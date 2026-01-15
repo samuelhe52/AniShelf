@@ -134,7 +134,7 @@ struct AnimeEntryEditor: View {
                 let unFavoritedMessage: LocalizedStringResource = "Unfavorited"
                 return AlertToast(
                     displayMode: .hud,
-                    type: .systemImage(entry.favorite ? "star.fill" : "star.slash.fill", .primary),
+                    type: .systemImage(entry.favorite ? "heart.fill" : "heart.slash.fill", .primary),
                     titleResource: entry.favorite ? favoritedMessage : unFavoritedMessage)
             }
         )

@@ -15,7 +15,7 @@ struct EntryFavoriteButton: View {
         Button(action: action) {
             Label(
                 favorited ? "Unfavorite" : "Favorite",
-                systemImage: favorited ? "star.circle.fill" : "star.circle")
+                systemImage: favorited ? "heart.fill" : "heart")
         }
     }
 }

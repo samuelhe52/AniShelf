@@ -112,7 +112,7 @@ struct GlobalToastsModifier: ViewModifier {
                 alert: {
                     AlertToast(
                         displayMode: .hud,
-                        type: .systemImage("star.fill", .pink),
+                        type: .systemImage("heart.fill", .pink),
                         titleResource: "Favorited")
                 }
             )
@@ -121,7 +121,7 @@ struct GlobalToastsModifier: ViewModifier {
                 alert: {
                     AlertToast(
                         displayMode: .hud,
-                        type: .systemImage("star.slash.fill", .gray),
+                        type: .systemImage("heart.slash.fill", .gray),
                         titleResource: "Unfavorited")
                 }
             )
