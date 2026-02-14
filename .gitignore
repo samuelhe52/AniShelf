@@ -72,3 +72,4 @@ Media/
 
 # VSCode
 .vscode/
+buildServer.json
