@@ -14,10 +14,12 @@ extension UserEntryInfo {
 
     /// Copies the UserEntryInfo to the general pasteboard using both a custom UTI and plain text.
     public func copyToPasteboard() {
-        guard let data = try? JSONEncoder().encode(self) else { return }
+        guard let data = try? JSONEncoder().encode(self),
+            let jsonString = String(data: data, encoding: .utf8)
+        else { return }
         UIPasteboard.general.items = [
             [
-                Self.pasteboardUTType.identifier: data,
+                Self.pasteboardUTType.identifier: jsonString,
                 UTType.plainText.identifier: self.description
             ]
         ]
