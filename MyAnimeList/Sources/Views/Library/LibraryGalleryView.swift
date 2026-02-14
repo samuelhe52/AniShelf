@@ -138,9 +138,11 @@ fileprivate struct AnimeEntryCardWrapper: View {
     }
 }
 
+#if DEBUG
 // This is where we place debug-specific code.
 extension LibraryGalleryView {
     private func mockDelete(entry: AnimeEntry) {
         store.mockDeleteEntry(entry)
     }
 }
+#endif

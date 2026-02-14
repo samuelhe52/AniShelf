@@ -566,6 +566,7 @@ class LibraryStore {
     }
 }
 
+#if DEBUG
 // This is where we place debug-specific code.
 extension LibraryStore {
     /// Mock delete, doesn't really touch anything in the persisted data model.
@@ -580,3 +581,4 @@ extension LibraryStore {
         }
     }
 }
+#endif
