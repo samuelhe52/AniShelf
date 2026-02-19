@@ -1,4 +1,4 @@
-# MyAnimeList 📺
+# AniShelf 📺
 
 A beautiful, native iOS app for tracking and managing your anime library.
 
@@ -34,8 +34,8 @@ A beautiful, native iOS app for tracking and managing your anime library.
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/yourusername/MyAnimeList.git
-   cd MyAnimeList
+   git clone https://github.com/yourusername/AniShelf.git
+   cd AniShelf
    ```
 
 2. **Open in Xcode**
@@ -68,6 +68,8 @@ make lint
 ```
 
 ### Project Structure
+
+> **Note:** The app was renamed from **MyAnimeList** to **AniShelf**. Only the display name and the top-level repository folder were changed; internal directory and file names still use `MyAnimeList` for simplicity and backward compatibility.
 
 - `MyAnimeList/` - Main iOS/macOS application
 - `DataProvider/` - SwiftData persistence layer (Swift Package)

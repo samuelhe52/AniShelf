@@ -1,11 +1,11 @@
-# MyAnimeList - Project Overview
+# AniShelf - Project Overview
 
 **Last Updated:** 2025-11-21
 **Created by:** AI Assistant
 
 ## Project Purpose
 
-MyAnimeList is a native iOS/macOS anime library management application that allows users to track and organize their anime viewing. The app integrates with The Movie Database (TMDb) API to fetch detailed information about anime titles including movies, TV series, and individual seasons.
+AniShelf is a native iOS/macOS anime library management application that allows users to track and organize their anime viewing. The app integrates with The Movie Database (TMDb) API to fetch detailed information about anime titles including movies, TV series, and individual seasons.
 
 > **Platform note:** iOS remains the primary target. macOS builds are supported for the core library workflow, but newer features (like the Sharing sheet) can temporarily launch iOS-only until we circle back for Mac polish.
 
@@ -35,9 +35,11 @@ MyAnimeList is a native iOS/macOS anime library management application that allo
 
 ## Project Structure
 
+> **Note:** The app was renamed from **MyAnimeList** to **AniShelf**. Only the display name and the top-level repository folder (`AniShelf/`) were changed; internal directories and file names still use `MyAnimeList` for simplicity and backward compatibility.
+
 ```text
-MyAnimeList/
-├── MyAnimeList/                    # Main iOS/macOS app
+AniShelf/                           # Top-level repo folder (display name: AniShelf)
+├── MyAnimeList/                    # Main iOS/macOS app (internal name unchanged)
 │   ├── Sources/
 │   │   ├── App/                    # App entry point
 │   │   │   └── MyAnimeListApp.swift

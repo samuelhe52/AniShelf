@@ -88,7 +88,7 @@ class BackupManager {
     // MARK: - Properties
     private let fileManager = FileManager.default
     private let userDefaults = UserDefaults.standard
-    private let backupFileName = "MyAnimeList_Backup_" + Date().ISO8601Format()
+    private let backupFileName = "AniShelf_Backup_" + Date().ISO8601Format()
     private let userSettingsFileName = "UserSettings.json"
     private let schemaVersionFileName = "SchemaVersion.txt"
     private var dataStoreFolderName: String {
