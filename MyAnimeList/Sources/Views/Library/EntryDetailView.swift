@@ -442,7 +442,7 @@ private final class EntryDetailModel: ObservableObject {
                 movie.overview?.nilIfEmpty
                 ?? entry.displayOverview
                 ?? String(localized: L10n.noOverviewAvailable)
-            genreNames = movie.genres?.map(\.name) ?? []
+            genreNames = Self.localizedGenreNames(movie.genres, language: language)
             statCards = [
                 movie.voteAverage.map {
                     StatCard(id: "rating", title: L10n.tmdbScore, value: String(format: "%.1f", $0), symbolName: "star.fill")
@@ -475,7 +475,7 @@ private final class EntryDetailModel: ObservableObject {
                 series.overview?.nilIfEmpty
                 ?? entry.displayOverview
                 ?? String(localized: L10n.noOverviewAvailable)
-            genreNames = series.genres?.map(\.name) ?? []
+            genreNames = Self.localizedGenreNames(series.genres, language: language)
             statCards = [
                 series.voteAverage.map {
                     StatCard(id: "rating", title: L10n.tmdbScore, value: String(format: "%.1f", $0), symbolName: "star.fill")
@@ -515,7 +515,7 @@ private final class EntryDetailModel: ObservableObject {
                 season.overview?.nilIfEmpty
                 ?? entry.displayOverview
                 ?? String(localized: L10n.noOverviewAvailable)
-            genreNames = parentSeries.genres?.map(\.name) ?? []
+            genreNames = Self.localizedGenreNames(parentSeries.genres, language: language)
             statCards = [
                 parentSeries.voteAverage.map {
                     StatCard(id: "rating", title: L10n.tmdbScore, value: String(format: "%.1f", $0), symbolName: "star.fill")
@@ -654,6 +654,115 @@ private final class EntryDetailModel: ObservableObject {
         }
         return originalName
     }
+
+    private static func localizedGenreNames(_ genres: [Genre]?, language: Language) -> [String] {
+        (genres ?? []).map { genre in
+            localizedGenreName(for: genre, language: language)
+        }
+    }
+
+    private static func localizedGenreName(for genre: Genre, language: Language) -> String {
+        let localized = switch language {
+        case .english:
+            englishGenreNames[genre.id]
+        case .japanese:
+            japaneseGenreNames[genre.id]
+        case .chinese:
+            chineseGenreNames[genre.id]
+        }
+
+        return localized ?? genre.name
+    }
+
+    private static let englishGenreNames: [Int: String] = [
+        12: "Adventure",
+        14: "Fantasy",
+        16: "Animation",
+        18: "Drama",
+        27: "Horror",
+        28: "Action",
+        35: "Comedy",
+        36: "History",
+        37: "Western",
+        53: "Thriller",
+        80: "Crime",
+        99: "Documentary",
+        878: "Science Fiction",
+        9648: "Mystery",
+        10402: "Music",
+        10749: "Romance",
+        10751: "Family",
+        10752: "War",
+        10759: "Action & Adventure",
+        10762: "Kids",
+        10763: "News",
+        10764: "Reality",
+        10765: "Sci-Fi & Fantasy",
+        10766: "Soap",
+        10767: "Talk",
+        10768: "War & Politics",
+        10770: "TV Movie",
+    ]
+
+    private static let japaneseGenreNames: [Int: String] = [
+        12: "アドベンチャー",
+        14: "ファンタジー",
+        16: "アニメーション",
+        18: "ドラマ",
+        27: "ホラー",
+        28: "アクション",
+        35: "コメディ",
+        36: "歴史",
+        37: "西部劇",
+        53: "スリラー",
+        80: "犯罪",
+        99: "ドキュメンタリー",
+        878: "SF",
+        9648: "ミステリー",
+        10402: "音楽",
+        10749: "ロマンス",
+        10751: "ファミリー",
+        10752: "戦争",
+        10759: "アクション・アドベンチャー",
+        10762: "キッズ",
+        10763: "ニュース",
+        10764: "リアリティ",
+        10765: "SF・ファンタジー",
+        10766: "ソープ",
+        10767: "トーク",
+        10768: "戦争・政治",
+        10770: "テレビ映画",
+    ]
+
+    private static let chineseGenreNames: [Int: String] = [
+        12: "冒险",
+        14: "奇幻",
+        16: "动画",
+        18: "剧情",
+        27: "恐怖",
+        28: "动作",
+        35: "喜剧",
+        36: "历史",
+        37: "西部",
+        53: "惊悚",
+        80: "犯罪",
+        99: "纪录",
+        878: "科幻",
+        9648: "悬疑",
+        10402: "音乐",
+        10749: "爱情",
+        10751: "家庭",
+        10752: "战争",
+        10759: "动作冒险",
+        10762: "儿童",
+        10763: "新闻",
+        10764: "真人秀",
+        10765: "科幻奇幻",
+        10766: "肥皂剧",
+        10767: "脱口秀",
+        10768: "战争政治",
+        10770: "电视电影",
+    ]
 }
 
 private struct DetailStatCard: View {
