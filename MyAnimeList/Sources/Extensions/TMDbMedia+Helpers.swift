@@ -11,6 +11,13 @@ import os
 
 fileprivate let logger = Logger(subsystem: .bundleIdentifier, category: "TMDbMediaInfoFetching")
 
+fileprivate func firstJapanesePNGPath(from resources: [ImageMetadata]) -> URL? {
+    resources
+        .filter { $0.languageCode == Language.japanese.rawValue }
+        .first { $0.filePath.pathExtension.caseInsensitiveCompare("png") == .orderedSame }?
+        .filePath
+}
+
 extension Movie {
     /// Returns the basic information for the movie.
     ///
@@ -84,10 +91,7 @@ extension Movie {
     /// - Throws: An error if the request fails.
     func logoURL(client: TMDb.TMDbClient, idealWidth: Int = .max) async throws -> URL? {
         let imageResources = try await client.movies.images(forMovie: id)
-        let logoPath = imageResources.logos
-            .filter { $0.languageCode == Language.japanese.rawValue }
-            .first?
-            .filePath
+        let logoPath = firstJapanesePNGPath(from: imageResources.logos)
         let url = try await client.imagesConfiguration.logoURL(
             for: logoPath, idealWidth: idealWidth)
         return url
@@ -192,10 +196,7 @@ extension TVSeries {
     /// - Throws: An error if the request fails.
     func logoURL(client: TMDbClient, idealWidth: Int = .max) async throws -> URL? {
         let imageResources = try await client.tvSeries.images(forTVSeries: id)
-        let logoPath = imageResources.logos
-            .filter { $0.languageCode == Language.japanese.rawValue }
-            .first?
-            .filePath
+        let logoPath = firstJapanesePNGPath(from: imageResources.logos)
         return try await client.imagesConfiguration.logoURL(for: logoPath, idealWidth: idealWidth)
     }
 

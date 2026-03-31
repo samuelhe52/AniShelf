@@ -266,8 +266,7 @@ struct EntryDetailView: View {
                                 previewContext: .init(
                                     seriesTMDbID: entry.type.parentSeriesID ?? entry.tmdbID,
                                     seasonNumber: entry.type.seasonNumber ?? 0,
-                                    language: currentLanguage,
-                                    posterURL: entry.posterURL
+                                    language: currentLanguage
                                 )
                             )
                         }
@@ -371,7 +370,7 @@ private final class EntryDetailModel: ObservableObject {
         let posterURL: URL?
     }
 
-    struct EpisodeCard: Identifiable {
+    struct EpisodeCard: Identifiable, Equatable {
         let id: Int
         let episodeNumber: Int
         let title: String
@@ -764,6 +763,8 @@ private struct SeasonCardView: View {
 private struct EpisodeRowView: View {
     let card: EntryDetailModel.EpisodeCard
     let previewContext: EpisodePreviewContext?
+    @State private var showPreview = false
+    @State private var previewHapticTrigger = false
 
     init(card: EntryDetailModel.EpisodeCard, previewContext: EpisodePreviewContext? = nil) {
         self.card = card
@@ -787,6 +788,7 @@ private struct EpisodeRowView: View {
                         }
                 }
             }
+            
             .frame(width: 126, height: 74)
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
@@ -803,7 +805,21 @@ private struct EpisodeRowView: View {
         }
         .padding(12)
         .glassPanel(cornerRadius: 22)
-        .modifier(EpisodeContextPreview(card: card, context: previewContext))
+        .onLongPressGesture {
+            guard previewContext != nil else { return }
+            previewHapticTrigger.toggle()
+            showPreview = true
+        }
+        .sensoryFeedback(.impact(flexibility: .solid), trigger: previewHapticTrigger)
+        .popover(isPresented: $showPreview) {
+            if let previewContext {
+                EpisodePreviewCard(
+                    card: card,
+                    context: previewContext
+                )
+                .presentationCompactAdaptation(.popover)
+            }
+        }
     }
 }
 
@@ -811,6 +827,8 @@ private struct SeriesSeasonEpisodeGroupView: View {
     let season: EntryDetailModel.SeasonCard
     let seriesTMDbID: Int
     let language: Language
+
+    private let loadingAnimation: Animation = .easeInOut(duration: 0.25)
 
     @State private var episodes: [EntryDetailModel.EpisodeCard] = []
     @State private var isLoading = false
@@ -848,8 +866,7 @@ private struct SeriesSeasonEpisodeGroupView: View {
                             previewContext: .init(
                                 seriesTMDbID: seriesTMDbID,
                                 seasonNumber: season.seasonNumber,
-                                language: language,
-                                posterURL: nil
+                                language: language
                             )
                         )
                     }
@@ -859,15 +876,19 @@ private struct SeriesSeasonEpisodeGroupView: View {
         .task(id: "\(seriesTMDbID)-\(season.id)-\(language.rawValue)") {
             await loadEpisodesIfNeeded()
         }
+        .animation(loadingAnimation, value: episodes)
+        .animation(loadingAnimation, value: isLoading)
+        .animation(loadingAnimation, value: loadFailed)
     }
 
     private func loadEpisodesIfNeeded() async {
         guard episodes.isEmpty, !isLoading else { return }
-        isLoading = true
-        defer { isLoading = false }
+        withAnimation(loadingAnimation) {
+            isLoading = true
+        }
 
         do {
-            episodes = try await InfoFetcher()
+            let loadedEpisodes = try await InfoFetcher()
                 .seasonEpisodeSummaries(
                     parentSeriesID: seriesTMDbID,
                     seasonNumber: season.seasonNumber,
@@ -883,9 +904,16 @@ private struct SeriesSeasonEpisodeGroupView: View {
                         imageURL: $0.imageURL
                     )
                 }
-            loadFailed = false
+            withAnimation(loadingAnimation) {
+                episodes = loadedEpisodes
+                loadFailed = false
+                isLoading = false
+            }
         } catch {
-            loadFailed = true
+            withAnimation(loadingAnimation) {
+                loadFailed = true
+                isLoading = false
+            }
         }
     }
 }
@@ -894,32 +922,12 @@ private struct EpisodePreviewContext {
     let seriesTMDbID: Int
     let seasonNumber: Int
     let language: Language
-    let posterURL: URL?
-}
-
-private struct EpisodeContextPreview: ViewModifier {
-    let card: EntryDetailModel.EpisodeCard
-    let context: EpisodePreviewContext?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let context {
-            content.contextMenu {
-
-            } preview: {
-                EpisodePreviewCard(
-                    card: card,
-                    context: context
-                )
-            }
-        } else {
-            content
-        }
-    }
 }
 
 @MainActor
 private final class EpisodePreviewModel: ObservableObject {
+    private let detailLoadAnimation: Animation = .easeInOut(duration: 0.3)
+
     @Published private(set) var overviewText = String(localized: L10n.loading)
     @Published private(set) var isLoading = false
 
@@ -939,11 +947,17 @@ private final class EpisodePreviewModel: ObservableObject {
                 episodeNumber: card.episodeNumber,
                 language: context.language
             )
-            overviewText = detail.overview?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+            let resolvedOverviewText =
+                detail.overview?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
                 ? detail.overview!
                 : String(localized: L10n.noOverviewAvailable)
+            withAnimation(detailLoadAnimation) {
+                overviewText = resolvedOverviewText
+            }
         } catch {
-            overviewText = String(localized: L10n.noOverviewAvailable)
+            withAnimation(detailLoadAnimation) {
+                overviewText = String(localized: L10n.noOverviewAvailable)
+            }
         }
     }
 }
@@ -956,38 +970,33 @@ private struct EpisodePreviewCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 14) {
+            HStack(spacing: 14) {
                 Group {
-                    if let posterURL = context.posterURL {
-                        KFImageView(url: posterURL, targetWidth: 320, diskCacheExpiration: .shortTerm)
+                    if let imageURL = card.imageURL {
+                        KFImageView(url: imageURL, targetWidth: 500, diskCacheExpiration: .transient)
                             .scaledToFill()
-                            .frame(width: 96, height: 136)
+                            .frame(width: 126, height: 74)
                             .clipped()
                     } else {
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        Rectangle()
                             .fill(Color.secondary.opacity(0.15))
                             .overlay {
-                                Image(systemName: "film")
+                                Image(systemName: "tv")
                                     .foregroundStyle(.secondary)
                             }
                     }
                 }
-                .frame(width: 96, height: 136)
+                .frame(width: 126, height: 74)
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(card.title)
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(3)
-
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(2)
                     Text(card.subtitle)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(2)
                 }
-
-                Spacer(minLength: 0)
             }
 
             Text(previewModel.overviewText)
@@ -995,6 +1004,8 @@ private struct EpisodePreviewCard: View {
                 .foregroundStyle(.secondary)
                 .lineSpacing(3)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .contentTransition(.opacity)
+                .animation(.easeInOut(duration: 0.2), value: previewModel.overviewText)
         }
         .frame(width: 320, alignment: .leading)
         .padding(18)

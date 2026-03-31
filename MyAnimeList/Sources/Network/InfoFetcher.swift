@@ -97,12 +97,14 @@ final class InfoFetcher: Sendable {
             forTVSeries: parentSeriesID,
             language: language.rawValue)
         let backdropURL = try await parentSeries.backdropURL(client: tmdbClient)
+        let logoURL = try await parentSeries.logoURL(client: tmdbClient)
         let linkToDetails = parentSeries.linkToDetails
 
-        // Use the parent series' backdrop image and homepage for the season.
+        // Use the parent series' shared brand assets for the season.
         let basicInfo = try await season.basicInfo(
             client: tmdbClient,
             backdropURL: backdropURL,
+            logoURL: logoURL,
             linkToDetails: linkToDetails,
             parentSeriesID: parentSeriesID)
         return basicInfo
@@ -172,13 +174,20 @@ final class InfoFetcher: Sendable {
     ) async throws -> [BasicInfo] {
         let series = try await tvSeries(tmdbID, language: language)
         guard let seasons = series.seasons else { return [] }
+        let backdropURL = try await series.backdropURL(client: tmdbClient)
+        let logoURL = try await series.logoURL(client: tmdbClient)
+        let linkToDetails = series.linkToDetails
 
         return try await withThrowingTaskGroup(of: BasicInfo.self) { group in
             var results: [BasicInfo] = []
             for season in seasons {
                 group.addTask {
                     try await season.basicInfo(
-                        client: self.tmdbClient, parentSeriesID: tmdbID)
+                        client: self.tmdbClient,
+                        backdropURL: backdropURL,
+                        logoURL: logoURL,
+                        linkToDetails: linkToDetails,
+                        parentSeriesID: tmdbID)
                 }
             }
             for try await info in group {
