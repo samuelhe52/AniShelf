@@ -187,6 +187,298 @@ final class InfoFetcher: Sendable {
             return results.sorted { ($0.type.seasonNumber ?? 0) < ($1.type.seasonNumber ?? 0) }
         }
     }
+
+    func detailInfo(entryType: AnimeType, tmdbID: Int, language: Language) async throws -> AnimeEntryDetail {
+        switch entryType {
+        case .movie:
+            return try await movieDetail(tmdbID: tmdbID, language: language)
+        case .series:
+            return try await tvSeriesDetail(tmdbID: tmdbID, language: language)
+        case .season(let seasonNumber, let parentSeriesID):
+            return try await tvSeasonDetail(
+                seasonNumber: seasonNumber,
+                parentSeriesID: parentSeriesID,
+                language: language
+            )
+        }
+    }
+
+    func seasonEpisodeSummaries(
+        parentSeriesID: Int,
+        seasonNumber: Int,
+        language: Language
+    ) async throws -> [AnimeEntryEpisodeSummary] {
+        let season = try await tvSeason(parentSeriesID, seasonNumber: seasonNumber, language: language)
+        let imagesConfiguration = try await tmdbClient.imagesConfiguration
+        return makeEpisodeSummaries(
+            from: season.episodes ?? [],
+            imagesConfiguration: imagesConfiguration
+        )
+    }
+
+    func episodePreviewInfo(
+        parentSeriesID: Int,
+        seasonNumber: Int,
+        episodeNumber: Int,
+        language: Language
+    ) async throws -> TVEpisode {
+        try await tmdbClient.tvEpisodes.details(
+            forEpisode: episodeNumber,
+            inSeason: seasonNumber,
+            inTVSeries: parentSeriesID,
+            language: language.rawValue
+        )
+    }
+
+    private func movieDetail(tmdbID: Int, language: Language) async throws -> AnimeEntryDetail {
+        let movie = try await movie(tmdbID, language: language)
+        let heroImageURL = try await movie.backdropURL(client: tmdbClient, idealWidth: 1_280)
+        let logoImageURL = try await movie.logoURL(client: tmdbClient, idealWidth: 500)
+        let credits = try await tmdbClient.movies.credits(forMovie: movie.id, language: language.rawValue)
+        let imagesConfiguration = try await tmdbClient.imagesConfiguration
+
+        return AnimeEntryDetail(
+            language: language.rawValue,
+            title: movie.title,
+            subtitle: movie.tagline?.nilIfEmpty,
+            overview: movie.overview?.nilIfEmpty,
+            status: movie.status?.rawValue,
+            airDate: movie.releaseDate,
+            primaryLinkURL: movie.homepageURL,
+            heroImageURL: heroImageURL,
+            logoImageURL: logoImageURL,
+            genreIDs: movie.genres?.map(\.id) ?? [],
+            voteAverage: movie.voteAverage,
+            runtimeMinutes: movie.runtime,
+            characters: credits.cast.prefix(12).map {
+                AnimeEntryCharacter(
+                    id: $0.id,
+                    characterName: $0.character.strippingVoiceQualifier.nilIfEmpty ?? "Character",
+                    actorName: Self.preferredActorName(
+                        localizedName: $0.name,
+                        originalName: nil,
+                        language: language
+                    ),
+                    profileURL: imagesConfiguration.profileURL(for: $0.profilePath, idealWidth: 185)
+                )
+            }
+        )
+    }
+
+    private func tvSeriesDetail(tmdbID: Int, language: Language) async throws -> AnimeEntryDetail {
+        let series = try await tvSeries(tmdbID, language: language)
+        let heroImageURL = try await series.backdropURL(client: tmdbClient, idealWidth: 1_280)
+        let logoImageURL = try await series.logoURL(client: tmdbClient, idealWidth: 500)
+        let credits = try await tmdbClient.tvSeries.aggregateCredits(
+            forTVSeries: series.id,
+            language: language.rawValue
+        )
+        let imagesConfiguration = try await tmdbClient.imagesConfiguration
+
+        return AnimeEntryDetail(
+            language: language.rawValue,
+            title: series.name,
+            subtitle: series.tagline?.nilIfEmpty,
+            overview: series.overview?.nilIfEmpty,
+            status: series.status,
+            airDate: series.firstAirDate,
+            primaryLinkURL: series.homepageURL,
+            heroImageURL: heroImageURL,
+            logoImageURL: logoImageURL,
+            genreIDs: series.genres?.map(\.id) ?? [],
+            voteAverage: series.voteAverage,
+            runtimeMinutes: series.episodeRunTime?.first,
+            episodeCount: series.numberOfEpisodes,
+            seasonCount: series.numberOfSeasons,
+            characters: makeCharacters(
+                from: credits.cast.prefix(12),
+                imagesConfiguration: imagesConfiguration,
+                language: language
+            ),
+            seasons: makeSeasonSummaries(
+                from: series.seasons ?? [],
+                imagesConfiguration: imagesConfiguration
+            )
+        )
+    }
+
+    private func tvSeasonDetail(
+        seasonNumber: Int,
+        parentSeriesID: Int,
+        language: Language
+    ) async throws -> AnimeEntryDetail {
+        async let parentSeries = tvSeries(parentSeriesID, language: language)
+        async let season = tvSeason(parentSeriesID, seasonNumber: seasonNumber, language: language)
+
+        let resolvedParentSeries = try await parentSeries
+        let resolvedSeason = try await season
+        let heroImageURL = try await resolvedParentSeries.backdropURL(client: tmdbClient, idealWidth: 1_280)
+        let logoImageURL = try await resolvedParentSeries.logoURL(client: tmdbClient, idealWidth: 500)
+        let credits = try await tmdbClient.tvSeasons.aggregateCredits(
+            forSeason: resolvedSeason.seasonNumber,
+            inTVSeries: resolvedParentSeries.id,
+            language: language.rawValue
+        )
+        let imagesConfiguration = try await tmdbClient.imagesConfiguration
+
+        return AnimeEntryDetail(
+            language: language.rawValue,
+            title: resolvedParentSeries.name,
+            subtitle: resolvedSeason.name,
+            overview: resolvedSeason.overview?.nilIfEmpty,
+            status: resolvedParentSeries.status,
+            airDate: resolvedSeason.airDate,
+            primaryLinkURL: resolvedParentSeries.homepageURL,
+            heroImageURL: heroImageURL,
+            logoImageURL: logoImageURL,
+            genreIDs: resolvedParentSeries.genres?.map(\.id) ?? [],
+            voteAverage: resolvedParentSeries.voteAverage,
+            runtimeMinutes: resolvedParentSeries.episodeRunTime?.first,
+            episodeCount: resolvedSeason.episodes?.count,
+            characters: makeCharacters(
+                from: credits.cast.prefix(12),
+                imagesConfiguration: imagesConfiguration,
+                language: language
+            ),
+            episodes: makeEpisodeSummaries(
+                from: Array((resolvedSeason.episodes ?? []).prefix(8)),
+                imagesConfiguration: imagesConfiguration
+            )
+        )
+    }
+
+    private func makeCharacters<S: Sequence>(
+        from cast: S,
+        imagesConfiguration: ImagesConfiguration,
+        language: Language
+    ) -> [AnimeEntryCharacter] where S.Element == CastMember {
+        cast.map {
+            AnimeEntryCharacter(
+                id: $0.id,
+                characterName: $0.character.strippingVoiceQualifier.nilIfEmpty ?? "Character",
+                actorName: Self.preferredActorName(
+                    localizedName: $0.name,
+                    originalName: nil,
+                    language: language
+                ),
+                profileURL: imagesConfiguration.profileURL(for: $0.profilePath, idealWidth: 185)
+            )
+        }
+    }
+
+    private func makeCharacters<S: Sequence>(
+        from cast: S,
+        imagesConfiguration: ImagesConfiguration,
+        language: Language
+    ) -> [AnimeEntryCharacter] where S.Element == AggregrateCastMember {
+        cast.map {
+            let primaryRole = $0.roles.max { lhs, rhs in
+                lhs.episodeCount < rhs.episodeCount
+            }?.character
+                .strippingVoiceQualifier
+                .nilIfEmpty
+
+            return AnimeEntryCharacter(
+                id: $0.id,
+                characterName: primaryRole ?? "Character",
+                actorName: Self.preferredActorName(
+                    localizedName: $0.name,
+                    originalName: $0.originalName,
+                    language: language
+                ),
+                profileURL: imagesConfiguration.profileURL(for: $0.profilePath, idealWidth: 185)
+            )
+        }
+    }
+
+    private func makeSeasonSummaries(
+        from seasons: [TVSeason],
+        imagesConfiguration: ImagesConfiguration
+    ) -> [AnimeEntrySeasonSummary] {
+        seasons
+            .filter { $0.seasonNumber > 0 }
+            .sorted { $0.seasonNumber < $1.seasonNumber }
+            .map {
+                AnimeEntrySeasonSummary(
+                    id: $0.id,
+                    seasonNumber: $0.seasonNumber,
+                    title: $0.name,
+                    posterURL: imagesConfiguration.posterURL(for: $0.posterPath, idealWidth: 300)
+                )
+            }
+    }
+
+    private func makeEpisodeSummaries(
+        from episodes: [TVEpisode],
+        imagesConfiguration: ImagesConfiguration
+    ) -> [AnimeEntryEpisodeSummary] {
+        episodes.map {
+            AnimeEntryEpisodeSummary(
+                id: $0.id,
+                episodeNumber: $0.episodeNumber,
+                title: $0.name,
+                airDate: $0.airDate,
+                imageURL: imagesConfiguration.stillURL(for: $0.stillPath, idealWidth: 500)
+            )
+        }
+    }
+
+    private static func preferredActorName(localizedName: String, originalName: String?, language: Language)
+        -> String
+    {
+        guard language == .japanese,
+            let originalName,
+            originalName != localizedName,
+            originalName.containsJapaneseScript
+        else {
+            return localizedName
+        }
+        return originalName
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : self
+    }
+
+    var strippingVoiceQualifier: String {
+        let voiceMarkerPattern = #"(?i:voice|voiced\s+by|cv|c\.?\s*v\.?)|声優|声の出演|声|吹替え|吹替|吹き替え|ボイス"#
+        let patterns = [
+            #"\s*[\(\（][^)\）]*(?:__VOICE_MARKERS__)[^)\）]*[\)\）]\s*$"#,
+            #"\s*[\[\［][^\]\］]*(?:__VOICE_MARKERS__)[^\]\］]*[\]\］]\s*$"#,
+        ].map {
+            $0.replacingOccurrences(of: "__VOICE_MARKERS__", with: voiceMarkerPattern)
+        }
+
+        var value = self
+        while true {
+            let stripped = patterns.reduce(value) { partialResult, pattern in
+                partialResult.replacingOccurrences(
+                    of: pattern,
+                    with: "",
+                    options: .regularExpression
+                )
+            }
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            guard stripped != value else {
+                return stripped
+            }
+            value = stripped
+        }
+    }
+
+    var containsJapaneseScript: Bool {
+        unicodeScalars.contains {
+            switch $0.value {
+            case 0x3040...0x309F, 0x30A0...0x30FF, 0x4E00...0x9FFF:
+                return true
+            default:
+                return false
+            }
+        }
+    }
 }
 
 extension RedirectingHTTPClient {

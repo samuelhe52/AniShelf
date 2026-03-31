@@ -107,11 +107,17 @@ class LibraryStore {
             return nil
         }
         logger.debug("Creating new entry with id: \(id), type: \(type)...")
-        let info = try await infoFetcher.fetchInfoFromTMDB(
+        async let info = infoFetcher.fetchInfoFromTMDB(
             entryType: type,
             tmdbID: id,
             language: language)
-        let entry = AnimeEntry(fromInfo: info)
+        async let detail = infoFetcher.detailInfo(
+            entryType: type,
+            tmdbID: id,
+            language: language
+        )
+        let entry = AnimeEntry(fromInfo: try await info)
+        entry.detail = try await detail
         if let parentSeriesID = entry.parentSeriesID {
             if let parentSeriesEntry = library.first(where: { $0.tmdbID == parentSeriesID }) {
                 entry.parentSeriesEntry = parentSeriesEntry
@@ -223,7 +229,7 @@ class LibraryStore {
                     messageResource: "Fetching Info: 0 / \(library.count)")
 
             do {
-                var fetchedInfos: [Int: BasicInfo] = [:]
+                var fetchedInfos: [Int: (BasicInfo, AnimeEntryDetail)] = [:]
                 let totalCount = library.count
                 for chunk in chunkedLibraryEntries(chunkSize: 8) {
                     let chunkInfos = try await latestInfoForEntries(
@@ -237,16 +243,17 @@ class LibraryStore {
                                     total: totalCount,
                                     messageResource: messageResource)
                         })
-                    for (id, info) in chunkInfos {
-                        fetchedInfos[id] = info
+                    for (id, info, detail) in chunkInfos {
+                        fetchedInfos[id] = (info, detail)
                     }
                 }
                 ToastCenter.global.progressState = nil
 
                 ToastCenter.global.loadingMessage = .message("Organizing Library...")
-                for (id, info) in fetchedInfos {
+                for (id, payload) in fetchedInfos {
                     if let entry = library.entryWithTMDbID(id) {
-                        entry.update(from: info)
+                        entry.update(from: payload.0)
+                        entry.detail = payload.1
                         try await resolveParentSeriesEntry(for: entry)
                     }
                 }
@@ -268,28 +275,26 @@ class LibraryStore {
     ///   - entries: The entries to fetch latest infos for.
     ///   - updateProgress: A (current, total) closure called when progress is updated.
     ///
-    /// - Returns: An array of (tmdbID, BasicInfo) tuples.
+    /// - Returns: An array of (tmdbID, BasicInfo, AnimeEntryDetail) tuples.
     /// - Throws: An error if fetching fails.
     func latestInfoForEntries<C: Collection<AnimeEntry>>(
         entries: C,
         updateProgress: @escaping (Int, Int) -> Void
-    ) async throws -> [(Int, BasicInfo)] {
+    ) async throws -> [(Int, BasicInfo, AnimeEntryDetail)] {
         try await withThrowingTaskGroup(
-            of: (Int, BasicInfo).self
+            of: (Int, BasicInfo, AnimeEntryDetail).self
         ) { group in
-            var fetchedInfos: [(Int, BasicInfo)] = []
+            var fetchedInfos: [(Int, BasicInfo, AnimeEntryDetail)] = []
 
             for entry in entries {
                 let tmdbID = entry.tmdbID
                 let type = entry.type
-                let persistentID = entry.id
                 let originalPosterURL = entry.posterURL
                 let usingCustomPoster = entry.usingCustomPoster
                 group.addTask {
                     try await self.fetchLatestInfo(
                         tmdbID: tmdbID,
                         entryType: type,
-                        persistentID: persistentID,
                         originalPosterURL: originalPosterURL,
                         usingCustomPoster: usingCustomPoster)
                 }
@@ -307,19 +312,23 @@ class LibraryStore {
     func fetchLatestInfo(
         tmdbID: Int,
         entryType: AnimeType,
-        persistentID: PersistentIdentifier,
         originalPosterURL: URL?,
         usingCustomPoster: Bool
-    ) async throws -> (Int, BasicInfo) {
-        var info = try await self.infoFetcher.fetchInfoFromTMDB(
+    ) async throws -> (Int, BasicInfo, AnimeEntryDetail) {
+        async let info = self.infoFetcher.fetchInfoFromTMDB(
             entryType: entryType,
             tmdbID: tmdbID,
             language: language)
+        async let detail = self.infoFetcher.detailInfo(
+            entryType: entryType,
+            tmdbID: tmdbID,
+            language: language)
+        var resolvedInfo = try await info
         if usingCustomPoster {
             // Preserve the original poster URL if using a custom poster
-            info.posterURL = originalPosterURL
+            resolvedInfo.posterURL = originalPosterURL
         }
-        return (tmdbID, info)
+        return (tmdbID, resolvedInfo, try await detail)
     }
 
     func resolveParentSeriesEntry(for entry: AnimeEntry) async throws {
@@ -404,6 +413,11 @@ class LibraryStore {
         } else {
             let parentInfo = try await infoFetcher.tvSeriesInfo(tmdbID: parentSeriesID, language: language)
             parentEntry = AnimeEntry(fromInfo: parentInfo)
+            parentEntry.detail = try await infoFetcher.detailInfo(
+                entryType: .series,
+                tmdbID: parentSeriesID,
+                language: language
+            )
             parentEntry.onDisplay = true
             try dataProvider.dataHandler.newEntry(parentEntry)
         }
@@ -436,27 +450,42 @@ class LibraryStore {
 
         let userInfo = entry.userInfo
         let originalPosterURL = entry.posterURL
+        let seasonTMDbID = entry.tmdbID
 
         // Fetch infos before deleting the original entry
-        let parentInfo = try await infoFetcher.tvSeriesInfo(tmdbID: parentSeriesID, language: language)
-        var seasonInfo = try await infoFetcher.tvSeasonInfo(
+        async let parentInfo = infoFetcher.tvSeriesInfo(tmdbID: parentSeriesID, language: language)
+        async let parentDetail = infoFetcher.detailInfo(
+            entryType: .series,
+            tmdbID: parentSeriesID,
+            language: language
+        )
+        async let seasonInfo = infoFetcher.tvSeasonInfo(
             seasonNumber: seasonNumber,
             parentSeriesID: parentSeriesID,
             language: language)
+        async let seasonDetail = infoFetcher.detailInfo(
+            entryType: .season(seasonNumber: seasonNumber, parentSeriesID: parentSeriesID),
+            tmdbID: seasonTMDbID,
+            language: language
+        )
+        let resolvedParentInfo = try await parentInfo
+        var resolvedSeasonInfo = try await seasonInfo
 
         // Remove the original series entry from the library
         try dataProvider.dataHandler.deleteEntry(entry)
 
         if userInfo.usingCustomPoster {
-            seasonInfo.posterURL = originalPosterURL
+            resolvedSeasonInfo.posterURL = originalPosterURL
         }
 
         // Hidden parent series entry
-        let parentEntry = AnimeEntry(fromInfo: parentInfo)
+        let parentEntry = AnimeEntry(fromInfo: resolvedParentInfo)
+        parentEntry.detail = try await parentDetail
         parentEntry.onDisplay = false
 
         // New season entry with user metadata
-        let seasonEntry = AnimeEntry(fromInfo: seasonInfo)
+        let seasonEntry = AnimeEntry(fromInfo: resolvedSeasonInfo)
+        seasonEntry.detail = try await seasonDetail
         seasonEntry.parentSeriesEntry = parentEntry
         seasonEntry.updateUserInfo(from: userInfo)
         if userInfo.usingCustomPoster {

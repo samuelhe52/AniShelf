@@ -7,7 +7,6 @@
 
 import DataProvider
 import SwiftUI
-import TMDb
 
 struct EntryDetailView: View {
     let entry: AnimeEntry
@@ -31,10 +30,12 @@ struct EntryDetailView: View {
 
                 VStack(alignment: .leading, spacing: 20) {
                     quickActionsRow
+                        .padding(.top, -20)
+                        .padding(.bottom, 4)
                     detailsContent
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 20)
+                .padding(.top, 4)
                 .padding(.bottom, 40)
             }
         }
@@ -52,7 +53,7 @@ struct EntryDetailView: View {
             AnimeSharingSheet(entry: entry)
         }
         .task(id: "\(entry.tmdbID)-\(currentLanguage.rawValue)") {
-            await model.load(for: entry, language: currentLanguage)
+            await model.load(for: entry, language: currentLanguage, dataHandler: dataHandler)
         }
     }
 
@@ -240,22 +241,41 @@ struct EntryDetailView: View {
             }
         }
 
-        if !model.seasonCards.isEmpty {
-            sectionCard(L10n.seasons) {
-                horizontalCards(model.seasonCards) { season in
-                    SeasonCardView(card: season, accentColor: accentColor)
-                }
-            }
-        }
-
-        if !model.episodeCards.isEmpty {
-            sectionCard(L10n.episodes) {
-                VStack(spacing: 10) {
-                    ForEach(model.episodeCards) { episode in
-                        EpisodeRowView(card: episode)
+        switch entry.type {
+        case .series:
+            if !model.seasonCards.isEmpty {
+                sectionCard(L10n.episodes) {
+                    VStack(spacing: 18) {
+                        ForEach(model.seasonCards) { season in
+                            SeriesSeasonEpisodeGroupView(
+                                season: season,
+                                seriesTMDbID: entry.tmdbID,
+                                language: currentLanguage
+                            )
+                        }
                     }
                 }
             }
+        case .season:
+            if !model.episodeCards.isEmpty {
+                sectionCard(L10n.episodes) {
+                    VStack(spacing: 10) {
+                        ForEach(model.episodeCards) { episode in
+                            EpisodeRowView(
+                                card: episode,
+                                previewContext: .init(
+                                    seriesTMDbID: entry.type.parentSeriesID ?? entry.tmdbID,
+                                    seasonNumber: entry.type.seasonNumber ?? 0,
+                                    language: currentLanguage,
+                                    posterURL: entry.posterURL
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        case .movie:
+            EmptyView()
         }
 
         if let errorMessage = model.loadError {
@@ -345,6 +365,7 @@ private final class EntryDetailModel: ObservableObject {
 
     struct SeasonCard: Identifiable {
         let id: Int
+        let seasonNumber: Int
         let title: String
         let subtitle: String
         let posterURL: URL?
@@ -352,15 +373,10 @@ private final class EntryDetailModel: ObservableObject {
 
     struct EpisodeCard: Identifiable {
         let id: Int
+        let episodeNumber: Int
         let title: String
         let subtitle: String
         let imageURL: URL?
-    }
-
-    private enum Payload {
-        case movie(Movie)
-        case series(TVSeries)
-        case season(parentSeries: TVSeries, season: TVSeason)
     }
 
     @Published private(set) var isLoading = false
@@ -381,7 +397,7 @@ private final class EntryDetailModel: ObservableObject {
 
     private var lastRequestKey: String?
 
-    func load(for entry: AnimeEntry, language: Language) async {
+    func load(for entry: AnimeEntry, language: Language, dataHandler: DataHandler?) async {
         let requestKey = "\(entry.tmdbID)-\(language.rawValue)"
         guard lastRequestKey != requestKey else { return }
         lastRequestKey = requestKey
@@ -400,228 +416,124 @@ private final class EntryDetailModel: ObservableObject {
         heroImageURL = entry.backdropURL ?? entry.posterURL
         logoImageURL = nil
         loadError = nil
-        isLoading = true
+        if let detail = entry.detail, detail.language == language.rawValue {
+            apply(detail: detail, entry: entry, language: language)
+            isLoading = false
+            return
+        }
 
+        isLoading = true
         do {
-            let fetcher = InfoFetcher()
-            let payload = try await fetchPayload(for: entry, language: language, fetcher: fetcher)
-            try await apply(payload: payload, entry: entry, client: fetcher.tmdbClient, language: language)
+            let detail = try await InfoFetcher().detailInfo(
+                entryType: entry.type,
+                tmdbID: entry.tmdbID,
+                language: language
+            )
+            entry.detail = detail
+            try? dataHandler?.modelContext.save()
+            apply(detail: detail, entry: entry, language: language)
         } catch {
             loadError = error.localizedDescription
         }
-
         isLoading = false
     }
 
-    private func fetchPayload(for entry: AnimeEntry, language: Language, fetcher: InfoFetcher) async throws
-        -> Payload
-    {
-        switch entry.type {
-        case .movie:
-            return .movie(try await fetcher.movie(entry.tmdbID, language: language))
-        case .series:
-            return .series(try await fetcher.tvSeries(entry.tmdbID, language: language))
-        case .season(let seasonNumber, let parentSeriesID):
-            async let parentSeries = fetcher.tvSeries(parentSeriesID, language: language)
-            async let season = fetcher.tvSeason(parentSeriesID, seasonNumber: seasonNumber, language: language)
-            return try await .season(parentSeries: parentSeries, season: season)
-        }
-    }
+    private func apply(detail: AnimeEntryDetail, entry: AnimeEntry, language: Language) {
+        displayTitle = detail.title
+        subtitleText = detail.subtitle
+        overviewText = detail.overview ?? entry.displayOverview ?? String(localized: L10n.noOverviewAvailable)
+        genreNames = Self.localizedGenreNames(detail.genreIDs, language: language)
+        heroImageURL = detail.heroImageURL ?? entry.backdropURL ?? entry.posterURL
+        logoImageURL = detail.logoImageURL
+        primaryLinkURL = detail.primaryLinkURL ?? entry.linkToDetails
+        characterSectionTitle = L10n.characters
 
-    private func apply(payload: Payload, entry: AnimeEntry, client: TMDbClient, language: Language) async throws {
-        switch payload {
-        case .movie(let movie):
-            displayTitle = movie.title
-            subtitleText = movie.tagline?.nilIfEmpty
-            metadataLineItems = [
-                movie.releaseDate?.formatted(date: .abbreviated, time: .omitted),
-                movie.runtime.map(Self.minutesText),
-                movie.status?.rawValue,
+        metadataLineItems = switch entry.type {
+        case .movie:
+            [
+                detail.airDate?.formatted(date: .abbreviated, time: .omitted),
+                detail.runtimeMinutes.map(Self.minutesText),
+                detail.status,
             ].compactMap(\.self)
-            overviewText =
-                movie.overview?.nilIfEmpty
-                ?? entry.displayOverview
-                ?? String(localized: L10n.noOverviewAvailable)
-            genreNames = Self.localizedGenreNames(movie.genres, language: language)
-            statCards = [
-                movie.voteAverage.map {
+        case .series:
+            [
+                detail.airDate?.formatted(date: .abbreviated, time: .omitted),
+                detail.status,
+                detail.seasonCount.map(Self.seasonCountText),
+            ].compactMap(\.self)
+        case .season:
+            [
+                detail.airDate?.formatted(date: .abbreviated, time: .omitted),
+                detail.episodeCount.map(Self.episodeCountText),
+                detail.status,
+            ].compactMap(\.self)
+        }
+
+        statCards = switch entry.type {
+        case .movie:
+            [
+                detail.voteAverage.map {
                     StatCard(id: "rating", title: L10n.tmdbScore, value: String(format: "%.1f", $0), symbolName: "star.fill")
                 },
-                movie.runtime.map {
+                detail.runtimeMinutes.map {
                     StatCard(id: "runtime", title: L10n.runtime, value: Self.minutesText($0), symbolName: "clock.fill")
                 },
             ]
             .compactMap(\.self)
-            heroImageURL = try await movie.backdropURL(client: client, idealWidth: 1_280) ?? entry.posterURL
-            logoImageURL = try await movie.logoURL(client: client, idealWidth: 500)
-            primaryLinkURL = movie.homepageURL ?? entry.linkToDetails
-
-            let credits = try await client.movies.credits(forMovie: movie.id, language: language.rawValue)
-            characterCards = try await makeCharacterCards(
-                from: credits.cast.prefix(12),
-                client: client,
-                language: language
-            )
-
-        case .series(let series):
-            displayTitle = series.name
-            subtitleText = series.tagline?.nilIfEmpty
-            metadataLineItems = [
-                series.firstAirDate?.formatted(date: .abbreviated, time: .omitted),
-                series.status,
-                series.numberOfSeasons.map(Self.seasonCountText),
-            ].compactMap(\.self)
-            overviewText =
-                series.overview?.nilIfEmpty
-                ?? entry.displayOverview
-                ?? String(localized: L10n.noOverviewAvailable)
-            genreNames = Self.localizedGenreNames(series.genres, language: language)
-            statCards = [
-                series.voteAverage.map {
+        case .series:
+            [
+                detail.voteAverage.map {
                     StatCard(id: "rating", title: L10n.tmdbScore, value: String(format: "%.1f", $0), symbolName: "star.fill")
                 },
-                series.numberOfEpisodes.map {
+                detail.episodeCount.map {
                     StatCard(id: "episodes", title: L10n.episodes, value: "\($0)", symbolName: "play.rectangle.fill")
                 },
-                series.episodeRunTime?.first.map {
+                detail.runtimeMinutes.map {
                     StatCard(id: "runtime", title: L10n.averageRuntime, value: Self.minutesText($0), symbolName: "clock.fill")
                 },
             ]
             .compactMap(\.self)
-            heroImageURL = try await series.backdropURL(client: client, idealWidth: 1_280) ?? entry.posterURL
-            logoImageURL = try await series.logoURL(client: client, idealWidth: 500)
-            primaryLinkURL = series.homepageURL ?? entry.linkToDetails
-            seasonCards = try await makeSeasonCards(from: series.seasons ?? [], client: client)
-
-            let credits = try await client.tvSeries.aggregateCredits(
-                forTVSeries: series.id,
-                language: language.rawValue
-            )
-            characterCards = try await makeCharacterCards(
-                from: credits.cast.prefix(12),
-                client: client,
-                language: language
-            )
-
-        case .season(let parentSeries, let season):
-            displayTitle = parentSeries.name
-            subtitleText = season.name
-            metadataLineItems = [
-                season.airDate?.formatted(date: .abbreviated, time: .omitted),
-                season.episodes.map { Self.episodeCountText($0.count) },
-                parentSeries.status,
-            ].compactMap(\.self)
-            overviewText =
-                season.overview?.nilIfEmpty
-                ?? entry.displayOverview
-                ?? String(localized: L10n.noOverviewAvailable)
-            genreNames = Self.localizedGenreNames(parentSeries.genres, language: language)
-            statCards = [
-                parentSeries.voteAverage.map {
+        case .season:
+            [
+                detail.voteAverage.map {
                     StatCard(id: "rating", title: L10n.tmdbScore, value: String(format: "%.1f", $0), symbolName: "star.fill")
                 },
-                season.episodes.map {
-                    StatCard(id: "episodes", title: L10n.episodes, value: "\($0.count)", symbolName: "play.rectangle.fill")
+                detail.episodeCount.map {
+                    StatCard(id: "episodes", title: L10n.episodes, value: "\($0)", symbolName: "play.rectangle.fill")
                 },
-                parentSeries.episodeRunTime?.first.map {
+                detail.runtimeMinutes.map {
                     StatCard(id: "runtime", title: L10n.averageRuntime, value: Self.minutesText($0), symbolName: "clock.fill")
                 },
             ]
             .compactMap(\.self)
-            heroImageURL = try await parentSeries.backdropURL(client: client, idealWidth: 1_280) ?? entry.posterURL
-            logoImageURL = try await parentSeries.logoURL(client: client, idealWidth: 500)
-            primaryLinkURL = parentSeries.homepageURL ?? entry.linkToDetails
-            episodeCards = try await makeEpisodeCards(from: Array((season.episodes ?? []).prefix(8)), client: client)
-
-            let credits = try await client.tvSeasons.aggregateCredits(
-                forSeason: season.seasonNumber,
-                inTVSeries: parentSeries.id,
-                language: language.rawValue
-            )
-            characterCards = try await makeCharacterCards(
-                from: credits.cast.prefix(12),
-                client: client,
-                language: language
-            )
         }
-    }
 
-    private func makeCharacterCards<S: Sequence>(
-        from cast: S,
-        client: TMDbClient,
-        language: Language
-    ) async throws -> [CharacterCard] where S.Element == CastMember {
-        let imagesConfiguration = try await client.imagesConfiguration
-        return cast.map {
+        characterCards = detail.characters.map {
             CharacterCard(
                 id: $0.id,
-                characterName: $0.character.strippingVoiceQualifier.nilIfEmpty ?? String(localized: L10n.character),
-                actorName: Self.preferredActorName(
-                    localizedName: $0.name,
-                    originalName: nil,
-                    language: language
-                ),
-                profileURL: imagesConfiguration.profileURL(for: $0.profilePath, idealWidth: 185)
+                characterName: $0.characterName,
+                actorName: $0.actorName,
+                profileURL: $0.profileURL
             )
         }
-    }
-
-    private func makeCharacterCards<S: Sequence>(
-        from cast: S,
-        client: TMDbClient,
-        language: Language
-    ) async throws -> [CharacterCard] where S.Element == AggregrateCastMember {
-        let imagesConfiguration = try await client.imagesConfiguration
-        return cast.map {
-            let primaryRole = $0.roles.max { lhs, rhs in
-                lhs.episodeCount < rhs.episodeCount
-            }?.character
-                .strippingVoiceQualifier
-                .nilIfEmpty
-            return CharacterCard(
+        seasonCards = detail.seasons.map {
+            SeasonCard(
                 id: $0.id,
-                characterName: primaryRole ?? String(localized: L10n.character),
-                actorName: Self.preferredActorName(
-                    localizedName: $0.name,
-                    originalName: $0.originalName,
-                    language: language
-                ),
-                profileURL: imagesConfiguration.profileURL(for: $0.profilePath, idealWidth: 185)
+                seasonNumber: $0.seasonNumber,
+                title: $0.title,
+                subtitle: Self.seasonLabelText($0.seasonNumber),
+                posterURL: $0.posterURL
             )
         }
-    }
-
-    private func makeSeasonCards(from seasons: [TVSeason], client: TMDbClient) async throws -> [SeasonCard] {
-        let imagesConfiguration = try await client.imagesConfiguration
-        return seasons
-            .filter { $0.seasonNumber > 0 }
-            .sorted { $0.seasonNumber < $1.seasonNumber }
-            .map {
-                SeasonCard(
-                    id: $0.id,
-                    title: $0.name,
-                    subtitle: Self.seasonLabelText($0.seasonNumber),
-                    posterURL: imagesConfiguration.posterURL(for: $0.posterPath, idealWidth: 300)
-                )
-            }
-    }
-
-    private func makeEpisodeCards(from episodes: [TVEpisode], client: TMDbClient) async throws -> [EpisodeCard] {
-        let imagesConfiguration = try await client.imagesConfiguration
-        return episodes.map {
+        episodeCards = detail.episodes.map {
             EpisodeCard(
                 id: $0.id,
-                title: "\($0.episodeNumber). \($0.name)",
+                episodeNumber: $0.episodeNumber,
+                title: "\($0.episodeNumber). \($0.title)",
                 subtitle: $0.airDate?.formatted(date: .abbreviated, time: .omitted) ?? String(localized: L10n.episode),
-                imageURL: imagesConfiguration.stillURL(for: $0.stillPath, idealWidth: 500)
+                imageURL: $0.imageURL
             )
         }
-    }
-
-    private static func compactCount(_ count: Int) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        return formatter.string(from: NSNumber(value: count)) ?? "\(count)"
     }
 
     private static func seasonCountText(_ count: Int) -> String {
@@ -642,36 +554,23 @@ private final class EntryDetailModel: ObservableObject {
         String(localized: "\(minutes) min")
     }
 
-    private static func preferredActorName(localizedName: String, originalName: String?, language: Language)
-        -> String
-    {
-        guard language == .japanese,
-            let originalName,
-            originalName != localizedName,
-            originalName.containsJapaneseScript
-        else {
-            return localizedName
-        }
-        return originalName
-    }
-
-    private static func localizedGenreNames(_ genres: [Genre]?, language: Language) -> [String] {
-        (genres ?? []).map { genre in
-            localizedGenreName(for: genre, language: language)
+    private static func localizedGenreNames(_ genreIDs: [Int], language: Language) -> [String] {
+        genreIDs.compactMap { genreID in
+            localizedGenreName(for: genreID, language: language)
         }
     }
 
-    private static func localizedGenreName(for genre: Genre, language: Language) -> String {
+    private static func localizedGenreName(for genreID: Int, language: Language) -> String? {
         let localized = switch language {
         case .english:
-            englishGenreNames[genre.id]
+            englishGenreNames[genreID]
         case .japanese:
-            japaneseGenreNames[genre.id]
+            japaneseGenreNames[genreID]
         case .chinese:
-            chineseGenreNames[genre.id]
+            chineseGenreNames[genreID]
         }
 
-        return localized ?? genre.name
+        return localized
     }
 
     private static let englishGenreNames: [Int: String] = [
@@ -779,7 +678,7 @@ private struct DetailStatCard: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, minHeight: 114, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: 80, alignment: .topLeading)
         .padding(16)
         .glassPanel(cornerRadius: 24)
     }
@@ -864,12 +763,18 @@ private struct SeasonCardView: View {
 
 private struct EpisodeRowView: View {
     let card: EntryDetailModel.EpisodeCard
+    let previewContext: EpisodePreviewContext?
+
+    init(card: EntryDetailModel.EpisodeCard, previewContext: EpisodePreviewContext? = nil) {
+        self.card = card
+        self.previewContext = previewContext
+    }
 
     var body: some View {
         HStack(spacing: 14) {
             Group {
                 if let imageURL = card.imageURL {
-                    KFImageView(url: imageURL, targetWidth: 500, diskCacheExpiration: .longTerm)
+                    KFImageView(url: imageURL, targetWidth: 500, diskCacheExpiration: .transient)
                         .scaledToFill()
                         .frame(width: 126, height: 74)
                         .clipped()
@@ -898,6 +803,205 @@ private struct EpisodeRowView: View {
         }
         .padding(12)
         .glassPanel(cornerRadius: 22)
+        .modifier(EpisodeContextPreview(card: card, context: previewContext))
+    }
+}
+
+private struct SeriesSeasonEpisodeGroupView: View {
+    let season: EntryDetailModel.SeasonCard
+    let seriesTMDbID: Int
+    let language: Language
+
+    @State private var episodes: [EntryDetailModel.EpisodeCard] = []
+    @State private var isLoading = false
+    @State private var loadFailed = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(season.title)
+                    .font(.headline.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                if season.title != season.subtitle {
+                    Text(season.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if episodes.isEmpty, isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 8)
+            } else if episodes.isEmpty, loadFailed {
+                ContentUnavailableView(
+                    String(localized: L10n.couldNotLoadDetails),
+                    systemImage: "wifi.exclamationmark"
+                )
+                .frame(maxWidth: .infinity)
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(episodes) { episode in
+                        EpisodeRowView(
+                            card: episode,
+                            previewContext: .init(
+                                seriesTMDbID: seriesTMDbID,
+                                seasonNumber: season.seasonNumber,
+                                language: language,
+                                posterURL: nil
+                            )
+                        )
+                    }
+                }
+            }
+        }
+        .task(id: "\(seriesTMDbID)-\(season.id)-\(language.rawValue)") {
+            await loadEpisodesIfNeeded()
+        }
+    }
+
+    private func loadEpisodesIfNeeded() async {
+        guard episodes.isEmpty, !isLoading else { return }
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            episodes = try await InfoFetcher()
+                .seasonEpisodeSummaries(
+                    parentSeriesID: seriesTMDbID,
+                    seasonNumber: season.seasonNumber,
+                    language: language
+                )
+                .map {
+                    EntryDetailModel.EpisodeCard(
+                        id: $0.id,
+                        episodeNumber: $0.episodeNumber,
+                        title: "\($0.episodeNumber). \($0.title)",
+                        subtitle: $0.airDate?.formatted(date: .abbreviated, time: .omitted)
+                            ?? String(localized: L10n.episode),
+                        imageURL: $0.imageURL
+                    )
+                }
+            loadFailed = false
+        } catch {
+            loadFailed = true
+        }
+    }
+}
+
+private struct EpisodePreviewContext {
+    let seriesTMDbID: Int
+    let seasonNumber: Int
+    let language: Language
+    let posterURL: URL?
+}
+
+private struct EpisodeContextPreview: ViewModifier {
+    let card: EntryDetailModel.EpisodeCard
+    let context: EpisodePreviewContext?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let context {
+            content.contextMenu {
+
+            } preview: {
+                EpisodePreviewCard(
+                    card: card,
+                    context: context
+                )
+            }
+        } else {
+            content
+        }
+    }
+}
+
+@MainActor
+private final class EpisodePreviewModel: ObservableObject {
+    @Published private(set) var overviewText = String(localized: L10n.loading)
+    @Published private(set) var isLoading = false
+
+    private var lastRequestKey: String?
+
+    func load(card: EntryDetailModel.EpisodeCard, context: EpisodePreviewContext) async {
+        let requestKey = "\(context.seriesTMDbID)-\(context.seasonNumber)-\(card.episodeNumber)-\(context.language.rawValue)"
+        guard lastRequestKey != requestKey else { return }
+        lastRequestKey = requestKey
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let detail = try await InfoFetcher().episodePreviewInfo(
+                parentSeriesID: context.seriesTMDbID,
+                seasonNumber: context.seasonNumber,
+                episodeNumber: card.episodeNumber,
+                language: context.language
+            )
+            overviewText = detail.overview?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+                ? detail.overview!
+                : String(localized: L10n.noOverviewAvailable)
+        } catch {
+            overviewText = String(localized: L10n.noOverviewAvailable)
+        }
+    }
+}
+
+private struct EpisodePreviewCard: View {
+    let card: EntryDetailModel.EpisodeCard
+    let context: EpisodePreviewContext
+
+    @StateObject private var previewModel = EpisodePreviewModel()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 14) {
+                Group {
+                    if let posterURL = context.posterURL {
+                        KFImageView(url: posterURL, targetWidth: 320, diskCacheExpiration: .shortTerm)
+                            .scaledToFill()
+                            .frame(width: 96, height: 136)
+                            .clipped()
+                    } else {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(Color.secondary.opacity(0.15))
+                            .overlay {
+                                Image(systemName: "film")
+                                    .foregroundStyle(.secondary)
+                            }
+                    }
+                }
+                .frame(width: 96, height: 136)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(card.title)
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(3)
+
+                    Text(card.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            Text(previewModel.overviewText)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .lineSpacing(3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(width: 320, alignment: .leading)
+        .padding(18)
+        .glassPanel(cornerRadius: 28, tint: .white.opacity(0.08))
+        .task(id: "\(context.seriesTMDbID)-\(context.seasonNumber)-\(card.episodeNumber)-\(context.language.rawValue)") {
+            await previewModel.load(card: card, context: context)
+        }
     }
 }
 
@@ -916,51 +1020,6 @@ private extension View {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .stroke(.white.opacity(0.22), lineWidth: 1)
             }
-    }
-}
-
-private extension String {
-    var nilIfEmpty: String? {
-        trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : self
-    }
-
-    var strippingVoiceQualifier: String {
-        let voiceMarkerPattern = #"(?i:voice|voiced\s+by|cv|c\.?\s*v\.?)|声優|声の出演|声|吹替え|吹替|吹き替え|ボイス"#
-        let patterns = [
-            #"\s*[\(\（][^)\）]*(?:__VOICE_MARKERS__)[^)\）]*[\)\）]\s*$"#,
-            #"\s*[\[\［][^\]\］]*(?:__VOICE_MARKERS__)[^\]\］]*[\]\］]\s*$"#,
-        ].map {
-            $0.replacingOccurrences(of: "__VOICE_MARKERS__", with: voiceMarkerPattern)
-        }
-
-        var value = self
-
-        while true {
-            let stripped = patterns.reduce(value) { partialResult, pattern in
-                partialResult.replacingOccurrences(
-                    of: pattern,
-                    with: "",
-                    options: .regularExpression
-                )
-            }
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-            guard stripped != value else {
-                return stripped
-            }
-            value = stripped
-        }
-    }
-
-    var containsJapaneseScript: Bool {
-        unicodeScalars.contains {
-            switch $0.value {
-            case 0x3040...0x309F, 0x30A0...0x30FF, 0x4E00...0x9FFF:
-                return true
-            default:
-                return false
-            }
-        }
     }
 }
 
@@ -994,6 +1053,7 @@ private struct EntryDetailPreviewHost: View {
 }
 
 private enum L10n {
+    static let loading: LocalizedStringResource = "Loading..."
     static let done: LocalizedStringResource = "Done"
     static let showDetail: LocalizedStringResource = "Show Detail"
     static let overview: LocalizedStringResource = "Overview"
