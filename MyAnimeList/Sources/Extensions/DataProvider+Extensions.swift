@@ -20,8 +20,7 @@ extension DataProvider {
                     name: "CLANNAD Season 1",
                     type: .season(seasonNumber: 1, parentSeriesID: 24835),
                     tmdbID: 35033))
-            try dataHandler.newEntry(
-                AnimeEntry(name: "Koe no katachi", type: .movie, tmdbID: 378064))
+            try dataHandler.newEntry(AnimeEntry.yourName)
         } catch {
             print("Error generating preview entries: \(error)")
         }

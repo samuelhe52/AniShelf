@@ -54,6 +54,7 @@ fileprivate struct AnimeEntryCardWrapper: View {
     var entry: AnimeEntry
     let delete: (AnimeEntry) -> Void
 
+    @Environment(LibraryEntryInteractionState.self) private var interaction
     @State private var triggerDeleteHaptic: Bool = false
     @State private var showDeleteToast: Bool = false
     @State private var isEditing: Bool = false
@@ -75,7 +76,7 @@ fileprivate struct AnimeEntryCardWrapper: View {
             showDeleteToast = false
         }
         .onTapGesture(count: 2) {
-            isEditing = true
+            interaction.detailingEntry = entry
         }
         .toast(
             isPresenting: $showDeleteToast, duration: 3,

@@ -51,10 +51,7 @@ extension Movie {
     /// - Throws: An error if the request fails.
     func backdropURL(client: TMDb.TMDbClient, idealWidth: Int = .max) async throws -> URL? {
         let imageResources = try await client.movies.images(forMovie: id)
-        let backdropPath = imageResources.backdrops
-            .filter { $0.languageCode == Language.japanese.rawValue }
-            .first?
-            .filePath
+        let backdropPath = imageResources.backdrops.first?.filePath
         let url = try await client.imagesConfiguration.backdropURL(
             for: backdropPath, idealWidth: idealWidth)
         return url
@@ -181,10 +178,7 @@ extension TVSeries {
     /// - Throws: An error if the request fails.
     func backdropURL(client: TMDbClient, idealWidth: Int = .max) async throws -> URL? {
         let imageResources = try await client.tvSeries.images(forTVSeries: id)
-        let backdropPath = imageResources.backdrops
-            .filter { $0.languageCode == Language.japanese.rawValue }
-            .first?
-            .filePath
+        let backdropPath = imageResources.backdrops.first?.filePath
         return try await client.imagesConfiguration.backdropURL(
             for: backdropPath, idealWidth: idealWidth)
     }

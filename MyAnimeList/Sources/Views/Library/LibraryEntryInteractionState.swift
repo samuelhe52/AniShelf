@@ -13,6 +13,7 @@ import UIKit
 @Observable
 @MainActor
 final class LibraryEntryInteractionState {
+    var detailingEntry: AnimeEntry?
     var deletingEntry: AnimeEntry?
     var isDeletingEntry: Bool = false
     var editingEntry: AnimeEntry?
@@ -152,6 +153,16 @@ extension View {
                 Button("Cancel", role: .cancel) {}
             } message: { _ in
                 Text("This anime already has edits. Pasting will overwrite current info.")
+            }
+            .sheet(
+                item: Binding(
+                    get: { state.detailingEntry },
+                    set: { state.detailingEntry = $0 }
+                )
+            ) { entry in
+                NavigationStack {
+                    EntryDetailView(entry: entry)
+                }
             }
             .sheet(
                 item: Binding(

@@ -64,6 +64,31 @@ extension AnimeEntry {
             dateFinished: nil,
         )
     }
+
+    public static var yourName: AnimeEntry {
+        AnimeEntry(
+            name: "君の名は。",
+            nameTranslations: [
+                "ja-JP": "君の名は。",
+                "en-US": "Your Name.",
+                "zh-CN": "你的名字。",
+            ],
+            overview:
+                "山深い田舎町で暮らす女子高生の三葉と、東京で暮らす男子高校生の瀧。出会うはずのない二人は、ある日突然入れ替わる不思議な現象をきっかけに、お互いの人生へ深く関わっていく。",
+            onAirDate: previewDate(year: 2016, month: 8, day: 26),
+            type: .movie,
+            linkToDetails: URL(string: "https://kiminonawa-movie.jp/"),
+            tmdbID: 372058,
+            dateSaved: .now,
+            dateStarted: nil,
+            dateFinished: nil,
+        )
+    }
+
+    private static func previewDate(year: Int, month: Int, day: Int) -> Date? {
+        Calendar(identifier: .gregorian).date(
+            from: DateComponents(year: year, month: month, day: day))
+    }
 }
 
 extension Collection where Element == AnimeEntry {

@@ -42,7 +42,7 @@ struct LibraryGridView: View {
                             }
                             .onTapGesture { scrolledID = entry.tmdbID }
                             .onTapGesture(count: 2) {
-                                interaction.setEditingEntry(entry)
+                                interaction.detailingEntry = entry
                                 scrolledID = entry.tmdbID
                             }
                     }

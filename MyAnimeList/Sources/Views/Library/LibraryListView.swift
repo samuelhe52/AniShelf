@@ -55,7 +55,7 @@ struct LibraryListView: View {
                         }
                         .tint(.blue)
                     }
-                    .onTapGesture(count: 2) { interaction.setEditingEntry(entry) }
+                    .onTapGesture(count: 2) { interaction.detailingEntry = entry }
             }
             .animation(.default, value: store.sortReversed)
             .animation(.default, value: store.sortStrategy)

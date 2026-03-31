@@ -97,10 +97,16 @@ extension TMDbClient {
     func backdrops(from collection: ImageCollection, idealWidth: Int = .max) async
         -> [ImageURLWithMetadata]
     {
-        await urlsFromImageMetadata(
-            resources: collection.backdrops,
-            imageType: .backdrop,
-            idealWidth: .max)
+        var results: [ImageURLWithMetadata] = []
+        for resource in collection.backdrops {
+            if let url = try? await imagesConfiguration.backdropURL(
+                for: resource.filePath,
+                idealWidth: idealWidth)
+            {
+                results.append(.init(metadata: resource, url: url))
+            }
+        }
+        return results
     }
 
     /// Fetches logo image URLs from an image collection.
