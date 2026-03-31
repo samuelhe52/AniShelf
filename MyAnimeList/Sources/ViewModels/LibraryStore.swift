@@ -350,7 +350,13 @@ class LibraryStore {
     }
 
     func prefetchAllImages() {
-        let urls = library.compactMap { $0.posterURL }
+        let urls = Array(
+            Set(
+                library.flatMap { entry in
+                    [entry.posterURL, entry.detail?.heroImageURL, entry.detail?.logoImageURL].compactMap(\.self)
+                }
+            )
+        )
         ToastCenter.global.progressState =
             .progress(
                 current: 0,
