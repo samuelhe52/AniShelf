@@ -37,6 +37,23 @@ struct MyAnimeListTests {
         #expect(!jaPosters.isEmpty, "Expected at least one Japanese poster")
     }
 
+    @Test func testBackdropPrefersNoLanguageForSeries() async throws {
+        let seriesID = 209867  // Sousou no Frieren
+        let series = try await fetcher.tmdbClient.tvSeries
+            .details(forTVSeries: seriesID, language: language.rawValue)
+        let images = try await fetcher.tmdbClient.tvSeries.images(forTVSeries: seriesID)
+        let expectedPath = try #require(
+            images.backdrops.first(where: { $0.languageCode == nil })?.filePath,
+            "Expected at least one no-language backdrop"
+        )
+        let expectedURL = try await fetcher.tmdbClient.imagesConfiguration.backdropURL(
+            for: expectedPath,
+            idealWidth: 1_280
+        )
+        let actualURL = try await series.backdropURL(client: fetcher.tmdbClient, idealWidth: 1_280)
+        #expect(actualURL == expectedURL)
+    }
+
     @Test @MainActor func testBackup() throws {
         let backupURL = try backupManager.createBackup()
         let fileManager = FileManager.default

@@ -18,6 +18,17 @@ fileprivate func firstJapanesePNGPath(from resources: [ImageMetadata]) -> URL? {
         .filePath
 }
 
+fileprivate func isNoLanguageResource(_ resource: ImageMetadata) -> Bool {
+    let languageCode = (resource.languageCode ?? "")
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+        .lowercased()
+    return languageCode.isEmpty || ["null", "xx", "und", "zxx"].contains(languageCode)
+}
+
+fileprivate func preferredBackdropPath(from resources: [ImageMetadata]) -> URL? {
+    resources.first(where: isNoLanguageResource)?.filePath ?? resources.first?.filePath
+}
+
 extension Movie {
     /// Returns the basic information for the movie.
     ///
@@ -58,7 +69,7 @@ extension Movie {
     /// - Throws: An error if the request fails.
     func backdropURL(client: TMDb.TMDbClient, idealWidth: Int = .max) async throws -> URL? {
         let imageResources = try await client.movies.images(forMovie: id)
-        let backdropPath = imageResources.backdrops.first?.filePath
+        let backdropPath = preferredBackdropPath(from: imageResources.backdrops)
         let url = try await client.imagesConfiguration.backdropURL(
             for: backdropPath, idealWidth: idealWidth)
         return url
@@ -182,7 +193,7 @@ extension TVSeries {
     /// - Throws: An error if the request fails.
     func backdropURL(client: TMDbClient, idealWidth: Int = .max) async throws -> URL? {
         let imageResources = try await client.tvSeries.images(forTVSeries: id)
-        let backdropPath = imageResources.backdrops.first?.filePath
+        let backdropPath = preferredBackdropPath(from: imageResources.backdrops)
         return try await client.imagesConfiguration.backdropURL(
             for: backdropPath, idealWidth: idealWidth)
     }
