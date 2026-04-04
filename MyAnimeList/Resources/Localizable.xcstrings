@@ -392,18 +392,18 @@
         }
       }
     },
-    "Check Disk Usage" : {
+    "Check Metadata Cache Size" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ディスク使用量を確認"
+            "value" : "キャッシュサイズ確認"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "存储占用"
+            "value" : "查看缓存大小"
           }
         }
       }
@@ -458,18 +458,18 @@
         }
       }
     },
-    "Clear" : {
+    "Clear Cache" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "クリア"
+            "value" : "キャッシュ削除"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "清空"
+            "value" : "清空缓存"
           }
         }
       }
@@ -775,22 +775,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "放弃所有修改？"
-          }
-        }
-      }
-    },
-    "Disk Usage" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ディスク使用量"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "存储占用"
           }
         }
       }
@@ -1355,6 +1339,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "记载中"
+          }
+        }
+      }
+    },
+    "Metadata Cache Size" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キャッシュサイズ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缓存大小"
           }
         }
       }

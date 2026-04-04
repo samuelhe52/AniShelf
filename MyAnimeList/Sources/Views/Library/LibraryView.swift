@@ -208,8 +208,8 @@ struct LibraryView: View {
             Divider()
             backupManagement
             Divider()
-            apiConfigruation
-            checkDiskUsageButton
+            apiConfiguration
+            checkCacheSizeButton
             refreshInfosButton
             Divider()
             deleteAllButton
@@ -251,11 +251,11 @@ struct LibraryView: View {
             Text("This may take considerable time.")
         }
         .alert(
-            "Disk Usage", isPresented: $showCacheAlert, presenting: cacheSizeResult,
+            "Metadata Cache Size", isPresented: $showCacheAlert, presenting: cacheSizeResult,
             actions: { result in
                 switch result {
                 case .success:
-                    Button("Clear") {
+                    Button("Clear Cache") {
                         KingfisherManager.shared.cache.clearCache()
                     }
                     Button("Cancel", role: .cancel) {}
@@ -343,8 +343,8 @@ struct LibraryView: View {
         }
     }
 
-    private var checkDiskUsageButton: some View {
-        Button("Check Disk Usage", systemImage: "archivebox") {
+    private var checkCacheSizeButton: some View {
+        Button("Check Metadata Cache Size", systemImage: "archivebox") {
             KingfisherManager.shared.cache.calculateDiskStorageSize { result in
                 DispatchQueue.main.async {
                     cacheSizeResult = result
@@ -354,7 +354,7 @@ struct LibraryView: View {
         }
     }
 
-    private var apiConfigruation: some View {
+    private var apiConfiguration: some View {
         Button("Change API Key", systemImage: "person.badge.key") { changeAPIKey = true }
     }
 
