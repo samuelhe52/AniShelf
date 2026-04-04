@@ -506,22 +506,6 @@
         }
       }
     },
-    "Convert" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "変換"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "转换"
-          }
-        }
-      }
-    },
     "Convert to which season?" : {
       "localizations" : {
         "ja" : {
@@ -775,6 +759,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "放弃所有修改？"
+          }
+        }
+      }
+    },
+    "Discard Changes" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "変更を破棄"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "放弃更改"
           }
         }
       }
@@ -1391,22 +1391,6 @@
         }
       }
     },
-    "Movies cannot be converted" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "映画は変換できません"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "电影无法转换"
-          }
-        }
-      }
-    },
     "Network Error!" : {
       "localizations" : {
         "ja" : {
@@ -1712,6 +1696,38 @@
         }
       }
     },
+    "Poster Source" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ポスターソース"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "海报来源"
+          }
+        }
+      }
+    },
+    "Posters" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ポスター"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "海报"
+          }
+        }
+      }
+    },
     "Prefetching images..." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1966,6 +1982,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "时长"
+          }
+        }
+      }
+    },
+    "Save" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存"
           }
         }
       }
@@ -2388,6 +2420,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "请输入 TMDb API 密钥"
+          }
+        }
+      }
+    },
+    "Tracking" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "視聴管理"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "追踪"
           }
         }
       }

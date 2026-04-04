@@ -6,22 +6,39 @@
 //
 
 import DataProvider
+import SwiftData
 import SwiftUI
 
 struct EntryDetailView: View {
     let entry: AnimeEntry
+    private let startInEditingMode: Bool
 
     @Environment(\.dataHandler) private var dataHandler
     @Environment(\.dismiss) private var dismiss
     @Environment(\.libraryStore) private var libraryStore
+    @Environment(\.modelContext) private var modelContext
 
     @StateObject private var model = EntryDetailModel()
-    @State private var showEditor = false
     @State private var showSharingSheet = false
+    @State private var showPosterSelectionView = false
+    @State private var showCancelEditsConfirmation = false
+    @State private var isEditingDetails: Bool
+    @State private var originalUserInfo: UserEntryInfo
+    @State private var conversionInProgress = false
+    @State private var showSeasonPicker = false
+    @State private var isFetchingSeasons = false
+    @State private var seasonNumberOptions: [Int] = []
 
     private var accentColor: Color { entry.favorite ? .orange : .blue }
     private var currentLanguage: Language { libraryStore?.language ?? .current }
     private let heroHeight: CGFloat = 420
+
+    init(entry: AnimeEntry, startInEditingMode: Bool = false) {
+        self.entry = entry
+        self.startInEditingMode = startInEditingMode
+        self._isEditingDetails = State(initialValue: startInEditingMode)
+        self._originalUserInfo = State(initialValue: entry.userInfo)
+    }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -44,13 +61,50 @@ struct EntryDetailView: View {
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar { toolbarContent }
         .presentationDragIndicator(.visible)
-        .sheet(isPresented: $showEditor) {
+        .interactiveDismissDisabled(entry.userInfoHasChanges(comparedTo: originalUserInfo))
+        .sheet(isPresented: $showPosterSelectionView) {
             NavigationStack {
-                AnimeEntryEditor(entry: entry)
+                PosterSelectionView(
+                    tmdbID: entry.tmdbID,
+                    type: entry.type
+                ) { url in
+                    if url != entry.posterURL {
+                        entry.usingCustomPoster = true
+                    }
+                    entry.posterURL = url
+                }
+                .navigationTitle("Change Poster")
             }
         }
         .sheet(isPresented: $showSharingSheet) {
             AnimeSharingSheet(entry: entry)
+        }
+        .confirmationDialog(
+            "Convert to which season?",
+            isPresented: $showSeasonPicker,
+            titleVisibility: .visible
+        ) {
+            if isFetchingSeasons {
+                ProgressView()
+            } else if seasonNumberOptions.isEmpty {
+                Button("No seasons available", role: .cancel) {}
+            } else {
+                ForEach(seasonNumberOptions, id: \.self) { seasonNumber in
+                    Button("Season \(seasonNumber)") {
+                        Task { await convertSeriesToSeason(seasonNumber: seasonNumber) }
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .confirmationDialog("Discard all changes?", isPresented: $showCancelEditsConfirmation) {
+            Button("Discard", role: .destructive) {
+                discardUserEdits()
+                if startInEditingMode {
+                    dismiss()
+                }
+            }
+            Button("Cancel", role: .cancel) {}
         }
         .task(id: "\(entry.tmdbID)-\(currentLanguage.rawValue)") {
             await model.load(for: entry, language: currentLanguage, dataHandler: dataHandler)
@@ -169,14 +223,15 @@ struct EntryDetailView: View {
         HStack(spacing: 10) {
             Spacer(minLength: 0)
 
-            circleActionButton("square.and.pencil") { showEditor = true }
-
-            circleActionButton(
-                entry.favorite ? "heart.fill" : "heart",
+            PopupActionCircleButton(
+                systemImage: entry.favorite ? "heart.fill" : "heart",
                 tint: entry.favorite ? .pink : .primary
             ) { toggleFavorite() }
 
-            circleActionButton("square.and.arrow.up", verticalOffset: -1) { showSharingSheet = true }
+            PopupActionCircleButton(
+                systemImage: "square.and.arrow.up",
+                verticalOffset: -1
+            ) { showSharingSheet = true }
 
             if let url = model.primaryLinkURL ?? entry.linkToDetails {
                 Link(destination: url) {
@@ -190,28 +245,38 @@ struct EntryDetailView: View {
                 .tint(.primary)
             }
 
+            if entry.type == .movie {
+                PopupActionCircleButton(systemImage: "photo.on.rectangle") {
+                    showPosterSelectionView = true
+                }
+            } else {
+                Menu {
+                    Button {
+                        showPosterSelectionView = true
+                    } label: {
+                        Label("Change Poster", systemImage: "photo.on.rectangle")
+                    }
+
+                    Button {
+                        Task { await handleConvertTap() }
+                    } label: {
+                        Label(convertMenuTitle, systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    .disabled(conversionInProgress)
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.title2)
+                        .frame(width: 20, height: 20)
+                        .padding(10)
+                }
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+                .tint(.primary)
+            }
+
             Spacer(minLength: 0)
         }
     }
-
-    private func circleActionButton(
-        _ icon: String,
-        tint: Color = .primary,
-        verticalOffset: CGFloat = 0,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.title2)
-                .frame(width: 20, height: 20)
-                .padding(10)
-                .offset(y: verticalOffset)
-        }
-        .buttonStyle(.glass)
-        .buttonBorderShape(.circle)
-        .tint(tint)
-    }
-
 
     // MARK: - Details Content
 
@@ -224,6 +289,8 @@ struct EntryDetailView: View {
                 }
             }
         }
+
+        editingSection
 
         sectionCard(L10n.overview) {
             Text(model.overviewText)
@@ -289,6 +356,38 @@ struct EntryDetailView: View {
         }
     }
 
+    @ViewBuilder
+    private var editingSection: some View {
+        PopupDisclosureCard("Tracking", systemImage: "square.and.pencil", isExpanded: $isEditingDetails) {
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Watch Status")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    AnimeEntryWatchedStatusPicker(for: entry)
+                        .pickerStyle(.segmented)
+                    AnimeEntryDatePickers(entry: entry)
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Notes")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    PlaceholderTextEditor(
+                        text: Binding(
+                            get: { entry.notes },
+                            set: { entry.notes = $0 }
+                        ),
+                        placeholder: "Write some thoughts..."
+                    )
+                    .frame(height: 200)
+                    .padding(12)
+                    .background(.black.opacity(0.08), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                }
+            }
+        }
+    }
+
     private var statColumns: [GridItem] {
         Array(
             repeating: GridItem(.flexible(), spacing: 12, alignment: .top),
@@ -301,14 +400,9 @@ struct EntryDetailView: View {
         _ title: LocalizedStringResource,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(String(localized: title))
-                .font(.title3.weight(.bold))
+        PopupSectionCard(title) {
             content()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .glassPanel(cornerRadius: 24)
     }
 
     @ViewBuilder
@@ -331,11 +425,7 @@ struct EntryDetailView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
-            Button(String(localized: L10n.done)) {
-                dismiss()
-            }
-            .font(.headline.weight(.semibold))
-            .foregroundStyle(.primary)
+            doneToolbarControl
         }
     }
 
@@ -344,10 +434,135 @@ struct EntryDetailView: View {
     private func toggleFavorite() {
         dataHandler?.toggleFavorite(entry: entry)
     }
+
+    @ViewBuilder
+    private var doneToolbarControl: some View {
+        if entry.userInfoHasChanges(comparedTo: originalUserInfo) {
+            Menu {
+                Button("Save") {
+                    saveUserEdits()
+                    dismiss()
+                }
+                Button("Discard Changes", role: .destructive) {
+                    discardUserEdits()
+                    dismiss()
+                }
+            } label: {
+                Text(String(localized: L10n.done))
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.primary)
+            }
+        } else {
+            Button(String(localized: L10n.done)) {
+                dismiss()
+            }
+            .font(.headline.weight(.semibold))
+            .foregroundStyle(.primary)
+        }
+    }
+
+    private var convertMenuTitle: String {
+        switch entry.type {
+        case .series:
+            "Convert to Season"
+        case .season:
+            "Convert to Series"
+        case .movie:
+            preconditionFailure("Movies do not expose conversion actions.")
+        }
+    }
+
+    private func saveUserEdits() {
+        do {
+            try modelContext.save()
+            originalUserInfo = entry.userInfo
+        } catch {
+            ToastCenter.global.completionState = .failed(message: error.localizedDescription)
+        }
+    }
+
+    private func discardUserEdits() {
+        entry.updateUserInfo(from: originalUserInfo)
+        do {
+            try modelContext.save()
+        } catch {
+            ToastCenter.global.completionState = .failed(message: error.localizedDescription)
+        }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+            isEditingDetails = startInEditingMode
+        }
+    }
+
+    private func handleConvertTap() async {
+        guard !conversionInProgress else { return }
+        switch entry.type {
+        case .series:
+            await presentSeasonPicker()
+        case .season:
+            await convertSeasonToSeries()
+        case .movie:
+            return
+        }
+    }
+
+    private func presentSeasonPicker() async {
+        isFetchingSeasons = true
+        conversionInProgress = true
+        do {
+            let infoFetcher = InfoFetcher()
+            let series = try await infoFetcher.tvSeries(
+                entry.tmdbID,
+                language: currentLanguage
+            )
+            seasonNumberOptions = series.seasons?.map(\.seasonNumber).sorted() ?? []
+            showSeasonPicker = true
+        } catch {
+            ToastCenter.global.completionState = .failed(message: error.localizedDescription)
+        }
+        isFetchingSeasons = false
+        conversionInProgress = false
+    }
+
+    private func convertSeasonToSeries() async {
+        guard let store = libraryStore else {
+            ToastCenter.global.completionState = .failed("Library is unavailable")
+            return
+        }
+        guard case .season(_, _) = entry.type else { return }
+        conversionInProgress = true
+        do {
+            try await store.convertSeasonToSeries(entry, language: currentLanguage)
+            ToastCenter.global.completionState = .completed("Converted to series")
+            dismiss()
+        } catch {
+            ToastCenter.global.completionState = .failed(message: error.localizedDescription)
+        }
+        conversionInProgress = false
+    }
+
+    private func convertSeriesToSeason(seasonNumber: Int) async {
+        guard let store = libraryStore else {
+            ToastCenter.global.completionState = .failed("Library is unavailable")
+            return
+        }
+        conversionInProgress = true
+        do {
+            try await store.convertSeriesToSeason(
+                entry,
+                seasonNumber: seasonNumber,
+                language: currentLanguage
+            )
+            ToastCenter.global.completionState = .completed("Converted to season")
+            dismiss()
+        } catch {
+            ToastCenter.global.completionState = .failed(message: error.localizedDescription)
+        }
+        conversionInProgress = false
+    }
 }
 
 @MainActor
-private final class EntryDetailModel: ObservableObject {
+fileprivate final class EntryDetailModel: ObservableObject {
     struct StatCard: Identifiable {
         let id: String
         let title: LocalizedStringResource
@@ -449,65 +664,80 @@ private final class EntryDetailModel: ObservableObject {
         primaryLinkURL = detail.primaryLinkURL ?? entry.linkToDetails
         characterSectionTitle = L10n.characters
 
-        metadataLineItems = switch entry.type {
-        case .movie:
-            [
-                detail.airDate?.formatted(date: .abbreviated, time: .omitted),
-                detail.runtimeMinutes.map(Self.minutesText),
-                detail.status,
-            ].compactMap(\.self)
-        case .series:
-            [
-                detail.airDate?.formatted(date: .abbreviated, time: .omitted),
-                detail.status,
-                detail.seasonCount.map(Self.seasonCountText),
-            ].compactMap(\.self)
-        case .season:
-            [
-                detail.airDate?.formatted(date: .abbreviated, time: .omitted),
-                detail.episodeCount.map(Self.episodeCountText),
-                detail.status,
-            ].compactMap(\.self)
-        }
+        metadataLineItems =
+            switch entry.type {
+            case .movie:
+                [
+                    detail.airDate?.formatted(date: .abbreviated, time: .omitted),
+                    detail.runtimeMinutes.map(Self.minutesText),
+                    detail.status
+                ].compactMap(\.self)
+            case .series:
+                [
+                    detail.airDate?.formatted(date: .abbreviated, time: .omitted),
+                    detail.status,
+                    detail.seasonCount.map(Self.seasonCountText)
+                ].compactMap(\.self)
+            case .season:
+                [
+                    detail.airDate?.formatted(date: .abbreviated, time: .omitted),
+                    detail.episodeCount.map(Self.episodeCountText),
+                    detail.status
+                ].compactMap(\.self)
+            }
 
-        statCards = switch entry.type {
-        case .movie:
-            [
-                detail.voteAverage.map {
-                    StatCard(id: "rating", title: L10n.tmdbScore, value: String(format: "%.1f", $0), symbolName: "star.fill")
-                },
-                detail.runtimeMinutes.map {
-                    StatCard(id: "runtime", title: L10n.runtime, value: Self.minutesText($0), symbolName: "clock.fill")
-                },
-            ]
-            .compactMap(\.self)
-        case .series:
-            [
-                detail.voteAverage.map {
-                    StatCard(id: "rating", title: L10n.tmdbScore, value: String(format: "%.1f", $0), symbolName: "star.fill")
-                },
-                detail.episodeCount.map {
-                    StatCard(id: "episodes", title: L10n.episodes, value: "\($0)", symbolName: "play.rectangle.fill")
-                },
-                detail.runtimeMinutes.map {
-                    StatCard(id: "runtime", title: L10n.averageRuntime, value: Self.minutesText($0), symbolName: "clock.fill")
-                },
-            ]
-            .compactMap(\.self)
-        case .season:
-            [
-                detail.voteAverage.map {
-                    StatCard(id: "rating", title: L10n.tmdbScore, value: String(format: "%.1f", $0), symbolName: "star.fill")
-                },
-                detail.episodeCount.map {
-                    StatCard(id: "episodes", title: L10n.episodes, value: "\($0)", symbolName: "play.rectangle.fill")
-                },
-                detail.runtimeMinutes.map {
-                    StatCard(id: "runtime", title: L10n.averageRuntime, value: Self.minutesText($0), symbolName: "clock.fill")
-                },
-            ]
-            .compactMap(\.self)
-        }
+        statCards =
+            switch entry.type {
+            case .movie:
+                [
+                    detail.voteAverage.map {
+                        StatCard(
+                            id: "rating", title: L10n.tmdbScore, value: String(format: "%.1f", $0),
+                            symbolName: "star.fill")
+                    },
+                    detail.runtimeMinutes.map {
+                        StatCard(
+                            id: "runtime", title: L10n.runtime, value: Self.minutesText($0), symbolName: "clock.fill")
+                    }
+                ]
+                .compactMap(\.self)
+            case .series:
+                [
+                    detail.voteAverage.map {
+                        StatCard(
+                            id: "rating", title: L10n.tmdbScore, value: String(format: "%.1f", $0),
+                            symbolName: "star.fill")
+                    },
+                    detail.episodeCount.map {
+                        StatCard(
+                            id: "episodes", title: L10n.episodes, value: "\($0)", symbolName: "play.rectangle.fill")
+                    },
+                    detail.runtimeMinutes.map {
+                        StatCard(
+                            id: "runtime", title: L10n.averageRuntime, value: Self.minutesText($0),
+                            symbolName: "clock.fill")
+                    }
+                ]
+                .compactMap(\.self)
+            case .season:
+                [
+                    detail.voteAverage.map {
+                        StatCard(
+                            id: "rating", title: L10n.tmdbScore, value: String(format: "%.1f", $0),
+                            symbolName: "star.fill")
+                    },
+                    detail.episodeCount.map {
+                        StatCard(
+                            id: "episodes", title: L10n.episodes, value: "\($0)", symbolName: "play.rectangle.fill")
+                    },
+                    detail.runtimeMinutes.map {
+                        StatCard(
+                            id: "runtime", title: L10n.averageRuntime, value: Self.minutesText($0),
+                            symbolName: "clock.fill")
+                    }
+                ]
+                .compactMap(\.self)
+            }
 
         characterCards = detail.characters.map {
             CharacterCard(
@@ -562,14 +792,15 @@ private final class EntryDetailModel: ObservableObject {
     }
 
     private static func localizedGenreName(for genreID: Int, language: Language) -> String? {
-        let localized = switch language {
-        case .english:
-            englishGenreNames[genreID]
-        case .japanese:
-            japaneseGenreNames[genreID]
-        case .chinese:
-            chineseGenreNames[genreID]
-        }
+        let localized =
+            switch language {
+            case .english:
+                englishGenreNames[genreID]
+            case .japanese:
+                japaneseGenreNames[genreID]
+            case .chinese:
+                chineseGenreNames[genreID]
+            }
 
         return localized
     }
@@ -601,7 +832,7 @@ private final class EntryDetailModel: ObservableObject {
         10766: "Soap",
         10767: "Talk",
         10768: "War & Politics",
-        10770: "TV Movie",
+        10770: "TV Movie"
     ]
 
     private static let japaneseGenreNames: [Int: String] = [
@@ -631,7 +862,7 @@ private final class EntryDetailModel: ObservableObject {
         10766: "ソープ",
         10767: "トーク",
         10768: "戦争・政治",
-        10770: "テレビ映画",
+        10770: "テレビ映画"
     ]
 
     private static let chineseGenreNames: [Int: String] = [
@@ -661,11 +892,11 @@ private final class EntryDetailModel: ObservableObject {
         10766: "肥皂剧",
         10767: "脱口秀",
         10768: "战争政治",
-        10770: "电视电影",
+        10770: "电视电影"
     ]
 }
 
-private struct DetailStatCard: View {
+fileprivate struct DetailStatCard: View {
     let card: EntryDetailModel.StatCard
 
     var body: some View {
@@ -681,11 +912,11 @@ private struct DetailStatCard: View {
         }
         .frame(maxWidth: .infinity, minHeight: 80, alignment: .topLeading)
         .padding(16)
-        .glassPanel(cornerRadius: 24)
+        .popupGlassPanel(cornerRadius: 24)
     }
 }
 
-private struct CharacterCardView: View {
+fileprivate struct CharacterCardView: View {
     let card: EntryDetailModel.CharacterCard
 
     var body: some View {
@@ -720,11 +951,11 @@ private struct CharacterCardView: View {
         }
         .frame(width: 138, alignment: .leading)
         .padding(12)
-        .glassPanel(cornerRadius: 24)
+        .popupGlassPanel(cornerRadius: 24)
     }
 }
 
-private struct SeasonCardView: View {
+fileprivate struct SeasonCardView: View {
     let card: EntryDetailModel.SeasonCard
     let accentColor: Color
 
@@ -758,11 +989,11 @@ private struct SeasonCardView: View {
         }
         .frame(width: 198, alignment: .leading)
         .padding(12)
-        .glassPanel(cornerRadius: 24)
+        .popupGlassPanel(cornerRadius: 24)
     }
 }
 
-private struct EpisodeRowView: View {
+fileprivate struct EpisodeRowView: View {
     let card: EntryDetailModel.EpisodeCard
     let previewContext: EpisodePreviewContext?
     @State private var showPreview = false
@@ -790,7 +1021,7 @@ private struct EpisodeRowView: View {
                         }
                 }
             }
-            
+
             .frame(width: 126, height: 74)
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
@@ -806,7 +1037,7 @@ private struct EpisodeRowView: View {
             Spacer(minLength: 0)
         }
         .padding(12)
-        .glassPanel(cornerRadius: 22)
+        .popupGlassPanel(cornerRadius: 22)
         .onLongPressGesture {
             guard previewContext != nil else { return }
             previewHapticTrigger.toggle()
@@ -825,7 +1056,7 @@ private struct EpisodeRowView: View {
     }
 }
 
-private struct SeriesSeasonEpisodeGroupView: View {
+fileprivate struct SeriesSeasonEpisodeGroupView: View {
     let season: EntryDetailModel.SeasonCard
     let seriesTMDbID: Int
     let language: Language
@@ -920,14 +1151,14 @@ private struct SeriesSeasonEpisodeGroupView: View {
     }
 }
 
-private struct EpisodePreviewContext {
+fileprivate struct EpisodePreviewContext {
     let seriesTMDbID: Int
     let seasonNumber: Int
     let language: Language
 }
 
 @MainActor
-private final class EpisodePreviewModel: ObservableObject {
+fileprivate final class EpisodePreviewModel: ObservableObject {
     private let detailLoadAnimation: Animation = .easeInOut(duration: 0.3)
 
     @Published private(set) var overviewText = String(localized: L10n.loading)
@@ -936,7 +1167,8 @@ private final class EpisodePreviewModel: ObservableObject {
     private var lastRequestKey: String?
 
     func load(card: EntryDetailModel.EpisodeCard, context: EpisodePreviewContext) async {
-        let requestKey = "\(context.seriesTMDbID)-\(context.seasonNumber)-\(card.episodeNumber)-\(context.language.rawValue)"
+        let requestKey =
+            "\(context.seriesTMDbID)-\(context.seasonNumber)-\(card.episodeNumber)-\(context.language.rawValue)"
         guard lastRequestKey != requestKey else { return }
         lastRequestKey = requestKey
         isLoading = true
@@ -964,7 +1196,7 @@ private final class EpisodePreviewModel: ObservableObject {
     }
 }
 
-private struct EpisodePreviewCard: View {
+fileprivate struct EpisodePreviewCard: View {
     let card: EntryDetailModel.EpisodeCard
     let context: EpisodePreviewContext
 
@@ -1011,32 +1243,15 @@ private struct EpisodePreviewCard: View {
         }
         .frame(width: 320, alignment: .leading)
         .padding(18)
-        .glassPanel(cornerRadius: 28, tint: .white.opacity(0.08))
-        .task(id: "\(context.seriesTMDbID)-\(context.seasonNumber)-\(card.episodeNumber)-\(context.language.rawValue)") {
+        .popupGlassPanel(cornerRadius: 28, tint: .white.opacity(0.08))
+        .task(id: "\(context.seriesTMDbID)-\(context.seasonNumber)-\(card.episodeNumber)-\(context.language.rawValue)")
+        {
             await previewModel.load(card: card, context: context)
         }
     }
 }
 
-private extension View {
-    func glassPanel(cornerRadius: CGFloat, padding: CGFloat = 0, tint: Color = .white.opacity(0.05))
-        -> some View
-    {
-        self
-            .padding(padding)
-            .background {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(tint)
-            }
-            .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
-            .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(.white.opacity(0.22), lineWidth: 1)
-            }
-    }
-}
-
-private struct EntryDetailPreviewHost: View {
+fileprivate struct EntryDetailPreviewHost: View {
     @State private var showDetail = false
     @State private var previewStore = LibraryStore(dataProvider: .forPreview)
 
@@ -1065,7 +1280,7 @@ private struct EntryDetailPreviewHost: View {
     EntryDetailPreviewHost()
 }
 
-private enum L10n {
+fileprivate enum L10n {
     static let loading: LocalizedStringResource = "Loading..."
     static let done: LocalizedStringResource = "Done"
     static let showDetail: LocalizedStringResource = "Show Detail"

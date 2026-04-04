@@ -15,11 +15,7 @@ struct AnimeSharingControlsSection: View {
     let onChangePoster: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Controls")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-
+        PopupSectionCard("Controls", systemImage: "slider.horizontal.3") {
             if canSelectLanguage {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Language")
@@ -45,16 +41,5 @@ struct AnimeSharingControlsSection: View {
                 .buttonStyle(.borderedProminent)
             }
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(.thinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.06), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 10)
     }
 }

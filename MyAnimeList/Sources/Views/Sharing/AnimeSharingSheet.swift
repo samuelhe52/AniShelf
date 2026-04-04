@@ -39,11 +39,14 @@ struct AnimeSharingSheet: View {
                         onChangePoster: { showPosterSelection = true }
                     )
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 24)
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 32)
             }
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Share")
             .navigationBarTitleDisplayMode(.inline)
+            .presentationDragIndicator(.visible)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -54,8 +57,9 @@ struct AnimeSharingSheet: View {
                 ToolbarItem(placement: .primaryAction) {
                     if let url = controller.renderedImageURL {
                         ShareLink(item: url) {
-                            Label("Share", systemImage: "square.and.arrow.up")
+                            Image(systemName: "square.and.arrow.up")
                         }
+                        .labelStyle(.iconOnly)
                     } else {
                         Label("Rendering…", systemImage: "hourglass")
                             .foregroundStyle(.secondary)
@@ -69,7 +73,9 @@ struct AnimeSharingSheet: View {
                         type: controller.entry.type,
                         onPosterSelected: { url in
                             controller.updateSelectedPosterURL(url)
-                        })
+                        }
+                    )
+                    .navigationTitle("Change Poster")
                 }
             }
             .task(id: controller.renderTrigger) {

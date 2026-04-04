@@ -56,12 +56,18 @@ struct PosterGridView: View {
                 targetWidth: 300,
                 diskCacheExpiration: Constants.cacheExpiration
             )
+            .overlay {
+                RoundedRectangle(cornerRadius: Constants.posterCornerRadius, style: .continuous)
+                    .stroke(.white.opacity(0.18), lineWidth: 1)
+            }
             .clipShape(RoundedRectangle(cornerRadius: Constants.posterCornerRadius))
             .aspectRatio(contentMode: .fit)
             Text("\(width) x \(height)")
                 .font(.caption)
-                .foregroundStyle(.gray)
+                .foregroundStyle(.secondary)
         }
+        .padding(8)
+        .popupGlassPanel(cornerRadius: 18, tint: .white.opacity(0.04))
         .matchedTransitionSource(id: poster.metadata.filePath, in: previewNamespace)
     }
 }

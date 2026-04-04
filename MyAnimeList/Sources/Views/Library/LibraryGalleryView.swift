@@ -94,7 +94,7 @@ fileprivate struct AnimeEntryCardWrapper: View {
         .sensoryFeedback(.success, trigger: triggerDeleteHaptic)
         .sheet(isPresented: $isEditing) {
             NavigationStack {
-                AnimeEntryEditor(entry: entry)
+                EntryDetailView(entry: entry, startInEditingMode: true)
             }
         }
         .sheet(isPresented: $isSwitchingPoster) {
@@ -140,10 +140,10 @@ fileprivate struct AnimeEntryCardWrapper: View {
 }
 
 #if DEBUG
-// This is where we place debug-specific code.
-extension LibraryGalleryView {
-    private func mockDelete(entry: AnimeEntry) {
-        store.mockDeleteEntry(entry)
+    // This is where we place debug-specific code.
+    extension LibraryGalleryView {
+        private func mockDelete(entry: AnimeEntry) {
+            store.mockDeleteEntry(entry)
+        }
     }
-}
 #endif

@@ -48,36 +48,46 @@ struct PosterSelectionView: View {
     }
 
     var body: some View {
-        VStack {
-            if case .season = type {
-                Picker(selection: $useSeriesPoster) {
-                    Text("Season").tag(false)
-                    Text("TV Series").tag(true)
-                } label: {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                if case .season = type {
+                    PopupSectionCard("Poster Source", systemImage: "square.stack") {
+                        Picker(selection: $useSeriesPoster) {
+                            Text("Season").tag(false)
+                            Text("TV Series").tag(true)
+                        } label: {
+                        }
+                        .pickerStyle(.segmented)
+                        .padding(.bottom, Constants.pickerPadding)
+                    }
                 }
-                .pickerStyle(.segmented)
-                .padding(.bottom, Constants.pickerPadding)
-            }
-            switch imageLoadState {
-            case .loading:
-                Spacer()
-                ProgressView()
-                Spacer()
-            case .loaded:
-                posterGrid
-            case .empty:
-                contentUnavailable
-            case .error(let error):
-                Text("Error loading posters: \(error.localizedDescription)")
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.red)
+
+                PopupSectionCard("Posters", systemImage: "photo.on.rectangle") {
+                    switch imageLoadState {
+                    case .loading:
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 24)
+                    case .loaded:
+                        posterGrid
+                    case .empty:
+                        contentUnavailable
+                    case .error(let error):
+                        Text("Error loading posters: \(error.localizedDescription)")
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
             }
         }
         .animation(.default.delay(0.5), value: useSeriesPoster)
         .animation(.default, value: availablePosters)
         .animation(.default, value: seriesPosters)
-        .padding(.horizontal)
+        .padding(.horizontal, 16)
+        .background(Color(.systemGroupedBackground))
         .navigationBarTitleDisplayMode(.inline)
+        .presentationDragIndicator(.visible)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") {

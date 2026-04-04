@@ -195,7 +195,7 @@ extension View {
                 )
             ) { entry in
                 NavigationStack {
-                    AnimeEntryEditor(entry: entry)
+                    EntryDetailView(entry: entry, startInEditingMode: true)
                 }
             }
     }
