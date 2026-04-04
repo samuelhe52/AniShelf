@@ -313,6 +313,7 @@
       }
     },
     "Cast" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -377,6 +378,7 @@
       }
     },
     "Character" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -2150,6 +2152,7 @@
       }
     },
     "Seasons" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -2636,6 +2639,7 @@
       }
     },
     "Votes" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
