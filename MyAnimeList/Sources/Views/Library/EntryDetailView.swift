@@ -26,6 +26,7 @@ struct EntryDetailView: View {
     @State private var originalUserInfo: UserEntryInfo
     @State private var conversionInProgress = false
     @State private var showSeasonPicker = false
+    @State private var showSiblingSeasonWarning = false
     @State private var isFetchingSeasons = false
     @State private var seasonNumberOptions: [Int] = []
     @State private var didAutoScrollToEditingSection = false
@@ -121,6 +122,16 @@ struct EntryDetailView: View {
                 }
             }
             Button("Cancel", role: .cancel) {}
+        }
+        .alert("Sibling Season Exists", isPresented: $showSiblingSeasonWarning) {
+            Button("Convert Anyway", role: .destructive) {
+                Task { await convertSeasonToSeries() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(
+                "Another season entry for this series is already in your library. Converting this season to a series can leave both the series and the sibling season entries in the library."
+            )
         }
         .task(id: "\(entry.tmdbID)-\(currentLanguage.rawValue)") {
             await model.load(for: entry, language: currentLanguage, dataHandler: dataHandler)
@@ -239,16 +250,6 @@ struct EntryDetailView: View {
         HStack(spacing: 10) {
             Spacer(minLength: 0)
 
-            PopupActionCircleButton(
-                systemImage: entry.favorite ? "heart.fill" : "heart",
-                tint: entry.favorite ? .pink : .primary
-            ) { toggleFavorite() }
-
-            PopupActionCircleButton(
-                systemImage: "square.and.arrow.up",
-                verticalOffset: -1
-            ) { showSharingSheet = true }
-
             if let url = model.primaryLinkURL ?? entry.linkToDetails {
                 Link(destination: url) {
                     Image(systemName: "safari")
@@ -260,6 +261,16 @@ struct EntryDetailView: View {
                 .buttonBorderShape(.circle)
                 .tint(.primary)
             }
+
+            PopupActionCircleButton(
+                systemImage: "square.and.arrow.up",
+                verticalOffset: -1
+            ) { showSharingSheet = true }
+
+            PopupActionCircleButton(
+                systemImage: entry.favorite ? "heart.fill" : "heart",
+                tint: entry.favorite ? .pink : .primary
+            ) { toggleFavorite() }
 
             if entry.type == .movie {
                 PopupActionCircleButton(systemImage: "photo.on.rectangle") {
@@ -525,10 +536,34 @@ struct EntryDetailView: View {
         case .series:
             await presentSeasonPicker()
         case .season:
-            await convertSeasonToSeries()
+            if hasSiblingSeasonEntry {
+                showSiblingSeasonWarning = true
+            } else {
+                await convertSeasonToSeries()
+            }
         case .movie:
             return
         }
+    }
+
+    private var hasSiblingSeasonEntry: Bool {
+        guard case .season(_, let parentSeriesID) = entry.type else { return false }
+
+        let visibleSiblingExists =
+            libraryStore?.libraryOnDisplay.contains { candidate in
+                guard candidate.id != entry.id else { return false }
+                guard case .season(_, let candidateParentSeriesID) = candidate.type else {
+                    return false
+                }
+                return candidateParentSeriesID == parentSeriesID
+            } ?? false
+
+        if visibleSiblingExists {
+            return true
+        }
+
+        return entry.parentSeriesEntry?.childSeasonEntries.contains(where: { $0.id != entry.id })
+            ?? false
     }
 
     private func presentSeasonPicker() async {

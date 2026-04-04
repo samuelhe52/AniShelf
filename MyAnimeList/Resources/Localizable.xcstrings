@@ -232,6 +232,22 @@
         }
       }
     },
+    "Another season entry for this series is already in your library. Converting this season to a series can leave both the series and the sibling season entries in the library." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このシリーズの別シーズンの項目がすでにライブラリにあります。このシーズンをシリーズに変換すると、シリーズ項目と兄弟シーズン項目の両方がライブラリに残る可能性があります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "您的资料库中已存在该系列的其他季度条目。将此季度转换为系列后，资料库中可能会同时保留系列条目和其他同系列季度条目。"
+          }
+        }
+      }
+    },
     "Artwork" : {
       "localizations" : {
         "ja" : {
@@ -502,6 +518,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "控制面板"
+          }
+        }
+      }
+    },
+    "Convert Anyway" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "そのまま変換"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仍要转换"
           }
         }
       }
@@ -909,21 +941,8 @@
         }
       }
     },
-    "Error loading posters: %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ポスターの読み込みエラー： %@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "加载海报时发生错误：%@"
-          }
-        }
-      }
+    "Error Loading Posters" : {
+
     },
     "Error restoring library" : {
       "localizations" : {
@@ -1728,38 +1747,6 @@
         }
       }
     },
-    "Poster Source" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ポスターソース"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "海报来源"
-          }
-        }
-      }
-    },
-    "Posters" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ポスター"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "海报"
-          }
-        }
-      }
-    },
     "Prefetching images..." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2226,6 +2213,22 @@
         }
       }
     },
+    "Sibling Season Exists" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同じシリーズの別シーズンがあります"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已存在同系列的其他季度"
+          }
+        }
+      }
+    },
     "Size: %.2f MB" : {
       "localizations" : {
         "ja" : {
@@ -2308,22 +2311,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更换海报"
-          }
-        }
-      }
-    },
-    "Tap me to confirm." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "確認するにはタップしてください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "点击以确认。"
           }
         }
       }
