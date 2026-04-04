@@ -506,6 +506,38 @@
         }
       }
     },
+    "Convert to Season" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シーズンに変換"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "转换为季度"
+          }
+        }
+      }
+    },
+    "Convert to Series" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シリーズに変換"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "转换为剧集"
+          }
+        }
+      }
+    },
     "Convert to which season?" : {
       "localizations" : {
         "ja" : {

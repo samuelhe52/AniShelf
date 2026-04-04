@@ -358,20 +358,22 @@ struct EntryDetailView: View {
 
     @ViewBuilder
     private var editingSection: some View {
-        PopupDisclosureCard("Tracking", systemImage: "square.and.pencil", isExpanded: $isEditingDetails) {
+        PopupDisclosureCard("Tracking", systemImage: "checklist", isExpanded: $isEditingDetails) {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Watch Status")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                     AnimeEntryWatchedStatusPicker(for: entry)
                         .pickerStyle(.segmented)
                     AnimeEntryDatePickers(entry: entry)
                 }
 
+                Divider()
+
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Notes")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                     PlaceholderTextEditor(
                         text: Binding(
@@ -380,9 +382,16 @@ struct EntryDetailView: View {
                         ),
                         placeholder: "Write some thoughts..."
                     )
-                    .frame(height: 200)
+                    .frame(height: 180)
                     .padding(12)
-                    .background(.black.opacity(0.08), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .background(
+                        .thinMaterial,
+                        in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    )
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(.white.opacity(0.1), lineWidth: 0.5)
+                    }
                 }
             }
         }
@@ -461,7 +470,7 @@ struct EntryDetailView: View {
         }
     }
 
-    private var convertMenuTitle: String {
+    private var convertMenuTitle: LocalizedStringResource {
         switch entry.type {
         case .series:
             "Convert to Season"

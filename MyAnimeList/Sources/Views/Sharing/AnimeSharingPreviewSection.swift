@@ -31,8 +31,6 @@ struct AnimeSharingPreviewSection: View {
             )
             .frame(maxWidth: AnimeSharingController.previewCardWidth)
             .frame(maxWidth: .infinity)
-            .padding(12)
-            .popupGlassPanel(cornerRadius: 30, tint: .white.opacity(0.08))
         }
     }
 }
