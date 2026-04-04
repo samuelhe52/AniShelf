@@ -2363,6 +2363,22 @@
         }
       }
     },
+    "This will replace the current poster." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在のポスターを置き換えます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这将替换当前海报。"
+          }
+        }
+      }
+    },
     "TMDb" : {
       "localizations" : {
         "ja" : {
@@ -2523,6 +2539,22 @@
         }
       }
     },
+    "Use Poster" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用する"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用海报"
+          }
+        }
+      }
+    },
     "Use this poster" : {
       "localizations" : {
         "ja" : {
@@ -2535,6 +2567,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "设为海报"
+          }
+        }
+      }
+    },
+    "Use this poster?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このポスターを使いますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用这张海报？"
           }
         }
       }

@@ -21,6 +21,7 @@ struct PosterSlides: View {
     @State private var fullSizePosterURLs: [Poster: URL] = [:]
     @State private var fetchState: FetchState = .idle
     @State private var currentSlideID: String?
+    @State private var showSelectionConfirmation = false
 
     var body: some View {
         Group {
@@ -37,6 +38,15 @@ struct PosterSlides: View {
         }
         .task(id: posters) {
             await loadPosterURLsOnAppear(force: true)
+        }
+        .alert("Use this poster?", isPresented: $showSelectionConfirmation, presenting: currentSlide) {
+            slide in
+            Button("Use Poster") {
+                onPosterSelected(slide.url)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { _ in
+            Text("This will replace the current poster.")
         }
     }
 
@@ -61,7 +71,7 @@ struct PosterSlides: View {
                         .font(.caption)
                         .foregroundStyle(.gray)
                     Button("Use this poster") {
-                        onPosterSelected(slide.url)
+                        showSelectionConfirmation = true
                     }
                     .buttonStyle(.borderedProminent)
                     .buttonBorderShape(.capsule)
