@@ -5,7 +5,6 @@
 //  Created by Samuel He on 2025/5/25.
 //
 
-import AlertToast
 import DataProvider
 import Foundation
 import SwiftUI
@@ -16,14 +15,17 @@ struct LibraryGalleryView: View {
     @Binding var scrolledID: Int?
 
     var body: some View {
-        if !store.libraryOnDisplay.isEmpty {
-            libraryContent
-        } else {
-            Color.clear
-                .overlay {
-                    Text("The library is empty.")
-                }
+        Group {
+            if !store.libraryOnDisplay.isEmpty {
+                libraryContent
+            } else {
+                Color.clear
+                    .overlay {
+                        Text("The library is empty.")
+                    }
+            }
         }
+        .libraryEntryInteractionOverlays(state: interaction, store: store)
     }
 
     private var libraryContent: some View {
@@ -32,7 +34,11 @@ struct LibraryGalleryView: View {
             ScrollView(.horizontal) {
                 LazyHStack {
                     ForEach(store.libraryOnDisplay, id: \.tmdbID) { entry in
-                        AnimeEntryCardWrapper(entry: entry, delete: deleteEntry)
+                        AnimeEntryCardWrapper(
+                            entry: entry,
+                            store: store,
+                            scrolledID: $scrolledID
+                        )
                             .containerRelativeFrame(isHorizontal ? .horizontal : .vertical)
                             .transition(.opacity)
                             .onScrollVisibilityChange { _ in }
@@ -44,22 +50,14 @@ struct LibraryGalleryView: View {
         }
     }
 
-    private func deleteEntry(_ entry: AnimeEntry) {
-        interaction.setScrolledIDBeforeDeletion(for: entry, in: store, scrolledID: $scrolledID)
-        store.deleteEntry(entry)
-    }
 }
 
 fileprivate struct AnimeEntryCardWrapper: View {
     var entry: AnimeEntry
-    let delete: (AnimeEntry) -> Void
+    let store: LibraryStore
+    @Binding var scrolledID: Int?
 
     @Environment(LibraryEntryInteractionState.self) private var interaction
-    @State private var triggerDeleteHaptic: Bool = false
-    @State private var showDeleteToast: Bool = false
-    @State private var isEditing: Bool = false
-    @State private var isSwitchingPoster: Bool = false
-    @State private var isSharingAnime: Bool = false
     @State private var imageLoaded: Bool = false
 
     var body: some View {
@@ -72,44 +70,9 @@ fileprivate struct AnimeEntryCardWrapper: View {
                     contextMenu(for: entry)
                 }
         }
-        .onTapGesture {
-            showDeleteToast = false
-        }
         .onTapGesture(count: 2) {
             interaction.detailingEntry = entry
-        }
-        .toast(
-            isPresenting: $showDeleteToast, duration: 3,
-            alert: {
-                AlertToast(
-                    displayMode: .alert, type: .regular,
-                    titleResource: "Delete Anime?",
-                    subTitleResource: "Tap me to confirm.")
-            },
-            onTap: {
-                delete(entry)
-                triggerDeleteHaptic.toggle()
-            }
-        )
-        .sensoryFeedback(.success, trigger: triggerDeleteHaptic)
-        .sheet(isPresented: $isEditing) {
-            NavigationStack {
-                EntryDetailView(entry: entry, startInEditingMode: true)
-            }
-        }
-        .sheet(isPresented: $isSwitchingPoster) {
-            NavigationStack {
-                PosterSelectionView(tmdbID: entry.tmdbID, type: entry.type) { url in
-                    if url != entry.posterURL {
-                        entry.usingCustomPoster = true
-                    }
-                    entry.posterURL = url
-                }
-                .navigationTitle("Pick a poster")
-            }
-        }
-        .sheet(isPresented: $isSharingAnime) {
-            AnimeSharingSheet(entry: entry)
+            scrolledID = entry.tmdbID
         }
     }
 
@@ -117,14 +80,14 @@ fileprivate struct AnimeEntryCardWrapper: View {
     func contextMenu(for entry: AnimeEntry) -> some View {
         ControlGroup {
             Button("Edit", systemImage: "pencil") {
-                isEditing = true
+                interaction.setEditingEntry(entry)
             }
             Button("Share", systemImage: "square.and.arrow.up") {
-                isSharingAnime = true
+                interaction.sharingAnimeEntry = entry
             }
         }
         Button {
-            isSwitchingPoster = true
+            interaction.switchingPosterForEntry = entry
         } label: {
             Label("Switch Poster", systemImage: "photo.badge.magnifyingglass")
         }
@@ -134,7 +97,7 @@ fileprivate struct AnimeEntryCardWrapper: View {
             }
         }
         Button("Delete", systemImage: "trash", role: .destructive) {
-            showDeleteToast = true
+            interaction.prepareDeletion(for: entry, store: store, scrolledID: $scrolledID)
         }
     }
 }
