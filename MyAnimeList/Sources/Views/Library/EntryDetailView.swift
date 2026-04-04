@@ -28,6 +28,7 @@ struct EntryDetailView: View {
     @State private var showSeasonPicker = false
     @State private var isFetchingSeasons = false
     @State private var seasonNumberOptions: [Int] = []
+    @State private var didAutoScrollToEditingSection = false
 
     private var accentColor: Color { entry.favorite ? .orange : .blue }
     private var currentLanguage: Language { libraryStore?.language ?? .current }
@@ -41,19 +42,34 @@ struct EntryDetailView: View {
     }
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 0) {
-                heroSection
+        ScrollViewReader { proxy in
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    heroSection
 
-                VStack(alignment: .leading, spacing: 20) {
-                    quickActionsRow
-                        .padding(.top, -20)
-                        .padding(.bottom, 4)
-                    detailsContent
+                    VStack(alignment: .leading, spacing: 20) {
+                        quickActionsRow
+                            .padding(.top, -20)
+                            .padding(.bottom, 4)
+                        detailsContent
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+                    .padding(.bottom, 40)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 4)
-                .padding(.bottom, 40)
+            }
+            .onAppear {
+                guard startInEditingMode, !didAutoScrollToEditingSection else { return }
+                didAutoScrollToEditingSection = true
+                isEditingDetails = true
+                Task {
+                    try? await Task.sleep(for: .milliseconds(150))
+                    await MainActor.run {
+                        withAnimation(.spring(response: 0.6, dampingFraction: 0.86)) {
+                            proxy.scrollTo(ScrollTarget.editingSection, anchor: .center)
+                        }
+                    }
+                }
             }
         }
         .ignoresSafeArea(edges: .top)
@@ -395,6 +411,7 @@ struct EntryDetailView: View {
                 }
             }
         }
+        .id(ScrollTarget.editingSection)
     }
 
     private var statColumns: [GridItem] {
@@ -1307,4 +1324,8 @@ fileprivate enum L10n {
     static let runtime: LocalizedStringResource = "Runtime"
     static let averageRuntime: LocalizedStringResource = "Avg Runtime"
     static let episode: LocalizedStringResource = "Episode"
+}
+
+fileprivate enum ScrollTarget: Hashable {
+    case editingSection
 }

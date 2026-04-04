@@ -1,8 +1,8 @@
 //
-//  AnimeEntryEditor.swift
+//  AnimeEntryTrackingControls.swift
 //  MyAnimeList
 //
-//  Created by Samuel He on 2025/6/20.
+//  Created by OpenAI Codex on 2026/4/4.
 //
 
 import DataProvider
@@ -10,17 +10,8 @@ import SwiftUI
 
 typealias WatchedStatus = AnimeEntry.WatchStatus
 
-struct AnimeEntryEditor: View {
-    let entry: AnimeEntry
-
-    var body: some View {
-        EntryDetailView(entry: entry, startInEditingMode: true)
-    }
-}
-
 struct AnimeEntryWatchedStatusPicker: View {
     var entry: AnimeEntry
-    @Environment(\.dataHandler) var dataHandler
 
     init(for entry: AnimeEntry) {
         self.entry = entry
@@ -110,19 +101,5 @@ struct AnimeEntryDatePickers: View {
             Spacer()
         }
         .datePickerStyle(.vertical(labelsHidden: labelsHidden))
-    }
-}
-
-#Preview {
-    @Previewable @State var dataProvider = DataProvider.forPreview
-    @Previewable @State var entry: AnimeEntry = .template(id: 1)
-    NavigationStack {
-        AnimeEntryEditor(entry: entry)
-            .environment(\.dataHandler, dataProvider.dataHandler)
-            .onAppear {
-                dataProvider.generateEntriesForPreview()
-                let entries = try? dataProvider.getAllModels(ofType: AnimeEntry.self)
-                entry = entries?.first ?? .template(id: 124)
-            }
     }
 }

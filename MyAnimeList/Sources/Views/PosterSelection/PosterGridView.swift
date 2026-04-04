@@ -66,8 +66,6 @@ struct PosterGridView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-        .padding(8)
-        .popupGlassPanel(cornerRadius: 18, tint: .white.opacity(0.04))
         .matchedTransitionSource(id: poster.metadata.filePath, in: previewNamespace)
     }
 }

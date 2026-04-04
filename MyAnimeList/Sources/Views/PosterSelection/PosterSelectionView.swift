@@ -20,21 +20,24 @@ struct PosterSelectionView: View {
     let type: AnimeType
     let fetcher: InfoFetcher
     let onPosterSelected: (URL) -> Void
-    @State private var imageLoadState: ImageLoadState = .loading
 
-    init(tmdbID: Int, type: AnimeType, infoFetcher: InfoFetcher = .init(), onPosterSelected: @escaping (URL) -> Void) {
+    init(
+        tmdbID: Int, type: AnimeType, infoFetcher: InfoFetcher = .init(),
+        onPosterSelected: @escaping (URL) -> Void
+    ) {
         self.tmdbID = tmdbID
         self.type = type
         self.fetcher = infoFetcher
         self.onPosterSelected = onPosterSelected
     }
 
-    @State var availablePosters: [Poster] = []
-    @State var seriesPosters: [Poster] = []
-    @State var previewPoster: Poster?
-    @State var useSeriesPoster: Bool = false
-    @Environment(\.dismiss) var dismiss
-    @Namespace var preview
+    @State private var loadState: LoadState = .loading
+    @State private var availablePosters: [Poster] = []
+    @State private var seriesPosters: [Poster] = []
+    @State private var previewPoster: Poster?
+    @State private var useSeriesPoster: Bool = false
+    @Environment(\.dismiss) private var dismiss
+    @Namespace private var preview
 
     private var currentPosters: [Poster] {
         useSeriesPoster ? seriesPosters : availablePosters
@@ -42,62 +45,63 @@ struct PosterSelectionView: View {
 
     @MainActor
     private struct Constants {
-        /// The ideal width for poster images to fetch from TMDb.
         static let idealPosterWidth: Int = 200
-        static let pickerPadding: CGFloat = 5
     }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 16) {
                 if case .season = type {
-                    PopupSectionCard("Poster Source", systemImage: "square.stack") {
-                        Picker(selection: $useSeriesPoster) {
-                            Text("Season").tag(false)
-                            Text("TV Series").tag(true)
-                        } label: {
-                        }
-                        .pickerStyle(.segmented)
-                        .padding(.bottom, Constants.pickerPadding)
-                    }
+                    Picker(selection: $useSeriesPoster) {
+                        Text("Season").tag(false)
+                        Text("TV Series").tag(true)
+                    } label: {}
+                    .pickerStyle(.segmented)
                 }
 
-                PopupSectionCard("Posters", systemImage: "photo.on.rectangle") {
-                    switch imageLoadState {
-                    case .loading:
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 24)
-                    case .loaded:
-                        posterGrid
-                    case .empty:
-                        contentUnavailable
-                    case .error(let error):
-                        Text("Error loading posters: \(error.localizedDescription)")
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(.red)
-                            .frame(maxWidth: .infinity)
-                    }
+                switch loadState {
+                case .loading:
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                case .loaded:
+                    PosterGridView(
+                        posters: currentPosters,
+                        previewNamespace: preview,
+                        onPosterTap: { poster in
+                            previewPoster = poster
+                        }
+                    )
+                case .empty:
+                    ContentUnavailableView(
+                        "No Posters Available",
+                        systemImage: "photo.on.rectangle",
+                        description: Text(
+                            "TMDb did not return posters for this selection yet.")
+                    )
+                case .error(let error):
+                    ContentUnavailableView(
+                        "Error Loading Posters",
+                        systemImage: "exclamationmark.triangle",
+                        description: Text(error.localizedDescription)
+                    )
                 }
             }
+            .padding(.horizontal, 16)
         }
-        .animation(.default.delay(0.5), value: useSeriesPoster)
-        .animation(.default, value: availablePosters)
-        .animation(.default, value: seriesPosters)
-        .padding(.horizontal, 16)
+        .animation(.default, value: loadState == .loading)
+        .animation(.default, value: currentPosters.map(\.id))
         .background(Color(.systemGroupedBackground))
         .navigationBarTitleDisplayMode(.inline)
         .presentationDragIndicator(.visible)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
-                    dismiss()
-                }
+                Button("Cancel") { dismiss() }
             }
         }
         .fullScreenCover(item: $previewPoster) { poster in
             PosterSlides(
-                posters: availablePosters,
+                posters: currentPosters,
                 currentPoster: poster,
                 onPosterSelected: { url in
                     if let url {
@@ -113,65 +117,30 @@ struct PosterSelectionView: View {
         }
         .onChange(of: useSeriesPoster, initial: false) { _, newValue in
             guard case .season = type else { return }
+            previewPoster = nil
             Task {
                 if newValue {
                     await fetchSeriesPostersIfNeeded()
                 } else {
-                    await ensurePrimaryPostersLoadedIfNeeded()
+                    syncLoadState()
                 }
             }
         }
-        .task {
-            await ensurePrimaryPostersLoadedIfNeeded()
-        }
+        .task { await fetchPrimaryPosters() }
     }
 
-    @ViewBuilder
-    private var posterGrid: some View {
-        PosterGridView(
-            posters: currentPosters,
-            previewNamespace: preview,
-            onPosterTap: { poster in
-                previewPoster = poster
-            }
-        )
-    }
+    // MARK: - Data Fetching
 
-    @ViewBuilder
-    private var contentUnavailable: some View {
-        ContentUnavailableView(
-            "No Posters Available",
-            systemImage: "photo.on.rectangle",
-            description: Text("TMDb did not return posters for this selection yet.")
-        )
-        .multilineTextAlignment(.center)
-        .foregroundStyle(.secondary)
-    }
-
-    @MainActor
-    private func ensurePrimaryPostersLoadedIfNeeded() async {
-        if availablePosters.isEmpty {
-            await fetchPrimaryPosters()
-        } else {
-            syncLoadStateWithCurrentData()
-        }
-    }
-
-    /// Fetches posters for the current TMDb entity (movie/series/season) and updates state.
-    ///
-    /// This is the default poster path; seasons use it unless toggled to parent-series posters.
     @MainActor
     private func fetchPrimaryPosters() async {
         do {
-            imageLoadState = .loading
+            loadState = .loading
             let posters = try await primaryPosterRequest()
             availablePosters = posters.filteredAndSorted()
-            if !useSeriesPoster {
-                syncLoadStateWithCurrentData(sourceOverride: availablePosters)
-            }
+            syncLoadState()
         } catch {
             logger.error("Error fetching posters: \(error.localizedDescription)")
-            imageLoadState = .error(error)
+            loadState = .error(error)
         }
     }
 
@@ -179,60 +148,58 @@ struct PosterSelectionView: View {
     private func fetchSeriesPostersIfNeeded() async {
         guard case .season(_, let parentSeriesID) = type else { return }
         if !seriesPosters.isEmpty {
-            if useSeriesPoster {
-                syncLoadStateWithCurrentData()
-            }
+            syncLoadState()
             return
         }
 
         do {
-            imageLoadState = .loading
+            loadState = .loading
             seriesPosters = try await fetcher.postersForSeries(
                 seriesID: parentSeriesID,
                 idealWidth: Constants.idealPosterWidth
             )
             .filteredAndSorted()
-            if useSeriesPoster {
-                syncLoadStateWithCurrentData(sourceOverride: seriesPosters)
-            }
+            syncLoadState()
         } catch {
             logger.error("Error fetching posters: \(error.localizedDescription)")
-            imageLoadState = .error(error)
+            loadState = .error(error)
         }
     }
 
-    /// Builds and executes the primary poster request based on the current anime type.
     @MainActor
     private func primaryPosterRequest() async throws -> [Poster] {
         switch type {
         case .movie:
             return try await fetcher.postersForMovie(
-                for: tmdbID,
-                idealWidth: Constants.idealPosterWidth)
+                for: tmdbID, idealWidth: Constants.idealPosterWidth)
         case .series:
             return try await fetcher.postersForSeries(
-                seriesID: tmdbID,
-                idealWidth: Constants.idealPosterWidth)
+                seriesID: tmdbID, idealWidth: Constants.idealPosterWidth)
         case .season(let seasonNumber, let parentSeriesID):
             return try await fetcher.postersForSeason(
-                forSeason: seasonNumber,
-                inParentSeries: parentSeriesID,
+                forSeason: seasonNumber, inParentSeries: parentSeriesID,
                 idealWidth: Constants.idealPosterWidth)
         }
     }
 
-    /// Syncs the displayed load state with the provided posters (or current selection).
     @MainActor
-    private func syncLoadStateWithCurrentData(sourceOverride: [Poster]? = nil) {
-        let posters = sourceOverride ?? currentPosters
-        imageLoadState = posters.isEmpty ? .empty : .loaded
+    private func syncLoadState() {
+        loadState = currentPosters.isEmpty ? .empty : .loaded
     }
 
-    private enum ImageLoadState {
+    private enum LoadState: Equatable {
         case loading
         case loaded
         case empty
         case error(Error)
+
+        static func == (lhs: LoadState, rhs: LoadState) -> Bool {
+            switch (lhs, rhs) {
+            case (.loading, .loading), (.loaded, .loaded), (.empty, .empty): return true
+            case (.error, .error): return true
+            default: return false
+            }
+        }
     }
 }
 
