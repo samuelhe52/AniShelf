@@ -55,7 +55,8 @@ struct PosterSelectionView: View {
                     Picker(selection: $useSeriesPoster) {
                         Text("Season").tag(false)
                         Text("TV Series").tag(true)
-                    } label: {}
+                    } label: {
+                    }
                     .pickerStyle(.segmented)
                 }
 

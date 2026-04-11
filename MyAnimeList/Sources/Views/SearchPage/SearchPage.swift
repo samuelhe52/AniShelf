@@ -23,6 +23,8 @@ enum SearchMode: String, CaseIterable, CustomLocalizedStringResourceConvertible 
 /// Main search page that coordinates between TMDb and Library search modes.
 struct SearchPage: View {
     @AppStorage(.searchMode) private var mode: SearchMode = .tmdb
+    @AppStorage(.searchPageQuery) private var query: String = ""
+    @AppStorage(.searchTMDbLanguage) private var tmdbLanguage: Language = .english
 
     // View models owned by SearchPage
     @State private var tmdbSearchService: TMDbSearchService
@@ -42,15 +44,12 @@ struct SearchPage: View {
         self.checkDuplicate = checkDuplicate
 
         // Initialize view models
-        let query = UserDefaults.standard.string(forKey: .searchPageQuery) ?? ""
         self._tmdbSearchService = State(
             initialValue: TMDbSearchService(
-                query: query,
                 processResults: processTMDbSearchResults
             ))
         self._librarySearchService = State(
             initialValue: LibrarySearchService(
-                query: query,
                 jumpToEntryInLibrary: jumpToEntryInLibrary
             ))
     }
@@ -73,6 +72,8 @@ struct SearchPage: View {
             switch mode {
             case .tmdb:
                 TMDbSearchContent(
+                    language: $tmdbLanguage,
+                    onRetry: performSearch,
                     onDuplicateTapped: onDuplicateTapped,
                     checkDuplicate: checkDuplicate
                 )
@@ -80,15 +81,52 @@ struct SearchPage: View {
                 .transition(.move(edge: .leading))
 
             case .library:
-                LibrarySearchContent()
+                LibrarySearchContent(onRetry: performSearch)
                     .environment(librarySearchService)
                     .transition(.move(edge: .trailing))
             }
+        }
+        .searchable(
+            text: $query,
+            placement: .navigationBarDrawer(displayMode: .automatic),
+            prompt: searchPrompt
+        )
+        .onSubmit(of: .search) {
+            performSearch()
+        }
+        .onChange(of: mode) {
+            performSearch()
+        }
+        .onChange(of: tmdbLanguage) {
+            guard mode == .tmdb else { return }
+            performSearch()
+        }
+        .onAppear {
+            guard !query.isEmpty else { return }
+            performSearch()
         }
         .toolbar {
             DefaultToolbarItem(kind: .search, placement: .bottomBar)
         }
         .animation(.default, value: mode)
+    }
+
+    private var searchPrompt: LocalizedStringKey {
+        switch mode {
+        case .tmdb:
+            "Search TV animation or movies..."
+        case .library:
+            "Search in your library..."
+        }
+    }
+
+    private func performSearch() {
+        switch mode {
+        case .tmdb:
+            tmdbSearchService.updateResults(query: query, language: tmdbLanguage)
+        case .library:
+            librarySearchService.updateResults(query: query)
+        }
     }
 }
 

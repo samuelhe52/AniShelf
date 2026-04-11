@@ -105,7 +105,8 @@ final class EntryDetailModel: ObservableObject {
     private func apply(detail: AnimeEntryDetail, entry: AnimeEntry, language: Language) {
         displayTitle = detail.title
         subtitleText = detail.subtitle
-        overviewText = detail.overview ?? entry.displayOverview
+        overviewText =
+            detail.overview ?? entry.displayOverview
             ?? String(localized: EntryDetailL10n.noOverviewAvailable)
         genreNames = Self.localizedGenreNames(detail.genreIDs, language: language)
         heroImageURL = detail.heroImageURL ?? entry.backdropURL ?? entry.posterURL
@@ -119,19 +120,19 @@ final class EntryDetailModel: ObservableObject {
                 [
                     detail.airDate?.formatted(date: .abbreviated, time: .omitted),
                     detail.runtimeMinutes.map(Self.minutesText),
-                    detail.status,
+                    detail.status
                 ].compactMap(\.self)
             case .series:
                 [
                     detail.airDate?.formatted(date: .abbreviated, time: .omitted),
                     detail.status,
-                    detail.seasonCount.map(Self.seasonCountText),
+                    detail.seasonCount.map(Self.seasonCountText)
                 ].compactMap(\.self)
             case .season:
                 [
                     detail.airDate?.formatted(date: .abbreviated, time: .omitted),
                     detail.episodeCount.map(Self.episodeCountText),
-                    detail.status,
+                    detail.status
                 ].compactMap(\.self)
             }
 
@@ -154,7 +155,7 @@ final class EntryDetailModel: ObservableObject {
                             value: Self.minutesText($0),
                             symbolName: "clock.fill"
                         )
-                    },
+                    }
                 ].compactMap(\.self)
             case .series, .season:
                 [
@@ -181,7 +182,7 @@ final class EntryDetailModel: ObservableObject {
                             value: Self.minutesText($0),
                             symbolName: "clock.fill"
                         )
-                    },
+                    }
                 ].compactMap(\.self)
             }
 
@@ -254,7 +255,7 @@ final class EntryDetailModel: ObservableObject {
         10402: "Music", 10749: "Romance", 10751: "Family", 10752: "War",
         10759: "Action & Adventure", 10762: "Kids", 10763: "News", 10764: "Reality",
         10765: "Sci-Fi & Fantasy", 10766: "Soap", 10767: "Talk", 10768: "War & Politics",
-        10770: "TV Movie",
+        10770: "TV Movie"
     ]
 
     private static let japaneseGenreNames: [Int: String] = [
@@ -264,7 +265,7 @@ final class EntryDetailModel: ObservableObject {
         10749: "ロマンス", 10751: "ファミリー", 10752: "戦争",
         10759: "アクション・アドベンチャー", 10762: "キッズ", 10763: "ニュース",
         10764: "リアリティ", 10765: "SF・ファンタジー", 10766: "ソープ",
-        10767: "トーク", 10768: "戦争・政治", 10770: "テレビ映画",
+        10767: "トーク", 10768: "戦争・政治", 10770: "テレビ映画"
     ]
 
     private static let chineseGenreNames: [Int: String] = [
@@ -272,7 +273,7 @@ final class EntryDetailModel: ObservableObject {
         36: "历史", 37: "西部", 53: "惊悚", 80: "犯罪", 99: "纪录", 878: "科幻", 9648: "悬疑",
         10402: "音乐", 10749: "爱情", 10751: "家庭", 10752: "战争", 10759: "动作冒险",
         10762: "儿童", 10763: "新闻", 10764: "真人秀", 10765: "科幻奇幻",
-        10766: "肥皂剧", 10767: "脱口秀", 10768: "战争政治", 10770: "电视电影",
+        10766: "肥皂剧", 10767: "脱口秀", 10768: "战争政治", 10770: "电视电影"
     ]
 }
 
@@ -339,4 +340,5 @@ enum EntryDetailL10n {
 
 enum EntryDetailScrollTarget: Hashable {
     case editingSection
+    case episodesSection
 }

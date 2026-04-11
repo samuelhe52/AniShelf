@@ -11,22 +11,13 @@ import SwiftUI
 /// View responsible for displaying TMDb search results and handling TMDb-specific interactions.
 struct TMDbSearchContent: View {
     @Environment(TMDbSearchService.self) private var tmdbSearchService: TMDbSearchService
-    @AppStorage(.searchTMDbLanguage) private var language: Language = .english
+    @Binding var language: Language
 
-    private let onDuplicateTapped: (Int) -> Void
-    private let checkDuplicate: (Int) -> Bool
-
-    init(
-        onDuplicateTapped: @escaping (Int) -> Void,
-        checkDuplicate: @escaping (Int) -> Bool
-    ) {
-        self.onDuplicateTapped = onDuplicateTapped
-        self.checkDuplicate = checkDuplicate
-    }
+    let onRetry: () -> Void
+    let onDuplicateTapped: (Int) -> Void
+    let checkDuplicate: (Int) -> Bool
 
     var body: some View {
-        @Bindable var tmdbSearchService = tmdbSearchService
-
         VStack {
             switch tmdbSearchService.status {
             case .loaded:
@@ -41,10 +32,8 @@ struct TMDbSearchContent: View {
             case .error(let error):
                 Spacer()
                 VStack {
-                    Button("Reload", systemImage: "arrow.clockwise.circle") {
-                        updateResults()
-                    }
-                    .padding(.bottom)
+                    Button("Reload", systemImage: "arrow.clockwise.circle", action: onRetry)
+                        .padding(.bottom)
                     Text("An error occurred while loading results.")
                     Text("Check your internet connection.")
                         .padding(.bottom)
@@ -56,21 +45,9 @@ struct TMDbSearchContent: View {
             }
         }
         .listStyle(.inset)
-        .searchable(
-            text: $tmdbSearchService.query,
-            placement: .navigationBarDrawer(displayMode: .automatic),
-            prompt: "Search TV animation or movies..."
-        )
         .safeAreaInset(edge: .bottom) {
             submitMenu
                 .offset(y: -30)
-        }
-        .onSubmit(of: .search) { updateResults() }
-        .onChange(of: language) { updateResults() }
-        .onAppear {
-            if tmdbSearchService.movieResults.isEmpty && tmdbSearchService.seriesResults.isEmpty {
-                updateResults()
-            }
         }
         .animation(.default, value: tmdbSearchService.status)
     }
@@ -147,9 +124,6 @@ struct TMDbSearchContent: View {
         }
     }
 
-    private func updateResults() {
-        tmdbSearchService.updateResults(language: language)
-    }
 }
 
 fileprivate struct AlreadyAddedIndicatorModifier: ViewModifier {

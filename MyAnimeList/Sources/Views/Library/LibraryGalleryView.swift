@@ -39,9 +39,9 @@ struct LibraryGalleryView: View {
                             store: store,
                             scrolledID: $scrolledID
                         )
-                            .containerRelativeFrame(isHorizontal ? .horizontal : .vertical)
-                            .transition(.opacity)
-                            .onScrollVisibilityChange { _ in }
+                        .containerRelativeFrame(isHorizontal ? .horizontal : .vertical)
+                        .transition(.opacity)
+                        .onScrollVisibilityChange { _ in }
                     }
                 }.scrollTargetLayout()
             }

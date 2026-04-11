@@ -52,7 +52,7 @@ struct EntryDetailView: View {
                         quickActionsRow
                             .padding(.top, -20)
                             .padding(.bottom, 4)
-                        detailsContent
+                        detailsContent(proxy)
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
@@ -308,18 +308,28 @@ struct EntryDetailView: View {
     // MARK: - Details Content
 
     @ViewBuilder
-    private var detailsContent: some View {
+    private func detailsContent(_ proxy: ScrollViewProxy) -> some View {
         if !model.statCards.isEmpty {
             LazyVGrid(columns: statColumns, spacing: 12) {
                 ForEach(model.statCards) { card in
                     DetailStatCard(card: card)
+                        .onTapGesture {
+                            if card.id == "episodes" {
+                                withAnimation(.spring(response: 0.6, dampingFraction: 0.86)) {
+                                    proxy.scrollTo(
+                                        EntryDetailScrollTarget.episodesSection,
+                                        anchor: .top
+                                    )
+                                }
+                            }
+                        }
                 }
             }
         }
 
         editingSection
 
-            sectionCard(EntryDetailL10n.overview) {
+        sectionCard(EntryDetailL10n.overview) {
             Text(model.overviewText)
                 .font(.body)
                 .foregroundStyle(.primary)
@@ -349,6 +359,7 @@ struct EntryDetailView: View {
                         }
                     }
                 }
+                .id(EntryDetailScrollTarget.episodesSection)
             }
         case .season:
             if !model.episodeCards.isEmpty {
@@ -366,6 +377,7 @@ struct EntryDetailView: View {
                         }
                     }
                 }
+                .id(EntryDetailScrollTarget.episodesSection)
             }
         case .movie:
             EmptyView()

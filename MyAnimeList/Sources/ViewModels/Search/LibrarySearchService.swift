@@ -17,7 +17,6 @@ fileprivate let logger = Logger(subsystem: .bundleIdentifier, category: "Library
 @Observable @MainActor
 class LibrarySearchService {
     private let dataProvider = DataProvider.default
-    var query: String
     private var entries: [AnimeEntry] = []
     private(set) var jumpToEntryInLibrary: (Int) -> Void
 
@@ -25,10 +24,8 @@ class LibrarySearchService {
     private(set) var status: Status = .loaded
 
     init(
-        query: String = UserDefaults.standard.string(forKey: .searchPageQuery) ?? "",
         jumpToEntryInLibrary: @escaping (Int) -> Void = { _ in }
     ) {
-        self.query = query
         self.jumpToEntryInLibrary = jumpToEntryInLibrary
     }
 
@@ -50,9 +47,8 @@ class LibrarySearchService {
         }
     }
 
-    func updateResults() {
+    func updateResults(query: String) {
         status = .loading
-        UserDefaults.standard.set(query, forKey: .searchPageQuery)
         loadModels()
         if query.isEmpty {
             results = []

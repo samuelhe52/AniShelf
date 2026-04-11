@@ -71,7 +71,7 @@ extension AnimeEntry {
             nameTranslations: [
                 "ja-JP": "君の名は。",
                 "en-US": "Your Name.",
-                "zh-CN": "你的名字。",
+                "zh-CN": "你的名字。"
             ],
             overview:
                 "山深い田舎町で暮らす女子高生の三葉と、東京で暮らす男子高校生の瀧。出会うはずのない二人は、ある日突然入れ替わる不思議な現象をきっかけに、お互いの人生へ深く関わっていく。",

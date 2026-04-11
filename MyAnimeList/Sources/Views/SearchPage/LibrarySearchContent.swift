@@ -11,10 +11,9 @@ import SwiftUI
 /// View responsible for displaying library search results and handling library-specific interactions.
 struct LibrarySearchContent: View {
     @Environment(LibrarySearchService.self) private var librarySearchService: LibrarySearchService
+    let onRetry: () -> Void
 
     var body: some View {
-        @Bindable var librarySearchService = librarySearchService
-
         VStack {
             switch librarySearchService.status {
             case .loaded:
@@ -26,10 +25,8 @@ struct LibrarySearchContent: View {
             case .error(let error):
                 Spacer()
                 VStack {
-                    Button("Reload", systemImage: "arrow.clockwise.circle") {
-                        librarySearchService.updateResults()
-                    }
-                    .padding(.bottom)
+                    Button("Reload", systemImage: "arrow.clockwise.circle", action: onRetry)
+                        .padding(.bottom)
                     Text("An error occurred while loading results.")
                     Text("Error: \(error.localizedDescription)")
                         .font(.caption)
@@ -39,17 +36,6 @@ struct LibrarySearchContent: View {
             }
         }
         .listStyle(.inset)
-        .searchable(
-            text: $librarySearchService.query,
-            placement: .navigationBarDrawer(displayMode: .automatic),
-            prompt: "Search in your library..."
-        )
-        .onSubmit(of: .search) { librarySearchService.updateResults() }
-        .onAppear {
-            if librarySearchService.results.isEmpty {
-                librarySearchService.updateResults()
-            }
-        }
         .animation(.default, value: librarySearchService.status)
     }
 

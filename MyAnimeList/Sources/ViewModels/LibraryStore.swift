@@ -602,18 +602,18 @@ class LibraryStore {
 }
 
 #if DEBUG
-// This is where we place debug-specific code.
-extension LibraryStore {
-    /// Mock delete, doesn't really touch anything in the persisted data model.
-    ///
-    /// Restores after 1.5 seconds.
-    func mockDeleteEntry(_ entry: AnimeEntry) {
-        if let index = library.firstIndex(where: { $0.id == entry.id }) {
-            library.remove(at: index)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-                self?.library.insert(entry, at: index)
+    // This is where we place debug-specific code.
+    extension LibraryStore {
+        /// Mock delete, doesn't really touch anything in the persisted data model.
+        ///
+        /// Restores after 1.5 seconds.
+        func mockDeleteEntry(_ entry: AnimeEntry) {
+            if let index = library.firstIndex(where: { $0.id == entry.id }) {
+                library.remove(at: index)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                    self?.library.insert(entry, at: index)
+                }
             }
         }
     }
-}
 #endif

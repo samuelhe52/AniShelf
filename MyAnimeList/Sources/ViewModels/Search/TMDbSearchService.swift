@@ -20,20 +20,23 @@ struct SearchResult: Hashable {
 
 @Observable @MainActor
 class TMDbSearchService {
+    private struct SearchRequest: Equatable {
+        let query: String
+        let language: Language
+    }
+
     let fetcher: InfoFetcher = .init()
-    private(set) var status: Status = .loading
-    var query: String
+    private(set) var status: Status = .loaded
     private(set) var movieResults: [BasicInfo] = []
     private(set) var seriesResults: [BasicInfo] = []
 
+    private var latestRequest: SearchRequest?
     private var resultsToSubmit: OrderedSet<SearchResult> = []
     var processResults: (OrderedSet<SearchResult>) -> Void
 
     init(
-        query: String = UserDefaults.standard.string(forKey: .searchPageQuery) ?? "",
         processResults: @escaping (OrderedSet<SearchResult>) -> Void
     ) {
-        self.query = query
         self.processResults = processResults
     }
 
@@ -105,16 +108,24 @@ class TMDbSearchService {
         }
     }
 
-    func updateResults(language: Language) {
-        UserDefaults.standard.set(query, forKey: .searchPageQuery)
-        guard !query.isEmpty else { return }
+    func updateResults(query: String, language: Language) {
+        let request = SearchRequest(query: query, language: language)
+        latestRequest = request
+
+        guard !query.isEmpty else {
+            withAnimation {
+                movieResults = []
+                seriesResults = []
+            }
+            status = .loaded
+            return
+        }
         Task {
-            let currentQuery = query
             status = .loading
             do {
-                let movies = try await fetcher.searchMovies(name: currentQuery, language: language)
+                let movies = try await fetcher.searchMovies(name: query, language: language)
                 let tvSeries = try await fetcher.searchTVSeries(
-                    name: currentQuery, language: language)
+                    name: query, language: language)
                 let moviesPosterURLs = try await fetchPosterURLs(
                     from: movies.map { (tmdbID: $0.id, path: $0.posterPath) })
                 let seriesPosterURLs = try await fetchPosterURLs(
@@ -142,7 +153,7 @@ class TMDbSearchService {
                         type: .series)
                 }
 
-                if currentQuery == query {
+                if request == latestRequest {
                     withAnimation {
                         movieResults = searchMovieResults
                         seriesResults = searchTVSeriesResults

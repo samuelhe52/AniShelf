@@ -446,16 +446,16 @@ final class InfoFetcher: Sendable {
     }
 }
 
-private extension String {
-    var nilIfEmpty: String? {
+extension String {
+    fileprivate var nilIfEmpty: String? {
         trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : self
     }
 
-    var strippingVoiceQualifier: String {
+    fileprivate var strippingVoiceQualifier: String {
         let voiceMarkerPattern = #"(?i:voice|voiced\s+by|cv|c\.?\s*v\.?)|声優|声の出演|声|吹替え|吹替|吹き替え|ボイス"#
         let patterns = [
             #"\s*[\(\（][^)\）]*(?:__VOICE_MARKERS__)[^)\）]*[\)\）]\s*$"#,
-            #"\s*[\[\［][^\]\］]*(?:__VOICE_MARKERS__)[^\]\］]*[\]\］]\s*$"#,
+            #"\s*[\[\［][^\]\］]*(?:__VOICE_MARKERS__)[^\]\］]*[\]\］]\s*$"#
         ].map {
             $0.replacingOccurrences(of: "__VOICE_MARKERS__", with: voiceMarkerPattern)
         }
@@ -478,7 +478,7 @@ private extension String {
         }
     }
 
-    var containsJapaneseScript: Bool {
+    fileprivate var containsJapaneseScript: Bool {
         unicodeScalars.contains {
             switch $0.value {
             case 0x3040...0x309F, 0x30A0...0x30FF, 0x4E00...0x9FFF:
