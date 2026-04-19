@@ -272,34 +272,40 @@ struct EntryDetailView: View {
                 tint: entry.favorite ? .pink : .primary
             ) { toggleFavorite() }
 
-            if entry.type == .movie {
-                PopupActionCircleButton(systemImage: "photo.on.rectangle") {
+            Menu {
+                Button {
                     showPosterSelectionView = true
+                } label: {
+                    Label("Change Poster", systemImage: "photo.on.rectangle")
                 }
-            } else {
-                Menu {
-                    Button {
-                        showPosterSelectionView = true
-                    } label: {
-                        Label("Change Poster", systemImage: "photo.on.rectangle")
-                    }
 
+                if entry.type != .movie {
                     Button {
                         Task { await handleConvertTap() }
                     } label: {
                         Label(convertMenuTitle, systemImage: "arrow.triangle.2.circlepath")
                     }
                     .disabled(conversionInProgress)
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.title2)
-                        .frame(width: 20, height: 20)
-                        .padding(10)
                 }
-                .buttonStyle(.glass)
-                .buttonBorderShape(.circle)
-                .tint(.primary)
+
+                Divider()
+
+                Button(
+                    dropActionTitle,
+                    systemImage: dropActionSystemImage,
+                    role: entry.watchStatus == .dropped ? nil : .destructive,
+                    action: toggleDroppedStatus
+                )
+                .tint(entry.watchStatus == .dropped ? .primary : .red)
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.title2)
+                    .frame(width: 20, height: 20)
+                    .padding(10)
             }
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
+            .tint(.primary)
 
             Spacer(minLength: 0)
         }
@@ -484,13 +490,36 @@ struct EntryDetailView: View {
         dataHandler?.toggleFavorite(entry: entry)
     }
 
+    private func toggleDroppedStatus() {
+        withAnimation {
+            if entry.watchStatus == .dropped {
+                entry.setWatchStatus(.watching)
+            } else {
+                entry.setWatchStatus(.dropped)
+            }
+        }
+    }
+
+    private var dropActionTitle: LocalizedStringResource {
+        entry.watchStatus == .dropped ? "Undrop" : "Mark as Dropped"
+    }
+
+    private var dropActionSystemImage: String {
+        entry.watchStatus == .dropped ? "arrow.uturn.backward.circle" : "xmark.circle"
+    }
+
     @ViewBuilder
     private var doneToolbarControl: some View {
-        if entry.userInfoHasChanges(comparedTo: originalUserInfo) {
+        if !shouldConfirmBeforeSaving {
+            Button(String(localized: EntryDetailL10n.done)) {
+                dismiss()
+            }
+            .font(.headline.weight(.semibold))
+            .foregroundStyle(.primary)
+        } else {
             Menu {
                 Button("Save") {
-                    saveUserEdits()
-                    dismiss()
+                    saveAndDismissIfNeeded()
                 }
                 Button("Discard Changes", role: .destructive) {
                     discardUserEdits()
@@ -501,13 +530,23 @@ struct EntryDetailView: View {
                     .font(.headline.weight(.semibold))
                     .foregroundStyle(.primary)
             }
-        } else {
-            Button(String(localized: EntryDetailL10n.done)) {
-                dismiss()
-            }
-            .font(.headline.weight(.semibold))
-            .foregroundStyle(.primary)
         }
+    }
+
+    private var hasUnsavedUserInfoChanges: Bool {
+        entry.userInfoHasChanges(comparedTo: originalUserInfo)
+    }
+
+    private var shouldConfirmBeforeSaving: Bool {
+        // Onlt non-incremetal note changes require confirmation.
+        !entry.notes.hasPrefix(originalUserInfo.notes)
+    }
+
+    private func saveAndDismissIfNeeded() {
+        if hasUnsavedUserInfoChanges {
+            saveUserEdits()
+        }
+        dismiss()
     }
 
     private var convertMenuTitle: LocalizedStringResource {

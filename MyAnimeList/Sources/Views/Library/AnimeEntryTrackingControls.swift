@@ -17,30 +17,31 @@ struct AnimeEntryWatchedStatusPicker: View {
         self.entry = entry
     }
 
-    private var watchedStatusBinding: Binding<WatchedStatus> {
+    private var activeStatusBinding: Binding<WatchedStatus> {
         Binding(
             get: {
-                entry.watchStatus
+                switch entry.watchStatus {
+                case .planToWatch, .watching, .watched:
+                    return entry.watchStatus
+                case .dropped:
+                    return .watching
+                }
             },
             set: {
-                entry.watchStatus = $0
-                switch $0 {
-                case .watched:
-                    entry.dateFinished = .now
-                case .watching:
-                    entry.dateStarted = .now
-                    entry.dateFinished = nil
-                default: break
-                }
+                entry.setWatchStatus($0)
             })
     }
 
     var body: some View {
-        Picker(selection: watchedStatusBinding) {
-            Text("Plan to Watch").tag(WatchedStatus.planToWatch)
-            Text("Watching").tag(WatchedStatus.watching)
-            Text("Watched").tag(WatchedStatus.watched)
-        } label: {
+        VStack(alignment: .leading, spacing: 12) {
+            Picker(selection: activeStatusBinding) {
+                Text("Plan to Watch").tag(WatchedStatus.planToWatch)
+                Text("Watching").tag(WatchedStatus.watching)
+                Text("Watched").tag(WatchedStatus.watched)
+            } label: {
+            }
+            .disabled(entry.watchStatus == .dropped)
+            .animation(.default, value: entry.watchStatus == .dropped)
         }
     }
 }
@@ -49,13 +50,19 @@ struct AnimeEntryDatePickers: View {
     var entry: AnimeEntry
     var labelsHidden: Bool = false
 
+    var isLocked: Bool {
+        entry.watchStatus == .dropped
+    }
+
     private var dateStartedBinding: Binding<Date> {
         Binding(
             get: {
                 entry.dateStarted ?? .now
             },
             set: {
+                guard !isLocked else { return }
                 entry.dateStarted = $0
+                entry.normalizeTrackingDates()
             })
     }
 
@@ -65,41 +72,50 @@ struct AnimeEntryDatePickers: View {
                 entry.dateFinished ?? .now
             },
             set: {
+                guard !isLocked else { return }
                 entry.dateFinished = $0
-                if $0 < .now {
-                    entry.watchStatus = .watched
-                }
+                entry.setWatchStatus(.watched)
             })
     }
 
     var body: some View {
-        HStack {
-            Spacer()
-            DatePicker(
-                selection: dateStartedBinding,
-                in: Date.distantPast...(entry.dateFinished ?? .now),
-                displayedComponents: [.date]
-            ) {
-                Text("Date Started")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-            Image(systemName: "ellipsis")
-                .alignmentGuide(VerticalAlignment.center) { d in
-                    labelsHidden ? d[VerticalAlignment.center] : -6
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Spacer()
+                DatePicker(
+                    selection: dateStartedBinding,
+                    in: Date.distantPast...(entry.dateFinished ?? .now),
+                    displayedComponents: [.date]
+                ) {
+                    Text("Date Started")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
-                .foregroundStyle(.secondary)
-            DatePicker(
-                selection: dateFinishedBinding,
-                in: (entry.dateStarted ?? .now)...Date.distantFuture,
-                displayedComponents: [.date]
-            ) {
-                Text("Date Finished")
-                    .font(.footnote)
+                Image(systemName: "ellipsis")
+                    .alignmentGuide(VerticalAlignment.center) { d in
+                        labelsHidden ? d[VerticalAlignment.center] : -6
+                    }
+                    .foregroundStyle(.secondary)
+                DatePicker(
+                    selection: dateFinishedBinding,
+                    in: (entry.dateStarted ?? .now)...Date.distantFuture,
+                    displayedComponents: [.date]
+                ) {
+                    Text("Date Finished")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .datePickerStyle(.vertical(labelsHidden: labelsHidden))
+            .disabled(isLocked)
+            .animation(.default, value: isLocked)
+
+            if isLocked {
+                Label("Dates are locked while this entry is dropped.", systemImage: "lock.fill")
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Spacer()
         }
-        .datePickerStyle(.vertical(labelsHidden: labelsHidden))
     }
 }

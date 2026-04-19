@@ -15,6 +15,7 @@ extension AnimeEntry.WatchStatus: @retroactive CustomLocalizedStringResourceConv
         case .planToWatch: return "Plan to Watch"
         case .watching: return "Watching"
         case .watched: return "Watched"
+        case .dropped: return "Dropped"
         }
     }
 }

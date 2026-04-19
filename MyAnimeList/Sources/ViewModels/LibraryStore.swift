@@ -541,6 +541,9 @@ class LibraryStore {
         static let watching = AnimeFilter(id: "Watching", name: "Watching") {
             $0.watchStatus == .watching
         }
+        static let dropped = AnimeFilter(id: "Dropped", name: "Dropped") {
+            $0.watchStatus == .dropped
+        }
 
         private init(
             id: String, name: LocalizedStringResource,
@@ -556,7 +559,7 @@ class LibraryStore {
         let evaluate: @Sendable (AnimeEntry) -> Bool
 
         static var allCases: [LibraryStore.AnimeFilter] {
-            [.favorited, .watched, .planToWatch, .watching]
+            [.favorited, .watched, .planToWatch, .watching, .dropped]
         }
 
         static func == (lhs: LibraryStore.AnimeFilter, rhs: LibraryStore.AnimeFilter) -> Bool {

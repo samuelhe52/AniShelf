@@ -23,7 +23,8 @@ enum MigrationPlan: SchemaMigrationPlan {
             SchemaV2_3_2.self,
             SchemaV2_4_0.self,
             SchemaV2_4_1.self,
-            SchemaV2_5_0.self
+            SchemaV2_5_0.self,
+            SchemaV2_6_0.self
         ]
     }
 
@@ -40,7 +41,8 @@ enum MigrationPlan: SchemaMigrationPlan {
             .lightweight(fromVersion: SchemaV2_3_1.self, toVersion: SchemaV2_3_2.self),
             .lightweight(fromVersion: SchemaV2_3_2.self, toVersion: SchemaV2_4_0.self),
             .lightweight(fromVersion: SchemaV2_4_0.self, toVersion: SchemaV2_4_1.self),
-            .lightweight(fromVersion: SchemaV2_4_1.self, toVersion: SchemaV2_5_0.self)
+            .lightweight(fromVersion: SchemaV2_4_1.self, toVersion: SchemaV2_5_0.self),
+            .lightweight(fromVersion: SchemaV2_5_0.self, toVersion: SchemaV2_6_0.self)
         ]
     }
 }

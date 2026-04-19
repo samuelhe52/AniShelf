@@ -71,6 +71,7 @@ Media/
 # SPM
 .swiftpm/
 
-# VSCode
+# Editor
 .vscode/
 buildServer.json
+.nvim/

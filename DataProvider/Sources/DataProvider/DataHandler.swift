@@ -46,15 +46,14 @@ public final class DataHandler {
     /// - Parameter entry: The entry to update.
     public func markEntryAsPlanToWatch(_ entry: AnimeEntry) {
         logger.debug("Marking entry as unwatched: \(entry.tmdbID), name: \(entry.name)")
-        entry.watchStatus = .planToWatch
+        entry.setWatchStatus(.planToWatch)
     }
 
     /// Marks an anime entry as currently watching by the status to `.watching` setting the start date to now.
     /// - Parameter entry: The entry to update.
     public func markEntryAsWatching(_ entry: AnimeEntry) {
         logger.debug("Marking entry as watching: \(entry.tmdbID), name: \(entry.name)")
-        entry.watchStatus = .watching
-        entry.dateStarted = .now
+        entry.setWatchStatus(.watching)
     }
 
     /// Marks an anime entry as watched by setting the status to `.watched` and finish date to now.
@@ -62,8 +61,14 @@ public final class DataHandler {
     /// - Note: If the entry hasn't been marked as currently watching yet, `dateStarted` will be set to `.now`
     public func markEntryAsWatched(_ entry: AnimeEntry) {
         logger.debug("Marking entry as watched: \(entry.tmdbID), name: \(entry.name)")
-        entry.watchStatus = .watched
-        entry.dateFinished = .now
+        entry.setWatchStatus(.watched)
+    }
+
+    /// Marks an anime entry as dropped and preserves any existing tracking dates.
+    /// - Parameter entry: The entry to update.
+    public func markEntryAsDropped(_ entry: AnimeEntry) {
+        logger.debug("Marking entry as dropped: \(entry.tmdbID), name: \(entry.name)")
+        entry.setWatchStatus(.dropped)
     }
 
     /// Marks an anime entry as a favorite.

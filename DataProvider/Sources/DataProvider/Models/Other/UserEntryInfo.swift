@@ -61,6 +61,7 @@ extension AnimeEntry.WatchStatus: CustomStringConvertible {
         case .planToWatch: return "Plan to Watch"
         case .watching: return "Watching"
         case .watched: return "Watched"
+        case .dropped: return "Dropped"
         }
     }
 }
@@ -79,6 +80,22 @@ extension UserEntryInfo: CustomStringConvertible {
 }
 
 extension AnimeEntry {
+    public func setWatchStatus(_ status: WatchStatus, now: Date = .now) {
+        watchStatus = status
+        normalizeTrackingDates(now: now)
+    }
+
+    public func normalizeTrackingDates(now: Date = .now) {
+        guard watchStatus != .dropped else { return }
+        let normalizedDates = watchStatus.normalizedDates(
+            dateStarted: dateStarted,
+            dateFinished: dateFinished,
+            now: now
+        )
+        dateStarted = normalizedDates.dateStarted
+        dateFinished = normalizedDates.dateFinished
+    }
+
     public func updateUserInfo(from userInfo: UserEntryInfo) {
         watchStatus = userInfo.watchStatus
         dateStarted = userInfo.dateStarted
@@ -86,5 +103,36 @@ extension AnimeEntry {
         favorite = userInfo.favorite
         notes = userInfo.notes
         usingCustomPoster = userInfo.usingCustomPoster
+        normalizeTrackingDates()
+    }
+}
+
+extension AnimeEntry.WatchStatus {
+    public func normalizedDates(
+        dateStarted: Date?,
+        dateFinished: Date?,
+        now: Date = .now
+    ) -> (dateStarted: Date?, dateFinished: Date?) {
+        switch self {
+        case .planToWatch:
+            return (nil, nil)
+        case .watching:
+            return (dateStarted ?? now, nil)
+        case .watched:
+            let finished = dateFinished ?? dateStarted ?? now
+            let started = min(dateStarted ?? finished, finished)
+            return (started, finished)
+        case .dropped:
+            switch (dateStarted, dateFinished) {
+            case (nil, nil):
+                return (nil, nil)
+            case (.some(let started), nil):
+                return (started, nil)
+            case (nil, .some(let finished)):
+                return (finished, finished)
+            case (.some(let started), .some(let finished)):
+                return (started, max(started, finished))
+            }
+        }
     }
 }
