@@ -2,6 +2,19 @@
 
 A beautiful, native iOS app for tracking and managing your anime library.
 
+## 📸 Screenshots
+
+<div style="overflow-x: auto; padding: 0.25rem 0 1rem;">
+  <table cellpadding="0" cellspacing="12">
+    <tr>
+      <td><img src=".app-store-assets/screenshots/ios/1.PNG" alt="AniShelf iPhone screenshot 1" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/2.PNG" alt="AniShelf iPhone screenshot 2" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/3.PNG" alt="AniShelf iPhone screenshot 3" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/4.PNG" alt="AniShelf iPhone screenshot 4" width="240" /></td>
+    </tr>
+  </table>
+</div>
+
 ## ✨ Features
 
 - **📚 Library Management** - Keep track of all your anime in one place
@@ -14,6 +27,14 @@ A beautiful, native iOS app for tracking and managing your anime library.
 - **💾 Backup & Restore** - Export and import your library data
 - **🌍 Multi-language** - Support for anime titles and descriptions in multiple languages
 
+## 🧪 TestFlight Beta
+
+Join the latest beta build here:
+
+- [AniShelf TestFlight](https://testflight.apple.com/join/ns3sR38X)
+
+> You still need a TMDb API key to use the app, which can be obtained for free from [The Movie Database](https://www.themoviedb.org/settings/api).
+
 ## 🛠 Tech Stack
 
 - **Swift 6.1+** with strict concurrency
@@ -22,7 +43,7 @@ A beautiful, native iOS app for tracking and managing your anime library.
 - **TMDb API** integration for anime metadata
 - **Kingfisher** for efficient image loading and caching
 
-## 📋 Requirements
+## 📋 Build Requirements
 
 - iOS 26.0+
 - Xcode 26.0+

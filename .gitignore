@@ -12,7 +12,6 @@ xcuserdata/
 *.ipa
 *.dSYM.zip
 *.dSYM
-.app-store-assets
 
 ## Playgrounds
 timeline.xctimeline
