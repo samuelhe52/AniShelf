@@ -24,11 +24,6 @@ struct AnimeEntryCard: View {
         )
         .scaledToFit()
         .clipShape(.rect(cornerRadius: 10))
-        .overlay(alignment: .bottomTrailing) {
-            AnimeTypeIndicator(type: entry.type)
-                .opacity(imageLoaded ? 1 : 0)
-                .font(.footnote)
-        }
         .padding()
     }
 }
