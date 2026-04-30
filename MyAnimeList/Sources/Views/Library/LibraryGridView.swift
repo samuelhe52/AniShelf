@@ -60,9 +60,7 @@ struct LibraryGridView: View {
 
     private func onChangeOfScrolledID(proxy: ScrollViewProxy) {
         if let scrolledID {
-            withAnimation {
-                proxy.scrollTo(scrolledID)
-            }
+            proxy.scrollTo(scrolledID)
         }
     }
 
@@ -70,9 +68,7 @@ struct LibraryGridView: View {
         // Prevent the problem of programmatic scrolling doesn't work when images aren't loaded yet.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             if let scrolledID {
-                withAnimation {
-                    proxy.scrollTo(scrolledID, anchor: .center)
-                }
+                proxy.scrollTo(scrolledID, anchor: .center)
             }
         }
     }

@@ -24,6 +24,7 @@ struct LibraryView: View {
     @Bindable var store: LibraryStore
     @State private var interaction = LibraryEntryInteractionState()
     @Environment(\.dataHandler) var dataHandler
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     // UI state
     @State private var isSearching = false
@@ -48,7 +49,9 @@ struct LibraryView: View {
 
     var body: some View {
         NavigationStack {
-            libraryView
+            ZStack {
+                libraryView
+            }
                 .environment(\.toggleFavorite, toggleFavorite)
                 .environment(\.libraryStore, store)
                 .environment(interaction)
@@ -67,28 +70,34 @@ struct LibraryView: View {
                 store: store,
                 scrolledID: $scrollState.scrolledID
             )
+            .id(LibraryViewStyle.gallery)
             .scenePadding(.vertical)
             .ignoresSafeArea(.keyboard, edges: .bottom)
-            .navigationTitle("\(store.libraryOnDisplay.count) Anime")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            .transition(libraryViewTransition)
         case .list:
             LibraryListView(
                 store: store,
                 scrolledID: $scrollState.scrolledID,
                 highlightedEntryID: $highlightedEntryID
             )
+            .id(LibraryViewStyle.list)
             .safeAreaPadding(.bottom, 20)
-            .navigationTitle("\(store.libraryOnDisplay.count) Anime")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            .transition(libraryViewTransition)
         case .grid:
             LibraryGridView(
                 store: store,
                 scrolledID: $scrollState.scrolledID,
                 highlightedEntryID: $highlightedEntryID
             )
+            .id(LibraryViewStyle.grid)
             .safeAreaPadding(.bottom, 20)
-            .navigationTitle("\(store.libraryOnDisplay.count) Anime")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            .transition(libraryViewTransition)
         }
     }
 
@@ -96,13 +105,11 @@ struct LibraryView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        if libraryViewStyle == .list {
-            ToolbarItem(placement: .principal) {
-                listNavigationTitle
-            }
+        ToolbarItem(placement: .principal) {
+            LibraryNavigationTitleCapsule(count: store.libraryOnDisplay.count)
         }
         ToolbarItem(placement: .bottomBar) {
-            Picker("View Style", selection: $libraryViewStyle) {
+            Picker("View Style", selection: libraryViewStyleBinding) {
                 ForEach(LibraryViewStyle.allCases, id: \.self) { style in
                     Label(style.nameKey, systemImage: style.systemImageName).tag(style)
                 }
@@ -131,31 +138,6 @@ struct LibraryView: View {
         ToolbarItemGroup(placement: .topBarTrailing) {
             settings
         }
-    }
-
-    private var listNavigationTitle: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 5) {
-            Text("\(store.libraryOnDisplay.count)")
-                .font(.title3.weight(.bold))
-                .monospacedDigit()
-            Text(animeTitleResource)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 13)
-        .padding(.vertical, 6)
-        .background {
-            Capsule(style: .continuous)
-                .fill(.white.opacity(0.055))
-        }
-        .overlay {
-            Capsule(style: .continuous)
-                .stroke(.white.opacity(0.11), lineWidth: 1)
-        }
-    }
-
-    private var animeTitleResource: LocalizedStringResource {
-        "Anime"
     }
 
     private var sortOptions: some View {
@@ -201,6 +183,52 @@ struct LibraryView: View {
                         if $0 { store.filters.removeAll() }
                     }))
         }
+    }
+
+    private var libraryViewStyleBinding: Binding<LibraryViewStyle> {
+        Binding(
+            get: { libraryViewStyle },
+            set: { newValue in
+                guard newValue != libraryViewStyle else { return }
+                withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+                    libraryViewStyle = newValue
+                }
+            }
+        )
+    }
+
+    private var libraryViewTransition: AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(
+            insertion: .modifier(
+                active: LibraryViewTransitionModifier(
+                    opacity: 0,
+                    scale: 0.975,
+                    blurRadius: 8,
+                    yOffset: 14
+                ),
+                identity: LibraryViewTransitionModifier(
+                    opacity: 1,
+                    scale: 1,
+                    blurRadius: 0,
+                    yOffset: 0
+                )
+            ),
+            removal: .modifier(
+                active: LibraryViewTransitionModifier(
+                    opacity: 0,
+                    scale: 1.018,
+                    blurRadius: 5,
+                    yOffset: -10
+                ),
+                identity: LibraryViewTransitionModifier(
+                    opacity: 1,
+                    scale: 1,
+                    blurRadius: 0,
+                    yOffset: 0
+                )
+            )
+        )
     }
 
     // MARK: - Search
@@ -465,6 +493,22 @@ struct LibraryView: View {
             case .grid: "rectangle.grid.3x2.fill"
             }
         }
+    }
+}
+
+private struct LibraryViewTransitionModifier: ViewModifier {
+    let opacity: Double
+    let scale: CGFloat
+    let blurRadius: CGFloat
+    let yOffset: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(scale)
+            .offset(y: yOffset)
+            .blur(radius: blurRadius)
+            .opacity(opacity)
+            .compositingGroup()
     }
 }
 
