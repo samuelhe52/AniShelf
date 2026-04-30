@@ -14,27 +14,46 @@ struct AnimeEntryListRow: View {
     @State private var favoriteOverride: Bool?
 
     var entry: AnimeEntry
+    var onSelect: (() -> Void)? = nil
+    var onOpenDetails: (() -> Void)? = nil
 
     private let metadataFont = Font.system(size: 10.5, weight: .medium)
     private let overviewFont = Font.system(size: 11, weight: .regular)
     private let posterWidth: CGFloat = 88
     private let posterHeight: CGFloat = 132
     private let rowHeight: CGFloat = 126
+    private let favoriteButtonTapClearance: CGFloat = 44
 
     var body: some View {
         HStack(alignment: .top, spacing: 11) {
             poster
-
             info(entry: entry)
         }
         .frame(height: rowHeight, alignment: .top)
         .padding(.vertical, 5)
+        .overlay {
+            rowTapSurface
+        }
         .onChange(of: entry.favorite, initial: true) { _, newValue in
             guard favoriteOverride != nil else { return }
             if favoriteOverride == newValue {
                 favoriteOverride = nil
             }
         }
+    }
+
+    private var rowTapSurface: some View {
+        HStack(spacing: 0) {
+            Color.clear
+                .contentShape(.rect)
+                .onTapGesture { onSelect?() }
+                .onTapGesture(count: 2) { onOpenDetails?() }
+
+            Color.clear
+                .frame(width: favoriteButtonTapClearance)
+                .allowsHitTesting(false)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -134,7 +153,7 @@ struct AnimeEntryListRow: View {
                 .animation(.snappy(duration: 0.18), value: isFavorite)
                 .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.borderless)
         .sensoryFeedback(.impact, trigger: isFavorite)
         .accessibilityLabel(Text(favoriteAccessibilityLabel))
     }
@@ -201,23 +220,27 @@ struct AnimeEntryListRow: View {
 
     private var statusLabel: some View {
         HStack(spacing: 10) {
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 5, height: 5)
-                Text(entry.watchStatus.localizedStringResource)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(statusColor.opacity(0.92))
-                    .lineLimit(1)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background {
-                Capsule(style: .continuous)
-                    .fill(statusColor.opacity(0.09))
-            }
+            statusBadge
             Spacer(minLength: 8)
             favoriteButton
+        }
+    }
+
+    private var statusBadge: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(statusColor)
+                .frame(width: 5, height: 5)
+            Text(entry.watchStatus.localizedStringResource)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(statusColor.opacity(0.92))
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background {
+            Capsule(style: .continuous)
+                .fill(statusColor.opacity(0.09))
         }
     }
 

@@ -19,47 +19,49 @@ struct LibraryListView: View {
     var body: some View {
         ScrollViewReader { proxy in
             List(store.libraryOnDisplay, id: \.tmdbID) { entry in
-                AnimeEntryListRow(entry: entry)
-                    .highlightEffect(
-                        showHighlight: interaction.highlightBinding(
-                            for: entry,
-                            highlightedEntryID: $highlightedEntryID
-                        ),
-                        delay: 0.2
+                AnimeEntryListRow(
+                    entry: entry,
+                    onSelect: { scrolledID = entry.tmdbID },
+                    onOpenDetails: { interaction.detailingEntry = entry }
+                )
+                .highlightEffect(
+                    showHighlight: interaction.highlightBinding(
+                        for: entry,
+                        highlightedEntryID: $highlightedEntryID
+                    ),
+                    delay: 0.2
+                )
+                .contextMenu {
+                    interaction.contextMenu(
+                        for: entry,
+                        store: store,
+                        scrolledID: $scrolledID,
+                        toggleFavorite: toggleFavorite
                     )
-                    .onTapGesture { scrolledID = entry.tmdbID }
-                    .contextMenu {
-                        interaction.contextMenu(
+                } preview: {
+                    EntryContextMenuPreview(entry: entry)
+                        .onAppear { scrolledID = entry.tmdbID }
+                }
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button("Delete", systemImage: "trash") {
+                        interaction.prepareDeletion(
                             for: entry,
                             store: store,
-                            scrolledID: $scrolledID,
-                            toggleFavorite: toggleFavorite
+                            scrolledID: $scrolledID
                         )
-                    } preview: {
-                        EntryContextMenuPreview(entry: entry)
-                            .onAppear { scrolledID = entry.tmdbID }
                     }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button("Delete", systemImage: "trash") {
-                            interaction.prepareDeletion(
-                                for: entry,
-                                store: store,
-                                scrolledID: $scrolledID
-                            )
-                        }
-                        .tint(.red)
+                    .tint(.red)
+                }
+                .swipeActions(edge: .leading) {
+                    Button("Edit", systemImage: "pencil") {
+                        interaction.setEditingEntry(entry)
                     }
-                    .swipeActions(edge: .leading) {
-                        Button("Edit", systemImage: "pencil") {
-                            interaction.setEditingEntry(entry)
-                        }
-                        .tint(.blue)
-                    }
-                    .onTapGesture(count: 2) { interaction.detailingEntry = entry }
-                    .listRowInsets(.init(top: 8, leading: 10, bottom: 8, trailing: 10))
-                    .listRowSeparator(.visible)
-                    .listRowSeparatorTint(.white.opacity(0.06))
-                    .listRowBackground(Color.clear)
+                    .tint(.blue)
+                }
+                .listRowInsets(.init(top: 8, leading: 10, bottom: 8, trailing: 10))
+                .listRowSeparator(.visible)
+                .listRowSeparatorTint(.white.opacity(0.06))
+                .listRowBackground(Color.clear)
             }
             .listStyle(.plain)
             .animation(.default, value: store.sortReversed)

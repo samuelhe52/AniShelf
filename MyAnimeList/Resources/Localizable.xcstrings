@@ -135,6 +135,22 @@
         }
       }
     },
+    "•" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "•"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "•"
+          }
+        }
+      }
+    },
     "Add To Library..." : {
       "localizations" : {
         "ja" : {
@@ -212,6 +228,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "加载时发生错误。"
+          }
+        }
+      }
+    },
+    "Anime" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アニメ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "动画"
           }
         }
       }
@@ -988,7 +1020,20 @@
       }
     },
     "Error Loading Posters" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ポスターの読み込み中にエラーが発生しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加载海报时发生错误。"
+          }
+        }
+      }
     },
     "Error restoring library" : {
       "localizations" : {
@@ -2246,22 +2291,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "动画系列"
-          }
-        }
-      }
-    },
-    "Season %lld" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "シーズン%lld"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "第 %lld 季"
           }
         }
       }
