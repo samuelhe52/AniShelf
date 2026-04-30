@@ -36,7 +36,6 @@ struct LibraryView: View {
     @SceneStorage("LibraryView.showBackupManager") private var showBackupManager = false
     @State private var scrollState = ScrollState()
     @State private var newEntriesAddedToggle = false
-    @State private var favoriteToggle = false
     @State private var highlightedEntryID: Int?
 
     // Persistent UI preference
@@ -55,7 +54,6 @@ struct LibraryView: View {
                 .environment(interaction)
                 .toolbar(content: { toolbarContent })
                 .sensoryFeedback(.success, trigger: newEntriesAddedToggle)
-                .sensoryFeedback(.impact, trigger: favoriteToggle)
         }
     }
 
@@ -79,7 +77,9 @@ struct LibraryView: View {
                 scrolledID: $scrollState.scrolledID,
                 highlightedEntryID: $highlightedEntryID
             )
+            .safeAreaPadding(.bottom, 20)
             .navigationTitle("\(store.libraryOnDisplay.count) Anime")
+            .navigationBarTitleDisplayMode(.inline)
         case .grid:
             LibraryGridView(
                 store: store,
@@ -96,6 +96,11 @@ struct LibraryView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        if libraryViewStyle == .list {
+            ToolbarItem(placement: .principal) {
+                listNavigationTitle
+            }
+        }
         ToolbarItem(placement: .bottomBar) {
             Picker("View Style", selection: $libraryViewStyle) {
                 ForEach(LibraryViewStyle.allCases, id: \.self) { style in
@@ -126,6 +131,31 @@ struct LibraryView: View {
         ToolbarItemGroup(placement: .topBarTrailing) {
             settings
         }
+    }
+
+    private var listNavigationTitle: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 5) {
+            Text("\(store.libraryOnDisplay.count)")
+                .font(.title3.weight(.bold))
+                .monospacedDigit()
+            Text(animeTitleResource)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 13)
+        .padding(.vertical, 6)
+        .background {
+            Capsule(style: .continuous)
+                .fill(.white.opacity(0.055))
+        }
+        .overlay {
+            Capsule(style: .continuous)
+                .stroke(.white.opacity(0.11), lineWidth: 1)
+        }
+    }
+
+    private var animeTitleResource: LocalizedStringResource {
+        "Anime"
     }
 
     private var sortOptions: some View {
@@ -380,7 +410,6 @@ struct LibraryView: View {
 
     private func toggleFavorite(_ entry: AnimeEntry) {
         dataHandler?.toggleFavorite(entry: entry)
-        favoriteToggle.toggle()
     }
 
     private func jumpToEntryInLibrary(withID id: Int) {

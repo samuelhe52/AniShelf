@@ -15,6 +15,7 @@ extension String {
     static let searchMode = "SearchMode"
     static let persistedScrolledID = "PersistedScrolledID"
     static let librarySortStrategy = "LibrarySortStrategy"
+    static let librarySortReversed = "LibrarySortReversed"
     static let libraryViewStyle = "LibraryViewStyle"
 
     static let allPreferenceKeys: [String] = [
@@ -23,6 +24,7 @@ extension String {
         .searchPageQuery,
         .persistedScrolledID,
         .librarySortStrategy,
+        .librarySortReversed,
         .libraryViewStyle
     ]
 }

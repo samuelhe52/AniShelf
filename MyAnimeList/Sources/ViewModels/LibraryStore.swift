@@ -38,7 +38,12 @@ class LibraryStore {
             logger.debug("Updated sort strategy to \(newValue.rawValue)")
         }
     }
-    var sortReversed: Bool = false
+    var sortReversed: Bool = true {
+        willSet {
+            UserDefaults.standard.setValue(newValue, forKey: .librarySortReversed)
+            logger.debug("Updated sort reversed to \(newValue)")
+        }
+    }
 
     var libraryOnDisplay: [AnimeEntry] {
         filterAndSort(library)
@@ -53,6 +58,9 @@ class LibraryStore {
             let strategy = AnimeSortStrategy(rawValue: sortStrategyRawValue)
         {
             self.sortStrategy = strategy
+        }
+        if UserDefaults.standard.object(forKey: .librarySortReversed) != nil {
+            self.sortReversed = UserDefaults.standard.bool(forKey: .librarySortReversed)
         }
         setupUpdateLibrary()
         setupTMDbAPIConfigurationChangeMonitor()

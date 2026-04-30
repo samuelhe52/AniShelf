@@ -56,7 +56,12 @@ struct LibraryListView: View {
                         .tint(.blue)
                     }
                     .onTapGesture(count: 2) { interaction.detailingEntry = entry }
+                    .listRowInsets(.init(top: 8, leading: 10, bottom: 8, trailing: 10))
+                    .listRowSeparator(.visible)
+                    .listRowSeparatorTint(.white.opacity(0.06))
+                    .listRowBackground(Color.clear)
             }
+            .listStyle(.plain)
             .animation(.default, value: store.sortReversed)
             .animation(.default, value: store.sortStrategy)
             .animation(.default, value: store.filters)
