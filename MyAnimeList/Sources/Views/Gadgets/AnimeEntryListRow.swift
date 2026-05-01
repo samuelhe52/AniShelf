@@ -10,9 +10,6 @@ import Kingfisher
 import SwiftUI
 
 struct AnimeEntryListRow: View {
-    @Environment(\.toggleFavorite) private var toggleFavorite
-    @State private var favoriteOverride: Bool?
-
     var entry: AnimeEntry
     var onSelect: (() -> Void)? = nil
     var onOpenDetails: (() -> Void)? = nil
@@ -33,12 +30,6 @@ struct AnimeEntryListRow: View {
         .padding(.vertical, 5)
         .overlay {
             rowTapSurface
-        }
-        .onChange(of: entry.favorite, initial: true) { _, newValue in
-            guard favoriteOverride != nil else { return }
-            if favoriteOverride == newValue {
-                favoriteOverride = nil
-            }
         }
     }
 
@@ -133,29 +124,22 @@ struct AnimeEntryListRow: View {
     }
 
     private var favoriteButton: some View {
-        Button {
-            favoriteOverride = !isFavorite
-            toggleFavorite(entry)
-        } label: {
-            Image(systemName: isFavorite ? "heart.fill" : "heart")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(isFavorite ? .pink.opacity(0.94) : .secondary.opacity(0.9))
-                .frame(width: 34, height: 34)
-                .background {
-                    Circle()
-                        .fill(.white.opacity(isFavorite ? 0.1 : 0.04))
-                }
-                .overlay {
-                    Circle()
-                        .stroke(.white.opacity(isFavorite ? 0.18 : 0.08), lineWidth: 1)
-                }
-                .contentTransition(.symbolEffect(.replace))
-                .animation(.snappy(duration: 0.18), value: isFavorite)
-                .contentShape(.rect)
+        LibraryFavoriteToggle(entry: entry) { isFavorite in
+            LibraryFavoriteSymbol(
+                isFavorite: isFavorite,
+                font: .footnote.weight(.semibold)
+            )
+            .frame(width: 34, height: 34)
+            .background {
+                Circle()
+                    .fill(.white.opacity(isFavorite ? 0.1 : 0.04))
+            }
+            .overlay {
+                Circle()
+                    .stroke(.white.opacity(isFavorite ? 0.18 : 0.08), lineWidth: 1)
+            }
+            .contentShape(.rect)
         }
-        .buttonStyle(.borderless)
-        .sensoryFeedback(.impact, trigger: isFavorite)
-        .accessibilityLabel(Text(favoriteAccessibilityLabel))
     }
 
     private var primaryMetadata: [String] {
@@ -227,32 +211,6 @@ struct AnimeEntryListRow: View {
     }
 
     private var statusBadge: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(statusColor)
-                .frame(width: 5, height: 5)
-            Text(entry.watchStatus.localizedStringResource)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(statusColor.opacity(0.92))
-                .lineLimit(1)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background {
-            Capsule(style: .continuous)
-                .fill(statusColor.opacity(0.09))
-        }
-    }
-
-    private var isFavorite: Bool {
-        favoriteOverride ?? entry.favorite
-    }
-
-    private var favoriteAccessibilityLabel: LocalizedStringResource {
-        isFavorite ? "Unfavorite" : "Favorite"
-    }
-
-    private var statusColor: Color {
-        entry.watchStatus.libraryTintColor
+        LibraryWatchStatusBadge(status: entry.watchStatus)
     }
 }

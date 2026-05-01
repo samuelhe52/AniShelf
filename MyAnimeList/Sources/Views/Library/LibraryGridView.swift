@@ -125,25 +125,31 @@ fileprivate struct LibraryGridItem: View {
     }
 
     private var statusIndicator: some View {
-        Circle()
-            .fill(entry.watchStatus.libraryTintColor)
-            .frame(width: 10, height: 10)
-            .overlay {
-                Circle()
-                    .stroke(.white.opacity(0.88), lineWidth: 1.8)
-            }
-            .shadow(color: .black.opacity(0.22), radius: 4, y: 2)
-            .padding(8)
+        LibraryWatchStatusIndicator(
+            status: entry.watchStatus,
+            diameter: 10,
+            strokeColor: .white.opacity(0.88),
+            strokeWidth: 1.8,
+            shadowColor: .black.opacity(0.22),
+            shadowRadius: 4,
+            shadowYOffset: 2
+        )
+        .padding(8)
     }
 
     @ViewBuilder
     private var favoriteIndicator: some View {
         if entry.favorite {
-            Image(systemName: "heart.fill")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(.pink.opacity(0.92))
-                .shadow(color: .black.opacity(0.55), radius: 5, y: 2)
-                .padding(8)
+            LibraryFavoriteSymbol(
+                isFavorite: true,
+                font: .system(size: 11, weight: .bold),
+                filledColor: .pink.opacity(0.92),
+                emptyColor: .pink.opacity(0.92),
+                shadowColor: .black.opacity(0.55),
+                shadowRadius: 5,
+                shadowYOffset: 2
+            )
+            .padding(8)
         }
     }
 }

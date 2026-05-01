@@ -21,7 +21,7 @@ struct LibraryGalleryView: View {
             } else {
                 Color.clear
                     .overlay {
-                        Text("The library is empty.")
+                        Text(emptyLibraryResource)
                     }
             }
         }
@@ -30,23 +30,28 @@ struct LibraryGalleryView: View {
 
     private var libraryContent: some View {
         GeometryReader { geometry in
-            let isHorizontal = geometry.size.width < geometry.size.height
             ScrollView(.horizontal) {
-                LazyHStack {
+                LazyHStack(spacing: 0) {
                     ForEach(store.libraryOnDisplay, id: \.tmdbID) { entry in
                         AnimeEntryCardWrapper(
                             entry: entry,
                             store: store,
                             scrolledID: $scrolledID
                         )
-                        .containerRelativeFrame(isHorizontal ? .horizontal : .vertical)
+                        .frame(width: geometry.size.width, height: geometry.size.height)
                         .onScrollVisibilityChange { _ in }
                     }
-                }.scrollTargetLayout()
+                }
+                .scrollTargetLayout()
             }
+            .scrollClipDisabled()
             .scrollPosition(id: $scrolledID)
             .scrollTargetBehavior(.viewAligned)
         }
+    }
+
+    private var emptyLibraryResource: LocalizedStringResource {
+        "The library is empty."
     }
 
 }
@@ -60,44 +65,37 @@ fileprivate struct AnimeEntryCardWrapper: View {
     @State private var imageLoaded: Bool = false
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 14) {
             if imageLoaded {
                 AnimeEntryDates(entry: entry)
             }
-            AnimeEntryCard(entry: entry, imageLoaded: $imageLoaded)
-                .contextMenu {
-                    contextMenu(for: entry)
-                }
+            AnimeEntryCard(
+                entry: entry,
+                onOpenDetails: {
+                    interaction.detailingEntry = entry
+                    scrolledID = entry.tmdbID
+                },
+                imageLoaded: $imageLoaded
+            )
+            .contextMenu {
+                contextMenu(for: entry)
+            }
         }
-        .onTapGesture(count: 2) {
-            interaction.detailingEntry = entry
-            scrolledID = entry.tmdbID
-        }
+        .padding(.horizontal, 14)
+        .padding(.top, 4)
+        .padding(.bottom, 28)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     @ViewBuilder
     func contextMenu(for entry: AnimeEntry) -> some View {
         ControlGroup {
-            Button("Edit", systemImage: "pencil") {
-                interaction.setEditingEntry(entry)
-            }
-            Button("Share", systemImage: "square.and.arrow.up") {
-                interaction.sharingAnimeEntry = entry
-            }
+            interaction.editButton(for: entry)
+            interaction.shareButton(for: entry)
         }
-        Button {
-            interaction.switchingPosterForEntry = entry
-        } label: {
-            Label("Switch Poster", systemImage: "photo.badge.magnifyingglass")
-        }
-        if let posterURL = entry.posterURL {
-            ShareLink(item: posterURL) {
-                Label("Save Poster", systemImage: "photo.badge.arrow.down")
-            }
-        }
-        Button("Delete", systemImage: "trash", role: .destructive) {
-            interaction.prepareDeletion(for: entry, store: store, scrolledID: $scrolledID)
-        }
+        interaction.switchPosterButton(for: entry)
+        interaction.savePosterButton(for: entry)
+        interaction.deleteButton(for: entry, store: store, scrolledID: $scrolledID)
     }
 }
 

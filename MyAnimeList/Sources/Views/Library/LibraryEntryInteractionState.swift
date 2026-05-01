@@ -71,38 +71,45 @@ final class LibraryEntryInteractionState {
 }
 
 extension LibraryEntryInteractionState {
-    @ViewBuilder
-    func contextMenu(
-        for entry: AnimeEntry,
-        store: LibraryStore,
-        scrolledID: Binding<Int?>,
-        toggleFavorite: @escaping (AnimeEntry) -> Void
-    ) -> some View {
-        ControlGroup {
-            EntryFavoriteButton(favorited: entry.favorite) {
-                toggleFavorite(entry)
-                if entry.favorite {
-                    ToastCenter.global.favorited = true
-                } else {
-                    ToastCenter.global.unFavorited = true
-                }
-            }
-            Button("Share", systemImage: "square.and.arrow.up") {
-                self.sharingAnimeEntry = entry
+    func favoriteButton(for entry: AnimeEntry, toggleFavorite: @escaping (AnimeEntry) -> Void) -> some View {
+        EntryFavoriteButton(favorited: entry.favorite) {
+            toggleFavorite(entry)
+            if entry.favorite {
+                ToastCenter.global.favorited = true
+            } else {
+                ToastCenter.global.unFavorited = true
             }
         }
+    }
+
+    func shareButton(for entry: AnimeEntry) -> some View {
+        Button("Share", systemImage: "square.and.arrow.up") {
+            self.sharingAnimeEntry = entry
+        }
+    }
+
+    func editButton(for entry: AnimeEntry) -> some View {
         Button("Edit", systemImage: "pencil") {
             self.editingEntry = entry
         }
+    }
+
+    func switchPosterButton(for entry: AnimeEntry) -> some View {
         Button("Switch Poster", systemImage: "photo.badge.magnifyingglass") {
             self.switchingPosterForEntry = entry
         }
-        Divider()
+    }
+
+    @ViewBuilder
+    func savePosterButton(for entry: AnimeEntry) -> some View {
         if let posterURL = entry.posterURL {
             ShareLink(item: posterURL) {
                 Label("Save Poster", systemImage: "photo.badge.arrow.down")
             }
         }
+    }
+
+    func userInfoMenu(for entry: AnimeEntry) -> some View {
         Menu("User Info", systemImage: "person.crop.circle") {
             Button("Copy Info", systemImage: "doc.on.doc") {
                 entry.userInfo.copyToPasteboard()
@@ -117,9 +124,35 @@ extension LibraryEntryInteractionState {
                 )
             )
         }
+    }
+
+    func deleteButton(
+        for entry: AnimeEntry,
+        store: LibraryStore,
+        scrolledID: Binding<Int?>
+    ) -> some View {
         Button("Delete", systemImage: "trash", role: .destructive) {
             self.prepareDeletion(for: entry, store: store, scrolledID: scrolledID)
         }
+    }
+
+    @ViewBuilder
+    func contextMenu(
+        for entry: AnimeEntry,
+        store: LibraryStore,
+        scrolledID: Binding<Int?>,
+        toggleFavorite: @escaping (AnimeEntry) -> Void
+    ) -> some View {
+        ControlGroup {
+            favoriteButton(for: entry, toggleFavorite: toggleFavorite)
+            shareButton(for: entry)
+        }
+        editButton(for: entry)
+        switchPosterButton(for: entry)
+        Divider()
+        savePosterButton(for: entry)
+        userInfoMenu(for: entry)
+        deleteButton(for: entry, store: store, scrolledID: scrolledID)
 
     }
 }

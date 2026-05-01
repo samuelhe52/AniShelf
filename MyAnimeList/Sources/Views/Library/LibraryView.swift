@@ -52,11 +52,11 @@ struct LibraryView: View {
             ZStack {
                 libraryView
             }
-                .environment(\.toggleFavorite, toggleFavorite)
-                .environment(\.libraryStore, store)
-                .environment(interaction)
-                .toolbar(content: { toolbarContent })
-                .sensoryFeedback(.success, trigger: newEntriesAddedToggle)
+            .environment(\.toggleFavorite, toggleFavorite)
+            .environment(\.libraryStore, store)
+            .environment(interaction)
+            .toolbar(content: { toolbarContent })
+            .sensoryFeedback(.success, trigger: newEntriesAddedToggle)
         }
     }
 
@@ -66,38 +66,32 @@ struct LibraryView: View {
     private var libraryView: some View {
         switch libraryViewStyle {
         case .gallery:
-            LibraryGalleryView(
-                store: store,
-                scrolledID: $scrollState.scrolledID
-            )
-            .id(LibraryViewStyle.gallery)
-            .scenePadding(.vertical)
-            .ignoresSafeArea(.keyboard, edges: .bottom)
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .transition(libraryViewTransition)
+            libraryViewPage(id: .gallery) {
+                LibraryGalleryView(
+                    store: store,
+                    scrolledID: $scrollState.scrolledID
+                )
+                .scenePadding(.vertical)
+                .ignoresSafeArea(.keyboard, edges: .bottom)
+            }
         case .list:
-            LibraryListView(
-                store: store,
-                scrolledID: $scrollState.scrolledID,
-                highlightedEntryID: $highlightedEntryID
-            )
-            .id(LibraryViewStyle.list)
-            .safeAreaPadding(.bottom, 20)
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .transition(libraryViewTransition)
+            libraryViewPage(id: .list) {
+                LibraryListView(
+                    store: store,
+                    scrolledID: $scrollState.scrolledID,
+                    highlightedEntryID: $highlightedEntryID
+                )
+                .safeAreaPadding(.bottom, 20)
+            }
         case .grid:
-            LibraryGridView(
-                store: store,
-                scrolledID: $scrollState.scrolledID,
-                highlightedEntryID: $highlightedEntryID
-            )
-            .id(LibraryViewStyle.grid)
-            .safeAreaPadding(.bottom, 20)
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .transition(libraryViewTransition)
+            libraryViewPage(id: .grid) {
+                LibraryGridView(
+                    store: store,
+                    scrolledID: $scrollState.scrolledID,
+                    highlightedEntryID: $highlightedEntryID
+                )
+                .safeAreaPadding(.bottom, 20)
+            }
         }
     }
 
@@ -118,18 +112,6 @@ struct LibraryView: View {
         }
         ToolbarItemGroup(placement: .status) {
             sortOptions
-            if let scrolledID = scrollState.scrolledID,
-                let entry = store.libraryOnDisplay.entryWithTMDbID(scrolledID)
-            {
-                toggleFavoriteButton(for: entry)
-                    .disabled(libraryViewStyle != .gallery)
-            } else {
-                Button {
-                } label: {
-                    Image(systemName: "heart")
-                }
-                .disabled(true)
-            }
             filterOptions
         }
         ToolbarItem(placement: .bottomBar) {
@@ -424,18 +406,6 @@ struct LibraryView: View {
 
     // MARK: - Entry Actions
 
-    private func toggleFavoriteButton(for entry: AnimeEntry) -> some View {
-        Button {
-            toggleFavorite(entry)
-        } label: {
-            if entry.favorite {
-                Image(systemName: "heart.fill")
-            } else {
-                Image(systemName: "heart")
-            }
-        }
-    }
-
     private func toggleFavorite(_ entry: AnimeEntry) {
         dataHandler?.toggleFavorite(entry: entry)
     }
@@ -464,6 +434,17 @@ struct LibraryView: View {
     }
 
     // MARK: - Helpers
+
+    private func libraryViewPage<Content: View>(
+        id: LibraryViewStyle,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        content()
+            .id(id)
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .transition(libraryViewTransition)
+    }
 
     private func customButtonStyle<S: Shape>(in shape: S)
         -> CustomBGBorderedButtonStyle<Material, S>
@@ -496,7 +477,7 @@ struct LibraryView: View {
     }
 }
 
-private struct LibraryViewTransitionModifier: ViewModifier {
+fileprivate struct LibraryViewTransitionModifier: ViewModifier {
     let opacity: Double
     let scale: CGFloat
     let blurRadius: CGFloat

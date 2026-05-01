@@ -13,9 +13,15 @@ struct EntryFavoriteButton: View {
 
     var body: some View {
         Button(action: action) {
-            Label(
-                favorited ? "Unfavorite" : "Favorite",
-                systemImage: favorited ? "heart.fill" : "heart")
+            Label {
+                Text(favoriteActionResource)
+            } icon: {
+                Image(systemName: favorited ? "heart.fill" : "heart")
+            }
         }
+    }
+
+    private var favoriteActionResource: LocalizedStringResource {
+        favorited ? "Unfavorite" : "Favorite"
     }
 }
