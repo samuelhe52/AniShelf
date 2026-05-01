@@ -7,10 +7,11 @@ A beautiful, native iOS app for tracking and managing your anime library.
 <div style="overflow-x: auto; padding: 0.25rem 0 1rem;">
   <table cellpadding="0" cellspacing="12">
     <tr>
-      <td><img src=".app-store-assets/screenshots/ios/1.PNG" alt="AniShelf iPhone screenshot 1" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/2.PNG" alt="AniShelf iPhone screenshot 2" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/3.PNG" alt="AniShelf iPhone screenshot 3" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/4.PNG" alt="AniShelf iPhone screenshot 4" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/1.jpeg" alt="AniShelf iPhone screenshot 1" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/2.jpeg" alt="AniShelf iPhone screenshot 2" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/5.jpeg" alt="AniShelf iPhone screenshot 5" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/3.jpeg" alt="AniShelf iPhone screenshot 4" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/4.jpeg" alt="AniShelf iPhone screenshot 3" width="240" /></td>
     </tr>
   </table>
 </div>
