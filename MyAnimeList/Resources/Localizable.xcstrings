@@ -34,6 +34,7 @@
       }
     },
     "%lld Anime" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -61,6 +62,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld 集"
+          }
+        }
+      }
+    },
+    "%lld Filters" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 条件"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 条件"
           }
         }
       }
@@ -172,7 +189,24 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "すべてを表示"
+            "value" : "すべて"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示所有"
+          }
+        }
+      }
+    },
+    "All 1" : {
+      "extractionState" : "pasted",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべて"
           }
         },
         "zh-Hans" : {
@@ -1147,6 +1181,22 @@
         }
       }
     },
+    "Favorites" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "お気に入り"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "特别收藏"
+          }
+        }
+      }
+    },
     "Fetched: %lld, failed: %lld" : {
       "localizations" : {
         "en" : {
@@ -1555,6 +1605,22 @@
         }
       }
     },
+    "N/A" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "N/A"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "N/A"
+          }
+        }
+      }
+    },
     "Network Error!" : {
       "localizations" : {
         "ja" : {
@@ -1829,6 +1895,22 @@
       }
     },
     "Plan to Watch" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "見たい"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "想看"
+          }
+        }
+      }
+    },
+    "Planned" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -2869,5 +2951,5 @@
       }
     }
   },
-  "version" : "1.0"
+  "version" : "1.2"
 }

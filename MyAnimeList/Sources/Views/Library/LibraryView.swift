@@ -110,9 +110,8 @@ struct LibraryView: View {
             }
             .labelsHidden()
         }
-        ToolbarItemGroup(placement: .status) {
-            sortOptions
-            filterOptions
+        ToolbarItem(placement: .status) {
+            libraryBrowseSummaryMenu
         }
         ToolbarItem(placement: .bottomBar) {
             searchButton
@@ -122,49 +121,51 @@ struct LibraryView: View {
         }
     }
 
-    private var sortOptions: some View {
+    private var libraryBrowseSummaryMenu: some View {
         Menu {
-            Toggle(
-                "Reversed", systemImage: "arrow.counterclockwise.circle", isOn: $store.sortReversed)
-            Picker("Sort", systemImage: "arrow.up.arrow.down", selection: $store.sortStrategy) {
-                ForEach(LibraryStore.AnimeSortStrategy.allCases, id: \.self) { strategy in
-                    Text(strategy.localizedStringResource).tag(strategy)
-                }
-            }
-            .pickerStyle(.menu)
-        } label: {
-            Image(systemName: "arrow.up.arrow.down")
-                .font(.system(size: 16))
-                .padding(1.5)
-        }
-        .menuActionDismissBehavior(.disabled)
-    }
-
-    private var filterOptions: some View {
-        Menu("Filter", systemImage: "line.3.horizontal.decrease") {
-            ForEach(LibraryStore.AnimeFilter.allCases, id: \.self) { filter in
+            Section("Sort") {
                 Toggle(
+                    "Reversed",
+                    systemImage: "arrow.counterclockwise.circle",
+                    isOn: $store.sortReversed
+                )
+                Picker(
+                    "Sort",
+                    systemImage: "arrow.up.arrow.down",
+                    selection: $store.sortStrategy
+                ) {
+                    ForEach(LibraryStore.AnimeSortStrategy.allCases, id: \.self) { strategy in
+                        Text(strategy.localizedStringResource).tag(strategy)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+
+            Section("Filter") {
+                ForEach(LibraryStore.AnimeFilter.allCases, id: \.self) { filter in
+                    Toggle(
+                        isOn: binding(for: filter),
+                        label: { Text(filter.name) }
+                    )
+                }
+                Toggle(
+                    "All",
                     isOn: .init(
-                        get: {
-                            store.filters.contains(filter)
-                        },
+                        get: { store.filters.isEmpty },
                         set: {
                             if $0 {
-                                store.filters.insert(filter)
-                            } else {
-                                store.filters.remove(filter)
+                                store.filters.removeAll()
                             }
-                        }), label: { Text(filter.name) })
+                        }
+                    )
+                )
             }
-            Divider()
-            Toggle(
-                "All",
-                isOn: .init(
-                    get: { store.filters.isEmpty },
-                    set: {
-                        if $0 { store.filters.removeAll() }
-                    }))
+        } label: {
+            LibraryToolbarSummaryCapsule(
+                primary: filterSummaryResource
+            )
         }
+        .menuActionDismissBehavior(.disabled)
     }
 
     private var libraryViewStyleBinding: Binding<LibraryViewStyle> {
@@ -404,6 +405,40 @@ struct LibraryView: View {
         }
     }
 
+    private var activeFilters: [LibraryStore.AnimeFilter] {
+        LibraryStore.AnimeFilter.allCases.filter { store.filters.contains($0) }
+    }
+
+    private var filterSummaryResource: LocalizedStringResource {
+        switch activeFilters.count {
+        case 0:
+            return "All"
+        case 1:
+            return filterSummaryResource(for: activeFilters[0])
+        default:
+            return "\(activeFilters.count) Filters"
+        }
+    }
+
+    private func filterSummaryResource(
+        for filter: LibraryStore.AnimeFilter
+    ) -> LocalizedStringResource {
+        switch filter.id {
+        case LibraryStore.AnimeFilter.favorited.id:
+            return "Favorites"
+        case LibraryStore.AnimeFilter.watched.id:
+            return "Watched"
+        case LibraryStore.AnimeFilter.planToWatch.id:
+            return "Planned"
+        case LibraryStore.AnimeFilter.watching.id:
+            return "Watching"
+        case LibraryStore.AnimeFilter.dropped.id:
+            return "Dropped"
+        default:
+            return filter.name
+        }
+    }
+
     // MARK: - Entry Actions
 
     private func toggleFavorite(_ entry: AnimeEntry) {
@@ -435,6 +470,19 @@ struct LibraryView: View {
 
     // MARK: - Helpers
 
+    private func binding(for filter: LibraryStore.AnimeFilter) -> Binding<Bool> {
+        .init(
+            get: { store.filters.contains(filter) },
+            set: {
+                if $0 {
+                    store.filters.insert(filter)
+                } else {
+                    store.filters.remove(filter)
+                }
+            }
+        )
+    }
+
     private func libraryViewPage<Content: View>(
         id: LibraryViewStyle,
         @ViewBuilder content: () -> Content
@@ -444,12 +492,6 @@ struct LibraryView: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .transition(libraryViewTransition)
-    }
-
-    private func customButtonStyle<S: Shape>(in shape: S)
-        -> CustomBGBorderedButtonStyle<Material, S>
-    {
-        CustomBGBorderedButtonStyle(.ultraThinMaterial, backgroundIn: shape)
     }
 
     // MARK: - Types
