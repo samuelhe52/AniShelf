@@ -127,7 +127,7 @@ fileprivate struct LibraryGridItem: View {
     private var statusIndicator: some View {
         Circle()
             .fill(entry.watchStatus.libraryTintColor)
-            .frame(width: 9, height: 9)
+            .frame(width: 10, height: 10)
             .overlay {
                 Circle()
                     .stroke(.white.opacity(0.88), lineWidth: 1.8)
@@ -140,9 +140,9 @@ fileprivate struct LibraryGridItem: View {
     private var favoriteIndicator: some View {
         if entry.favorite {
             Image(systemName: "heart.fill")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(.white.opacity(0.96))
-                .shadow(color: .black.opacity(0.3), radius: 5, y: 2)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.pink.opacity(0.92))
+                .shadow(color: .black.opacity(0.55), radius: 5, y: 2)
                 .padding(8)
         }
     }
