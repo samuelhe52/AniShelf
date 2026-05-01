@@ -33,6 +33,7 @@ struct LibraryView: View {
     @State private var showClearAllAlert = false
     @State private var showRefreshInfoOnLanguageUpdateAlert = false
     @State private var showRefreshInfoAlert = false
+    @State private var showAboutSheet = false
     @State private var cacheSizeResult: Result<UInt, KingfisherError>? = nil
     @SceneStorage("LibraryView.showBackupManager") private var showBackupManager = false
     @State private var scrollState = ScrollState()
@@ -253,6 +254,8 @@ struct LibraryView: View {
             checkCacheSizeButton
             refreshInfosButton
             Divider()
+            aboutButton
+            Divider()
             deleteAllButton
         } label: {
             Image(systemName: "ellipsis.circle").padding(.vertical, 7.5)
@@ -321,6 +324,12 @@ struct LibraryView: View {
             BackupManagerView(backupManager: store.backupManager)
                 .presentationDetents([.medium])
         }
+        .sheet(isPresented: $showAboutSheet) {
+            NavigationStack {
+                AboutAniShelfSheet()
+            }
+            .presentationDetents([.fraction(0.85), .large])
+        }
     }
 
     private var backupManagement: some View {
@@ -381,6 +390,12 @@ struct LibraryView: View {
     private var deleteAllButton: some View {
         Button("Delete All Animes", systemImage: "trash", role: .destructive) {
             showClearAllAlert = true
+        }
+    }
+
+    private var aboutButton: some View {
+        Button("About AniShelf", systemImage: "info.circle") {
+            showAboutSheet = true
         }
     }
 

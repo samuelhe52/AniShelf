@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "" : {
+
+    },
     "* For security reasons, your TMDb API Key will not be exported." : {
       "localizations" : {
         "ja" : {
@@ -168,6 +171,38 @@
         }
       }
     },
+    "A native anime tracker built around your own library." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分のライブラリを中心にしたネイティブアニメトラッカー。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "围绕你的个人资料库打造的原生动画追踪器。"
+          }
+        }
+      }
+    },
+    "About AniShelf" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfについて"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关于 AniShelf"
+          }
+        }
+      }
+    },
     "Add To Library..." : {
       "localizations" : {
         "ja" : {
@@ -201,7 +236,7 @@
       }
     },
     "All 1" : {
-      "extractionState" : "pasted",
+      "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -298,6 +333,54 @@
         }
       }
     },
+    "AniShelf" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf"
+          }
+        }
+      }
+    },
+    "AniShelf keeps watch status, dates, and quick notes together so your collection stays useful over time." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "視聴状況、日付、メモをまとめて管理し、コレクションを長く活用できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将观看状态、日期和简短笔记集中管理，让你的收藏持续保持实用性。"
+          }
+        }
+      }
+    },
+    "AniShelf on GitHub" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub上のAniShelf"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub 上的 AniShelf"
+          }
+        }
+      }
+    },
     "Another season entry for this series is already in your library. Converting this season to a series can leave both the series and the sibling season entries in the library." : {
       "localizations" : {
         "ja" : {
@@ -358,6 +441,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "备份 & 恢复"
+          }
+        }
+      }
+    },
+    "Backups" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バックアップ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "备份"
           }
         }
       }
@@ -1487,6 +1586,22 @@
         }
       }
     },
+    "Links" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リンク"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "链接"
+          }
+        }
+      }
+    },
     "List" : {
       "localizations" : {
         "ja" : {
@@ -1531,6 +1646,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "记载中"
+          }
+        }
+      }
+    },
+    "Made by Samuel He. Metadata and artwork are provided by TMDb." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Samuel He により開発。メタデータとアートワークは TMDb 提供。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "由 Samuel He 开发。元数据和图片由 TMDb 提供。"
           }
         }
       }
@@ -2196,6 +2327,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "时长"
+          }
+        }
+      }
+    },
+    "Samuel He on GitHub" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub上のSamuel He"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub 上的 Samuel He"
           }
         }
       }

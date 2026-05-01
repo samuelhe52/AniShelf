@@ -81,7 +81,7 @@ fileprivate struct AnimeEntryCardWrapper: View {
                 contextMenu(for: entry)
                     .onAppear { scrolledID = entry.tmdbID }
             } preview: {
-                EntryContextMenuPreview(entry: entry, showTypeIndicator: false)
+                EntryContextMenuPreview(entry: entry)
                     .onAppear { scrolledID = entry.tmdbID }
             }
         }
