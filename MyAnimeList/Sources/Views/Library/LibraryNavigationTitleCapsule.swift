@@ -55,29 +55,28 @@ struct LibraryToolbarSummaryCapsule: View {
     let primary: LocalizedStringResource
 
     var body: some View {
-        LibraryCapsuleSurface(horizontalPadding: 12, verticalPadding: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.secondary.opacity(0.92))
+        HStack(spacing: 6) {
+            Image(systemName: "slider.horizontal.3")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.secondary.opacity(0.92))
 
-                Text(primary)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
+            Text(primary)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
 
-                Circle()
-                    .fill(.secondary.opacity(0.45))
-                    .frame(width: 3.5, height: 3.5)
+            Circle()
+                .fill(.secondary.opacity(0.45))
+                .frame(width: 3.5, height: 3.5)
 
-                Image(systemName: "arrow.up.arrow.down")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
+            Image(systemName: "arrow.up.arrow.down")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
 
-                Image(systemName: "chevron.down")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .minimumScaleFactor(0.82)
+            Image(systemName: "chevron.down")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.tertiary)
         }
+        .padding(.horizontal, 2)
+        .minimumScaleFactor(0.82)
     }
 }

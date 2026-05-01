@@ -49,10 +49,12 @@ struct LibrarySearchContent: View {
         } else {
             List {
                 ForEach(librarySearchService.results, id: \.tmdbID) { result in
-                    AnimeEntryListRow(entry: result)
-                        .onTapGesture {
+                    AnimeEntryListRow(
+                        entry: result,
+                        onSelect: {
                             librarySearchService.jumpToEntryInLibrary(result.tmdbID)
                         }
+                    )
                 }
             }
         }

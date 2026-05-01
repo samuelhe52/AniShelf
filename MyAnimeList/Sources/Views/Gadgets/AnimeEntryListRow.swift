@@ -35,16 +35,27 @@ struct AnimeEntryListRow: View {
 
     private var rowTapSurface: some View {
         HStack(spacing: 0) {
-            Color.clear
-                .contentShape(.rect)
-                .onTapGesture { onSelect?() }
-                .onTapGesture(count: 2) { onOpenDetails?() }
+            rowTapTarget
 
             Color.clear
                 .frame(width: favoriteButtonTapClearance)
                 .allowsHitTesting(false)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var rowTapTarget: some View {
+        if let onOpenDetails {
+            Color.clear
+                .contentShape(.rect)
+                .onTapGesture { onSelect?() }
+                .onTapGesture(count: 2) { onOpenDetails() }
+        } else {
+            Color.clear
+                .contentShape(.rect)
+                .onTapGesture { onSelect?() }
+        }
     }
 
     @ViewBuilder
