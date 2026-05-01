@@ -12,16 +12,8 @@ struct AnimeTypeIndicator: View {
     var type: AnimeType
     var padding: CGFloat = 5
 
-    var description: LocalizedStringKey {
-        switch type {
-        case .movie: return "Movie"
-        case .series: return "TV Series"
-        case .season(let seasonNumber, _): return "Season \(seasonNumber)"
-        }
-    }
-
     var body: some View {
-        Text(description)
+        Text(type.libraryLocalizedStringResource)
             .padding(padding)
             .glassEffect(.regular, in: .rect(cornerRadius: 5))
     }

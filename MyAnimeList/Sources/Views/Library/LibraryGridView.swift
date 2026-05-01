@@ -14,11 +14,12 @@ struct LibraryGridView: View {
     @Environment(LibraryEntryInteractionState.self) var interaction
     @Binding var scrolledID: Int?
     @Binding var highlightedEntryID: Int?
+    private let columns = [GridItem(.adaptive(minimum: 104, maximum: 132), spacing: 10)]
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 90))]) {
+                LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(store.libraryOnDisplay, id: \.tmdbID) { entry in
                         LibraryGridItem(entry: entry)
                             .highlightEffect(
@@ -49,7 +50,9 @@ struct LibraryGridView: View {
                 }
                 .onChange(of: scrolledID) { onChangeOfScrolledID(proxy: proxy) }
                 .onAppear { onGridViewAppear(proxy: proxy) }
-                .padding(.horizontal)
+                .padding(.horizontal, 14)
+                .padding(.top, 6)
+                .padding(.bottom, 104)
             }
             .animation(.spring, value: store.sortReversed)
             .animation(.spring, value: store.sortStrategy)
@@ -76,16 +79,71 @@ struct LibraryGridView: View {
 
 fileprivate struct LibraryGridItem: View {
     var entry: AnimeEntry
+    private let posterShape = RoundedRectangle(cornerRadius: 16, style: .continuous)
 
     var body: some View {
-        VStack {
-            KFImageView(url: entry.posterURL, targetWidth: 300, diskCacheExpiration: .longTerm)
-                .clipShape(.proportionalRounded(cornerFraction: 0.05))
-                .aspectRatio(contentMode: .fit)
-            Text(entry.displayName)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+        VStack(alignment: .leading, spacing: 5) {
+            poster
+            titleLabel
+        }
+        .contentShape(.rect)
+    }
+
+    private var poster: some View {
+        Color.clear
+            .aspectRatio(2.0 / 3.0, contentMode: .fit)
+            .overlay { posterImage }
+            .overlay(alignment: .topLeading) { statusIndicator }
+            .overlay(alignment: .topTrailing) { favoriteIndicator }
+            .overlay {
+                posterShape
+                    .stroke(.white.opacity(0.08), lineWidth: 1)
+            }
+            .clipShape(posterShape)
+            .shadow(color: .black.opacity(0.22), radius: 11, y: 6)
+    }
+
+    private var posterImage: some View {
+        KFImageView(
+            url: entry.posterURL,
+            targetWidth: 360,
+            diskCacheExpiration: .longTerm
+        )
+        .scaledToFill()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var titleLabel: some View {
+        Text(entry.displayName)
+            .font(.system(size: 11.5, weight: .semibold))
+            .foregroundStyle(.primary.opacity(0.88))
+            .multilineTextAlignment(.leading)
+            .lineLimit(2)
+            .lineSpacing(-1)
+            .truncationMode(.tail)
+            .frame(maxWidth: .infinity, minHeight: 28, alignment: .topLeading)
+    }
+
+    private var statusIndicator: some View {
+        Circle()
+            .fill(entry.watchStatus.libraryTintColor)
+            .frame(width: 9, height: 9)
+            .overlay {
+                Circle()
+                    .stroke(.white.opacity(0.88), lineWidth: 1.8)
+            }
+            .shadow(color: .black.opacity(0.22), radius: 4, y: 2)
+            .padding(8)
+    }
+
+    @ViewBuilder
+    private var favoriteIndicator: some View {
+        if entry.favorite {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.white.opacity(0.96))
+                .shadow(color: .black.opacity(0.3), radius: 5, y: 2)
+                .padding(8)
         }
     }
 }

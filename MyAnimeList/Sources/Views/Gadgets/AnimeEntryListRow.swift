@@ -253,15 +253,6 @@ struct AnimeEntryListRow: View {
     }
 
     private var statusColor: Color {
-        switch entry.watchStatus {
-        case .planToWatch:
-            .secondary
-        case .watching:
-            .orange
-        case .watched:
-            .green
-        case .dropped:
-            .pink
-        }
+        entry.watchStatus.libraryTintColor
     }
 }
