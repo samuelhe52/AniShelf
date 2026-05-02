@@ -286,7 +286,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "すでにライブラリーにあります。"
+            "value" : "すでにライブラリに追加済みです。"
           }
         },
         "zh-Hans" : {
@@ -447,7 +447,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "平均上映時間"
+            "value" : "平均再生時間"
           }
         },
         "zh-Hans" : {
@@ -641,7 +641,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "インターネット接続を確認して。"
+            "value" : "インターネット接続を確認してください。"
           }
         },
         "zh-Hans" : {
@@ -771,7 +771,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "コントロール"
+            "value" : "設定"
           }
         },
         "zh-Hans" : {
@@ -916,7 +916,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "情報をコピーする"
+            "value" : "情報をコピー"
           }
         },
         "zh-Hans" : {
@@ -1012,7 +1012,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保存日"
+            "value" : "追加日"
           }
         },
         "zh-Hans" : {
@@ -1346,7 +1346,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "輸出"
+            "value" : "エクスポート"
           }
         },
         "zh-Hans" : {
@@ -1410,7 +1410,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "お気に入り"
+            "value" : "お気に入りに追加済み"
           }
         },
         "zh-Hans" : {
@@ -1834,7 +1834,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "记载中"
+            "value" : "加载中..."
           }
         }
       }
@@ -2010,7 +2010,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "クリップボードに情報がない"
+            "value" : "クリップボードに情報が見つかりませんでした。"
           }
         },
         "zh-Hans" : {
@@ -2074,7 +2074,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : " 結果が見つかりません"
+            "value" : "検索結果がありません"
           }
         },
         "zh-Hans" : {
@@ -2234,7 +2234,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "情報をペーストする"
+            "value" : "情報を貼り付け"
           }
         },
         "zh-Hans" : {
@@ -2250,7 +2250,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "情報をペーストするの"
+            "value" : "情報を貼り付けますか？"
           }
         },
         "zh-Hans" : {
@@ -2621,7 +2621,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "上映時間"
+            "value" : "再生時間"
           }
         },
         "zh-Hans" : {
@@ -2685,7 +2685,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "範囲"
+            "value" : "検索対象"
           }
         },
         "zh-Hans" : {
@@ -2910,7 +2910,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ソート方式"
+            "value" : "並び替え"
           }
         },
         "zh-Hans" : {
@@ -2970,7 +2970,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld/%2$lld"
+            "value" : "ステップ %1$lld / %2$lld"
           }
         },
         "zh-Hans" : {
@@ -3163,7 +3163,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "続行するには、TMDb API キーを入力します。"
+            "value" : "続行するには、TMDb APIキーを入力してください。"
           }
         },
         "zh-Hans" : {
@@ -3249,7 +3249,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "お気に入りから削除"
+            "value" : "お気に入り解除済み"
           }
         },
         "zh-Hans" : {
@@ -3265,7 +3265,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "お気に入りから削除"
+            "value" : "お気に入り解除済み"
           }
         },
         "zh-Hans" : {
@@ -3410,7 +3410,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "視聴ステータス"
+            "value" : "視聴状況"
           }
         },
         "zh-Hans" : {
@@ -3426,7 +3426,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "視聴済み"
+            "value" : "視聴済"
           }
         },
         "zh-Hans" : {

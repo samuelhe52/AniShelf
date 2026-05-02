@@ -74,3 +74,10 @@ Media/
 .vscode/
 buildServer.json
 .nvim/
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+.temp/
+
