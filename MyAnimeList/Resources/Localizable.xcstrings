@@ -28,7 +28,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "* 出于安全考虑，您的 TMDb API 密钥不会被输出"
+            "value" : "* 出于安全考虑，您的 TMDb API 密钥不会被导出。"
           }
         }
       }
@@ -163,7 +163,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld x %2$lld"
+            "value" : "%1$lld × %2$lld"
           }
         }
       }
@@ -195,7 +195,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "围绕你的个人资料库打造的原生动画追踪器。"
+            "value" : "你的 iOS 原生动漫书架。"
           }
         }
       }
@@ -243,7 +243,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加入资料库"
+            "value" : "加入资料库..."
           }
         }
       }
@@ -259,7 +259,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "显示所有"
+            "value" : "全部"
           }
         }
       }
@@ -276,7 +276,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "显示所有"
+            "value" : "全部"
           }
         }
       }
@@ -389,7 +389,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "将观看状态、日期和简短笔记集中管理，让你的收藏持续保持实用性。"
+            "value" : "集中管理观看状态、日期，随手记录感想。"
           }
         }
       }
@@ -437,7 +437,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "背景"
+            "value" : "图片"
           }
         }
       }
@@ -469,7 +469,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "备份 & 恢复"
+            "value" : "备份与恢复"
           }
         }
       }
@@ -502,23 +502,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "取消"
-          }
-        }
-      }
-    },
-    "Cast" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "キャスト"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "演员"
           }
         }
       }
@@ -777,7 +760,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "控制面板"
+            "value" : "设置"
           }
         }
       }
@@ -809,7 +792,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "转换为季度"
+            "value" : "转换为季"
           }
         }
       }
@@ -825,7 +808,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "转换为剧集"
+            "value" : "转换为系列"
           }
         }
       }
@@ -1002,7 +985,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "上映日期"
+            "value" : "开播日期"
           }
         }
       }
@@ -1056,7 +1039,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "当该条目标记为已弃看时，日期会被锁定。"
+            "value" : "当该条目标记为已中断时，日期会被锁定。"
           }
         }
       }
@@ -1104,7 +1087,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "删除所有动画?"
+            "value" : "删除所有动画？"
           }
         }
       }
@@ -1207,7 +1190,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "弃看"
+            "value" : "中断"
           }
         }
       }
@@ -1256,7 +1239,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "单集"
+            "value" : "集"
           }
         }
       }
@@ -1272,7 +1255,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "剧集"
+            "value" : "集数"
           }
         }
       }
@@ -1304,7 +1287,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加载海报时发生错误。"
+            "value" : "加载海报出错"
           }
         }
       }
@@ -1384,7 +1367,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加载海报时发生错误。"
+            "value" : "加载海报失败。"
           }
         }
       }
@@ -1400,7 +1383,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "特别收藏"
+            "value" : "收藏"
           }
         }
       }
@@ -1416,7 +1399,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已特别收藏"
+            "value" : "已收藏"
           }
         }
       }
@@ -1432,7 +1415,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "特别收藏"
+            "value" : "收藏"
           }
         }
       }
@@ -1558,7 +1541,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "过滤"
+            "value" : "筛选"
           }
         }
       }
@@ -1590,7 +1573,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "画廊"
+            "value" : "图库"
           }
         }
       }
@@ -1888,7 +1871,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "标记为弃看"
+            "value" : "标记为中断"
           }
         }
       }
@@ -2016,7 +1999,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "剪贴板上无信息"
+            "value" : "剪贴板中没有信息。"
           }
         }
       }
@@ -2064,7 +2047,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无可用海报"
+            "value" : "暂无可用海报。"
           }
         }
       }
@@ -2096,7 +2079,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "没有可用的季"
+            "value" : "暂无可用季"
           }
         }
       }
@@ -2128,7 +2111,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "确认"
+            "value" : "好"
           }
         }
       }
@@ -2224,7 +2207,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "复制"
+            "value" : "粘贴"
           }
         }
       }
@@ -2369,7 +2352,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在继续之前，请备份当前资料库"
+            "value" : "继续前请先备份当前资料库。"
           }
         }
       }
@@ -2547,7 +2530,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "重启 App 以应用更改"
+            "value" : "重启 App 以应用更改。"
           }
         }
       }
@@ -2723,7 +2706,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "搜素资料库"
+            "value" : "搜索资料库..."
           }
         }
       }
@@ -2739,7 +2722,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "搜索 TV 动画或电影"
+            "value" : "搜索 TV 动画或电影..."
           }
         }
       }
@@ -2755,7 +2738,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "搜索"
+            "value" : "搜索..."
           }
         }
       }
@@ -2771,7 +2754,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "季度"
+            "value" : "季"
           }
         }
       }
@@ -2788,23 +2771,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "第 %lld 季"
-          }
-        }
-      }
-    },
-    "Seasons" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "シーズン"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "季度"
           }
         }
       }
@@ -2868,7 +2834,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已存在同系列的其他季度"
+            "value" : "已存在同系列的其他季"
           }
         }
       }
@@ -2900,7 +2866,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已占用：%.2f MB"
+            "value" : "大小：%.2f MB"
           }
         }
       }
@@ -3104,7 +3070,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "TMDb 中找不到相关海报"
+            "value" : "TMDb 暂未返回该选择的海报。"
           }
         }
       }
@@ -3169,7 +3135,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请输入 TMDb API 密钥"
+            "value" : "请输入 TMDb API 密钥以继续。"
           }
         }
       }
@@ -3239,7 +3205,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "取消弃看"
+            "value" : "取消中断"
           }
         }
       }
@@ -3255,7 +3221,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "取消特别收藏"
+            "value" : "取消收藏"
           }
         }
       }
@@ -3271,7 +3237,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已取消特别收藏"
+            "value" : "已取消收藏"
           }
         }
       }
@@ -3388,23 +3354,6 @@
         }
       }
     },
-    "Votes" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "投票数"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "评分人数"
-          }
-        }
-      }
-    },
     "Watch Status" : {
       "localizations" : {
         "ja" : {
@@ -3449,23 +3398,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在看"
-          }
-        }
-      }
-    },
-    "Welcome" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ようこそ"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "欢迎"
           }
         }
       }
