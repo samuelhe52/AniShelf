@@ -317,7 +317,7 @@ struct LibraryView: View {
             }
         )
         .sheet(isPresented: $changeAPIKey) {
-            TMDbAPIConfigurator(isEditing: true)
+            TMDbAPIConfigurator()
                 .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showBackupManager) {

@@ -14,9 +14,13 @@ fileprivate let logger = Logger(subsystem: .bundleIdentifier, category: "TMDbAPI
 @Observable
 class TMDbAPIKeyStorage {
     private let account = "TMDbAPIKey"
+    private static let resetArgument = "-reset-tmdb-api-key"
     var key: String?
 
     init() {
+        if ProcessInfo.processInfo.arguments.contains(Self.resetArgument) {
+            deleteKey()
+        }
         let key: String? = retrieveKey()
         self.key = key
     }
@@ -38,6 +42,22 @@ class TMDbAPIKeyStorage {
             logger.error("Failed to save TMDb API key to keychain. Status code: \(status)")
         }
         return status == errSecSuccess
+    }
+
+    func deleteKey() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: account
+        ]
+
+        let status = SecItemDelete(query as CFDictionary)
+        switch status {
+        case errSecSuccess, errSecItemNotFound:
+            self.key = nil
+            logger.info("Removed TMDb API key from keychain.")
+        default:
+            logger.error("Failed to remove TMDb API key from keychain. Status code: \(status)")
+        }
     }
 
     func retrieveKey() -> String? {

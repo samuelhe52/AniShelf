@@ -2,8 +2,9 @@
 
 ## Workflow
 
-- Use the Makefile for routine tasks: `make clean`, `make refresh-packages`, `make format`, `make lint`.
-- Use the Makefile target for real-device validation: `make run-device` for build, install, and launch on a connected iPhone.
+- Use the Makefile for routine tasks: `make clean`, `make refresh-packages`, `make format`, `make lint`, `make build`.
+- Use `make run-device` for build, install, and launch on a connected iPhone.
+- If visual feedback is needed, run `make run-device`, then use Computer Use to open iPhone Mirroring or Quicktime and inspect the launched app there. Default to Quicktime, unless the user dictates otherwise.
 - Prefer the smallest relevant build or test command before broad verification.
 
 ## Code Style

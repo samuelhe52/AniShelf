@@ -2,7 +2,20 @@
   "sourceLanguage" : "en",
   "strings" : {
     "" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
     },
     "* For security reasons, your TMDb API Key will not be exported." : {
       "localizations" : {
@@ -199,6 +212,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "关于 AniShelf"
+          }
+        }
+      }
+    },
+    "Add a free API key once to unlock search, posters, and more." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無料の API キーを一度追加すれば、検索やポスターなどが使えるようになります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只需添加一个免费的 API 密钥，即可解锁搜索、海报等功能。"
           }
         }
       }
@@ -526,6 +555,22 @@
         }
       }
     },
+    "Change your API key" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "APIキーを変更"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改 API 密钥"
+          }
+        }
+      }
+    },
     "Changing the preferred language will not refresh existing infos.\nRefresh all anime infos now? This may take considerable time." : {
       "localizations" : {
         "ja" : {
@@ -624,6 +669,22 @@
         }
       }
     },
+    "Checking..." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認中..."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "验证中..."
+          }
+        }
+      }
+    },
     "Chinese" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -669,6 +730,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "确认"
+          }
+        }
+      }
+    },
+    "Connect AniShelf to TMDB" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf を TMDb に接続"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将 AniShelf 连接到 TMDb"
+          }
+        }
+      }
+    },
+    "Connect TMDB" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb に接続"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接 TMDb"
           }
         }
       }
@@ -802,6 +895,22 @@
         }
       }
     },
+    "Copy API Key" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "APIキーをコピー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制 API 密钥"
+          }
+        }
+      }
+    },
     "Copy Info" : {
       "localizations" : {
         "ja" : {
@@ -818,6 +927,22 @@
         }
       }
     },
+    "Copy the API Key, not the Read Access Token." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "APIキーをコピーしてください。読み取りアクセストークンではありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制 API 密钥，不要复制读取访问令牌。"
+          }
+        }
+      }
+    },
     "Couldn't load details" : {
       "localizations" : {
         "ja" : {
@@ -830,6 +955,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法加载详情"
+          }
+        }
+      }
+    },
+    "Create an account or log in first." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まずアカウントを作成するか、ログインしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先创建账号或登录。"
           }
         }
       }
@@ -1454,6 +1595,38 @@
         }
       }
     },
+    "Get a TMDB key" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb APIキーを取得"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "获取 TMDb API 密钥"
+          }
+        }
+      }
+    },
+    "Go to the API page after you are signed in." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サインイン後に API ページへ移動してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录后前往 API 页面。"
+          }
+        }
+      }
+    },
     "Grid" : {
       "localizations" : {
         "ja" : {
@@ -1483,6 +1656,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "日语"
+          }
+        }
+      }
+    },
+    "Join TMDB" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb に登録"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "注册 TMDb"
           }
         }
       }
@@ -1650,6 +1839,22 @@
         }
       }
     },
+    "Login to TMDB" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb にログイン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录 TMDb"
+          }
+        }
+      }
+    },
     "Made by Samuel He. Metadata and artwork are provided by TMDb." : {
       "localizations" : {
         "ja" : {
@@ -1684,6 +1889,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "标记为弃看"
+          }
+        }
+      }
+    },
+    "Metadata" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メタデータ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "元数据"
           }
         }
       }
@@ -1764,6 +1985,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "网络错误！"
+          }
+        }
+      }
+    },
+    "Next" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次へ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步"
           }
         }
       }
@@ -1896,6 +2133,38 @@
         }
       }
     },
+    "Open API Page" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "APIページを開く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开 API 页面"
+          }
+        }
+      }
+    },
+    "Open API settings" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API設定を開く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开 API 设置"
+          }
+        }
+      }
+    },
     "Organizing Library..." : {
       "localizations" : {
         "ja" : {
@@ -1988,6 +2257,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "粘贴信息？"
+          }
+        }
+      }
+    },
+    "Paste your new API Key. AniShelf will check it before saving." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい APIキーを貼り付けてください。保存前に AniShelf が確認します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请粘贴新的 API 密钥。AniShelf 会在保存前检查。"
+          }
+        }
+      }
+    },
+    "Paste your TMDB API Key here. AniShelf will check it before saving." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ここに TMDb APIキーを貼り付けてください。保存前に AniShelf が確認します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请在此粘贴你的 TMDb API 密钥。AniShelf 会在保存前检查。"
           }
         }
       }
@@ -2572,6 +2873,22 @@
         }
       }
     },
+    "Sign in to TMDB" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb にサインイン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录 TMDb"
+          }
+        }
+      }
+    },
     "Size: %.2f MB" : {
       "localizations" : {
         "ja" : {
@@ -2638,6 +2955,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "状态: %1$@\n开始: %2$@\n结束: %3$@\n特别收藏: %4$@\n笔记: %5$@\n使用自选海报: %6$@"
+          }
+        }
+      }
+    },
+    "Step %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Step %1$lld of %2$lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld/%2$lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 %1$lld/%2$lld 步"
           }
         }
       }
@@ -2770,6 +3109,38 @@
         }
       }
     },
+    "TMDB gives each account a personal API key. It's completely free for personal use." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb は各アカウントに個人用 APIキーを提供します。個人利用なら完全無料です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb 会为每个账号提供专属 API 密钥。个人使用完全免费。"
+          }
+        }
+      }
+    },
+    "TMDB powers AniShelf." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb が AniShelf を支えています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb 为 AniShelf 提供支持。"
+          }
+        }
+      }
+    },
     "TMDb Score" : {
       "localizations" : {
         "ja" : {
@@ -2787,6 +3158,7 @@
       }
     },
     "To continue, enter a TMDb API Key." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -2900,6 +3272,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已取消特别收藏"
+          }
+        }
+      }
+    },
+    "Use API Key, not API Read Access Token." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "APIキーを使用してください。読み取りアクセストークンではありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请使用 API 密钥，不要使用读取访问令牌。"
           }
         }
       }
@@ -3066,6 +3454,7 @@
       }
     },
     "Welcome" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -3093,6 +3482,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "写点什么…"
+          }
+        }
+      }
+    },
+    "You can change this later from settings." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あとで設定から変更できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "之后可以在设置中更改。"
+          }
+        }
+      }
+    },
+    "Your existing key stays active until the new one is saved." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいキーが保存されるまでは、現在のキーが有効です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在新密钥保存前，现有密钥仍然有效。"
           }
         }
       }
