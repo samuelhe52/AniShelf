@@ -1,0 +1,276 @@
+//
+//  LibraryProfileSettingsSections.swift
+//  MyAnimeList
+//
+//  Created by OpenAI Codex on 2026/5/3.
+//
+
+import DataProvider
+import SwiftUI
+
+struct LibraryProfileHeroCard: View {
+    let stats: LibraryProfileStats
+    let animeTitleResource: LocalizedStringResource
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 18) {
+            ZStack(alignment: .bottomTrailing) {
+                Image(.appIcon)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .frame(width: 104, height: 104)
+                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .shadow(color: .black.opacity(0.18), radius: 16, y: 8)
+
+                Image(systemName: "books.vertical.fill")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 34, height: 34)
+                    .background(.orange.gradient, in: Circle())
+                    .overlay {
+                        Circle().stroke(.white.opacity(0.7), lineWidth: 1)
+                    }
+                    .offset(x: 6, y: 6)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text("\(stats.totalCount)")
+                        .font(.system(size: 54, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                    Text(animeTitleResource)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityElement(children: .combine)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Spacer(minLength: 0)
+        }
+        .padding(20)
+        .popupGlassPanel(cornerRadius: 30, tint: .white.opacity(0.045))
+    }
+}
+
+struct LibraryProfilePrimaryStatsGrid: View {
+    let stats: LibraryProfileStats
+
+    var body: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
+            LibraryProfileMetricCard(
+                title: "Watched",
+                value: stats.watchedCount,
+                systemImage: "checkmark.circle.fill",
+                tint: AnimeEntry.WatchStatus.watched.libraryTintColor
+            )
+            LibraryProfileMetricCard(
+                title: "Watching",
+                value: stats.watchingCount,
+                systemImage: "play.circle.fill",
+                tint: AnimeEntry.WatchStatus.watching.libraryTintColor
+            )
+            LibraryProfileMetricCard(
+                title: "Favorites",
+                value: stats.favoriteCount,
+                systemImage: "heart.fill",
+                tint: .pink
+            )
+            LibraryProfileMetricCard(
+                title: "Planned",
+                value: stats.planToWatchCount,
+                systemImage: "bookmark.fill",
+                tint: AnimeEntry.WatchStatus.planToWatch.libraryTintColor
+            )
+        }
+    }
+}
+
+struct LibraryProfileLibraryDetailsCard: View {
+    let stats: LibraryProfileStats
+    let runtimeDescription: String
+
+    var body: some View {
+        PopupSectionCard("Library Details", systemImage: "sparkles.rectangle.stack", spacing: 14) {
+            VStack(spacing: 10) {
+                LibraryProfileDetailRow(title: "Movies", value: "\(stats.movieCount)", systemImage: "film")
+                LibraryProfileDetailRow(title: "Series", value: "\(stats.seriesCount)", systemImage: "tv")
+                LibraryProfileDetailRow(
+                    title: "Seasons",
+                    value: "\(stats.seasonCount)",
+                    systemImage: "square.stack.3d.up"
+                )
+                LibraryProfileDetailRow(
+                    title: "With Notes",
+                    value: "\(stats.entriesWithNotesCount)",
+                    systemImage: "note.text"
+                )
+                LibraryProfileDetailRow(title: "Runtime", value: runtimeDescription, systemImage: "clock")
+            }
+        }
+    }
+}
+
+struct LibraryProfileSettingsCard: View {
+    @Binding var followsSystemLanguage: Bool
+    @Binding var preferredLanguage: Language
+
+    let restoreCompleted: Bool
+    let createBackupItems: () -> [Any]?
+    let onRestore: () -> Void
+    let onChangeAPIKey: () -> Void
+    let onCheckMetadataCacheSize: () -> Void
+    let onRefreshInfos: () -> Void
+    let onShowAbout: () -> Void
+    let onDeleteAllAnimes: () -> Void
+
+    var body: some View {
+        PopupSectionCard("Settings", systemImage: "gearshape.2", spacing: 14) {
+            VStack(spacing: 14) {
+                languagePickerRow
+                backupManagementRow
+                maintenanceActions
+            }
+        }
+    }
+
+    private var languagePickerRow: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            LibraryProfileSettingHeader(
+                title: "Anime Info Language",
+                subtitle: "Choose the language used for future metadata fetches.",
+                systemImage: "globe",
+                tint: .blue
+            )
+
+            HStack(spacing: 12) {
+                Text("Follow System")
+                    .font(.subheadline.weight(.semibold))
+                Spacer(minLength: 12)
+                Toggle("Follow System", isOn: $followsSystemLanguage)
+                    .labelsHidden()
+                    .scaleEffect(0.78, anchor: .trailing)
+                    .frame(width: 42, height: 26, alignment: .trailing)
+            }
+            .padding(.vertical, 2)
+
+            if !followsSystemLanguage {
+                Picker("Anime Info Language", selection: $preferredLanguage) {
+                    ForEach(Language.allCases, id: \.rawValue) { language in
+                        Text(language.localizedStringResource).tag(language)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.top, 2)
+                .transition(
+                    .asymmetric(
+                        insertion: .opacity.combined(with: .move(edge: .top)),
+                        removal: .opacity.combined(with: .scale(scale: 0.98, anchor: .top))
+                    )
+                )
+            }
+        }
+        .padding(14)
+        .libraryProfileInsetPanel(cornerRadius: 22, tint: .blue)
+    }
+
+    private var backupManagementRow: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            LibraryProfileSettingHeader(
+                title: "Backup & Restore",
+                subtitle: "Export or restore your local library.",
+                systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90",
+                tint: .orange
+            )
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    exportButton
+                        .frame(maxWidth: .infinity)
+                    restoreButton
+                        .frame(maxWidth: .infinity)
+                }
+                VStack(spacing: 10) {
+                    exportButton
+                    restoreButton
+                }
+            }
+            .disabled(restoreCompleted)
+
+            if restoreCompleted {
+                Text("Restore completed! Restart app to see changes.")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.green)
+                    .transition(.opacity)
+            }
+
+            Text("* For security reasons, your TMDb API Key will not be exported.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .libraryProfileInsetPanel(cornerRadius: 22, tint: .orange)
+    }
+
+    private var maintenanceActions: some View {
+        VStack(spacing: 0) {
+            LibraryProfileActionRow(
+                title: "Change API Key",
+                subtitle: "Update the TMDb key used for metadata.",
+                systemImage: "person.badge.key",
+                tint: .cyan,
+                action: onChangeAPIKey
+            )
+            LibraryProfileActionDivider()
+            LibraryProfileActionRow(
+                title: "Check Metadata Cache Size",
+                subtitle: "Review image and metadata cache usage.",
+                systemImage: "archivebox",
+                tint: .teal,
+                action: onCheckMetadataCacheSize
+            )
+            LibraryProfileActionDivider()
+            LibraryProfileActionRow(
+                title: "Refresh Infos",
+                subtitle: "Fetch latest TMDb metadata for every entry.",
+                systemImage: "arrow.clockwise",
+                tint: .indigo,
+                action: onRefreshInfos
+            )
+            LibraryProfileActionDivider()
+            LibraryProfileActionRow(
+                title: "About AniShelf",
+                subtitle: "Version, links, and credits.",
+                systemImage: "info.circle",
+                tint: .secondary,
+                action: onShowAbout
+            )
+            LibraryProfileActionDivider()
+            LibraryProfileActionRow(
+                title: "Delete All Animes",
+                subtitle: "Remove every saved library entry.",
+                systemImage: "trash",
+                role: .destructive,
+                tint: .red,
+                action: onDeleteAllAnimes
+            )
+        }
+        .padding(.vertical, 4)
+        .libraryProfileInsetPanel(cornerRadius: 22, tint: .secondary)
+    }
+
+    @ViewBuilder
+    private var exportButton: some View {
+        LazyShareLink(prepareData: createBackupItems) {
+            Label("Export", systemImage: "document.badge.arrow.up")
+        }
+        .buttonStyle(LibraryProfileCommandButtonStyle(tint: .blue, filled: true))
+    }
+
+    private var restoreButton: some View {
+        Button("Restore", systemImage: "document.badge.clock", role: .destructive, action: onRestore)
+            .buttonStyle(LibraryProfileCommandButtonStyle(tint: .red, filled: false))
+    }
+}

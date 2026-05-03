@@ -225,7 +225,7 @@ struct LibraryView: View {
     }
 
     private var profileSettingsAnimation: Animation? {
-        reduceMotion ? nil : .smooth(duration: 0.36, extraBounce: 0)
+        reduceMotion ? nil : .smooth(duration: 0.45, extraBounce: 0)
     }
 
     private var profileSettingsTransition: AnyTransition {
