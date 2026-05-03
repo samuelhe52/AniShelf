@@ -332,20 +332,16 @@ class LibraryStore {
         originalPosterURL: URL?,
         usingCustomPoster: Bool
     ) async throws -> (Int, BasicInfo, AnimeEntryDetail) {
-        async let info = self.infoFetcher.fetchInfoFromTMDB(
+        let payload = try await self.infoFetcher.latestInfo(
             entryType: entryType,
             tmdbID: tmdbID,
             language: language)
-        async let detail = self.infoFetcher.detailInfo(
-            entryType: entryType,
-            tmdbID: tmdbID,
-            language: language)
-        var resolvedInfo = try await info
+        var resolvedInfo = payload.0
         if usingCustomPoster {
             // Preserve the original poster URL if using a custom poster
             resolvedInfo.posterURL = originalPosterURL
         }
-        return (tmdbID, resolvedInfo, try await detail)
+        return (tmdbID, resolvedInfo, payload.1)
     }
 
     func resolveParentSeriesEntry(for entry: AnimeEntry) async throws {
