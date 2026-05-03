@@ -8,6 +8,15 @@
 import DataProvider
 import SwiftUI
 
+fileprivate enum LibraryProfileMaintenancePalette {
+    static let apiKey = Color(red: 0.38, green: 0.72, blue: 0.98)
+    static let cache = Color(red: 0.29, green: 0.77, blue: 0.90)
+    static let refresh = Color(red: 0.45, green: 0.62, blue: 0.96)
+    static let prefetch = Color(red: 0.33, green: 0.80, blue: 0.74)
+    static let about = Color(red: 0.58, green: 0.64, blue: 0.74)
+    static let panel = Color(red: 0.42, green: 0.58, blue: 0.76)
+}
+
 struct LibraryProfileHeroCard: View {
     let stats: LibraryProfileStats
     let animeTitleResource: LocalizedStringResource
@@ -129,6 +138,9 @@ struct LibraryProfileSettingsCard: View {
 
     @Binding var followsSystemLanguage: Bool
     @Binding var hideDroppedByDefault: Bool
+    @Binding var defaultNewEntryWatchStatus: AnimeEntry.WatchStatus
+    @Binding var defaultFilterPreset: LibraryStore.DefaultFilterPreset
+    @Binding var autoPrefetchImagesOnAddAndRestore: Bool
     @Binding var preferredLanguage: Language
 
     let restoreCompleted: Bool
@@ -202,10 +214,37 @@ struct LibraryProfileSettingsCard: View {
         VStack(alignment: .leading, spacing: 10) {
             LibraryProfileSettingHeader(
                 title: "Library Defaults",
-                subtitle: "Choose how the library opens.",
                 systemImage: "line.3.horizontal.decrease.circle",
                 tint: .mint
             )
+
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text("New Entries Start As")
+                    .font(.subheadline.weight(.semibold))
+                Spacer(minLength: 12)
+                Picker("New Entries Start As", selection: $defaultNewEntryWatchStatus) {
+                    ForEach(AnimeEntry.WatchStatus.allCases, id: \.self) { status in
+                        Text(status.localizedStringResource).tag(status)
+                    }
+                }
+                .pickerStyle(.menu)
+                .tint(defaultNewEntryWatchStatus.defaultPickerTintColor)
+            }
+            .padding(.vertical, 2)
+
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text("Default Filter")
+                    .font(.subheadline.weight(.semibold))
+                Spacer(minLength: 12)
+                Picker("Default Filter", selection: $defaultFilterPreset) {
+                    ForEach(LibraryStore.DefaultFilterPreset.allCases, id: \.self) { preset in
+                        Text(preset.localizedStringResource).tag(preset)
+                    }
+                }
+                .pickerStyle(.menu)
+                .tint(defaultFilterPreset.libraryTintColor)
+            }
+            .padding(.vertical, 2)
 
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
@@ -218,6 +257,24 @@ struct LibraryProfileSettingsCard: View {
                 }
                 Spacer(minLength: 12)
                 Toggle("Hide Dropped Entries", isOn: $hideDroppedByDefault)
+                    .labelsHidden()
+                    .tint(.mint)
+                    .scaleEffect(0.78, anchor: .trailing)
+                    .frame(width: 42, height: 26, alignment: .trailing)
+            }
+            .padding(.vertical, 2)
+
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Auto Prefetch Images")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Prefetch images when adding titles or restoring a backup.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 12)
+                Toggle("Auto Prefetch Images", isOn: $autoPrefetchImagesOnAddAndRestore)
                     .labelsHidden()
                     .tint(.mint)
                     .scaleEffect(0.78, anchor: .trailing)
@@ -247,10 +304,14 @@ struct LibraryProfileSettingsCard: View {
             .disabled(restoreCompleted)
 
             if restoreCompleted {
-                Text("Restore completed! Restart app to see changes.")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.green)
-                    .transition(.opacity)
+                HStack {
+                    Spacer()
+                    Text("Restore completed!")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.green)
+                        .transition(.opacity)
+                    Spacer()
+                }
             }
 
             Text("* For security reasons, your TMDb API Key will not be exported.")
@@ -267,7 +328,7 @@ struct LibraryProfileSettingsCard: View {
                 title: "Change API Key",
                 subtitle: "Update the TMDb key used for metadata.",
                 systemImage: "person.badge.key",
-                tint: .cyan,
+                tint: LibraryProfileMaintenancePalette.apiKey,
                 action: onChangeAPIKey
             )
             LibraryProfileActionDivider()
@@ -275,7 +336,7 @@ struct LibraryProfileSettingsCard: View {
                 title: "Check Metadata Cache Size",
                 subtitle: "Review image and metadata cache usage.",
                 systemImage: "archivebox",
-                tint: .teal,
+                tint: LibraryProfileMaintenancePalette.cache,
                 action: onCheckMetadataCacheSize
             )
             LibraryProfileActionDivider()
@@ -283,7 +344,7 @@ struct LibraryProfileSettingsCard: View {
                 title: "Refresh Infos",
                 subtitle: "Fetch latest TMDb metadata for every entry.",
                 systemImage: "arrow.clockwise",
-                tint: .indigo,
+                tint: LibraryProfileMaintenancePalette.refresh,
                 action: onRefreshInfos
             )
             LibraryProfileActionDivider()
@@ -291,7 +352,7 @@ struct LibraryProfileSettingsCard: View {
                 title: "Prefetch Images",
                 subtitle: "Cache posters and artwork without refreshing metadata.",
                 systemImage: "photo.stack",
-                tint: .mint,
+                tint: LibraryProfileMaintenancePalette.prefetch,
                 action: onPrefetchImages
             )
             LibraryProfileActionDivider()
@@ -299,7 +360,7 @@ struct LibraryProfileSettingsCard: View {
                 title: "About AniShelf",
                 subtitle: "Version, links, and credits.",
                 systemImage: "info.circle",
-                tint: .secondary,
+                tint: LibraryProfileMaintenancePalette.about,
                 action: onShowAbout
             )
             LibraryProfileActionDivider()
@@ -313,7 +374,7 @@ struct LibraryProfileSettingsCard: View {
             )
         }
         .padding(.vertical, 4)
-        .libraryProfileInsetPanel(cornerRadius: 22, tint: .secondary)
+        .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileMaintenancePalette.panel)
     }
 
     @ViewBuilder
@@ -331,5 +392,35 @@ struct LibraryProfileSettingsCard: View {
 
     private var sectionCardTint: Color {
         colorScheme == .dark ? .black.opacity(0.22) : .white.opacity(0.05)
+    }
+}
+
+extension LibraryStore.DefaultFilterPreset {
+    fileprivate var libraryTintColor: Color {
+        switch self {
+        case .all:
+            .mint
+        case .favorites:
+            .pink
+        case .watched:
+            AnimeEntry.WatchStatus.watched.libraryTintColor
+        case .planToWatch:
+            AnimeEntry.WatchStatus.planToWatch.libraryTintColor
+        case .watching:
+            AnimeEntry.WatchStatus.watching.libraryTintColor
+        case .dropped:
+            AnimeEntry.WatchStatus.dropped.libraryTintColor
+        }
+    }
+}
+
+extension AnimeEntry.WatchStatus {
+    fileprivate var defaultPickerTintColor: Color {
+        switch self {
+        case .planToWatch:
+            .mint
+        default:
+            libraryTintColor
+        }
     }
 }

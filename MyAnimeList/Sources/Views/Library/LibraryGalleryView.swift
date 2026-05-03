@@ -44,6 +44,7 @@ struct LibraryGalleryView: View {
                 }
                 .scrollTargetLayout()
             }
+            .animation(.default, value: store.filters)
             .scrollClipDisabled()
             .scrollPosition(id: $scrolledID)
             .scrollTargetBehavior(.viewAligned)

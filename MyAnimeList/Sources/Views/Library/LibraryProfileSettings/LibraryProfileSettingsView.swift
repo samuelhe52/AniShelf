@@ -229,6 +229,9 @@ struct LibraryProfileSettingsView: View {
         LibraryProfileSettingsCard(
             followsSystemLanguage: followsSystemLanguageBinding,
             hideDroppedByDefault: $store.hideDroppedByDefault,
+            defaultNewEntryWatchStatus: $store.defaultNewEntryWatchStatus,
+            defaultFilterPreset: $store.defaultFilterPreset,
+            autoPrefetchImagesOnAddAndRestore: $store.autoPrefetchImagesOnAddAndRestore,
             preferredLanguage: $preferredLanguage,
             restoreCompleted: restoreCompleted,
             createBackupItems: makeBackupExportItems,
@@ -344,6 +347,11 @@ struct LibraryProfileSettingsView: View {
             }
             defer { url.stopAccessingSecurityScopedResource() }
             try store.backupManager.restoreBackup(from: url)
+            store.reloadPersistedPreferences()
+            try store.refreshLibrary()
+            if store.autoPrefetchImagesOnAddAndRestore {
+                store.prefetchAllImages()
+            }
             withAnimation {
                 restoreCompleted = true
             }

@@ -39,10 +39,13 @@ struct LibraryNavigationTitleCapsule: View {
                 Text("\(count)")
                     .font(.title3.weight(.bold))
                     .monospacedDigit()
+                    .contentTransition(.numericText(countsDown: false))
                 Text(animeTitleResource)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
+                    .contentTransition(.identity)
             }
+            .animation(.bouncy, value: count)
         }
     }
 

@@ -458,6 +458,22 @@
         }
       }
     },
+    "Auto Prefetch Images" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像を自動プリフェッチ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动预加载图片"
+          }
+        }
+      }
+    },
     "Avg Runtime" : {
       "localizations" : {
         "ja" : {
@@ -502,6 +518,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "备份"
+          }
+        }
+      }
+    },
+    "Prefetch images when adding titles or restoring a backup." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "項目を追加するときやバックアップを復元するときに画像をプリフェッチします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在添加条目或导入备份时预加载图片。"
+          }
+        }
+      }
+    },
+    "Cache posters and artwork without refreshing metadata." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メタデータを更新せずに、ポスターとアートワークをキャッシュします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在不刷新元数据的情况下缓存海报和图片。"
           }
         }
       }
@@ -571,7 +619,20 @@
       }
     },
     "Changing the metadata language setting will not refresh existing infos.\nRefresh all anime infos now? This may take considerable time." : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メタデータの言語設定を変更しても既存の情報は更新されません。\nすべてのアニメ情報を今すぐ更新しますか？時間がかかる場合があります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改元数据语言设置不会刷新现有的信息。\n现在刷新所有动画信息吗？这可能需要一些时间。"
+          }
+        }
+      }
     },
     "Changing the preferred language will not refresh existing infos.\nRefresh all anime infos now? This may take considerable time." : {
       "extractionState" : "stale",
@@ -701,6 +762,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "中文"
+          }
+        }
+      }
+    },
+    "Choose how the library opens." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリの開き方を選んでください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择资料库的打开方式。"
           }
         }
       }
@@ -1711,6 +1789,22 @@
         }
       }
     },
+    "Hide Dropped Entries" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中断項目を非表示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐藏中断条目"
+          }
+        }
+      }
+    },
     "Japanese" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1823,6 +1917,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "资料库"
+          }
+        }
+      }
+    },
+    "Library Defaults" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリの既定設定"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "资料库默认设置"
           }
         }
       }
@@ -2073,6 +2183,22 @@
         }
       }
     },
+    "New Entries Start As" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新規項目の初期状態"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新条目默认状态"
+          }
+        }
+      }
+    },
     "Next" : {
       "localizations" : {
         "ja" : {
@@ -2217,6 +2343,22 @@
         }
       }
     },
+    "Only show dropped entries after you explicitly enable the Dropped filter." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「中断」フィルターを明示的に有効にした場合のみ、中断項目を表示します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只有在你明确启用“中断”筛选后，才会显示中断条目。"
+          }
+        }
+      }
+    },
     "Open API Page" : {
       "localizations" : {
         "ja" : {
@@ -2261,6 +2403,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打开资料库概览"
+          }
+        }
+      }
+    },
+    "Default Filter" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既定フィルター"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "默认筛选"
           }
         }
       }
@@ -2470,6 +2628,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "继续前请先备份当前资料库。"
+          }
+        }
+      }
+    },
+    "Prefetch Images" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像をプリフェッチ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预加载图片"
           }
         }
       }
@@ -2702,7 +2876,6 @@
       }
     },
     "Restore completed!" : {
-      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -2719,7 +2892,21 @@
       }
     },
     "Restore completed! Restart app to see changes." : {
-
+      "extractionState" : "stale",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "復元が完了しました！変更を適用するにはアプリを再起動してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导入完成！重启 App 以应用更改。"
+          }
+        }
+      }
     },
     "Retry" : {
       "localizations" : {

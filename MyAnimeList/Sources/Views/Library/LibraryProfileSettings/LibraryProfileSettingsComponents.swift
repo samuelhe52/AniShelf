@@ -101,20 +101,22 @@ struct LibraryProfileActionDivider: View {
 
 struct LibraryProfileSettingHeader: View {
     let title: LocalizedStringResource
-    let subtitle: LocalizedStringResource
+    var subtitle: LocalizedStringResource? = nil
     let systemImage: String
     let tint: Color
 
     var body: some View {
         HStack(spacing: 12) {
             LibraryProfileSettingIcon(systemImage: systemImage, tint: tint)
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: subtitle == nil ? 0 : 3) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             Spacer(minLength: 0)
         }

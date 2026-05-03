@@ -19,6 +19,9 @@ extension String {
     static let librarySortReversed = "LibrarySortReversed"
     static let libraryViewStyle = "LibraryViewStyle"
     static let libraryHideDroppedByDefault = "LibraryHideDroppedByDefault"
+    static let libraryDefaultWatchStatus = "LibraryDefaultWatchStatus"
+    static let libraryDefaultFilterPreset = "LibraryDefaultFilterPreset"
+    static let libraryAutoPrefetchImagesOnAddAndRestore = "LibraryAutoPrefetchImagesOnAddAndRestore"
 
     static let allPreferenceKeys: [String] = [
         .preferredAnimeInfoLanguage,
@@ -29,7 +32,10 @@ extension String {
         .librarySortStrategy,
         .librarySortReversed,
         .libraryViewStyle,
-        .libraryHideDroppedByDefault
+        .libraryHideDroppedByDefault,
+        .libraryDefaultWatchStatus,
+        .libraryDefaultFilterPreset,
+        .libraryAutoPrefetchImagesOnAddAndRestore
     ]
 }
 

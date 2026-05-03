@@ -38,6 +38,31 @@ class LibraryStore {
             logger.debug("Updated hide dropped by default to \(newValue)")
         }
     }
+    var defaultNewEntryWatchStatus: AnimeEntry.WatchStatus = .planToWatch {
+        willSet {
+            UserDefaults.standard.setValue(newValue.preferenceValue, forKey: .libraryDefaultWatchStatus)
+            logger.debug("Updated default new entry watch status to \(newValue.preferenceValue)")
+        }
+    }
+    var defaultFilterPreset: DefaultFilterPreset = .all {
+        willSet {
+            UserDefaults.standard.setValue(newValue.rawValue, forKey: .libraryDefaultFilterPreset)
+            logger.debug("Updated default filter preset to \(newValue.rawValue)")
+        }
+        didSet {
+            guard defaultFilterPreset != oldValue else { return }
+            applyDefaultFilters()
+        }
+    }
+    var autoPrefetchImagesOnAddAndRestore: Bool = false {
+        willSet {
+            UserDefaults.standard.setValue(
+                newValue,
+                forKey: .libraryAutoPrefetchImagesOnAddAndRestore
+            )
+            logger.debug("Updated auto prefetch images on add and restore to \(newValue)")
+        }
+    }
     var sortStrategy: AnimeSortStrategy = .dateStarted {
         willSet {
             UserDefaults.standard.setValue(newValue.rawValue, forKey: .librarySortStrategy)
@@ -60,20 +85,73 @@ class LibraryStore {
         self.backupManager = BackupManager(dataProvider: dataProvider)
         self.library = []
         self.infoFetcher = .init()
-        if let sortStrategyRawValue = UserDefaults.standard.string(forKey: .librarySortStrategy),
-            let strategy = AnimeSortStrategy(rawValue: sortStrategyRawValue)
-        {
-            self.sortStrategy = strategy
-        }
-        if UserDefaults.standard.object(forKey: .librarySortReversed) != nil {
-            self.sortReversed = UserDefaults.standard.bool(forKey: .librarySortReversed)
-        }
-        if UserDefaults.standard.object(forKey: .libraryHideDroppedByDefault) != nil {
-            self.hideDroppedByDefault = UserDefaults.standard.bool(forKey: .libraryHideDroppedByDefault)
-        }
+        reloadPersistedPreferences()
         setupUpdateLibrary()
         setupTMDbAPIConfigurationChangeMonitor()
         try? refreshLibrary()
+    }
+
+    func reloadPersistedPreferences() {
+        let defaults = UserDefaults.standard
+
+        let resolvedSortStrategy =
+            defaults
+            .string(forKey: .librarySortStrategy)
+            .flatMap(AnimeSortStrategy.init(rawValue:))
+            ?? .dateStarted
+        if sortStrategy != resolvedSortStrategy {
+            sortStrategy = resolvedSortStrategy
+        }
+
+        let resolvedSortReversed =
+            if defaults.object(forKey: .librarySortReversed) != nil {
+                defaults.bool(forKey: .librarySortReversed)
+            } else {
+                true
+            }
+        if sortReversed != resolvedSortReversed {
+            sortReversed = resolvedSortReversed
+        }
+
+        let resolvedHideDroppedByDefault =
+            if defaults.object(forKey: .libraryHideDroppedByDefault) != nil {
+                defaults.bool(forKey: .libraryHideDroppedByDefault)
+            } else {
+                false
+            }
+        if hideDroppedByDefault != resolvedHideDroppedByDefault {
+            hideDroppedByDefault = resolvedHideDroppedByDefault
+        }
+
+        let resolvedDefaultWatchStatus =
+            defaults
+            .string(forKey: .libraryDefaultWatchStatus)
+            .flatMap(AnimeEntry.WatchStatus.init(preferenceValue:))
+            ?? .planToWatch
+        if defaultNewEntryWatchStatus != resolvedDefaultWatchStatus {
+            defaultNewEntryWatchStatus = resolvedDefaultWatchStatus
+        }
+
+        let resolvedDefaultFilterPreset =
+            defaults
+            .string(forKey: .libraryDefaultFilterPreset)
+            .flatMap(DefaultFilterPreset.init(rawValue:))
+            ?? .all
+        if defaultFilterPreset != resolvedDefaultFilterPreset {
+            defaultFilterPreset = resolvedDefaultFilterPreset
+        }
+
+        let resolvedAutoPrefetchImagesOnAddAndRestore =
+            if defaults.object(forKey: .libraryAutoPrefetchImagesOnAddAndRestore) != nil {
+                defaults.bool(forKey: .libraryAutoPrefetchImagesOnAddAndRestore)
+            } else {
+                false
+            }
+        if autoPrefetchImagesOnAddAndRestore != resolvedAutoPrefetchImagesOnAddAndRestore {
+            autoPrefetchImagesOnAddAndRestore = resolvedAutoPrefetchImagesOnAddAndRestore
+        }
+
+        applyDefaultFilters()
     }
 
     // MARK: - Library Loading & Observers
@@ -114,7 +192,7 @@ class LibraryStore {
     func createNewEntry(
         tmdbID id: Int,
         type: AnimeType
-    ) async throws -> PersistentIdentifier? {
+    ) async throws -> AnimeEntry? {
         // No duplicate entries
         guard library.map(\.tmdbID).contains(id) == false else {
             library.entryWithTMDbID(id)?.onDisplay = true
@@ -134,6 +212,7 @@ class LibraryStore {
             language: language
         )
         let entry = AnimeEntry(fromInfo: try await info)
+        applyNewEntryDefaults(to: entry)
         entry.detail = try await detail
         if let parentSeriesID = entry.parentSeriesID {
             if let parentSeriesEntry = library.first(where: { $0.tmdbID == parentSeriesID }) {
@@ -148,7 +227,8 @@ class LibraryStore {
                 entry.parentSeriesEntry = parentSeriesEntry
             }
         }
-        return try dataProvider.dataHandler.newEntry(entry)
+        try dataProvider.dataHandler.newEntry(entry)
+        return entry
     }
 
     /// Creates a new `AnimeEntry` from a TMDB ID and adds it to the library.
@@ -162,7 +242,9 @@ class LibraryStore {
     /// - Returns: `true` if no error occurred; otherwise `false`.
     func newEntry(tmdbID id: Int, type: AnimeType) async -> Bool {
         do {
-            try await createNewEntry(tmdbID: id, type: type)
+            if let entry = try await createNewEntry(tmdbID: id, type: type) {
+                prefetchImagesForDefaultBehavior([entry])
+            }
             return true
         } catch {
             logger.error("Error creating new entry: \(error)")
@@ -177,9 +259,13 @@ class LibraryStore {
         -> Bool
     {
         do {
+            var createdEntries: [AnimeEntry] = []
             for result in results {
-                try await createNewEntry(tmdbID: result.tmdbID, type: result.type)
+                if let entry = try await createNewEntry(tmdbID: result.tmdbID, type: result.type) {
+                    createdEntries.append(entry)
+                }
             }
+            prefetchImagesForDefaultBehavior(createdEntries)
             return true
         } catch {
             logger.error("Error creating new entries from search results: \(error)")
@@ -191,7 +277,10 @@ class LibraryStore {
     /// Creates new `AnimeEntry` instances from a `BasicInfo` and adds it to the library.
     func newEntryFromBasicInfo(_ info: BasicInfo) {
         do {
-            try dataProvider.dataHandler.newEntry(.init(fromInfo: info))
+            let entry = AnimeEntry(fromInfo: info)
+            applyNewEntryDefaults(to: entry)
+            try dataProvider.dataHandler.newEntry(entry)
+            prefetchImagesForDefaultBehavior([entry])
         } catch {
             logger.error("Error creating new entry from BasicInfo: \(error)")
         }
@@ -363,13 +452,18 @@ class LibraryStore {
     }
 
     func prefetchAllImages() {
-        let urls = Array(
-            Set(
-                library.flatMap { entry in
-                    [entry.posterURL, entry.detail?.heroImageURL, entry.detail?.logoImageURL].compactMap(\.self)
-                }
-            )
-        )
+        prefetchImages(for: library)
+    }
+
+    private func prefetchImagesForDefaultBehavior<C: Collection>(_ entries: C)
+    where C.Element == AnimeEntry {
+        guard autoPrefetchImagesOnAddAndRestore else { return }
+        prefetchImages(for: entries)
+    }
+
+    private func prefetchImages<C: Collection>(for entries: C)
+    where C.Element == AnimeEntry {
+        let urls = Array(Set(imageURLs(for: entries)))
         ToastCenter.global.progressState =
             .progress(
                 current: 0,
@@ -406,6 +500,21 @@ class LibraryStore {
                 logger.info("Prefetched images: \(messageResourceString)")
             })
         prefetcher.start()
+    }
+
+    private func imageURLs<C: Collection>(for entries: C) -> [URL]
+    where C.Element == AnimeEntry {
+        entries.flatMap { entry in
+            [entry.posterURL, entry.detail?.heroImageURL, entry.detail?.logoImageURL].compactMap(\.self)
+        }
+    }
+
+    private func applyNewEntryDefaults(to entry: AnimeEntry) {
+        entry.setWatchStatus(defaultNewEntryWatchStatus)
+    }
+
+    private func applyDefaultFilters() {
+        filters = defaultFilterPreset.resolvedFilters
     }
 
     // MARK: - Conversion helpers
@@ -549,6 +658,43 @@ class LibraryStore {
 
     // MARK: - Filters
 
+    enum DefaultFilterPreset: String, CaseIterable, Codable, CustomLocalizedStringResourceConvertible {
+        case all
+        case favorites
+        case watched
+        case planToWatch
+        case watching
+        case dropped
+
+        var resolvedFilters: Set<AnimeFilter> {
+            switch self {
+            case .all:
+                []
+            case .favorites:
+                [.favorited]
+            case .watched:
+                [.watched]
+            case .planToWatch:
+                [.planToWatch]
+            case .watching:
+                [.watching]
+            case .dropped:
+                [.dropped]
+            }
+        }
+
+        var localizedStringResource: LocalizedStringResource {
+            switch self {
+            case .all: "All"
+            case .favorites: "Favorites"
+            case .watched: "Watched"
+            case .planToWatch: "Plan to Watch"
+            case .watching: "Watching"
+            case .dropped: "Dropped"
+            }
+        }
+    }
+
     struct AnimeFilter: Sendable, CaseIterable, Equatable, Hashable {
         static let favorited = AnimeFilter(id: "Favorites", name: "Favorites") { $0.favorite }
         static let watched = AnimeFilter(id: "Watched", name: "Watched") {
@@ -639,3 +785,33 @@ class LibraryStore {
         }
     }
 #endif
+
+extension AnimeEntry.WatchStatus {
+    var preferenceValue: String {
+        switch self {
+        case .planToWatch:
+            "planToWatch"
+        case .watching:
+            "watching"
+        case .watched:
+            "watched"
+        case .dropped:
+            "dropped"
+        }
+    }
+
+    init?(preferenceValue: String) {
+        switch preferenceValue {
+        case "planToWatch":
+            self = .planToWatch
+        case "watching":
+            self = .watching
+        case "watched":
+            self = .watched
+        case "dropped":
+            self = .dropped
+        default:
+            return nil
+        }
+    }
+}
