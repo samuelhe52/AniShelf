@@ -46,7 +46,7 @@ import Testing
     #expect(entry.dateFinished == referenceDate(day: 7))
 }
 
-private func referenceDate(day: Int) -> Date {
+fileprivate func referenceDate(day: Int) -> Date {
     Calendar(identifier: .gregorian).date(
         from: DateComponents(year: 2026, month: 4, day: day)
     )!

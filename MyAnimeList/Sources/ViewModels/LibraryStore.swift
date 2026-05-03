@@ -32,6 +32,12 @@ class LibraryStore {
     // MARK: - Filtering & Sorting State
 
     var filters: Set<AnimeFilter> = []
+    var hideDroppedByDefault: Bool = false {
+        willSet {
+            UserDefaults.standard.setValue(newValue, forKey: .libraryHideDroppedByDefault)
+            logger.debug("Updated hide dropped by default to \(newValue)")
+        }
+    }
     var sortStrategy: AnimeSortStrategy = .dateStarted {
         willSet {
             UserDefaults.standard.setValue(newValue.rawValue, forKey: .librarySortStrategy)
@@ -61,6 +67,9 @@ class LibraryStore {
         }
         if UserDefaults.standard.object(forKey: .librarySortReversed) != nil {
             self.sortReversed = UserDefaults.standard.bool(forKey: .librarySortReversed)
+        }
+        if UserDefaults.standard.object(forKey: .libraryHideDroppedByDefault) != nil {
+            self.hideDroppedByDefault = UserDefaults.standard.bool(forKey: .libraryHideDroppedByDefault)
         }
         setupUpdateLibrary()
         setupTMDbAPIConfigurationChangeMonitor()
@@ -526,20 +535,26 @@ class LibraryStore {
                 .sorted(by: sortStrategy.compare)
                 .reversed()
         }
+        let defaultDisplayEntries: [AnimeEntry]
+        if hideDroppedByDefault && !filters.contains(.dropped) {
+            defaultDisplayEntries = sorted.filter { $0.watchStatus != .dropped }
+        } else {
+            defaultDisplayEntries = sorted
+        }
         guard filters.isEmpty else {
-            return sorted.filter { entry in
+            return defaultDisplayEntries.filter { entry in
                 filters.contains { filter in
                     filter.evaluate(entry)
                 }
             }
         }
-        return sorted
+        return defaultDisplayEntries
     }
 
     // MARK: - Filters
 
     struct AnimeFilter: Sendable, CaseIterable, Equatable, Hashable {
-        static let favorited = AnimeFilter(id: "Favorited", name: "Favorited") { $0.favorite }
+        static let favorited = AnimeFilter(id: "Favorites", name: "Favorites") { $0.favorite }
         static let watched = AnimeFilter(id: "Watched", name: "Watched") {
             $0.watchStatus == WatchedStatus.watched
         }

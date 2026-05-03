@@ -89,11 +89,18 @@ struct LibraryProfilePrimaryStatsGrid: View {
 }
 
 struct LibraryProfileLibraryDetailsCard: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let stats: LibraryProfileStats
     let runtimeDescription: String
 
     var body: some View {
-        PopupSectionCard("Library Details", systemImage: "sparkles.rectangle.stack", spacing: 14) {
+        PopupSectionCard(
+            "Library Details",
+            systemImage: "sparkles.rectangle.stack",
+            spacing: 14,
+            panelTint: sectionCardTint
+        ) {
             VStack(spacing: 10) {
                 LibraryProfileDetailRow(title: "Movies", value: "\(stats.movieCount)", systemImage: "film")
                 LibraryProfileDetailRow(title: "Series", value: "\(stats.seriesCount)", systemImage: "tv")
@@ -111,10 +118,17 @@ struct LibraryProfileLibraryDetailsCard: View {
             }
         }
     }
+
+    private var sectionCardTint: Color {
+        colorScheme == .dark ? .black.opacity(0.22) : .white.opacity(0.05)
+    }
 }
 
 struct LibraryProfileSettingsCard: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     @Binding var followsSystemLanguage: Bool
+    @Binding var hideDroppedByDefault: Bool
     @Binding var preferredLanguage: Language
 
     let restoreCompleted: Bool
@@ -123,13 +137,20 @@ struct LibraryProfileSettingsCard: View {
     let onChangeAPIKey: () -> Void
     let onCheckMetadataCacheSize: () -> Void
     let onRefreshInfos: () -> Void
+    let onPrefetchImages: () -> Void
     let onShowAbout: () -> Void
     let onDeleteAllAnimes: () -> Void
 
     var body: some View {
-        PopupSectionCard("Settings", systemImage: "gearshape.2", spacing: 14) {
+        PopupSectionCard(
+            "Settings",
+            systemImage: "gearshape.2",
+            spacing: 14,
+            panelTint: sectionCardTint
+        ) {
             VStack(spacing: 14) {
                 languagePickerRow
+                defaultLibraryBehaviorRow
                 backupManagementRow
                 maintenanceActions
             }
@@ -145,12 +166,13 @@ struct LibraryProfileSettingsCard: View {
                 tint: .blue
             )
 
-            HStack(spacing: 12) {
+            HStack {
                 Text("Follow System")
                     .font(.subheadline.weight(.semibold))
                 Spacer(minLength: 12)
                 Toggle("Follow System", isOn: $followsSystemLanguage)
                     .labelsHidden()
+                    .tint(.blue)
                     .scaleEffect(0.78, anchor: .trailing)
                     .frame(width: 42, height: 26, alignment: .trailing)
             }
@@ -176,6 +198,37 @@ struct LibraryProfileSettingsCard: View {
         .libraryProfileInsetPanel(cornerRadius: 22, tint: .blue)
     }
 
+    private var defaultLibraryBehaviorRow: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            LibraryProfileSettingHeader(
+                title: "Library Defaults",
+                subtitle: "Choose how the library opens.",
+                systemImage: "line.3.horizontal.decrease.circle",
+                tint: .mint
+            )
+
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Hide Dropped Entries")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Only show dropped entries after you explicitly enable the Dropped filter.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 12)
+                Toggle("Hide Dropped Entries", isOn: $hideDroppedByDefault)
+                    .labelsHidden()
+                    .tint(.mint)
+                    .scaleEffect(0.78, anchor: .trailing)
+                    .frame(width: 42, height: 26, alignment: .trailing)
+            }
+            .padding(.vertical, 2)
+        }
+        .padding(14)
+        .libraryProfileInsetPanel(cornerRadius: 22, tint: .mint)
+    }
+
     private var backupManagementRow: some View {
         VStack(alignment: .leading, spacing: 12) {
             LibraryProfileSettingHeader(
@@ -185,17 +238,11 @@ struct LibraryProfileSettingsCard: View {
                 tint: .orange
             )
 
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 10) {
-                    exportButton
-                        .frame(maxWidth: .infinity)
-                    restoreButton
-                        .frame(maxWidth: .infinity)
-                }
-                VStack(spacing: 10) {
-                    exportButton
-                    restoreButton
-                }
+            HStack(spacing: 10) {
+                exportButton
+                    .frame(maxWidth: .infinity)
+                restoreButton
+                    .frame(maxWidth: .infinity)
             }
             .disabled(restoreCompleted)
 
@@ -241,6 +288,14 @@ struct LibraryProfileSettingsCard: View {
             )
             LibraryProfileActionDivider()
             LibraryProfileActionRow(
+                title: "Prefetch Images",
+                subtitle: "Cache posters and artwork without refreshing metadata.",
+                systemImage: "photo.stack",
+                tint: .mint,
+                action: onPrefetchImages
+            )
+            LibraryProfileActionDivider()
+            LibraryProfileActionRow(
                 title: "About AniShelf",
                 subtitle: "Version, links, and credits.",
                 systemImage: "info.circle",
@@ -266,11 +321,15 @@ struct LibraryProfileSettingsCard: View {
         LazyShareLink(prepareData: createBackupItems) {
             Label("Export", systemImage: "document.badge.arrow.up")
         }
-        .buttonStyle(LibraryProfileCommandButtonStyle(tint: .blue, filled: true))
+        .buttonStyle(LibraryProfileCommandButtonStyle(tint: .blue, filled: false))
     }
 
     private var restoreButton: some View {
         Button("Restore", systemImage: "document.badge.clock", role: .destructive, action: onRestore)
             .buttonStyle(LibraryProfileCommandButtonStyle(tint: .red, filled: false))
+    }
+
+    private var sectionCardTint: Color {
+        colorScheme == .dark ? .black.opacity(0.22) : .white.opacity(0.05)
     }
 }

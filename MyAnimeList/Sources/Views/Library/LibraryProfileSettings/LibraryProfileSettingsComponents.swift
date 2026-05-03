@@ -152,7 +152,7 @@ struct LibraryProfileCommandButtonStyle: ButtonStyle {
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(filled ? .white : tint)
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 44)
+            .frame(minHeight: 32)
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .background {

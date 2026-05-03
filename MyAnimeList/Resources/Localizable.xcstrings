@@ -570,7 +570,11 @@
         }
       }
     },
+    "Changing the metadata language setting will not refresh existing infos.\nRefresh all anime infos now? This may take considerable time." : {
+
+    },
     "Changing the preferred language will not refresh existing infos.\nRefresh all anime infos now? This may take considerable time." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -1389,6 +1393,7 @@
       }
     },
     "Export all saved anime and preferences" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -1627,7 +1632,6 @@
       }
     },
     "Follow System" : {
-      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -2648,7 +2652,24 @@
         }
       }
     },
+    "Replace the TMDb key AniShelf uses for search and metadata." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf が検索とメタデータに使う TMDb キーを変更します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "替换 AniShelf 用于搜索和元数据的 TMDb 密钥。"
+          }
+        }
+      }
+    },
     "Restart app to see changes." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -2681,6 +2702,7 @@
       }
     },
     "Restore completed!" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -2695,6 +2717,9 @@
           }
         }
       }
+    },
+    "Restore completed! Restart app to see changes." : {
+
     },
     "Retry" : {
       "localizations" : {
@@ -2788,6 +2813,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存"
+          }
+        }
+      }
+    },
+    "Save API Key" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "APIキーを保存"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存 API 密钥"
           }
         }
       }

@@ -5,23 +5,17 @@
 //  Created by OpenAI Codex on 2026/5/2.
 //
 
-import AlertToast
 import SwiftUI
 
 struct TMDbAPIOnboardingView: View {
     @Environment(TMDbAPIKeyStorage.self) private var keyStorage
 
-    @State private var apiKeyInput: String = ""
+    @StateObject private var keyEntryController = TMDbAPIKeyEntryController()
     @State private var selectedStep: Step = .welcome
-    @State private var status: TMDbAPIKeyCheckStatus?
 
     private let apiSettingsURL = URL(string: "https://www.themoviedb.org/settings/api")!
     private let loginURL = URL(string: "https://www.themoviedb.org/login")!
     private let signupURL = URL(string: "https://www.themoviedb.org/signup")!
-
-    private var checking: Bool { status == .checking }
-    private var checkFailed: Bool { status == .invalid }
-    private var checkSuccess: Bool { status == .valid }
 
     var body: some View {
         ScrollView {
@@ -38,6 +32,7 @@ struct TMDbAPIOnboardingView: View {
                     canGoBack: selectedStep.previous != nil,
                     canContinue: canContinue,
                     primaryTitle: selectedStep.primaryButtonTitle,
+                    validationStatus: selectedStep == .enterKey ? keyEntryController.status : nil,
                     goBack: goToPreviousStep,
                     goForward: goToNextStep
                 )
@@ -51,13 +46,7 @@ struct TMDbAPIOnboardingView: View {
             Color.clear.frame(height: 14)
         }
         .animation(.spring(response: 0.32, dampingFraction: 0.88), value: selectedStep)
-        .tmdbAPIKeyCheckToasts(
-            checking: checking,
-            failed: checkFailedBinding,
-            succeeded: checkSuccessBinding,
-            displayMode: .hud
-        )
-        .sensoryFeedback(trigger: status) { _, new in
+        .sensoryFeedback(trigger: keyEntryController.status) { _, new in
             switch new {
             case .invalid: .error
             case .valid: .success
@@ -78,11 +67,11 @@ struct TMDbAPIOnboardingView: View {
                 apiSettingsURL: apiSettingsURL
             )
         case .enterKey:
-            TMDbOnboardingPanel {
+            TMDbSetupPanel {
                 TMDbAPIKeyEntryCard(
-                    apiKey: $apiKeyInput,
+                    apiKey: $keyEntryController.apiKeyInput,
                     mode: .onboarding,
-                    isChecking: checking,
+                    isChecking: keyEntryController.checking,
                     autoFocus: true,
                     showsValidateButton: false,
                     validate: validateKey
@@ -91,21 +80,13 @@ struct TMDbAPIOnboardingView: View {
         }
     }
 
-    private var checkFailedBinding: Binding<Bool> {
-        .init(get: { checkFailed }, set: { _ in status = nil })
-    }
-
-    private var checkSuccessBinding: Binding<Bool> {
-        .init(get: { checkSuccess }, set: { _ in status = nil })
-    }
-
     private var currentProgressResource: LocalizedStringResource {
         "Step \(selectedStep.rawValue) of \(Step.allCases.count)"
     }
 
     private var canContinue: Bool {
         guard selectedStep == .enterKey else { return true }
-        return !apiKeyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !checking
+        return !keyEntryController.isFieldEmpty && !keyEntryController.checking
     }
 
     private func goToNextStep() {
@@ -127,38 +108,7 @@ struct TMDbAPIOnboardingView: View {
     }
 
     private func validateKey() {
-        let trimmedKey = apiKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedKey.isEmpty else { return }
-        status = .checking
-        Task { await checkKey(trimmedKey) }
-    }
-
-    @discardableResult
-    private func checkKey(_ key: String) async -> Bool {
-        let result = await TMDbAPIKeyValidator.check(key)
-        guard result else {
-            status = .invalid
-            return false
-        }
-
-        status = .valid
-        await saveKeyAfterFeedback(key)
-        return true
-    }
-
-    private func saveKeyAfterFeedback(_ key: String) async {
-        await withCheckedContinuation { continuation in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                let result = keyStorage.saveKey(key)
-                if result {
-                    NotificationCenter.default.post(
-                        name: .tmdbAPIConfigurationDidChange,
-                        object: nil
-                    )
-                }
-                continuation.resume()
-            }
-        }
+        keyEntryController.validate(using: keyStorage)
     }
 
     private enum Step: Int, CaseIterable, Identifiable {
@@ -217,7 +167,7 @@ fileprivate struct TMDbOnboardingHeader: View {
 
 fileprivate struct TMDbWelcomeCard: View {
     var body: some View {
-        TMDbOnboardingPanel {
+        TMDbSetupPanel {
             VStack(spacing: 16) {
                 Image("app-icon")
                     .resizable()
@@ -284,7 +234,7 @@ fileprivate struct TMDbKeyGuideCard: View {
     let apiSettingsURL: URL
 
     var body: some View {
-        TMDbOnboardingPanel {
+        TMDbSetupPanel {
             VStack(alignment: .leading, spacing: 18) {
                 Text(messageResource)
                     .font(.subheadline)
@@ -442,6 +392,7 @@ fileprivate struct TMDbOnboardingNavigation: View {
     let canGoBack: Bool
     let canContinue: Bool
     let primaryTitle: LocalizedStringResource
+    var validationStatus: TMDbAPIKeyCheckStatus? = nil
     let goBack: () -> Void
     let goForward: () -> Void
 
@@ -451,52 +402,26 @@ fileprivate struct TMDbOnboardingNavigation: View {
                 Button(action: goBack) {
                     Image(systemName: "chevron.left")
                         .font(.headline.weight(.semibold))
-                        .frame(width: 46, height: 46)
+                        .frame(width: 50, height: 50)
                         .background(
                             Color(.secondarySystemBackground),
-                            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
                         )
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.blue)
             }
 
-            Button(action: goForward) {
-                HStack(spacing: 8) {
-                    Text(primaryTitle)
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.bold))
-                }
-                .font(.headline.weight(.semibold))
-                .frame(maxWidth: .infinity)
-                .frame(height: 46)
-                .background(
-                    canContinue ? Color.blue : Color(.tertiarySystemFill),
-                    in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                )
-                .foregroundStyle(canContinue ? .white : .secondary)
-            }
-            .buttonStyle(.plain)
-            .disabled(!canContinue)
+            TMDbProminentButton(
+                title: primaryTitle,
+                systemImage: "chevron.right",
+                iconPlacement: .trailing,
+                isEnabled: canContinue,
+                validationStatus: validationStatus,
+                action: goForward
+            )
         }
         .padding(8)
-    }
-}
-
-fileprivate struct TMDbOnboardingPanel<Content: View>: View {
-    @ViewBuilder let content: Content
-
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            content
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .popupGlassPanel(cornerRadius: 28)
     }
 }
 

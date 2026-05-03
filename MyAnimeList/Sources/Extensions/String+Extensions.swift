@@ -18,6 +18,7 @@ extension String {
     static let librarySortStrategy = "LibrarySortStrategy"
     static let librarySortReversed = "LibrarySortReversed"
     static let libraryViewStyle = "LibraryViewStyle"
+    static let libraryHideDroppedByDefault = "LibraryHideDroppedByDefault"
 
     static let allPreferenceKeys: [String] = [
         .preferredAnimeInfoLanguage,
@@ -27,7 +28,8 @@ extension String {
         .persistedScrolledID,
         .librarySortStrategy,
         .librarySortReversed,
-        .libraryViewStyle
+        .libraryViewStyle,
+        .libraryHideDroppedByDefault
     ]
 }
 

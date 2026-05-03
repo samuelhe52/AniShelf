@@ -11,17 +11,20 @@ struct PopupSectionCard<Content: View>: View {
     let title: LocalizedStringResource
     var systemImage: String? = nil
     var spacing: CGFloat = 14
+    var panelTint: Color? = nil
     @ViewBuilder let content: Content
 
     init(
         _ title: LocalizedStringResource,
         systemImage: String? = nil,
         spacing: CGFloat = 14,
+        panelTint: Color? = nil,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.systemImage = systemImage
         self.spacing = spacing
+        self.panelTint = panelTint
         self.content = content()
     }
 
@@ -40,7 +43,11 @@ struct PopupSectionCard<Content: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
-        .popupGlassPanel(cornerRadius: 24)
+        .popupGlassPanel(cornerRadius: 24, tint: resolvedPanelTint)
+    }
+
+    private var resolvedPanelTint: Color {
+        panelTint ?? .white.opacity(0.05)
     }
 }
 

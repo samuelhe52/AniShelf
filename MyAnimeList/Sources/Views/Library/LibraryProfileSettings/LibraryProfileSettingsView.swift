@@ -197,7 +197,7 @@ struct LibraryProfileSettingsView: View {
         }
         .sheet(isPresented: $changeAPIKey) {
             TMDbAPIConfigurator()
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.fraction(0.65), .large])
         }
         .sheet(isPresented: $showAboutSheet) {
             NavigationStack {
@@ -228,6 +228,7 @@ struct LibraryProfileSettingsView: View {
     private var settingsCard: some View {
         LibraryProfileSettingsCard(
             followsSystemLanguage: followsSystemLanguageBinding,
+            hideDroppedByDefault: $store.hideDroppedByDefault,
             preferredLanguage: $preferredLanguage,
             restoreCompleted: restoreCompleted,
             createBackupItems: makeBackupExportItems,
@@ -241,6 +242,9 @@ struct LibraryProfileSettingsView: View {
             onCheckMetadataCacheSize: calculateCacheSize,
             onRefreshInfos: {
                 showRefreshInfoAlert = true
+            },
+            onPrefetchImages: {
+                store.prefetchAllImages()
             },
             onShowAbout: {
                 showAboutSheet = true
