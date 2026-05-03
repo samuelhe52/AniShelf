@@ -230,7 +230,7 @@ struct LibraryProfileSettingsView: View {
             followsSystemLanguage: followsSystemLanguageBinding,
             hideDroppedByDefault: $store.hideDroppedByDefault,
             defaultNewEntryWatchStatus: $store.defaultNewEntryWatchStatus,
-            defaultFilterPreset: $store.defaultFilterPreset,
+            defaultFilters: $store.defaultFilters,
             autoPrefetchImagesOnAddAndRestore: $store.autoPrefetchImagesOnAddAndRestore,
             preferredLanguage: $preferredLanguage,
             restoreCompleted: restoreCompleted,

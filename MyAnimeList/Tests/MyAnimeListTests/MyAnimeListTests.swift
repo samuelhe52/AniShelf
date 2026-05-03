@@ -137,6 +137,67 @@ struct MyAnimeListTests {
         #expect(stats.runtimeMinutes == 388)
     }
 
+    @Test @MainActor func testLibraryDefaultsPersistMultipleFiltersAndNewEntryStatus() throws {
+        let defaults = UserDefaults.standard
+        let keys = [
+            String.libraryDefaultWatchStatus,
+            String.libraryDefaultFilters,
+            String.libraryDefaultFilterPreset,
+            String.libraryAutoPrefetchImagesOnAddAndRestore
+        ]
+        let originalValues = Dictionary(uniqueKeysWithValues: keys.map { ($0, defaults.object(forKey: $0)) })
+
+        defer {
+            for key in keys {
+                if let value = originalValues[key] {
+                    defaults.set(value, forKey: key)
+                } else {
+                    defaults.removeObject(forKey: key)
+                }
+            }
+        }
+
+        defaults.set(
+            AnimeEntry.WatchStatus.watching.preferenceValue,
+            forKey: .libraryDefaultWatchStatus
+        )
+        defaults.set(
+            [
+                LibraryStore.AnimeFilter.favorited.id,
+                LibraryStore.AnimeFilter.watched.id
+            ],
+            forKey: .libraryDefaultFilters
+        )
+        defaults.removeObject(forKey: .libraryDefaultFilterPreset)
+        defaults.set(false, forKey: .libraryAutoPrefetchImagesOnAddAndRestore)
+
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+
+        #expect(store.defaultFilters == Set([.favorited, .watched]))
+        #expect(store.filters == Set([.favorited, .watched]))
+        #expect(store.defaultNewEntryWatchStatus == .watching)
+
+        store.newEntryFromBasicInfo(
+            BasicInfo(
+                name: "Defaulted Entry",
+                nameTranslations: [:],
+                overview: nil,
+                overviewTranslations: [:],
+                posterURL: nil,
+                backdropURL: nil,
+                logoURL: nil,
+                tmdbID: 999_999,
+                onAirDate: nil,
+                linkToDetails: nil,
+                type: .movie
+            )
+        )
+        try store.refreshLibrary()
+
+        let entry = try #require(store.library.first(where: { $0.tmdbID == 999_999 }))
+        #expect(entry.watchStatus == .watching)
+    }
+
     private func referenceDate(year: Int, month: Int, day: Int) -> Date {
         Calendar(identifier: .gregorian).date(
             from: DateComponents(year: year, month: month, day: day)

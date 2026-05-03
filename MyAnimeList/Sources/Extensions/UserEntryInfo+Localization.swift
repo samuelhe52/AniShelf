@@ -12,7 +12,7 @@ import SwiftUI
 extension AnimeEntry.WatchStatus: @retroactive CustomLocalizedStringResourceConvertible {
     public var localizedStringResource: LocalizedStringResource {
         switch self {
-        case .planToWatch: return "Plan to Watch"
+        case .planToWatch: return "Planned"
         case .watching: return "Watching"
         case .watched: return "Watched"
         case .dropped: return "Dropped"

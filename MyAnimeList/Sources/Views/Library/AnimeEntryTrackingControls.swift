@@ -35,13 +35,16 @@ struct AnimeEntryWatchedStatusPicker: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Picker(selection: activeStatusBinding) {
-                Text("Plan to Watch").tag(WatchedStatus.planToWatch)
+                Text("Planned").tag(WatchedStatus.planToWatch)
                 Text("Watching").tag(WatchedStatus.watching)
                 Text("Watched").tag(WatchedStatus.watched)
             } label: {
             }
             .disabled(entry.watchStatus == .dropped)
-            .animation(.default, value: entry.watchStatus == .dropped)
+            .lineLimit(1)
+            .transaction { transaction in
+                transaction.animation = nil
+            }
         }
     }
 }

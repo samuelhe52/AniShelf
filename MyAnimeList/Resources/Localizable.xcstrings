@@ -522,22 +522,6 @@
         }
       }
     },
-    "Prefetch images when adding titles or restoring a backup." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "項目を追加するときやバックアップを復元するときに画像をプリフェッチします。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在添加条目或导入备份时预加载图片。"
-          }
-        }
-      }
-    },
     "Cache posters and artwork without refreshing metadata." : {
       "localizations" : {
         "ja" : {
@@ -1170,6 +1154,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "当该条目标记为已中断时，日期会被锁定。"
+          }
+        }
+      }
+    },
+    "Default Filters" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既定フィルター"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "默认筛选"
           }
         }
       }
@@ -2407,22 +2407,6 @@
         }
       }
     },
-    "Default Filter" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "既定フィルター"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "默认筛选"
-          }
-        }
-      }
-    },
     "Organizing Library..." : {
       "localizations" : {
         "ja" : {
@@ -2584,22 +2568,6 @@
         }
       }
     },
-    "Plan to Watch" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "見たい"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "想看"
-          }
-        }
-      }
-    },
     "Planned" : {
       "localizations" : {
         "ja" : {
@@ -2644,6 +2612,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "预加载图片"
+          }
+        }
+      }
+    },
+    "Prefetch images when adding titles or restoring a backup." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "項目を追加するときやバックアップを復元するときに画像をプリフェッチします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在添加条目或导入备份时预加载图片。"
           }
         }
       }

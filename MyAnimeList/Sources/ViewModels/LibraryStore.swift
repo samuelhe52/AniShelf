@@ -44,13 +44,14 @@ class LibraryStore {
             logger.debug("Updated default new entry watch status to \(newValue.preferenceValue)")
         }
     }
-    var defaultFilterPreset: DefaultFilterPreset = .all {
+    var defaultFilters: Set<AnimeFilter> = [] {
         willSet {
-            UserDefaults.standard.setValue(newValue.rawValue, forKey: .libraryDefaultFilterPreset)
-            logger.debug("Updated default filter preset to \(newValue.rawValue)")
+            let filterIDs = newValue.map(\.id).sorted()
+            UserDefaults.standard.setValue(filterIDs, forKey: .libraryDefaultFilters)
+            logger.debug("Updated default filters to \(filterIDs)")
         }
         didSet {
-            guard defaultFilterPreset != oldValue else { return }
+            guard defaultFilters != oldValue else { return }
             applyDefaultFilters()
         }
     }
@@ -132,13 +133,16 @@ class LibraryStore {
             defaultNewEntryWatchStatus = resolvedDefaultWatchStatus
         }
 
-        let resolvedDefaultFilterPreset =
-            defaults
-            .string(forKey: .libraryDefaultFilterPreset)
-            .flatMap(DefaultFilterPreset.init(rawValue:))
-            ?? .all
-        if defaultFilterPreset != resolvedDefaultFilterPreset {
-            defaultFilterPreset = resolvedDefaultFilterPreset
+        let resolvedDefaultFilters: Set<AnimeFilter>
+        if let storedFilterIDs = defaults.array(forKey: .libraryDefaultFilters) as? [String] {
+            resolvedDefaultFilters = Set(storedFilterIDs.compactMap(AnimeFilter.init(preferenceID:)))
+        } else if let legacyPreset = defaults.string(forKey: .libraryDefaultFilterPreset) {
+            resolvedDefaultFilters = legacyDefaultFilters(for: legacyPreset)
+        } else {
+            resolvedDefaultFilters = []
+        }
+        if defaultFilters != resolvedDefaultFilters {
+            defaultFilters = resolvedDefaultFilters
         }
 
         let resolvedAutoPrefetchImagesOnAddAndRestore =
@@ -514,7 +518,24 @@ class LibraryStore {
     }
 
     private func applyDefaultFilters() {
-        filters = defaultFilterPreset.resolvedFilters
+        filters = defaultFilters
+    }
+
+    private func legacyDefaultFilters(for preset: String) -> Set<AnimeFilter> {
+        switch preset {
+        case "favorites":
+            [.favorited]
+        case "watched":
+            [.watched]
+        case "planToWatch":
+            [.planToWatch]
+        case "watching":
+            [.watching]
+        case "dropped":
+            [.dropped]
+        default:
+            []
+        }
     }
 
     // MARK: - Conversion helpers
@@ -658,49 +679,12 @@ class LibraryStore {
 
     // MARK: - Filters
 
-    enum DefaultFilterPreset: String, CaseIterable, Codable, CustomLocalizedStringResourceConvertible {
-        case all
-        case favorites
-        case watched
-        case planToWatch
-        case watching
-        case dropped
-
-        var resolvedFilters: Set<AnimeFilter> {
-            switch self {
-            case .all:
-                []
-            case .favorites:
-                [.favorited]
-            case .watched:
-                [.watched]
-            case .planToWatch:
-                [.planToWatch]
-            case .watching:
-                [.watching]
-            case .dropped:
-                [.dropped]
-            }
-        }
-
-        var localizedStringResource: LocalizedStringResource {
-            switch self {
-            case .all: "All"
-            case .favorites: "Favorites"
-            case .watched: "Watched"
-            case .planToWatch: "Plan to Watch"
-            case .watching: "Watching"
-            case .dropped: "Dropped"
-            }
-        }
-    }
-
     struct AnimeFilter: Sendable, CaseIterable, Equatable, Hashable {
         static let favorited = AnimeFilter(id: "Favorites", name: "Favorites") { $0.favorite }
         static let watched = AnimeFilter(id: "Watched", name: "Watched") {
             $0.watchStatus == WatchedStatus.watched
         }
-        static let planToWatch = AnimeFilter(id: "Plan to Watch", name: "Plan to Watch") {
+        static let planToWatch = AnimeFilter(id: "Plan to Watch", name: "Planned") {
             $0.watchStatus == .planToWatch
         }
         static let watching = AnimeFilter(id: "Watching", name: "Watching") {
@@ -722,6 +706,13 @@ class LibraryStore {
         let id: String
         let name: LocalizedStringResource
         let evaluate: @Sendable (AnimeEntry) -> Bool
+
+        init?(preferenceID: String) {
+            guard let filter = Self.allCases.first(where: { $0.id == preferenceID }) else {
+                return nil
+            }
+            self = filter
+        }
 
         static var allCases: [LibraryStore.AnimeFilter] {
             [.favorited, .watched, .planToWatch, .watching, .dropped]

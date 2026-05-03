@@ -143,6 +143,39 @@ struct LibraryProfileSettingIcon: View {
     }
 }
 
+struct LibraryProfileSelectionCapsule: View {
+    let title: LocalizedStringResource
+    let tint: Color
+
+    var body: some View {
+        capsuleContent(title: title)
+            .foregroundStyle(tint)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background {
+                Capsule(style: .continuous)
+                    .fill(tint.opacity(0.12))
+            }
+            .overlay {
+                Capsule(style: .continuous)
+                    .stroke(tint.opacity(0.18), lineWidth: 1)
+            }
+    }
+
+    @ViewBuilder
+    private func capsuleContent(title: LocalizedStringResource) -> some View {
+        HStack(spacing: 6) {
+            Text(title)
+                .font(.footnote.weight(.semibold))
+                .lineLimit(1)
+
+            Image(systemName: "chevron.down")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(tint)
+        }
+    }
+}
+
 struct LibraryProfileCommandButtonStyle: ButtonStyle {
     @Environment(\.colorScheme) private var colorScheme
 

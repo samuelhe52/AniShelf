@@ -20,6 +20,7 @@ extension String {
     static let libraryViewStyle = "LibraryViewStyle"
     static let libraryHideDroppedByDefault = "LibraryHideDroppedByDefault"
     static let libraryDefaultWatchStatus = "LibraryDefaultWatchStatus"
+    static let libraryDefaultFilters = "LibraryDefaultFilters"
     static let libraryDefaultFilterPreset = "LibraryDefaultFilterPreset"
     static let libraryAutoPrefetchImagesOnAddAndRestore = "LibraryAutoPrefetchImagesOnAddAndRestore"
 
@@ -34,7 +35,7 @@ extension String {
         .libraryViewStyle,
         .libraryHideDroppedByDefault,
         .libraryDefaultWatchStatus,
-        .libraryDefaultFilterPreset,
+        .libraryDefaultFilters,
         .libraryAutoPrefetchImagesOnAddAndRestore
     ]
 }

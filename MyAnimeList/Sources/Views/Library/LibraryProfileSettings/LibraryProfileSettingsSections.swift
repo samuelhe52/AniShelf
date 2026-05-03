@@ -139,7 +139,7 @@ struct LibraryProfileSettingsCard: View {
     @Binding var followsSystemLanguage: Bool
     @Binding var hideDroppedByDefault: Bool
     @Binding var defaultNewEntryWatchStatus: AnimeEntry.WatchStatus
-    @Binding var defaultFilterPreset: LibraryStore.DefaultFilterPreset
+    @Binding var defaultFilters: Set<LibraryStore.AnimeFilter>
     @Binding var autoPrefetchImagesOnAddAndRestore: Bool
     @Binding var preferredLanguage: Language
 
@@ -222,27 +222,56 @@ struct LibraryProfileSettingsCard: View {
                 Text("New Entries Start As")
                     .font(.subheadline.weight(.semibold))
                 Spacer(minLength: 12)
-                Picker("New Entries Start As", selection: $defaultNewEntryWatchStatus) {
+                Menu {
                     ForEach(AnimeEntry.WatchStatus.allCases, id: \.self) { status in
-                        Text(status.localizedStringResource).tag(status)
+                        Button {
+                            defaultNewEntryWatchStatus = status
+                        } label: {
+                            if status == defaultNewEntryWatchStatus {
+                                Label(status.localizedStringResource, systemImage: "checkmark")
+                            } else {
+                                Text(status.localizedStringResource)
+                            }
+                        }
                     }
+                } label: {
+                    LibraryProfileSelectionCapsule(
+                        title: defaultNewEntryWatchStatus.localizedStringResource,
+                        tint: defaultNewEntryWatchStatus.defaultPickerTintColor
+                    )
                 }
-                .pickerStyle(.menu)
-                .tint(defaultNewEntryWatchStatus.defaultPickerTintColor)
             }
             .padding(.vertical, 2)
 
             HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text("Default Filter")
+                Text("Default Filters")
                     .font(.subheadline.weight(.semibold))
                 Spacer(minLength: 12)
-                Picker("Default Filter", selection: $defaultFilterPreset) {
-                    ForEach(LibraryStore.DefaultFilterPreset.allCases, id: \.self) { preset in
-                        Text(preset.localizedStringResource).tag(preset)
+                Menu {
+                    ForEach(LibraryStore.AnimeFilter.allCases, id: \.self) { filter in
+                        Toggle(
+                            isOn: defaultFilterBinding(for: filter),
+                            label: { Text(filter.name) }
+                        )
                     }
+                    Toggle(
+                        "All",
+                        isOn: .init(
+                            get: { defaultFilters.isEmpty },
+                            set: {
+                                if $0 {
+                                    defaultFilters.removeAll()
+                                }
+                            }
+                        )
+                    )
+                } label: {
+                    LibraryProfileSelectionCapsule(
+                        title: defaultFiltersSummaryResource,
+                        tint: .mint
+                    )
                 }
-                .pickerStyle(.menu)
-                .tint(defaultFilterPreset.libraryTintColor)
+                .menuActionDismissBehavior(.disabled)
             }
             .padding(.vertical, 2)
 
@@ -393,24 +422,52 @@ struct LibraryProfileSettingsCard: View {
     private var sectionCardTint: Color {
         colorScheme == .dark ? .black.opacity(0.22) : .white.opacity(0.05)
     }
-}
 
-extension LibraryStore.DefaultFilterPreset {
-    fileprivate var libraryTintColor: Color {
-        switch self {
-        case .all:
-            .mint
-        case .favorites:
-            .pink
-        case .watched:
-            AnimeEntry.WatchStatus.watched.libraryTintColor
-        case .planToWatch:
-            AnimeEntry.WatchStatus.planToWatch.libraryTintColor
-        case .watching:
-            AnimeEntry.WatchStatus.watching.libraryTintColor
-        case .dropped:
-            AnimeEntry.WatchStatus.dropped.libraryTintColor
+    private var orderedDefaultFilters: [LibraryStore.AnimeFilter] {
+        LibraryStore.AnimeFilter.allCases.filter { defaultFilters.contains($0) }
+    }
+
+    private var defaultFiltersSummaryResource: LocalizedStringResource {
+        switch orderedDefaultFilters.count {
+        case 0:
+            return "All"
+        case 1:
+            return defaultFilterSummaryResource(for: orderedDefaultFilters[0])
+        default:
+            return "\(orderedDefaultFilters.count) Filters"
         }
+    }
+
+    private func defaultFilterSummaryResource(
+        for filter: LibraryStore.AnimeFilter
+    ) -> LocalizedStringResource {
+        switch filter.id {
+        case LibraryStore.AnimeFilter.favorited.id:
+            return "Favorites"
+        case LibraryStore.AnimeFilter.watched.id:
+            return "Watched"
+        case LibraryStore.AnimeFilter.planToWatch.id:
+            return "Planned"
+        case LibraryStore.AnimeFilter.watching.id:
+            return "Watching"
+        case LibraryStore.AnimeFilter.dropped.id:
+            return "Dropped"
+        default:
+            return filter.name
+        }
+    }
+
+    private func defaultFilterBinding(for filter: LibraryStore.AnimeFilter) -> Binding<Bool> {
+        .init(
+            get: { defaultFilters.contains(filter) },
+            set: {
+                if $0 {
+                    defaultFilters.insert(filter)
+                } else {
+                    defaultFilters.remove(filter)
+                }
+            }
+        )
     }
 }
 
