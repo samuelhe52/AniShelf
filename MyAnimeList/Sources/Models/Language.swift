@@ -19,6 +19,26 @@ enum Language: String, CaseIterable, CustomLocalizedStringResourceConvertible {
         return Language(rawValue: languageCodeID) ?? .english
     }
 
+    static func followsSystemPreference(defaults: UserDefaults = .standard) -> Bool {
+        if defaults.object(forKey: .useCurrentLocaleForAnimeInfoLanguage) != nil {
+            return defaults.bool(forKey: .useCurrentLocaleForAnimeInfoLanguage)
+        }
+        return defaults.string(forKey: .preferredAnimeInfoLanguage) == nil
+    }
+
+    static func resolvedAnimeInfoLanguage(defaults: UserDefaults = .standard) -> Language {
+        followsSystemPreference(defaults: defaults)
+            ? .current
+            : (preferredAnimeInfoLanguage(defaults: defaults) ?? .english)
+    }
+
+    static func preferredAnimeInfoLanguage(defaults: UserDefaults = .standard) -> Language? {
+        guard let rawValue = defaults.string(forKey: .preferredAnimeInfoLanguage) else {
+            return nil
+        }
+        return Language(rawValue: rawValue)
+    }
+
     var localizedStringResource: LocalizedStringResource {
         switch self {
         case .chinese: return "Chinese"

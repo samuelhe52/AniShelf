@@ -10,6 +10,7 @@ import Foundation
 // UserDefaults entry names
 extension String {
     static let preferredAnimeInfoLanguage = "PreferredAnimeInfoLanguage"
+    static let useCurrentLocaleForAnimeInfoLanguage = "UseCurrentLocaleForAnimeInfoLanguage"
     static let searchTMDbLanguage = "SearchTMDbLanguage"
     static let searchPageQuery = "SearchPageQuery"
     static let searchMode = "SearchMode"
@@ -20,6 +21,7 @@ extension String {
 
     static let allPreferenceKeys: [String] = [
         .preferredAnimeInfoLanguage,
+        .useCurrentLocaleForAnimeInfoLanguage,
         .searchTMDbLanguage,
         .searchPageQuery,
         .persistedScrolledID,

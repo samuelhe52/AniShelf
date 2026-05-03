@@ -12,6 +12,8 @@ struct AnimeSharingSheet: View {
     @State private var controller: AnimeSharingController
     @Environment(\.dismiss) private var dismiss
     @AppStorage(.preferredAnimeInfoLanguage) private var defaultLanguage: Language = .english
+    @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
+        Language.followsSystemPreference()
 
     @State private var showPosterSelection = false
 
@@ -83,13 +85,23 @@ struct AnimeSharingSheet: View {
                 await controller.processRenderRequest(for: trigger)
             }
             .onAppear {
-                controller.applyPreferredLanguage(defaultLanguage, respectingCurrentSelection: false)
+                controller.applyPreferredLanguage(
+                    followsSystemLanguage ? .current : defaultLanguage,
+                    respectingCurrentSelection: false
+                )
             }
             .onDisappear {
                 controller.cleanupRenderedFiles()
             }
             .onChange(of: defaultLanguage, initial: false) { _, newValue in
+                guard !followsSystemLanguage else { return }
                 controller.applyPreferredLanguage(newValue, respectingCurrentSelection: true)
+            }
+            .onChange(of: followsSystemLanguage, initial: false) { _, newValue in
+                controller.applyPreferredLanguage(
+                    newValue ? .current : defaultLanguage,
+                    respectingCurrentSelection: true
+                )
             }
         }
     }

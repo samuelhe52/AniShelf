@@ -394,6 +394,22 @@
         }
       }
     },
+    "AniShelf Library" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfライブラリ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf 资料库"
+          }
+        }
+      }
+    },
     "AniShelf on GitHub" : {
       "localizations" : {
         "ja" : {
@@ -685,6 +701,22 @@
         }
       }
     },
+    "Choose the language used for future metadata fetches." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今後のメタデータ取得に使う言語を選んでください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择用于后续元数据获取的语言。"
+          }
+        }
+      }
+    },
     "Clear Cache" : {
       "localizations" : {
         "ja" : {
@@ -697,6 +729,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "清空缓存"
+          }
+        }
+      }
+    },
+    "Close" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "閉じる"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭"
           }
         }
       }
@@ -1356,6 +1404,22 @@
         }
       }
     },
+    "Export or restore your local library." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ローカルライブラリをエクスポートまたは復元します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出或导入你的本地资料库。"
+          }
+        }
+      }
+    },
     "Failed to load posters." : {
       "localizations" : {
         "ja" : {
@@ -1416,6 +1480,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "收藏"
+          }
+        }
+      }
+    },
+    "Fetch latest TMDb metadata for every entry." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "各項目の最新の TMDb メタデータを取得します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "为每个条目获取最新的 TMDb 元数据。"
           }
         }
       }
@@ -1547,6 +1627,7 @@
       }
     },
     "Follow System" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -1738,6 +1819,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "资料库"
+          }
+        }
+      }
+    },
+    "Library Details" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリ詳細"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "详情"
           }
         }
       }
@@ -2148,6 +2245,22 @@
         }
       }
     },
+    "Open Library Profile" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリ概要を開く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开资料库概览"
+          }
+        }
+      }
+    },
     "Organizing Library..." : {
       "localizations" : {
         "ja" : {
@@ -2503,6 +2616,22 @@
         }
       }
     },
+    "Remove every saved library entry." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存済みのライブラリ項目をすべて削除します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除所有已保存的资料库条目。"
+          }
+        }
+      }
+    },
     "Rendering…" : {
       "localizations" : {
         "ja" : {
@@ -2595,6 +2724,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "倒序"
+          }
+        }
+      }
+    },
+    "Review image and metadata cache usage." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像とメタデータのキャッシュ使用状況を確認します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看缓存使用情况。"
           }
         }
       }
@@ -2775,6 +2920,22 @@
         }
       }
     },
+    "Seasons" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シーズン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "季"
+          }
+        }
+      }
+    },
     "Series" : {
       "localizations" : {
         "ja" : {
@@ -2787,6 +2948,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "动画系列"
+          }
+        }
+      }
+    },
+    "Settings" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置"
           }
         }
       }
@@ -3123,23 +3300,6 @@
         }
       }
     },
-    "To continue, enter a TMDb API Key." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "続行するには、TMDb APIキーを入力してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请输入 TMDb API 密钥以继续。"
-          }
-        }
-      }
-    },
     "Tracking" : {
       "localizations" : {
         "ja" : {
@@ -3242,6 +3402,22 @@
         }
       }
     },
+    "Update the TMDb key used for metadata." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メタデータに使う TMDb キーを更新します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新用于元数据的 TMDb 密钥。"
+          }
+        }
+      }
+    },
     "Use API Key, not API Read Access Token." : {
       "localizations" : {
         "ja" : {
@@ -3338,6 +3514,22 @@
         }
       }
     },
+    "Version, links, and credits." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バージョン、リンク、謝辞。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "版本、链接和鸣谢。"
+          }
+        }
+      }
+    },
     "View Style" : {
       "localizations" : {
         "ja" : {
@@ -3398,6 +3590,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在看"
+          }
+        }
+      }
+    },
+    "With Notes" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ノートあり"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "含笔记"
           }
         }
       }

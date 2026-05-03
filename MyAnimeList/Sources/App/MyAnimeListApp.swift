@@ -13,14 +13,18 @@ import SwiftUI
 struct MyAnimeListApp: App {
     @State var libraryStore: LibraryStore = .init(dataProvider: .default)
     @State var keyStorage: TMDbAPIKeyStorage = .init()
-    @AppStorage(.preferredAnimeInfoLanguage) var language: Language = .current
+    @AppStorage(.preferredAnimeInfoLanguage) var preferredLanguage: Language = .english
+    @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) var followsSystemLanguage: Bool =
+        Language.followsSystemPreference()
 
     var body: some Scene {
         WindowGroup {
             ZStack {
                 if let key = keyStorage.key, !key.isEmpty {
                     LibraryView(store: libraryStore)
-                        .onAppear { libraryStore.language = language }
+                        .onAppear {
+                            libraryStore.language = followsSystemLanguage ? .current : preferredLanguage
+                        }
                         .transition(.opacity.animation(.easeInOut(duration: 1)))
                 } else {
                     TMDbAPIOnboardingView()

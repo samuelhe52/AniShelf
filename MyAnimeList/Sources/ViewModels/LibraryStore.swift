@@ -27,7 +27,7 @@ class LibraryStore {
 
     private(set) var library: [AnimeEntry]
     @ObservationIgnored private var infoFetcher: InfoFetcher
-    var language: Language = .current
+    var language: Language = .resolvedAnimeInfoLanguage()
 
     // MARK: - Filtering & Sorting State
 

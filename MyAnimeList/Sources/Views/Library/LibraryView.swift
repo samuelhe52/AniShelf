@@ -7,7 +7,6 @@
 
 import Collections
 import DataProvider
-import Kingfisher
 import SwiftData
 import SwiftUI
 
@@ -28,14 +27,7 @@ struct LibraryView: View {
 
     // UI state
     @State private var isSearching = false
-    @State private var changeAPIKey = false
-    @State private var showCacheAlert = false
-    @State private var showClearAllAlert = false
-    @State private var showRefreshInfoOnLanguageUpdateAlert = false
-    @State private var showRefreshInfoAlert = false
-    @State private var showAboutSheet = false
-    @State private var cacheSizeResult: Result<UInt, KingfisherError>? = nil
-    @SceneStorage("LibraryView.showBackupManager") private var showBackupManager = false
+    @State private var showProfileSettings = false
     @State private var scrollState = ScrollState()
     @State private var newEntriesAddedToggle = false
     @State private var highlightedEntryID: Int?
@@ -43,12 +35,27 @@ struct LibraryView: View {
     // Persistent UI preference
     @AppStorage(.libraryViewStyle) var libraryViewStyle: LibraryViewStyle = .gallery
 
-    // Language tracking
-    @State private var lastUsedlanguage: Language = .english
-
     // MARK: - Body
 
     var body: some View {
+        ZStack {
+            libraryNavigation
+                .opacity(showProfileSettings ? 0 : 1)
+                .allowsHitTesting(!showProfileSettings)
+                .accessibilityHidden(showProfileSettings)
+
+            if showProfileSettings {
+                LibraryProfileSettingsView(store: store) {
+                    closeProfileSettings()
+                }
+                .transition(profileSettingsTransition)
+                .zIndex(1)
+            }
+        }
+        .animation(profileSettingsAnimation, value: showProfileSettings)
+    }
+
+    private var libraryNavigation: some View {
         NavigationStack {
             ZStack {
                 libraryView
@@ -58,6 +65,8 @@ struct LibraryView: View {
             .environment(interaction)
             .toolbar(content: { toolbarContent })
             .sensoryFeedback(.success, trigger: newEntriesAddedToggle)
+            .allowsHitTesting(!showProfileSettings)
+            .accessibilityHidden(showProfileSettings)
         }
     }
 
@@ -118,7 +127,7 @@ struct LibraryView: View {
             searchButton
         }
         ToolbarItemGroup(placement: .topBarTrailing) {
-            settings
+            profileSettingsButton
         }
     }
 
@@ -215,6 +224,36 @@ struct LibraryView: View {
         )
     }
 
+    private var profileSettingsAnimation: Animation? {
+        reduceMotion ? nil : .smooth(duration: 0.36, extraBounce: 0)
+    }
+
+    private var profileSettingsTransition: AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(
+            insertion: .modifier(
+                active: LibraryProfileSettingsBlendModifier(
+                    opacity: 0,
+                    blurRadius: 22
+                ),
+                identity: LibraryProfileSettingsBlendModifier(
+                    opacity: 1,
+                    blurRadius: 0
+                )
+            ),
+            removal: .modifier(
+                active: LibraryProfileSettingsBlendModifier(
+                    opacity: 0,
+                    blurRadius: 14
+                ),
+                identity: LibraryProfileSettingsBlendModifier(
+                    opacity: 1,
+                    blurRadius: 0
+                )
+            )
+        )
+    }
+
     // MARK: - Search
 
     private var searchButton: some View {
@@ -241,183 +280,15 @@ struct LibraryView: View {
             }
     }
 
-    // MARK: - Settings Menu
+    // MARK: - Profile Settings
 
-    @ViewBuilder
-    private var settings: some View {
-        Menu {
-            preferredAnimeInfoLanguagePicker
-            Divider()
-            backupManagement
-            Divider()
-            apiConfiguration
-            checkCacheSizeButton
-            refreshInfosButton
-            Divider()
-            aboutButton
-            Divider()
-            deleteAllButton
+    private var profileSettingsButton: some View {
+        Button {
+            openProfileSettings()
         } label: {
-            Image(systemName: "ellipsis.circle").padding(.vertical, 7.5)
+            LibraryProfileLauncherBadge()
         }
-        .menuOrder(.priority)
-        .alert("Delete all animes?", isPresented: $showClearAllAlert) {
-            Button("Delete", role: .destructive) {
-                store.clearLibrary()
-            }
-            Button("Cancel", role: .cancel) {}
-        }
-        .alert(
-            "Refresh Info Language?",
-            isPresented: $showRefreshInfoOnLanguageUpdateAlert
-        ) {
-            Button("Refresh") {
-                store.refreshInfos()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            let message: LocalizedStringResource = """
-                Changing the preferred language will not refresh existing infos.
-                Refresh all anime infos now? This may take considerable time.
-                """
-
-            Text(message)
-        }
-        .alert(
-            "Refresh all anime infos?",
-            isPresented: $showRefreshInfoAlert
-        ) {
-            Button("Refresh") {
-                store.refreshInfos()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This may take considerable time.")
-        }
-        .alert(
-            "Metadata Cache Size", isPresented: $showCacheAlert, presenting: cacheSizeResult,
-            actions: { result in
-                switch result {
-                case .success:
-                    Button("Clear Cache") {
-                        KingfisherManager.shared.cache.clearCache()
-                    }
-                    Button("Cancel", role: .cancel) {}
-                case .failure:
-                    Button("OK") {}
-                }
-            },
-            message: { result in
-                switch result {
-                case .success(let size):
-                    Text("Size: \(Double(size) / 1024 / 1024, specifier: "%.2f") MB")
-                case .failure(let error):
-                    Text(error.localizedDescription)
-                }
-            }
-        )
-        .sheet(isPresented: $changeAPIKey) {
-            TMDbAPIConfigurator()
-                .presentationDetents([.medium, .large])
-        }
-        .sheet(isPresented: $showBackupManager) {
-            BackupManagerView(backupManager: store.backupManager)
-                .presentationDetents([.medium])
-        }
-        .sheet(isPresented: $showAboutSheet) {
-            NavigationStack {
-                AboutAniShelfSheet()
-            }
-            .presentationDetents([.fraction(0.85), .large])
-        }
-    }
-
-    private var backupManagement: some View {
-        Button(
-            "Backup & Restore", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90"
-        ) {
-            showBackupManager = true
-        }
-    }
-
-    // MARK: - Language
-
-    private var isLanguageFollowingSystem: Binding<Bool> {
-        Binding(
-            get: {
-                store.language == .current
-            },
-            set: {
-                if $0 {
-                    lastUsedlanguage = store.language
-                    store.language = .current
-                } else {
-                    store.language = lastUsedlanguage
-                }
-            })
-    }
-
-    private var preferredAnimeInfoLanguagePicker: some View {
-        Menu("Anime Info Language", systemImage: "globe") {
-            Toggle("Follow System", isOn: isLanguageFollowingSystem)
-            ForEach(Language.allCases, id: \.rawValue) { language in
-                Toggle(
-                    language.localizedStringResource,
-                    isOn: Binding(
-                        get: {
-                            store.language == language
-                        },
-                        set: {
-                            if $0 {
-                                store.language = language
-                            }
-                        }
-                    )
-                )
-                .disabled(isLanguageFollowingSystem.wrappedValue)
-            }
-        }
-        .menuActionDismissBehavior(.disabled)
-        .onChange(of: store.language) { old, new in
-            if old != new {
-                showRefreshInfoOnLanguageUpdateAlert = true
-            }
-        }
-    }
-
-    // MARK: - Settings Actions
-
-    private var deleteAllButton: some View {
-        Button("Delete All Animes", systemImage: "trash", role: .destructive) {
-            showClearAllAlert = true
-        }
-    }
-
-    private var aboutButton: some View {
-        Button("About AniShelf", systemImage: "info.circle") {
-            showAboutSheet = true
-        }
-    }
-
-    private var checkCacheSizeButton: some View {
-        Button("Check Metadata Cache Size", systemImage: "archivebox") {
-            KingfisherManager.shared.cache.calculateDiskStorageSize { result in
-                DispatchQueue.main.async {
-                    cacheSizeResult = result
-                    showCacheAlert = true
-                }
-            }
-        }
-    }
-
-    private var apiConfiguration: some View {
-        Button("Change API Key", systemImage: "person.badge.key") { changeAPIKey = true }
-    }
-
-    private var refreshInfosButton: some View {
-        Button("Refresh Infos", systemImage: "arrow.clockwise") {
-            showRefreshInfoAlert = true
-        }
+        .accessibilityLabel(Text("Open Library Profile"))
     }
 
     private var activeFilters: [LibraryStore.AnimeFilter] {
@@ -463,6 +334,18 @@ struct LibraryView: View {
     private func jumpToEntryInLibrary(withID id: Int) {
         scrollState.scrolledID = id
         highlightedEntryID = id
+    }
+
+    private func openProfileSettings() {
+        withAnimation(profileSettingsAnimation) {
+            showProfileSettings = true
+        }
+    }
+
+    private func closeProfileSettings() {
+        withAnimation(profileSettingsAnimation) {
+            showProfileSettings = false
+        }
     }
 
     private func processTMDbSearchResults(_ results: OrderedSet<SearchResult>) {
@@ -531,6 +414,36 @@ struct LibraryView: View {
             case .grid: "rectangle.grid.3x2.fill"
             }
         }
+    }
+}
+
+fileprivate struct LibraryProfileLauncherBadge: View {
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            Image(systemName: "books.vertical.fill")
+                .font(.system(size: 11, weight: .semibold))
+                .symbolRenderingMode(.monochrome)
+
+            Image(systemName: "gearshape.fill")
+                .font(.system(size: 6.5, weight: .bold))
+                .background(.primary.opacity(0.30), in: Circle())
+                .overlay {
+                    Circle().stroke(.white.opacity(0.4), lineWidth: 0.7)
+                }
+                .offset(x: 4, y: 4)
+        }
+    }
+}
+
+fileprivate struct LibraryProfileSettingsBlendModifier: ViewModifier {
+    let opacity: Double
+    let blurRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .blur(radius: blurRadius)
+            .opacity(opacity)
+            .compositingGroup()
     }
 }
 

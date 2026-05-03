@@ -79,4 +79,67 @@ struct MyAnimeListTests {
         #expect(parent.parentSeriesEntry == nil, "Parent should not have a parent before insertion")
         try dataProvider.dataHandler.newEntry(season)
     }
+
+    @Test func testLibraryProfileStatsEmptyLibrary() {
+        let stats = LibraryProfileStats(entries: [])
+
+        #expect(stats.totalCount == 0)
+        #expect(stats.favoriteCount == 0)
+        #expect(stats.runtimeMinutes == 0)
+    }
+
+    @Test func testLibraryProfileStatsMixedLibrary() {
+        let movie = AnimeEntry(
+            name: "Movie",
+            type: .movie,
+            tmdbID: 1,
+            detail: AnimeEntryDetail(language: "en", title: "Movie", runtimeMinutes: 100),
+            dateSaved: referenceDate(year: 2026, month: 1, day: 3)
+        )
+        movie.setWatchStatus(.watched, now: referenceDate(year: 2026, month: 1, day: 3))
+        movie.favorite = true
+        movie.notes = "Worth rewatching"
+        movie.usingCustomPoster = true
+
+        let series = AnimeEntry(
+            name: "Series",
+            type: .series,
+            tmdbID: 2,
+            detail: AnimeEntryDetail(
+                language: "en",
+                title: "Series",
+                runtimeMinutes: 24,
+                episodeCount: 12
+            ),
+            dateSaved: referenceDate(year: 2026, month: 2, day: 8)
+        )
+        series.setWatchStatus(.watching, now: referenceDate(year: 2026, month: 2, day: 8))
+
+        let season = AnimeEntry(
+            name: "Season",
+            type: .season(seasonNumber: 1, parentSeriesID: 2),
+            tmdbID: 3
+        )
+        season.setWatchStatus(.dropped, now: referenceDate(year: 2026, month: 2, day: 8))
+
+        let stats = LibraryProfileStats(entries: [movie, series, season])
+
+        #expect(stats.totalCount == 3)
+        #expect(stats.watchedCount == 1)
+        #expect(stats.watchingCount == 1)
+        #expect(stats.planToWatchCount == 0)
+        #expect(stats.droppedCount == 1)
+        #expect(stats.favoriteCount == 1)
+        #expect(stats.movieCount == 1)
+        #expect(stats.seriesCount == 1)
+        #expect(stats.seasonCount == 1)
+        #expect(stats.entriesWithNotesCount == 1)
+        #expect(stats.runtimeMinutes == 388)
+    }
+
+    private func referenceDate(year: Int, month: Int, day: Int) -> Date {
+        Calendar(identifier: .gregorian).date(
+            from: DateComponents(year: year, month: month, day: day)
+        )!
+    }
 }
