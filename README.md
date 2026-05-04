@@ -7,11 +7,14 @@ A beautiful, native iOS app for tracking and managing your anime library.
 <div style="overflow-x: auto; padding: 0.25rem 0 1rem;">
   <table cellpadding="0" cellspacing="12">
     <tr>
-      <td><img src=".app-store-assets/screenshots/ios/1.jpeg" alt="AniShelf iPhone screenshot 1" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/2.jpeg" alt="AniShelf iPhone screenshot 2" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/5.jpeg" alt="AniShelf iPhone screenshot 5" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/3.jpeg" alt="AniShelf iPhone screenshot 4" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/4.jpeg" alt="AniShelf iPhone screenshot 3" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/featured-library-card.jpeg" alt="AniShelf featured library card" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/library-list-view.jpeg" alt="AniShelf library list view" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/poster-grid-view.jpeg" alt="AniShelf poster grid view" width="240" /></td>
+    </tr>
+    <tr>
+      <td><img src=".app-store-assets/screenshots/ios/anime-detail-overview.jpeg" alt="AniShelf anime detail overview" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/watch-management-sheet.jpeg" alt="AniShelf watch management sheet" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/library-stats-overview.jpeg" alt="AniShelf library stats overview" width="240" /></td>
     </tr>
   </table>
 </div>
@@ -20,11 +23,9 @@ A beautiful, native iOS app for tracking and managing your anime library.
 
 - **📚 Library Management** - Keep track of all your anime in one place
 - **🔍 Smart Search** - Find anime using The Movie Database (TMDb) with multi-language support
-- **🎨 Beautiful UI** - Native SwiftUI interface with multiple viewing modes:
-  - Grid View - Visual poster grid
-  - List View - Detailed list layout
-  - Gallery View - Immersive full-screen browsing
+- **🎨 Beautiful UI** - Native SwiftUI interface, polished and consistent design language
 - **📊 Track Progress** - Monitor your viewing progress and status
+- **👤 Library Profile** - Overview your library with a dedicated profile page
 - **💾 Backup & Restore** - Export and import your library data
 - **🌍 Multi-language** - Support for anime titles and descriptions in multiple languages
 
@@ -44,7 +45,7 @@ Join the latest beta build here:
 - **TMDb API** integration for anime metadata
 - **Kingfisher** for efficient image loading and caching
 
-## 📋 Build Requirements
+## 📋 Build/Run Requirements
 
 - iOS 26.0+
 - Xcode 26.0+
@@ -56,7 +57,7 @@ Join the latest beta build here:
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/yourusername/AniShelf.git
+   git clone https://github.com/samuelhe52/AniShelf.git
    cd AniShelf
    ```
 
@@ -87,13 +88,19 @@ make format
 
 # Lint code
 make lint
+
+# Build, install, and launch on a connected iPhone
+make run-device
+
+# Reset the TMDb API key before launching on a connected iPhone
+make run-device-reset-tmdb-api-key
 ```
 
 ### Project Structure
 
 > **Note:** The app was renamed from **MyAnimeList** to **AniShelf**. Only the display name and the top-level repository folder were changed; internal directory and file names still use `MyAnimeList` for simplicity and backward compatibility.
 
-- `MyAnimeList/` - Main iOS/macOS application
+- `MyAnimeList/` - Main iOS application
 - `DataProvider/` - SwiftData persistence layer (Swift Package)
 
 For detailed architecture and development guidelines, see [AGENTS.md](AGENTS.md).
