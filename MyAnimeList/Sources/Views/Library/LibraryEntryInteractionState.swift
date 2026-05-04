@@ -13,6 +13,12 @@ import UIKit
 @Observable
 @MainActor
 final class LibraryEntryInteractionState {
+    enum DeletionScrollTarget: Equatable {
+        case preserveCurrent
+        case clear
+        case entry(Int)
+    }
+
     var detailingEntry: AnimeEntry?
     var deletingEntry: AnimeEntry?
     var isDeletingEntry: Bool = false
@@ -22,20 +28,48 @@ final class LibraryEntryInteractionState {
     var showPasteAlert: Bool = false
     var pasteAction: (() -> Void)?
 
-    func setScrolledIDBeforeDeletion(for entry: AnimeEntry, in store: LibraryStore, scrolledID: Binding<Int?>) {
-        if let index = store.libraryOnDisplay.firstIndex(of: entry) {
-            if index != 0 {
-                scrolledID.wrappedValue = store.libraryOnDisplay[index - 1].tmdbID
-            } else {
-                scrolledID.wrappedValue = store.libraryOnDisplay.last?.tmdbID
-            }
+    func deletionScrollTarget(for entry: AnimeEntry, in entries: [AnimeEntry]) -> DeletionScrollTarget {
+        guard let index = entries.firstIndex(where: { $0.id == entry.id }) else {
+            return .preserveCurrent
+        }
+
+        if index > 0 {
+            return .entry(entries[index - 1].tmdbID)
+        }
+
+        let nextIndex = index + 1
+        guard nextIndex < entries.endIndex else {
+            return .clear
+        }
+        return .entry(entries[nextIndex].tmdbID)
+    }
+
+    func prepareDeletion(for entry: AnimeEntry) {
+        deletingEntry = entry
+        isDeletingEntry = true
+    }
+
+    func confirmDeletion(in store: LibraryStore, scrolledID: Binding<Int?>) {
+        guard let entry = deletingEntry else { return }
+
+        let scrollTarget = deletionScrollTarget(for: entry, in: store.libraryOnDisplay)
+        clearDeletionRequest()
+
+        guard store.deleteEntry(entry) else { return }
+
+        switch scrollTarget {
+        case .preserveCurrent:
+            break
+        case .clear:
+            scrolledID.wrappedValue = nil
+        case .entry(let targetID):
+            scrolledID.wrappedValue = targetID
         }
     }
 
-    func prepareDeletion(for entry: AnimeEntry, store: LibraryStore, scrolledID: Binding<Int?>) {
-        setScrolledIDBeforeDeletion(for: entry, in: store, scrolledID: scrolledID)
-        deletingEntry = entry
-        isDeletingEntry = true
+    func clearDeletionRequest() {
+        deletingEntry = nil
+        isDeletingEntry = false
     }
 
     func setEditingEntry(_ entry: AnimeEntry) {
@@ -128,11 +162,10 @@ extension LibraryEntryInteractionState {
 
     func deleteButton(
         for entry: AnimeEntry,
-        store: LibraryStore,
-        scrolledID: Binding<Int?>
+        store: LibraryStore
     ) -> some View {
         Button("Delete", systemImage: "trash", role: .destructive) {
-            self.prepareDeletion(for: entry, store: store, scrolledID: scrolledID)
+            self.prepareDeletion(for: entry)
         }
     }
 
@@ -140,7 +173,6 @@ extension LibraryEntryInteractionState {
     func contextMenu(
         for entry: AnimeEntry,
         store: LibraryStore,
-        scrolledID: Binding<Int?>,
         toggleFavorite: @escaping (AnimeEntry) -> Void
     ) -> some View {
         ControlGroup {
@@ -152,7 +184,7 @@ extension LibraryEntryInteractionState {
         Divider()
         savePosterButton(for: entry)
         userInfoMenu(for: entry)
-        deleteButton(for: entry, store: store, scrolledID: scrolledID)
+        deleteButton(for: entry, store: store)
 
     }
 }
@@ -160,18 +192,27 @@ extension LibraryEntryInteractionState {
 extension View {
     func libraryEntryInteractionOverlays(
         state: LibraryEntryInteractionState,
-        store: LibraryStore
+        store: LibraryStore,
+        scrolledID: Binding<Int?>
     ) -> some View {
         self
             .alert(
                 "Delete Anime?",
                 isPresented: Binding(
                     get: { state.isDeletingEntry },
-                    set: { state.isDeletingEntry = $0 }
+                    set: {
+                        if $0 {
+                            state.isDeletingEntry = true
+                        } else {
+                            state.clearDeletionRequest()
+                        }
+                    }
                 ),
                 presenting: state.deletingEntry
-            ) { entry in
-                Button("Delete", role: .destructive) { store.deleteEntry(entry) }
+            ) { _ in
+                Button("Delete", role: .destructive) {
+                    state.confirmDeletion(in: store, scrolledID: scrolledID)
+                }
                 Button("Cancel", role: .cancel) {}
             }
             .alert(

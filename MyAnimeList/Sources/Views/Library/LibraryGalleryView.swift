@@ -25,7 +25,11 @@ struct LibraryGalleryView: View {
                     }
             }
         }
-        .libraryEntryInteractionOverlays(state: interaction, store: store)
+        .libraryEntryInteractionOverlays(
+            state: interaction,
+            store: store,
+            scrolledID: $scrolledID
+        )
     }
 
     private var libraryContent: some View {
@@ -100,7 +104,7 @@ fileprivate struct AnimeEntryCardWrapper: View {
         }
         interaction.switchPosterButton(for: entry)
         interaction.savePosterButton(for: entry)
-        interaction.deleteButton(for: entry, store: store, scrolledID: $scrolledID)
+        interaction.deleteButton(for: entry, store: store)
     }
 }
 

@@ -198,6 +198,25 @@ struct MyAnimeListTests {
         #expect(entry.watchStatus == .watching)
     }
 
+    @Test @MainActor func testDeletionScrollTargetFallbacks() {
+        let interaction = LibraryEntryInteractionState()
+        let first = AnimeEntry(name: "First", type: .movie, tmdbID: 1)
+        let second = AnimeEntry(name: "Second", type: .movie, tmdbID: 2)
+        let third = AnimeEntry(name: "Third", type: .movie, tmdbID: 3)
+        let entries = [first, second, third]
+
+        #expect(interaction.deletionScrollTarget(for: second, in: entries) == .entry(1))
+        #expect(interaction.deletionScrollTarget(for: first, in: entries) == .entry(2))
+        #expect(interaction.deletionScrollTarget(for: third, in: entries) == .entry(2))
+        #expect(interaction.deletionScrollTarget(for: first, in: [first]) == .clear)
+        #expect(
+            interaction.deletionScrollTarget(
+                for: AnimeEntry(name: "Missing", type: .movie, tmdbID: 99),
+                in: entries
+            ) == .preserveCurrent
+        )
+    }
+
     private func referenceDate(year: Int, month: Int, day: Int) -> Date {
         Calendar(identifier: .gregorian).date(
             from: DateComponents(year: year, month: month, day: day)

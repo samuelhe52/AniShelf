@@ -33,7 +33,6 @@ struct LibraryGridView: View {
                                 interaction.contextMenu(
                                     for: entry,
                                     store: store,
-                                    scrolledID: $scrolledID,
                                     toggleFavorite: toggleFavorite
                                 )
                                 .onAppear { scrolledID = entry.tmdbID }
@@ -58,7 +57,11 @@ struct LibraryGridView: View {
             .animation(.spring, value: store.sortStrategy)
             .animation(.spring, value: store.filters)
         }
-        .libraryEntryInteractionOverlays(state: interaction, store: store)
+        .libraryEntryInteractionOverlays(
+            state: interaction,
+            store: store,
+            scrolledID: $scrolledID
+        )
     }
 
     private func onChangeOfScrolledID(proxy: ScrollViewProxy) {

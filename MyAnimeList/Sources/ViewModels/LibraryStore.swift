@@ -292,12 +292,15 @@ class LibraryStore {
 
     // MARK: - Library Mutations
 
-    func deleteEntry(_ entry: AnimeEntry) {
+    @discardableResult
+    func deleteEntry(_ entry: AnimeEntry) -> Bool {
         do {
             try dataProvider.dataHandler.deleteEntry(entry)
+            return true
         } catch {
             logger.error("Failed to delete entry: \(error)")
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
+            return false
         }
     }
 

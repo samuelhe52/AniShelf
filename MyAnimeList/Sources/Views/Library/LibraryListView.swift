@@ -35,7 +35,6 @@ struct LibraryListView: View {
                     interaction.contextMenu(
                         for: entry,
                         store: store,
-                        scrolledID: $scrolledID,
                         toggleFavorite: toggleFavorite
                     )
                 } preview: {
@@ -44,11 +43,7 @@ struct LibraryListView: View {
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button("Delete", systemImage: "trash") {
-                        interaction.prepareDeletion(
-                            for: entry,
-                            store: store,
-                            scrolledID: $scrolledID
-                        )
+                        interaction.prepareDeletion(for: entry)
                     }
                     .tint(.red)
                 }
@@ -73,6 +68,10 @@ struct LibraryListView: View {
                 }
             }
         }
-        .libraryEntryInteractionOverlays(state: interaction, store: store)
+        .libraryEntryInteractionOverlays(
+            state: interaction,
+            store: store,
+            scrolledID: $scrolledID
+        )
     }
 }
