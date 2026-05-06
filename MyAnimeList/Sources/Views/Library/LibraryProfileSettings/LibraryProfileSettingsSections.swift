@@ -132,6 +132,7 @@ struct LibraryProfileSettingsCard: View {
     @Binding var defaultNewEntryWatchStatus: AnimeEntry.WatchStatus
     @Binding var defaultFilters: Set<LibraryStore.AnimeFilter>
     @Binding var autoPrefetchImagesOnAddAndRestore: Bool
+    @Binding var useTMDbRelayServer: Bool
     @Binding var preferredLanguage: Language
 
     let restoreCompleted: Bool
@@ -154,6 +155,7 @@ struct LibraryProfileSettingsCard: View {
             VStack(spacing: 14) {
                 languagePickerRow
                 defaultLibraryBehaviorRow
+                tmdbConnectionRow
                 backupManagementRow
                 maintenanceActions
             }
@@ -304,6 +306,37 @@ struct LibraryProfileSettingsCard: View {
         }
         .padding(14)
         .libraryProfileInsetPanel(cornerRadius: 22, tint: .mint)
+    }
+
+    private var tmdbConnectionRow: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            LibraryProfileSettingHeader(
+                title: "TMDb Connection",
+                subtitle: "AniShelf uses the relay by default when direct TMDb access is unstable.",
+                systemImage: "network",
+                tint: .cyan
+            )
+
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Use TMDb Proxy")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Turn this off if you already use a VPN or direct TMDb access is faster.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 12)
+                Toggle("Use TMDb Proxy", isOn: $useTMDbRelayServer)
+                    .labelsHidden()
+                    .tint(.cyan)
+                    .scaleEffect(0.78, anchor: .trailing)
+                    .frame(width: 42, height: 26, alignment: .trailing)
+            }
+            .padding(.vertical, 2)
+        }
+        .padding(14)
+        .libraryProfileInsetPanel(cornerRadius: 22, tint: .cyan)
     }
 
     private var backupManagementRow: some View {

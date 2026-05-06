@@ -18,6 +18,7 @@ struct LibraryProfileSettingsView: View {
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
+    @AppStorage(.useTMDbRelayServer) private var useTMDbRelayServer = true
 
     @State private var changeAPIKey = false
     @State private var showCacheAlert = false
@@ -31,6 +32,7 @@ struct LibraryProfileSettingsView: View {
     @State private var showRestoreConfirmation = false
     @State private var showRefreshInfoOnLanguageUpdateAlert = false
     @State private var showRefreshInfoAlert = false
+    @State private var showTMDbRelayRestartAlert = false
     @State private var showAboutSheet = false
     @State private var cacheSizeResult: Result<UInt, KingfisherError>? = nil
     @State private var appeared = false
@@ -143,6 +145,11 @@ struct LibraryProfileSettingsView: View {
         } message: {
             Text("This may take considerable time.")
         }
+        .alert("TMDb Proxy Updated", isPresented: $showTMDbRelayRestartAlert) {
+            Button("OK") {}
+        } message: {
+            Text("You might need to restart the app for this change to take effect.")
+        }
         .alert(
             "Error exporting library",
             isPresented: $showExportError,
@@ -232,6 +239,7 @@ struct LibraryProfileSettingsView: View {
             defaultNewEntryWatchStatus: $store.defaultNewEntryWatchStatus,
             defaultFilters: $store.defaultFilters,
             autoPrefetchImagesOnAddAndRestore: $store.autoPrefetchImagesOnAddAndRestore,
+            useTMDbRelayServer: $useTMDbRelayServer,
             preferredLanguage: $preferredLanguage,
             restoreCompleted: restoreCompleted,
             createBackupItems: makeBackupExportItems,
@@ -257,6 +265,14 @@ struct LibraryProfileSettingsView: View {
             }
         )
         .animation(languagePickerAnimation, value: followsSystemLanguage)
+        .onChange(of: useTMDbRelayServer) { old, new in
+            guard old != new else { return }
+            NotificationCenter.default.post(
+                name: .tmdbAPIConfigurationDidChange,
+                object: nil
+            )
+            showTMDbRelayRestartAlert = true
+        }
     }
 
     private var followsSystemLanguageBinding: Binding<Bool> {

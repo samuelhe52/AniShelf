@@ -413,7 +413,10 @@ struct TMDbAPIKeyValidator {
     static func check(_ key: String) async -> Bool {
         guard !key.isEmpty else { return false }
         guard
-            let url = URL(string: "https://tmdb-api.konakona52.com/3/configuration?api_key=\(key)")
+            let url = URL(
+                string:
+                    "https://\(UserDefaults.standard.tmdbAPIHostForCurrentPreference)/3/configuration?api_key=\(key)"
+            )
         else {
             return false
         }
@@ -428,6 +431,12 @@ struct TMDbAPIKeyValidator {
         } catch {
             return false
         }
+    }
+}
+
+extension UserDefaults {
+    fileprivate var tmdbAPIHostForCurrentPreference: String {
+        usesTMDbRelayServer ? "tmdb-api.konakona52.com" : "api.themoviedb.org"
     }
 }
 

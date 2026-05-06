@@ -14,13 +14,14 @@ import TMDb
 struct RedirectingHTTPClient: HTTPClient {
     let fromHost: String
     let toHost: String
+    var isEnabled: @Sendable () -> Bool = { true }
 
     func perform(request: HTTPRequest) async throws -> HTTPResponse {
         guard var components = URLComponents(url: request.url, resolvingAgainstBaseURL: false)
         else {
             throw URLError(.badURL)
         }
-        if components.host == fromHost {
+        if isEnabled(), components.host == fromHost {
             components.host = toHost
         }
 
@@ -42,5 +43,14 @@ struct RedirectingHTTPClient: HTTPClient {
             statusCode: httpResponse.statusCode,
             data: data
         )
+    }
+}
+
+extension UserDefaults {
+    var usesTMDbRelayServer: Bool {
+        if object(forKey: .useTMDbRelayServer) == nil {
+            return true
+        }
+        return bool(forKey: .useTMDbRelayServer)
     }
 }

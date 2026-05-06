@@ -921,5 +921,8 @@ extension String {
 
 extension RedirectingHTTPClient {
     static let relayServer: Self = .init(
-        fromHost: "api.themoviedb.org", toHost: "tmdb-api.konakona52.com")
+        fromHost: "api.themoviedb.org",
+        toHost: "tmdb-api.konakona52.com",
+        isEnabled: { UserDefaults.standard.usesTMDbRelayServer }
+    )
 }

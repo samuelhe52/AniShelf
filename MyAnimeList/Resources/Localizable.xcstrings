@@ -783,6 +783,23 @@
         }
       }
     },
+    "Choose how AniShelf reaches TMDb for search and metadata." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "検索とメタデータ取得で AniShelf が TMDb に接続する方法を選びます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择 AniShelf 搜索和获取元数据时连接 TMDb 的方式。"
+          }
+        }
+      }
+    },
     "Clear Cache" : {
       "localizations" : {
         "ja" : {
@@ -2940,6 +2957,39 @@
         }
       }
     },
+    "Route TMDb API requests through AniShelf's relay when direct access is unstable." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直接接続が不安定な場合、TMDb API リクエストを AniShelf の中継経由にします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直连不稳定时，通过 AniShelf 的中继发送 TMDb API 请求。"
+          }
+        }
+      }
+    },
+    "AniShelf uses the relay by default when direct TMDb access is unstable." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb への直接接続が不安定な場合に備え、AniShelf は標準で中継を使用します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf 默认使用中继，以应对 TMDb 直连不稳定的情况。"
+          }
+        }
+      }
+    },
     "Runtime" : {
       "localizations" : {
         "ja" : {
@@ -3448,6 +3498,38 @@
         }
       }
     },
+    "TMDb Connection" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb 接続"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb 连接"
+          }
+        }
+      }
+    },
+    "TMDb Proxy Updated" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb プロキシを更新しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb 代理已更新"
+          }
+        }
+      }
+    },
     "TMDb did not return posters for this selection yet." : {
       "localizations" : {
         "ja" : {
@@ -3642,6 +3724,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "请使用 API 密钥，不要使用读取访问令牌。"
+          }
+        }
+      }
+    },
+    "Use TMDb Proxy" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb プロキシを使用"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用 TMDb 代理"
+          }
+        }
+      }
+    },
+    "You might need to restart the app for this change to take effect." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この変更を反映するには、アプリの再起動が必要な場合があります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你可能需要重启 App 才能让此更改生效。"
+          }
+        }
+      }
+    },
+    "Turn this off if you already use a VPN or direct TMDb access is faster." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN を常用している場合や TMDb への直接接続の方が速い場合はオフにしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果你已长期使用代理，或直连 TMDb 更快，可以关闭此选项。"
           }
         }
       }
