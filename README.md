@@ -2,6 +2,8 @@
 
 A beautiful, native iOS app for tracking and managing your anime library.
 
+[中文教程](docs/anishelf_overview.md)
+
 ## 📸 Screenshots
 
 <div style="overflow-x: auto; padding: 0.25rem 0 1rem;">
