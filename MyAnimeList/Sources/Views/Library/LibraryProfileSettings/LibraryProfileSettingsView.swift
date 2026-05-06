@@ -221,7 +221,7 @@ struct LibraryProfileSettingsView: View {
     private var libraryDetailsCard: some View {
         LibraryProfileLibraryDetailsCard(
             stats: stats,
-            runtimeDescription: runtimeDescription
+            runtimeDescription: stats.runtimeDescription
         )
     }
 
@@ -280,19 +280,6 @@ struct LibraryProfileSettingsView: View {
 
     private func resolvedLanguage(followsSystem: Bool, preferredLanguage: Language) -> Language {
         followsSystem ? .current : preferredLanguage
-    }
-
-    private var runtimeDescription: String {
-        guard stats.runtimeMinutes > 0 else { return String(localized: "N/A") }
-        let hours = stats.runtimeMinutes / 60
-        let minutes = stats.runtimeMinutes % 60
-        if hours > 0 && minutes > 0 {
-            return "\(hours)h \(minutes)m"
-        }
-        if hours > 0 {
-            return "\(hours)h"
-        }
-        return "\(minutes)m"
     }
 
     private func makeBackupExportItems() -> [Any]? {

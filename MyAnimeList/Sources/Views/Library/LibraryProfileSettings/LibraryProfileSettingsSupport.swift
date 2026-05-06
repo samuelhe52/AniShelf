@@ -5,48 +5,7 @@
 //  Created by OpenAI Codex on 2026/5/3.
 //
 
-import DataProvider
 import SwiftUI
-
-struct LibraryProfileStats: Equatable {
-    let totalCount: Int
-    let watchedCount: Int
-    let watchingCount: Int
-    let planToWatchCount: Int
-    let droppedCount: Int
-    let favoriteCount: Int
-    let movieCount: Int
-    let seriesCount: Int
-    let seasonCount: Int
-    let entriesWithNotesCount: Int
-    let runtimeMinutes: Int
-
-    init(entries: [AnimeEntry]) {
-        totalCount = entries.count
-        watchedCount = entries.count { $0.watchStatus == .watched }
-        watchingCount = entries.count { $0.watchStatus == .watching }
-        planToWatchCount = entries.count { $0.watchStatus == .planToWatch }
-        droppedCount = entries.count { $0.watchStatus == .dropped }
-        favoriteCount = entries.count { $0.favorite }
-        movieCount = entries.count { $0.type == .movie }
-        seriesCount = entries.count { $0.type == .series }
-        seasonCount = entries.count {
-            if case .season = $0.type {
-                true
-            } else {
-                false
-            }
-        }
-        entriesWithNotesCount = entries.count { !$0.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-        runtimeMinutes = entries.reduce(0) { partialResult, entry in
-            guard let runtime = entry.detail?.runtimeMinutes else {
-                return partialResult
-            }
-            let multiplier = max(entry.detail?.episodeCount ?? 1, 1)
-            return partialResult + runtime * multiplier
-        }
-    }
-}
 
 struct LibraryProfileBackdrop: View {
     @Environment(\.colorScheme) private var colorScheme

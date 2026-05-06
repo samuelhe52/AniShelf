@@ -8,15 +8,6 @@
 import DataProvider
 import SwiftUI
 
-fileprivate enum LibraryProfileMaintenancePalette {
-    static let apiKey = Color(red: 0.38, green: 0.72, blue: 0.98)
-    static let cache = Color(red: 0.29, green: 0.77, blue: 0.90)
-    static let refresh = Color(red: 0.45, green: 0.62, blue: 0.96)
-    static let prefetch = Color(red: 0.33, green: 0.80, blue: 0.74)
-    static let about = Color(red: 0.58, green: 0.64, blue: 0.74)
-    static let panel = Color(red: 0.42, green: 0.58, blue: 0.76)
-}
-
 struct LibraryProfileHeroCard: View {
     let stats: LibraryProfileStats
     let animeTitleResource: LocalizedStringResource
@@ -468,16 +459,5 @@ struct LibraryProfileSettingsCard: View {
                 }
             }
         )
-    }
-}
-
-extension AnimeEntry.WatchStatus {
-    fileprivate var defaultPickerTintColor: Color {
-        switch self {
-        case .planToWatch:
-            .mint
-        default:
-            libraryTintColor
-        }
     }
 }

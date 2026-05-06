@@ -9,7 +9,7 @@ import Kingfisher
 import SwiftUI
 
 struct DetailStatCard: View {
-    let card: EntryDetailModel.StatCard
+    let card: EntryDetailStatCard
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -29,7 +29,7 @@ struct DetailStatCard: View {
 }
 
 struct CharacterCardView: View {
-    let card: EntryDetailModel.CharacterCard
+    let card: EntryDetailCharacterCard
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -68,12 +68,12 @@ struct CharacterCardView: View {
 }
 
 struct EpisodeRowView: View {
-    let card: EntryDetailModel.EpisodeCard
+    let card: EntryDetailEpisodeCard
     let previewContext: EpisodePreviewContext?
     @State private var showPreview = false
     @State private var previewHapticTrigger = false
 
-    init(card: EntryDetailModel.EpisodeCard, previewContext: EpisodePreviewContext? = nil) {
+    init(card: EntryDetailEpisodeCard, previewContext: EpisodePreviewContext? = nil) {
         self.card = card
         self.previewContext = previewContext
     }
@@ -127,13 +127,13 @@ struct EpisodeRowView: View {
 }
 
 struct SeriesSeasonEpisodeGroupView: View {
-    let season: EntryDetailModel.SeasonCard
+    let season: EntryDetailSeasonCard
     let seriesTMDbID: Int
     let language: Language
 
     private let loadingAnimation: Animation = .easeInOut(duration: 0.25)
 
-    @State private var episodes: [EntryDetailModel.EpisodeCard] = []
+    @State private var episodes: [EntryDetailEpisodeCard] = []
     @State private var isLoading = false
     @State private var loadFailed = false
 
@@ -198,7 +198,7 @@ struct SeriesSeasonEpisodeGroupView: View {
                     language: language
                 )
                 .map {
-                    EntryDetailModel.EpisodeCard(
+                    EntryDetailEpisodeCard(
                         id: $0.id,
                         episodeNumber: $0.episodeNumber,
                         title: "\($0.episodeNumber). \($0.title)",
@@ -222,10 +222,10 @@ struct SeriesSeasonEpisodeGroupView: View {
 }
 
 struct EpisodePreviewCard: View {
-    let card: EntryDetailModel.EpisodeCard
+    let card: EntryDetailEpisodeCard
     let context: EpisodePreviewContext
 
-    @StateObject private var previewModel = EpisodePreviewModel()
+    @State private var previewModel = EpisodePreviewViewModel()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {

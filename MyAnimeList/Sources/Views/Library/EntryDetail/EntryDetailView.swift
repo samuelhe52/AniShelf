@@ -18,7 +18,7 @@ struct EntryDetailView: View {
     @Environment(\.libraryStore) private var libraryStore
     @Environment(\.modelContext) private var modelContext
 
-    @StateObject private var model = EntryDetailModel()
+    @State private var model = EntryDetailViewModel()
     @State private var showSharingSheet = false
     @State private var showPosterSelectionView = false
     @State private var showCancelEditsConfirmation = false
