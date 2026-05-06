@@ -294,8 +294,10 @@ class LibraryStore {
 
     @discardableResult
     func deleteEntry(_ entry: AnimeEntry) -> Bool {
+        let cachedImageURLs = relatedImageURLs(for: entry)
         do {
             try dataProvider.dataHandler.deleteEntry(entry)
+            removeCachedImages(for: cachedImageURLs)
             return true
         } catch {
             logger.error("Failed to delete entry: \(error)")
@@ -305,8 +307,10 @@ class LibraryStore {
     }
 
     func clearLibrary() {
+        let cachedImageURLs = Set(library.flatMap { relatedImageURLs(for: $0) })
         do {
             try dataProvider.dataHandler.deleteAllEntries()
+            removeCachedImages(for: cachedImageURLs)
         } catch {
             logger.error("Error clearing library: \(error)")
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
@@ -515,6 +519,55 @@ class LibraryStore {
             [entry.posterURL, entry.detail?.heroImageURL, entry.detail?.logoImageURL].compactMap(\.self)
         }
     }
+
+    private func relatedImageURLs(for entry: AnimeEntry) -> Set<URL> {
+        var urls = Set([entry.posterURL, entry.backdropURL].compactMap(\.self))
+
+        if let detail = entry.detail {
+            urls.formUnion([detail.heroImageURL, detail.logoImageURL].compactMap(\.self))
+            urls.formUnion(detail.characters.compactMap(\.profileURL))
+            urls.formUnion(detail.seasons.compactMap(\.posterURL))
+            urls.formUnion(detail.episodes.compactMap(\.imageURL))
+        }
+
+        return urls
+    }
+
+    private func removeCachedImages(for urls: Set<URL>) {
+        guard !urls.isEmpty else { return }
+
+        let cacheKeys = Array(urls.map(\.cacheKey))
+        let processorIdentifiers = Self.cachedImageProcessorIdentifiers
+
+        Task.detached(priority: .utility) {
+            let cache = KingfisherManager.shared.cache
+            var removedCount = 0
+
+            for cacheKey in cacheKeys {
+                for processorIdentifier in processorIdentifiers {
+                    do {
+                        try await cache.removeImage(
+                            forKey: cacheKey,
+                            processorIdentifier: processorIdentifier
+                        )
+                        removedCount += 1
+                    } catch {
+                        logger.warning("Failed to remove cached image for key \(cacheKey): \(error)")
+                    }
+                }
+            }
+
+            logger.info("Removed \(removedCount) Kingfisher cache entries for deleted library content.")
+        }
+    }
+
+    private static let cachedImageProcessorIdentifiers: [String] = {
+        let downsampledIdentifiers = [240, 300, 360, 500, 720, 800, 1_200].map { targetWidth in
+            let size = CGSize(width: targetWidth, height: targetWidth * 1.5)
+            return DownsamplingImageProcessor(size: size).identifier
+        }
+        return [""] + downsampledIdentifiers
+    }()
 
     private func applyNewEntryDefaults(to entry: AnimeEntry) {
         entry.setWatchStatus(defaultNewEntryWatchStatus)

@@ -426,7 +426,7 @@ final class InfoFetcher: Sendable {
                 language: language
             ),
             episodes: makeEpisodeSummaries(
-                from: Array((resolvedSeason.episodes ?? []).prefix(8)),
+                from: resolvedSeason.episodes ?? [],
                 imagesConfiguration: imagesConfiguration
             )
         )

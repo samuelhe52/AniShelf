@@ -162,7 +162,7 @@ struct SeriesSeasonEpisodeGroupView: View {
                 )
                 .frame(maxWidth: .infinity)
             } else {
-                VStack(spacing: 10) {
+                LazyVStack(spacing: 10) {
                     ForEach(episodes) { episode in
                         EpisodeRowView(
                             card: episode,
@@ -179,7 +179,7 @@ struct SeriesSeasonEpisodeGroupView: View {
         .task(id: "\(seriesTMDbID)-\(season.id)-\(language.rawValue)") {
             await loadEpisodesIfNeeded()
         }
-        .animation(loadingAnimation, value: episodes)
+        .animation(loadingAnimation, value: episodes.count)
         .animation(loadingAnimation, value: isLoading)
         .animation(loadingAnimation, value: loadFailed)
     }

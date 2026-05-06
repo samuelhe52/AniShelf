@@ -355,7 +355,7 @@ struct EntryDetailView: View {
         case .series:
             if !model.seasonCards.isEmpty {
                 sectionCard(EntryDetailL10n.episodes) {
-                    VStack(spacing: 18) {
+                    LazyVStack(spacing: 18) {
                         ForEach(model.seasonCards) { season in
                             SeriesSeasonEpisodeGroupView(
                                 season: season,
@@ -370,7 +370,7 @@ struct EntryDetailView: View {
         case .season:
             if !model.episodeCards.isEmpty {
                 sectionCard(EntryDetailL10n.episodes) {
-                    VStack(spacing: 10) {
+                    LazyVStack(spacing: 10) {
                         ForEach(model.episodeCards) { episode in
                             EpisodeRowView(
                                 card: episode,
@@ -466,7 +466,7 @@ struct EntryDetailView: View {
         @ViewBuilder content: @escaping (Data.Element) -> Content
     ) -> some View where Data.Element: Identifiable {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: 12) {
+            LazyHStack(alignment: .top, spacing: 12) {
                 ForEach(data) { element in
                     content(element)
                 }
