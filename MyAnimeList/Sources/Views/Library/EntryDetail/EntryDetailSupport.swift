@@ -21,6 +21,7 @@ enum EntryDetailL10n {
     static let runtime: LocalizedStringResource = "Runtime"
     static let averageRuntime: LocalizedStringResource = "Avg Runtime"
     static let episode: LocalizedStringResource = "Episode"
+    static let noEpisodesAvailable: LocalizedStringResource = "No episodes available for this season."
 }
 
 enum EntryDetailScrollTarget: Hashable {

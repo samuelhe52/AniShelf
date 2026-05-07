@@ -834,8 +834,11 @@ final class InfoFetcher: Sendable {
         imagesConfiguration: ImagesConfiguration
     ) -> [AnimeEntrySeasonSummary] {
         seasons
-            .filter { $0.seasonNumber > 0 }
-            .sorted { $0.seasonNumber < $1.seasonNumber }
+            .sorted {
+                if $0.seasonNumber == 0 { return false }
+                if $1.seasonNumber == 0 { return true }
+                return $0.seasonNumber < $1.seasonNumber
+            }
             .map {
                 AnimeEntrySeasonSummary(
                     id: $0.id,

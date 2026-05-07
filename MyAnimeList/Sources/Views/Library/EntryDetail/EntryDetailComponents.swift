@@ -133,60 +133,104 @@ struct SeriesSeasonEpisodeGroupView: View {
 
     private let loadingAnimation: Animation = .easeInOut(duration: 0.25)
 
+    @State private var isExpanded: Bool
     @State private var episodes: [EntryDetailEpisodeCard] = []
     @State private var isLoading = false
     @State private var loadFailed = false
+    @State private var loadedEpisodesKey: String?
+
+    init(season: EntryDetailSeasonCard, seriesTMDbID: Int, language: Language) {
+        self.season = season
+        self.seriesTMDbID = seriesTMDbID
+        self.language = language
+        _isExpanded = State(initialValue: season.seasonNumber != 0)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(season.title)
-                    .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                if season.title != season.subtitle {
-                    Text(season.subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+            Button {
+                withAnimation(loadingAnimation) {
+                    isExpanded.toggle()
                 }
-            }
+            } label: {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                        .frame(width: 12)
 
-            if episodes.isEmpty, isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 8)
-            } else if episodes.isEmpty, loadFailed {
-                ContentUnavailableView(
-                    String(localized: EntryDetailL10n.couldNotLoadDetails),
-                    systemImage: "wifi.exclamationmark"
-                )
-                .frame(maxWidth: .infinity)
-            } else {
-                LazyVStack(spacing: 10) {
-                    ForEach(episodes) { episode in
-                        EpisodeRowView(
-                            card: episode,
-                            previewContext: .init(
-                                seriesTMDbID: seriesTMDbID,
-                                seasonNumber: season.seasonNumber,
-                                language: language
-                            )
-                        )
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(season.title)
+                            .font(.headline.weight(.semibold))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if season.title != season.subtitle {
+                            Text(season.subtitle)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
+                .contentShape(Rectangle())
             }
-        }
-        .task(id: "\(seriesTMDbID)-\(season.id)-\(language.rawValue)") {
-            await loadEpisodesIfNeeded()
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                episodeListContent
+                    .task(id: episodesRequestKey) {
+                        await loadEpisodesIfNeeded()
+                    }
+            }
         }
         .animation(loadingAnimation, value: episodes.count)
         .animation(loadingAnimation, value: isLoading)
         .animation(loadingAnimation, value: loadFailed)
+        .animation(loadingAnimation, value: isExpanded)
+    }
+
+    @ViewBuilder
+    private var episodeListContent: some View {
+        if episodes.isEmpty, isLoading {
+            ProgressView()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 8)
+        } else if episodes.isEmpty, loadFailed {
+            ContentUnavailableView(
+                String(localized: EntryDetailL10n.couldNotLoadDetails),
+                systemImage: "wifi.exclamationmark"
+            )
+            .frame(maxWidth: .infinity)
+        } else if episodes.isEmpty, loadedEpisodesKey == episodesRequestKey {
+            ContentUnavailableView(
+                String(localized: EntryDetailL10n.noEpisodesAvailable),
+                systemImage: "list.bullet.rectangle"
+            )
+            .frame(maxWidth: .infinity)
+        } else {
+            LazyVStack(spacing: 10) {
+                ForEach(episodes) { episode in
+                    EpisodeRowView(
+                        card: episode,
+                        previewContext: .init(
+                            seriesTMDbID: seriesTMDbID,
+                            seasonNumber: season.seasonNumber,
+                            language: language
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    private var episodesRequestKey: String {
+        "\(seriesTMDbID)-\(season.id)-\(language.rawValue)"
     }
 
     private func loadEpisodesIfNeeded() async {
-        guard episodes.isEmpty, !isLoading else { return }
+        guard loadedEpisodesKey != episodesRequestKey, !isLoading else { return }
         withAnimation(loadingAnimation) {
+            episodes = []
+            loadFailed = false
             isLoading = true
         }
 
@@ -209,6 +253,7 @@ struct SeriesSeasonEpisodeGroupView: View {
                 }
             withAnimation(loadingAnimation) {
                 episodes = loadedEpisodes
+                loadedEpisodesKey = episodesRequestKey
                 loadFailed = false
                 isLoading = false
             }

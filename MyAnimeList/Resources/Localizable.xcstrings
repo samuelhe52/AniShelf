@@ -2280,6 +2280,22 @@
         }
       }
     },
+    "No episodes available for this season." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このシーズンのエピソードはありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本季暂无剧集。"
+          }
+        }
+      }
+    },
     "No posters available right now." : {
       "localizations" : {
         "ja" : {

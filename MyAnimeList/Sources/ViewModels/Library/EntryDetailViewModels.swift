@@ -198,7 +198,10 @@ final class EntryDetailViewModel {
     }
 
     private static func seasonLabelText(_ seasonNumber: Int) -> String {
-        String(localized: "Season \(seasonNumber)")
+        if seasonNumber == 0 {
+            return String(localized: "Specials")
+        }
+        return String(localized: "Season \(seasonNumber)")
     }
 
     private static func minutesText(_ minutes: Int) -> String {
