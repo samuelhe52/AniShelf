@@ -52,23 +52,21 @@ final class LibraryProfileSettingsActions {
 
     func refreshInfos() {
         let metadataRefresher = LibraryMetadataRefresher(repository: store.repository)
-        let imageCacheService = LibraryImageCacheService()
         metadataRefresher.refreshInfos(
             for: store.library,
             fetcher: store.infoFetcher,
             language: store.language,
-            prefetchAllImages: { [imageCacheService] entries in
+            prefetchAllImages: { [imageCacheService = store.imageCacheService] entries in
                 imageCacheService.prefetchImages(for: entries)
             }
         )
     }
 
     func clearLibrary() {
-        let imageCacheService = LibraryImageCacheService()
-        let cachedImageURLs = Set(store.library.flatMap { imageCacheService.relatedImageURLs(for: $0) })
+        let cachedImageURLs = Set(store.library.flatMap { store.imageCacheService.relatedImageURLs(for: $0) })
         do {
             try store.repository.clearLibrary()
-            imageCacheService.removeCachedImages(for: cachedImageURLs)
+            store.imageCacheService.removeCachedImages(for: cachedImageURLs)
         } catch {
             libraryStoreLogger.error("Error clearing library: \(error)")
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
@@ -76,7 +74,6 @@ final class LibraryProfileSettingsActions {
     }
 
     func prefetchAllImages() {
-        let imageCacheService = LibraryImageCacheService()
-        imageCacheService.prefetchImages(for: store.library)
+        store.imageCacheService.prefetchImages(for: store.library)
     }
 }

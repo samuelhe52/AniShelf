@@ -639,9 +639,7 @@ struct EntryDetailView: View {
         guard case .season(_, _) = entry.type else { return }
         conversionInProgress = true
         do {
-            let converter = LibraryEntryConverter(
-                repository: libraryStore.repository
-            )
+            let converter = LibraryEntryConverter(repository: libraryStore.repository)
             try await converter.convertSeasonToSeries(
                 entry,
                 language: currentLanguage,
@@ -658,9 +656,7 @@ struct EntryDetailView: View {
     private func convertSeriesToSeason(seasonNumber: Int) async {
         conversionInProgress = true
         do {
-            let converter = LibraryEntryConverter(
-                repository: libraryStore.repository
-            )
+            let converter = LibraryEntryConverter(repository: libraryStore.repository)
             try await converter.convertSeriesToSeason(
                 entry,
                 seasonNumber: seasonNumber,

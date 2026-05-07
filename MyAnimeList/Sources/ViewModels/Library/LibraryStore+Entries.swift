@@ -89,7 +89,6 @@ extension LibraryStore {
 
     @discardableResult
     func deleteEntry(_ entry: AnimeEntry) -> Bool {
-        let imageCacheService = LibraryImageCacheService()
         let cachedImageURLs = imageCacheService.relatedImageURLs(for: entry)
         do {
             try repository.deleteEntry(entry)
@@ -105,7 +104,6 @@ extension LibraryStore {
     func prefetchImagesForDefaultBehavior<C: Collection>(_ entries: C)
     where C.Element == AnimeEntry {
         guard autoPrefetchImagesOnAddAndRestore else { return }
-        let imageCacheService = LibraryImageCacheService()
         imageCacheService.prefetchImages(for: entries)
     }
 }
