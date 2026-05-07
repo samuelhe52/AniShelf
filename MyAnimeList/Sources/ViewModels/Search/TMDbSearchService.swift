@@ -170,7 +170,7 @@ class TMDbSearchService {
 
     func fetchSeasons(for seriesInfo: BasicInfo, language: Language) async -> [BasicInfo] {
         do {
-            let fetcher = InfoFetcher()
+            let fetcher = self.fetcher
             let series = try await fetcher.tvSeries(seriesInfo.tmdbID, language: language)
             guard let seasons = series.seasons else { return [] }
             let infos = try await withThrowingTaskGroup(of: BasicInfo.self) { group in
