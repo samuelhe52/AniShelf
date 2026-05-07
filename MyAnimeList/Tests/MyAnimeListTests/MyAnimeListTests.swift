@@ -198,6 +198,186 @@ struct MyAnimeListTests {
         #expect(entry.watchStatus == .watching)
     }
 
+    @Test @MainActor func testLibraryImageCacheCollectsRelatedDetailURLs() throws {
+        let posterURL = try #require(URL(string: "https://example.com/poster.jpg"))
+        let backdropURL = try #require(URL(string: "https://example.com/backdrop.jpg"))
+        let heroURL = try #require(URL(string: "https://example.com/hero.jpg"))
+        let logoURL = try #require(URL(string: "https://example.com/logo.png"))
+        let characterURL = try #require(URL(string: "https://example.com/character.jpg"))
+        let seasonURL = try #require(URL(string: "https://example.com/season.jpg"))
+        let episodeURL = try #require(URL(string: "https://example.com/episode.jpg"))
+
+        let entry = AnimeEntry(
+            name: "Cache Test",
+            type: .series,
+            posterURL: posterURL,
+            backdropURL: backdropURL,
+            tmdbID: 4
+        )
+        entry.detail = AnimeEntryDetail(
+            language: "en",
+            title: "Cache Test",
+            heroImageURL: heroURL,
+            logoImageURL: logoURL,
+            characters: [
+                AnimeEntryCharacter(
+                    id: 1,
+                    characterName: "Character",
+                    actorName: "Actor",
+                    profileURL: characterURL
+                )
+            ],
+            seasons: [
+                AnimeEntrySeasonSummary(
+                    id: 2,
+                    seasonNumber: 1,
+                    title: "Season",
+                    posterURL: seasonURL
+                )
+            ],
+            episodes: [
+                AnimeEntryEpisodeSummary(
+                    id: 3,
+                    episodeNumber: 1,
+                    title: "Episode",
+                    imageURL: episodeURL
+                )
+            ]
+        )
+
+        let urls = LibraryImageCacheController().relatedImageURLs(for: entry)
+
+        #expect(
+            urls
+                == Set([
+                    posterURL,
+                    backdropURL,
+                    heroURL,
+                    logoURL,
+                    characterURL,
+                    seasonURL,
+                    episodeURL
+                ])
+        )
+    }
+
+    @Test @MainActor func testLibraryProfileSettingsViewModelPreferredLanguageChangeRequestsRefresh() {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let viewModel = LibraryProfileSettingsViewModel(store: store)
+
+        viewModel.handlePreferredLanguageChange(
+            old: .english,
+            new: .japanese,
+            followsSystem: false
+        )
+
+        #expect(store.language == .japanese)
+        #expect(viewModel.showRefreshInfoOnLanguageUpdateAlert)
+    }
+
+    @Test @MainActor func testLibraryProfileSettingsViewModelPreferredLanguageIgnoresSystemFollow() {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let originalLanguage = store.language
+        let viewModel = LibraryProfileSettingsViewModel(store: store)
+
+        viewModel.handlePreferredLanguageChange(
+            old: .english,
+            new: .japanese,
+            followsSystem: true
+        )
+
+        #expect(store.language == originalLanguage)
+        #expect(!viewModel.showRefreshInfoOnLanguageUpdateAlert)
+    }
+
+    @Test @MainActor
+    func testLibraryProfileSettingsViewModelFollowSystemChangeOnlyRequestsRefreshWhenEffectiveLanguageChanges() {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let viewModel = LibraryProfileSettingsViewModel(store: store)
+        let differentLanguage: Language = Language.current == .japanese ? .english : .japanese
+
+        viewModel.handleFollowsSystemLanguageChange(
+            old: false,
+            new: true,
+            preferredLanguage: .current
+        )
+
+        #expect(store.language == .current)
+        #expect(!viewModel.showRefreshInfoOnLanguageUpdateAlert)
+
+        viewModel.handleFollowsSystemLanguageChange(
+            old: true,
+            new: false,
+            preferredLanguage: differentLanguage
+        )
+
+        #expect(store.language == differentLanguage)
+        #expect(viewModel.showRefreshInfoOnLanguageUpdateAlert)
+    }
+
+    @Test @MainActor func testLibraryProfileSettingsViewModelFileImportSuccessRequestsRestoreConfirmation() throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let viewModel = LibraryProfileSettingsViewModel(store: store)
+        let backupURL = URL(filePath: NSTemporaryDirectory()).appending(path: "library.mallib")
+
+        viewModel.handleFileImport(.success(backupURL))
+
+        #expect(viewModel.restoreFileURL == backupURL)
+        #expect(viewModel.showRestoreConfirmation)
+    }
+
+    @Test @MainActor func testLibraryProfileSettingsViewModelFileImportFailureShowsRestoreError() {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let viewModel = LibraryProfileSettingsViewModel(store: store)
+        let error = NSError(domain: "AniShelfTests", code: 10)
+
+        viewModel.handleFileImport(.failure(error))
+
+        #expect(viewModel.showRestoreError)
+        #expect(viewModel.restoreError != nil)
+    }
+
+    @Test @MainActor func testLibraryProfileSettingsViewModelBackupExportReturnsShareItems() throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let viewModel = LibraryProfileSettingsViewModel(store: store)
+
+        let items = try #require(viewModel.prepareBackupExportItems())
+        let backupURL = try #require(items.first as? URL)
+
+        #expect(FileManager.default.fileExists(atPath: backupURL.path()))
+        #expect(!viewModel.showExportError)
+    }
+
+    @Test @MainActor func testLibraryProfileSettingsViewModelClearLibraryConfirmationRemovesEntries() throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        store.newEntryFromBasicInfo(
+            BasicInfo(
+                name: "Clear Me",
+                nameTranslations: [:],
+                overview: nil,
+                overviewTranslations: [:],
+                posterURL: nil,
+                backdropURL: nil,
+                logoURL: nil,
+                tmdbID: 100_001,
+                onAirDate: nil,
+                linkToDetails: nil,
+                type: .movie
+            )
+        )
+        try store.refreshLibrary()
+        #expect(store.library.count == 1)
+
+        let viewModel = LibraryProfileSettingsViewModel(store: store)
+        viewModel.requestClearLibrary()
+        #expect(viewModel.showClearAllAlert)
+
+        viewModel.confirmClearLibrary()
+        try store.refreshLibrary()
+
+        #expect(store.library.isEmpty)
+    }
+
     @Test @MainActor func testDeletionScrollTargetFallbacks() {
         let interaction = LibraryEntryInteractionState()
         let first = AnimeEntry(name: "First", type: .movie, tmdbID: 1)

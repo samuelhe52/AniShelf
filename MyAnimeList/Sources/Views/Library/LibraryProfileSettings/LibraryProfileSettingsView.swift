@@ -6,7 +6,6 @@
 //
 
 import DataProvider
-import Kingfisher
 import SwiftUI
 
 struct LibraryProfileSettingsView: View {
@@ -20,23 +19,13 @@ struct LibraryProfileSettingsView: View {
         Language.followsSystemPreference()
     @AppStorage(.useTMDbRelayServer) private var useTMDbRelayServer = true
 
-    @State private var changeAPIKey = false
-    @State private var showCacheAlert = false
-    @State private var showClearAllAlert = false
-    @State private var exportError: Error? = nil
-    @State private var showExportError = false
-    @State private var restoreError: Error? = nil
-    @State private var showRestoreError = false
-    @State private var showFileImporter = false
-    @State private var restoreFileURL: URL? = nil
-    @State private var showRestoreConfirmation = false
-    @State private var showRefreshInfoOnLanguageUpdateAlert = false
-    @State private var showRefreshInfoAlert = false
-    @State private var showTMDbRelayRestartAlert = false
-    @State private var showAboutSheet = false
-    @State private var cacheSizeResult: Result<UInt, KingfisherError>? = nil
-    @State private var appeared = false
-    @SceneStorage("LibraryProfileSettingsView.restoreCompleted") private var restoreCompleted = false
+    @State private var viewModel: LibraryProfileSettingsViewModel
+
+    init(store: LibraryStore, onDismiss: (() -> Void)? = nil) {
+        self.store = store
+        self.onDismiss = onDismiss
+        _viewModel = State(initialValue: LibraryProfileSettingsViewModel(store: store))
+    }
 
     private var stats: LibraryProfileStats {
         LibraryProfileStats(entries: store.library)
@@ -50,13 +39,13 @@ struct LibraryProfileSettingsView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         heroCard
-                            .profileReveal(index: 0, appeared: appeared, reduceMotion: reduceMotion)
+                            .profileReveal(index: 0, appeared: viewModel.appeared, reduceMotion: reduceMotion)
                         primaryStatsGrid
-                            .profileReveal(index: 1, appeared: appeared, reduceMotion: reduceMotion)
+                            .profileReveal(index: 1, appeared: viewModel.appeared, reduceMotion: reduceMotion)
                         libraryDetailsCard
-                            .profileReveal(index: 2, appeared: appeared, reduceMotion: reduceMotion)
+                            .profileReveal(index: 2, appeared: viewModel.appeared, reduceMotion: reduceMotion)
                         settingsCard
-                            .profileReveal(index: 3, appeared: appeared, reduceMotion: reduceMotion)
+                            .profileReveal(index: 3, appeared: viewModel.appeared, reduceMotion: reduceMotion)
                     }
                     .padding(.horizontal, 18)
                     .padding(.top, 16)
@@ -87,43 +76,35 @@ struct LibraryProfileSettingsView: View {
                 }
             }
             .onAppear {
-                store.language = effectiveLanguage
-                withAnimation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.86)) {
-                    appeared = true
-                }
+                viewModel.onAppear(effectiveLanguage: effectiveLanguage, reduceMotion: reduceMotion)
             }
             .onChange(of: preferredLanguage) { old, new in
-                guard old != new, !followsSystemLanguage else { return }
-                store.language = new
-                showRefreshInfoOnLanguageUpdateAlert = true
+                viewModel.handlePreferredLanguageChange(
+                    old: old,
+                    new: new,
+                    followsSystem: followsSystemLanguage
+                )
             }
             .onChange(of: followsSystemLanguage) { old, new in
-                guard old != new else { return }
-                let oldLanguage = resolvedLanguage(
-                    followsSystem: old,
+                viewModel.handleFollowsSystemLanguageChange(
+                    old: old,
+                    new: new,
                     preferredLanguage: preferredLanguage
                 )
-                let newLanguage = resolvedLanguage(
-                    followsSystem: new,
-                    preferredLanguage: preferredLanguage
-                )
-                store.language = new ? .current : preferredLanguage
-                guard oldLanguage != newLanguage else { return }
-                showRefreshInfoOnLanguageUpdateAlert = true
             }
         }
-        .alert("Delete all animes?", isPresented: $showClearAllAlert) {
+        .alert("Delete all animes?", isPresented: $viewModel.showClearAllAlert) {
             Button("Delete", role: .destructive) {
-                store.clearLibrary()
+                viewModel.confirmClearLibrary()
             }
             Button("Cancel", role: .cancel) {}
         }
         .alert(
             "Refresh Info Language?",
-            isPresented: $showRefreshInfoOnLanguageUpdateAlert
+            isPresented: $viewModel.showRefreshInfoOnLanguageUpdateAlert
         ) {
             Button("Refresh") {
-                store.refreshInfos()
+                viewModel.confirmRefreshInfos()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -136,24 +117,24 @@ struct LibraryProfileSettingsView: View {
         }
         .alert(
             "Refresh all anime infos?",
-            isPresented: $showRefreshInfoAlert
+            isPresented: $viewModel.showRefreshInfoAlert
         ) {
             Button("Refresh") {
-                store.refreshInfos()
+                viewModel.confirmRefreshInfos()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This may take considerable time.")
         }
-        .alert("TMDb Proxy Updated", isPresented: $showTMDbRelayRestartAlert) {
+        .alert("TMDb Proxy Updated", isPresented: $viewModel.showTMDbRelayRestartAlert) {
             Button("OK") {}
         } message: {
             Text("You might need to restart the app for this change to take effect.")
         }
         .alert(
             "Error exporting library",
-            isPresented: $showExportError,
-            presenting: exportError
+            isPresented: $viewModel.showExportError,
+            presenting: viewModel.exportError
         ) { _ in
             Button("Cancel", role: .cancel) {}
         } message: { error in
@@ -161,26 +142,26 @@ struct LibraryProfileSettingsView: View {
         }
         .alert(
             "Error restoring library",
-            isPresented: $showRestoreError,
-            presenting: restoreError
+            isPresented: $viewModel.showRestoreError,
+            presenting: viewModel.restoreError
         ) { _ in
             Button("Cancel", role: .cancel) {}
         } message: { error in
             Text(error.localizedDescription)
         }
-        .alert("Overwrite the current library?", isPresented: $showRestoreConfirmation) {
+        .alert("Overwrite the current library?", isPresented: $viewModel.showRestoreConfirmation) {
             Button("Cancel", role: .cancel) {}
-            Button("Confirm", role: .destructive, action: restore)
+            Button("Confirm", role: .destructive, action: viewModel.restoreSelectedBackup)
         } message: {
             Text("Please backup the current library before proceeding.")
         }
         .alert(
-            "Metadata Cache Size", isPresented: $showCacheAlert, presenting: cacheSizeResult,
+            "Metadata Cache Size", isPresented: $viewModel.showCacheAlert, presenting: viewModel.cacheSizeResult,
             actions: { result in
                 switch result {
                 case .success:
                     Button("Clear Cache") {
-                        KingfisherManager.shared.cache.clearCache()
+                        viewModel.clearMetadataCache()
                     }
                     Button("Cancel", role: .cancel) {}
                 case .failure:
@@ -197,16 +178,16 @@ struct LibraryProfileSettingsView: View {
             }
         )
         .fileImporter(
-            isPresented: $showFileImporter,
+            isPresented: $viewModel.showFileImporter,
             allowedContentTypes: [.mallib]
         ) { result in
-            processFileImport(result)
+            viewModel.handleFileImport(result)
         }
-        .sheet(isPresented: $changeAPIKey) {
+        .sheet(isPresented: $viewModel.changeAPIKey) {
             TMDbAPIConfigurator()
                 .presentationDetents([.fraction(0.65), .large])
         }
-        .sheet(isPresented: $showAboutSheet) {
+        .sheet(isPresented: $viewModel.showAboutSheet) {
             NavigationStack {
                 AboutAniShelfSheet()
             }
@@ -241,37 +222,19 @@ struct LibraryProfileSettingsView: View {
             autoPrefetchImagesOnAddAndRestore: $store.autoPrefetchImagesOnAddAndRestore,
             useTMDbRelayServer: $useTMDbRelayServer,
             preferredLanguage: $preferredLanguage,
-            restoreCompleted: restoreCompleted,
-            createBackupItems: makeBackupExportItems,
-            onRestore: {
-                restoreCompleted = false
-                showFileImporter = true
-            },
-            onChangeAPIKey: {
-                changeAPIKey = true
-            },
-            onCheckMetadataCacheSize: calculateCacheSize,
-            onRefreshInfos: {
-                showRefreshInfoAlert = true
-            },
-            onPrefetchImages: {
-                store.prefetchAllImages()
-            },
-            onShowAbout: {
-                showAboutSheet = true
-            },
-            onDeleteAllAnimes: {
-                showClearAllAlert = true
-            }
+            restoreCompleted: viewModel.restoreCompleted,
+            createBackupItems: viewModel.prepareBackupExportItems,
+            onRestore: viewModel.requestRestore,
+            onChangeAPIKey: viewModel.showAPIKeySheet,
+            onCheckMetadataCacheSize: viewModel.calculateCacheSize,
+            onRefreshInfos: viewModel.requestRefreshInfos,
+            onPrefetchImages: viewModel.prefetchImages,
+            onShowAbout: viewModel.showAbout,
+            onDeleteAllAnimes: viewModel.requestClearLibrary
         )
         .animation(languagePickerAnimation, value: followsSystemLanguage)
         .onChange(of: useTMDbRelayServer) { old, new in
-            guard old != new else { return }
-            NotificationCenter.default.post(
-                name: .tmdbAPIConfigurationDidChange,
-                object: nil
-            )
-            showTMDbRelayRestartAlert = true
+            viewModel.handleTMDbRelayServerChange(old: old, new: new)
         }
     }
 
@@ -292,75 +255,6 @@ struct LibraryProfileSettingsView: View {
 
     private var effectiveLanguage: Language {
         followsSystemLanguage ? .current : preferredLanguage
-    }
-
-    private func resolvedLanguage(followsSystem: Bool, preferredLanguage: Language) -> Language {
-        followsSystem ? .current : preferredLanguage
-    }
-
-    private func makeBackupExportItems() -> [Any]? {
-        do {
-            let url = try store.backupManager.createBackup()
-            return [url]
-        } catch {
-            presentExportError(error)
-            return nil
-        }
-    }
-
-    private func calculateCacheSize() {
-        KingfisherManager.shared.cache.calculateDiskStorageSize { result in
-            DispatchQueue.main.async {
-                cacheSizeResult = result
-                showCacheAlert = true
-            }
-        }
-    }
-
-    private func processFileImport(_ result: Result<URL, Error>) {
-        switch result {
-        case .success(let url):
-            restoreFileURL = url
-            showRestoreConfirmation = true
-        case .failure(let error):
-            presentRestoreError(error)
-        }
-    }
-
-    private func presentExportError(_ error: Error) {
-        exportError = error
-        showExportError = true
-    }
-
-    private func presentRestoreError(_ error: Error) {
-        restoreError = error
-        showRestoreError = true
-    }
-
-    private func restore() {
-        restoreCompleted = false
-        guard let url = restoreFileURL else { return }
-        do {
-            guard url.startAccessingSecurityScopedResource() else {
-                throw NSError(
-                    domain: .bundleIdentifier,
-                    code: 1,
-                    userInfo: [url.path(): "Access denied to URL"]
-                )
-            }
-            defer { url.stopAccessingSecurityScopedResource() }
-            try store.backupManager.restoreBackup(from: url)
-            store.reloadPersistedPreferences()
-            try store.refreshLibrary()
-            if store.autoPrefetchImagesOnAddAndRestore {
-                store.prefetchAllImages()
-            }
-            withAnimation {
-                restoreCompleted = true
-            }
-        } catch {
-            presentRestoreError(error)
-        }
     }
 
     private var profileTitleResource: LocalizedStringResource {

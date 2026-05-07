@@ -13,6 +13,12 @@ DEVICE_PROCESS_LAUNCH_ARGS ?=
 build:
 	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination 'generic/platform=iOS' build
 
+.PHONY: test
+test:
+	@[ -n "$(CONNECTED_IOS_DEVICE_ID)" ] || { echo "No connected iPhone found."; exit 1; }
+	@echo "Using device $(CONNECTED_IOS_DEVICE_ID)"
+	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "id=$(CONNECTED_IOS_DEVICE_ID)" test -only-testing:MyAnimeListTests
+
 .PHONY: clean
 clean:
 	xcodebuild clean -project MyAnimeList.xcodeproj -scheme MyAnimeList
