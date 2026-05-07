@@ -185,7 +185,6 @@ extension LibraryEntryInteractionState {
         savePosterButton(for: entry)
         userInfoMenu(for: entry)
         deleteButton(for: entry, store: store)
-
     }
 }
 

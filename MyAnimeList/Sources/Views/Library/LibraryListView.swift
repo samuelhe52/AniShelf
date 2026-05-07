@@ -22,7 +22,10 @@ struct LibraryListView: View {
                 AnimeEntryListRow(
                     entry: entry,
                     onSelect: { scrolledID = entry.tmdbID },
-                    onOpenDetails: { interaction.detailingEntry = entry }
+                    onOpenDetails: {
+                        scrolledID = entry.tmdbID
+                        interaction.detailingEntry = entry 
+                    }
                 )
                 .highlightEffect(
                     showHighlight: interaction.highlightBinding(
