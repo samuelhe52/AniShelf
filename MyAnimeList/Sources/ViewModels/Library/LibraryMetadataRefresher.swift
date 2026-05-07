@@ -3,7 +3,7 @@ import Foundation
 import SwiftUI
 
 @MainActor
-final class LibraryMetadataRefreshController {
+final class LibraryMetadataRefresher {
     private struct LatestInfoFailure {
         let tmdbID: Int
         let name: String
@@ -93,7 +93,7 @@ final class LibraryMetadataRefreshController {
         }
     }
 
-    func chunkedEntries(_ entries: [AnimeEntry], chunkSize: Int) -> [ArraySlice<AnimeEntry>] {
+    private func chunkedEntries(_ entries: [AnimeEntry], chunkSize: Int) -> [ArraySlice<AnimeEntry>] {
         var chunks: [ArraySlice<AnimeEntry>] = []
         var currentIndex = entries.startIndex
 
@@ -168,7 +168,7 @@ final class LibraryMetadataRefreshController {
         }
     }
 
-    func fetchLatestInfo(
+    private func fetchLatestInfo(
         tmdbID: Int,
         entryType: AnimeType,
         originalPosterURL: URL?,
@@ -187,7 +187,11 @@ final class LibraryMetadataRefreshController {
         return (tmdbID, resolvedInfo, payload.1)
     }
 
-    func resolveParentSeriesEntry(for entry: AnimeEntry, fetcher: InfoFetcher, language: Language) async {
+    private func resolveParentSeriesEntry(
+        for entry: AnimeEntry,
+        fetcher: InfoFetcher,
+        language: Language
+    ) async {
         guard let parentSeriesID = entry.parentSeriesID else { return }
 
         if entry.parentSeriesEntry?.tmdbID == parentSeriesID {
@@ -213,46 +217,5 @@ final class LibraryMetadataRefreshController {
                 "Failed to resolve parent series \(parentSeriesID, privacy: .public) for entry \(entry.tmdbID, privacy: .public): \(error.localizedDescription)"
             )
         }
-    }
-}
-
-extension LibraryStore {
-    func chunkedLibraryEntries(chunkSize: Int) -> [ArraySlice<AnimeEntry>] {
-        metadataRefreshController.chunkedEntries(library, chunkSize: chunkSize)
-    }
-
-    func refreshInfos() {
-        metadataRefreshController.refreshInfos(
-            for: library,
-            fetcher: infoFetcher,
-            language: language,
-            prefetchAllImages: { [imageCacheController] entries in
-                imageCacheController.prefetchImages(for: entries)
-            }
-        )
-    }
-
-    func fetchLatestInfo(
-        tmdbID: Int,
-        entryType: AnimeType,
-        originalPosterURL: URL?,
-        usingCustomPoster: Bool
-    ) async throws -> (Int, BasicInfo, AnimeEntryDetail) {
-        try await metadataRefreshController.fetchLatestInfo(
-            tmdbID: tmdbID,
-            entryType: entryType,
-            originalPosterURL: originalPosterURL,
-            usingCustomPoster: usingCustomPoster,
-            fetcher: infoFetcher,
-            language: language
-        )
-    }
-
-    func resolveParentSeriesEntry(for entry: AnimeEntry) async {
-        await metadataRefreshController.resolveParentSeriesEntry(
-            for: entry,
-            fetcher: infoFetcher,
-            language: language
-        )
     }
 }

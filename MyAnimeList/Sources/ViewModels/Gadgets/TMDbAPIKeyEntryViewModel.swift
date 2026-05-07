@@ -1,5 +1,5 @@
 //
-//  TMDbAPIKeyEntryController.swift
+//  TMDbAPIKeyEntryViewModel.swift
 //  MyAnimeList
 //
 //  Created by OpenAI Codex on 2026/5/7.
@@ -15,7 +15,7 @@ enum TMDbAPIKeyCheckStatus {
 }
 
 @Observable @MainActor
-final class TMDbAPIKeyEntryController {
+final class TMDbAPIKeyEntryViewModel {
     var apiKeyInput: String = "" {
         didSet {
             guard apiKeyInput != oldValue else { return }

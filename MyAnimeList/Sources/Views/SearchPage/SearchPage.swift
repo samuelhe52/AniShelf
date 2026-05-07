@@ -26,13 +26,15 @@ struct SearchPage: View {
     @AppStorage(.searchPageQuery) private var query: String = ""
     @AppStorage(.searchTMDbLanguage) private var tmdbLanguage: Language = .english
 
-    // View models owned by SearchPage
-    @State private var tmdbSearchService: TMDbSearchService
-    @State private var librarySearchService: LibrarySearchService
-
     // Callbacks for TMDb search interactions
     private let onDuplicateTapped: (Int) -> Void
     private let checkDuplicate: (Int) -> Bool
+    private let processTMDbSearchResults: (OrderedSet<SearchResult>) -> Void
+    private let jumpToEntryInLibrary: (Int) -> Void
+
+    // View models owned by SearchPage
+    @State private var tmdbSearchService = TMDbSearchService()
+    @State private var librarySearchService = LibrarySearchService()
 
     init(
         onDuplicateTapped: @escaping (_ tappedID: Int) -> Void,
@@ -42,16 +44,8 @@ struct SearchPage: View {
     ) {
         self.onDuplicateTapped = onDuplicateTapped
         self.checkDuplicate = checkDuplicate
-
-        // Initialize view models
-        self._tmdbSearchService = State(
-            initialValue: TMDbSearchService(
-                processResults: processTMDbSearchResults
-            ))
-        self._librarySearchService = State(
-            initialValue: LibrarySearchService(
-                jumpToEntryInLibrary: jumpToEntryInLibrary
-            ))
+        self.processTMDbSearchResults = processTMDbSearchResults
+        self.jumpToEntryInLibrary = jumpToEntryInLibrary
     }
 
     var body: some View {
@@ -102,6 +96,7 @@ struct SearchPage: View {
             performSearch()
         }
         .onAppear {
+            configureSearchServices()
             guard !query.isEmpty else { return }
             performSearch()
         }
@@ -127,6 +122,11 @@ struct SearchPage: View {
         case .library:
             librarySearchService.updateResults(query: query)
         }
+    }
+
+    private func configureSearchServices() {
+        tmdbSearchService.processResults = processTMDbSearchResults
+        librarySearchService.jumpToEntryInLibrary = jumpToEntryInLibrary
     }
 }
 

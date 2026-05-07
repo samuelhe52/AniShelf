@@ -4,7 +4,7 @@ import Kingfisher
 import SwiftUI
 
 @MainActor
-final class LibraryImageCacheController {
+final class LibraryImageCacheService {
     func prefetchImages<C: Collection>(for entries: C)
     where C.Element == AnimeEntry {
         let urls = Array(Set(imageURLs(for: entries)))

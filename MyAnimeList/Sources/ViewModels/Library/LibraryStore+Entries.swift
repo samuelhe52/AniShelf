@@ -89,10 +89,11 @@ extension LibraryStore {
 
     @discardableResult
     func deleteEntry(_ entry: AnimeEntry) -> Bool {
-        let cachedImageURLs = imageCacheController.relatedImageURLs(for: entry)
+        let imageCacheService = LibraryImageCacheService()
+        let cachedImageURLs = imageCacheService.relatedImageURLs(for: entry)
         do {
             try repository.deleteEntry(entry)
-            imageCacheController.removeCachedImages(for: cachedImageURLs)
+            imageCacheService.removeCachedImages(for: cachedImageURLs)
             return true
         } catch {
             libraryStoreLogger.error("Failed to delete entry: \(error)")
@@ -101,24 +102,10 @@ extension LibraryStore {
         }
     }
 
-    func clearLibrary() {
-        let cachedImageURLs = Set(library.flatMap { imageCacheController.relatedImageURLs(for: $0) })
-        do {
-            try repository.clearLibrary()
-            imageCacheController.removeCachedImages(for: cachedImageURLs)
-        } catch {
-            libraryStoreLogger.error("Error clearing library: \(error)")
-            ToastCenter.global.completionState = .failed(message: error.localizedDescription)
-        }
-    }
-
-    func prefetchAllImages() {
-        imageCacheController.prefetchImages(for: library)
-    }
-
     func prefetchImagesForDefaultBehavior<C: Collection>(_ entries: C)
     where C.Element == AnimeEntry {
         guard autoPrefetchImagesOnAddAndRestore else { return }
-        imageCacheController.prefetchImages(for: entries)
+        let imageCacheService = LibraryImageCacheService()
+        imageCacheService.prefetchImages(for: entries)
     }
 }

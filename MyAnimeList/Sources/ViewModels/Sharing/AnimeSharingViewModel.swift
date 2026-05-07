@@ -1,5 +1,5 @@
 //
-//  AnimeSharingController.swift
+//  AnimeSharingViewModel.swift
 //  MyAnimeList
 //
 //  Created by Samuel He on 2025/11/22.
@@ -10,10 +10,10 @@ import Foundation
 import Observation
 import SwiftUI
 
-/// Observable controller that prepares localized poster previews and
+/// Observable view model that prepares localized poster previews and
 /// manages cached renders for the sharing sheet.
 @MainActor @Observable
-final class AnimeSharingController {
+final class AnimeSharingViewModel {
     /// Target width (points) used for both preview and exported posters.
     static let previewCardWidth: CGFloat = 360
 
@@ -41,7 +41,7 @@ final class AnimeSharingController {
     private(set) var renderedImageURL: URL?
     private(set) var loadedImage: UIImage?
     /// Aspect ratio applied to previews and exports, sourced from renderer output.
-    private(set) var posterAspectRatio: CGFloat = AnimeSharingController.defaultAspectRatio
+    private(set) var posterAspectRatio: CGFloat = AnimeSharingViewModel.defaultAspectRatio
 
     private var translations: [Language: String]
 
@@ -83,20 +83,20 @@ final class AnimeSharingController {
     @ObservationIgnored private var preferredLanguage: Language
     @ObservationIgnored private let renderer: SharingCardRenderer
 
-    /// Creates a controller scoped to the provided entry, optionally forcing a
+    /// Creates a view model scoped to the provided entry, optionally forcing a
     /// specific default language for the generated metadata.
     init(entry: AnimeEntry, defaultLanguage: Language = .english) {
         self.entry = entry.parentSeriesEntry ?? entry
         self.selectedPosterURL = self.entry.posterURL
         self.selectedLanguage = defaultLanguage
         self.preferredLanguage = defaultLanguage
-        self.translations = AnimeSharingController.buildTranslations(from: self.entry)
+        self.translations = AnimeSharingViewModel.buildTranslations(from: self.entry)
         self.renderer = SharingCardRenderer(
-            baseWidth: AnimeSharingController.previewCardWidth,
-            jpegQuality: AnimeSharingController.jpegQuality,
-            defaultAspectRatio: AnimeSharingController.defaultAspectRatio,
-            minAspectRatio: AnimeSharingController.minAspectRatio,
-            maxAspectRatio: AnimeSharingController.maxAspectRatio
+            baseWidth: AnimeSharingViewModel.previewCardWidth,
+            jpegQuality: AnimeSharingViewModel.jpegQuality,
+            defaultAspectRatio: AnimeSharingViewModel.defaultAspectRatio,
+            minAspectRatio: AnimeSharingViewModel.minAspectRatio,
+            maxAspectRatio: AnimeSharingViewModel.maxAspectRatio
         )
         applyPreferredLanguage(defaultLanguage, respectingCurrentSelection: false)
     }
@@ -154,7 +154,7 @@ final class AnimeSharingController {
         renderer.cleanup()
         renderedImageURL = nil
         loadedImage = nil
-        posterAspectRatio = AnimeSharingController.defaultAspectRatio
+        posterAspectRatio = AnimeSharingViewModel.defaultAspectRatio
     }
 
     /// Builds a stable filename so repeat renders overwrite earlier versions
@@ -206,7 +206,7 @@ final class AnimeSharingController {
     /// Formats the entry's air date into a four-digit year, when available.
     private func releaseYearText() -> String? {
         guard let date = entry.onAirDate else { return nil }
-        return AnimeSharingController.yearFormatter.string(from: date)
+        return AnimeSharingViewModel.yearFormatter.string(from: date)
     }
 
     /// Human-readable label for whether the entry is a movie, series, or season.

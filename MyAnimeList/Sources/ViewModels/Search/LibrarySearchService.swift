@@ -18,7 +18,7 @@ fileprivate let logger = Logger(subsystem: .bundleIdentifier, category: "Library
 class LibrarySearchService {
     private let dataProvider = DataProvider.default
     private var entries: [AnimeEntry] = []
-    private(set) var jumpToEntryInLibrary: (Int) -> Void
+    var jumpToEntryInLibrary: (Int) -> Void
 
     private(set) var results: [AnimeEntry] = []
     private(set) var status: Status = .loaded

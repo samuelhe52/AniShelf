@@ -9,7 +9,7 @@ import DataProvider
 import SwiftUI
 
 struct LibraryGridView: View {
-    let store: LibraryStore
+    @Environment(LibraryStore.self) private var store
     @Environment(\.toggleFavorite) var toggleFavorite
     @Environment(LibraryEntryInteractionState.self) var interaction
     @Binding var scrolledID: Int?
@@ -158,13 +158,15 @@ fileprivate struct LibraryGridItem: View {
 }
 
 #Preview {
+    @Previewable let store = LibraryStore(dataProvider: .forPreview)
+
     LibraryGridView(
-        store: LibraryStore(dataProvider: .forPreview),
         scrolledID: .constant(nil),
         highlightedEntryID: .constant(nil)
     )
     .onAppear {
         DataProvider.forPreview.generateEntriesForPreview()
     }
+    .environment(store)
     .environment(\.dataHandler, DataProvider.forPreview.dataHandler)
 }

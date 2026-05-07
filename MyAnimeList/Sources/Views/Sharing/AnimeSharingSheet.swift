@@ -9,7 +9,7 @@ import DataProvider
 import SwiftUI
 
 struct AnimeSharingSheet: View {
-    @State private var controller: AnimeSharingController
+    @State private var viewModel: AnimeSharingViewModel
     @Environment(\.dismiss) private var dismiss
     @AppStorage(.preferredAnimeInfoLanguage) private var defaultLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
@@ -18,7 +18,7 @@ struct AnimeSharingSheet: View {
     @State private var showPosterSelection = false
 
     init(entry: AnimeEntry) {
-        _controller = State(initialValue: AnimeSharingController(entry: entry))
+        _viewModel = State(initialValue: AnimeSharingViewModel(entry: entry))
     }
 
     var body: some View {
@@ -26,18 +26,18 @@ struct AnimeSharingSheet: View {
             ScrollView {
                 VStack(spacing: 24) {
                     AnimeSharingPreviewSection(
-                        title: controller.currentTitle,
-                        subtitle: controller.previewSubtitle,
-                        detail: controller.previewDetailLine,
-                        aspectRatio: controller.previewAspectRatio,
-                        image: controller.loadedImage,
-                        animationTrigger: controller.selectedLanguage
+                        title: viewModel.currentTitle,
+                        subtitle: viewModel.previewSubtitle,
+                        detail: viewModel.previewDetailLine,
+                        aspectRatio: viewModel.previewAspectRatio,
+                        image: viewModel.loadedImage,
+                        animationTrigger: viewModel.selectedLanguage
                     )
 
                     AnimeSharingControlsSection(
-                        availableLanguages: controller.availableLanguages,
-                        selectedLanguage: $controller.selectedLanguage,
-                        canSelectLanguage: controller.canSelectLanguage,
+                        availableLanguages: viewModel.availableLanguages,
+                        selectedLanguage: $viewModel.selectedLanguage,
+                        canSelectLanguage: viewModel.canSelectLanguage,
                         onChangePoster: { showPosterSelection = true }
                     )
                 }
@@ -57,7 +57,7 @@ struct AnimeSharingSheet: View {
                 }
 
                 ToolbarItem(placement: .primaryAction) {
-                    if let url = controller.renderedImageURL {
+                    if let url = viewModel.renderedImageURL {
                         ShareLink(item: url) {
                             Image(systemName: "square.and.arrow.up")
                         }
@@ -71,34 +71,34 @@ struct AnimeSharingSheet: View {
             .fullScreenCover(isPresented: $showPosterSelection) {
                 NavigationStack {
                     PosterSelectionView(
-                        tmdbID: controller.entry.tmdbID,
-                        type: controller.entry.type,
+                        tmdbID: viewModel.entry.tmdbID,
+                        type: viewModel.entry.type,
                         onPosterSelected: { url in
-                            controller.updateSelectedPosterURL(url)
+                            viewModel.updateSelectedPosterURL(url)
                         }
                     )
                     .navigationTitle("Change Poster")
                 }
             }
-            .task(id: controller.renderTrigger) {
-                let trigger = controller.renderTrigger
-                await controller.processRenderRequest(for: trigger)
+            .task(id: viewModel.renderTrigger) {
+                let trigger = viewModel.renderTrigger
+                await viewModel.processRenderRequest(for: trigger)
             }
             .onAppear {
-                controller.applyPreferredLanguage(
+                viewModel.applyPreferredLanguage(
                     followsSystemLanguage ? .current : defaultLanguage,
                     respectingCurrentSelection: false
                 )
             }
             .onDisappear {
-                controller.cleanupRenderedFiles()
+                viewModel.cleanupRenderedFiles()
             }
             .onChange(of: defaultLanguage, initial: false) { _, newValue in
                 guard !followsSystemLanguage else { return }
-                controller.applyPreferredLanguage(newValue, respectingCurrentSelection: true)
+                viewModel.applyPreferredLanguage(newValue, respectingCurrentSelection: true)
             }
             .onChange(of: followsSystemLanguage, initial: false) { _, newValue in
-                controller.applyPreferredLanguage(
+                viewModel.applyPreferredLanguage(
                     newValue ? .current : defaultLanguage,
                     respectingCurrentSelection: true
                 )

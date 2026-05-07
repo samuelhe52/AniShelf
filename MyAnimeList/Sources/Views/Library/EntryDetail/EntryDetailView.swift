@@ -15,7 +15,7 @@ struct EntryDetailView: View {
 
     @Environment(\.dataHandler) private var dataHandler
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.libraryStore) private var libraryStore
+    @Environment(LibraryStore.self) private var libraryStore
     @Environment(\.modelContext) private var modelContext
 
     @State private var model = EntryDetailViewModel()
@@ -32,7 +32,7 @@ struct EntryDetailView: View {
     @State private var didAutoScrollToEditingSection = false
 
     private var accentColor: Color { entry.favorite ? .orange : .blue }
-    private var currentLanguage: Language { libraryStore?.language ?? .current }
+    private var currentLanguage: Language { libraryStore.language }
     private let heroHeight: CGFloat = 420
 
     init(entry: AnimeEntry, startInEditingMode: Bool = false) {
@@ -601,14 +601,13 @@ struct EntryDetailView: View {
     private var hasSiblingSeasonEntry: Bool {
         guard case .season(_, let parentSeriesID) = entry.type else { return false }
 
-        let visibleSiblingExists =
-            libraryStore?.libraryOnDisplay.contains { candidate in
-                guard candidate.id != entry.id else { return false }
-                guard case .season(_, let candidateParentSeriesID) = candidate.type else {
-                    return false
-                }
-                return candidateParentSeriesID == parentSeriesID
-            } ?? false
+        let visibleSiblingExists = libraryStore.libraryOnDisplay.contains { candidate in
+            guard candidate.id != entry.id else { return false }
+            guard case .season(_, let candidateParentSeriesID) = candidate.type else {
+                return false
+            }
+            return candidateParentSeriesID == parentSeriesID
+        }
 
         if visibleSiblingExists {
             return true
@@ -637,14 +636,17 @@ struct EntryDetailView: View {
     }
 
     private func convertSeasonToSeries() async {
-        guard let store = libraryStore else {
-            ToastCenter.global.completionState = .failed("Library is unavailable")
-            return
-        }
         guard case .season(_, _) = entry.type else { return }
         conversionInProgress = true
         do {
-            try await store.convertSeasonToSeries(entry, language: currentLanguage)
+            let converter = LibraryEntryConverter(
+                repository: libraryStore.repository
+            )
+            try await converter.convertSeasonToSeries(
+                entry,
+                language: currentLanguage,
+                fetcher: libraryStore.infoFetcher
+            )
             ToastCenter.global.completionState = .completed("Converted to series")
             dismiss()
         } catch {
@@ -654,16 +656,16 @@ struct EntryDetailView: View {
     }
 
     private func convertSeriesToSeason(seasonNumber: Int) async {
-        guard let store = libraryStore else {
-            ToastCenter.global.completionState = .failed("Library is unavailable")
-            return
-        }
         conversionInProgress = true
         do {
-            try await store.convertSeriesToSeason(
+            let converter = LibraryEntryConverter(
+                repository: libraryStore.repository
+            )
+            try await converter.convertSeriesToSeason(
                 entry,
                 seasonNumber: seasonNumber,
-                language: currentLanguage
+                language: currentLanguage,
+                fetcher: libraryStore.infoFetcher
             )
             ToastCenter.global.completionState = .completed("Converted to season")
             dismiss()
@@ -688,7 +690,7 @@ fileprivate struct EntryDetailPreviewHost: View {
             .sheet(isPresented: $showDetail) {
                 NavigationStack {
                     EntryDetailView(entry: .yourName)
-                        .environment(\.libraryStore, previewStore)
+                        .environment(previewStore)
                         .environment(\.dataHandler, DataProvider.forPreview.dataHandler)
                 }
             }

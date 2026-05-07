@@ -9,7 +9,7 @@ import DataProvider
 import SwiftUI
 
 struct LibraryListView: View {
-    let store: LibraryStore
+    @Environment(LibraryStore.self) private var store
     @Environment(LibraryEntryInteractionState.self) var interaction
     @Environment(\.toggleFavorite) var toggleFavorite
 

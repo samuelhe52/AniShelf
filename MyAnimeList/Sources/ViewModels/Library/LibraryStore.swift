@@ -18,12 +18,9 @@ let libraryStoreLogger = Logger(subsystem: .bundleIdentifier, category: "Library
 class LibraryStore {
     // MARK: - Dependencies
 
+    @ObservationIgnored let dataProvider: DataProvider
     @ObservationIgnored let repository: LibraryRepository
     @ObservationIgnored let preferences: LibraryPreferences
-    @ObservationIgnored let imageCacheController: LibraryImageCacheController
-    @ObservationIgnored let metadataRefreshController: LibraryMetadataRefreshController
-    @ObservationIgnored let conversionController: LibraryEntryConversionController
-    @ObservationIgnored private let backupManager: BackupManager
     @ObservationIgnored private var cancellables = Set<AnyCancellable>()
 
     // MARK: - State
@@ -85,13 +82,10 @@ class LibraryStore {
     }
 
     init(dataProvider: DataProvider) {
+        self.dataProvider = dataProvider
         self.repository = LibraryRepository(dataProvider: dataProvider)
         self.preferences = LibraryPreferences()
-        self.imageCacheController = LibraryImageCacheController()
         self.infoFetcher = .init()
-        self.backupManager = BackupManager(dataProvider: dataProvider)
-        self.metadataRefreshController = LibraryMetadataRefreshController(repository: repository)
-        self.conversionController = LibraryEntryConversionController(repository: repository)
         self.library = []
         reloadPersistedPreferences()
         setupUpdateLibrary()
@@ -153,21 +147,6 @@ class LibraryStore {
                 self?.infoFetcher = .init()
             }
             .store(in: &cancellables)
-    }
-
-    // MARK: - Backup
-
-    func createBackup() throws -> URL {
-        try backupManager.createBackup()
-    }
-
-    func restoreBackup(from url: URL) throws {
-        try backupManager.restoreBackup(from: url)
-        reloadPersistedPreferences()
-        try refreshLibrary()
-        if autoPrefetchImagesOnAddAndRestore {
-            prefetchAllImages()
-        }
     }
 
     // MARK: - Shared Helpers

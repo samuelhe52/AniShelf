@@ -245,7 +245,7 @@ struct MyAnimeListTests {
             ]
         )
 
-        let urls = LibraryImageCacheController().relatedImageURLs(for: entry)
+        let urls = LibraryImageCacheService().relatedImageURLs(for: entry)
 
         #expect(
             urls
@@ -261,94 +261,16 @@ struct MyAnimeListTests {
         )
     }
 
-    @Test @MainActor func testLibraryProfileSettingsViewModelPreferredLanguageChangeRequestsRefresh() {
+    @Test @MainActor func testLibraryProfileSettingsActionsCreateBackupReturnsArchive() throws {
         let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
-        let viewModel = LibraryProfileSettingsViewModel(store: store)
+        let actions = LibraryProfileSettingsActions(store: store)
 
-        viewModel.handlePreferredLanguageChange(
-            old: .english,
-            new: .japanese,
-            followsSystem: false
-        )
-
-        #expect(store.language == .japanese)
-        #expect(viewModel.showRefreshInfoOnLanguageUpdateAlert)
-    }
-
-    @Test @MainActor func testLibraryProfileSettingsViewModelPreferredLanguageIgnoresSystemFollow() {
-        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
-        let originalLanguage = store.language
-        let viewModel = LibraryProfileSettingsViewModel(store: store)
-
-        viewModel.handlePreferredLanguageChange(
-            old: .english,
-            new: .japanese,
-            followsSystem: true
-        )
-
-        #expect(store.language == originalLanguage)
-        #expect(!viewModel.showRefreshInfoOnLanguageUpdateAlert)
-    }
-
-    @Test @MainActor
-    func testLibraryProfileSettingsViewModelFollowSystemChangeOnlyRequestsRefreshWhenEffectiveLanguageChanges() {
-        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
-        let viewModel = LibraryProfileSettingsViewModel(store: store)
-        let differentLanguage: Language = Language.current == .japanese ? .english : .japanese
-
-        viewModel.handleFollowsSystemLanguageChange(
-            old: false,
-            new: true,
-            preferredLanguage: .current
-        )
-
-        #expect(store.language == .current)
-        #expect(!viewModel.showRefreshInfoOnLanguageUpdateAlert)
-
-        viewModel.handleFollowsSystemLanguageChange(
-            old: true,
-            new: false,
-            preferredLanguage: differentLanguage
-        )
-
-        #expect(store.language == differentLanguage)
-        #expect(viewModel.showRefreshInfoOnLanguageUpdateAlert)
-    }
-
-    @Test @MainActor func testLibraryProfileSettingsViewModelFileImportSuccessRequestsRestoreConfirmation() throws {
-        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
-        let viewModel = LibraryProfileSettingsViewModel(store: store)
-        let backupURL = URL(filePath: NSTemporaryDirectory()).appending(path: "library.mallib")
-
-        viewModel.handleFileImport(.success(backupURL))
-
-        #expect(viewModel.restoreFileURL == backupURL)
-        #expect(viewModel.showRestoreConfirmation)
-    }
-
-    @Test @MainActor func testLibraryProfileSettingsViewModelFileImportFailureShowsRestoreError() {
-        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
-        let viewModel = LibraryProfileSettingsViewModel(store: store)
-        let error = NSError(domain: "AniShelfTests", code: 10)
-
-        viewModel.handleFileImport(.failure(error))
-
-        #expect(viewModel.showRestoreError)
-        #expect(viewModel.restoreError != nil)
-    }
-
-    @Test @MainActor func testLibraryProfileSettingsViewModelBackupExportReturnsShareItems() throws {
-        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
-        let viewModel = LibraryProfileSettingsViewModel(store: store)
-
-        let items = try #require(viewModel.prepareBackupExportItems())
-        let backupURL = try #require(items.first as? URL)
+        let backupURL = try actions.createBackup()
 
         #expect(FileManager.default.fileExists(atPath: backupURL.path()))
-        #expect(!viewModel.showExportError)
     }
 
-    @Test @MainActor func testLibraryProfileSettingsViewModelClearLibraryConfirmationRemovesEntries() throws {
+    @Test @MainActor func testLibraryProfileSettingsActionsClearLibraryRemovesEntries() throws {
         let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
         store.newEntryFromBasicInfo(
             BasicInfo(
@@ -368,11 +290,8 @@ struct MyAnimeListTests {
         try store.refreshLibrary()
         #expect(store.library.count == 1)
 
-        let viewModel = LibraryProfileSettingsViewModel(store: store)
-        viewModel.requestClearLibrary()
-        #expect(viewModel.showClearAllAlert)
-
-        viewModel.confirmClearLibrary()
+        let actions = LibraryProfileSettingsActions(store: store)
+        actions.clearLibrary()
         try store.refreshLibrary()
 
         #expect(store.library.isEmpty)

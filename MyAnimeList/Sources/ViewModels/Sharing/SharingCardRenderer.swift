@@ -14,7 +14,7 @@ struct SharingCardRenderOutcome {
     let aspectRatio: CGFloat
 }
 
-/// Handles poster loading, caching, and export so the controller stays lean.
+/// Handles poster loading, caching, and export so the view model stays lean.
 @MainActor
 final class SharingCardRenderer {
     private let pipeline: SharingCardExportPipeline

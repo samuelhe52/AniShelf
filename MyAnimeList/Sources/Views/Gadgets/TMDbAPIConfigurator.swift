@@ -10,10 +10,10 @@ import SwiftUI
 struct TMDbAPIConfigurator: View {
     @Environment(TMDbAPIKeyStorage.self) private var keyStorage
 
-    @State private var keyEntryController = TMDbAPIKeyEntryController()
+    @State private var keyEntryViewModel = TMDbAPIKeyEntryViewModel()
 
     var body: some View {
-        @Bindable var keyEntryController = keyEntryController
+        @Bindable var keyEntryViewModel = keyEntryViewModel
 
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -21,7 +21,7 @@ struct TMDbAPIConfigurator: View {
 
                 TMDbSetupPanel {
                     TMDbAPIKeyEntryCard(
-                        apiKey: $keyEntryController.apiKeyInput,
+                        apiKey: $keyEntryViewModel.apiKeyInput,
                         mode: .settings,
                         autoFocus: true,
                         showsValidateButton: false,
@@ -39,10 +39,10 @@ struct TMDbAPIConfigurator: View {
         .safeAreaInset(edge: .bottom) {
             TMDbProminentButton(
                 title: confirmButtonTitleResource,
-                systemImage: keyEntryController.checking ? "hourglass" : "checkmark.circle.fill",
+                systemImage: keyEntryViewModel.checking ? "hourglass" : "checkmark.circle.fill",
                 iconPlacement: .leading,
-                isEnabled: !keyEntryController.isFieldEmpty && !keyEntryController.checking,
-                validationStatus: keyEntryController.status,
+                isEnabled: !keyEntryViewModel.isFieldEmpty && !keyEntryViewModel.checking,
+                validationStatus: keyEntryViewModel.status,
                 action: validateKey
             )
             .padding(.horizontal, 20)
@@ -51,9 +51,9 @@ struct TMDbAPIConfigurator: View {
         }
         .scrollBounceBehavior(.basedOnSize)
         .onAppear {
-            keyEntryController.loadCurrentKey(from: keyStorage)
+            keyEntryViewModel.loadCurrentKey(from: keyStorage)
         }
-        .sensoryFeedback(trigger: keyEntryController.status) { _, new in
+        .sensoryFeedback(trigger: keyEntryViewModel.status) { _, new in
             switch new {
             case .invalid: .error
             case .valid: .success
@@ -63,11 +63,11 @@ struct TMDbAPIConfigurator: View {
     }
 
     private var confirmButtonTitleResource: LocalizedStringResource {
-        keyEntryController.checking ? "Checking..." : "Save API Key"
+        keyEntryViewModel.checking ? "Checking..." : "Save API Key"
     }
 
     private func validateKey() {
-        keyEntryController.validate(using: keyStorage)
+        keyEntryViewModel.validate(using: keyStorage)
     }
 }
 

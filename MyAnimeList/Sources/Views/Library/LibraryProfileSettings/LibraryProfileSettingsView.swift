@@ -6,12 +6,13 @@
 //
 
 import DataProvider
+import Kingfisher
 import SwiftUI
 
 struct LibraryProfileSettingsView: View {
-    @Bindable var store: LibraryStore
     var onDismiss: (() -> Void)? = nil
 
+    @Environment(LibraryStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
@@ -19,16 +20,34 @@ struct LibraryProfileSettingsView: View {
         Language.followsSystemPreference()
     @AppStorage(.useTMDbRelayServer) private var useTMDbRelayServer = true
 
-    @State private var viewModel: LibraryProfileSettingsViewModel
+    @State private var changeAPIKey = false
+    @State private var showCacheAlert = false
+    @State private var showClearAllAlert = false
+    @State private var exportError: Error?
+    @State private var showExportError = false
+    @State private var restoreError: Error?
+    @State private var showRestoreError = false
+    @State private var showFileImporter = false
+    @State private var restoreFileURL: URL?
+    @State private var showRestoreConfirmation = false
+    @State private var showRefreshInfoOnLanguageUpdateAlert = false
+    @State private var showRefreshInfoAlert = false
+    @State private var showTMDbRelayRestartAlert = false
+    @State private var showAboutSheet = false
+    @State private var cacheSizeResult: Result<UInt, KingfisherError>?
+    @State private var appeared = false
+    @State private var restoreCompleted = false
 
-    init(store: LibraryStore, onDismiss: (() -> Void)? = nil) {
-        self.store = store
+    init(onDismiss: (() -> Void)? = nil) {
         self.onDismiss = onDismiss
-        _viewModel = State(initialValue: LibraryProfileSettingsViewModel(store: store))
     }
 
     private var stats: LibraryProfileStats {
         LibraryProfileStats(entries: store.library)
+    }
+
+    private var actions: LibraryProfileSettingsActions {
+        LibraryProfileSettingsActions(store: store)
     }
 
     var body: some View {
@@ -39,13 +58,13 @@ struct LibraryProfileSettingsView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         heroCard
-                            .profileReveal(index: 0, appeared: viewModel.appeared, reduceMotion: reduceMotion)
+                            .profileReveal(index: 0, appeared: appeared, reduceMotion: reduceMotion)
                         primaryStatsGrid
-                            .profileReveal(index: 1, appeared: viewModel.appeared, reduceMotion: reduceMotion)
+                            .profileReveal(index: 1, appeared: appeared, reduceMotion: reduceMotion)
                         libraryDetailsCard
-                            .profileReveal(index: 2, appeared: viewModel.appeared, reduceMotion: reduceMotion)
+                            .profileReveal(index: 2, appeared: appeared, reduceMotion: reduceMotion)
                         settingsCard
-                            .profileReveal(index: 3, appeared: viewModel.appeared, reduceMotion: reduceMotion)
+                            .profileReveal(index: 3, appeared: appeared, reduceMotion: reduceMotion)
                     }
                     .padding(.horizontal, 18)
                     .padding(.top, 16)
@@ -58,13 +77,7 @@ struct LibraryProfileSettingsView: View {
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        if let onDismiss {
-                            onDismiss()
-                        } else {
-                            dismiss()
-                        }
-                    } label: {
+                    Button(action: dismissSettings) {
                         Image(systemName: "xmark")
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(.primary)
@@ -75,37 +88,19 @@ struct LibraryProfileSettingsView: View {
                     .accessibilityLabel(Text(closeTitleResource))
                 }
             }
-            .onAppear {
-                viewModel.onAppear(effectiveLanguage: effectiveLanguage, reduceMotion: reduceMotion)
-            }
-            .onChange(of: preferredLanguage) { old, new in
-                viewModel.handlePreferredLanguageChange(
-                    old: old,
-                    new: new,
-                    followsSystem: followsSystemLanguage
-                )
-            }
-            .onChange(of: followsSystemLanguage) { old, new in
-                viewModel.handleFollowsSystemLanguageChange(
-                    old: old,
-                    new: new,
-                    preferredLanguage: preferredLanguage
-                )
-            }
+            .onAppear(perform: handleAppear)
+            .onChange(of: preferredLanguage, handlePreferredLanguageChange)
+            .onChange(of: followsSystemLanguage, handleFollowsSystemLanguageChange)
         }
-        .alert("Delete all animes?", isPresented: $viewModel.showClearAllAlert) {
-            Button("Delete", role: .destructive) {
-                viewModel.confirmClearLibrary()
-            }
+        .alert("Delete all animes?", isPresented: $showClearAllAlert) {
+            Button("Delete", role: .destructive, action: confirmClearLibrary)
             Button("Cancel", role: .cancel) {}
         }
         .alert(
             "Refresh Info Language?",
-            isPresented: $viewModel.showRefreshInfoOnLanguageUpdateAlert
+            isPresented: $showRefreshInfoOnLanguageUpdateAlert
         ) {
-            Button("Refresh") {
-                viewModel.confirmRefreshInfos()
-            }
+            Button("Refresh", action: confirmRefreshInfos)
             Button("Cancel", role: .cancel) {}
         } message: {
             let message: LocalizedStringResource = """
@@ -117,24 +112,22 @@ struct LibraryProfileSettingsView: View {
         }
         .alert(
             "Refresh all anime infos?",
-            isPresented: $viewModel.showRefreshInfoAlert
+            isPresented: $showRefreshInfoAlert
         ) {
-            Button("Refresh") {
-                viewModel.confirmRefreshInfos()
-            }
+            Button("Refresh", action: confirmRefreshInfos)
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This may take considerable time.")
         }
-        .alert("TMDb Proxy Updated", isPresented: $viewModel.showTMDbRelayRestartAlert) {
+        .alert("TMDb Proxy Updated", isPresented: $showTMDbRelayRestartAlert) {
             Button("OK") {}
         } message: {
             Text("You might need to restart the app for this change to take effect.")
         }
         .alert(
             "Error exporting library",
-            isPresented: $viewModel.showExportError,
-            presenting: viewModel.exportError
+            isPresented: $showExportError,
+            presenting: exportError
         ) { _ in
             Button("Cancel", role: .cancel) {}
         } message: { error in
@@ -142,27 +135,27 @@ struct LibraryProfileSettingsView: View {
         }
         .alert(
             "Error restoring library",
-            isPresented: $viewModel.showRestoreError,
-            presenting: viewModel.restoreError
+            isPresented: $showRestoreError,
+            presenting: restoreError
         ) { _ in
             Button("Cancel", role: .cancel) {}
         } message: { error in
             Text(error.localizedDescription)
         }
-        .alert("Overwrite the current library?", isPresented: $viewModel.showRestoreConfirmation) {
+        .alert("Overwrite the current library?", isPresented: $showRestoreConfirmation) {
             Button("Cancel", role: .cancel) {}
-            Button("Confirm", role: .destructive, action: viewModel.restoreSelectedBackup)
+            Button("Confirm", role: .destructive, action: confirmRestore)
         } message: {
             Text("Please backup the current library before proceeding.")
         }
         .alert(
-            "Metadata Cache Size", isPresented: $viewModel.showCacheAlert, presenting: viewModel.cacheSizeResult,
+            "Metadata Cache Size",
+            isPresented: $showCacheAlert,
+            presenting: cacheSizeResult,
             actions: { result in
                 switch result {
                 case .success:
-                    Button("Clear Cache") {
-                        viewModel.clearMetadataCache()
-                    }
+                    Button("Clear Cache", action: clearMetadataCache)
                     Button("Cancel", role: .cancel) {}
                 case .failure:
                     Button("OK") {}
@@ -178,16 +171,15 @@ struct LibraryProfileSettingsView: View {
             }
         )
         .fileImporter(
-            isPresented: $viewModel.showFileImporter,
-            allowedContentTypes: [.mallib]
-        ) { result in
-            viewModel.handleFileImport(result)
-        }
-        .sheet(isPresented: $viewModel.changeAPIKey) {
+            isPresented: $showFileImporter,
+            allowedContentTypes: [.mallib],
+            onCompletion: handleFileImport
+        )
+        .sheet(isPresented: $changeAPIKey) {
             TMDbAPIConfigurator()
                 .presentationDetents([.fraction(0.65), .large])
         }
-        .sheet(isPresented: $viewModel.showAboutSheet) {
+        .sheet(isPresented: $showAboutSheet) {
             NavigationStack {
                 AboutAniShelfSheet()
             }
@@ -213,7 +205,10 @@ struct LibraryProfileSettingsView: View {
         )
     }
 
+    @ViewBuilder
     private var settingsCard: some View {
+        @Bindable var store = store
+
         LibraryProfileSettingsCard(
             followsSystemLanguage: followsSystemLanguageBinding,
             hideDroppedByDefault: $store.hideDroppedByDefault,
@@ -222,20 +217,18 @@ struct LibraryProfileSettingsView: View {
             autoPrefetchImagesOnAddAndRestore: $store.autoPrefetchImagesOnAddAndRestore,
             useTMDbRelayServer: $useTMDbRelayServer,
             preferredLanguage: $preferredLanguage,
-            restoreCompleted: viewModel.restoreCompleted,
-            createBackupItems: viewModel.prepareBackupExportItems,
-            onRestore: viewModel.requestRestore,
-            onChangeAPIKey: viewModel.showAPIKeySheet,
-            onCheckMetadataCacheSize: viewModel.calculateCacheSize,
-            onRefreshInfos: viewModel.requestRefreshInfos,
-            onPrefetchImages: viewModel.prefetchImages,
-            onShowAbout: viewModel.showAbout,
-            onDeleteAllAnimes: viewModel.requestClearLibrary
+            restoreCompleted: restoreCompleted,
+            createBackupItems: createBackupItems,
+            onRestore: requestRestore,
+            onChangeAPIKey: requestAPIKeySheet,
+            onCheckMetadataCacheSize: checkMetadataCacheSize,
+            onRefreshInfos: requestRefreshInfos,
+            onPrefetchImages: actions.prefetchAllImages,
+            onShowAbout: presentAboutSheet,
+            onDeleteAllAnimes: requestClearLibrary
         )
         .animation(languagePickerAnimation, value: followsSystemLanguage)
-        .onChange(of: useTMDbRelayServer) { old, new in
-            viewModel.handleTMDbRelayServerChange(old: old, new: new)
-        }
+        .onChange(of: useTMDbRelayServer, handleTMDbRelayServerChange)
     }
 
     private var followsSystemLanguageBinding: Binding<Bool> {
@@ -268,13 +261,148 @@ struct LibraryProfileSettingsView: View {
     private var closeTitleResource: LocalizedStringResource {
         "Close"
     }
+
+    private func dismissSettings() {
+        if let onDismiss {
+            onDismiss()
+        } else {
+            dismiss()
+        }
+    }
+
+    private func handleAppear() {
+        store.language = effectiveLanguage
+        withAnimation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.86)) {
+            appeared = true
+        }
+    }
+
+    private func handlePreferredLanguageChange(old: Language, new: Language) {
+        guard old != new, !followsSystemLanguage else { return }
+        store.language = new
+        showRefreshInfoOnLanguageUpdateAlert = true
+    }
+
+    private func handleFollowsSystemLanguageChange(old: Bool, new: Bool) {
+        guard old != new else { return }
+        let oldLanguage = resolvedLanguage(
+            followsSystem: old,
+            preferredLanguage: preferredLanguage
+        )
+        let newLanguage = resolvedLanguage(
+            followsSystem: new,
+            preferredLanguage: preferredLanguage
+        )
+        store.language = new ? .current : preferredLanguage
+        guard oldLanguage != newLanguage else { return }
+        showRefreshInfoOnLanguageUpdateAlert = true
+    }
+
+    private func handleTMDbRelayServerChange(old: Bool, new: Bool) {
+        guard old != new else { return }
+        NotificationCenter.default.post(
+            name: .tmdbAPIConfigurationDidChange,
+            object: nil
+        )
+        showTMDbRelayRestartAlert = true
+    }
+
+    private func requestAPIKeySheet() {
+        changeAPIKey = true
+    }
+
+    private func requestRestore() {
+        restoreCompleted = false
+        showFileImporter = true
+    }
+
+    private func handleFileImport(_ result: Result<URL, Error>) {
+        switch result {
+        case .success(let url):
+            restoreFileURL = url
+            showRestoreConfirmation = true
+        case .failure(let error):
+            presentRestoreError(error)
+        }
+    }
+
+    private func confirmRestore() {
+        restoreCompleted = false
+        guard let restoreFileURL else { return }
+        do {
+            try actions.restoreBackup(from: restoreFileURL)
+            withAnimation {
+                restoreCompleted = true
+            }
+        } catch {
+            presentRestoreError(error)
+        }
+    }
+
+    private func requestRefreshInfos() {
+        showRefreshInfoAlert = true
+    }
+
+    private func confirmRefreshInfos() {
+        actions.refreshInfos()
+    }
+
+    private func checkMetadataCacheSize() {
+        Task { @MainActor in
+            cacheSizeResult = await actions.metadataCacheSize()
+            showCacheAlert = true
+        }
+    }
+
+    private func clearMetadataCache() {
+        actions.clearMetadataCache()
+    }
+
+    private func requestClearLibrary() {
+        showClearAllAlert = true
+    }
+
+    private func confirmClearLibrary() {
+        actions.clearLibrary()
+    }
+
+    private func presentAboutSheet() {
+        showAboutSheet = true
+    }
+
+    private func createBackupItems() -> [Any]? {
+        do {
+            return [try actions.createBackup()]
+        } catch {
+            presentExportError(error)
+            return nil
+        }
+    }
+
+    private func presentExportError(_ error: Error) {
+        exportError = error
+        showExportError = true
+    }
+
+    private func presentRestoreError(_ error: Error) {
+        restoreError = error
+        showRestoreError = true
+    }
+
+    private func resolvedLanguage(
+        followsSystem: Bool,
+        preferredLanguage: Language
+    ) -> Language {
+        followsSystem ? .current : preferredLanguage
+    }
 }
 
 #Preview {
     @Previewable let store = LibraryStore(dataProvider: .forPreview)
 
-    LibraryProfileSettingsView(store: store)
+    LibraryProfileSettingsView()
         .onAppear {
             DataProvider.forPreview.generateEntriesForPreview()
         }
+        .environment(store)
 }

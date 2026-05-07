@@ -35,7 +35,7 @@ class TMDbSearchService {
     var processResults: (OrderedSet<SearchResult>) -> Void
 
     init(
-        processResults: @escaping (OrderedSet<SearchResult>) -> Void
+        processResults: @escaping (OrderedSet<SearchResult>) -> Void = { _ in }
     ) {
         self.processResults = processResults
     }

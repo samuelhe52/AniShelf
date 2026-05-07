@@ -10,7 +10,7 @@ import SwiftUI
 struct TMDbAPIOnboardingView: View {
     @Environment(TMDbAPIKeyStorage.self) private var keyStorage
 
-    @State private var keyEntryController = TMDbAPIKeyEntryController()
+    @State private var keyEntryViewModel = TMDbAPIKeyEntryViewModel()
     @State private var selectedStep: Step = .welcome
 
     private let apiSettingsURL = URL(string: "https://www.themoviedb.org/settings/api")!
@@ -18,7 +18,7 @@ struct TMDbAPIOnboardingView: View {
     private let signupURL = URL(string: "https://www.themoviedb.org/signup")!
 
     var body: some View {
-        @Bindable var keyEntryController = keyEntryController
+        @Bindable var keyEntryViewModel = keyEntryViewModel
 
         ScrollView {
             VStack(spacing: 20) {
@@ -34,7 +34,7 @@ struct TMDbAPIOnboardingView: View {
                     canGoBack: selectedStep.previous != nil,
                     canContinue: canContinue,
                     primaryTitle: selectedStep.primaryButtonTitle,
-                    validationStatus: selectedStep == .enterKey ? keyEntryController.status : nil,
+                    validationStatus: selectedStep == .enterKey ? keyEntryViewModel.status : nil,
                     goBack: goToPreviousStep,
                     goForward: goToNextStep
                 )
@@ -48,7 +48,7 @@ struct TMDbAPIOnboardingView: View {
             Color.clear.frame(height: 14)
         }
         .animation(.spring(response: 0.32, dampingFraction: 0.88), value: selectedStep)
-        .sensoryFeedback(trigger: keyEntryController.status) { _, new in
+        .sensoryFeedback(trigger: keyEntryViewModel.status) { _, new in
             switch new {
             case .invalid: .error
             case .valid: .success
@@ -71,9 +71,9 @@ struct TMDbAPIOnboardingView: View {
         case .enterKey:
             TMDbSetupPanel {
                 TMDbAPIKeyEntryCard(
-                    apiKey: $keyEntryController.apiKeyInput,
+                    apiKey: $keyEntryViewModel.apiKeyInput,
                     mode: .onboarding,
-                    isChecking: keyEntryController.checking,
+                    isChecking: keyEntryViewModel.checking,
                     autoFocus: true,
                     showsValidateButton: false,
                     validate: validateKey
@@ -88,7 +88,7 @@ struct TMDbAPIOnboardingView: View {
 
     private var canContinue: Bool {
         guard selectedStep == .enterKey else { return true }
-        return !keyEntryController.isFieldEmpty && !keyEntryController.checking
+        return !keyEntryViewModel.isFieldEmpty && !keyEntryViewModel.checking
     }
 
     private func goToNextStep() {
@@ -110,7 +110,7 @@ struct TMDbAPIOnboardingView: View {
     }
 
     private func validateKey() {
-        keyEntryController.validate(using: keyStorage)
+        keyEntryViewModel.validate(using: keyStorage)
     }
 
     private enum Step: Int, CaseIterable, Identifiable {

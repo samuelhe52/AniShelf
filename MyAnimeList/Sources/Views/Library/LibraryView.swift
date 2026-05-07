@@ -14,13 +14,12 @@ import SwiftUI
 
 extension EnvironmentValues {
     @Entry var toggleFavorite: (AnimeEntry) -> Void = { _ in }
-    @Entry var libraryStore: LibraryStore? = nil
 }
 
 struct LibraryView: View {
     // MARK: - Stored Properties
 
-    @Bindable var store: LibraryStore
+    @Environment(LibraryStore.self) private var store
     @State private var interaction = LibraryEntryInteractionState()
     @Environment(\.dataHandler) var dataHandler
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -45,7 +44,7 @@ struct LibraryView: View {
                 .accessibilityHidden(showProfileSettings)
 
             if showProfileSettings {
-                LibraryProfileSettingsView(store: store) {
+                LibraryProfileSettingsView {
                     closeProfileSettings()
                 }
                 .transition(profileSettingsTransition)
@@ -61,7 +60,6 @@ struct LibraryView: View {
                 libraryView
             }
             .environment(\.toggleFavorite, toggleFavorite)
-            .environment(\.libraryStore, store)
             .environment(interaction)
             .toolbar(content: { toolbarContent })
             .sensoryFeedback(.success, trigger: newEntriesAddedToggle)
@@ -78,7 +76,6 @@ struct LibraryView: View {
         case .gallery:
             libraryViewPage(id: .gallery) {
                 LibraryGalleryView(
-                    store: store,
                     scrolledID: $scrollState.scrolledID
                 )
                 .scenePadding(.vertical)
@@ -87,7 +84,6 @@ struct LibraryView: View {
         case .list:
             libraryViewPage(id: .list) {
                 LibraryListView(
-                    store: store,
                     scrolledID: $scrollState.scrolledID,
                     highlightedEntryID: $highlightedEntryID
                 )
@@ -96,7 +92,6 @@ struct LibraryView: View {
         case .grid:
             libraryViewPage(id: .grid) {
                 LibraryGridView(
-                    store: store,
                     scrolledID: $scrollState.scrolledID,
                     highlightedEntryID: $highlightedEntryID
                 )
@@ -131,7 +126,10 @@ struct LibraryView: View {
         }
     }
 
+    @ViewBuilder
     private var libraryBrowseSummaryMenu: some View {
+        @Bindable var store = store
+
         Menu {
             Section("Sort") {
                 Toggle(
@@ -467,9 +465,10 @@ fileprivate struct LibraryViewTransitionModifier: ViewModifier {
     // dataProvider could be changed to .forPreview for memory-only storage.
     // Uncomment the task below to generate template entries.
     @Previewable let store = LibraryStore(dataProvider: .forPreview)
-    LibraryView(store: store)
+    LibraryView()
         .onAppear {
             DataProvider.forPreview.generateEntriesForPreview()
         }
+        .environment(store)
         .environment(\.dataHandler, DataProvider.forPreview.dataHandler)
 }

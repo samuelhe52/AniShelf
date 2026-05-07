@@ -2,7 +2,7 @@ import DataProvider
 import Foundation
 
 @MainActor
-final class LibraryEntryConversionController {
+final class LibraryEntryConverter {
     private let repository: LibraryRepository
 
     init(repository: LibraryRepository) {
@@ -100,28 +100,5 @@ final class LibraryEntryConversionController {
 
         libraryStoreLogger.info(
             "Converted series \(parentSeriesID, privacy: .public) to season \(seasonNumber, privacy: .public)")
-    }
-}
-
-extension LibraryStore {
-    func convertSeasonToSeries(_ entry: AnimeEntry, language: Language) async throws {
-        try await conversionController.convertSeasonToSeries(
-            entry,
-            language: language,
-            fetcher: infoFetcher
-        )
-    }
-
-    func convertSeriesToSeason(
-        _ entry: AnimeEntry,
-        seasonNumber: Int,
-        language: Language
-    ) async throws {
-        try await conversionController.convertSeriesToSeason(
-            entry,
-            seasonNumber: seasonNumber,
-            language: language,
-            fetcher: infoFetcher
-        )
     }
 }

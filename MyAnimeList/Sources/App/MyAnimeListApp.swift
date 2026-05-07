@@ -21,7 +21,7 @@ struct MyAnimeListApp: App {
         WindowGroup {
             ZStack {
                 if let key = keyStorage.key, !key.isEmpty {
-                    LibraryView(store: libraryStore)
+                    LibraryView()
                         .onAppear {
                             libraryStore.language = followsSystemLanguage ? .current : preferredLanguage
                         }
@@ -31,6 +31,7 @@ struct MyAnimeListApp: App {
                         .transition(.opacity.animation(.easeInOut(duration: 1)))
                 }
             }
+            .environment(libraryStore)
             .environment(keyStorage)
             .environment(\.dataHandler, DataProvider.default.dataHandler)
             .globalToasts()

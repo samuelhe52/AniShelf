@@ -10,7 +10,7 @@ import Foundation
 import SwiftUI
 
 struct LibraryGalleryView: View {
-    let store: LibraryStore
+    @Environment(LibraryStore.self) private var store
     @Environment(LibraryEntryInteractionState.self) var interaction
     @Binding var scrolledID: Int?
 
@@ -40,7 +40,6 @@ struct LibraryGalleryView: View {
                         AnimeEntryCardWrapper(
                             entry: item.entry,
                             snapshot: item.snapshot,
-                            store: store,
                             scrolledID: $scrolledID
                         )
                         .frame(width: geometry.size.width, height: geometry.size.height)
@@ -65,9 +64,9 @@ struct LibraryGalleryView: View {
 fileprivate struct AnimeEntryCardWrapper: View {
     var entry: AnimeEntry
     var snapshot: LibraryEntrySnapshot
-    let store: LibraryStore
     @Binding var scrolledID: Int?
 
+    @Environment(LibraryStore.self) private var store
     @Environment(LibraryEntryInteractionState.self) private var interaction
     @State private var imageLoaded: Bool = false
 

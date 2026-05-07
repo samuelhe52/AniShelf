@@ -29,7 +29,7 @@ struct AnimeSharingPreviewSection: View {
                 .spring(response: 0.35, dampingFraction: 0.85),
                 value: animationTrigger
             )
-            .frame(maxWidth: AnimeSharingController.previewCardWidth)
+            .frame(maxWidth: AnimeSharingViewModel.previewCardWidth)
             .frame(maxWidth: .infinity)
         }
     }
