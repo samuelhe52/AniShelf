@@ -10,7 +10,7 @@ import SwiftUI
 struct TMDbAPIOnboardingView: View {
     @Environment(TMDbAPIKeyStorage.self) private var keyStorage
 
-    @StateObject private var keyEntryController = TMDbAPIKeyEntryController()
+    @State private var keyEntryController = TMDbAPIKeyEntryController()
     @State private var selectedStep: Step = .welcome
 
     private let apiSettingsURL = URL(string: "https://www.themoviedb.org/settings/api")!
@@ -18,6 +18,8 @@ struct TMDbAPIOnboardingView: View {
     private let signupURL = URL(string: "https://www.themoviedb.org/signup")!
 
     var body: some View {
+        @Bindable var keyEntryController = keyEntryController
+
         ScrollView {
             VStack(spacing: 20) {
                 TMDbOnboardingHeader(

@@ -13,7 +13,7 @@ import SwiftUI
 ///
 /// It is recommended to use this class when toasts need to be triggered from non-UI components or a non-main-thread environment.
 @Observable @MainActor
-class ToastCenter: ObservableObject {
+class ToastCenter {
     static var global: ToastCenter = .init()
 
     var copied: Bool = false

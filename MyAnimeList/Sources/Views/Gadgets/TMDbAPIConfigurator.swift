@@ -10,12 +10,14 @@ import SwiftUI
 struct TMDbAPIConfigurator: View {
     @Environment(TMDbAPIKeyStorage.self) private var keyStorage
 
-    @StateObject private var keyEntryController = TMDbAPIKeyEntryController()
+    @State private var keyEntryController = TMDbAPIKeyEntryController()
 
     var body: some View {
+        @Bindable var keyEntryController = keyEntryController
+
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                configuratorHeader
+                TMDbAPIConfiguratorHeader()
 
                 TMDbSetupPanel {
                     TMDbAPIKeyEntryCard(
@@ -60,7 +62,17 @@ struct TMDbAPIConfigurator: View {
         }
     }
 
-    private var configuratorHeader: some View {
+    private var confirmButtonTitleResource: LocalizedStringResource {
+        keyEntryController.checking ? "Checking..." : "Save API Key"
+    }
+
+    private func validateKey() {
+        keyEntryController.validate(using: keyStorage)
+    }
+}
+
+fileprivate struct TMDbAPIConfiguratorHeader: View {
+    var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Label(sectionLabelResource, systemImage: "person.badge.key")
                 .font(.caption.weight(.semibold))
@@ -88,88 +100,10 @@ struct TMDbAPIConfigurator: View {
     private var sectionMessageResource: LocalizedStringResource {
         "Replace the TMDb key AniShelf uses for search and metadata."
     }
-
-    private var confirmButtonTitleResource: LocalizedStringResource {
-        keyEntryController.checking ? "Checking..." : "Save API Key"
-    }
-
-    private func validateKey() {
-        keyEntryController.validate(using: keyStorage)
-    }
 }
 
 extension Notification.Name {
     static let tmdbAPIConfigurationDidChange = Notification.Name("tmdbAPIKeyDidChange")
-}
-
-enum TMDbAPIKeyCheckStatus {
-    case checking
-    case valid
-    case invalid
-}
-
-@MainActor
-final class TMDbAPIKeyEntryController: ObservableObject {
-    @Published var apiKeyInput: String = "" {
-        didSet {
-            if status != .checking {
-                withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
-                    status = nil
-                }
-            }
-        }
-    }
-    @Published var status: TMDbAPIKeyCheckStatus?
-
-    var checking: Bool { status == .checking }
-    var isFieldEmpty: Bool {
-        apiKeyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    func loadCurrentKey(from keyStorage: TMDbAPIKeyStorage) {
-        apiKeyInput = keyStorage.key ?? ""
-    }
-
-    func validate(using keyStorage: TMDbAPIKeyStorage) {
-        let trimmedKey = apiKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedKey.isEmpty else { return }
-
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
-            status = .checking
-        }
-        Task {
-            await checkKey(trimmedKey, using: keyStorage)
-        }
-    }
-
-    @discardableResult
-    func checkKey(_ key: String, using keyStorage: TMDbAPIKeyStorage) async -> Bool {
-        let result = await TMDbAPIKeyValidator.check(key)
-        guard result else {
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
-                status = .invalid
-            }
-            return false
-        }
-
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
-            status = .valid
-        }
-        await saveKeyAfterFeedback(key, using: keyStorage)
-        return true
-    }
-
-    private func saveKeyAfterFeedback(_ key: String, using keyStorage: TMDbAPIKeyStorage) async {
-        try? await Task.sleep(for: .milliseconds(500))
-
-        let result = keyStorage.saveKey(key)
-        if result {
-            NotificationCenter.default.post(
-                name: .tmdbAPIConfigurationDidChange,
-                object: nil
-            )
-        }
-    }
 }
 
 enum TMDbAPIKeyEntryMode {
@@ -406,37 +340,6 @@ struct TMDbSetupPanel<Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
         .popupGlassPanel(cornerRadius: 28)
-    }
-}
-
-struct TMDbAPIKeyValidator {
-    static func check(_ key: String) async -> Bool {
-        guard !key.isEmpty else { return false }
-        guard
-            let url = URL(
-                string:
-                    "https://\(UserDefaults.standard.tmdbAPIHostForCurrentPreference)/3/configuration?api_key=\(key)"
-            )
-        else {
-            return false
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-
-        do {
-            let (_, response) = try await URLSession.shared.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse else { return false }
-            return httpResponse.statusCode == 200
-        } catch {
-            return false
-        }
-    }
-}
-
-extension UserDefaults {
-    fileprivate var tmdbAPIHostForCurrentPreference: String {
-        usesTMDbRelayServer ? "tmdb-api.konakona52.com" : "api.themoviedb.org"
     }
 }
 
