@@ -17,6 +17,17 @@ fileprivate let logger = Logger(subsystem: .bundleIdentifier, category: "Library
 
 @Observable @MainActor
 class LibraryStore {
+    private struct LatestInfoFailure {
+        let tmdbID: Int
+        let name: String
+        let message: String
+    }
+
+    private enum LatestInfoFetchOutcome {
+        case success(Int, BasicInfo, AnimeEntryDetail)
+        case failure(LatestInfoFailure)
+    }
+
     // MARK: - Dependencies
 
     @ObservationIgnored private let dataProvider: DataProvider
@@ -349,44 +360,60 @@ class LibraryStore {
                     total: library.count,
                     messageResource: "Fetching Info: 0 / \(library.count)")
 
+            var fetchedInfos: [Int: (BasicInfo, AnimeEntryDetail)] = [:]
+            var failures: [LatestInfoFailure] = []
+            let totalCount = library.count
+
             do {
-                var fetchedInfos: [Int: (BasicInfo, AnimeEntryDetail)] = [:]
-                let totalCount = library.count
                 for chunk in chunkedLibraryEntries(chunkSize: 8) {
-                    let chunkInfos = try await latestInfoForEntries(
+                    let chunkInfos = await latestInfoForEntries(
                         entries: chunk,
                         updateProgress: { current, _ in
                             let messageResource: LocalizedStringResource =
-                                "Fetching Info: \(fetchedInfos.count + current) / \(totalCount)"
+                                "Fetching Info: \(fetchedInfos.count + failures.count + current) / \(totalCount)"
                             ToastCenter.global.progressState =
                                 .progress(
-                                    current: fetchedInfos.count + current,
+                                    current: fetchedInfos.count + failures.count + current,
                                     total: totalCount,
                                     messageResource: messageResource)
                         })
-                    for (id, info, detail) in chunkInfos {
+                    for (id, info, detail) in chunkInfos.successes {
                         fetchedInfos[id] = (info, detail)
                     }
+                    failures.append(contentsOf: chunkInfos.failures)
                 }
                 ToastCenter.global.progressState = nil
 
                 ToastCenter.global.loadingMessage = .message("Organizing Library...")
                 for (id, payload) in fetchedInfos {
                     if let entry = library.entryWithTMDbID(id) {
-                        entry.update(from: payload.0)
+                        entry.replaceMetadata(
+                            from: payload.0,
+                            preservingCustomPoster: entry.usingCustomPoster)
                         entry.detail = payload.1
-                        try await resolveParentSeriesEntry(for: entry)
+                        await resolveParentSeriesEntry(for: entry)
                     }
                 }
+                try dataProvider.dataHandler.modelContext.save()
                 ToastCenter.global.loadingMessage = nil
-                ToastCenter.global.completionState = .completed(
-                    "Refreshed infos for \(fetchedInfos.count) entries.")
+                if failures.isEmpty {
+                    ToastCenter.global.completionState = .completed(
+                        "Refreshed infos for \(fetchedInfos.count) entries.")
+                } else if fetchedInfos.isEmpty {
+                    ToastCenter.global.completionState = .failed(
+                        "Failed to refresh \(failures.count) entries.")
+                } else {
+                    ToastCenter.global.completionState = .partialComplete(
+                        "Refreshed \(fetchedInfos.count) entries, failed \(failures.count).")
+                }
             } catch {
                 logger.error("Error refreshing infos: \(error)")
                 ToastCenter.global.completionState = .failed(message: error.localizedDescription)
                 return
             }
-            prefetchAllImages()
+            if !fetchedInfos.isEmpty {
+                prefetchAllImages()
+            }
         }
     }
 
@@ -396,37 +423,58 @@ class LibraryStore {
     ///   - entries: The entries to fetch latest infos for.
     ///   - updateProgress: A (current, total) closure called when progress is updated.
     ///
-    /// - Returns: An array of (tmdbID, BasicInfo, AnimeEntryDetail) tuples.
-    /// - Throws: An error if fetching fails.
-    func latestInfoForEntries<C: Collection<AnimeEntry>>(
+    /// - Returns: Successful info payloads and failures for entries that could not be refreshed.
+    private func latestInfoForEntries<C: Collection<AnimeEntry>>(
         entries: C,
         updateProgress: @escaping (Int, Int) -> Void
-    ) async throws -> [(Int, BasicInfo, AnimeEntryDetail)] {
-        try await withThrowingTaskGroup(
-            of: (Int, BasicInfo, AnimeEntryDetail).self
+    ) async -> (
+        successes: [(Int, BasicInfo, AnimeEntryDetail)],
+        failures: [LatestInfoFailure]
+    ) {
+        await withTaskGroup(
+            of: LatestInfoFetchOutcome.self
         ) { group in
             var fetchedInfos: [(Int, BasicInfo, AnimeEntryDetail)] = []
+            var failures: [LatestInfoFailure] = []
 
             for entry in entries {
                 let tmdbID = entry.tmdbID
+                let name = entry.name
                 let type = entry.type
                 let originalPosterURL = entry.posterURL
                 let usingCustomPoster = entry.usingCustomPoster
                 group.addTask {
-                    try await self.fetchLatestInfo(
-                        tmdbID: tmdbID,
-                        entryType: type,
-                        originalPosterURL: originalPosterURL,
-                        usingCustomPoster: usingCustomPoster)
+                    do {
+                        let payload = try await self.fetchLatestInfo(
+                            tmdbID: tmdbID,
+                            entryType: type,
+                            originalPosterURL: originalPosterURL,
+                            usingCustomPoster: usingCustomPoster)
+                        return .success(payload.0, payload.1, payload.2)
+                    } catch {
+                        return .failure(
+                            .init(
+                                tmdbID: tmdbID,
+                                name: name,
+                                message: error.localizedDescription))
+                    }
                 }
             }
 
-            for try await result in group {
-                fetchedInfos.append(result)
-                updateProgress(fetchedInfos.count, entries.count)
+            for await result in group {
+                switch result {
+                case .success(let id, let info, let detail):
+                    fetchedInfos.append((id, info, detail))
+                case .failure(let failure):
+                    failures.append(failure)
+                    logger.error(
+                        "Failed to refresh entry \(failure.tmdbID, privacy: .public), name: \(failure.name, privacy: .public): \(failure.message)"
+                    )
+                }
+                updateProgress(fetchedInfos.count + failures.count, entries.count)
             }
 
-            return fetchedInfos
+            return (fetchedInfos, failures)
         }
     }
 
@@ -448,21 +496,43 @@ class LibraryStore {
         return (tmdbID, resolvedInfo, payload.1)
     }
 
-    func resolveParentSeriesEntry(for entry: AnimeEntry) async throws {
-        if let parentSeriesID = entry.parentSeriesID {
-            if let parentSeriesEntry = library.entryWithTMDbID(parentSeriesID) {
-                entry.parentSeriesEntry = parentSeriesEntry
-            } else {
-                if let parentSeriesID = entry.parentSeriesID {
-                    let parentSeriesEntry =
-                        try await AnimeEntry
-                        .generateParentSeriesEntryForSeason(
-                            parentSeriesID: parentSeriesID,
-                            fetcher: infoFetcher,
-                            infoLanguage: language)
-                    entry.parentSeriesEntry = parentSeriesEntry
-                }
-            }
+    func resolveParentSeriesEntry(for entry: AnimeEntry) async {
+        guard let parentSeriesID = entry.parentSeriesID else { return }
+
+        if entry.parentSeriesEntry?.tmdbID == parentSeriesID {
+            return
+        }
+
+        if let parentSeriesEntry = existingEntry(tmdbID: parentSeriesID) {
+            entry.parentSeriesEntry = parentSeriesEntry
+            return
+        }
+
+        do {
+            let parentSeriesEntry =
+                try await AnimeEntry
+                .generateParentSeriesEntryForSeason(
+                    parentSeriesID: parentSeriesID,
+                    fetcher: infoFetcher,
+                    infoLanguage: language)
+            dataProvider.dataHandler.modelContext.insert(parentSeriesEntry)
+            entry.parentSeriesEntry = parentSeriesEntry
+        } catch {
+            logger.warning(
+                "Failed to resolve parent series \(parentSeriesID, privacy: .public) for entry \(entry.tmdbID, privacy: .public): \(error.localizedDescription)"
+            )
+        }
+    }
+
+    private func existingEntry(tmdbID: Int) -> AnimeEntry? {
+        do {
+            return try dataProvider.getAllModels(
+                ofType: AnimeEntry.self,
+                predicate: #Predicate { $0.tmdbID == tmdbID }
+            ).first
+        } catch {
+            logger.warning("Failed to fetch existing entry \(tmdbID, privacy: .public): \(error.localizedDescription)")
+            return nil
         }
     }
 

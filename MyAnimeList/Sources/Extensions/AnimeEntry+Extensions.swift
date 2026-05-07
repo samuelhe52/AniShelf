@@ -47,6 +47,25 @@ extension AnimeEntry {
         tmdbID = info.tmdbID
     }
 
+    /// Replaces remote metadata during an explicit refresh.
+    ///
+    /// Unlike `update(from:)`, this method intentionally clears fields that TMDb no longer returns.
+    /// User-owned state is not touched; callers can preserve custom poster choices by passing `true`.
+    func replaceMetadata(from info: BasicInfo, preservingCustomPoster: Bool) {
+        let resolvedPosterURL = preservingCustomPoster ? posterURL : info.posterURL
+
+        name = info.name
+        nameTranslations = info.nameTranslations
+        overview = info.overview
+        overviewTranslations = info.overviewTranslations
+        linkToDetails = info.linkToDetails
+        posterURL = resolvedPosterURL
+        backdropURL = info.backdropURL
+        onAirDate = info.onAirDate
+        type = info.type
+        tmdbID = info.tmdbID
+    }
+
     /// Converts the AnimeEntry to BasicInfo.
     var basicInfo: BasicInfo {
         BasicInfo(
