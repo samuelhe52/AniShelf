@@ -245,7 +245,7 @@ struct MyAnimeListTests {
             ]
         )
 
-        let urls = LibraryImageCacheService().relatedImageURLs(for: entry)
+        let urls = LibraryImageCacheService.relatedImageURLs(for: entry)
 
         #expect(
             urls

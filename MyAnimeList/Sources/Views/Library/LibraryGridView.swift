@@ -58,7 +58,9 @@ struct LibraryGridView: View {
         }
         .libraryEntryInteractionOverlays(
             state: interaction,
-            store: store,
+            displayedEntries: store.libraryOnDisplay,
+            deleteEntry: store.deleteEntry,
+            detailRepository: store.repository,
             scrolledID: $scrolledID
         )
     }

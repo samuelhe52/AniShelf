@@ -27,7 +27,9 @@ struct LibraryGalleryView: View {
         }
         .libraryEntryInteractionOverlays(
             state: interaction,
-            store: store,
+            displayedEntries: store.libraryOnDisplay,
+            deleteEntry: store.deleteEntry,
+            detailRepository: store.repository,
             scrolledID: $scrolledID
         )
     }
@@ -66,7 +68,6 @@ fileprivate struct AnimeEntryCardWrapper: View {
     var snapshot: LibraryEntrySnapshot
     @Binding var scrolledID: Int?
 
-    @Environment(LibraryStore.self) private var store
     @Environment(LibraryEntryInteractionState.self) private var interaction
     @State private var imageLoaded: Bool = false
 
@@ -109,12 +110,3 @@ fileprivate struct AnimeEntryCardWrapper: View {
         interaction.deleteButton(for: entry)
     }
 }
-
-#if DEBUG
-    // This is where we place debug-specific code.
-    extension LibraryGalleryView {
-        private func mockDelete(entry: AnimeEntry) {
-            store.mockDeleteEntry(entry)
-        }
-    }
-#endif

@@ -4,8 +4,8 @@ import Kingfisher
 import SwiftUI
 
 @MainActor
-final class LibraryImageCacheService {
-    func prefetchImages<C: Collection>(for entries: C)
+enum LibraryImageCacheService {
+    static func prefetchImages<C: Collection>(for entries: C)
     where C.Element == AnimeEntry {
         let urls = Array(Set(imageURLs(for: entries)))
         ToastCenter.global.progressState =
@@ -46,14 +46,14 @@ final class LibraryImageCacheService {
         prefetcher.start()
     }
 
-    func imageURLs<C: Collection>(for entries: C) -> [URL]
+    static func imageURLs<C: Collection>(for entries: C) -> [URL]
     where C.Element == AnimeEntry {
         entries.flatMap { entry in
             [entry.posterURL, entry.detail?.heroImageURL, entry.detail?.logoImageURL].compactMap(\.self)
         }
     }
 
-    func relatedImageURLs(for entry: AnimeEntry) -> Set<URL> {
+    static func relatedImageURLs(for entry: AnimeEntry) -> Set<URL> {
         var urls = Set([entry.posterURL, entry.backdropURL].compactMap(\.self))
 
         if let detail = entry.detail {
@@ -66,7 +66,7 @@ final class LibraryImageCacheService {
         return urls
     }
 
-    func removeCachedImages(for urls: Set<URL>) {
+    static func removeCachedImages(for urls: Set<URL>) {
         guard !urls.isEmpty else { return }
 
         let cacheKeys = Array(urls.map(\.cacheKey))

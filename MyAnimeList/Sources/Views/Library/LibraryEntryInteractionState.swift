@@ -49,13 +49,17 @@ final class LibraryEntryInteractionState {
         isDeletingEntry = true
     }
 
-    func confirmDeletion(in store: LibraryStore, scrolledID: Binding<Int?>) {
+    func confirmDeletion(
+        in entries: [AnimeEntry],
+        deleteEntry: (AnimeEntry) -> Bool,
+        scrolledID: Binding<Int?>
+    ) {
         guard let entry = deletingEntry else { return }
 
-        let scrollTarget = deletionScrollTarget(for: entry, in: store.libraryOnDisplay)
+        let scrollTarget = deletionScrollTarget(for: entry, in: entries)
         clearDeletionRequest()
 
-        guard store.deleteEntry(entry) else { return }
+        guard deleteEntry(entry) else { return }
 
         switch scrollTarget {
         case .preserveCurrent:
@@ -191,7 +195,9 @@ extension LibraryEntryInteractionState {
 extension View {
     func libraryEntryInteractionOverlays(
         state: LibraryEntryInteractionState,
-        store: LibraryStore,
+        displayedEntries: [AnimeEntry],
+        deleteEntry: @escaping (AnimeEntry) -> Bool,
+        detailRepository: LibraryRepository,
         scrolledID: Binding<Int?>
     ) -> some View {
         self
@@ -210,7 +216,11 @@ extension View {
                 presenting: state.deletingEntry
             ) { _ in
                 Button("Delete", role: .destructive) {
-                    state.confirmDeletion(in: store, scrolledID: scrolledID)
+                    state.confirmDeletion(
+                        in: displayedEntries,
+                        deleteEntry: deleteEntry,
+                        scrolledID: scrolledID
+                    )
                 }
                 Button("Cancel", role: .cancel) {}
             }
@@ -236,7 +246,7 @@ extension View {
                 NavigationStack {
                     EntryDetailView(
                         entry: entry,
-                        repository: store.repository
+                        repository: detailRepository
                     )
                 }
             }
@@ -273,7 +283,7 @@ extension View {
                 NavigationStack {
                     EntryDetailView(
                         entry: entry,
-                        repository: store.repository,
+                        repository: detailRepository,
                         startInEditingMode: true
                     )
                 }

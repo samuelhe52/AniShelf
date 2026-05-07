@@ -21,7 +21,6 @@ class LibraryStore {
     @ObservationIgnored let dataProvider: DataProvider
     @ObservationIgnored let repository: LibraryRepository
     @ObservationIgnored let preferences: LibraryPreferences
-    @ObservationIgnored let imageCacheService: LibraryImageCacheService
     @ObservationIgnored private var cancellables = Set<AnyCancellable>()
 
     // MARK: - State
@@ -87,7 +86,6 @@ class LibraryStore {
         let repository = LibraryRepository(dataProvider: dataProvider)
         self.repository = repository
         self.preferences = LibraryPreferences()
-        self.imageCacheService = LibraryImageCacheService()
         self.infoFetcher = .init()
         self.library = []
         reloadPersistedPreferences()
