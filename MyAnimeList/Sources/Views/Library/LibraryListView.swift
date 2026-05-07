@@ -38,7 +38,6 @@ struct LibraryListView: View {
                 .contextMenu {
                     interaction.contextMenu(
                         for: item.entry,
-                        store: store,
                         toggleFavorite: toggleFavorite
                     )
                 } preview: {

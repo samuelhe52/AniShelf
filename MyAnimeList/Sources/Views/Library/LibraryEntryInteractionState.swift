@@ -164,10 +164,7 @@ extension LibraryEntryInteractionState {
         }
     }
 
-    func deleteButton(
-        for entry: AnimeEntry,
-        store: LibraryStore
-    ) -> some View {
+    func deleteButton(for entry: AnimeEntry) -> some View {
         Button("Delete", systemImage: "trash", role: .destructive) {
             self.prepareDeletion(for: entry)
         }
@@ -176,7 +173,6 @@ extension LibraryEntryInteractionState {
     @ViewBuilder
     func contextMenu(
         for entry: AnimeEntry,
-        store: LibraryStore,
         toggleFavorite: @escaping (AnimeEntry) -> Void
     ) -> some View {
         ControlGroup {
@@ -188,7 +184,7 @@ extension LibraryEntryInteractionState {
         Divider()
         savePosterButton(for: entry)
         userInfoMenu(for: entry)
-        deleteButton(for: entry, store: store)
+        deleteButton(for: entry)
     }
 }
 

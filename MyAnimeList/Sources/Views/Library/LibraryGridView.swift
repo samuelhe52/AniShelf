@@ -32,7 +32,6 @@ struct LibraryGridView: View {
                             .contextMenu {
                                 interaction.contextMenu(
                                     for: item.entry,
-                                    store: store,
                                     toggleFavorite: toggleFavorite
                                 )
                                 .onAppear { scrolledID = item.id }

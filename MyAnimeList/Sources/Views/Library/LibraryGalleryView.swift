@@ -106,7 +106,7 @@ fileprivate struct AnimeEntryCardWrapper: View {
         }
         interaction.switchPosterButton(for: entry)
         interaction.savePosterButton(for: entry)
-        interaction.deleteButton(for: entry, store: store)
+        interaction.deleteButton(for: entry)
     }
 }
 
