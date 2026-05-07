@@ -9,10 +9,18 @@ import DataProvider
 import SwiftUI
 
 struct EntryContextMenuPreview: View {
-    var entry: AnimeEntry
+    var snapshot: LibraryEntrySnapshot
+
+    init(entry: AnimeEntry) {
+        self.snapshot = LibraryEntrySnapshot(entry: entry)
+    }
+
+    init(snapshot: LibraryEntrySnapshot) {
+        self.snapshot = snapshot
+    }
 
     var body: some View {
-        KFImageView(url: entry.posterURL, diskCacheExpiration: .longTerm)
+        KFImageView(url: snapshot.posterURL, diskCacheExpiration: .longTerm)
             .scaledToFit()
     }
 }

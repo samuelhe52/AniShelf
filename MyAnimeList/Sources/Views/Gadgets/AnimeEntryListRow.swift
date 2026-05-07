@@ -11,6 +11,7 @@ import SwiftUI
 
 struct AnimeEntryListRow: View {
     var entry: AnimeEntry
+    var snapshot: LibraryEntrySnapshot
     var onSelect: (() -> Void)? = nil
     var onOpenDetails: (() -> Void)? = nil
 
@@ -21,10 +22,22 @@ struct AnimeEntryListRow: View {
     private let rowHeight: CGFloat = 126
     private let favoriteButtonTapClearance: CGFloat = 44
 
+    init(
+        entry: AnimeEntry,
+        snapshot: LibraryEntrySnapshot? = nil,
+        onSelect: (() -> Void)? = nil,
+        onOpenDetails: (() -> Void)? = nil
+    ) {
+        self.entry = entry
+        self.snapshot = snapshot ?? LibraryEntrySnapshot(entry: entry)
+        self.onSelect = onSelect
+        self.onOpenDetails = onOpenDetails
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 11) {
             poster
-            info(entry: entry)
+            info
         }
         .frame(height: rowHeight, alignment: .top)
         .padding(.vertical, 5)
@@ -58,8 +71,7 @@ struct AnimeEntryListRow: View {
         }
     }
 
-    @ViewBuilder
-    private func info(entry: AnimeEntry) -> some View {
+    private var info: some View {
         VStack(alignment: .leading, spacing: 0) {
             headerBlock
             if let overviewText {
@@ -83,7 +95,7 @@ struct AnimeEntryListRow: View {
 
     private var poster: some View {
         KFImageView(
-            url: entry.posterURL,
+            url: snapshot.posterURL,
             targetWidth: 240,
             diskCacheExpiration: .longTerm
         )
@@ -101,7 +113,7 @@ struct AnimeEntryListRow: View {
 
     private var headerBlock: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(entry.displayName)
+            Text(snapshot.title)
                 .font(.headline.weight(.semibold))
                 .lineLimit(1...2)
                 .multilineTextAlignment(.leading)
@@ -135,7 +147,7 @@ struct AnimeEntryListRow: View {
     }
 
     private var favoriteButton: some View {
-        LibraryFavoriteToggle(entry: entry) { isFavorite in
+        LibraryFavoriteToggle(entry: entry, displayedIsFavorite: snapshot.isFavorite) { isFavorite in
             LibraryFavoriteSymbol(
                 isFavorite: isFavorite,
                 font: .footnote.weight(.semibold)
@@ -154,63 +166,15 @@ struct AnimeEntryListRow: View {
     }
 
     private var primaryMetadata: [String] {
-        [
-            yearText,
-            typeSummaryText
-        ].compactMap(\.self)
-    }
-
-    private var yearText: String? {
-        entry.onAirDate?.formatted(.dateTime.year().month().day())
-    }
-
-    private var typeSummaryText: String? {
-        switch entry.type {
-        case .movie:
-            return String(localized: movieSummaryResource)
-        case .series:
-            return entry.detail?.episodeCount.map { String(localized: episodeCountResource($0)) }
-                ?? String(localized: "Series")
-        case .season(let seasonNumber, _):
-            return entry.detail?.episodeCount.map { String(localized: episodeCountResource($0)) }
-                ?? String(localized: seasonSummaryResource(seasonNumber: seasonNumber))
-        }
+        snapshot.primaryMetadata
     }
 
     private var secondaryMetadataText: String? {
-        guard case .season(let seasonNumber, _) = entry.type else { return nil }
-        return String(localized: seasonSummaryResource(seasonNumber: seasonNumber))
-    }
-
-    private var movieSummaryResource: LocalizedStringResource {
-        if let runtime = entry.detail?.runtimeMinutes {
-            return "\(runtime) min"
-        }
-        return "Movie"
-    }
-
-    private func seasonSummaryResource(seasonNumber: Int) -> LocalizedStringResource {
-        if seasonNumber == 0 {
-            return "Specials"
-        }
-        return "Season \(seasonNumber)"
-    }
-
-    private func episodeCountResource(_ count: Int) -> LocalizedStringResource {
-        "\(count) episodes"
+        snapshot.secondaryMetadata
     }
 
     private var overviewText: String? {
-        guard
-            let overview = entry.displayOverview?
-                .replacingOccurrences(of: "\n", with: " ")
-                .trimmingCharacters(in: .whitespacesAndNewlines),
-            !overview.isEmpty
-        else {
-            return nil
-        }
-
-        return overview
+        snapshot.overview
     }
 
     private var statusLabel: some View {
@@ -222,6 +186,6 @@ struct AnimeEntryListRow: View {
     }
 
     private var statusBadge: some View {
-        LibraryWatchStatusBadge(status: entry.watchStatus)
+        LibraryWatchStatusBadge(status: snapshot.watchStatus)
     }
 }

@@ -97,8 +97,12 @@ final class LibraryEntryInteractionState {
     }
 
     func highlightBinding(for entry: AnimeEntry, highlightedEntryID: Binding<Int?>) -> Binding<Bool> {
+        highlightBinding(for: entry.tmdbID, highlightedEntryID: highlightedEntryID)
+    }
+
+    func highlightBinding(for entryID: Int, highlightedEntryID: Binding<Int?>) -> Binding<Bool> {
         Binding(
-            get: { highlightedEntryID.wrappedValue == entry.tmdbID },
+            get: { highlightedEntryID.wrappedValue == entryID },
             set: { if !$0 { highlightedEntryID.wrappedValue = nil } }
         )
     }

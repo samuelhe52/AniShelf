@@ -68,10 +68,16 @@ struct LibraryFavoriteToggle<Label: View>: View {
     @State private var favoriteOverride: Bool?
 
     let entry: AnimeEntry
+    let displayedIsFavorite: Bool
     private let label: (Bool) -> Label
 
-    init(entry: AnimeEntry, @ViewBuilder label: @escaping (Bool) -> Label) {
+    init(
+        entry: AnimeEntry,
+        displayedIsFavorite: Bool? = nil,
+        @ViewBuilder label: @escaping (Bool) -> Label
+    ) {
         self.entry = entry
+        self.displayedIsFavorite = displayedIsFavorite ?? entry.favorite
         self.label = label
     }
 
@@ -85,7 +91,7 @@ struct LibraryFavoriteToggle<Label: View>: View {
         .buttonStyle(.borderless)
         .sensoryFeedback(.impact, trigger: isFavorite)
         .accessibilityLabel(Text(favoriteActionResource))
-        .onChange(of: entry.favorite, initial: true) { _, newValue in
+        .onChange(of: displayedIsFavorite, initial: true) { _, newValue in
             guard favoriteOverride != nil else { return }
             if favoriteOverride == newValue {
                 favoriteOverride = nil
@@ -94,7 +100,7 @@ struct LibraryFavoriteToggle<Label: View>: View {
     }
 
     private var isFavorite: Bool {
-        favoriteOverride ?? entry.favorite
+        favoriteOverride ?? displayedIsFavorite
     }
 
     private var favoriteActionResource: LocalizedStringResource {

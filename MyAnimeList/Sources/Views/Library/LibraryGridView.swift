@@ -20,30 +20,30 @@ struct LibraryGridView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(store.libraryOnDisplay, id: \.tmdbID) { entry in
-                        LibraryGridItem(entry: entry)
+                    ForEach(store.libraryDisplayItems) { item in
+                        LibraryGridItem(snapshot: item.snapshot)
                             .highlightEffect(
                                 showHighlight: interaction.highlightBinding(
-                                    for: entry,
+                                    for: item.id,
                                     highlightedEntryID: $highlightedEntryID
                                 ),
                                 delay: 0.2
                             )
                             .contextMenu {
                                 interaction.contextMenu(
-                                    for: entry,
+                                    for: item.entry,
                                     store: store,
                                     toggleFavorite: toggleFavorite
                                 )
-                                .onAppear { scrolledID = entry.tmdbID }
+                                .onAppear { scrolledID = item.id }
                             } preview: {
-                                EntryContextMenuPreview(entry: entry)
-                                    .onAppear { scrolledID = entry.tmdbID }
+                                EntryContextMenuPreview(snapshot: item.snapshot)
+                                    .onAppear { scrolledID = item.id }
                             }
-                            .onTapGesture { scrolledID = entry.tmdbID }
+                            .onTapGesture { scrolledID = item.id }
                             .onTapGesture(count: 2) {
-                                interaction.detailingEntry = entry
-                                scrolledID = entry.tmdbID
+                                interaction.detailingEntry = item.entry
+                                scrolledID = item.id
                             }
                     }
                 }
@@ -81,7 +81,7 @@ struct LibraryGridView: View {
 }
 
 fileprivate struct LibraryGridItem: View {
-    var entry: AnimeEntry
+    var snapshot: LibraryEntrySnapshot
     private let posterShape = RoundedRectangle(cornerRadius: 16, style: .continuous)
 
     var body: some View {
@@ -108,7 +108,7 @@ fileprivate struct LibraryGridItem: View {
 
     private var posterImage: some View {
         KFImageView(
-            url: entry.posterURL,
+            url: snapshot.posterURL,
             targetWidth: 360,
             diskCacheExpiration: .longTerm
         )
@@ -117,7 +117,7 @@ fileprivate struct LibraryGridItem: View {
     }
 
     private var titleLabel: some View {
-        Text(entry.displayName)
+        Text(snapshot.title)
             .font(.system(size: 11.5, weight: .semibold))
             .foregroundStyle(.primary.opacity(0.88))
             .multilineTextAlignment(.leading)
@@ -129,7 +129,7 @@ fileprivate struct LibraryGridItem: View {
 
     private var statusIndicator: some View {
         LibraryWatchStatusIndicator(
-            status: entry.watchStatus,
+            status: snapshot.watchStatus,
             diameter: 10,
             strokeColor: .white.opacity(0.88),
             strokeWidth: 1.8,
@@ -142,7 +142,7 @@ fileprivate struct LibraryGridItem: View {
 
     @ViewBuilder
     private var favoriteIndicator: some View {
-        if entry.favorite {
+        if snapshot.isFavorite {
             LibraryFavoriteSymbol(
                 isFavorite: true,
                 font: .system(size: 11, weight: .bold),

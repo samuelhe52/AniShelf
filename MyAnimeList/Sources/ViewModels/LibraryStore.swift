@@ -81,6 +81,10 @@ class LibraryStore {
         filterAndSort(library)
     }
 
+    var libraryDisplayItems: [LibraryEntryDisplayItem] {
+        libraryOnDisplay.map(LibraryEntryDisplayItem.init)
+    }
+
     init(dataProvider: DataProvider) {
         self.dataProvider = dataProvider
         self.backupManager = BackupManager(dataProvider: dataProvider)
