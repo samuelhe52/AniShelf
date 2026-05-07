@@ -354,15 +354,16 @@ struct EntryDetailView: View {
         switch entry.type {
         case .series:
             if !model.seasonCards.isEmpty {
-                sectionCard(EntryDetailL10n.episodes) {
-                    LazyVStack(spacing: 18) {
-                        ForEach(model.seasonCards) { season in
-                            SeriesSeasonEpisodeGroupView(
-                                season: season,
-                                seriesTMDbID: entry.tmdbID,
-                                language: currentLanguage
-                            )
-                        }
+                LazyVStack(spacing: 18) {
+                    ForEach(model.seasonCards) { season in
+                        SeriesSeasonEpisodeGroupView(
+                            season: season,
+                            seriesTMDbID: entry.tmdbID,
+                            language: currentLanguage,
+                            sectionTitle: season.id == model.seasonCards.first?.id
+                                ? EntryDetailL10n.episodes
+                                : nil
+                        )
                     }
                 }
                 .id(EntryDetailScrollTarget.episodesSection)

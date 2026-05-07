@@ -130,6 +130,7 @@ struct SeriesSeasonEpisodeGroupView: View {
     let season: EntryDetailSeasonCard
     let seriesTMDbID: Int
     let language: Language
+    let sectionTitle: LocalizedStringResource?
 
     private let loadingAnimation: Animation = .easeInOut(duration: 0.25)
 
@@ -139,15 +140,27 @@ struct SeriesSeasonEpisodeGroupView: View {
     @State private var loadFailed = false
     @State private var loadedEpisodesKey: String?
 
-    init(season: EntryDetailSeasonCard, seriesTMDbID: Int, language: Language) {
+    init(
+        season: EntryDetailSeasonCard,
+        seriesTMDbID: Int,
+        language: Language,
+        sectionTitle: LocalizedStringResource? = nil
+    ) {
         self.season = season
         self.seriesTMDbID = seriesTMDbID
         self.language = language
+        self.sectionTitle = sectionTitle
         _isExpanded = State(initialValue: season.seasonNumber != 0)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if let sectionTitle {
+                Text(sectionTitle)
+                    .font(.title3.weight(.bold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             Button {
                 withAnimation(loadingAnimation) {
                     isExpanded.toggle()
@@ -182,6 +195,8 @@ struct SeriesSeasonEpisodeGroupView: View {
                     }
             }
         }
+        .padding(18)
+        .popupGlassPanel(cornerRadius: 24)
         .animation(loadingAnimation, value: episodes.count)
         .animation(loadingAnimation, value: isLoading)
         .animation(loadingAnimation, value: loadFailed)
