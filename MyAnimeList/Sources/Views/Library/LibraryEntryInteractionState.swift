@@ -234,7 +234,10 @@ extension View {
                 )
             ) { entry in
                 NavigationStack {
-                    EntryDetailView(entry: entry)
+                    EntryDetailView(
+                        entry: entry,
+                        repository: store.repository
+                    )
                 }
             }
             .sheet(
@@ -268,7 +271,11 @@ extension View {
                 )
             ) { entry in
                 NavigationStack {
-                    EntryDetailView(entry: entry, startInEditingMode: true)
+                    EntryDetailView(
+                        entry: entry,
+                        repository: store.repository,
+                        startInEditingMode: true
+                    )
                 }
             }
     }

@@ -10,15 +10,17 @@ import SwiftData
 import SwiftUI
 
 struct EntryDetailView: View {
+    @Environment(\.dataHandler) private var dataHandler
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
+    @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
+        Language.followsSystemPreference()
+
     let entry: AnimeEntry
     private let startInEditingMode: Bool
 
-    @Environment(\.dataHandler) private var dataHandler
-    @Environment(\.dismiss) private var dismiss
-    @Environment(LibraryStore.self) private var libraryStore
-    @Environment(\.modelContext) private var modelContext
-
-    @State private var model = EntryDetailViewModel()
+    @State private var model: EntryDetailViewModel
     @State private var showSharingSheet = false
     @State private var showPosterSelectionView = false
     @State private var showCancelEditsConfirmation = false
@@ -32,12 +34,17 @@ struct EntryDetailView: View {
     @State private var didAutoScrollToEditingSection = false
 
     private var accentColor: Color { entry.favorite ? .orange : .blue }
-    private var currentLanguage: Language { libraryStore.language }
+    private var currentLanguage: Language { followsSystemLanguage ? .current : preferredLanguage }
     private let heroHeight: CGFloat = 420
 
-    init(entry: AnimeEntry, startInEditingMode: Bool = false) {
+    init(
+        entry: AnimeEntry,
+        repository: LibraryRepository,
+        startInEditingMode: Bool = false
+    ) {
         self.entry = entry
         self.startInEditingMode = startInEditingMode
+        self._model = State(initialValue: EntryDetailViewModel(repository: repository))
         self._isEditingDetails = State(initialValue: startInEditingMode)
         self._originalUserInfo = State(initialValue: entry.userInfo)
     }
@@ -599,34 +606,17 @@ struct EntryDetailView: View {
     }
 
     private var hasSiblingSeasonEntry: Bool {
-        guard case .season(_, let parentSeriesID) = entry.type else { return false }
-
-        let visibleSiblingExists = libraryStore.libraryOnDisplay.contains { candidate in
-            guard candidate.id != entry.id else { return false }
-            guard case .season(_, let candidateParentSeriesID) = candidate.type else {
-                return false
-            }
-            return candidateParentSeriesID == parentSeriesID
-        }
-
-        if visibleSiblingExists {
-            return true
-        }
-
-        return entry.parentSeriesEntry?.childSeasonEntries.contains(where: { $0.id != entry.id })
-            ?? false
+        model.hasSiblingSeasonEntry(for: entry)
     }
 
     private func presentSeasonPicker() async {
         isFetchingSeasons = true
         conversionInProgress = true
         do {
-            let infoFetcher = InfoFetcher()
-            let series = try await infoFetcher.tvSeries(
-                entry.tmdbID,
+            seasonNumberOptions = try await model.seasonNumberOptions(
+                for: entry,
                 language: currentLanguage
             )
-            seasonNumberOptions = series.seasons?.map(\.seasonNumber).sorted() ?? []
             showSeasonPicker = true
         } catch {
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
@@ -639,11 +629,9 @@ struct EntryDetailView: View {
         guard case .season(_, _) = entry.type else { return }
         conversionInProgress = true
         do {
-            let converter = LibraryEntryConverter(repository: libraryStore.repository)
-            try await converter.convertSeasonToSeries(
+            try await model.convertSeasonToSeries(
                 entry,
-                language: currentLanguage,
-                fetcher: libraryStore.infoFetcher
+                language: currentLanguage
             )
             ToastCenter.global.completionState = .completed("Converted to series")
             dismiss()
@@ -656,12 +644,10 @@ struct EntryDetailView: View {
     private func convertSeriesToSeason(seasonNumber: Int) async {
         conversionInProgress = true
         do {
-            let converter = LibraryEntryConverter(repository: libraryStore.repository)
-            try await converter.convertSeriesToSeason(
+            try await model.convertSeriesToSeason(
                 entry,
                 seasonNumber: seasonNumber,
-                language: currentLanguage,
-                fetcher: libraryStore.infoFetcher
+                language: currentLanguage
             )
             ToastCenter.global.completionState = .completed("Converted to season")
             dismiss()
@@ -685,9 +671,11 @@ fileprivate struct EntryDetailPreviewHost: View {
             }
             .sheet(isPresented: $showDetail) {
                 NavigationStack {
-                    EntryDetailView(entry: .yourName)
-                        .environment(previewStore)
-                        .environment(\.dataHandler, DataProvider.forPreview.dataHandler)
+                    EntryDetailView(
+                        entry: .yourName,
+                        repository: previewStore.repository
+                    )
+                    .environment(\.dataHandler, DataProvider.forPreview.dataHandler)
                 }
             }
             .onAppear {

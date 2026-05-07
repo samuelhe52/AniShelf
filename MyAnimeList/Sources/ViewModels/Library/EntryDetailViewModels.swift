@@ -12,6 +12,9 @@ import SwiftUI
 @MainActor
 @Observable
 final class EntryDetailViewModel {
+    private let repository: LibraryRepository
+    private let infoFetcher: InfoFetcher
+
     private(set) var isLoading = false
     private(set) var loadError: String?
     private(set) var heroImageURL: URL?
@@ -30,6 +33,11 @@ final class EntryDetailViewModel {
         EntryDetailL10n.characters
 
     private var lastRequestKey: String?
+
+    init(repository: LibraryRepository, infoFetcher: InfoFetcher = .init()) {
+        self.repository = repository
+        self.infoFetcher = infoFetcher
+    }
 
     func load(for entry: AnimeEntry, language: Language, dataHandler: DataHandler?) async {
         let requestKey = "\(entry.tmdbID)-\(language.rawValue)"
@@ -60,7 +68,7 @@ final class EntryDetailViewModel {
 
         isLoading = true
         do {
-            let detail = try await InfoFetcher().detailInfo(
+            let detail = try await infoFetcher.detailInfo(
                 entryType: entry.type,
                 tmdbID: entry.tmdbID,
                 language: language
@@ -72,6 +80,62 @@ final class EntryDetailViewModel {
             loadError = error.localizedDescription
         }
         isLoading = false
+    }
+
+    func hasSiblingSeasonEntry(for entry: AnimeEntry) -> Bool {
+        guard case .season(_, let parentSeriesID) = entry.type else { return false }
+
+        do {
+            let visibleSiblingExists = try repository.visibleLibraryEntries().contains { candidate in
+                guard candidate.id != entry.id else { return false }
+                guard case .season(_, let candidateParentSeriesID) = candidate.type else {
+                    return false
+                }
+                return candidateParentSeriesID == parentSeriesID
+            }
+
+            if visibleSiblingExists {
+                return true
+            }
+        } catch {
+            libraryStoreLogger.warning(
+                "Failed to check sibling season entries for \(entry.tmdbID, privacy: .public): \(error.localizedDescription)"
+            )
+        }
+
+        return entry.parentSeriesEntry?.childSeasonEntries.contains(where: { $0.id != entry.id })
+            ?? false
+    }
+
+    func seasonNumberOptions(for entry: AnimeEntry, language: Language) async throws -> [Int] {
+        let series = try await infoFetcher.tvSeries(
+            entry.tmdbID,
+            language: language
+        )
+        return series.seasons?.map(\.seasonNumber).sorted() ?? []
+    }
+
+    func convertSeasonToSeries(_ entry: AnimeEntry, language: Language) async throws {
+        let converter = LibraryEntryConverter(repository: repository)
+        try await converter.convertSeasonToSeries(
+            entry,
+            language: language,
+            fetcher: infoFetcher
+        )
+    }
+
+    func convertSeriesToSeason(
+        _ entry: AnimeEntry,
+        seasonNumber: Int,
+        language: Language
+    ) async throws {
+        let converter = LibraryEntryConverter(repository: repository)
+        try await converter.convertSeriesToSeason(
+            entry,
+            seasonNumber: seasonNumber,
+            language: language,
+            fetcher: infoFetcher
+        )
     }
 
     private func apply(detail: AnimeEntryDetail, entry: AnimeEntry, language: Language) {
