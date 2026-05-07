@@ -16,7 +16,7 @@ struct LibraryGalleryView: View {
 
     var body: some View {
         Group {
-            if !store.libraryOnDisplay.isEmpty {
+            if !store.libraryDisplayItems.isEmpty {
                 libraryContent
             } else {
                 Color.clear
@@ -36,9 +36,10 @@ struct LibraryGalleryView: View {
         GeometryReader { geometry in
             ScrollView(.horizontal) {
                 LazyHStack(spacing: 0) {
-                    ForEach(store.libraryOnDisplay, id: \.tmdbID) { entry in
+                    ForEach(store.libraryDisplayItems) { item in
                         AnimeEntryCardWrapper(
-                            entry: entry,
+                            entry: item.entry,
+                            snapshot: item.snapshot,
                             store: store,
                             scrolledID: $scrolledID
                         )
@@ -63,6 +64,7 @@ struct LibraryGalleryView: View {
 
 fileprivate struct AnimeEntryCardWrapper: View {
     var entry: AnimeEntry
+    var snapshot: LibraryEntrySnapshot
     let store: LibraryStore
     @Binding var scrolledID: Int?
 
@@ -72,22 +74,23 @@ fileprivate struct AnimeEntryCardWrapper: View {
     var body: some View {
         VStack(spacing: 14) {
             if imageLoaded {
-                AnimeEntryDates(entry: entry)
+                AnimeEntryDates(snapshot: snapshot)
             }
             AnimeEntryCard(
                 entry: entry,
+                snapshot: snapshot,
                 onOpenDetails: {
                     interaction.detailingEntry = entry
-                    scrolledID = entry.tmdbID
+                    scrolledID = snapshot.id
                 },
                 imageLoaded: $imageLoaded
             )
             .contextMenu {
                 contextMenu(for: entry)
-                    .onAppear { scrolledID = entry.tmdbID }
+                    .onAppear { scrolledID = snapshot.id }
             } preview: {
-                EntryContextMenuPreview(entry: entry)
-                    .onAppear { scrolledID = entry.tmdbID }
+                EntryContextMenuPreview(snapshot: snapshot)
+                    .onAppear { scrolledID = snapshot.id }
             }
         }
         .padding(.horizontal, 14)

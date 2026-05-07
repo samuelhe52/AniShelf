@@ -18,41 +18,42 @@ struct LibraryListView: View {
 
     var body: some View {
         ScrollViewReader { proxy in
-            List(store.libraryOnDisplay, id: \.tmdbID) { entry in
+            List(store.libraryDisplayItems) { item in
                 AnimeEntryListRow(
-                    entry: entry,
-                    onSelect: { scrolledID = entry.tmdbID },
+                    entry: item.entry,
+                    snapshot: item.snapshot,
+                    onSelect: { scrolledID = item.id },
                     onOpenDetails: {
-                        scrolledID = entry.tmdbID
-                        interaction.detailingEntry = entry 
+                        scrolledID = item.id
+                        interaction.detailingEntry = item.entry
                     }
                 )
                 .highlightEffect(
                     showHighlight: interaction.highlightBinding(
-                        for: entry,
+                        for: item.id,
                         highlightedEntryID: $highlightedEntryID
                     ),
                     delay: 0.2
                 )
                 .contextMenu {
                     interaction.contextMenu(
-                        for: entry,
+                        for: item.entry,
                         store: store,
                         toggleFavorite: toggleFavorite
                     )
                 } preview: {
-                    EntryContextMenuPreview(entry: entry)
-                        .onAppear { scrolledID = entry.tmdbID }
+                    EntryContextMenuPreview(snapshot: item.snapshot)
+                        .onAppear { scrolledID = item.id }
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button("Delete", systemImage: "trash") {
-                        interaction.prepareDeletion(for: entry)
+                        interaction.prepareDeletion(for: item.entry)
                     }
                     .tint(.red)
                 }
                 .swipeActions(edge: .leading) {
                     Button("Edit", systemImage: "pencil") {
-                        interaction.setEditingEntry(entry)
+                        interaction.setEditingEntry(item.entry)
                     }
                     .tint(.blue)
                 }

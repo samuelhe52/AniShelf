@@ -9,8 +9,18 @@ import DataProvider
 import SwiftUI
 
 struct AnimeEntryDates: View {
-    var entry: AnimeEntry
+    var snapshot: LibraryEntrySnapshot
     var labelsHidden: Bool = false
+
+    init(entry: AnimeEntry, labelsHidden: Bool = false) {
+        self.snapshot = LibraryEntrySnapshot(entry: entry)
+        self.labelsHidden = labelsHidden
+    }
+
+    init(snapshot: LibraryEntrySnapshot, labelsHidden: Bool = false) {
+        self.snapshot = snapshot
+        self.labelsHidden = labelsHidden
+    }
 
     private var dateFormatStyle: Date.FormatStyle {
         .dateTime.year().month().day()
@@ -18,7 +28,7 @@ struct AnimeEntryDates: View {
 
     var body: some View {
         HStack(spacing: 18) {
-            dateColumn(label: dateStartedResource, value: entry.dateStarted)
+            dateColumn(label: dateStartedResource, value: snapshot.dateStarted)
 
             Image(systemName: "ellipsis")
                 .font(.footnote.weight(.bold))
@@ -27,7 +37,7 @@ struct AnimeEntryDates: View {
                     labelsHidden ? d[VerticalAlignment.center] : -7
                 }
 
-            dateColumn(label: dateFinishedResource, value: entry.dateFinished)
+            dateColumn(label: dateFinishedResource, value: snapshot.dateFinished)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)

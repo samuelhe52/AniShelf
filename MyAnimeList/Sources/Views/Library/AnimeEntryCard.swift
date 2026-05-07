@@ -4,11 +4,24 @@ import SwiftUI
 
 struct AnimeEntryCard: View {
     var entry: AnimeEntry
+    var snapshot: LibraryEntrySnapshot
     var onOpenDetails: (() -> Void)? = nil
     @Binding var imageLoaded: Bool
-    var imageMissing: Bool { entry.posterURL == nil }
+    var imageMissing: Bool { snapshot.posterURL == nil }
     private let posterShape = RoundedRectangle(cornerRadius: 28, style: .continuous)
     private let favoriteButtonTapClearance: CGFloat = 48
+
+    init(
+        entry: AnimeEntry,
+        snapshot: LibraryEntrySnapshot? = nil,
+        onOpenDetails: (() -> Void)? = nil,
+        imageLoaded: Binding<Bool>
+    ) {
+        self.entry = entry
+        self.snapshot = snapshot ?? LibraryEntrySnapshot(entry: entry)
+        self.onOpenDetails = onOpenDetails
+        self._imageLoaded = imageLoaded
+    }
 
     var body: some View {
         Color.clear
@@ -32,7 +45,7 @@ struct AnimeEntryCard: View {
 
     private var posterImage: some View {
         KFImageView(
-            url: entry.posterURL, targetWidth: 720, diskCacheExpiration: .longTerm,
+            url: snapshot.posterURL, targetWidth: 720, diskCacheExpiration: .longTerm,
             imageLoaded: $imageLoaded
         )
         .scaledToFill()
@@ -62,7 +75,7 @@ struct AnimeEntryCard: View {
 
     private var statusIndicator: some View {
         LibraryWatchStatusIndicator(
-            status: entry.watchStatus,
+            status: snapshot.watchStatus,
             diameter: 14,
             strokeColor: .white.opacity(0.9),
             strokeWidth: 2
@@ -71,7 +84,7 @@ struct AnimeEntryCard: View {
     }
 
     private var favoriteIndicator: some View {
-        LibraryFavoriteToggle(entry: entry) { isFavorite in
+        LibraryFavoriteToggle(entry: entry, displayedIsFavorite: snapshot.isFavorite) { isFavorite in
             LibraryFavoriteSymbol(
                 isFavorite: isFavorite,
                 font: .system(size: 15, weight: .bold),
