@@ -312,23 +312,89 @@ struct MyAnimeListTests {
         #expect(store.library.isEmpty)
     }
 
-    @Test @MainActor func testDeletionScrollTargetFallbacks() {
-        let interaction = LibraryEntryInteractionState()
-        let first = AnimeEntry(name: "First", type: .movie, tmdbID: 1)
-        let second = AnimeEntry(name: "Second", type: .movie, tmdbID: 2)
-        let third = AnimeEntry(name: "Third", type: .movie, tmdbID: 3)
-        let entries = [first, second, third]
+    @Test @MainActor func testDeletionScrollTargetFallbacks() throws {
+        let sortStrategyKey = String.librarySortStrategy
+        let sortReversedKey = String.librarySortReversed
+        let defaults = UserDefaults.standard
+        let originalSortStrategy = defaults.object(forKey: sortStrategyKey)
+        let originalSortReversed = defaults.object(forKey: sortReversedKey)
 
-        #expect(interaction.deletionScrollTarget(for: second, in: entries) == .entry(1))
-        #expect(interaction.deletionScrollTarget(for: first, in: entries) == .entry(2))
-        #expect(interaction.deletionScrollTarget(for: third, in: entries) == .entry(2))
-        #expect(interaction.deletionScrollTarget(for: first, in: [first]) == .clear)
-        #expect(
-            interaction.deletionScrollTarget(
-                for: AnimeEntry(name: "Missing", type: .movie, tmdbID: 99),
-                in: entries
-            ) == .preserveCurrent
-        )
+        defer {
+            if let originalSortStrategy {
+                defaults.set(originalSortStrategy, forKey: sortStrategyKey)
+            } else {
+                defaults.removeObject(forKey: sortStrategyKey)
+            }
+
+            if let originalSortReversed {
+                defaults.set(originalSortReversed, forKey: sortReversedKey)
+            } else {
+                defaults.removeObject(forKey: sortReversedKey)
+            }
+        }
+
+        func makeEntry(name: String, tmdbID: Int, day: Int) -> AnimeEntry {
+            AnimeEntry(
+                name: name,
+                type: .movie,
+                tmdbID: tmdbID,
+                dateSaved: referenceDate(year: 2026, month: 1, day: day)
+            )
+        }
+
+        func makeStore(with entries: [AnimeEntry]) throws -> LibraryStore {
+            let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+            store.sortStrategy = .dateSaved
+            store.sortReversed = false
+
+            for entry in entries {
+                try store.repository.newEntry(entry)
+            }
+            try store.refreshLibrary()
+            return store
+        }
+
+        do {
+            let first = makeEntry(name: "First", tmdbID: 1, day: 1)
+            let second = makeEntry(name: "Second", tmdbID: 2, day: 2)
+            let third = makeEntry(name: "Third", tmdbID: 3, day: 3)
+            let store = try makeStore(with: [first, second, third])
+            var scrolledID: Int?
+
+            #expect(store.deleteEntry(second) { scrolledID = $0 })
+            #expect(scrolledID == first.tmdbID)
+        }
+
+        do {
+            let first = makeEntry(name: "First", tmdbID: 1, day: 1)
+            let second = makeEntry(name: "Second", tmdbID: 2, day: 2)
+            let third = makeEntry(name: "Third", tmdbID: 3, day: 3)
+            let store = try makeStore(with: [first, second, third])
+            var scrolledID: Int?
+
+            #expect(store.deleteEntry(first) { scrolledID = $0 })
+            #expect(scrolledID == second.tmdbID)
+        }
+
+        do {
+            let first = makeEntry(name: "First", tmdbID: 1, day: 1)
+            let second = makeEntry(name: "Second", tmdbID: 2, day: 2)
+            let third = makeEntry(name: "Third", tmdbID: 3, day: 3)
+            let store = try makeStore(with: [first, second, third])
+            var scrolledID: Int?
+
+            #expect(store.deleteEntry(third) { scrolledID = $0 })
+            #expect(scrolledID == second.tmdbID)
+        }
+
+        do {
+            let solo = makeEntry(name: "Solo", tmdbID: 10, day: 10)
+            let store = try makeStore(with: [solo])
+            var scrolledID: Int? = solo.tmdbID
+
+            #expect(store.deleteEntry(solo) { scrolledID = $0 })
+            #expect(scrolledID == nil)
+        }
     }
 
     private func referenceDate(year: Int, month: Int, day: Int) -> Date {
