@@ -36,6 +36,7 @@ struct EntryDetailView: View {
     private var accentColor: Color { entry.favorite ? .orange : .blue }
     private var currentLanguage: Language { followsSystemLanguage ? .current : preferredLanguage }
     private let heroHeight: CGFloat = 420
+    private let scrollCoordinateSpaceName = "EntryDetailScroll"
 
     init(
         entry: AnimeEntry,
@@ -53,7 +54,7 @@ struct EntryDetailView: View {
         ScrollViewReader { proxy in
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    heroSection
+                    stretchyHeroSection
 
                     VStack(alignment: .leading, spacing: 20) {
                         quickActionsRow
@@ -66,6 +67,7 @@ struct EntryDetailView: View {
                     .padding(.bottom, 40)
                 }
             }
+            .coordinateSpace(name: scrollCoordinateSpaceName)
             .onAppear {
                 guard startInEditingMode, !didAutoScrollToEditingSection else { return }
                 didAutoScrollToEditingSection = true
@@ -147,7 +149,18 @@ struct EntryDetailView: View {
 
     // MARK: - Hero
 
-    private var heroSection: some View {
+    private var stretchyHeroSection: some View {
+        GeometryReader { proxy in
+            let overscroll = max(proxy.frame(in: .named(scrollCoordinateSpaceName)).minY, 0)
+            let stretchedHeight = heroHeight + overscroll
+
+            heroSection(height: stretchedHeight)
+                .offset(y: -overscroll)
+        }
+        .frame(height: heroHeight)
+    }
+
+    private func heroSection(height: CGFloat) -> some View {
         ZStack(alignment: .bottom) {
             heroArtwork
 
@@ -225,7 +238,7 @@ struct EntryDetailView: View {
             }
         }
         .containerRelativeFrame(.horizontal)
-        .frame(height: heroHeight)
+        .frame(height: height)
         .clipped()
     }
 
