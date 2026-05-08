@@ -226,7 +226,7 @@ final class EntryDetailViewModel {
                 ].compactMap(\.self)
             }
 
-        characterCards = detail.characters.map {
+        characterCards = detail.orderedCharacters.map {
             EntryDetailPersonCard(
                 id: $0.id,
                 primaryText: $0.characterName,
@@ -234,7 +234,7 @@ final class EntryDetailViewModel {
                 profileURL: $0.profileURL
             )
         }
-        staffCards = detail.staff.map {
+        staffCards = detail.orderedStaff.map {
             EntryDetailPersonCard(
                 id: $0.id,
                 primaryText: $0.name,
@@ -258,7 +258,7 @@ final class EntryDetailViewModel {
                 seasonCount: detail.seasonCount,
                 seasonCardCount: seasonCards.count
             )
-        episodeCards = detail.episodes.map {
+        episodeCards = detail.orderedEpisodes.map {
             EntryDetailEpisodeCard(
                 id: $0.id,
                 episodeNumber: $0.episodeNumber,

@@ -53,7 +53,8 @@ extension EntryDetailViewModel {
             translations = chineseStaffRoleNames
         }
 
-        return role
+        return
+            role
             .components(separatedBy: " / ")
             .map { translations[$0] ?? $0 }
             .joined(separator: " / ")
