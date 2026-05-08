@@ -146,9 +146,3 @@ updated version will be posted with a new effective date.
 For privacy questions about AniShelf, contact the app publisher through the
 contact method listed on the app's App Store product page or the project's
 repository.
-
-## Important Publishing Note
-
-Before submitting AniShelf to the App Store, review this policy and update it
-if the app's behavior changes, especially if you add analytics, crash
-reporting, cloud sync, authentication, or new data-sharing features.

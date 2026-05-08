@@ -1,58 +1,59 @@
 # AniShelf 📺
 
-A beautiful, native iOS app for tracking and managing your anime library.
+一个美观的原生 iOS 应用，用来追踪和管理你的动画资料库。
 
-[中文](README.zh-CN.md) · [使用教程](docs/anishelf_overview.md)
+[English](README.md) · [使用教程](docs/anishelf_overview.md)
 
-## 📸 Screenshots
+## 📸 截图
 
 <div style="overflow-x: auto; padding: 0.25rem 0 1rem;">
   <table cellpadding="0" cellspacing="12">
     <tr>
-      <td><img src=".app-store-assets/screenshots/ios/featured-library-card.jpeg" alt="AniShelf featured library card" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/library-list-view.jpeg" alt="AniShelf library list view" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/poster-grid-view.jpeg" alt="AniShelf poster grid view" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/featured-library-card.jpeg" alt="AniShelf 精选收藏卡片" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/library-list-view.jpeg" alt="AniShelf 收藏列表视图" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/poster-grid-view.jpeg" alt="AniShelf 海报网格视图" width="240" /></td>
     </tr>
     <tr>
-      <td><img src=".app-store-assets/screenshots/ios/anime-detail-overview.jpeg" alt="AniShelf anime detail overview" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/watch-management-sheet.jpeg" alt="AniShelf watch management sheet" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/library-stats-overview.jpeg" alt="AniShelf library stats overview" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/anime-detail-overview.jpeg" alt="AniShelf 动画详情概览" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/watch-management-sheet.jpeg" alt="AniShelf 观看管理面板" width="240" /></td>
+      <td><img src=".app-store-assets/screenshots/ios/library-stats-overview.jpeg" alt="AniShelf 收藏统计概览" width="240" /></td>
     </tr>
   </table>
 </div>
 
-## ✨ Features
+## ✨ 功能
 
-- **📚 Library Management** - Keep track of all your anime in one place
-- **🔍 Smart Search** - Find anime using The Movie Database (TMDb) with multi-language support
-- **🎨 Beautiful UI** - Native SwiftUI interface, polished and consistent design language
-- **📊 Track Progress** - Monitor your viewing progress and status
-- **👤 Library Profile** - Overview your library with a dedicated profile page
-- **💾 Backup & Restore** - Export and import your library data
-- **🌍 Multi-language** - Support for anime titles and descriptions in multiple languages
+- 从 TMDb 获取番剧/动画电影数据，展示在 App 内。
+- 用户可以添加番剧/动画电影到资料库，记录观看状态
+  - 未看、在看、已看、搁置
+  - 起止日期
+- 记录感想
+- 获取每集的摘要、声优等信息
+- 查看番剧/动画电影在 TMDb 上的评分
+- 精美的 UI 设计、流畅的交互体验
 
 ## 🧪 TestFlight Beta
 
-Join the latest beta build here:
+在这里加入最新 Beta 版本：
 
 - [AniShelf TestFlight](https://testflight.apple.com/join/ns3sR38X)
 
-> You still need a TMDb API key to use the app, which can be obtained for free from [The Movie Database](https://www.themoviedb.org/settings/api).
+> 使用应用仍然需要 TMDb API key，可以从 [The Movie Database](https://www.themoviedb.org/settings/api) 免费获取。
 
-## 🛠 Tech Stack
+## 🛠 技术栈
 
-- **Swift 6.1+** with strict concurrency
-- **SwiftUI** for modern, declarative UI
-- **SwiftData** for data persistence
-- **TMDb API** integration for anime metadata
-- **Kingfisher** for efficient image loading and caching
+- **Swift 6.1+**
+- **SwiftUI**
+- **SwiftData**
+- **TMDb API**
+- **Kingfisher**
 
-## 🗺 Plans
+## 🗺 计划
 
-- More granular watch progress tracking, such as episode-level progress
-- A more detailed rating system; currently the app only supports normal/special favorites, with star ratings planned for later
-- Batch import
-- Watch-data sync with platforms such as TMDb, Bangumi, and AniList; this is a large feature and may take time
+- 更细的观看进度记录，例如精确到集
+- 更细的评分机制；目前只有普通/特别收藏，后续考虑添加星级评分
+- 批量导入功能
+- 与 TMDb、Bangumi、AniList 等平台的观看数据同步功能；这个比较复杂，可能会比较晚再做
 
 ## 📋 Build/Run Requirements
 
