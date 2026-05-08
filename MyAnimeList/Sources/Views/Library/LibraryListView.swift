@@ -73,10 +73,10 @@ struct LibraryListView: View {
         }
         .libraryEntryInteractionOverlays(
             state: interaction,
-            displayedEntries: store.libraryOnDisplay,
-            deleteEntry: store.deleteEntry,
-            detailRepository: store.repository,
-            scrolledID: $scrolledID
+            deleteEntry: { entry in
+                store.deleteEntry(entry) { scrolledID = $0 }
+            },
+            detailRepository: store.repository
         )
     }
 }

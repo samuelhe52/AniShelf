@@ -1,6 +1,12 @@
 import DataProvider
 import Foundation
 
+fileprivate enum DeletionScrollTarget: Equatable {
+    case preserveCurrent
+    case clear
+    case entry(Int)
+}
+
 extension LibraryStore {
     @discardableResult
     func createNewEntry(
@@ -101,9 +107,44 @@ extension LibraryStore {
         }
     }
 
+    @discardableResult
+    func deleteEntry(_ entry: AnimeEntry, updateScrolledID: (Int?) -> Void) -> Bool {
+        let scrollTarget = deletionScrollTarget(for: entry)
+
+        guard deleteEntry(entry) else { return false }
+
+        switch scrollTarget {
+        case .preserveCurrent:
+            break
+        case .clear:
+            updateScrolledID(nil)
+        case .entry(let targetID):
+            updateScrolledID(targetID)
+        }
+
+        return true
+    }
+
     func prefetchImagesForDefaultBehavior<C: Collection>(_ entries: C)
     where C.Element == AnimeEntry {
         guard autoPrefetchImagesOnAddAndRestore else { return }
         LibraryImageCacheService.prefetchImages(for: entries)
+    }
+
+    private func deletionScrollTarget(for entry: AnimeEntry) -> DeletionScrollTarget {
+        let entries = libraryOnDisplay
+        guard let index = entries.firstIndex(where: { $0.id == entry.id }) else {
+            return .preserveCurrent
+        }
+
+        if index > 0 {
+            return .entry(entries[index - 1].tmdbID)
+        }
+
+        let nextIndex = index + 1
+        guard nextIndex < entries.endIndex else {
+            return .clear
+        }
+        return .entry(entries[nextIndex].tmdbID)
     }
 }

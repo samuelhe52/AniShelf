@@ -13,12 +13,6 @@ import UIKit
 @Observable
 @MainActor
 final class LibraryEntryInteractionState {
-    enum DeletionScrollTarget: Equatable {
-        case preserveCurrent
-        case clear
-        case entry(Int)
-    }
-
     var detailingEntry: AnimeEntry?
     var deletingEntry: AnimeEntry?
     var isDeletingEntry: Bool = false
@@ -28,47 +22,16 @@ final class LibraryEntryInteractionState {
     var showPasteAlert: Bool = false
     var pasteAction: (() -> Void)?
 
-    func deletionScrollTarget(for entry: AnimeEntry, in entries: [AnimeEntry]) -> DeletionScrollTarget {
-        guard let index = entries.firstIndex(where: { $0.id == entry.id }) else {
-            return .preserveCurrent
-        }
-
-        if index > 0 {
-            return .entry(entries[index - 1].tmdbID)
-        }
-
-        let nextIndex = index + 1
-        guard nextIndex < entries.endIndex else {
-            return .clear
-        }
-        return .entry(entries[nextIndex].tmdbID)
-    }
-
     func prepareDeletion(for entry: AnimeEntry) {
         deletingEntry = entry
         isDeletingEntry = true
     }
 
-    func confirmDeletion(
-        in entries: [AnimeEntry],
-        deleteEntry: (AnimeEntry) -> Bool,
-        scrolledID: Binding<Int?>
-    ) {
+    func confirmDeletion(deleteEntry: (AnimeEntry) -> Void) {
         guard let entry = deletingEntry else { return }
 
-        let scrollTarget = deletionScrollTarget(for: entry, in: entries)
         clearDeletionRequest()
-
-        guard deleteEntry(entry) else { return }
-
-        switch scrollTarget {
-        case .preserveCurrent:
-            break
-        case .clear:
-            scrolledID.wrappedValue = nil
-        case .entry(let targetID):
-            scrolledID.wrappedValue = targetID
-        }
+        deleteEntry(entry)
     }
 
     func clearDeletionRequest() {
@@ -195,10 +158,8 @@ extension LibraryEntryInteractionState {
 extension View {
     func libraryEntryInteractionOverlays(
         state: LibraryEntryInteractionState,
-        displayedEntries: [AnimeEntry],
-        deleteEntry: @escaping (AnimeEntry) -> Bool,
-        detailRepository: LibraryRepository,
-        scrolledID: Binding<Int?>
+        deleteEntry: @escaping (AnimeEntry) -> Void,
+        detailRepository: LibraryRepository
     ) -> some View {
         self
             .alert(
@@ -216,11 +177,7 @@ extension View {
                 presenting: state.deletingEntry
             ) { _ in
                 Button("Delete", role: .destructive) {
-                    state.confirmDeletion(
-                        in: displayedEntries,
-                        deleteEntry: deleteEntry,
-                        scrolledID: scrolledID
-                    )
+                    state.confirmDeletion(deleteEntry: deleteEntry)
                 }
                 Button("Cancel", role: .cancel) {}
             }
