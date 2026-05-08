@@ -19,6 +19,7 @@ final class LibraryRepository {
     }
 
     func deleteEntry(_ entry: AnimeEntry) throws {
+        entry.resolveLibraryDisplayFaultsBeforeDeletion()
         try dataProvider.dataHandler.deleteEntry(entry)
     }
 

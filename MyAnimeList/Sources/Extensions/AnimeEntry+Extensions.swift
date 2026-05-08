@@ -114,6 +114,33 @@ extension AnimeEntry {
         UserEntryInfo(from: self)
     }
 
+    /// Resolves fields that library UI snapshots may still read while SwiftData is processing deletion.
+    func resolveLibraryDisplayFaultsBeforeDeletion() {
+        _ = name
+        _ = parentSeriesEntry?.name
+        _ = overview
+        _ = parentSeriesEntry?.overview
+        _ = onAirDate
+        _ = type
+        _ = posterURL
+        _ = backdropURL
+        _ = tmdbID
+        _ = watchStatus
+        _ = favorite
+        _ = dateStarted
+        _ = dateFinished
+
+        if let detail {
+            _ = detail.runtimeMinutes
+            _ = detail.episodeCount
+            _ = detail.heroImageURL
+            _ = detail.logoImageURL
+            _ = detail.characters
+            _ = detail.seasons
+            _ = detail.episodes
+        }
+    }
+
     func userInfoHasChanges(comparedTo compared: UserEntryInfo) -> Bool {
         userInfo != compared
     }
