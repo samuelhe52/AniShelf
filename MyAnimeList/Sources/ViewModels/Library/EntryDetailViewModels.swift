@@ -26,8 +26,8 @@ final class EntryDetailViewModel {
     private(set) var overviewText = String(localized: EntryDetailL10n.noOverviewAvailable)
     private(set) var genreNames: [String] = []
     private(set) var statCards: [EntryDetailStatCard] = []
-    private(set) var characterCards: [EntryDetailCharacterCard] = []
-    private(set) var staffCards: [EntryDetailStaffCard] = []
+    private(set) var characterCards: [EntryDetailPersonCard] = []
+    private(set) var staffCards: [EntryDetailPersonCard] = []
     private(set) var seasonCards: [EntryDetailSeasonCard] = []
     private(set) var episodeCards: [EntryDetailEpisodeCard] = []
     private(set) var collapseSeriesSeasonsByDefault = false
@@ -227,19 +227,18 @@ final class EntryDetailViewModel {
             }
 
         characterCards = detail.characters.map {
-            EntryDetailCharacterCard(
+            EntryDetailPersonCard(
                 id: $0.id,
-                characterName: $0.characterName,
-                actorName: $0.actorName,
+                primaryText: $0.characterName,
+                secondaryText: $0.actorName,
                 profileURL: $0.profileURL
             )
         }
         staffCards = detail.staff.map {
-            EntryDetailStaffCard(
+            EntryDetailPersonCard(
                 id: $0.id,
-                name: $0.name,
-                role: $0.role,
-                department: $0.department,
+                primaryText: $0.name,
+                secondaryText: $0.role,
                 profileURL: $0.profileURL
             )
         }

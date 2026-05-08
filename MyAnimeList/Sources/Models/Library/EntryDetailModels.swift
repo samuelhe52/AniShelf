@@ -14,18 +14,10 @@ struct EntryDetailStatCard: Identifiable {
     let symbolName: String
 }
 
-struct EntryDetailCharacterCard: Identifiable {
+struct EntryDetailPersonCard: Identifiable {
     let id: Int
-    let characterName: String
-    let actorName: String
-    let profileURL: URL?
-}
-
-struct EntryDetailStaffCard: Identifiable {
-    let id: Int
-    let name: String
-    let role: String
-    let department: String?
+    let primaryText: String
+    let secondaryText: String
     let profileURL: URL?
 }
 

@@ -32,6 +32,7 @@ struct EntryDetailView: View {
     @State private var isFetchingSeasons = false
     @State private var seasonNumberOptions: [Int] = []
     @State private var didAutoScrollToEditingSection = false
+    @State private var isCharacterExpanded = true
     @State private var isStaffExpanded = false
 
     private var accentColor: Color { entry.favorite ? .orange : .blue }
@@ -356,7 +357,7 @@ struct EntryDetailView: View {
 
         editingSection
 
-        sectionCard(EntryDetailL10n.overview) {
+        sectionCard(EntryDetailL10n.overview, systemImage: "text.alignleft") {
             Text(model.overviewText)
                 .font(.body)
                 .foregroundStyle(.primary)
@@ -365,9 +366,13 @@ struct EntryDetailView: View {
         }
 
         if !model.characterCards.isEmpty {
-            sectionCard(model.characterSectionTitle) {
+            PopupDisclosureCard(
+                model.characterSectionTitle,
+                systemImage: "person.2.fill",
+                isExpanded: $isCharacterExpanded
+            ) {
                 horizontalCards(model.characterCards) { card in
-                    CharacterCardView(card: card)
+                    PersonCardView(card: card)
                 }
             }
         }
@@ -379,7 +384,7 @@ struct EntryDetailView: View {
                 isExpanded: $isStaffExpanded
             ) {
                 horizontalCards(model.staffCards) { card in
-                    StaffCardView(card: card)
+                    PersonCardView(card: card)
                 }
             }
         }
@@ -396,6 +401,9 @@ struct EntryDetailView: View {
                             collapseByDefault: model.collapseSeriesSeasonsByDefault,
                             sectionTitle: season.id == model.seasonCards.first?.id
                                 ? EntryDetailL10n.episodes
+                                : nil,
+                            sectionSystemImage: season.id == model.seasonCards.first?.id
+                                ? "play.rectangle.on.rectangle.fill"
                                 : nil
                         )
                         .id("\(season.id)-\(model.collapseSeriesSeasonsByDefault)")
@@ -405,7 +413,7 @@ struct EntryDetailView: View {
             }
         case .season:
             if !model.episodeCards.isEmpty {
-                sectionCard(EntryDetailL10n.episodes) {
+                sectionCard(EntryDetailL10n.episodes, systemImage: "play.rectangle.on.rectangle.fill") {
                     LazyVStack(spacing: 10) {
                         ForEach(model.episodeCards) { episode in
                             EpisodeRowView(
@@ -489,9 +497,10 @@ struct EntryDetailView: View {
     @ViewBuilder
     private func sectionCard<Content: View>(
         _ title: LocalizedStringResource,
+        systemImage: String? = nil,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        PopupSectionCard(title) {
+        PopupSectionCard(title, systemImage: systemImage) {
             content()
         }
     }

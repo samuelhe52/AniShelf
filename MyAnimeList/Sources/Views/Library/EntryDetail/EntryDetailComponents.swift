@@ -28,8 +28,8 @@ struct DetailStatCard: View {
     }
 }
 
-struct CharacterCardView: View {
-    let card: EntryDetailCharacterCard
+struct PersonCardView: View {
+    let card: EntryDetailPersonCard
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -52,60 +52,14 @@ struct CharacterCardView: View {
             .frame(width: 122, height: 156)
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
 
-            Text(card.characterName)
+            Text(card.primaryText)
                 .font(.subheadline.weight(.semibold))
                 .lineLimit(2)
 
-            Text(card.actorName)
+            Text(card.secondaryText)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
-        }
-        .frame(width: 138, alignment: .leading)
-        .padding(12)
-        .popupGlassPanel(cornerRadius: 24)
-    }
-}
-
-struct StaffCardView: View {
-    let card: EntryDetailStaffCard
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Group {
-                if let profileURL = card.profileURL {
-                    KFImageView(url: profileURL, targetWidth: 240, diskCacheExpiration: .longTerm)
-                        .scaledToFill()
-                        .frame(width: 122, height: 156)
-                        .clipped()
-                } else {
-                    Rectangle()
-                        .fill(Color.secondary.opacity(0.15))
-                        .overlay {
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 34))
-                                .foregroundStyle(.secondary)
-                        }
-                }
-            }
-            .frame(width: 122, height: 156)
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-
-            Text(card.name)
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(2)
-
-            Text(card.role)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-
-            if let department = card.department {
-                Text(department)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-            }
         }
         .frame(width: 138, alignment: .leading)
         .padding(12)
@@ -177,6 +131,7 @@ struct SeriesSeasonEpisodeGroupView: View {
     let seriesTMDbID: Int
     let language: Language
     let sectionTitle: LocalizedStringResource?
+    let sectionSystemImage: String?
 
     private let loadingAnimation: Animation = .easeInOut(duration: 0.25)
     private let initialRenderedEpisodeCount = 24
@@ -194,21 +149,30 @@ struct SeriesSeasonEpisodeGroupView: View {
         seriesTMDbID: Int,
         language: Language,
         collapseByDefault: Bool = false,
-        sectionTitle: LocalizedStringResource? = nil
+        sectionTitle: LocalizedStringResource? = nil,
+        sectionSystemImage: String? = nil
     ) {
         self.season = season
         self.seriesTMDbID = seriesTMDbID
         self.language = language
         self.sectionTitle = sectionTitle
+        self.sectionSystemImage = sectionSystemImage
         _isExpanded = State(initialValue: !collapseByDefault && season.seasonNumber != 0)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let sectionTitle {
-                Text(sectionTitle)
-                    .font(.title3.weight(.bold))
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 8) {
+                    if let sectionSystemImage {
+                        Image(systemName: sectionSystemImage)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    Text(sectionTitle)
+                        .font(.title3.weight(.bold))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             Button {
