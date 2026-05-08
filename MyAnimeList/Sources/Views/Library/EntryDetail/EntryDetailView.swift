@@ -32,6 +32,7 @@ struct EntryDetailView: View {
     @State private var isFetchingSeasons = false
     @State private var seasonNumberOptions: [Int] = []
     @State private var didAutoScrollToEditingSection = false
+    @State private var isStaffExpanded = false
 
     private var accentColor: Color { entry.favorite ? .orange : .blue }
     private var currentLanguage: Language { followsSystemLanguage ? .current : preferredLanguage }
@@ -367,6 +368,18 @@ struct EntryDetailView: View {
             sectionCard(model.characterSectionTitle) {
                 horizontalCards(model.characterCards) { card in
                     CharacterCardView(card: card)
+                }
+            }
+        }
+
+        if !model.staffCards.isEmpty {
+            PopupDisclosureCard(
+                EntryDetailL10n.staff,
+                systemImage: "person.2.fill",
+                isExpanded: $isStaffExpanded
+            ) {
+                horizontalCards(model.staffCards) { card in
+                    StaffCardView(card: card)
                 }
             }
         }

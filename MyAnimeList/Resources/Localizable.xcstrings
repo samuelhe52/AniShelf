@@ -667,6 +667,22 @@
         }
       }
     },
+    "Staff" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スタッフ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "制作人员"
+          }
+        }
+      }
+    },
     "Check Metadata Cache Size" : {
       "localizations" : {
         "ja" : {

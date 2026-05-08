@@ -88,6 +88,24 @@ struct MyAnimeListTests {
         #expect(stats.runtimeMinutes == 0)
     }
 
+    @Test func testStableStaffIdentifierUsesCreditID() {
+        let first = InfoFetcher.stableStaffIdentifier(
+            creditID: "52fe4250c3a36847f8014a11",
+            fallbackID: 7
+        )
+        let second = InfoFetcher.stableStaffIdentifier(
+            creditID: "52fe4250c3a36847f8014a11",
+            fallbackID: 99
+        )
+        let different = InfoFetcher.stableStaffIdentifier(
+            creditID: "56380f0cc3a3681b5c0200be",
+            fallbackID: 7
+        )
+
+        #expect(first == second)
+        #expect(first != different)
+    }
+
     @Test func testLibraryProfileStatsMixedLibrary() {
         let movie = AnimeEntry(
             name: "Movie",
@@ -250,6 +268,7 @@ struct MyAnimeListTests {
         let heroURL = try #require(URL(string: "https://example.com/hero.jpg"))
         let logoURL = try #require(URL(string: "https://example.com/logo.png"))
         let characterURL = try #require(URL(string: "https://example.com/character.jpg"))
+        let staffURL = try #require(URL(string: "https://example.com/staff.jpg"))
         let seasonURL = try #require(URL(string: "https://example.com/season.jpg"))
         let episodeURL = try #require(URL(string: "https://example.com/episode.jpg"))
 
@@ -271,6 +290,14 @@ struct MyAnimeListTests {
                     characterName: "Character",
                     actorName: "Actor",
                     profileURL: characterURL
+                )
+            ],
+            staff: [
+                AnimeEntryStaff(
+                    id: 10,
+                    name: "Director",
+                    role: "Director",
+                    profileURL: staffURL
                 )
             ],
             seasons: [
@@ -301,6 +328,7 @@ struct MyAnimeListTests {
                     heroURL,
                     logoURL,
                     characterURL,
+                    staffURL,
                     seasonURL,
                     episodeURL
                 ])

@@ -1,14 +1,14 @@
 //
-//  AnimeEntryV2_6_0.swift
+//  AnimeEntryV2_7_0.swift
 //  DataProvider
 //
-//  Created by OpenAI Codex on 2026/4/19.
+//  Created by OpenAI Codex on 2026/5/8.
 //
 
 import Foundation
 import SwiftData
 
-extension SchemaV2_6_0 {
+extension SchemaV2_7_0 {
     @Model
     public final class AnimeEntry {
         public var name: String
@@ -21,7 +21,10 @@ extension SchemaV2_6_0 {
         public var posterURL: URL?
         public var backdropURL: URL?
         public var tmdbID: Int
-        public var detail: LegacyAnimeEntryDetailPayload?
+
+        @Relationship(deleteRule: .cascade, inverse: \AnimeEntryDetail.entry)
+        public var detail: AnimeEntryDetail?
+
         public var parentSeriesEntry: AnimeEntry? = nil
 
         @Relationship(inverse: \AnimeEntry.parentSeriesEntry)
@@ -47,7 +50,7 @@ extension SchemaV2_6_0 {
             posterURL: URL? = nil,
             backdropURL: URL? = nil,
             tmdbID: Int,
-            detail: LegacyAnimeEntryDetailPayload? = nil,
+            detail: AnimeEntryDetail? = nil,
             dateSaved: Date? = nil,
             dateStarted: Date? = nil,
             dateFinished: Date? = nil,
@@ -81,7 +84,7 @@ extension SchemaV2_6_0 {
             posterURL: URL?,
             backdropURL: URL?,
             tmdbID: Int,
-            detail: LegacyAnimeEntryDetailPayload?,
+            detail: AnimeEntryDetail?,
             parentSeriesEntry: AnimeEntry?,
             onDisplay: Bool,
             watchStatus: WatchStatus,

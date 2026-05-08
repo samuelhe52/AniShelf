@@ -25,11 +25,11 @@ final class LibraryEntryConverter {
         } else {
             let parentInfo = try await fetcher.tvSeriesInfo(tmdbID: parentSeriesID, language: language)
             parentEntry = AnimeEntry(fromInfo: parentInfo)
-            parentEntry.detail = try await fetcher.detailInfo(
+            parentEntry.replaceDetail(from: try await fetcher.detailInfo(
                 entryType: .series,
                 tmdbID: parentSeriesID,
                 language: language
-            )
+            ))
             parentEntry.onDisplay = true
             try repository.newEntry(parentEntry)
         }
@@ -84,11 +84,11 @@ final class LibraryEntryConverter {
         }
 
         let parentEntry = AnimeEntry(fromInfo: resolvedParentInfo)
-        parentEntry.detail = try await parentDetail
+        parentEntry.replaceDetail(from: try await parentDetail)
         parentEntry.onDisplay = false
 
         let seasonEntry = AnimeEntry(fromInfo: resolvedSeasonInfo)
-        seasonEntry.detail = try await seasonDetail
+        seasonEntry.replaceDetail(from: try await seasonDetail)
         seasonEntry.parentSeriesEntry = parentEntry
         seasonEntry.updateUserInfo(from: userInfo)
         if userInfo.usingCustomPoster {

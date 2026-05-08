@@ -21,7 +21,7 @@ extension SchemaV2_5_0 {
         public var posterURL: URL?
         public var backdropURL: URL?
         public var tmdbID: Int
-        public var detail: AnimeEntryDetail?
+        public var detail: LegacyAnimeEntryDetailPayload?
         public var parentSeriesEntry: AnimeEntry? = nil
 
         @Relationship(inverse: \AnimeEntry.parentSeriesEntry)
@@ -47,7 +47,7 @@ extension SchemaV2_5_0 {
             posterURL: URL? = nil,
             backdropURL: URL? = nil,
             tmdbID: Int,
-            detail: AnimeEntryDetail? = nil,
+            detail: LegacyAnimeEntryDetailPayload? = nil,
             dateSaved: Date? = nil,
             dateStarted: Date? = nil,
             dateFinished: Date? = nil,
@@ -81,7 +81,7 @@ extension SchemaV2_5_0 {
             posterURL: URL?,
             backdropURL: URL?,
             tmdbID: Int,
-            detail: AnimeEntryDetail?,
+            detail: LegacyAnimeEntryDetailPayload?,
             parentSeriesEntry: AnimeEntry?,
             onDisplay: Bool,
             watchStatus: WatchStatus,

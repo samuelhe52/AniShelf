@@ -27,6 +27,7 @@ final class EntryDetailViewModel {
     private(set) var genreNames: [String] = []
     private(set) var statCards: [EntryDetailStatCard] = []
     private(set) var characterCards: [EntryDetailCharacterCard] = []
+    private(set) var staffCards: [EntryDetailStaffCard] = []
     private(set) var seasonCards: [EntryDetailSeasonCard] = []
     private(set) var episodeCards: [EntryDetailEpisodeCard] = []
     private(set) var collapseSeriesSeasonsByDefault = false
@@ -52,6 +53,7 @@ final class EntryDetailViewModel {
         genreNames = []
         statCards = []
         characterCards = []
+        staffCards = []
         seasonCards = []
         episodeCards = []
         collapseSeriesSeasonsByDefault = false
@@ -70,12 +72,12 @@ final class EntryDetailViewModel {
 
         isLoading = true
         do {
-            let detail = try await infoFetcher.detailInfo(
+            let detailDTO = try await infoFetcher.detailInfo(
                 entryType: entry.type,
                 tmdbID: entry.tmdbID,
                 language: language
             )
-            entry.detail = detail
+            let detail = entry.replaceDetail(from: detailDTO)
             try? dataHandler?.modelContext.save()
             apply(detail: detail, entry: entry, language: language)
         } catch {
@@ -229,6 +231,15 @@ final class EntryDetailViewModel {
                 id: $0.id,
                 characterName: $0.characterName,
                 actorName: $0.actorName,
+                profileURL: $0.profileURL
+            )
+        }
+        staffCards = detail.staff.map {
+            EntryDetailStaffCard(
+                id: $0.id,
+                name: $0.name,
+                role: $0.role,
+                department: $0.department,
                 profileURL: $0.profileURL
             )
         }

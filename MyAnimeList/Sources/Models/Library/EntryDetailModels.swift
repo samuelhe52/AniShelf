@@ -21,6 +21,14 @@ struct EntryDetailCharacterCard: Identifiable {
     let profileURL: URL?
 }
 
+struct EntryDetailStaffCard: Identifiable {
+    let id: Int
+    let name: String
+    let role: String
+    let department: String?
+    let profileURL: URL?
+}
+
 struct EntryDetailSeasonCard: Identifiable {
     let id: Int
     let seasonNumber: Int

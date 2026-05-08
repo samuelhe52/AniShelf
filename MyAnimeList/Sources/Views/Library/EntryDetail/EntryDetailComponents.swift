@@ -67,6 +67,52 @@ struct CharacterCardView: View {
     }
 }
 
+struct StaffCardView: View {
+    let card: EntryDetailStaffCard
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Group {
+                if let profileURL = card.profileURL {
+                    KFImageView(url: profileURL, targetWidth: 240, diskCacheExpiration: .longTerm)
+                        .scaledToFill()
+                        .frame(width: 122, height: 156)
+                        .clipped()
+                } else {
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.15))
+                        .overlay {
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 34))
+                                .foregroundStyle(.secondary)
+                        }
+                }
+            }
+            .frame(width: 122, height: 156)
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+
+            Text(card.name)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(2)
+
+            Text(card.role)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+
+            if let department = card.department {
+                Text(department)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+            }
+        }
+        .frame(width: 138, alignment: .leading)
+        .padding(12)
+        .popupGlassPanel(cornerRadius: 24)
+    }
+}
+
 struct EpisodeRowView: View {
     let card: EntryDetailEpisodeCard
     let previewContext: EpisodePreviewContext?

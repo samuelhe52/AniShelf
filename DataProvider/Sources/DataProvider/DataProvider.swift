@@ -9,10 +9,15 @@ import Foundation
 import SwiftData
 
 /// The current schema version used by the data provider.
-public typealias CurrentSchema = SchemaV2_6_0
+public typealias CurrentSchema = SchemaV2_7_0
 
 /// The current anime entry type used by the data provider.
 public typealias AnimeEntry = CurrentSchema.AnimeEntry
+public typealias AnimeEntryDetail = CurrentSchema.AnimeEntryDetail
+public typealias AnimeEntryCharacter = CurrentSchema.AnimeEntryCharacter
+public typealias AnimeEntryStaff = CurrentSchema.AnimeEntryStaff
+public typealias AnimeEntrySeasonSummary = CurrentSchema.AnimeEntrySeasonSummary
+public typealias AnimeEntryEpisodeSummary = CurrentSchema.AnimeEntryEpisodeSummary
 
 @usableFromInline
 let persistenStoreURL = URL.applicationSupportDirectory

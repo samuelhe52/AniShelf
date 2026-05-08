@@ -24,7 +24,8 @@ enum MigrationPlan: SchemaMigrationPlan {
             SchemaV2_4_0.self,
             SchemaV2_4_1.self,
             SchemaV2_5_0.self,
-            SchemaV2_6_0.self
+            SchemaV2_6_0.self,
+            SchemaV2_7_0.self
         ]
     }
 
@@ -42,12 +43,37 @@ enum MigrationPlan: SchemaMigrationPlan {
             .lightweight(fromVersion: SchemaV2_3_2.self, toVersion: SchemaV2_4_0.self),
             .lightweight(fromVersion: SchemaV2_4_0.self, toVersion: SchemaV2_4_1.self),
             .lightweight(fromVersion: SchemaV2_4_1.self, toVersion: SchemaV2_5_0.self),
-            .lightweight(fromVersion: SchemaV2_5_0.self, toVersion: SchemaV2_6_0.self)
+            .lightweight(fromVersion: SchemaV2_5_0.self, toVersion: SchemaV2_6_0.self),
+            .migrateV260ToV270()
         ]
     }
 }
 
 extension MigrationStage {
+    private struct AnimeEntryV270Snapshot {
+        let oldID: PersistentIdentifier
+        let parentSeriesOldID: PersistentIdentifier?
+        let name: String
+        let nameTranslations: [String: String]
+        let overview: String?
+        let overviewTranslations: [String: String]
+        let onAirDate: Date?
+        let type: AnimeType
+        let linkToDetails: URL?
+        let posterURL: URL?
+        let backdropURL: URL?
+        let tmdbID: Int
+        let detail: LegacyAnimeEntryDetailPayload?
+        let onDisplay: Bool
+        let watchStatus: SchemaV2_6_0.AnimeEntry.WatchStatus
+        let dateSaved: Date
+        let dateStarted: Date?
+        let dateFinished: Date?
+        let favorite: Bool
+        let notes: String
+        let usingCustomPoster: Bool
+    }
+
     static func migrateV201ToV210() -> MigrationStage {
         var newEntries: [SchemaV2_1_0.AnimeEntry] = []
 
@@ -92,5 +118,106 @@ extension MigrationStage {
                 try context.save()
             }
         )
+    }
+
+    static func migrateV260ToV270() -> MigrationStage {
+        var snapshots: [AnimeEntryV270Snapshot] = []
+
+        return MigrationStage.custom(
+            fromVersion: SchemaV2_6_0.self,
+            toVersion: SchemaV2_7_0.self,
+            willMigrate: { context in
+                let descriptor = FetchDescriptor<SchemaV2_6_0.AnimeEntry>()
+                let oldEntries = try context.fetch(descriptor)
+                snapshots = oldEntries.map { old in
+                    AnimeEntryV270Snapshot(
+                        oldID: old.persistentModelID,
+                        parentSeriesOldID: old.parentSeriesEntry?.persistentModelID,
+                        name: old.name,
+                        nameTranslations: old.nameTranslations,
+                        overview: old.overview,
+                        overviewTranslations: old.overviewTranslations,
+                        onAirDate: old.onAirDate,
+                        type: old.type,
+                        linkToDetails: old.linkToDetails,
+                        posterURL: old.posterURL,
+                        backdropURL: old.backdropURL,
+                        tmdbID: old.tmdbID,
+                        detail: old.detail,
+                        onDisplay: old.onDisplay,
+                        watchStatus: old.watchStatus,
+                        dateSaved: old.dateSaved,
+                        dateStarted: old.dateStarted,
+                        dateFinished: old.dateFinished,
+                        favorite: old.favorite,
+                        notes: old.notes,
+                        usingCustomPoster: old.usingCustomPoster
+                    )
+                }
+
+                for entry in oldEntries {
+                    context.delete(entry)
+                }
+                try context.save()
+            },
+            didMigrate: { context in
+                var newEntriesByOldID: [PersistentIdentifier: SchemaV2_7_0.AnimeEntry] = [:]
+
+                for snapshot in snapshots {
+                    let entry = SchemaV2_7_0.AnimeEntry(
+                        name: snapshot.name,
+                        nameTranslations: snapshot.nameTranslations,
+                        overview: snapshot.overview,
+                        overviewTranslations: snapshot.overviewTranslations,
+                        onAirDate: snapshot.onAirDate,
+                        type: snapshot.type,
+                        linkToDetails: snapshot.linkToDetails,
+                        posterURL: snapshot.posterURL,
+                        backdropURL: snapshot.backdropURL,
+                        tmdbID: snapshot.tmdbID,
+                        detail: snapshot.detail.map(SchemaV2_7_0.AnimeEntryDetail.init(fromLegacy:)),
+                        parentSeriesEntry: nil,
+                        onDisplay: snapshot.onDisplay,
+                        watchStatus: mapWatchStatus(snapshot.watchStatus),
+                        dateSaved: snapshot.dateSaved,
+                        dateStarted: snapshot.dateStarted,
+                        dateFinished: snapshot.dateFinished,
+                        favorite: snapshot.favorite,
+                        notes: snapshot.notes,
+                        usingCustomPoster: snapshot.usingCustomPoster
+                    )
+                    context.insert(entry)
+                    newEntriesByOldID[snapshot.oldID] = entry
+                }
+
+                for snapshot in snapshots {
+                    guard
+                        let parentSeriesOldID = snapshot.parentSeriesOldID,
+                        let entry = newEntriesByOldID[snapshot.oldID],
+                        let parentEntry = newEntriesByOldID[parentSeriesOldID]
+                    else {
+                        continue
+                    }
+                    entry.parentSeriesEntry = parentEntry
+                }
+
+                try context.save()
+            }
+        )
+    }
+
+    private static func mapWatchStatus(
+        _ status: SchemaV2_6_0.AnimeEntry.WatchStatus
+    ) -> SchemaV2_7_0.AnimeEntry.WatchStatus {
+        switch status {
+        case .planToWatch:
+            .planToWatch
+        case .watching:
+            .watching
+        case .watched:
+            .watched
+        case .dropped:
+            .dropped
+        }
     }
 }

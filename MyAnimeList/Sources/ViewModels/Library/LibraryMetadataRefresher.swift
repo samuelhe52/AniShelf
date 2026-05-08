@@ -11,7 +11,7 @@ final class LibraryMetadataRefresher {
     }
 
     private enum LatestInfoFetchOutcome {
-        case success(Int, BasicInfo, AnimeEntryDetail)
+        case success(Int, BasicInfo, AnimeEntryDetailDTO)
         case failure(LatestInfoFailure)
     }
 
@@ -34,7 +34,7 @@ final class LibraryMetadataRefresher {
                     total: library.count,
                     messageResource: "Fetching Info: 0 / \(library.count)")
 
-            var fetchedInfos: [Int: (BasicInfo, AnimeEntryDetail)] = [:]
+            var fetchedInfos: [Int: (BasicInfo, AnimeEntryDetailDTO)] = [:]
             var failures: [LatestInfoFailure] = []
             let totalCount = library.count
 
@@ -61,12 +61,13 @@ final class LibraryMetadataRefresher {
                 ToastCenter.global.progressState = nil
 
                 ToastCenter.global.loadingMessage = .message("Organizing Library...")
-                for (id, payload) in fetchedInfos {
+                for (id, fetchedInfo) in fetchedInfos {
                     if let entry = library.entryWithTMDbID(id) {
+                        let (info, detailDTO) = fetchedInfo
                         entry.replaceMetadata(
-                            from: payload.0,
+                            from: info,
                             preservingCustomPoster: entry.usingCustomPoster)
-                        entry.detail = payload.1
+                        entry.replaceDetail(from: detailDTO)
                         await resolveParentSeriesEntry(for: entry, fetcher: fetcher, language: language)
                     }
                 }
@@ -116,13 +117,13 @@ final class LibraryMetadataRefresher {
         language: Language,
         updateProgress: @escaping (Int, Int) -> Void
     ) async -> (
-        successes: [(Int, BasicInfo, AnimeEntryDetail)],
+        successes: [(Int, BasicInfo, AnimeEntryDetailDTO)],
         failures: [LatestInfoFailure]
     ) {
         await withTaskGroup(
             of: LatestInfoFetchOutcome.self
         ) { group in
-            var fetchedInfos: [(Int, BasicInfo, AnimeEntryDetail)] = []
+            var fetchedInfos: [(Int, BasicInfo, AnimeEntryDetailDTO)] = []
             var failures: [LatestInfoFailure] = []
 
             for entry in entries {
@@ -133,14 +134,14 @@ final class LibraryMetadataRefresher {
                 let usingCustomPoster = entry.usingCustomPoster
                 group.addTask {
                     do {
-                        let payload = try await self.fetchLatestInfo(
+                        let latestInfo = try await self.fetchLatestInfo(
                             tmdbID: tmdbID,
                             entryType: type,
                             originalPosterURL: originalPosterURL,
                             usingCustomPoster: usingCustomPoster,
                             fetcher: fetcher,
                             language: language)
-                        return .success(payload.0, payload.1, payload.2)
+                        return .success(latestInfo.0, latestInfo.1, latestInfo.2)
                     } catch {
                         return .failure(
                             .init(
@@ -175,16 +176,16 @@ final class LibraryMetadataRefresher {
         usingCustomPoster: Bool,
         fetcher: InfoFetcher,
         language: Language
-    ) async throws -> (Int, BasicInfo, AnimeEntryDetail) {
-        let payload = try await fetcher.latestInfo(
+    ) async throws -> (Int, BasicInfo, AnimeEntryDetailDTO) {
+        let latestInfo = try await fetcher.latestInfo(
             entryType: entryType,
             tmdbID: tmdbID,
             language: language)
-        var resolvedInfo = payload.0
+        var resolvedInfo = latestInfo.0
         if usingCustomPoster {
             resolvedInfo.posterURL = originalPosterURL
         }
-        return (tmdbID, resolvedInfo, payload.1)
+        return (tmdbID, resolvedInfo, latestInfo.1)
     }
 
     private func resolveParentSeriesEntry(

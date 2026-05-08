@@ -14,6 +14,7 @@ enum EntryDetailL10n {
     static let overview: LocalizedStringResource = "Overview"
     static let episodes: LocalizedStringResource = "Episodes"
     static let characters: LocalizedStringResource = "Characters"
+    static let staff: LocalizedStringResource = "Staff"
     static let tmdb: LocalizedStringResource = "TMDb"
     static let couldNotLoadDetails: LocalizedStringResource = "Couldn't load details"
     static let noOverviewAvailable: LocalizedStringResource = "No overview available."

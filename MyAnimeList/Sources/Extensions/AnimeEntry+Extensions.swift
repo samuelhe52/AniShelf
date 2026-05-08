@@ -136,6 +136,7 @@ extension AnimeEntry {
             _ = detail.heroImageURL
             _ = detail.logoImageURL
             _ = detail.characters
+            _ = detail.staff
             _ = detail.seasons
             _ = detail.episodes
         }

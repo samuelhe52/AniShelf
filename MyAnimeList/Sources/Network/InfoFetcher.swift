@@ -285,7 +285,11 @@ final class InfoFetcher: Sendable {
         }
     }
 
-    func detailInfo(entryType: AnimeType, tmdbID: Int, language: Language) async throws -> AnimeEntryDetail {
+    func detailInfo(
+        entryType: AnimeType,
+        tmdbID: Int,
+        language: Language
+    ) async throws -> AnimeEntryDetailDTO {
         switch entryType {
         case .movie:
             return try await movieDetail(tmdbID: tmdbID, language: language)
@@ -304,7 +308,7 @@ final class InfoFetcher: Sendable {
         parentSeriesID: Int,
         seasonNumber: Int,
         language: Language
-    ) async throws -> [AnimeEntryEpisodeSummary] {
+    ) async throws -> [AnimeEntryEpisodeSummaryDTO] {
         let season = try await tvSeason(parentSeriesID, seasonNumber: seasonNumber, language: language)
         let imagesConfiguration = try await imagesConfiguration()
         return makeEpisodeSummaries(
@@ -314,7 +318,7 @@ final class InfoFetcher: Sendable {
     }
 
     func latestInfo(entryType: AnimeType, tmdbID: Int, language: Language) async throws
-        -> (BasicInfo, AnimeEntryDetail)
+        -> (BasicInfo, AnimeEntryDetailDTO)
     {
         switch entryType {
         case .movie:
@@ -344,14 +348,17 @@ final class InfoFetcher: Sendable {
         )
     }
 
-    private func movieDetail(tmdbID: Int, language: Language) async throws -> AnimeEntryDetail {
+    private func movieDetail(
+        tmdbID: Int,
+        language: Language
+    ) async throws -> AnimeEntryDetailDTO {
         let movie = try await movie(tmdbID, language: language)
         let heroImageURL = try await movie.backdropURL(client: tmdbClient, idealWidth: 1_280)
         let logoImageURL = try await movie.logoURL(client: tmdbClient, idealWidth: 500)
         let credits = try await tmdbClient.movies.credits(forMovie: movie.id, language: language.rawValue)
         let imagesConfiguration = try await imagesConfiguration()
 
-        return AnimeEntryDetail(
+        return AnimeEntryDetailDTO(
             language: language.rawValue,
             title: movie.title,
             subtitle: movie.tagline?.nilIfEmpty,
@@ -365,7 +372,7 @@ final class InfoFetcher: Sendable {
             voteAverage: movie.voteAverage,
             runtimeMinutes: movie.runtime,
             characters: credits.cast.prefix(12).map {
-                AnimeEntryCharacter(
+                AnimeEntryCharacterDTO(
                     id: $0.id,
                     characterName: $0.character.strippingVoiceQualifier.nilIfEmpty ?? "Character",
                     actorName: Self.preferredActorName(
@@ -375,11 +382,19 @@ final class InfoFetcher: Sendable {
                     ),
                     profileURL: imagesConfiguration.profileURL(for: $0.profilePath, idealWidth: 185)
                 )
-            }
+            },
+            staff: makeStaff(
+                from: credits.crew.prefix(12),
+                imagesConfiguration: imagesConfiguration,
+                language: language
+            )
         )
     }
 
-    private func tvSeriesDetail(tmdbID: Int, language: Language) async throws -> AnimeEntryDetail {
+    private func tvSeriesDetail(
+        tmdbID: Int,
+        language: Language
+    ) async throws -> AnimeEntryDetailDTO {
         let series = try await tvSeries(tmdbID, language: language)
         let heroImageURL = try await series.backdropURL(client: tmdbClient, idealWidth: 1_280)
         let logoImageURL = try await series.logoURL(client: tmdbClient, idealWidth: 500)
@@ -389,7 +404,7 @@ final class InfoFetcher: Sendable {
         )
         let imagesConfiguration = try await imagesConfiguration()
 
-        return AnimeEntryDetail(
+        return AnimeEntryDetailDTO(
             language: language.rawValue,
             title: series.name,
             subtitle: series.tagline?.nilIfEmpty,
@@ -409,6 +424,11 @@ final class InfoFetcher: Sendable {
                 imagesConfiguration: imagesConfiguration,
                 language: language
             ),
+            staff: makeStaff(
+                from: credits.crew.prefix(12),
+                imagesConfiguration: imagesConfiguration,
+                language: language
+            ),
             seasons: makeSeasonSummaries(
                 from: series.seasons ?? [],
                 imagesConfiguration: imagesConfiguration
@@ -420,7 +440,7 @@ final class InfoFetcher: Sendable {
         seasonNumber: Int,
         parentSeriesID: Int,
         language: Language
-    ) async throws -> AnimeEntryDetail {
+    ) async throws -> AnimeEntryDetailDTO {
         async let parentSeries = tvSeries(parentSeriesID, language: language)
         async let season = tvSeason(parentSeriesID, seasonNumber: seasonNumber, language: language)
 
@@ -435,7 +455,7 @@ final class InfoFetcher: Sendable {
         )
         let imagesConfiguration = try await imagesConfiguration()
 
-        return AnimeEntryDetail(
+        return AnimeEntryDetailDTO(
             language: language.rawValue,
             title: resolvedParentSeries.name,
             subtitle: resolvedSeason.name,
@@ -451,6 +471,11 @@ final class InfoFetcher: Sendable {
             episodeCount: resolvedSeason.episodes?.count,
             characters: makeCharacters(
                 from: credits.cast.prefix(12),
+                imagesConfiguration: imagesConfiguration,
+                language: language
+            ),
+            staff: makeStaff(
+                from: credits.crew.prefix(12),
                 imagesConfiguration: imagesConfiguration,
                 language: language
             ),
@@ -484,7 +509,7 @@ final class InfoFetcher: Sendable {
     }
 
     private func latestMovieInfo(tmdbID: Int, language: Language) async throws
-        -> (BasicInfo, AnimeEntryDetail)
+        -> (BasicInfo, AnimeEntryDetailDTO)
     {
         async let movie = movie(tmdbID, language: language)
         async let imageResources = tmdbClient.movies.images(forMovie: tmdbID)
@@ -516,7 +541,7 @@ final class InfoFetcher: Sendable {
     }
 
     private func latestTVSeriesInfo(tmdbID: Int, language: Language) async throws
-        -> (BasicInfo, AnimeEntryDetail)
+        -> (BasicInfo, AnimeEntryDetailDTO)
     {
         async let series = tvSeries(tmdbID, language: language)
         async let imageResources = tmdbClient.tvSeries.images(forTVSeries: tmdbID)
@@ -554,7 +579,7 @@ final class InfoFetcher: Sendable {
         parentSeriesID: Int,
         seasonNumber: Int,
         language: Language
-    ) async throws -> (BasicInfo, AnimeEntryDetail) {
+    ) async throws -> (BasicInfo, AnimeEntryDetailDTO) {
         async let parentSeries = tvSeries(parentSeriesID, language: language)
         async let season = tvSeason(parentSeriesID, seasonNumber: seasonNumber, language: language)
         async let parentSeriesImages = tmdbClient.tvSeries.images(forTVSeries: parentSeriesID)
@@ -689,8 +714,8 @@ final class InfoFetcher: Sendable {
         credits: ShowCredits,
         imagesConfiguration: ImagesConfiguration,
         language: Language
-    ) -> AnimeEntryDetail {
-        AnimeEntryDetail(
+    ) -> AnimeEntryDetailDTO {
+        AnimeEntryDetailDTO(
             language: language.rawValue,
             title: movie.title,
             subtitle: movie.tagline?.nilIfEmpty,
@@ -710,7 +735,7 @@ final class InfoFetcher: Sendable {
             voteAverage: movie.voteAverage,
             runtimeMinutes: movie.runtime,
             characters: credits.cast.prefix(12).map {
-                AnimeEntryCharacter(
+                AnimeEntryCharacterDTO(
                     id: $0.id,
                     characterName: $0.character.strippingVoiceQualifier.nilIfEmpty ?? "Character",
                     actorName: Self.preferredActorName(
@@ -720,7 +745,12 @@ final class InfoFetcher: Sendable {
                     ),
                     profileURL: imagesConfiguration.profileURL(for: $0.profilePath, idealWidth: 185)
                 )
-            }
+            },
+            staff: makeStaff(
+                from: credits.crew.prefix(12),
+                imagesConfiguration: imagesConfiguration,
+                language: language
+            )
         )
     }
 
@@ -730,8 +760,8 @@ final class InfoFetcher: Sendable {
         credits: TVSeriesAggregateCredits,
         imagesConfiguration: ImagesConfiguration,
         language: Language
-    ) -> AnimeEntryDetail {
-        AnimeEntryDetail(
+    ) -> AnimeEntryDetailDTO {
+        AnimeEntryDetailDTO(
             language: language.rawValue,
             title: series.name,
             subtitle: series.tagline?.nilIfEmpty,
@@ -757,6 +787,11 @@ final class InfoFetcher: Sendable {
                 imagesConfiguration: imagesConfiguration,
                 language: language
             ),
+            staff: makeStaff(
+                from: credits.crew.prefix(12),
+                imagesConfiguration: imagesConfiguration,
+                language: language
+            ),
             seasons: makeSeasonSummaries(
                 from: series.seasons ?? [],
                 imagesConfiguration: imagesConfiguration
@@ -771,8 +806,8 @@ final class InfoFetcher: Sendable {
         credits: TVSeasonAggregateCredits,
         imagesConfiguration: ImagesConfiguration,
         language: Language
-    ) -> AnimeEntryDetail {
-        AnimeEntryDetail(
+    ) -> AnimeEntryDetailDTO {
+        AnimeEntryDetailDTO(
             language: language.rawValue,
             title: parentSeries.name,
             subtitle: season.name,
@@ -794,6 +829,11 @@ final class InfoFetcher: Sendable {
             episodeCount: season.episodes?.count,
             characters: makeCharacters(
                 from: credits.cast.prefix(12),
+                imagesConfiguration: imagesConfiguration,
+                language: language
+            ),
+            staff: makeStaff(
+                from: credits.crew.prefix(12),
                 imagesConfiguration: imagesConfiguration,
                 language: language
             ),
@@ -836,9 +876,9 @@ final class InfoFetcher: Sendable {
         from cast: S,
         imagesConfiguration: ImagesConfiguration,
         language: Language
-    ) -> [AnimeEntryCharacter] where S.Element == CastMember {
+    ) -> [AnimeEntryCharacterDTO] where S.Element == CastMember {
         cast.map {
-            AnimeEntryCharacter(
+            AnimeEntryCharacterDTO(
                 id: $0.id,
                 characterName: $0.character.strippingVoiceQualifier.nilIfEmpty ?? "Character",
                 actorName: Self.preferredActorName(
@@ -855,7 +895,7 @@ final class InfoFetcher: Sendable {
         from cast: S,
         imagesConfiguration: ImagesConfiguration,
         language: Language
-    ) -> [AnimeEntryCharacter] where S.Element == AggregrateCastMember {
+    ) -> [AnimeEntryCharacterDTO] where S.Element == AggregrateCastMember {
         cast.map {
             let primaryRole = $0.roles.max { lhs, rhs in
                 lhs.episodeCount < rhs.episodeCount
@@ -863,7 +903,7 @@ final class InfoFetcher: Sendable {
                 .strippingVoiceQualifier
                 .nilIfEmpty
 
-            return AnimeEntryCharacter(
+            return AnimeEntryCharacterDTO(
                 id: $0.id,
                 characterName: primaryRole ?? "Character",
                 actorName: Self.preferredActorName(
@@ -876,10 +916,83 @@ final class InfoFetcher: Sendable {
         }
     }
 
+    private func makeStaff<S: Sequence>(
+        from crew: S,
+        imagesConfiguration: ImagesConfiguration,
+        language: Language
+    ) -> [AnimeEntryStaffDTO] where S.Element == CrewMember {
+        crew.map {
+            AnimeEntryStaffDTO(
+                id: Self.stableStaffIdentifier(creditID: $0.creditID, fallbackID: $0.id),
+                name: Self.preferredActorName(
+                    localizedName: $0.name,
+                    originalName: nil,
+                    language: language
+                ),
+                role: $0.job.nilIfEmpty ?? $0.department.nilIfEmpty ?? "Staff",
+                department: $0.department.nilIfEmpty,
+                profileURL: imagesConfiguration.profileURL(for: $0.profilePath, idealWidth: 185)
+            )
+        }
+    }
+
+    private func makeStaff<S: Sequence>(
+        from crew: S,
+        imagesConfiguration: ImagesConfiguration,
+        language: Language
+    ) -> [AnimeEntryStaffDTO] where S.Element == AggregrateCrewMember {
+        crew.map {
+            let jobs = Self.uniqueNonEmptyStrings(
+                $0.jobs.sorted { lhs, rhs in
+                    lhs.episodeCount > rhs.episodeCount
+                }.map(\.job)
+            )
+            let department = $0.knownForDepartment?.nilIfEmpty
+
+            return AnimeEntryStaffDTO(
+                id: $0.id,
+                name: Self.preferredActorName(
+                    localizedName: $0.name,
+                    originalName: $0.originalName,
+                    language: language
+                ),
+                role: jobs.prefix(2).joined(separator: " / ").nilIfEmpty ?? department ?? "Staff",
+                department: department,
+                profileURL: imagesConfiguration.profileURL(for: $0.profilePath, idealWidth: 185)
+            )
+        }
+    }
+
+    private static func uniqueNonEmptyStrings<S: Sequence>(_ values: S) -> [String]
+    where S.Element == String {
+        var seen: Set<String> = []
+        var result: [String] = []
+
+        for value in values {
+            guard let value = value.nilIfEmpty, seen.insert(value).inserted else { continue }
+            result.append(value)
+        }
+
+        return result
+    }
+
+    static func stableStaffIdentifier(creditID: String, fallbackID: Int) -> Int {
+        guard !creditID.isEmpty else { return fallbackID }
+
+        // TMDb reuses person IDs across multiple movie crew credits, so derive a stable
+        // per-credit identifier from the credit ID while keeping the stored model shape intact.
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        for byte in creditID.utf8 {
+            hash ^= UInt64(byte)
+            hash &*= 1_099_511_628_211
+        }
+        return Int(truncatingIfNeeded: hash)
+    }
+
     private func makeSeasonSummaries(
         from seasons: [TVSeason],
         imagesConfiguration: ImagesConfiguration
-    ) -> [AnimeEntrySeasonSummary] {
+    ) -> [AnimeEntrySeasonSummaryDTO] {
         seasons
             .sorted {
                 if $0.seasonNumber == 0 { return false }
@@ -887,7 +1000,7 @@ final class InfoFetcher: Sendable {
                 return $0.seasonNumber < $1.seasonNumber
             }
             .map {
-                AnimeEntrySeasonSummary(
+                AnimeEntrySeasonSummaryDTO(
                     id: $0.id,
                     seasonNumber: $0.seasonNumber,
                     title: $0.name,
@@ -899,9 +1012,9 @@ final class InfoFetcher: Sendable {
     private func makeEpisodeSummaries(
         from episodes: [TVEpisode],
         imagesConfiguration: ImagesConfiguration
-    ) -> [AnimeEntryEpisodeSummary] {
+    ) -> [AnimeEntryEpisodeSummaryDTO] {
         episodes.map {
-            AnimeEntryEpisodeSummary(
+            AnimeEntryEpisodeSummaryDTO(
                 id: $0.id,
                 episodeNumber: $0.episodeNumber,
                 title: $0.name,

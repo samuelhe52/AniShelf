@@ -32,7 +32,7 @@ extension LibraryStore {
         )
         let entry = AnimeEntry(fromInfo: try await info)
         applyNewEntryDefaults(to: entry)
-        entry.detail = try await detail
+        entry.replaceDetail(from: try await detail)
         if let parentSeriesID = entry.parentSeriesID {
             if let parentSeriesEntry = library.first(where: { $0.tmdbID == parentSeriesID }) {
                 entry.parentSeriesEntry = parentSeriesEntry
