@@ -426,6 +426,22 @@
         }
       }
     },
+    "AniShelf uses the relay by default when direct TMDb access is unstable." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb への直接接続が不安定な場合に備え、AniShelf は標準で中継を使用します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf 默认使用中继，以应对 TMDb 直连不稳定的情况。"
+          }
+        }
+      }
+    },
     "Another season entry for this series is already in your library. Converting this season to a series can leave both the series and the sibling season entries in the library." : {
       "localizations" : {
         "ja" : {
@@ -618,23 +634,6 @@
         }
       }
     },
-    "Changing the preferred language will not refresh existing infos.\nRefresh all anime infos now? This may take considerable time." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "優先言語を変更しても既存の情報は更新されません。\nすべてのアニメ情報を今すぐ更新しますか？ライブラリのサイズによっては時間がかかる場合があります。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "更改偏好语言不会刷新现有的信息。\n现在刷新所有动画信息吗？根据资料库大小可能需要一些时间。"
-          }
-        }
-      }
-    },
     "Character" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -750,23 +749,6 @@
         }
       }
     },
-    "Choose how the library opens." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ライブラリの開き方を選んでください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择资料库的打开方式。"
-          }
-        }
-      }
-    },
     "Choose the language used for future metadata fetches." : {
       "localizations" : {
         "ja" : {
@@ -779,23 +761,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "选择用于后续元数据获取的语言。"
-          }
-        }
-      }
-    },
-    "Choose how AniShelf reaches TMDb for search and metadata." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "検索とメタデータ取得で AniShelf が TMDb に接続する方法を選びます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择 AniShelf 搜索和获取元数据时连接 TMDb 的方式。"
           }
         }
       }
@@ -1487,23 +1452,6 @@
         }
       }
     },
-    "Export all saved anime and preferences" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存したアニメと設定をすべてエクスポート"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "导出所有动画及偏好设置"
-          }
-        }
-      }
-    },
     "Export or restore your local library." : {
       "localizations" : {
         "ja" : {
@@ -1532,6 +1480,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "加载海报失败。"
+          }
+        }
+      }
+    },
+    "Failed to refresh %lld entries." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 件の情報の更新に失敗しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 条信息刷新失败"
           }
         }
       }
@@ -1970,22 +1934,6 @@
         }
       }
     },
-    "Library is unavailable" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ライブラリを利用できません"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "资料库不可用"
-          }
-        }
-      }
-    },
     "Links" : {
       "localizations" : {
         "ja" : {
@@ -2232,6 +2180,22 @@
         }
       }
     },
+    "No episodes available for this season." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このシーズンのエピソードはありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本季暂无剧集。"
+          }
+        }
+      }
+    },
     "No info found on pasteboard." : {
       "localizations" : {
         "ja" : {
@@ -2276,22 +2240,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无海报可用"
-          }
-        }
-      }
-    },
-    "No episodes available for this season." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このシーズンのエピソードはありません。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "本季暂无剧集。"
           }
         }
       }
@@ -2762,6 +2710,28 @@
         }
       }
     },
+    "Refreshed %lld entries, failed %lld." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Refreshed %1$lld entries, failed %2$lld."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld 件の情報を更新しましたが、%2$lld 件は失敗しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已刷新 %1$lld 条信息，%2$lld 条失败"
+          }
+        }
+      }
+    },
     "Refreshed infos for %lld entries." : {
       "localizations" : {
         "ja" : {
@@ -2908,23 +2878,6 @@
         }
       }
     },
-    "Restore completed! Restart app to see changes." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "復元が完了しました！変更を適用するにはアプリを再起動してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "导入完成！重启 App 以应用更改。"
-          }
-        }
-      }
-    },
     "Retry" : {
       "localizations" : {
         "ja" : {
@@ -2969,39 +2922,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "查看缓存使用情况。"
-          }
-        }
-      }
-    },
-    "Route TMDb API requests through AniShelf's relay when direct access is unstable." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "直接接続が不安定な場合、TMDb API リクエストを AniShelf の中継経由にします。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "直连不稳定时，通过 AniShelf 的中继发送 TMDb API 请求。"
-          }
-        }
-      }
-    },
-    "AniShelf uses the relay by default when direct TMDb access is unstable." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "TMDb への直接接続が不安定な場合に備え、AniShelf は標準で中継を使用します。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AniShelf 默认使用中继，以应对 TMDb 直连不稳定的情况。"
           }
         }
       }
@@ -3530,22 +3450,6 @@
         }
       }
     },
-    "TMDb Proxy Updated" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "TMDb プロキシを更新しました"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "TMDb 代理已更新"
-          }
-        }
-      }
-    },
     "TMDb did not return posters for this selection yet." : {
       "localizations" : {
         "ja" : {
@@ -3594,6 +3498,22 @@
         }
       }
     },
+    "TMDb Proxy Updated" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb プロキシを更新しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb 代理已更新"
+          }
+        }
+      }
+    },
     "TMDb Score" : {
       "localizations" : {
         "ja" : {
@@ -3638,6 +3558,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "尝试另外的搜索词"
+          }
+        }
+      }
+    },
+    "Turn this off if you already use a VPN or direct TMDb access is faster." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN を常用している場合や TMDb への直接接続の方が速い場合はオフにしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果你已长期使用代理，或直连 TMDb 更快，可以关闭此选项。"
           }
         }
       }
@@ -3744,54 +3680,6 @@
         }
       }
     },
-    "Use TMDb Proxy" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "TMDb プロキシを使用"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用 TMDb 代理"
-          }
-        }
-      }
-    },
-    "You might need to restart the app for this change to take effect." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "この変更を反映するには、アプリの再起動が必要な場合があります。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你可能需要重启 App 才能让此更改生效。"
-          }
-        }
-      }
-    },
-    "Turn this off if you already use a VPN or direct TMDb access is faster." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "VPN を常用している場合や TMDb への直接接続の方が速い場合はオフにしてください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "如果你已长期使用代理，或直连 TMDb 更快，可以关闭此选项。"
-          }
-        }
-      }
-    },
     "Use Poster" : {
       "localizations" : {
         "ja" : {
@@ -3836,6 +3724,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用这张海报？"
+          }
+        }
+      }
+    },
+    "Use TMDb Proxy" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb プロキシを使用"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用 TMDb 代理"
           }
         }
       }
@@ -3996,6 +3900,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "之后可以在设置中更改。"
+          }
+        }
+      }
+    },
+    "You might need to restart the app for this change to take effect." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この変更を反映するには、アプリの再起動が必要な場合があります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你可能需要重启 App 才能让此更改生效。"
           }
         }
       }
