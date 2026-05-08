@@ -133,9 +133,12 @@ struct SeriesSeasonEpisodeGroupView: View {
     let sectionTitle: LocalizedStringResource?
 
     private let loadingAnimation: Animation = .easeInOut(duration: 0.25)
+    private let initialRenderedEpisodeCount = 24
+    private let renderedEpisodeBatchSize = 24
 
     @State private var isExpanded: Bool
     @State private var episodes: [EntryDetailEpisodeCard] = []
+    @State private var renderedEpisodeCount = 24
     @State private var isLoading = false
     @State private var loadFailed = false
     @State private var loadedEpisodesKey: String?
@@ -144,13 +147,14 @@ struct SeriesSeasonEpisodeGroupView: View {
         season: EntryDetailSeasonCard,
         seriesTMDbID: Int,
         language: Language,
+        collapseByDefault: Bool = false,
         sectionTitle: LocalizedStringResource? = nil
     ) {
         self.season = season
         self.seriesTMDbID = seriesTMDbID
         self.language = language
         self.sectionTitle = sectionTitle
-        _isExpanded = State(initialValue: season.seasonNumber != 0)
+        _isExpanded = State(initialValue: !collapseByDefault && season.seasonNumber != 0)
     }
 
     var body: some View {
@@ -197,7 +201,6 @@ struct SeriesSeasonEpisodeGroupView: View {
         }
         .padding(18)
         .popupGlassPanel(cornerRadius: 24)
-        .animation(loadingAnimation, value: episodes.count)
         .animation(loadingAnimation, value: isLoading)
         .animation(loadingAnimation, value: loadFailed)
         .animation(loadingAnimation, value: isExpanded)
@@ -209,21 +212,24 @@ struct SeriesSeasonEpisodeGroupView: View {
             ProgressView()
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, 8)
+                .transition(.opacity)
         } else if episodes.isEmpty, loadFailed {
             ContentUnavailableView(
                 String(localized: EntryDetailL10n.couldNotLoadDetails),
                 systemImage: "wifi.exclamationmark"
             )
             .frame(maxWidth: .infinity)
+            .transition(.opacity)
         } else if episodes.isEmpty, loadedEpisodesKey == episodesRequestKey {
             ContentUnavailableView(
                 String(localized: EntryDetailL10n.noEpisodesAvailable),
                 systemImage: "list.bullet.rectangle"
             )
             .frame(maxWidth: .infinity)
+            .transition(.opacity)
         } else {
             LazyVStack(spacing: 10) {
-                ForEach(episodes) { episode in
+                ForEach(renderedEpisodes) { episode in
                     EpisodeRowView(
                         card: episode,
                         previewContext: .init(
@@ -233,8 +239,22 @@ struct SeriesSeasonEpisodeGroupView: View {
                         )
                     )
                 }
+
+                if renderedEpisodeCount < episodes.count {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .onAppear {
+                            renderMoreEpisodes()
+                        }
+                }
             }
+            .transition(.opacity)
         }
+    }
+
+    private var renderedEpisodes: ArraySlice<EntryDetailEpisodeCard> {
+        episodes.prefix(renderedEpisodeCount)
     }
 
     private var episodesRequestKey: String {
@@ -245,6 +265,7 @@ struct SeriesSeasonEpisodeGroupView: View {
         guard loadedEpisodesKey != episodesRequestKey, !isLoading else { return }
         withAnimation(loadingAnimation) {
             episodes = []
+            renderedEpisodeCount = initialRenderedEpisodeCount
             loadFailed = false
             isLoading = true
         }
@@ -268,6 +289,7 @@ struct SeriesSeasonEpisodeGroupView: View {
                 }
             withAnimation(loadingAnimation) {
                 episodes = loadedEpisodes
+                renderedEpisodeCount = min(initialRenderedEpisodeCount, loadedEpisodes.count)
                 loadedEpisodesKey = episodesRequestKey
                 loadFailed = false
                 isLoading = false
@@ -278,6 +300,11 @@ struct SeriesSeasonEpisodeGroupView: View {
                 isLoading = false
             }
         }
+    }
+
+    private func renderMoreEpisodes() {
+        guard renderedEpisodeCount < episodes.count else { return }
+        renderedEpisodeCount = min(renderedEpisodeCount + renderedEpisodeBatchSize, episodes.count)
     }
 }
 

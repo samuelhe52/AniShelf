@@ -29,6 +29,7 @@ final class EntryDetailViewModel {
     private(set) var characterCards: [EntryDetailCharacterCard] = []
     private(set) var seasonCards: [EntryDetailSeasonCard] = []
     private(set) var episodeCards: [EntryDetailEpisodeCard] = []
+    private(set) var collapseSeriesSeasonsByDefault = false
     private(set) var characterSectionTitle: LocalizedStringResource =
         EntryDetailL10n.characters
 
@@ -53,6 +54,7 @@ final class EntryDetailViewModel {
         characterCards = []
         seasonCards = []
         episodeCards = []
+        collapseSeriesSeasonsByDefault = false
         characterSectionTitle = EntryDetailL10n.characters
         primaryLinkURL = entry.linkToDetails
         heroImageURL = entry.backdropURL ?? entry.posterURL
@@ -239,6 +241,13 @@ final class EntryDetailViewModel {
                 posterURL: $0.posterURL
             )
         }
+        collapseSeriesSeasonsByDefault =
+            entry.type == .series
+            && EntryDetailSeasonExpansionPolicy.shouldCollapseSeriesSeasonsByDefault(
+                episodeCount: detail.episodeCount,
+                seasonCount: detail.seasonCount,
+                seasonCardCount: seasonCards.count
+            )
         episodeCards = detail.episodes.map {
             EntryDetailEpisodeCard(
                 id: $0.id,

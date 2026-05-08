@@ -137,6 +137,37 @@ struct MyAnimeListTests {
         #expect(stats.runtimeMinutes == 388)
     }
 
+    @Test func testEntryDetailLargeSeriesExpansionPolicy() {
+        #expect(
+            EntryDetailSeasonExpansionPolicy.shouldCollapseSeriesSeasonsByDefault(
+                episodeCount: 200,
+                seasonCount: 1,
+                seasonCardCount: 1
+            )
+        )
+        #expect(
+            !EntryDetailSeasonExpansionPolicy.shouldCollapseSeriesSeasonsByDefault(
+                episodeCount: 199,
+                seasonCount: 20,
+                seasonCardCount: 20
+            )
+        )
+        #expect(
+            EntryDetailSeasonExpansionPolicy.shouldCollapseSeriesSeasonsByDefault(
+                episodeCount: nil,
+                seasonCount: 9,
+                seasonCardCount: 0
+            )
+        )
+        #expect(
+            !EntryDetailSeasonExpansionPolicy.shouldCollapseSeriesSeasonsByDefault(
+                episodeCount: nil,
+                seasonCount: nil,
+                seasonCardCount: 8
+            )
+        )
+    }
+
     @Test func testSingleTapDetailPreferenceDefaultsAndBackupInclusion() {
         let suiteName = "MyAnimeListTests.SingleTapDetailPreference"
         let defaults = UserDefaults(suiteName: suiteName)!

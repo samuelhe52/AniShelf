@@ -380,10 +380,12 @@ struct EntryDetailView: View {
                             season: season,
                             seriesTMDbID: entry.tmdbID,
                             language: currentLanguage,
+                            collapseByDefault: model.collapseSeriesSeasonsByDefault,
                             sectionTitle: season.id == model.seasonCards.first?.id
                                 ? EntryDetailL10n.episodes
                                 : nil
                         )
+                        .id("\(season.id)-\(model.collapseSeriesSeasonsByDefault)")
                     }
                 }
                 .id(EntryDetailScrollTarget.episodesSection)

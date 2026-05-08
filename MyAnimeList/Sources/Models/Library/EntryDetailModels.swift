@@ -42,3 +42,21 @@ struct EpisodePreviewContext {
     let seasonNumber: Int
     let language: Language
 }
+
+enum EntryDetailSeasonExpansionPolicy {
+    static let largeSeriesEpisodeThreshold = 200
+    private static let estimatedEpisodesPerSeason = 24
+
+    static func shouldCollapseSeriesSeasonsByDefault(
+        episodeCount: Int?,
+        seasonCount: Int?,
+        seasonCardCount: Int
+    ) -> Bool {
+        if let episodeCount {
+            return episodeCount >= largeSeriesEpisodeThreshold
+        }
+
+        let estimatedSeasonCount = seasonCount ?? seasonCardCount
+        return estimatedSeasonCount * estimatedEpisodesPerSeason >= largeSeriesEpisodeThreshold
+    }
+}
