@@ -184,7 +184,16 @@ final class InfoFetcher: Sendable {
     func postersForMovie(for tmdbID: Int, idealWidth: Int = .max) async throws
         -> [ImageURLWithMetadata]
     {
-        try await tmdbClient.posterURLs(forMovie: tmdbID, idealWidth: idealWidth)
+        async let collection = tmdbClient.movies.images(forMovie: tmdbID)
+        async let imagesConfiguration = imagesConfiguration()
+        let resolvedCollection = try await collection
+        let resolvedImagesConfiguration = try await imagesConfiguration
+
+        return makePosterURLs(
+            from: resolvedCollection.posters,
+            idealWidth: idealWidth,
+            imagesConfiguration: resolvedImagesConfiguration
+        )
     }
 
     func backdropsForMovie(for tmdbID: Int, idealWidth: Int = .max) async throws
@@ -202,7 +211,16 @@ final class InfoFetcher: Sendable {
     func postersForSeries(seriesID tmdbID: Int, idealWidth: Int = .max) async throws
         -> [ImageURLWithMetadata]
     {
-        try await tmdbClient.posterURLs(forTVSeries: tmdbID, idealWidth: idealWidth)
+        async let collection = tmdbClient.tvSeries.images(forTVSeries: tmdbID)
+        async let imagesConfiguration = imagesConfiguration()
+        let resolvedCollection = try await collection
+        let resolvedImagesConfiguration = try await imagesConfiguration
+
+        return makePosterURLs(
+            from: resolvedCollection.posters,
+            idealWidth: idealWidth,
+            imagesConfiguration: resolvedImagesConfiguration
+        )
     }
 
     func backdropsForSeries(for tmdbID: Int, idealWidth: Int = .max) async throws
@@ -222,8 +240,19 @@ final class InfoFetcher: Sendable {
         inParentSeries parentSeriesID: Int,
         idealWidth: Int = .max
     ) async throws -> [ImageURLWithMetadata] {
-        try await tmdbClient.posterURLs(
-            forSeason: seasonNumber, inTVSeries: parentSeriesID, idealWidth: idealWidth)
+        async let collection = tmdbClient.tvSeasons.images(
+            forSeason: seasonNumber,
+            inTVSeries: parentSeriesID
+        )
+        async let imagesConfiguration = imagesConfiguration()
+        let resolvedCollection = try await collection
+        let resolvedImagesConfiguration = try await imagesConfiguration
+
+        return makePosterURLs(
+            from: resolvedCollection.posters,
+            idealWidth: idealWidth,
+            imagesConfiguration: resolvedImagesConfiguration
+        )
     }
 
     /// Fetches BasicInfo for all seasons of a TV series.
@@ -434,6 +463,24 @@ final class InfoFetcher: Sendable {
 
     private func imagesConfiguration() async throws -> ImagesConfiguration {
         try await cache.imagesConfiguration(client: tmdbClient)
+    }
+
+    private func makePosterURLs(
+        from resources: [ImageMetadata],
+        idealWidth: Int,
+        imagesConfiguration: ImagesConfiguration
+    ) -> [ImageURLWithMetadata] {
+        resources.compactMap { resource in
+            guard
+                let url = imagesConfiguration.posterURL(
+                    for: resource.filePath,
+                    idealWidth: idealWidth
+                )
+            else {
+                return nil
+            }
+            return .init(metadata: resource, url: url)
+        }
     }
 
     private func latestMovieInfo(tmdbID: Int, language: Language) async throws

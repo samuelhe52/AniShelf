@@ -24,24 +24,21 @@ struct PosterGridView: View {
     }
 
     var body: some View {
-        ScrollView {
-            LazyVGrid(
-                columns: [
-                    GridItem(
-                        .adaptive(
-                            minimum: Constants.gridItemMinSize,
-                            maximum: Constants.gridItemMaxSize),
-                        spacing: Constants.gridItemHorizontalSpacing)
-                ],
-                spacing: Constants.gridItemVerticalSpacing
-            ) {
-                ForEach(posters, id: \.url) { poster in
-                    posterWithInfo(poster: poster)
-                        .transition(.opacity)
-                        .onTapGesture {
-                            onPosterTap(poster)
-                        }
-                }
+        LazyVGrid(
+            columns: [
+                GridItem(
+                    .adaptive(
+                        minimum: Constants.gridItemMinSize,
+                        maximum: Constants.gridItemMaxSize),
+                    spacing: Constants.gridItemHorizontalSpacing)
+            ],
+            spacing: Constants.gridItemVerticalSpacing
+        ) {
+            ForEach(posters, id: \.url) { poster in
+                posterWithInfo(poster: poster)
+                    .onTapGesture {
+                        onPosterTap(poster)
+                    }
             }
         }
     }
@@ -50,18 +47,20 @@ struct PosterGridView: View {
     private func posterWithInfo(poster: Poster) -> some View {
         let width = poster.metadata.width
         let height = poster.metadata.height
+        let aspectRatio = CGFloat(width) / CGFloat(max(height, 1))
+
         VStack {
             KFImageView(
                 url: poster.url,
                 targetWidth: 300,
                 diskCacheExpiration: Constants.cacheExpiration
             )
+            .aspectRatio(aspectRatio, contentMode: .fit)
             .overlay {
                 RoundedRectangle(cornerRadius: Constants.posterCornerRadius, style: .continuous)
                     .stroke(.white.opacity(0.18), lineWidth: 1)
             }
             .clipShape(RoundedRectangle(cornerRadius: Constants.posterCornerRadius))
-            .aspectRatio(contentMode: .fit)
             Text("\(width) x \(height)")
                 .font(.caption)
                 .foregroundStyle(.secondary)

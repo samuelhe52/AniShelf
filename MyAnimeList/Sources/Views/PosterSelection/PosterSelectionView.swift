@@ -50,7 +50,7 @@ struct PosterSelectionView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            LazyVStack(alignment: .leading, spacing: 16) {
                 if case .season = type {
                     Picker(selection: $useSeriesPoster) {
                         Text("Season").tag(false)
@@ -90,8 +90,6 @@ struct PosterSelectionView: View {
             }
             .padding(.horizontal, 16)
         }
-        .animation(.default, value: loadState == .loading)
-        .animation(.default, value: currentPosters.map(\.id))
         .background(Color(.systemGroupedBackground))
         .navigationBarTitleDisplayMode(.inline)
         .presentationDragIndicator(.visible)
