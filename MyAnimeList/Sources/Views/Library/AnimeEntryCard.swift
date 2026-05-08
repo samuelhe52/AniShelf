@@ -3,6 +3,8 @@ import Kingfisher
 import SwiftUI
 
 struct AnimeEntryCard: View {
+    @AppStorage(.libraryOpenDetailWithSingleTap) private var openDetailWithSingleTap = false
+
     var entry: AnimeEntry
     var snapshot: LibraryEntrySnapshot
     var onOpenDetails: (() -> Void)? = nil
@@ -58,7 +60,7 @@ struct AnimeEntryCard: View {
             HStack(spacing: 0) {
                 Color.clear
                     .contentShape(.rect)
-                    .onTapGesture(count: 2) { onOpenDetails?() }
+                    .onTapGesture(count: openDetailWithSingleTap ? 1 : 2) { onOpenDetails?() }
 
                 Color.clear
                     .frame(width: favoriteButtonTapClearance, height: favoriteButtonTapClearance)
@@ -68,7 +70,7 @@ struct AnimeEntryCard: View {
 
             Color.clear
                 .contentShape(.rect)
-                .onTapGesture(count: 2) { onOpenDetails?() }
+                .onTapGesture(count: openDetailWithSingleTap ? 1 : 2) { onOpenDetails?() }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

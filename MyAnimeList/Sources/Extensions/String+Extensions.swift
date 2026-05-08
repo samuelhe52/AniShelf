@@ -18,6 +18,7 @@ extension String {
     static let librarySortStrategy = "LibrarySortStrategy"
     static let librarySortReversed = "LibrarySortReversed"
     static let libraryViewStyle = "LibraryViewStyle"
+    static let libraryOpenDetailWithSingleTap = "LibraryOpenDetailWithSingleTap"
     static let libraryHideDroppedByDefault = "LibraryHideDroppedByDefault"
     static let libraryDefaultWatchStatus = "LibraryDefaultWatchStatus"
     static let libraryDefaultFilters = "LibraryDefaultFilters"
@@ -34,6 +35,7 @@ extension String {
         .librarySortStrategy,
         .librarySortReversed,
         .libraryViewStyle,
+        .libraryOpenDetailWithSingleTap,
         .libraryHideDroppedByDefault,
         .libraryDefaultWatchStatus,
         .libraryDefaultFilters,

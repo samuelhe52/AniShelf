@@ -137,6 +137,21 @@ struct MyAnimeListTests {
         #expect(stats.runtimeMinutes == 388)
     }
 
+    @Test func testSingleTapDetailPreferenceDefaultsAndBackupInclusion() {
+        let suiteName = "MyAnimeListTests.SingleTapDetailPreference"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        #expect(defaults.object(forKey: .libraryOpenDetailWithSingleTap) == nil)
+        #expect(defaults.bool(forKey: .libraryOpenDetailWithSingleTap) == false)
+
+        defaults.set(true, forKey: .libraryOpenDetailWithSingleTap)
+        #expect(defaults.bool(forKey: .libraryOpenDetailWithSingleTap))
+
+        #expect(String.allPreferenceKeys.contains(.libraryOpenDetailWithSingleTap))
+    }
+
     @Test @MainActor func testLibraryDefaultsPersistMultipleFiltersAndNewEntryStatus() throws {
         let defaults = UserDefaults.standard
         let keys = [

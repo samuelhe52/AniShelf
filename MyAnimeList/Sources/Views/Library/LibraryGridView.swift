@@ -9,6 +9,8 @@ import DataProvider
 import SwiftUI
 
 struct LibraryGridView: View {
+    @AppStorage(.libraryOpenDetailWithSingleTap) private var openDetailWithSingleTap = false
+
     @Environment(LibraryStore.self) private var store
     @Environment(\.toggleFavorite) var toggleFavorite
     @Environment(LibraryEntryInteractionState.self) var interaction
@@ -21,29 +23,7 @@ struct LibraryGridView: View {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(store.libraryDisplayItems) { item in
-                        LibraryGridItem(snapshot: item.snapshot)
-                            .highlightEffect(
-                                showHighlight: interaction.highlightBinding(
-                                    for: item.id,
-                                    highlightedEntryID: $highlightedEntryID
-                                ),
-                                delay: 0.2
-                            )
-                            .contextMenu {
-                                interaction.contextMenu(
-                                    for: item.entry,
-                                    toggleFavorite: toggleFavorite
-                                )
-                                .onAppear { scrolledID = item.id }
-                            } preview: {
-                                EntryContextMenuPreview(snapshot: item.snapshot)
-                                    .onAppear { scrolledID = item.id }
-                            }
-                            .onTapGesture { scrolledID = item.id }
-                            .onTapGesture(count: 2) {
-                                interaction.detailingEntry = item.entry
-                                scrolledID = item.id
-                            }
+                        configuredGridItem(for: item)
                     }
                 }
                 .onChange(of: scrolledID) { onChangeOfScrolledID(proxy: proxy) }
@@ -77,6 +57,43 @@ struct LibraryGridView: View {
             if let scrolledID {
                 proxy.scrollTo(scrolledID, anchor: .center)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func configuredGridItem(for item: LibraryEntryDisplayItem) -> some View {
+        let baseItem = LibraryGridItem(snapshot: item.snapshot)
+            .highlightEffect(
+                showHighlight: interaction.highlightBinding(
+                    for: item.id,
+                    highlightedEntryID: $highlightedEntryID
+                ),
+                delay: 0.2
+            )
+            .contextMenu {
+                interaction.contextMenu(
+                    for: item.entry,
+                    toggleFavorite: toggleFavorite
+                )
+                .onAppear { scrolledID = item.id }
+            } preview: {
+                EntryContextMenuPreview(snapshot: item.snapshot)
+                    .onAppear { scrolledID = item.id }
+            }
+
+        if openDetailWithSingleTap {
+            baseItem
+                .onTapGesture {
+                    scrolledID = item.id
+                    interaction.detailingEntry = item.entry
+                }
+        } else {
+            baseItem
+                .onTapGesture { scrolledID = item.id }
+                .onTapGesture(count: 2) {
+                    interaction.detailingEntry = item.entry
+                    scrolledID = item.id
+                }
         }
     }
 }

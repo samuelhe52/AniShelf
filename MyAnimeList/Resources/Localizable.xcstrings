@@ -2340,6 +2340,38 @@
         }
       }
     },
+    "Open Detail with Single Tap" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シングルタップで詳細を開く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "单击打开详情"
+          }
+        }
+      }
+    },
+    "By default, double tap opens detail. Turn this on to use single tap instead." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デフォルトではダブルタップで詳細を開きます。オンにするとシングルタップで開きます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "默认双击打开详情。开启后改为单击打开。"
+          }
+        }
+      }
+    },
     "Open API Page" : {
       "localizations" : {
         "ja" : {

@@ -131,6 +131,7 @@ struct LibraryProfileSettingsCard: View {
     @Binding var hideDroppedByDefault: Bool
     @Binding var defaultNewEntryWatchStatus: AnimeEntry.WatchStatus
     @Binding var defaultFilters: Set<LibraryStore.AnimeFilter>
+    @Binding var openDetailWithSingleTap: Bool
     @Binding var autoPrefetchImagesOnAddAndRestore: Bool
     @Binding var useTMDbRelayServer: Bool
     @Binding var preferredLanguage: Language
@@ -265,6 +266,24 @@ struct LibraryProfileSettingsCard: View {
                     )
                 }
                 .menuActionDismissBehavior(.disabled)
+            }
+            .padding(.vertical, 2)
+
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Open Detail with Single Tap")
+                        .font(.subheadline.weight(.semibold))
+                    Text("By default, double tap opens detail. Turn this on to use single tap instead.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 12)
+                Toggle("Open Detail with Single Tap", isOn: $openDetailWithSingleTap)
+                    .labelsHidden()
+                    .tint(.mint)
+                    .scaleEffect(0.78, anchor: .trailing)
+                    .frame(width: 42, height: 26, alignment: .trailing)
             }
             .padding(.vertical, 2)
 

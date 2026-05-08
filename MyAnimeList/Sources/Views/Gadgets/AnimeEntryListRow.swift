@@ -10,6 +10,8 @@ import Kingfisher
 import SwiftUI
 
 struct AnimeEntryListRow: View {
+    @AppStorage(.libraryOpenDetailWithSingleTap) private var openDetailWithSingleTap = false
+
     var entry: AnimeEntry
     var snapshot: LibraryEntrySnapshot
     var onSelect: (() -> Void)? = nil
@@ -60,10 +62,19 @@ struct AnimeEntryListRow: View {
     @ViewBuilder
     private var rowTapTarget: some View {
         if let onOpenDetails {
-            Color.clear
-                .contentShape(.rect)
-                .onTapGesture { onSelect?() }
-                .onTapGesture(count: 2) { onOpenDetails() }
+            if openDetailWithSingleTap {
+                Color.clear
+                    .contentShape(.rect)
+                    .onTapGesture {
+                        onSelect?()
+                        onOpenDetails()
+                    }
+            } else {
+                Color.clear
+                    .contentShape(.rect)
+                    .onTapGesture { onSelect?() }
+                    .onTapGesture(count: 2) { onOpenDetails() }
+            }
         } else {
             Color.clear
                 .contentShape(.rect)
