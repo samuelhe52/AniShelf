@@ -50,6 +50,18 @@ struct EntryDetailView: View {
         self._model = State(initialValue: EntryDetailViewModel(repository: repository))
         self._isEditingDetails = State(initialValue: startInEditingMode)
         self._originalUserInfo = State(initialValue: entry.userInfo)
+        self._isCharacterExpanded = State(
+            initialValue: Self.defaultExpansionState(
+                forKey: .entryDetailCharactersExpandedByDefault,
+                defaultValue: true
+            )
+        )
+        self._isStaffExpanded = State(
+            initialValue: Self.defaultExpansionState(
+                forKey: .entryDetailStaffExpandedByDefault,
+                defaultValue: false
+            )
+        )
     }
 
     var body: some View {
@@ -719,6 +731,16 @@ fileprivate struct EntryDetailPreviewHost: View {
                 showDetail = true
             }
         }
+    }
+}
+
+extension EntryDetailView {
+    private static func defaultExpansionState(forKey key: String, defaultValue: Bool) -> Bool {
+        let defaults = UserDefaults.standard
+        guard defaults.object(forKey: key) != nil else {
+            return defaultValue
+        }
+        return defaults.bool(forKey: key)
     }
 }
 

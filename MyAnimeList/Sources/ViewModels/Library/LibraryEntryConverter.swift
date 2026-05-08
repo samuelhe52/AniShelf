@@ -25,11 +25,12 @@ final class LibraryEntryConverter {
         } else {
             let parentInfo = try await fetcher.tvSeriesInfo(tmdbID: parentSeriesID, language: language)
             parentEntry = AnimeEntry(fromInfo: parentInfo)
-            parentEntry.replaceDetail(from: try await fetcher.detailInfo(
-                entryType: .series,
-                tmdbID: parentSeriesID,
-                language: language
-            ))
+            parentEntry.replaceDetail(
+                from: try await fetcher.detailInfo(
+                    entryType: .series,
+                    tmdbID: parentSeriesID,
+                    language: language
+                ))
             parentEntry.onDisplay = true
             try repository.newEntry(parentEntry)
         }

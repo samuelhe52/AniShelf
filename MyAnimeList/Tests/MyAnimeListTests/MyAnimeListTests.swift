@@ -186,6 +186,118 @@ struct MyAnimeListTests {
         )
     }
 
+    @Test @MainActor func testEntryDetailPlacesSpecialsSeasonAfterNumberedSeasons() async {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let viewModel = EntryDetailViewModel(repository: repository)
+        let entry = AnimeEntry(
+            name: "Series",
+            type: .series,
+            tmdbID: 20,
+            detail: AnimeEntryDetail(
+                language: "en",
+                title: "Series",
+                logoImageURL: URL(string: "https://example.com/logo.png"),
+                seasons: [
+                    AnimeEntrySeasonSummary(
+                        id: 100,
+                        seasonNumber: 0,
+                        title: "Specials"
+                    ),
+                    AnimeEntrySeasonSummary(
+                        id: 101,
+                        seasonNumber: 2,
+                        title: "Season 2"
+                    ),
+                    AnimeEntrySeasonSummary(
+                        id: 102,
+                        seasonNumber: 1,
+                        title: "Season 1"
+                    )
+                ]
+            )
+        )
+
+        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+
+        #expect(viewModel.seasonCards.map(\.seasonNumber) == [1, 2, 0])
+    }
+
+    @Test @MainActor func testEntryDetailLocalizesStaffRoleFallbacks() async {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+
+        let japaneseViewModel = EntryDetailViewModel(repository: repository)
+        let japaneseEntry = AnimeEntry(
+            name: "Movie",
+            type: .movie,
+            tmdbID: 30,
+            detail: AnimeEntryDetail(
+                language: Language.japanese.rawValue,
+                title: "Movie",
+                logoImageURL: URL(string: "https://example.com/logo-ja.png"),
+                staff: [
+                    AnimeEntryStaff(
+                        id: 1,
+                        name: "Staff One",
+                        role: "Key Animation / Director"
+                    ),
+                    AnimeEntryStaff(
+                        id: 2,
+                        name: "Staff Two",
+                        role: "Unknown Role"
+                    ),
+                    AnimeEntryStaff(
+                        id: 5,
+                        name: "Staff Five",
+                        role: "Storyboard Artist / Settings"
+                    )
+                ]
+            )
+        )
+
+        await japaneseViewModel.load(for: japaneseEntry, language: .japanese, dataHandler: nil)
+
+        #expect(
+            japaneseViewModel.staffCards.map(\.secondaryText)
+                == ["原画 / 監督", "Unknown Role", "絵コンテ / 設定"]
+        )
+
+        let chineseViewModel = EntryDetailViewModel(repository: repository)
+        let chineseEntry = AnimeEntry(
+            name: "Movie",
+            type: .movie,
+            tmdbID: 31,
+            detail: AnimeEntryDetail(
+                language: Language.chinese.rawValue,
+                title: "Movie",
+                logoImageURL: URL(string: "https://example.com/logo-zh.png"),
+                staff: [
+                    AnimeEntryStaff(
+                        id: 3,
+                        name: "Staff Three",
+                        role: "Theme Song Performance / Producer"
+                    ),
+                    AnimeEntryStaff(
+                        id: 4,
+                        name: "Staff Four",
+                        role: "Visual Effects"
+                    ),
+                    AnimeEntryStaff(
+                        id: 6,
+                        name: "Staff Six",
+                        role: "Production Design / Graphic Designer"
+                    )
+                ]
+            )
+        )
+
+        await chineseViewModel.load(for: chineseEntry, language: .chinese, dataHandler: nil)
+
+        #expect(
+            chineseViewModel.staffCards.map(\.secondaryText)
+                == ["主题曲演唱 / 制片人", "视觉效果", "制作设计 / 平面设计"]
+        )
+    }
+
     @Test func testSingleTapDetailPreferenceDefaultsAndBackupInclusion() {
         let suiteName = "MyAnimeListTests.SingleTapDetailPreference"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -199,6 +311,26 @@ struct MyAnimeListTests {
         #expect(defaults.bool(forKey: .libraryOpenDetailWithSingleTap))
 
         #expect(String.allPreferenceKeys.contains(.libraryOpenDetailWithSingleTap))
+    }
+
+    @Test func testEntryDetailExpansionPreferenceDefaultsAndBackupInclusion() {
+        let suiteName = "MyAnimeListTests.EntryDetailExpansionPreferences"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        #expect(defaults.object(forKey: .entryDetailCharactersExpandedByDefault) == nil)
+        #expect(defaults.bool(forKey: .entryDetailCharactersExpandedByDefault) == false)
+        #expect(defaults.object(forKey: .entryDetailStaffExpandedByDefault) == nil)
+        #expect(defaults.bool(forKey: .entryDetailStaffExpandedByDefault) == false)
+
+        defaults.set(false, forKey: .entryDetailCharactersExpandedByDefault)
+        defaults.set(true, forKey: .entryDetailStaffExpandedByDefault)
+
+        #expect(!defaults.bool(forKey: .entryDetailCharactersExpandedByDefault))
+        #expect(defaults.bool(forKey: .entryDetailStaffExpandedByDefault))
+        #expect(String.allPreferenceKeys.contains(.entryDetailCharactersExpandedByDefault))
+        #expect(String.allPreferenceKeys.contains(.entryDetailStaffExpandedByDefault))
     }
 
     @Test @MainActor func testLibraryDefaultsPersistMultipleFiltersAndNewEntryStatus() throws {

@@ -19,6 +19,10 @@ struct LibraryProfileSettingsView: View {
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
     @AppStorage(.libraryOpenDetailWithSingleTap) private var openDetailWithSingleTap = false
+    @AppStorage(.entryDetailCharactersExpandedByDefault)
+    private var entryDetailCharactersExpandedByDefault = true
+    @AppStorage(.entryDetailStaffExpandedByDefault)
+    private var entryDetailStaffExpandedByDefault = false
     @AppStorage(.useTMDbRelayServer) private var useTMDbRelayServer = true
 
     @State private var changeAPIKey = false
@@ -216,6 +220,8 @@ struct LibraryProfileSettingsView: View {
             defaultNewEntryWatchStatus: $store.defaultNewEntryWatchStatus,
             defaultFilters: $store.defaultFilters,
             openDetailWithSingleTap: $openDetailWithSingleTap,
+            entryDetailCharactersExpandedByDefault: $entryDetailCharactersExpandedByDefault,
+            entryDetailStaffExpandedByDefault: $entryDetailStaffExpandedByDefault,
             autoPrefetchImagesOnAddAndRestore: $store.autoPrefetchImagesOnAddAndRestore,
             useTMDbRelayServer: $useTMDbRelayServer,
             preferredLanguage: $preferredLanguage,

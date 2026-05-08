@@ -1436,6 +1436,38 @@
         }
       }
     },
+    "Expand Characters by Default" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キャラクターを標準で展開"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "默认展开角色"
+          }
+        }
+      }
+    },
+    "Expand Staff by Default" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スタッフを標準で展開"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "默认展开制作人员"
+          }
+        }
+      }
+    },
     "Error: %@" : {
       "localizations" : {
         "ja" : {
@@ -2384,6 +2416,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "默认双击打开详情。开启后改为单击打开。"
+          }
+        }
+      }
+    },
+    "Open the Characters section automatically in entry detail view." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詳細画面でキャラクター欄を自動的に開きます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在详情页中自动展开角色部分。"
+          }
+        }
+      }
+    },
+    "Open the Staff section automatically in entry detail view." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詳細画面でスタッフ欄を自動的に開きます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在详情页中自动展开制作人员部分。"
           }
         }
       }

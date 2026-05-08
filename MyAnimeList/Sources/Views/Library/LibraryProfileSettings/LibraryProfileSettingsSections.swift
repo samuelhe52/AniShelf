@@ -132,6 +132,8 @@ struct LibraryProfileSettingsCard: View {
     @Binding var defaultNewEntryWatchStatus: AnimeEntry.WatchStatus
     @Binding var defaultFilters: Set<LibraryStore.AnimeFilter>
     @Binding var openDetailWithSingleTap: Bool
+    @Binding var entryDetailCharactersExpandedByDefault: Bool
+    @Binding var entryDetailStaffExpandedByDefault: Bool
     @Binding var autoPrefetchImagesOnAddAndRestore: Bool
     @Binding var useTMDbRelayServer: Bool
     @Binding var preferredLanguage: Language
@@ -280,6 +282,45 @@ struct LibraryProfileSettingsCard: View {
                 }
                 Spacer(minLength: 12)
                 Toggle("Open Detail with Single Tap", isOn: $openDetailWithSingleTap)
+                    .labelsHidden()
+                    .tint(.mint)
+                    .scaleEffect(0.78, anchor: .trailing)
+                    .frame(width: 42, height: 26, alignment: .trailing)
+            }
+            .padding(.vertical, 2)
+
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Expand Characters by Default")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Open the Characters section automatically in entry detail view.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 12)
+                Toggle(
+                    "Expand Characters by Default",
+                    isOn: $entryDetailCharactersExpandedByDefault
+                )
+                .labelsHidden()
+                .tint(.mint)
+                .scaleEffect(0.78, anchor: .trailing)
+                .frame(width: 42, height: 26, alignment: .trailing)
+            }
+            .padding(.vertical, 2)
+
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Expand Staff by Default")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Open the Staff section automatically in entry detail view.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 12)
+                Toggle("Expand Staff by Default", isOn: $entryDetailStaffExpandedByDefault)
                     .labelsHidden()
                     .tint(.mint)
                     .scaleEffect(0.78, anchor: .trailing)
