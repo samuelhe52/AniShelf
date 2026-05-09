@@ -79,19 +79,24 @@ struct MyAnimeListApp: App {
 
 fileprivate struct WhatsNewRootSheet: View {
     let entry: WhatsNewEntry
-    let settingsActions: LibraryProfileSettingsActions
     let onDismiss: () -> Void
 
-    @Environment(\.openURL) private var openURL
+    @State private var actionRunner: WhatsNewActionRunner
+
+    init(
+        entry: WhatsNewEntry,
+        settingsActions: LibraryProfileSettingsActions,
+        onDismiss: @escaping () -> Void
+    ) {
+        self.entry = entry
+        self.onDismiss = onDismiss
+        _actionRunner = State(initialValue: settingsActions.makeWhatsNewActionRunner())
+    }
 
     var body: some View {
         WhatsNewView(
             entry: entry,
-            actionRunner: settingsActions.makeWhatsNewActionRunner(
-                openURL: { url in
-                    openURL(url)
-                }
-            ),
+            actionRunner: actionRunner,
             onDismiss: onDismiss
         )
     }

@@ -232,7 +232,7 @@ struct LibraryProfileSettingsView: View {
             onChangeAPIKey: requestAPIKeySheet,
             onCheckMetadataCacheSize: checkMetadataCacheSize,
             onRefreshInfos: requestRefreshInfos,
-            onPrefetchImages: actions.prefetchAllImages,
+            onPrefetchImages: { actions.prefetchAllImages() },
             whatsNewVersion: whatsNew.currentEntry?.version,
             onShowWhatsNew: presentWhatsNewSheet,
             onShowAbout: presentAboutSheet,

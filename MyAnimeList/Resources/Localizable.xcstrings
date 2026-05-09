@@ -216,6 +216,9 @@
         }
       }
     },
+    "Actions" : {
+
+    },
     "Add a free API key once to unlock search, posters, and more." : {
       "localizations" : {
         "ja" : {
@@ -247,6 +250,9 @@
           }
         }
       }
+    },
+    "Added a setting option to open the details page with a single click." : {
+
     },
     "All" : {
       "localizations" : {
@@ -377,6 +383,9 @@
           }
         }
       }
+    },
+    "AniShelf can now show selected update notes after launch and reopen them later from Settings." : {
+
     },
     "AniShelf keeps watch status, dates, and quick notes together so your collection stays useful over time." : {
       "localizations" : {
@@ -538,6 +547,25 @@
         }
       }
     },
+    "Built-in release notes" : {
+
+    },
+    "By default, double tap opens detail. Turn this on to use single tap instead." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デフォルトではダブルタップで詳細を開きます。オンにするとシングルタップで開きます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "默认双击打开详情。开启后改为单击打开。"
+          }
+        }
+      }
+    },
     "Cache posters and artwork without refreshing metadata." : {
       "localizations" : {
         "ja" : {
@@ -663,22 +691,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "角色"
-          }
-        }
-      }
-    },
-    "Staff" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スタッフ"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "制作人员"
           }
         }
       }
@@ -1436,6 +1448,22 @@
         }
       }
     },
+    "Error: %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エラー：%@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "错误：%@"
+          }
+        }
+      }
+    },
     "Expand Characters by Default" : {
       "localizations" : {
         "ja" : {
@@ -1464,22 +1492,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "默认展开制作人员"
-          }
-        }
-      }
-    },
-    "Error: %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "エラー：%@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "错误：%@"
           }
         }
       }
@@ -1634,6 +1646,9 @@
         }
       }
     },
+    "Fetched: 0, failed: 0" : {
+
+    },
     "Fetching Images: %lld / %lld" : {
       "localizations" : {
         "en" : {
@@ -1738,6 +1753,9 @@
         }
       }
     },
+    "Fixed a crash issue when converting to an animation series." : {
+
+    },
     "Follow System" : {
       "localizations" : {
         "ja" : {
@@ -1833,6 +1851,12 @@
           }
         }
       }
+    },
+    "Highlights" : {
+
+    },
+    "Important release notes can now appear once after you update the app." : {
+
     },
     "Japanese" : {
       "extractionState" : "manual",
@@ -2388,6 +2412,38 @@
         }
       }
     },
+    "Open API Page" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "APIページを開く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开 API 页面"
+          }
+        }
+      }
+    },
+    "Open API settings" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API設定を開く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开 API 设置"
+          }
+        }
+      }
+    },
     "Open Detail with Single Tap" : {
       "localizations" : {
         "ja" : {
@@ -2404,18 +2460,18 @@
         }
       }
     },
-    "By default, double tap opens detail. Turn this on to use single tap instead." : {
+    "Open Library Profile" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "デフォルトではダブルタップで詳細を開きます。オンにするとシングルタップで開きます。"
+            "value" : "ライブラリ概要を開く"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "默认双击打开详情。开启后改为单击打开。"
+            "value" : "打开资料库概览"
           }
         }
       }
@@ -2452,53 +2508,8 @@
         }
       }
     },
-    "Open API Page" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "APIページを開く"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开 API 页面"
-          }
-        }
-      }
-    },
-    "Open API settings" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "API設定を開く"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开 API 设置"
-          }
-        }
-      }
-    },
-    "Open Library Profile" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ライブラリ概要を開く"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开资料库概览"
-          }
-        }
-      }
+    "Optimized the Details page UI: added Staff information, added an overscroll zoom effect for posters." : {
+
     },
     "Organizing Library..." : {
       "localizations" : {
@@ -2822,6 +2833,9 @@
         }
       }
     },
+    "Refresh Metadata" : {
+
+    },
     "Refreshed %lld entries, failed %lld." : {
       "localizations" : {
         "en" : {
@@ -2877,6 +2891,12 @@
         }
       }
     },
+    "Refreshing Metadata..." : {
+
+    },
+    "Release 1.60" : {
+
+    },
     "Reload" : {
       "localizations" : {
         "ja" : {
@@ -2924,6 +2944,9 @@
           }
         }
       }
+    },
+    "Reopen the release note for version %@." : {
+
     },
     "Replace the TMDb key AniShelf uses for search and metadata." : {
       "localizations" : {
@@ -3390,6 +3413,22 @@
         }
       }
     },
+    "Staff" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スタッフ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "制作人员"
+          }
+        }
+      }
+    },
     "Status: %@\nStarted: %@\nFinished: %@\nFavorite: %@\nNotes: %@\nCustom Poster: %@" : {
       "localizations" : {
         "en" : {
@@ -3450,6 +3489,9 @@
         }
       }
     },
+    "The current release note stays available from Settings whenever this version includes one." : {
+
+    },
     "The library is empty." : {
       "localizations" : {
         "ja" : {
@@ -3497,6 +3539,12 @@
           }
         }
       }
+    },
+    "This page can also trigger a full metadata refresh if you want to update existing entries right away." : {
+
+    },
+    "This version includes multiple bug fixes and improvements. It is recommended that existing users perform a metadata refresh by tapping the action button below, as this version includes important optimizations for metadata retrieval." : {
+
     },
     "This will replace the current poster." : {
       "localizations" : {
@@ -3888,6 +3936,9 @@
         }
       }
     },
+    "Version %@" : {
+
+    },
     "Version, links, and credits." : {
       "localizations" : {
         "ja" : {
@@ -3967,6 +4018,9 @@
           }
         }
       }
+    },
+    "What's New" : {
+
     },
     "With Notes" : {
       "localizations" : {

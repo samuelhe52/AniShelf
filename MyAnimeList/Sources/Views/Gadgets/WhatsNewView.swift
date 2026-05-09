@@ -13,6 +13,7 @@ struct WhatsNewView: View {
     let onDismiss: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         ZStack {
@@ -100,12 +101,17 @@ struct WhatsNewView: View {
         ) {
             VStack(alignment: .leading, spacing: 12) {
                 if let primaryAction = entry.primaryAction {
-                    primaryActionButton(for: primaryAction)
+                    primaryActionSection(for: primaryAction)
                 }
 
                 ForEach(entry.secondaryActions) { action in
                     Button {
-                        actionRunner.run(action.kind)
+                        actionRunner.run(
+                            action.kind,
+                            openURL: { url in
+                                openURL(url)
+                            }
+                        )
                     } label: {
                         HStack(spacing: 12) {
                             Image(systemName: action.systemImage)
@@ -132,24 +138,60 @@ struct WhatsNewView: View {
     private var primaryActionButton: some View {
         Group {
             if let primaryAction = entry.primaryAction {
-                primaryActionButton(for: primaryAction)
+                primaryActionSection(for: primaryAction)
+            }
+        }
+    }
+
+    private func primaryActionSection(for action: WhatsNewEntry.Action) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            primaryActionButton(for: action)
+
+            if showsRefreshDismissalNotice(for: action) {
+                refreshDismissalNotice
             }
         }
     }
 
     private func primaryActionButton(for action: WhatsNewEntry.Action) -> some View {
-        Button {
-            actionRunner.run(action.kind)
-        } label: {
-            Label {
-                Text(action.title)
-            } icon: {
-                Image(systemName: action.systemImage)
-            }
-            .font(.subheadline.weight(.semibold))
-            .frame(maxWidth: .infinity)
+        let presentation = primaryActionPresentation(for: action)
+
+        return WhatsNewPrimaryActionButton(
+            title: presentation.title,
+            systemImage: presentation.systemImage,
+            tint: presentation.tint,
+            progressFraction: presentation.progressFraction,
+            showsActivity: presentation.showsActivity,
+            isEnabled: presentation.isEnabled
+        ) {
+            actionRunner.run(
+                action.kind,
+                openURL: { url in
+                    openURL(url)
+                }
+            )
         }
-        .buttonStyle(LibraryProfileCommandButtonStyle(tint: .orange, filled: true))
+    }
+
+    private var refreshDismissalNotice: some View {
+        Label {
+            Text("Keep this page open until the refresh finishes.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } icon: {
+            Image(systemName: "info.circle.fill")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.orange)
+        }
+    }
+
+    private func showsRefreshDismissalNotice(for action: WhatsNewEntry.Action) -> Bool {
+        guard actionRunner.isRefreshRunning else { return false }
+        if case .refreshMetadata = action.kind {
+            return true
+        }
+        return false
     }
 
     private func highlightRow(_ text: LocalizedStringResource) -> some View {
@@ -172,6 +214,77 @@ struct WhatsNewView: View {
         "Done"
     }
 
+    private func primaryActionPresentation(
+        for action: WhatsNewEntry.Action
+    ) -> WhatsNewPrimaryActionPresentation {
+        guard case .refreshMetadata = action.kind else {
+            return .init(
+                title: action.title,
+                systemImage: action.systemImage,
+                tint: .orange,
+                progressFraction: nil,
+                showsActivity: false,
+                isEnabled: true
+            )
+        }
+
+        switch actionRunner.refreshState {
+        case .idle:
+            return .init(
+                title: action.title,
+                systemImage: action.systemImage,
+                tint: .orange,
+                progressFraction: nil,
+                showsActivity: false,
+                isEnabled: true
+            )
+        case .inProgress(let progress):
+            return .init(
+                title: progress.messageResource,
+                systemImage: nil,
+                tint: .orange,
+                progressFraction: progress.fractionCompleted,
+                showsActivity: true,
+                isEnabled: false
+            )
+        case .completed(let completion):
+            return .init(
+                title: completion.messageResource,
+                systemImage: completionSystemImage(for: completion.state),
+                tint: completionTint(for: completion.state),
+                progressFraction: nil,
+                showsActivity: false,
+                isEnabled: true
+            )
+        }
+    }
+
+    private func completionSystemImage(
+        for state: LibraryRefreshCompletionState
+    ) -> String {
+        switch state {
+        case .completed:
+            "checkmark.circle.fill"
+        case .failed:
+            "xmark.circle.fill"
+        case .partialComplete:
+            "exclamationmark.triangle.fill"
+        }
+    }
+
+    private func completionTint(
+        for state: LibraryRefreshCompletionState
+    ) -> Color {
+        switch state {
+        case .completed:
+            .green
+        case .failed:
+            .red
+        case .partialComplete:
+            .orange
+        }
+    }
+
     private var showsInlinePrimaryAction: Bool {
         entry.primaryAction != nil && entry.secondaryActions.isEmpty
     }
@@ -185,11 +298,107 @@ struct WhatsNewView: View {
     NavigationStack {
         WhatsNewView(
             entry: WhatsNewRegistry.currentEntry(for: "1.54")!,
-            actionRunner: .init(
-                refreshMetadata: {},
-                openURL: { _ in }
-            ),
+            actionRunner: .init(refreshMetadata: { _ in }),
             onDismiss: {}
+        )
+    }
+}
+
+fileprivate struct WhatsNewPrimaryActionPresentation {
+    let title: LocalizedStringResource
+    let systemImage: String?
+    let tint: Color
+    let progressFraction: Double?
+    let showsActivity: Bool
+    let isEnabled: Bool
+}
+
+fileprivate struct WhatsNewPrimaryActionButton: View {
+    let title: LocalizedStringResource
+    let systemImage: String?
+    let tint: Color
+    let progressFraction: Double?
+    let showsActivity: Bool
+    let isEnabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                if showsActivity {
+                    ProgressView()
+                        .tint(.white)
+                } else if let systemImage {
+                    Image(systemName: systemImage)
+                        .font(.subheadline.weight(.bold))
+                }
+
+                Text(title)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .font(.subheadline.weight(.semibold))
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 44)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background {
+                GeometryReader { geometry in
+                    let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    ZStack(alignment: .leading) {
+                        shape
+                            .fill(trackGradient)
+
+                        if let progressFraction {
+                            shape
+                                .fill(progressGradient)
+                                .frame(
+                                    width: max(
+                                        geometry.size.width * progressFraction,
+                                        progressFraction > 0 ? 42 : 0
+                                    )
+                                )
+                        } else {
+                            shape
+                                .fill(progressGradient)
+                        }
+                    }
+                    .clipShape(shape)
+                }
+            }
+            .foregroundStyle(.white)
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(.white.opacity(0.18), lineWidth: 1)
+            }
+            .shadow(color: tint.opacity(0.18), radius: 16, y: 10)
+            .animation(.spring(response: 0.3, dampingFraction: 0.85), value: progressFraction)
+            .animation(.spring(response: 0.3, dampingFraction: 0.85), value: tint)
+            .opacity(isEnabled ? 1 : 0.96)
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+    }
+
+    private var trackGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                tint.opacity(progressFraction == nil ? 0.92 : 0.38),
+                tint.opacity(progressFraction == nil ? 0.76 : 0.24)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private var progressGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                tint,
+                tint.opacity(0.84)
+            ],
+            startPoint: .leading,
+            endPoint: .trailing
         )
     }
 }

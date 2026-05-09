@@ -8,28 +8,13 @@
 import Foundation
 import Kingfisher
 
-struct WhatsNewActionRunner {
-    let refreshMetadata: @MainActor () -> Void
-    let openURL: @MainActor (URL) -> Void
-
-    @MainActor
-    func run(_ action: WhatsNewEntry.Action.Kind) {
-        switch action {
-        case .refreshMetadata:
-            refreshMetadata()
-        case .openURL(let url):
-            openURL(url)
-        }
-    }
-}
-
 @MainActor
 final class LibraryProfileSettingsActions {
-    typealias RefreshInfosHandler = @MainActor (LibraryStore) -> Void
+    typealias RefreshInfosHandler = @MainActor (LibraryStore, LibraryRefreshOptions) -> Void
 
     private let store: LibraryStore
     /// Indirection for the metadata refresh path so tests can verify routing
-    /// without kicking off the full library-wide refresh work.
+    /// and inject alternate presentation backends without changing the core flow.
     private let refreshInfosHandler: RefreshInfosHandler
 
     init(store: LibraryStore) {
@@ -77,35 +62,37 @@ final class LibraryProfileSettingsActions {
     }
 
     /// Runs the canonical metadata refresh flow for the current library.
-    /// Production uses `performRefreshInfos(for:)`; tests can inject a stub.
-    func refreshInfos() {
-        refreshInfosHandler(store)
+    /// Production uses `performRefreshInfos(for:options:)`; tests can inject a stub.
+    func refreshInfos(options: LibraryRefreshOptions = .toastDefault) {
+        refreshInfosHandler(store, options)
     }
 
     /// Builds the narrow action surface used by the What's New modal.
     /// The refresh CTA deliberately reuses `refreshInfos()` so there is only
     /// one in-app metadata refresh path to maintain.
-    func makeWhatsNewActionRunner(
-        openURL: @escaping @MainActor (URL) -> Void
-    ) -> WhatsNewActionRunner {
+    func makeWhatsNewActionRunner() -> WhatsNewActionRunner {
         WhatsNewActionRunner(
-            refreshMetadata: { self.refreshInfos() },
-            openURL: openURL
+            refreshMetadata: { options in
+                self.refreshInfos(options: options)
+            }
         )
     }
 
-    /// Default production implementation for `refreshInfos()`.
+    /// Default production implementation for `refreshInfos(options:)`.
     /// Refreshes visible library metadata and prefetches any updated images.
-    private static func performRefreshInfos(for store: LibraryStore) {
+    private static func performRefreshInfos(
+        for store: LibraryStore,
+        options: LibraryRefreshOptions
+    ) {
         let metadataRefresher = LibraryMetadataRefresher(repository: store.repository)
-        metadataRefresher.refreshInfos(
-            for: store.library,
-            fetcher: store.infoFetcher,
-            language: store.language,
-            prefetchAllImages: { entries in
-                LibraryImageCacheService.prefetchImages(for: entries)
-            }
-        )
+        Task {
+            await metadataRefresher.refreshInfos(
+                for: store.library,
+                fetcher: store.infoFetcher,
+                language: store.language,
+                options: options
+            )
+        }
     }
 
     func clearLibrary() {
@@ -119,7 +106,10 @@ final class LibraryProfileSettingsActions {
         }
     }
 
-    func prefetchAllImages() {
-        LibraryImageCacheService.prefetchImages(for: store.library)
+    func prefetchAllImages(reporter: LibraryRefreshReporter = .toast) {
+        LibraryImageCacheService.prefetchImages(
+            for: store.library,
+            reporter: reporter
+        )
     }
 }

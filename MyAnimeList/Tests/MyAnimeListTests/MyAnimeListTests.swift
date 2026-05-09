@@ -633,22 +633,141 @@ struct MyAnimeListTests {
 
         let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
         var refreshCallCount = 0
+        var capturedOptions: LibraryRefreshOptions?
         var openedURL: URL?
         let actions = LibraryProfileSettingsActions(
             store: store,
-            refreshInfosHandler: { _ in
+            refreshInfosHandler: { _, options in
                 refreshCallCount += 1
+                capturedOptions = options
             }
         )
 
-        let runner = actions.makeWhatsNewActionRunner { url in
+        let runner = actions.makeWhatsNewActionRunner()
+        runner.run(.refreshMetadata) { url in
             openedURL = url
         }
-        runner.run(.refreshMetadata)
 
         #expect(refreshCallCount == 1)
+        #expect(capturedOptions?.prefetchImages == true)
         #expect(openedURL == nil)
         #expect(defaults.bool(forKey: key))
+    }
+
+    @Test @MainActor func testWhatsNewRefreshActionTracksInlineProgressState() {
+        var capturedOptions: LibraryRefreshOptions?
+        let runner = WhatsNewActionRunner { options in
+            capturedOptions = options
+        }
+
+        runner.run(.refreshMetadata) { _ in
+            Issue.record("Refresh action should not open a URL.")
+        }
+
+        guard let capturedOptions else {
+            Issue.record("Expected refresh options to be captured.")
+            return
+        }
+
+        switch runner.refreshState {
+        case .inProgress(let progress):
+            #expect(progress.fractionCompleted == 0)
+        default:
+            Issue.record("Expected refresh to enter an in-progress state immediately.")
+        }
+
+        capturedOptions.reporter.report(
+            .metadataProgress(
+                current: 2,
+                total: 4,
+                messageResource: "Fetching Info: 2 / 4"
+            )
+        )
+
+        switch runner.refreshState {
+        case .inProgress(let progress):
+            #expect(progress.fractionCompleted == 0.5)
+        default:
+            Issue.record("Expected metadata progress to keep the action in progress.")
+        }
+
+        capturedOptions.reporter.report(
+            .organizingLibrary(messageResource: "Organizing Library...")
+        )
+
+        switch runner.refreshState {
+        case .inProgress(let progress):
+            #expect(progress.fractionCompleted == nil)
+        default:
+            Issue.record("Expected organizing state to be reflected inline.")
+        }
+
+        capturedOptions.reporter.report(
+            .metadataPhaseComplete(
+                .init(
+                    state: .completed,
+                    messageResource: "Refreshed infos for 4 entries.",
+                    successfulItemCount: 4,
+                    failedItemCount: 0
+                )
+            )
+        )
+
+        switch runner.refreshState {
+        case .inProgress:
+            break
+        default:
+            Issue.record("Expected metadata phase completion to remain non-terminal inline.")
+        }
+
+        capturedOptions.reporter.report(
+            .imagePrefetchProgress(
+                current: 3,
+                total: 6,
+                messageResource: "Fetching Images: 3 / 6"
+            )
+        )
+
+        switch runner.refreshState {
+        case .inProgress(let progress):
+            #expect(progress.fractionCompleted == 0.5)
+        default:
+            Issue.record("Expected image prefetch progress to continue inline.")
+        }
+
+        capturedOptions.reporter.report(
+            .imagePrefetchPhaseComplete(
+                .init(
+                    state: .completed,
+                    messageResource: "Fetched: 6, failed: 0",
+                    successfulItemCount: 6,
+                    failedItemCount: 0
+                )
+            )
+        )
+
+        switch runner.refreshState {
+        case .inProgress:
+            break
+        default:
+            Issue.record("Expected image prefetch phase completion to remain non-terminal inline.")
+        }
+
+        capturedOptions.reporter.report(
+            .refreshComplete(
+                .init(
+                    state: .completed,
+                    messageResource: "Refreshed 4 entries and fetched 6 images."
+                )
+            )
+        )
+
+        switch runner.refreshState {
+        case .completed(let completion):
+            #expect(completion.state == .completed)
+        default:
+            Issue.record("Expected a completed inline refresh state after image prefetch completion.")
+        }
     }
 
     @Test @MainActor func testDeletionScrollTargetFallbacks() throws {

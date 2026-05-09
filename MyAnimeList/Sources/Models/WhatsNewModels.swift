@@ -74,6 +74,31 @@ enum WhatsNewRegistry {
                     kind: .openURL(projectURL)
                 )
             ]
+        ),
+        "1.60": .init(
+            version: "1.60",
+            title: "Release 1.60",
+            summary:
+                "This version includes multiple bug fixes and improvements. It is recommended that existing users perform a metadata refresh by tapping the action button below, as this version includes important optimizations for metadata retrieval.",
+            highlights: [
+                "Optimized the Details page UI: added Staff information, added an overscroll zoom effect for posters.",
+                "Fixed a crash issue when converting to an animation series.",
+                "Added a setting option to open the details page with a single click."
+            ],
+            primaryAction: .init(
+                id: "refresh-metadata",
+                title: "Refresh Metadata",
+                systemImage: "arrow.clockwise",
+                kind: .refreshMetadata
+            ),
+            secondaryActions: [
+                .init(
+                    id: "project-github",
+                    title: "AniShelf on GitHub",
+                    systemImage: "arrow.up.right.square",
+                    kind: .openURL(projectURL)
+                )
+            ]
         )
     ]
 

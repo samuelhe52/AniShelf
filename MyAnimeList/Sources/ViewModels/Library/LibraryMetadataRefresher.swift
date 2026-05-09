@@ -25,72 +25,164 @@ final class LibraryMetadataRefresher {
         for library: [AnimeEntry],
         fetcher: InfoFetcher,
         language: Language,
-        prefetchAllImages: @escaping ([AnimeEntry]) -> Void
-    ) {
-        Task {
-            ToastCenter.global.progressState =
-                .progress(
-                    current: 0,
-                    total: library.count,
-                    messageResource: "Fetching Info: 0 / \(library.count)")
+        options: LibraryRefreshOptions = .toastDefault
+    ) async {
+        options.reporter.report(
+            .metadataProgress(
+                current: 0,
+                total: library.count,
+                messageResource: "Fetching Info: 0 / \(library.count)"
+            )
+        )
 
-            var fetchedInfos: [Int: (BasicInfo, AnimeEntryDetailDTO)] = [:]
-            var failures: [LatestInfoFailure] = []
-            let totalCount = library.count
+        var fetchedInfos: [Int: (BasicInfo, AnimeEntryDetailDTO)] = [:]
+        var failures: [LatestInfoFailure] = []
+        let totalCount = library.count
 
-            do {
-                for chunk in chunkedEntries(library, chunkSize: 8) {
-                    let chunkInfos = await latestInfoForEntries(
-                        entries: chunk,
-                        fetcher: fetcher,
-                        language: language,
-                        updateProgress: { current, _ in
-                            let messageResource: LocalizedStringResource =
-                                "Fetching Info: \(fetchedInfos.count + failures.count + current) / \(totalCount)"
-                            ToastCenter.global.progressState =
-                                .progress(
-                                    current: fetchedInfos.count + failures.count + current,
-                                    total: totalCount,
-                                    messageResource: messageResource)
-                        })
-                    for (id, info, detail) in chunkInfos.successes {
-                        fetchedInfos[id] = (info, detail)
-                    }
-                    failures.append(contentsOf: chunkInfos.failures)
+        do {
+            for chunk in chunkedEntries(library, chunkSize: 8) {
+                let chunkInfos = await latestInfoForEntries(
+                    entries: chunk,
+                    fetcher: fetcher,
+                    language: language,
+                    updateProgress: { current, _ in
+                        let resolvedCurrent = fetchedInfos.count + failures.count + current
+                        options.reporter.report(
+                            .metadataProgress(
+                                current: resolvedCurrent,
+                                total: totalCount,
+                                messageResource: "Fetching Info: \(resolvedCurrent) / \(totalCount)"
+                            )
+                        )
+                    })
+                for (id, info, detail) in chunkInfos.successes {
+                    fetchedInfos[id] = (info, detail)
                 }
-                ToastCenter.global.progressState = nil
-
-                ToastCenter.global.loadingMessage = .message("Organizing Library...")
-                for (id, fetchedInfo) in fetchedInfos {
-                    if let entry = library.entryWithTMDbID(id) {
-                        let (info, detailDTO) = fetchedInfo
-                        entry.replaceMetadata(
-                            from: info,
-                            preservingCustomPoster: entry.usingCustomPoster)
-                        entry.replaceDetail(from: detailDTO)
-                        await resolveParentSeriesEntry(for: entry, fetcher: fetcher, language: language)
-                    }
-                }
-                try repository.save()
-                ToastCenter.global.loadingMessage = nil
-                if failures.isEmpty {
-                    ToastCenter.global.completionState = .completed(
-                        "Refreshed infos for \(fetchedInfos.count) entries.")
-                } else if fetchedInfos.isEmpty {
-                    ToastCenter.global.completionState = .failed(
-                        "Failed to refresh \(failures.count) entries.")
-                } else {
-                    ToastCenter.global.completionState = .partialComplete(
-                        "Refreshed \(fetchedInfos.count) entries, failed \(failures.count).")
-                }
-            } catch {
-                libraryStoreLogger.error("Error refreshing infos: \(error)")
-                ToastCenter.global.completionState = .failed(message: error.localizedDescription)
-                return
+                failures.append(contentsOf: chunkInfos.failures)
             }
-            if !fetchedInfos.isEmpty {
-                prefetchAllImages(library)
+
+            options.reporter.report(
+                .organizingLibrary(messageResource: "Organizing Library...")
+            )
+            for (id, fetchedInfo) in fetchedInfos {
+                if let entry = library.entryWithTMDbID(id) {
+                    let (info, detailDTO) = fetchedInfo
+                    entry.replaceMetadata(
+                        from: info,
+                        preservingCustomPoster: entry.usingCustomPoster)
+                    entry.replaceDetail(from: detailDTO)
+                    await resolveParentSeriesEntry(for: entry, fetcher: fetcher, language: language)
+                }
             }
+            try repository.save()
+            let metadataCompletion = metadataCompletion(
+                refreshedCount: fetchedInfos.count,
+                failureCount: failures.count
+            )
+            options.reporter.report(.metadataPhaseComplete(metadataCompletion))
+
+            if options.prefetchImages, !fetchedInfos.isEmpty {
+                let imagePrefetchCompletion = await LibraryImageCacheService.prefetchImagesNow(
+                    for: library,
+                    reporter: options.reporter
+                )
+                options.reporter.report(
+                    .refreshComplete(
+                        refreshCompletion(
+                            metadataCompletion: metadataCompletion,
+                            imagePrefetchCompletion: imagePrefetchCompletion
+                        )
+                    )
+                )
+            } else {
+                options.reporter.report(.refreshComplete(metadataCompletion))
+            }
+        } catch {
+            libraryStoreLogger.error("Error refreshing infos: \(error)")
+            options.reporter.report(
+                .refreshComplete(
+                    .init(
+                        state: .failed,
+                        messageResource: LocalizedStringResource(stringLiteral: error.localizedDescription)
+                    )
+                )
+            )
+            return
+        }
+    }
+
+    private func metadataCompletion(
+        refreshedCount: Int,
+        failureCount: Int
+    ) -> LibraryRefreshCompletion {
+        if failureCount == 0 {
+            return .init(
+                state: .completed,
+                messageResource: "Refreshed infos for \(refreshedCount) entries.",
+                successfulItemCount: refreshedCount,
+                failedItemCount: failureCount
+            )
+        } else if refreshedCount == 0 {
+            return .init(
+                state: .failed,
+                messageResource: "Failed to refresh \(failureCount) entries.",
+                successfulItemCount: refreshedCount,
+                failedItemCount: failureCount
+            )
+        } else {
+            return .init(
+                state: .partialComplete,
+                messageResource: "Refreshed \(refreshedCount) entries, failed \(failureCount).",
+                successfulItemCount: refreshedCount,
+                failedItemCount: failureCount
+            )
+        }
+    }
+
+    private func refreshCompletion(
+        metadataCompletion: LibraryRefreshCompletion,
+        imagePrefetchCompletion: LibraryRefreshCompletion
+    ) -> LibraryRefreshCompletion {
+        let refreshedCount = metadataCompletion.successfulItemCount ?? 0
+        let metadataFailureCount = metadataCompletion.failedItemCount ?? 0
+        let fetchedImageCount = imagePrefetchCompletion.successfulItemCount ?? 0
+        let imageFailureCount = imagePrefetchCompletion.failedItemCount ?? 0
+
+        let messageResource: LocalizedStringResource
+        switch (metadataFailureCount, imageFailureCount) {
+        case (0, 0):
+            messageResource = "Refreshed \(refreshedCount) entries and fetched \(fetchedImageCount) images."
+        case (0, _):
+            messageResource =
+                "Refreshed \(refreshedCount) entries. Fetched \(fetchedImageCount) images, failed \(imageFailureCount)."
+        case (_, 0):
+            messageResource =
+                "Refreshed \(refreshedCount) entries, failed \(metadataFailureCount). Fetched \(fetchedImageCount) images."
+        default:
+            messageResource =
+                "Refreshed \(refreshedCount) entries, failed \(metadataFailureCount). Fetched \(fetchedImageCount) images, failed \(imageFailureCount)."
+        }
+
+        return .init(
+            state: refreshCompletionState(
+                metadataState: metadataCompletion.state,
+                imagePrefetchState: imagePrefetchCompletion.state
+            ),
+            messageResource: messageResource
+        )
+    }
+
+    private func refreshCompletionState(
+        metadataState: LibraryRefreshCompletionState,
+        imagePrefetchState: LibraryRefreshCompletionState
+    ) -> LibraryRefreshCompletionState {
+        switch (metadataState, imagePrefetchState) {
+        case (.completed, .completed):
+            .completed
+        case (.failed, _):
+            .failed
+        case (_, .failed), (.partialComplete, _), (_, .partialComplete):
+            .partialComplete
         }
     }
 

@@ -5,45 +5,99 @@ import SwiftUI
 
 @MainActor
 enum LibraryImageCacheService {
-    static func prefetchImages<C: Collection>(for entries: C)
+    static func prefetchImages<C: Collection>(
+        for entries: C,
+        reporter: LibraryRefreshReporter = .toast
+    )
     where C.Element == AnimeEntry {
         let urls = Array(Set(imageURLs(for: entries)))
-        ToastCenter.global.progressState =
-            .progress(
+        Task {
+            _ = await prefetchImagesNow(urls: urls, reporter: reporter)
+        }
+    }
+
+    @discardableResult
+    static func prefetchImagesNow<C: Collection>(
+        for entries: C,
+        reporter: LibraryRefreshReporter = .toast
+    ) async -> LibraryRefreshCompletion where C.Element == AnimeEntry {
+        let urls = Array(Set(imageURLs(for: entries)))
+        return await prefetchImagesNow(urls: urls, reporter: reporter)
+    }
+
+    @discardableResult
+    private static func prefetchImagesNow(
+        urls: [URL],
+        reporter: LibraryRefreshReporter
+    ) async -> LibraryRefreshCompletion {
+        reporter.report(
+            .imagePrefetchProgress(
                 current: 0,
                 total: urls.count,
-                messageResource: "Fetching Images: 0 / \(urls.count)")
-        let prefetcher = ImagePrefetcher(
-            urls: urls,
-            progressBlock: { skipped, failed, completed in
-                let total = urls.count
-                let current = skipped.count + failed.count + completed.count
-                ToastCenter.global.progressState =
-                    .progress(
-                        current: current,
-                        total: total,
-                        messageResource: "Fetching Images: \(current) / \(total)")
-            },
-            completionHandler: { skipped, failed, completed in
-                var state: ToastCenter.CompletedWithMessage.State = .completed
-                let messageResourceString =
-                    "Fetched: \(skipped.count + completed.count), failed: \(failed.count)"
-                let messageResource = LocalizedStringResource(
-                    "Fetched: \(skipped.count + completed.count), failed: \(failed.count)")
-                if failed.isEmpty {
-                    state = .completed
-                } else if completed.isEmpty && skipped.isEmpty {
-                    state = .failed
-                } else {
-                    state = .partialComplete
+                messageResource: "Fetching Images: 0 / \(urls.count)"
+            )
+        )
+
+        guard !urls.isEmpty else {
+            let completion = LibraryRefreshCompletion(
+                state: .completed,
+                messageResource: "Fetched: 0, failed: 0",
+                successfulItemCount: 0,
+                failedItemCount: 0
+            )
+            reporter.report(.imagePrefetchPhaseComplete(completion))
+            return completion
+        }
+
+        let session = PrefetchSession()
+        return await withCheckedContinuation { continuation in
+            let prefetcher = ImagePrefetcher(
+                urls: urls,
+                progressBlock: { skipped, failed, completed in
+                    let total = urls.count
+                    let current = skipped.count + failed.count + completed.count
+                    Task { @MainActor in
+                        reporter.report(
+                            .imagePrefetchProgress(
+                                current: current,
+                                total: total,
+                                messageResource: "Fetching Images: \(current) / \(total)"
+                            )
+                        )
+                    }
+                },
+                completionHandler: { skipped, failed, completed in
+                    let fetchedCount = skipped.count + completed.count
+                    let failedCount = failed.count
+                    let state: LibraryRefreshCompletionState
+
+                    if failed.isEmpty {
+                        state = .completed
+                    } else if completed.isEmpty && skipped.isEmpty {
+                        state = .failed
+                    } else {
+                        state = .partialComplete
+                    }
+
+                    let completion = LibraryRefreshCompletion(
+                        state: state,
+                        messageResource: "Fetched: \(fetchedCount), failed: \(failedCount)",
+                        successfulItemCount: fetchedCount,
+                        failedItemCount: failedCount
+                    )
+                    Task { @MainActor in
+                        reporter.report(.imagePrefetchPhaseComplete(completion))
+                        libraryStoreLogger.info(
+                            "Prefetched images: Fetched: \(fetchedCount), failed: \(failedCount)"
+                        )
+                        session.prefetcher = nil
+                        continuation.resume(returning: completion)
+                    }
                 }
-                ToastCenter.global.progressState = nil
-                ToastCenter.global.completionState = .init(
-                    state: state,
-                    messageResource: messageResource)
-                libraryStoreLogger.info("Prefetched images: \(messageResourceString)")
-            })
-        prefetcher.start()
+            )
+            session.prefetcher = prefetcher
+            prefetcher.start()
+        }
     }
 
     static func imageURLs<C: Collection>(for entries: C) -> [URL]
@@ -102,4 +156,8 @@ enum LibraryImageCacheService {
         }
         return [""] + downsampledIdentifiers
     }()
+
+    private final class PrefetchSession {
+        var prefetcher: ImagePrefetcher?
+    }
 }
