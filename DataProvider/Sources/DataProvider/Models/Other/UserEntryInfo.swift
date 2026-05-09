@@ -18,6 +18,9 @@ public struct UserEntryInfo: Equatable, Codable {
     /// Date marked finished.
     public var dateFinished: Date?
 
+    /// User's optional score for this entry.
+    public var score: Int?
+
     /// Whether the entry is marked as favorite.
     public var favorite: Bool
 
@@ -28,12 +31,18 @@ public struct UserEntryInfo: Equatable, Codable {
     public var usingCustomPoster: Bool
 
     private init(
-        watchStatus: AnimeEntry.WatchStatus, dateStarted: Date? = nil, dateFinished: Date? = nil,
-        favorite: Bool, notes: String, usingCustomPoster: Bool
+        watchStatus: AnimeEntry.WatchStatus,
+        dateStarted: Date? = nil,
+        dateFinished: Date? = nil,
+        score: Int? = nil,
+        favorite: Bool,
+        notes: String,
+        usingCustomPoster: Bool
     ) {
         self.watchStatus = watchStatus
         self.dateStarted = dateStarted
         self.dateFinished = dateFinished
+        self.score = normalizedEntryScore(score)
         self.favorite = favorite
         self.notes = notes
         self.usingCustomPoster = usingCustomPoster
@@ -43,6 +52,7 @@ public struct UserEntryInfo: Equatable, Codable {
         self.watchStatus = entry.watchStatus
         self.dateStarted = entry.dateStarted
         self.dateFinished = entry.dateFinished
+        self.score = normalizedEntryScore(entry.score)
         self.favorite = entry.favorite
         self.notes = entry.notes
         self.usingCustomPoster = entry.usingCustomPoster
@@ -51,7 +61,41 @@ public struct UserEntryInfo: Equatable, Codable {
     /// Whether this user info is "empty", i.e. has no meaningful user data.
     public var isEmpty: Bool {
         watchStatus == .planToWatch && dateStarted == nil && dateFinished == nil
-            && favorite == false && notes.isEmpty && usingCustomPoster == false
+            && score == nil && favorite == false && notes.isEmpty && usingCustomPoster == false
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case watchStatus
+        case dateStarted
+        case dateFinished
+        case score
+        case favorite
+        case notes
+        case usingCustomPoster
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            watchStatus: try container.decode(AnimeEntry.WatchStatus.self, forKey: .watchStatus),
+            dateStarted: try container.decodeIfPresent(Date.self, forKey: .dateStarted),
+            dateFinished: try container.decodeIfPresent(Date.self, forKey: .dateFinished),
+            score: normalizedEntryScore(try container.decodeIfPresent(Int.self, forKey: .score)),
+            favorite: try container.decode(Bool.self, forKey: .favorite),
+            notes: try container.decode(String.self, forKey: .notes),
+            usingCustomPoster: try container.decode(Bool.self, forKey: .usingCustomPoster)
+        )
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(watchStatus, forKey: .watchStatus)
+        try container.encodeIfPresent(dateStarted, forKey: .dateStarted)
+        try container.encodeIfPresent(dateFinished, forKey: .dateFinished)
+        try container.encodeIfPresent(normalizedEntryScore(score), forKey: .score)
+        try container.encode(favorite, forKey: .favorite)
+        try container.encode(notes, forKey: .notes)
+        try container.encode(usingCustomPoster, forKey: .usingCustomPoster)
     }
 }
 
@@ -72,6 +116,7 @@ extension UserEntryInfo: CustomStringConvertible {
         Status: \(watchStatus)
         Started: \(dateStarted?.description ?? "N/A")
         Finished: \(dateFinished?.description ?? "N/A")
+        Score: \(score.map(String.init) ?? "No score")
         Favorite: \(favorite)
         Notes: \(notes)
         Custom Poster: \(usingCustomPoster)
@@ -80,9 +125,15 @@ extension UserEntryInfo: CustomStringConvertible {
 }
 
 extension AnimeEntry {
+    public static let validScoreRange = 1...5
+
     public func setWatchStatus(_ status: WatchStatus, now: Date = .now) {
         watchStatus = status
         normalizeTrackingDates(now: now)
+    }
+
+    public func setScore(_ score: Int?) {
+        self.score = normalizedEntryScore(score)
     }
 
     public func normalizeTrackingDates(now: Date = .now) {
@@ -100,6 +151,7 @@ extension AnimeEntry {
         watchStatus = userInfo.watchStatus
         dateStarted = userInfo.dateStarted
         dateFinished = userInfo.dateFinished
+        score = normalizedEntryScore(userInfo.score)
         favorite = userInfo.favorite
         notes = userInfo.notes
         usingCustomPoster = userInfo.usingCustomPoster
@@ -135,4 +187,9 @@ extension AnimeEntry.WatchStatus {
             }
         }
     }
+}
+
+fileprivate func normalizedEntryScore(_ score: Int?) -> Int? {
+    guard let score else { return nil }
+    return AnimeEntry.validScoreRange.contains(score) ? score : nil
 }

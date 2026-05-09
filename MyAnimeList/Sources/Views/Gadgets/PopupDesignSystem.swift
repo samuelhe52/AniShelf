@@ -140,7 +140,7 @@ struct PopupDisclosureCard<Content: View>: View {
     }
 }
 
-struct PopupInlineDisclosureSection<Content: View>: View {
+struct PopupNestedDisclosureSection<Content: View>: View {
     let title: LocalizedStringResource
     var systemImage: String? = nil
     @Binding var isExpanded: Bool
@@ -185,10 +185,6 @@ struct PopupInlineDisclosureSection<Content: View>: View {
 
             if isExpanded {
                 VStack(alignment: .leading, spacing: 0) {
-                    Rectangle()
-                        .fill(.white.opacity(0.14))
-                        .frame(height: 1)
-                        .padding(.bottom, 16)
                     content
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }

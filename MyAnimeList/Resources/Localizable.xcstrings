@@ -3558,6 +3558,54 @@
         }
       }
     },
+    "Clear" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリア"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除"
+          }
+        }
+      }
+    },
+    "No score" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未設定"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未评分"
+          }
+        }
+      }
+    },
+    "Score" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スコア"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "评分"
+          }
+        }
+      }
+    },
     "Share" : {
       "localizations" : {
         "ja" : {
@@ -3704,6 +3752,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "状态: %1$@\n开始: %2$@\n结束: %3$@\n特别收藏: %4$@\n笔记: %5$@\n使用自选海报: %6$@"
+          }
+        }
+      }
+    },
+    "Status: %@\nStarted: %@\nFinished: %@\nScore: %lld\nFavorite: %@\nNotes: %@\nCustom Poster: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Status: %1$@\nStarted: %2$@\nFinished: %3$@\nScore: %4$lld\nFavorite: %5$@\nNotes: %6$@\nCustom Poster: %7$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ステータス: %1$@\n開始日: %2$@\n終了日: %3$@\nスコア: %4$lld\nお気に入り: %5$@\nノート: %6$@\nカスタムポスター: %7$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "状态: %1$@\n开始: %2$@\n结束: %3$@\n评分: %4$lld\n特别收藏: %5$@\n笔记: %6$@\n使用自选海报: %7$@"
+          }
+        }
+      }
+    },
+    "Status: %@\nStarted: %@\nFinished: %@\nScore: No score\nFavorite: %@\nNotes: %@\nCustom Poster: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Status: %1$@\nStarted: %2$@\nFinished: %3$@\nScore: No score\nFavorite: %4$@\nNotes: %5$@\nCustom Poster: %6$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ステータス: %1$@\n開始日: %2$@\n終了日: %3$@\nスコア: 未設定\nお気に入り: %4$@\nノート: %5$@\nカスタムポスター: %6$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "状态: %1$@\n开始: %2$@\n结束: %3$@\n评分: 未评分\n特别收藏: %4$@\n笔记: %5$@\n使用自选海报: %6$@"
           }
         }
       }

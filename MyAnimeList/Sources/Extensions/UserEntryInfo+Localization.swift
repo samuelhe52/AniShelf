@@ -22,13 +22,26 @@ extension AnimeEntry.WatchStatus: @retroactive CustomLocalizedStringResourceConv
 
 extension UserEntryInfo: @retroactive CustomLocalizedStringResourceConvertible {
     public var localizedStringResource: LocalizedStringResource {
-        """
-        Status: \(watchStatus)
-        Started: \(dateStarted?.description ?? "N/A")
-        Finished: \(dateFinished?.description ?? "N/A")
-        Favorite: \(favorite ? "Yes" : "No")
-        Notes: \(notes)
-        Custom Poster: \(usingCustomPoster ? "Yes" : "No")
-        """
+        if let score {
+            """
+            Status: \(watchStatus)
+            Started: \(dateStarted?.description ?? "N/A")
+            Finished: \(dateFinished?.description ?? "N/A")
+            Score: \(score)
+            Favorite: \(favorite ? "Yes" : "No")
+            Notes: \(notes)
+            Custom Poster: \(usingCustomPoster ? "Yes" : "No")
+            """
+        } else {
+            """
+            Status: \(watchStatus)
+            Started: \(dateStarted?.description ?? "N/A")
+            Finished: \(dateFinished?.description ?? "N/A")
+            Score: No score
+            Favorite: \(favorite ? "Yes" : "No")
+            Notes: \(notes)
+            Custom Poster: \(usingCustomPoster ? "Yes" : "No")
+            """
+        }
     }
 }

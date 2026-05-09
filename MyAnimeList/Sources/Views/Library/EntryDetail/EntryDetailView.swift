@@ -459,43 +459,55 @@ struct EntryDetailView: View {
 
     @ViewBuilder
     private var editingSection: some View {
-        PopupDisclosureCard("Tracking", systemImage: "checklist", isExpanded: $isEditingDetails) {
-            VStack(alignment: .leading, spacing: 18) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Watch Status")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    AnimeEntryWatchedStatusPicker(for: entry)
-                        .pickerStyle(.segmented)
-                    AnimeEntryDatePickers(entry: entry)
-                }
+        VStack(alignment: .leading, spacing: 16) {
+            EntryScoreCard(entry: entry)
 
-                Divider()
+            Divider()
 
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Notes")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    PlaceholderTextEditor(
-                        text: Binding(
-                            get: { entry.notes },
-                            set: { entry.notes = $0 }
-                        ),
-                        placeholder: "Write some thoughts..."
-                    )
-                    .frame(height: 180)
-                    .padding(12)
-                    .background(
-                        .thinMaterial,
-                        in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    )
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(.white.opacity(0.1), lineWidth: 0.5)
+            PopupNestedDisclosureSection(
+                "Tracking",
+                systemImage: "checklist",
+                isExpanded: $isEditingDetails
+            ) {
+                VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Watch Status")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        AnimeEntryWatchedStatusPicker(for: entry)
+                            .pickerStyle(.segmented)
+                        AnimeEntryDatePickers(entry: entry)
+                    }
+
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Notes")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        PlaceholderTextEditor(
+                            text: Binding(
+                                get: { entry.notes },
+                                set: { entry.notes = $0 }
+                            ),
+                            placeholder: "Write some thoughts..."
+                        )
+                        .frame(height: 180)
+                        .padding(12)
+                        .background(
+                            .thinMaterial,
+                            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        )
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(.white.opacity(0.1), lineWidth: 0.5)
+                        }
                     }
                 }
             }
         }
+        .padding(18)
+        .popupGlassPanel(cornerRadius: 24)
         .id(EntryDetailScrollTarget.editingSection)
     }
 

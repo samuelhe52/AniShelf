@@ -8,6 +8,7 @@
 import Foundation
 import SwiftData
 import Testing
+import UIKit
 import ZIPFoundation
 
 @testable import DataProvider
@@ -78,6 +79,159 @@ struct MyAnimeListTests {
         season.parentSeriesEntry = parent
         #expect(parent.parentSeriesEntry == nil, "Parent should not have a parent before insertion")
         try dataProvider.dataHandler.newEntry(season)
+    }
+
+    @Test func testEntryScoreRoundTripAndChangeDetection() throws {
+        let entry = AnimeEntry.template(id: 101)
+        let originalUserInfo = entry.userInfo
+
+        entry.setScore(4)
+        #expect(entry.score == 4)
+        #expect(entry.userInfo.score == 4)
+        #expect(entry.userInfoHasChanges(comparedTo: originalUserInfo))
+
+        let encoded = try JSONEncoder().encode(entry.userInfo)
+        let decoded = try JSONDecoder().decode(UserEntryInfo.self, from: encoded)
+        #expect(decoded == entry.userInfo)
+
+        let restored = AnimeEntry.template(id: 202)
+        restored.updateUserInfo(from: decoded)
+        #expect(restored.score == 4)
+        #expect(restored.userInfo == decoded)
+
+        entry.setScore(nil)
+        #expect(entry.score == nil)
+        #expect(!entry.userInfoHasChanges(comparedTo: originalUserInfo))
+    }
+
+    @Test func testEntryScoreNormalizationRejectsOutOfRangeValues() throws {
+        let entry = AnimeEntry.template(id: 303)
+        entry.setScore(9)
+
+        #expect(entry.score == nil)
+
+        entry.setScore(1)
+        #expect(entry.score == 1)
+
+        var payload = try #require(
+            JSONSerialization.jsonObject(
+                with: try JSONEncoder().encode(entry.userInfo)
+            ) as? [String: Any]
+        )
+        payload["score"] = 99
+
+        let invalidData = try JSONSerialization.data(withJSONObject: payload)
+        let decoded = try JSONDecoder().decode(UserEntryInfo.self, from: invalidData)
+        #expect(decoded.score == nil)
+    }
+
+    @Test @MainActor func testUserEntryInfoPasteboardRoundTripPreservesScore() throws {
+        let pasteboard = UIPasteboard.general
+        let originalItems = pasteboard.items
+        defer { pasteboard.items = originalItems }
+
+        let entry = AnimeEntry.template(id: 404)
+        entry.setScore(5)
+        entry.notes = "Keep this"
+
+        entry.userInfo.copyToPasteboard()
+
+        let pasted = try #require(UserEntryInfo.fromPasteboard())
+        #expect(pasted.score == 5)
+        #expect(pasted.notes == "Keep this")
+    }
+
+    @Test @MainActor func testScoreMigrationFromV271DefaultsToNil() throws {
+        let storeURL = temporaryStoreURL(name: "score-migration")
+
+        let legacySchema = Schema(versionedSchema: SchemaV2_7_1.self)
+        let legacyConfiguration = ModelConfiguration(schema: legacySchema, url: storeURL)
+        let legacyContainer = try ModelContainer(for: legacySchema, configurations: legacyConfiguration)
+        let legacyEntry = SchemaV2_7_1.AnimeEntry(
+            name: "Legacy Entry",
+            type: .movie,
+            tmdbID: 7_777,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 1)
+        )
+        legacyEntry.notes = "Migrated notes"
+        legacyEntry.favorite = true
+        legacyContainer.mainContext.insert(legacyEntry)
+        try legacyContainer.mainContext.save()
+
+        let migratedProvider = DataProvider(url: storeURL)
+        let migratedEntries = try migratedProvider.getAllModels(ofType: AnimeEntry.self)
+        let migratedEntry = try #require(migratedEntries.first)
+
+        #expect(migratedEntry.tmdbID == 7_777)
+        #expect(migratedEntry.notes == "Migrated notes")
+        #expect(migratedEntry.favorite)
+        #expect(migratedEntry.score == nil)
+    }
+
+    @Test @MainActor func testConvertSeasonToSeriesPreservesScore() async throws {
+        let dataProvider = DataProvider(inMemory: true)
+        let repository = LibraryRepository(dataProvider: dataProvider)
+        let converter = LibraryEntryConverter(repository: repository)
+        let seasonEntry = AnimeEntry(
+            name: "Frieren Season 1",
+            type: .season(seasonNumber: 1, parentSeriesID: 209867),
+            tmdbID: 400_234
+        )
+        seasonEntry.setScore(5)
+        seasonEntry.notes = "Season-side score"
+        try repository.newEntry(seasonEntry)
+
+        try await converter.convertSeasonToSeries(
+            seasonEntry,
+            language: .english,
+            fetcher: fetcher
+        )
+
+        let migratedEntries = try dataProvider.getAllModels(ofType: AnimeEntry.self)
+        let seriesEntry = try #require(
+            migratedEntries.first(where: { $0.tmdbID == 209867 && $0.onDisplay })
+        )
+
+        #expect(seriesEntry.score == 5)
+        #expect(seriesEntry.notes == "Season-side score")
+    }
+
+    @Test @MainActor func testConvertSeriesToSeasonPreservesScore() async throws {
+        let dataProvider = DataProvider(inMemory: true)
+        let repository = LibraryRepository(dataProvider: dataProvider)
+        let converter = LibraryEntryConverter(repository: repository)
+        let seriesEntry = AnimeEntry(
+            name: "Frieren",
+            type: .series,
+            tmdbID: 209867
+        )
+        seriesEntry.setScore(2)
+        seriesEntry.notes = "Series-side score"
+        try repository.newEntry(seriesEntry)
+
+        try await converter.convertSeriesToSeason(
+            seriesEntry,
+            seasonNumber: 1,
+            language: .english,
+            fetcher: fetcher
+        )
+
+        let migratedEntries = try dataProvider.getAllModels(ofType: AnimeEntry.self)
+        let seasonEntry = try #require(
+            migratedEntries.first {
+                guard case .season(let seasonNumber, let parentSeriesID) = $0.type else {
+                    return false
+                }
+                return seasonNumber == 1 && parentSeriesID == 209867 && $0.onDisplay
+            }
+        )
+        let hiddenSeriesEntry = try #require(
+            migratedEntries.first(where: { $0.tmdbID == 209867 && $0.type == .series && !$0.onDisplay })
+        )
+
+        #expect(seasonEntry.score == 2)
+        #expect(seasonEntry.notes == "Series-side score")
+        #expect(hiddenSeriesEntry.tmdbID == 209867)
     }
 
     @Test func testLibraryProfileStatsEmptyLibrary() {
@@ -1028,5 +1182,15 @@ struct MyAnimeListTests {
         Calendar(identifier: .gregorian).date(
             from: DateComponents(year: year, month: month, day: day)
         )!
+    }
+
+    private func temporaryStoreURL(name: String) -> URL {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AniShelfTests-\(name)-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        return directory.appendingPathComponent("store.sqlite")
     }
 }

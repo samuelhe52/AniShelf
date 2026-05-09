@@ -1,5 +1,5 @@
 //
-//  AnimeEntryDetailV2_7_1.swift
+//  AnimeEntryDetailV2_7_2.swift
 //  DataProvider
 //
 //  Created by OpenAI Codex on 2026/5/9.
@@ -8,7 +8,7 @@
 import Foundation
 import SwiftData
 
-extension SchemaV2_7_1 {
+extension SchemaV2_7_2 {
     @Model
     public final class AnimeEntryDetail {
         public var language: String
@@ -27,17 +27,17 @@ extension SchemaV2_7_1 {
         public var seasonCount: Int?
         public var entry: AnimeEntry? = nil
 
-        @Relationship(deleteRule: .cascade, inverse: \SchemaV2_7_1.AnimeEntryCharacter.detail)
-        public var characters: [SchemaV2_7_1.AnimeEntryCharacter] = []
+        @Relationship(deleteRule: .cascade, inverse: \AnimeEntryCharacter.detail)
+        public var characters: [AnimeEntryCharacter] = []
 
-        @Relationship(deleteRule: .cascade, inverse: \SchemaV2_7_1.AnimeEntryStaff.detail)
-        public var staff: [SchemaV2_7_1.AnimeEntryStaff] = []
+        @Relationship(deleteRule: .cascade, inverse: \AnimeEntryStaff.detail)
+        public var staff: [AnimeEntryStaff] = []
 
-        @Relationship(deleteRule: .cascade, inverse: \SchemaV2_7_1.AnimeEntrySeasonSummary.detail)
-        public var seasons: [SchemaV2_7_1.AnimeEntrySeasonSummary] = []
+        @Relationship(deleteRule: .cascade, inverse: \AnimeEntrySeasonSummary.detail)
+        public var seasons: [AnimeEntrySeasonSummary] = []
 
-        @Relationship(deleteRule: .cascade, inverse: \SchemaV2_7_1.AnimeEntryEpisodeSummary.detail)
-        public var episodes: [SchemaV2_7_1.AnimeEntryEpisodeSummary] = []
+        @Relationship(deleteRule: .cascade, inverse: \AnimeEntryEpisodeSummary.detail)
+        public var episodes: [AnimeEntryEpisodeSummary] = []
 
         public init(
             language: String,
@@ -54,10 +54,10 @@ extension SchemaV2_7_1 {
             runtimeMinutes: Int? = nil,
             episodeCount: Int? = nil,
             seasonCount: Int? = nil,
-            characters: [SchemaV2_7_1.AnimeEntryCharacter] = [],
-            staff: [SchemaV2_7_1.AnimeEntryStaff] = [],
-            seasons: [SchemaV2_7_1.AnimeEntrySeasonSummary] = [],
-            episodes: [SchemaV2_7_1.AnimeEntryEpisodeSummary] = []
+            characters: [AnimeEntryCharacter] = [],
+            staff: [AnimeEntryStaff] = [],
+            seasons: [AnimeEntrySeasonSummary] = [],
+            episodes: [AnimeEntryEpisodeSummary] = []
         ) {
             self.language = language
             self.title = title

@@ -5,6 +5,7 @@
 //  Created by OpenAI Codex on 2026/4/4.
 //
 
+import DataProvider
 import Kingfisher
 import SwiftUI
 
@@ -25,6 +26,88 @@ struct DetailStatCard: View {
         .frame(maxWidth: .infinity, minHeight: 80, alignment: .topLeading)
         .padding(16)
         .popupGlassPanel(cornerRadius: 24)
+    }
+}
+
+struct EntryScoreCard: View {
+    let entry: AnimeEntry
+
+    @State private var bouncingScore: Int?
+
+    private let selectionAnimation = Animation.spring(response: 0.28, dampingFraction: 0.82)
+    private let bounceInAnimation = Animation.spring(response: 0.18, dampingFraction: 0.42)
+    private let bounceOutAnimation = Animation.spring(response: 0.28, dampingFraction: 0.72)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
+                Label {
+                    Text(EntryDetailL10n.score)
+                        .font(.subheadline.weight(.semibold))
+                } icon: {
+                    Image(systemName: "star")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .foregroundStyle(.secondary)
+
+                Spacer(minLength: 12)
+
+                Button {
+                    withAnimation(selectionAnimation) {
+                        entry.setScore(nil)
+                    }
+                } label: {
+                    Text(EntryDetailL10n.clear)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .disabled(entry.score == nil)
+                .opacity(entry.score == nil ? 0.42 : 1)
+            }
+
+            HStack(spacing: 10) {
+                ForEach(Array(AnimeEntry.validScoreRange), id: \.self) { value in
+                    scoreButton(for: value)
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func scoreButton(for value: Int) -> some View {
+        let isFilled = (entry.score ?? 0) >= value
+        let isBouncing = bouncingScore == value
+
+        return Button {
+            setScore(value)
+        } label: {
+            Image(systemName: isFilled ? "star.fill" : "star")
+                .font(.title3.weight(.semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(isFilled ? .yellow : .secondary)
+                .scaleEffect(isBouncing ? 1.34 : 1)
+                .frame(width: 36, height: 36)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(value)/5")
+    }
+
+    private func setScore(_ value: Int) {
+        withAnimation(selectionAnimation) {
+            entry.setScore(value)
+        }
+        withAnimation(bounceInAnimation) {
+            bouncingScore = value
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
+            guard bouncingScore == value else { return }
+            withAnimation(bounceOutAnimation) {
+                bouncingScore = nil
+            }
+        }
     }
 }
 
