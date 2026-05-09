@@ -6,6 +6,7 @@
 - Use `make run-device` for build, install, and launch on a connected iPhone.
 - If visual feedback is needed, run `make run-device`, then use Computer Use to open iPhone Mirroring or Quicktime and inspect the launched app there. Default to Quicktime, unless the user dictates otherwise.
 - Prefer the smallest relevant build or test command before broad verification.
+- If the user asks to perform a change in a new worktree, create that worktree under ../AniShelf-worktrees/.
 
 ## Code Style
 
