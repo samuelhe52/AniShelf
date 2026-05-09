@@ -775,6 +775,140 @@ struct MyAnimeListTests {
             Issue.record("Completed refresh CTA should stay disabled.")
         }
         #expect(refreshRunCount == 1)
+
+        capturedOptions.reporter.report(
+            .imagePrefetchProgress(
+                current: 6,
+                total: 6,
+                messageResource: "Fetching Images: 6 / 6"
+            )
+        )
+
+        switch runner.refreshState {
+        case .completed(let completion):
+            #expect(completion.state == .completed)
+        default:
+            Issue.record("Late progress should not override completed inline refresh state.")
+        }
+    }
+
+    @Test @MainActor func testToastReporterIgnoresLateProgressAfterRefreshCompletion() {
+        let originalCenter = ToastCenter.global
+        let center = ToastCenter()
+        ToastCenter.global = center
+        defer { ToastCenter.global = originalCenter }
+
+        let reporter = LibraryRefreshReporter.toast
+
+        reporter.report(
+            .imagePrefetchProgress(
+                current: 2,
+                total: 4,
+                messageResource: "Fetching Images: 2 / 4"
+            )
+        )
+        #expect(center.progressState?.current == 2)
+
+        reporter.report(
+            .refreshComplete(
+                .init(
+                    state: .completed,
+                    messageResource: "Refreshed 4 entries and fetched 6 images."
+                )
+            )
+        )
+
+        #expect(center.progressState == nil)
+        #expect(center.loadingMessage == nil)
+        #expect(center.completionState?.state == .completed)
+
+        reporter.report(
+            .imagePrefetchProgress(
+                current: 4,
+                total: 4,
+                messageResource: "Fetching Images: 4 / 4"
+            )
+        )
+
+        #expect(center.progressState == nil)
+        #expect(center.completionState?.state == .completed)
+    }
+
+    @Test @MainActor func testStandaloneImagePrefetchReportsRefreshCompletion() async throws {
+        func isRefreshComplete(_ event: LibraryRefreshEvent) -> Bool {
+            if case .refreshComplete = event {
+                true
+            } else {
+                false
+            }
+        }
+
+        var events: [LibraryRefreshEvent] = []
+        let reporter = LibraryRefreshReporter { event in
+            events.append(event)
+        }
+
+        LibraryImageCacheService.prefetchImages(for: [AnimeEntry](), reporter: reporter)
+
+        for _ in 0..<20 {
+            if events.contains(where: isRefreshComplete) {
+                break
+            }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+
+        #expect(
+            events.contains { event in
+                if case .imagePrefetchProgress = event {
+                    true
+                } else {
+                    false
+                }
+            })
+        #expect(
+            events.contains { event in
+                if case .imagePrefetchPhaseComplete = event {
+                    true
+                } else {
+                    false
+                }
+            })
+
+        guard
+            let completion = events.compactMap({ event -> LibraryRefreshCompletion? in
+                if case .refreshComplete(let completion) = event {
+                    completion
+                } else {
+                    nil
+                }
+            }).first
+        else {
+            Issue.record("Standalone image prefetch should report overall refresh completion.")
+            return
+        }
+        #expect(completion.state == .completed)
+        #expect(completion.successfulItemCount == 0)
+        #expect(completion.failedItemCount == 0)
+    }
+
+    @Test @MainActor func testStandaloneImagePrefetchToastClearsProgressOnCompletion() async throws {
+        let originalCenter = ToastCenter.global
+        let center = ToastCenter()
+        ToastCenter.global = center
+        defer { ToastCenter.global = originalCenter }
+
+        LibraryImageCacheService.prefetchImages(for: [AnimeEntry](), reporter: .toast)
+
+        for _ in 0..<20 {
+            if center.completionState != nil {
+                break
+            }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+
+        #expect(center.progressState == nil)
+        #expect(center.loadingMessage == nil)
+        #expect(center.completionState?.state == .completed)
     }
 
     @Test @MainActor func testDeletionScrollTargetFallbacks() throws {

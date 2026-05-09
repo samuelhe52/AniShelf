@@ -82,7 +82,7 @@ final class LibraryMetadataRefresher {
             options.reporter.report(.metadataPhaseComplete(metadataCompletion))
 
             if options.prefetchImages, !fetchedInfos.isEmpty {
-                let imagePrefetchCompletion = await LibraryImageCacheService.prefetchImagesNow(
+                let imagePrefetchCompletion = await LibraryImageCacheService.prefetchImagesForRefreshPhaseNow(
                     for: library,
                     reporter: options.reporter
                 )

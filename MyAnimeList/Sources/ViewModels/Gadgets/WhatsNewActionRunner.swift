@@ -24,6 +24,7 @@ final class WhatsNewActionRunner {
     @ObservationIgnored
     private let refreshMetadata: @MainActor (LibraryRefreshOptions) -> Void
 
+    private var refreshGeneration: Int = 0
     var refreshState: RefreshState = .idle
 
     init(
@@ -65,6 +66,8 @@ final class WhatsNewActionRunner {
 
     private func startRefreshMetadata() {
         guard canStartRefresh else { return }
+        refreshGeneration += 1
+        let currentGeneration = refreshGeneration
 
         refreshState = .inProgress(
             .init(
@@ -75,14 +78,19 @@ final class WhatsNewActionRunner {
         refreshMetadata(
             .init(
                 reporter: .init { [weak self] event in
-                    self?.receive(event)
+                    self?.receive(event, generation: currentGeneration)
                 },
                 prefetchImages: true
             )
         )
     }
 
-    private func receive(_ event: LibraryRefreshEvent) {
+    private func receive(_ event: LibraryRefreshEvent, generation: Int) {
+        guard generation == refreshGeneration else { return }
+        if case .completed = refreshState, !isTerminal(event) {
+            return
+        }
+
         switch event {
         case .metadataProgress(let current, let total, let messageResource),
             .imagePrefetchProgress(let current, let total, let messageResource):
@@ -112,5 +120,13 @@ final class WhatsNewActionRunner {
     private func progressFraction(current: Int, total: Int) -> Double? {
         guard total > 0 else { return 1 }
         return min(max(Double(current) / Double(total), 0), 1)
+    }
+
+    private func isTerminal(_ event: LibraryRefreshEvent) -> Bool {
+        if case .refreshComplete = event {
+            true
+        } else {
+            false
+        }
     }
 }

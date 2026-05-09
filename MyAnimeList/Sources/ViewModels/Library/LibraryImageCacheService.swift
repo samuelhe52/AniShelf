@@ -12,7 +12,7 @@ enum LibraryImageCacheService {
     where C.Element == AnimeEntry {
         let urls = Array(Set(imageURLs(for: entries)))
         Task {
-            _ = await prefetchImagesNow(urls: urls, reporter: reporter)
+            _ = await prefetchImageURLsNow(urls: urls, reporter: reporter)
         }
     }
 
@@ -22,11 +22,30 @@ enum LibraryImageCacheService {
         reporter: LibraryRefreshReporter = .toast
     ) async -> LibraryRefreshCompletion where C.Element == AnimeEntry {
         let urls = Array(Set(imageURLs(for: entries)))
-        return await prefetchImagesNow(urls: urls, reporter: reporter)
+        return await prefetchImageURLsNow(urls: urls, reporter: reporter)
     }
 
     @discardableResult
-    private static func prefetchImagesNow(
+    static func prefetchImagesForRefreshPhaseNow<C: Collection>(
+        for entries: C,
+        reporter: LibraryRefreshReporter
+    ) async -> LibraryRefreshCompletion where C.Element == AnimeEntry {
+        let urls = Array(Set(imageURLs(for: entries)))
+        return await prefetchImagePhaseURLsNow(urls: urls, reporter: reporter)
+    }
+
+    @discardableResult
+    private static func prefetchImageURLsNow(
+        urls: [URL],
+        reporter: LibraryRefreshReporter
+    ) async -> LibraryRefreshCompletion {
+        let completion = await prefetchImagePhaseURLsNow(urls: urls, reporter: reporter)
+        reporter.report(.refreshComplete(completion))
+        return completion
+    }
+
+    @discardableResult
+    private static func prefetchImagePhaseURLsNow(
         urls: [URL],
         reporter: LibraryRefreshReporter
     ) async -> LibraryRefreshCompletion {

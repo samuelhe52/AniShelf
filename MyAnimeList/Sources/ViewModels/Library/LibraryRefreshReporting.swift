@@ -47,31 +47,45 @@ struct LibraryRefreshReporter {
     let reportEvent: @MainActor (LibraryRefreshEvent) -> Void
 
     @MainActor
+    private final class ToastSession {
+        var isCompleted = false
+    }
+
+    @MainActor
     func report(_ event: LibraryRefreshEvent) {
         reportEvent(event)
     }
 
     static let silent = Self { _ in }
 
-    static let toast = Self { event in
-        switch event {
-        case .metadataProgress(let current, let total, let messageResource),
-            .imagePrefetchProgress(let current, let total, let messageResource):
-            ToastCenter.global.loadingMessage = nil
-            ToastCenter.global.progressState = .progress(
-                current: current,
-                total: total,
-                messageResource: messageResource
-            )
-        case .organizingLibrary(let messageResource):
-            ToastCenter.global.progressState = nil
-            ToastCenter.global.loadingMessage = .message(messageResource)
-        case .metadataPhaseComplete, .imagePrefetchPhaseComplete:
-            break
-        case .refreshComplete(let completion):
-            ToastCenter.global.loadingMessage = nil
-            ToastCenter.global.progressState = nil
-            ToastCenter.global.completionState = toastCompletion(for: completion)
+    @MainActor
+    static var toast: Self {
+        let session = ToastSession()
+        return Self { event in
+            switch event {
+            case .metadataProgress(let current, let total, let messageResource),
+                .imagePrefetchProgress(let current, let total, let messageResource):
+                guard !session.isCompleted else { return }
+                ToastCenter.global.completionState = nil
+                ToastCenter.global.loadingMessage = nil
+                ToastCenter.global.progressState = .progress(
+                    current: current,
+                    total: total,
+                    messageResource: messageResource
+                )
+            case .organizingLibrary(let messageResource):
+                guard !session.isCompleted else { return }
+                ToastCenter.global.completionState = nil
+                ToastCenter.global.progressState = nil
+                ToastCenter.global.loadingMessage = .message(messageResource)
+            case .metadataPhaseComplete, .imagePrefetchPhaseComplete:
+                break
+            case .refreshComplete(let completion):
+                session.isCompleted = true
+                ToastCenter.global.loadingMessage = nil
+                ToastCenter.global.progressState = nil
+                ToastCenter.global.completionState = toastCompletion(for: completion)
+            }
         }
     }
 
@@ -103,8 +117,11 @@ struct LibraryRefreshOptions {
     let reporter: LibraryRefreshReporter
     let prefetchImages: Bool
 
-    static let toastDefault = Self(
-        reporter: .toast,
-        prefetchImages: true
-    )
+    @MainActor
+    static var toastDefault: Self {
+        Self(
+            reporter: .toast,
+            prefetchImages: true
+        )
+    }
 }
