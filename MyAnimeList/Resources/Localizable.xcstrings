@@ -217,7 +217,20 @@
       }
     },
     "Actions" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アクション"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作"
+          }
+        }
+      }
     },
     "Add a free API key once to unlock search, posters, and more." : {
       "localizations" : {
@@ -252,7 +265,20 @@
       }
     },
     "Added a setting option to open the details page with a single click." : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1回のタップで詳細ページを開く設定を追加しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增了单击打开详情页的设置选项。"
+          }
+        }
+      }
     },
     "All" : {
       "localizations" : {
@@ -385,7 +411,20 @@
       }
     },
     "AniShelf can now show selected update notes after launch and reopen them later from Settings." : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfは起動後に選択した更新ノートを表示し、あとから設定で再表示できるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf 现在可以在启动后显示选定的更新说明，也可以稍后从设置中重新打开。"
+          }
+        }
+      }
     },
     "AniShelf keeps watch status, dates, and quick notes together so your collection stays useful over time." : {
       "localizations" : {
@@ -548,7 +587,20 @@
       }
     },
     "Built-in release notes" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "内蔵リリースノート"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "内置版本说明"
+          }
+        }
+      }
     },
     "By default, double tap opens detail. Turn this on to use single tap instead." : {
       "localizations" : {
@@ -1647,7 +1699,20 @@
       }
     },
     "Fetched: 0, failed: 0" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取得: 0、失敗: 0"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已获取：0，失败：0"
+          }
+        }
+      }
     },
     "Fetching Images: %lld / %lld" : {
       "localizations" : {
@@ -1754,7 +1819,20 @@
       }
     },
     "Fixed a crash issue when converting to an animation series." : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アニメシリーズへ変換する際にクラッシュする問題を修正しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修复了转换为动画系列时可能崩溃的问题。"
+          }
+        }
+      }
     },
     "Follow System" : {
       "localizations" : {
@@ -1853,10 +1931,36 @@
       }
     },
     "Highlights" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ハイライト"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "详情"
+          }
+        }
+      }
     },
     "Important release notes can now appear once after you update the app." : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリ更新後に、重要なリリースノートを一度だけ表示できるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新 App 后，现在可以显示一次重要版本说明。"
+          }
+        }
+      }
     },
     "Japanese" : {
       "extractionState" : "manual",
@@ -2509,7 +2613,20 @@
       }
     },
     "Optimized the Details page UI: added Staff information, added an overscroll zoom effect for posters." : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詳細ページのUIを改善しました。スタッフ情報と、ポスターのオーバースクロール拡大効果を追加しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "优化了详情页界面：新增 Staff 信息，并为海报添加了过度滚动缩放效果。"
+          }
+        }
+      }
     },
     "Organizing Library..." : {
       "localizations" : {
@@ -2834,7 +2951,20 @@
       }
     },
     "Refresh Metadata" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メタデータを更新"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刷新元数据"
+          }
+        }
+      }
     },
     "Refreshed %lld entries, failed %lld." : {
       "localizations" : {
@@ -2892,10 +3022,20 @@
       }
     },
     "Refreshing Metadata..." : {
-
-    },
-    "Release 1.60" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メタデータを更新中..."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在刷新元数据..."
+          }
+        }
+      }
     },
     "Reload" : {
       "localizations" : {
@@ -2946,7 +3086,20 @@
       }
     },
     "Reopen the release note for version %@." : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バージョン%@のリリースノートを再表示します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新打开 %@ 版本的版本说明。"
+          }
+        }
+      }
     },
     "Replace the TMDb key AniShelf uses for search and metadata." : {
       "localizations" : {
@@ -3490,7 +3643,20 @@
       }
     },
     "The current release note stays available from Settings whenever this version includes one." : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このバージョンにリリースノートがある場合、現在のリリースノートは設定からいつでも確認できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果当前版本包含版本说明，你随时可以从设置中再次查看。"
+          }
+        }
+      }
     },
     "The library is empty." : {
       "localizations" : {
@@ -3541,10 +3707,36 @@
       }
     },
     "This page can also trigger a full metadata refresh if you want to update existing entries right away." : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既存の項目をすぐ更新したい場合は、このページからメタデータの一括更新も開始できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果你想立即更新现有条目，也可以在此页面触发完整的元数据刷新。"
+          }
+        }
+      }
     },
     "This version includes multiple bug fixes and improvements. It is recommended that existing users perform a metadata refresh by tapping the action button below, as this version includes important optimizations for metadata retrieval." : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このバージョンには複数のバグ修正と改善が含まれています。メタデータ取得に重要な最適化が含まれるため、既存ユーザーは下のアクションボタンからメタデータを更新することをおすすめします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此版本包含多项问题修复和改进。由于本版本对元数据获取做了重要优化，建议现有用户点击下方操作按钮执行一次元数据刷新。"
+          }
+        }
+      }
     },
     "This will replace the current poster." : {
       "localizations" : {
@@ -3937,7 +4129,20 @@
       }
     },
     "Version %@" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バージョン %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "版本 %@"
+          }
+        }
+      }
     },
     "Version, links, and credits." : {
       "localizations" : {
@@ -4020,7 +4225,20 @@
       }
     },
     "What's New" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新機能"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新内容"
+          }
+        }
+      }
     },
     "With Notes" : {
       "localizations" : {

@@ -31,7 +31,7 @@ struct WhatsNewEntry: Identifiable {
 
     init(
         version: String,
-        title: LocalizedStringResource,
+        title: LocalizedStringResource? = nil,
         summary: LocalizedStringResource,
         highlights: [LocalizedStringResource],
         primaryAction: Action? = nil,
@@ -39,7 +39,7 @@ struct WhatsNewEntry: Identifiable {
     ) {
         self.id = version
         self.version = version
-        self.title = title
+        self.title = title ?? "Version \(version)"
         self.summary = summary
         self.highlights = highlights
         self.primaryAction = primaryAction
@@ -77,7 +77,6 @@ enum WhatsNewRegistry {
         ),
         "1.60": .init(
             version: "1.60",
-            title: "Release 1.60",
             summary:
                 "This version includes multiple bug fixes and improvements. It is recommended that existing users perform a metadata refresh by tapping the action button below, as this version includes important optimizations for metadata retrieval.",
             highlights: [
