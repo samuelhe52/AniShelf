@@ -32,6 +32,7 @@ struct LibraryGridView: View {
                 .padding(.top, 6)
                 .padding(.bottom, 104)
             }
+            .animation(.spring, value: store.groupStrategy)
             .animation(.spring, value: store.sortReversed)
             .animation(.spring, value: store.sortStrategy)
             .animation(.spring, value: store.filters)

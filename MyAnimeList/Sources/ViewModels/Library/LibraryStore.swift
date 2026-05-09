@@ -60,6 +60,12 @@ class LibraryStore {
             libraryStoreLogger.debug("Updated auto prefetch images on add and restore to \(newValue)")
         }
     }
+    var groupStrategy: LibraryGroupStrategy = .none {
+        willSet {
+            preferences.saveGroupStrategy(newValue)
+            libraryStoreLogger.debug("Updated group strategy to \(newValue.rawValue)")
+        }
+    }
     var sortStrategy: AnimeSortStrategy = .dateStarted {
         willSet {
             preferences.saveSortStrategy(newValue)
@@ -96,6 +102,9 @@ class LibraryStore {
 
     func reloadPersistedPreferences() {
         let snapshot = preferences.load()
+        if groupStrategy != snapshot.groupStrategy {
+            groupStrategy = snapshot.groupStrategy
+        }
         if sortStrategy != snapshot.sortStrategy {
             sortStrategy = snapshot.sortStrategy
         }

@@ -127,6 +127,8 @@ extension AnimeEntry {
         _ = tmdbID
         _ = watchStatus
         _ = favorite
+        _ = score
+        _ = dateSaved
         _ = dateStarted
         _ = dateFinished
 

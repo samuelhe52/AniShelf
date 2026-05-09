@@ -2015,6 +2015,22 @@
         }
       }
     },
+    "Group By" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "グループ化"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分组方式"
+          }
+        }
+      }
+    },
     "Hide Dropped Entries" : {
       "localizations" : {
         "ja" : {
@@ -2629,6 +2645,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "笔记"
+          }
+        }
+      }
+    },
+    "None" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "なし"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无"
           }
         }
       }
@@ -4517,7 +4549,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "分类"
+            "value" : "观看状态"
           }
         }
       }

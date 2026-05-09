@@ -4,6 +4,7 @@ import Foundation
 @MainActor
 struct LibraryPreferences {
     struct Snapshot {
+        let groupStrategy: LibraryStore.LibraryGroupStrategy
         let sortStrategy: LibraryStore.AnimeSortStrategy
         let sortReversed: Bool
         let hideDroppedByDefault: Bool
@@ -20,6 +21,7 @@ struct LibraryPreferences {
 
     func load() -> Snapshot {
         Snapshot(
+            groupStrategy: loadGroupStrategy(),
             sortStrategy: loadSortStrategy(),
             sortReversed: loadBool(forKey: .librarySortReversed, defaultValue: true),
             hideDroppedByDefault: loadBool(forKey: .libraryHideDroppedByDefault, defaultValue: false),
@@ -48,12 +50,23 @@ struct LibraryPreferences {
         defaults.setValue(value, forKey: .libraryAutoPrefetchImagesOnAddAndRestore)
     }
 
+    func saveGroupStrategy(_ value: LibraryStore.LibraryGroupStrategy) {
+        defaults.setValue(value.rawValue, forKey: .libraryGroupStrategy)
+    }
+
     func saveSortStrategy(_ value: LibraryStore.AnimeSortStrategy) {
         defaults.setValue(value.rawValue, forKey: .librarySortStrategy)
     }
 
     func saveSortReversed(_ value: Bool) {
         defaults.setValue(value, forKey: .librarySortReversed)
+    }
+
+    private func loadGroupStrategy() -> LibraryStore.LibraryGroupStrategy {
+        defaults
+            .string(forKey: .libraryGroupStrategy)
+            .flatMap(LibraryStore.LibraryGroupStrategy.init(rawValue:))
+            ?? .none
     }
 
     private func loadSortStrategy() -> LibraryStore.AnimeSortStrategy {

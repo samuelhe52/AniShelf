@@ -50,6 +50,9 @@ struct LibraryGalleryView: View {
                 }
                 .scrollTargetLayout()
             }
+            .animation(.default, value: store.groupStrategy)
+            .animation(.default, value: store.sortReversed)
+            .animation(.default, value: store.sortStrategy)
             .animation(.default, value: store.filters)
             .scrollClipDisabled()
             .scrollPosition(id: $scrolledID)

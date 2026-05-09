@@ -15,6 +15,7 @@ extension String {
     static let searchPageQuery = "SearchPageQuery"
     static let searchMode = "SearchMode"
     static let persistedScrolledID = "PersistedScrolledID"
+    static let libraryGroupStrategy = "LibraryGroupStrategy"
     static let librarySortStrategy = "LibrarySortStrategy"
     static let librarySortReversed = "LibrarySortReversed"
     static let libraryViewStyle = "LibraryViewStyle"
@@ -35,6 +36,7 @@ extension String {
         .searchTMDbLanguage,
         .searchPageQuery,
         .persistedScrolledID,
+        .libraryGroupStrategy,
         .librarySortStrategy,
         .librarySortReversed,
         .libraryViewStyle,

@@ -131,6 +131,19 @@ struct LibraryView: View {
         @Bindable var store = store
 
         Menu {
+            Section("Group By") {
+                Picker(
+                    "Group By",
+                    systemImage: "square.grid.2x2",
+                    selection: $store.groupStrategy
+                ) {
+                    ForEach(LibraryStore.LibraryGroupStrategy.allCases, id: \.self) { strategy in
+                        Text(strategy.localizedStringResource).tag(strategy)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+
             Section("Sort") {
                 Toggle(
                     "Reversed",

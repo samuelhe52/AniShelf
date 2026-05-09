@@ -487,6 +487,25 @@ struct MyAnimeListTests {
         #expect(String.allPreferenceKeys.contains(.entryDetailStaffExpandedByDefault))
     }
 
+    @Test @MainActor func testLibraryGroupStrategyPreferenceRoundTripAndBackupInclusion() {
+        let suiteName = "MyAnimeListTests.LibraryGroupStrategy"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let preferences = LibraryPreferences(defaults: defaults)
+
+        #expect(preferences.load().groupStrategy == .none)
+
+        preferences.saveGroupStrategy(.score)
+        #expect(preferences.load().groupStrategy == .score)
+
+        defaults.set("invalid", forKey: .libraryGroupStrategy)
+        #expect(preferences.load().groupStrategy == .none)
+
+        #expect(String.allPreferenceKeys.contains(.libraryGroupStrategy))
+    }
+
     @Test @MainActor func testLibraryDefaultsPersistMultipleFiltersAndNewEntryStatus() throws {
         let defaults = UserDefaults.standard
         let keys = [
@@ -1150,6 +1169,96 @@ struct MyAnimeListTests {
         }
     }
 
+    @Test @MainActor func testWatchStatusGroupingUsesCurrentSortWithinBuckets() throws {
+        try withRestoredLibrarySortingPreferences {
+            let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+            store.groupStrategy = .watchStatus
+            store.sortStrategy = .dateSaved
+            store.sortReversed = false
+
+            let entries = [
+                makeLibraryEntry(name: "Watched Early", tmdbID: 31, watchStatus: .watched, daySaved: 1),
+                makeLibraryEntry(name: "Watching Early", tmdbID: 11, watchStatus: .watching, daySaved: 2),
+                makeLibraryEntry(name: "Dropped", tmdbID: 41, watchStatus: .dropped, daySaved: 3),
+                makeLibraryEntry(name: "Watching Late", tmdbID: 12, watchStatus: .watching, daySaved: 4),
+                makeLibraryEntry(name: "Planned", tmdbID: 21, watchStatus: .planToWatch, daySaved: 5),
+                makeLibraryEntry(name: "Watched Late", tmdbID: 32, watchStatus: .watched, daySaved: 6)
+            ]
+
+            #expect(store.filterAndSort(entries).map(\.tmdbID) == [11, 12, 21, 31, 32, 41])
+        }
+    }
+
+    @Test @MainActor func testScoreGroupingPlacesUnscoredEntriesLast() throws {
+        try withRestoredLibrarySortingPreferences {
+            let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+            store.groupStrategy = .score
+            store.sortStrategy = .dateSaved
+            store.sortReversed = false
+
+            let entries = [
+                makeLibraryEntry(name: "Unscored", tmdbID: 61, daySaved: 1),
+                makeLibraryEntry(name: "Score Five Early", tmdbID: 51, daySaved: 2, score: 5),
+                makeLibraryEntry(name: "Score Three", tmdbID: 31, daySaved: 3, score: 3),
+                makeLibraryEntry(name: "Score Two", tmdbID: 21, daySaved: 4, score: 2),
+                makeLibraryEntry(name: "Score Five Late", tmdbID: 52, daySaved: 5, score: 5),
+                makeLibraryEntry(name: "Score Four", tmdbID: 41, daySaved: 6, score: 4),
+                makeLibraryEntry(name: "Score One", tmdbID: 11, daySaved: 7, score: 1)
+            ]
+
+            #expect(store.filterAndSort(entries).map(\.tmdbID) == [51, 52, 41, 31, 21, 11, 61])
+        }
+    }
+
+    @Test @MainActor func testFavoriteGroupingKeepsBucketOrderWhenReversed() throws {
+        try withRestoredLibrarySortingPreferences {
+            let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+            store.groupStrategy = .favorite
+            store.sortStrategy = .dateSaved
+            store.sortReversed = false
+
+            let favoriteEarly = makeLibraryEntry(
+                name: "Favorite Early",
+                tmdbID: 71,
+                daySaved: 1,
+                favorite: true
+            )
+            let otherEarly = makeLibraryEntry(name: "Other Early", tmdbID: 81, daySaved: 2)
+            let favoriteLate = makeLibraryEntry(
+                name: "Favorite Late",
+                tmdbID: 72,
+                daySaved: 3,
+                favorite: true
+            )
+            let otherLate = makeLibraryEntry(name: "Other Late", tmdbID: 82, daySaved: 4)
+            let entries = [favoriteEarly, otherEarly, favoriteLate, otherLate]
+
+            #expect(store.filterAndSort(entries).map(\.tmdbID) == [71, 72, 81, 82])
+
+            store.sortReversed = true
+            #expect(store.filterAndSort(entries).map(\.tmdbID) == [72, 71, 82, 81])
+        }
+    }
+
+    @Test @MainActor func testNoGroupingMatchesCurrentFlatSortBehavior() throws {
+        try withRestoredLibrarySortingPreferences {
+            let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+            store.groupStrategy = .none
+            store.sortStrategy = .dateSaved
+            store.sortReversed = true
+
+            let entries = [
+                makeLibraryEntry(name: "Favorite", tmdbID: 91, daySaved: 1, favorite: true),
+                makeLibraryEntry(name: "Watched", tmdbID: 92, watchStatus: .watched, daySaved: 4),
+                makeLibraryEntry(name: "Watching", tmdbID: 93, watchStatus: .watching, daySaved: 2),
+                makeLibraryEntry(name: "Scored", tmdbID: 94, daySaved: 3, score: 5)
+            ]
+
+            let expected = Array(entries.sorted(by: LibraryStore.AnimeSortStrategy.dateSaved.compare).reversed())
+            #expect(store.filterAndSort(entries).map(\.tmdbID) == expected.map(\.tmdbID))
+        }
+    }
+
     @MainActor
     private func makeWhatsNewController(
         defaults: UserDefaults,
@@ -1182,6 +1291,49 @@ struct MyAnimeListTests {
         Calendar(identifier: .gregorian).date(
             from: DateComponents(year: year, month: month, day: day)
         )!
+    }
+
+    @MainActor
+    private func withRestoredLibrarySortingPreferences(_ body: () throws -> Void) throws {
+        let defaults = UserDefaults.standard
+        let keys = [
+            String.libraryGroupStrategy,
+            String.librarySortStrategy,
+            String.librarySortReversed
+        ]
+        let originalValues = Dictionary(uniqueKeysWithValues: keys.map { ($0, defaults.object(forKey: $0)) })
+
+        defer {
+            for key in keys {
+                if let value = originalValues[key] {
+                    defaults.set(value, forKey: key)
+                } else {
+                    defaults.removeObject(forKey: key)
+                }
+            }
+        }
+
+        try body()
+    }
+
+    private func makeLibraryEntry(
+        name: String,
+        tmdbID: Int,
+        watchStatus: AnimeEntry.WatchStatus = .planToWatch,
+        daySaved: Int,
+        score: Int? = nil,
+        favorite: Bool = false
+    ) -> AnimeEntry {
+        let entry = AnimeEntry(
+            name: name,
+            type: .movie,
+            tmdbID: tmdbID,
+            dateSaved: referenceDate(year: 2026, month: 1, day: daySaved),
+            score: score
+        )
+        entry.watchStatus = watchStatus
+        entry.favorite = favorite
+        return entry
     }
 
     private func temporaryStoreURL(name: String) -> URL {
