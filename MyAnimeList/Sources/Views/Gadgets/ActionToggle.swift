@@ -30,6 +30,10 @@ struct ActionToggle<ToggleLabel: View>: View {
 
     var body: some View {
         Toggle(isOn: $isOn, label: label)
+            .onAppear {
+                guard isOn else { return }
+                on()
+            }
             .onChange(of: isOn) {
                 if isOn {
                     on()

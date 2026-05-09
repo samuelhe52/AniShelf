@@ -51,6 +51,7 @@
 				Resources/Info.plist,
 				Tests/MyAnimeListTests/LibraryExportManagerTests.swift,
 				Tests/MyAnimeListTests/MyAnimeListTests.swift,
+				Tests/MyAnimeListTests/TMDbSearchServiceBatchTests.swift,
 				Tests/MyAnimeListUITests/MyAnimeListUITests.swift,
 				Tests/MyAnimeListUITests/MyAnimeListUITestsLaunchTests.swift,
 			);
@@ -61,6 +62,7 @@
 			membershipExceptions = (
 				Tests/MyAnimeListTests/LibraryExportManagerTests.swift,
 				Tests/MyAnimeListTests/MyAnimeListTests.swift,
+				Tests/MyAnimeListTests/TMDbSearchServiceBatchTests.swift,
 			);
 			target = 9F8D663F2D055FF000CF355D /* MyAnimeListTests */;
 		};

@@ -126,7 +126,7 @@ struct TMDbSearchContent: View {
 
 }
 
-fileprivate struct AlreadyAddedIndicatorModifier: ViewModifier {
+struct AlreadyAddedIndicatorModifier: ViewModifier {
     var added: Bool
     var message: LocalizedStringKey
 
@@ -150,7 +150,7 @@ fileprivate struct AlreadyAddedIndicatorModifier: ViewModifier {
 }
 
 extension View {
-    fileprivate func indicateAlreadyAdded(
+    func indicateAlreadyAdded(
         added: Bool = false,
         message: LocalizedStringKey
     ) -> some View {

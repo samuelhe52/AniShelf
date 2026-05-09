@@ -11,7 +11,7 @@ import Foundation
 /// A structure representing basic information about an anime.
 ///
 /// The `id` is derived from the `tmdbID` property.
-struct BasicInfo: Equatable, Identifiable, Hashable {
+struct BasicInfo: Equatable, Identifiable, Hashable, Sendable {
     var name: String
     var nameTranslations: [String: String]
     var overview: String?

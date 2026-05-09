@@ -11,6 +11,7 @@ import SwiftUI
 struct MovieResultItem: View {
     @Environment(TMDbSearchService.self) var service
     let movie: BasicInfo
+    var initiallySelected: Bool = false
 
     var body: some View {
         HStack {
@@ -25,6 +26,7 @@ struct MovieResultItem: View {
                         .lineLimit(1)
                     Spacer()
                     ActionToggle(
+                        isOn: initiallySelected,
                         on: { service.register(info: movie) },
                         off: { service.unregister(info: movie) },
                         label: { Image(systemName: "checkmark") }

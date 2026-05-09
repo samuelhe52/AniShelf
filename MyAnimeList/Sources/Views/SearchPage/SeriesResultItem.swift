@@ -16,6 +16,7 @@ struct SeriesResultItem: View {
     @Environment(TMDbSearchService.self) var service
     @AppStorage(.searchTMDbLanguage) private var language: Language = .english
     let series: BasicInfo
+    var initiallySelected: Bool = false
     @State private var resultOption: ResultOption = .series
     @State private var seasons: [BasicInfo] = []
     @State private var seasonFetchStatus: SeasonFetchStatus = .notStarted
@@ -90,6 +91,7 @@ struct SeriesResultItem: View {
     private var selectionIndicator: some View {
         if resultOption == .series {
             ActionToggle(
+                isOn: initiallySelected,
                 on: { service.register(info: series) },
                 off: { service.unregister(info: series) },
                 label: { Image(systemName: "checkmark") }

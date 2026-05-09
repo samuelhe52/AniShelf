@@ -25,6 +25,7 @@ struct SearchPage: View {
     @AppStorage(.searchMode) private var mode: SearchMode = .tmdb
     @AppStorage(.searchPageQuery) private var query: String = ""
     @AppStorage(.searchTMDbLanguage) private var tmdbLanguage: Language = .english
+    @State private var isPresentingBatchAddSheet = false
 
     // Callbacks for TMDb search interactions
     private let onDuplicateTapped: (Int) -> Void
@@ -89,6 +90,10 @@ struct SearchPage: View {
             performSearch()
         }
         .onChange(of: mode) {
+            if mode != .tmdb {
+                isPresentingBatchAddSheet = false
+                tmdbSearchService.clearBatchSession()
+            }
             performSearch()
         }
         .onChange(of: tmdbLanguage) {
@@ -102,8 +107,27 @@ struct SearchPage: View {
         }
         .toolbar {
             DefaultToolbarItem(kind: .search, placement: .bottomBar)
+            if mode == .tmdb {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        isPresentingBatchAddSheet = true
+                    } label: {
+                        Label(batchAddButtonTitleResource, systemImage: "text.badge.plus")
+                    }
+                }
+            }
         }
         .animation(.default, value: mode)
+        .sheet(isPresented: $isPresentingBatchAddSheet, onDismiss: tmdbSearchService.clearBatchSession) {
+            TMDbBatchAddSheet(
+                language: tmdbLanguage,
+                checkDuplicate: checkDuplicate,
+                onDuplicateTapped: onDuplicateTapped
+            )
+            .environment(tmdbSearchService)
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
     }
 
     private var searchPrompt: LocalizedStringKey {
@@ -126,7 +150,12 @@ struct SearchPage: View {
 
     private func configureSearchServices() {
         tmdbSearchService.processResults = processTMDbSearchResults
+        tmdbSearchService.checkDuplicate = checkDuplicate
         librarySearchService.jumpToEntryInLibrary = jumpToEntryInLibrary
+    }
+
+    private var batchAddButtonTitleResource: LocalizedStringResource {
+        "Batch Add"
     }
 }
 
