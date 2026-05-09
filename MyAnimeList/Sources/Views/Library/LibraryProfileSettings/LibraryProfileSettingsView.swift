@@ -13,6 +13,7 @@ struct LibraryProfileSettingsView: View {
     var onDismiss: (() -> Void)? = nil
 
     @Environment(LibraryStore.self) private var store
+    @Environment(WhatsNewController.self) private var whatsNew
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
@@ -232,6 +233,8 @@ struct LibraryProfileSettingsView: View {
             onCheckMetadataCacheSize: checkMetadataCacheSize,
             onRefreshInfos: requestRefreshInfos,
             onPrefetchImages: actions.prefetchAllImages,
+            whatsNewVersion: whatsNew.currentEntry?.version,
+            onShowWhatsNew: presentWhatsNewSheet,
             onShowAbout: presentAboutSheet,
             onDeleteAllAnimes: requestClearLibrary
         )
@@ -378,6 +381,10 @@ struct LibraryProfileSettingsView: View {
         showAboutSheet = true
     }
 
+    private func presentWhatsNewSheet() {
+        whatsNew.presentCurrentEntry()
+    }
+
     private func createBackupItems() -> [Any]? {
         do {
             return [try actions.createBackup()]
@@ -413,4 +420,5 @@ struct LibraryProfileSettingsView: View {
             DataProvider.forPreview.generateEntriesForPreview()
         }
         .environment(store)
+        .environment(WhatsNewController(currentVersion: "1.54"))
 }

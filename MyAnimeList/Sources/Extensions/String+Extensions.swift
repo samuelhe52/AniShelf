@@ -27,6 +27,7 @@ extension String {
     static let libraryDefaultFilterPreset = "LibraryDefaultFilterPreset"
     static let libraryAutoPrefetchImagesOnAddAndRestore = "LibraryAutoPrefetchImagesOnAddAndRestore"
     static let useTMDbRelayServer = "UseTMDbRelayServer"
+    static let lastSeenWhatsNewVersion = "LastSeenWhatsNewVersion"
 
     static let allPreferenceKeys: [String] = [
         .preferredAnimeInfoLanguage,
@@ -44,7 +45,8 @@ extension String {
         .libraryDefaultWatchStatus,
         .libraryDefaultFilters,
         .libraryAutoPrefetchImagesOnAddAndRestore,
-        .useTMDbRelayServer
+        .useTMDbRelayServer,
+        .lastSeenWhatsNewVersion
     ]
 }
 

@@ -503,6 +503,154 @@ struct MyAnimeListTests {
         #expect(store.library.isEmpty)
     }
 
+    @Test @MainActor func testWhatsNewDoesNotAutoShowWithoutRegisteredEntry() {
+        let suiteName = "MyAnimeListTests.WhatsNew.NoEntry"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let controller = makeWhatsNewController(
+            defaults: defaults,
+            currentVersion: "1.54",
+            entries: [:]
+        )
+
+        controller.presentIfNeeded(allowsAutoPresentation: true)
+
+        #expect(controller.currentEntry == nil)
+        #expect(controller.presentedEntry == nil)
+        #expect(String.allPreferenceKeys.contains(.lastSeenWhatsNewVersion))
+    }
+
+    @Test @MainActor func testWhatsNewAutoShowsOnceForRegisteredVersion() {
+        let suiteName = "MyAnimeListTests.WhatsNew.AutoShow"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let entry = makeWhatsNewEntry(version: "1.54")
+        let controller = makeWhatsNewController(
+            defaults: defaults,
+            currentVersion: "1.54",
+            entries: [entry.version: entry]
+        )
+
+        controller.presentIfNeeded(allowsAutoPresentation: true)
+
+        #expect(controller.currentEntry?.version == entry.version)
+        #expect(controller.presentedEntry?.version == entry.version)
+    }
+
+    @Test @MainActor func testWhatsNewDismissalMarksSeenAndSuppressesRepeatAutoPresentation() {
+        let suiteName = "MyAnimeListTests.WhatsNew.Dismissal"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let entry = makeWhatsNewEntry(version: "1.54")
+        let firstController = makeWhatsNewController(
+            defaults: defaults,
+            currentVersion: entry.version,
+            entries: [entry.version: entry]
+        )
+        firstController.presentIfNeeded(allowsAutoPresentation: true)
+        firstController.dismissPresentedEntry()
+
+        #expect(defaults.string(forKey: .lastSeenWhatsNewVersion) == entry.version)
+        #expect(firstController.presentedEntry == nil)
+
+        let secondController = makeWhatsNewController(
+            defaults: defaults,
+            currentVersion: entry.version,
+            entries: [entry.version: entry]
+        )
+        secondController.presentIfNeeded(allowsAutoPresentation: true)
+
+        #expect(secondController.presentedEntry == nil)
+    }
+
+    @Test @MainActor func testWhatsNewUpdateOnlyAutoShowsWhenNewVersionHasEntry() {
+        let suiteName = "MyAnimeListTests.WhatsNew.VersionUpdates"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set("1.53", forKey: .lastSeenWhatsNewVersion)
+
+        let missingEntryController = makeWhatsNewController(
+            defaults: defaults,
+            currentVersion: "1.54",
+            entries: [:]
+        )
+        missingEntryController.presentIfNeeded(allowsAutoPresentation: true)
+
+        let entry = makeWhatsNewEntry(version: "1.55")
+        let newVersionController = makeWhatsNewController(
+            defaults: defaults,
+            currentVersion: entry.version,
+            entries: [entry.version: entry]
+        )
+        newVersionController.presentIfNeeded(allowsAutoPresentation: true)
+
+        #expect(missingEntryController.presentedEntry == nil)
+        #expect(newVersionController.presentedEntry?.version == entry.version)
+    }
+
+    @Test @MainActor func testWhatsNewManualReopenRemainsAvailableAfterDismissal() {
+        let suiteName = "MyAnimeListTests.WhatsNew.ManualReopen"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let entry = makeWhatsNewEntry(version: "1.54")
+        let controller = makeWhatsNewController(
+            defaults: defaults,
+            currentVersion: entry.version,
+            entries: [entry.version: entry]
+        )
+
+        controller.presentIfNeeded(allowsAutoPresentation: true)
+        controller.dismissPresentedEntry()
+        controller.presentCurrentEntry()
+
+        #expect(controller.currentEntry?.version == entry.version)
+        #expect(controller.presentedEntry?.version == entry.version)
+    }
+
+    @Test @MainActor func testWhatsNewRefreshMetadataActionUsesSettingsRefreshPath() {
+        let defaults = UserDefaults.standard
+        let key = String.libraryHideDroppedByDefault
+        let originalValue = defaults.object(forKey: key)
+        defer {
+            if let originalValue {
+                defaults.set(originalValue, forKey: key)
+            } else {
+                defaults.removeObject(forKey: key)
+            }
+        }
+
+        defaults.set(true, forKey: key)
+
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        var refreshCallCount = 0
+        var openedURL: URL?
+        let actions = LibraryProfileSettingsActions(
+            store: store,
+            refreshInfosHandler: { _ in
+                refreshCallCount += 1
+            }
+        )
+
+        let runner = actions.makeWhatsNewActionRunner { url in
+            openedURL = url
+        }
+        runner.run(.refreshMetadata)
+
+        #expect(refreshCallCount == 1)
+        #expect(openedURL == nil)
+        #expect(defaults.bool(forKey: key))
+    }
+
     @Test @MainActor func testDeletionScrollTargetFallbacks() throws {
         let sortStrategyKey = String.librarySortStrategy
         let sortReversedKey = String.librarySortReversed
@@ -586,6 +734,34 @@ struct MyAnimeListTests {
             #expect(store.deleteEntry(solo) { scrolledID = $0 })
             #expect(scrolledID == nil)
         }
+    }
+
+    @MainActor
+    private func makeWhatsNewController(
+        defaults: UserDefaults,
+        currentVersion: String,
+        entries: [String: WhatsNewEntry]
+    ) -> WhatsNewController {
+        WhatsNewController(
+            defaults: defaults,
+            currentVersion: currentVersion,
+            entryProvider: { entries[$0] }
+        )
+    }
+
+    private func makeWhatsNewEntry(version: String) -> WhatsNewEntry {
+        WhatsNewEntry(
+            version: version,
+            title: "Version \(version)",
+            summary: "Release summary",
+            highlights: ["A highlight"],
+            primaryAction: .init(
+                id: "refresh",
+                title: "Refresh Metadata",
+                systemImage: "arrow.clockwise",
+                kind: .refreshMetadata
+            )
+        )
     }
 
     private func referenceDate(year: Int, month: Int, day: Int) -> Date {

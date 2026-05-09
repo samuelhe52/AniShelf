@@ -145,6 +145,8 @@ struct LibraryProfileSettingsCard: View {
     let onCheckMetadataCacheSize: () -> Void
     let onRefreshInfos: () -> Void
     let onPrefetchImages: () -> Void
+    let whatsNewVersion: String?
+    let onShowWhatsNew: () -> Void
     let onShowAbout: () -> Void
     let onDeleteAllAnimes: () -> Void
 
@@ -469,6 +471,16 @@ struct LibraryProfileSettingsCard: View {
                 action: onPrefetchImages
             )
             LibraryProfileActionDivider()
+            if let whatsNewVersion {
+                LibraryProfileActionRow(
+                    title: "What's New",
+                    subtitle: whatsNewSubtitleResource(for: whatsNewVersion),
+                    systemImage: "sparkles.rectangle.stack",
+                    tint: LibraryProfileMaintenancePalette.whatsNew,
+                    action: onShowWhatsNew
+                )
+                LibraryProfileActionDivider()
+            }
             LibraryProfileActionRow(
                 title: "About AniShelf",
                 subtitle: "Version, links, and credits.",
@@ -552,5 +564,9 @@ struct LibraryProfileSettingsCard: View {
                 }
             }
         )
+    }
+
+    private func whatsNewSubtitleResource(for version: String) -> LocalizedStringResource {
+        "Reopen the release note for version \(version)."
     }
 }

@@ -8,12 +8,38 @@
 import Foundation
 import Kingfisher
 
+struct WhatsNewActionRunner {
+    let refreshMetadata: @MainActor () -> Void
+    let openURL: @MainActor (URL) -> Void
+
+    @MainActor
+    func run(_ action: WhatsNewEntry.Action.Kind) {
+        switch action {
+        case .refreshMetadata:
+            refreshMetadata()
+        case .openURL(let url):
+            openURL(url)
+        }
+    }
+}
+
 @MainActor
 final class LibraryProfileSettingsActions {
+    typealias RefreshInfosHandler = @MainActor (LibraryStore) -> Void
+
     private let store: LibraryStore
+    /// Indirection for the metadata refresh path so tests can verify routing
+    /// without kicking off the full library-wide refresh work.
+    private let refreshInfosHandler: RefreshInfosHandler
 
     init(store: LibraryStore) {
         self.store = store
+        self.refreshInfosHandler = Self.performRefreshInfos
+    }
+
+    init(store: LibraryStore, refreshInfosHandler: @escaping RefreshInfosHandler) {
+        self.store = store
+        self.refreshInfosHandler = refreshInfosHandler
     }
 
     func createBackup() throws -> URL {
@@ -50,7 +76,27 @@ final class LibraryProfileSettingsActions {
         KingfisherManager.shared.cache.clearCache()
     }
 
+    /// Runs the canonical metadata refresh flow for the current library.
+    /// Production uses `performRefreshInfos(for:)`; tests can inject a stub.
     func refreshInfos() {
+        refreshInfosHandler(store)
+    }
+
+    /// Builds the narrow action surface used by the What's New modal.
+    /// The refresh CTA deliberately reuses `refreshInfos()` so there is only
+    /// one in-app metadata refresh path to maintain.
+    func makeWhatsNewActionRunner(
+        openURL: @escaping @MainActor (URL) -> Void
+    ) -> WhatsNewActionRunner {
+        WhatsNewActionRunner(
+            refreshMetadata: { self.refreshInfos() },
+            openURL: openURL
+        )
+    }
+
+    /// Default production implementation for `refreshInfos()`.
+    /// Refreshes visible library metadata and prefetches any updated images.
+    private static func performRefreshInfos(for store: LibraryStore) {
         let metadataRefresher = LibraryMetadataRefresher(repository: store.repository)
         metadataRefresher.refreshInfos(
             for: store.library,
