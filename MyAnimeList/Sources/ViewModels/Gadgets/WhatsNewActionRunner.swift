@@ -52,8 +52,19 @@ final class WhatsNewActionRunner {
         }
     }
 
+    var canStartRefresh: Bool {
+        switch refreshState {
+        case .idle:
+            true
+        case .inProgress:
+            false
+        case .completed(let completion):
+            completion.state != .completed
+        }
+    }
+
     private func startRefreshMetadata() {
-        guard !isRefreshRunning else { return }
+        guard canStartRefresh else { return }
 
         refreshState = .inProgress(
             .init(

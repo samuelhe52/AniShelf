@@ -1995,6 +1995,22 @@
         }
       }
     },
+    "Keep this page open until the refresh finishes." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "更新が完了するまで、このページを開いたままにしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "刷新完成前请保持此页面打开。"
+          }
+        }
+      }
+    },
     "Key" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2966,6 +2982,28 @@
         }
       }
     },
+    "Refreshed %lld entries and fetched %lld images." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Refreshed %1$lld entries and fetched %2$lld images."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld 件の情報を更新し、%2$lld 件の画像を取得しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "已刷新 %1$lld 条信息，并获取 %2$lld 张图片"
+          }
+        }
+      }
+    },
     "Refreshed %lld entries, failed %lld." : {
       "localizations" : {
         "en" : {
@@ -2984,6 +3022,72 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已刷新 %1$lld 条信息，%2$lld 条失败"
+          }
+        }
+      }
+    },
+    "Refreshed %lld entries, failed %lld. Fetched %lld images, failed %lld." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Refreshed %1$lld entries, failed %2$lld. Fetched %3$lld images, failed %4$lld."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld 件の情報を更新しましたが、%2$lld 件は失敗しました。%3$lld 件の画像を取得しましたが、%4$lld 件は失敗しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "已刷新 %1$lld 条信息，%2$lld 条失败。已获取 %3$lld 张图片，%4$lld 张失败"
+          }
+        }
+      }
+    },
+    "Refreshed %lld entries, failed %lld. Fetched %lld images." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Refreshed %1$lld entries, failed %2$lld. Fetched %3$lld images."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld 件の情報を更新しましたが、%2$lld 件は失敗しました。%3$lld 件の画像を取得しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "已刷新 %1$lld 条信息，%2$lld 条失败。已获取 %3$lld 张图片"
+          }
+        }
+      }
+    },
+    "Refreshed %lld entries. Fetched %lld images, failed %lld." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Refreshed %1$lld entries. Fetched %2$lld images, failed %3$lld."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld 件の情報を更新しました。%2$lld 件の画像を取得しましたが、%3$lld 件は失敗しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "已刷新 %1$lld 条信息。已获取 %2$lld 张图片，%3$lld 张失败"
           }
         }
       }

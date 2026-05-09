@@ -656,7 +656,9 @@ struct MyAnimeListTests {
 
     @Test @MainActor func testWhatsNewRefreshActionTracksInlineProgressState() {
         var capturedOptions: LibraryRefreshOptions?
+        var refreshRunCount = 0
         let runner = WhatsNewActionRunner { options in
+            refreshRunCount += 1
             capturedOptions = options
         }
 
@@ -768,6 +770,11 @@ struct MyAnimeListTests {
         default:
             Issue.record("Expected a completed inline refresh state after image prefetch completion.")
         }
+
+        runner.run(.refreshMetadata) { _ in
+            Issue.record("Completed refresh CTA should stay disabled.")
+        }
+        #expect(refreshRunCount == 1)
     }
 
     @Test @MainActor func testDeletionScrollTargetFallbacks() throws {

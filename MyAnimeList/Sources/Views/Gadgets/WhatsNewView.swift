@@ -45,19 +45,13 @@ struct WhatsNewView: View {
     }
 
     private var heroCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             versionBadge
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text(entry.title)
-                    .font(.title2.weight(.bold))
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text(entry.summary)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            Text(entry.summary)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
@@ -65,15 +59,15 @@ struct WhatsNewView: View {
     }
 
     private var versionBadge: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Image(systemName: "sparkles.rectangle.stack.fill")
-                .font(.footnote.weight(.bold))
+                .font(.subheadline.weight(.bold))
             Text("Version \(entry.version)")
-                .font(.footnote.weight(.semibold))
+                .font(.callout.weight(.semibold))
         }
         .foregroundStyle(.orange)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
         .background(.orange.opacity(0.12), in: Capsule(style: .continuous))
         .overlay {
             Capsule(style: .continuous)
@@ -132,6 +126,7 @@ struct WhatsNewView: View {
                     .buttonStyle(.plain)
                 }
             }
+            .animation(.default, value: actionRunner.isRefreshRunning)
         }
     }
 
@@ -143,6 +138,7 @@ struct WhatsNewView: View {
         }
     }
 
+    @ViewBuilder
     private func primaryActionSection(for action: WhatsNewEntry.Action) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             primaryActionButton(for: action)
@@ -153,10 +149,11 @@ struct WhatsNewView: View {
         }
     }
 
+    @ViewBuilder
     private func primaryActionButton(for action: WhatsNewEntry.Action) -> some View {
         let presentation = primaryActionPresentation(for: action)
 
-        return WhatsNewPrimaryActionButton(
+        WhatsNewPrimaryActionButton(
             title: presentation.title,
             systemImage: presentation.systemImage,
             tint: presentation.tint,
@@ -194,8 +191,9 @@ struct WhatsNewView: View {
         return false
     }
 
+    @ViewBuilder
     private func highlightRow(_ text: LocalizedStringResource) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(.orange)
@@ -254,7 +252,7 @@ struct WhatsNewView: View {
                 tint: completionTint(for: completion.state),
                 progressFraction: nil,
                 showsActivity: false,
-                isEnabled: true
+                isEnabled: completion.state != .completed
             )
         }
     }
@@ -327,7 +325,7 @@ fileprivate struct WhatsNewPrimaryActionButton: View {
             HStack(spacing: 10) {
                 if showsActivity {
                     ProgressView()
-                        .tint(.white)
+                        .tint(foregroundColor)
                 } else if let systemImage {
                     Image(systemName: systemImage)
                         .font(.subheadline.weight(.bold))
@@ -366,7 +364,7 @@ fileprivate struct WhatsNewPrimaryActionButton: View {
                     .clipShape(shape)
                 }
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(foregroundColor)
             .overlay {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .stroke(.white.opacity(0.18), lineWidth: 1)
@@ -377,14 +375,37 @@ fileprivate struct WhatsNewPrimaryActionButton: View {
             .opacity(isEnabled ? 1 : 0.96)
         }
         .buttonStyle(.plain)
-        .disabled(!isEnabled)
+        .allowsHitTesting(isEnabled)
+    }
+
+    private var isProgressBar: Bool {
+        progressFraction != nil
+    }
+
+    private var foregroundColor: Color {
+        if isProgressBar {
+            Color(red: 0.39, green: 0.21, blue: 0.05)
+        } else {
+            .white
+        }
     }
 
     private var trackGradient: LinearGradient {
-        LinearGradient(
+        if isProgressBar {
+            return LinearGradient(
+                colors: [
+                    Color(red: 0.99, green: 0.94, blue: 0.88),
+                    Color(red: 0.98, green: 0.89, blue: 0.80)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+
+        return LinearGradient(
             colors: [
-                tint.opacity(progressFraction == nil ? 0.92 : 0.38),
-                tint.opacity(progressFraction == nil ? 0.76 : 0.24)
+                tint.opacity(0.92),
+                tint.opacity(0.76)
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -392,7 +413,18 @@ fileprivate struct WhatsNewPrimaryActionButton: View {
     }
 
     private var progressGradient: LinearGradient {
-        LinearGradient(
+        if isProgressBar {
+            return LinearGradient(
+                colors: [
+                    Color(red: 0.99, green: 0.76, blue: 0.44),
+                    Color(red: 0.95, green: 0.56, blue: 0.15)
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        }
+
+        return LinearGradient(
             colors: [
                 tint,
                 tint.opacity(0.84)
