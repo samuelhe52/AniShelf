@@ -46,13 +46,20 @@ struct LibraryExportManagerTests {
         defer { try? FileManager.default.removeItem(at: url) }
 
         let data = try Data(contentsOf: url)
+        let exportedJSON = try #require(String(data: data, encoding: .utf8))
         let payload = try JSONDecoder().decode(LibraryExportPayload.self, from: data)
-        let exportedMovie = try #require(payload.entries.first(where: { $0.tmdbID == 101 }))
-        let exportedSeason = try #require(payload.entries.first(where: { $0.tmdbID == 303 }))
+        let exportedMovie = try #require(payload.entries.first(where: { $0.title == "Movie Export" }))
+        let exportedSeason = try #require(payload.entries.first(where: { $0.title == "Season Export" }))
 
         #expect(url.pathExtension == "json")
         #expect(payload.entryCount == 2)
         #expect(payload.exportedAt == "2026-05-09T12:00:00Z")
+        #expect(exportedJSON.contains("\"title\""))
+        #expect(exportedJSON.contains("\"score\""))
+        #expect(exportedJSON.contains("\"detailsURL\""))
+        #expect(exportedJSON.contains("\"seasonNumber\""))
+        #expect(!exportedJSON.contains("\"tmdbID\""))
+        #expect(!exportedJSON.contains("\"parentSeriesTMDbID\""))
         #expect(exportedMovie.releaseYear == 2024)
         #expect(exportedMovie.releaseDate == "2024-04-05")
         #expect(exportedMovie.animeType == "movie")
@@ -63,7 +70,6 @@ struct LibraryExportManagerTests {
         #expect(exportedMovie.usingCustomPoster)
         #expect(exportedMovie.dateSaved == "2026-05-01T10:15:30Z")
         #expect(exportedSeason.parentSeriesTitle == "Parent Series")
-        #expect(exportedSeason.parentSeriesTMDbID == 202)
         #expect(exportedSeason.seasonNumber == 2)
         #expect(exportedSeason.score == 3)
     }
@@ -83,12 +89,16 @@ struct LibraryExportManagerTests {
         let csvURL = try manager.createExport(for: [entry], format: .csv)
         defer { try? FileManager.default.removeItem(at: csvURL) }
         let csv = try String(contentsOf: csvURL)
+        #expect(!csv.contains("tmdb_id"))
+        #expect(!csv.contains("parent_series_tmdb_id"))
         #expect(csv.contains("\"Line 1, with comma\nLine\t2\""))
         #expect(csv.contains(",4,"))
 
         let tsvURL = try manager.createExport(for: [entry], format: .tsv)
         defer { try? FileManager.default.removeItem(at: tsvURL) }
         let tsv = try String(contentsOf: tsvURL)
+        #expect(!tsv.contains("tmdb_id"))
+        #expect(!tsv.contains("parent_series_tmdb_id"))
         #expect(tsv.contains("\"Line 1, with comma\nLine\t2\""))
         #expect(tsv.contains("\t4\t"))
     }
@@ -117,6 +127,8 @@ struct LibraryExportManagerTests {
         #expect(worksheetXML.contains("Workbook Export"))
         #expect(worksheetXML.contains("For workbook"))
         #expect(worksheetXML.contains(">2<"))
+        #expect(!worksheetXML.contains("tmdb_id"))
+        #expect(!worksheetXML.contains("parent_series_tmdb_id"))
     }
 
     private func utcDate(_ timestamp: String) -> Date {

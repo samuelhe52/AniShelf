@@ -66,8 +66,6 @@ struct LibraryExportRecord: Codable, Equatable {
     let releaseDate: String?
     let animeType: String
     let seasonNumber: Int?
-    let tmdbID: Int
-    let parentSeriesTMDbID: Int?
     let detailsURL: String?
     let dateSaved: String
     let watchStatus: String
@@ -85,8 +83,6 @@ struct LibraryExportRecord: Codable, Equatable {
         "release_date",
         "anime_type",
         "season_number",
-        "tmdb_id",
-        "parent_series_tmdb_id",
         "details_url",
         "date_saved",
         "watch_status",
@@ -104,9 +100,7 @@ struct LibraryExportRecord: Codable, Equatable {
         releaseYear = Self.releaseYear(from: entry.onAirDate)
         releaseDate = Self.releaseDateString(from: entry.onAirDate)
         seasonNumber = entry.type.seasonNumber
-        parentSeriesTMDbID = entry.type.parentSeriesID
         detailsURL = entry.linkToDetails?.absoluteString
-        tmdbID = entry.tmdbID
         dateSaved = Self.timestampString(from: entry.dateSaved)
         watchStatus = Self.watchStatusString(for: entry.watchStatus)
         dateStarted = Self.optionalTimestampString(from: entry.dateStarted)
@@ -134,8 +128,6 @@ struct LibraryExportRecord: Codable, Equatable {
             releaseDate ?? "",
             animeType,
             seasonNumber.map(String.init) ?? "",
-            String(tmdbID),
-            parentSeriesTMDbID.map(String.init) ?? "",
             detailsURL ?? "",
             dateSaved,
             watchStatus,
@@ -307,12 +299,11 @@ final class LibraryExportManager {
         let entryText = payload.entries.enumerated().map { index, entry in
             [
                 "\(index + 1). \(entry.title)",
-                "TMDb ID: \(entry.tmdbID)",
                 "Type: \(entry.animeType)",
                 "Release Year: \(entry.releaseYear.map(String.init) ?? "N/A")",
                 "Release Date: \(entry.releaseDate ?? "N/A")",
+                "Season Number: \(entry.seasonNumber.map(String.init) ?? "N/A")",
                 "Parent Series: \(entry.parentSeriesTitle ?? "N/A")",
-                "Parent Series TMDb ID: \(entry.parentSeriesTMDbID.map(String.init) ?? "N/A")",
                 "Details URL: \(entry.detailsURL ?? "N/A")",
                 "Saved At: \(entry.dateSaved)",
                 "Watch Status: \(entry.watchStatus)",
@@ -438,7 +429,21 @@ final class LibraryExportManager {
             return (lhs.releaseYear ?? Int.min) < (rhs.releaseYear ?? Int.min)
         }
 
-        return lhs.tmdbID < rhs.tmdbID
+        if lhs.releaseDate != rhs.releaseDate {
+            return (lhs.releaseDate ?? "") < (rhs.releaseDate ?? "")
+        }
+
+        if lhs.seasonNumber != rhs.seasonNumber {
+            return (lhs.seasonNumber ?? Int.min) < (rhs.seasonNumber ?? Int.min)
+        }
+
+        if lhs.parentSeriesTitle != rhs.parentSeriesTitle {
+            return (lhs.parentSeriesTitle ?? "").localizedCaseInsensitiveCompare(
+                rhs.parentSeriesTitle ?? ""
+            ) == .orderedAscending
+        }
+
+        return lhs.dateSaved < rhs.dateSaved
     }
 
     private let contentTypesXML = """

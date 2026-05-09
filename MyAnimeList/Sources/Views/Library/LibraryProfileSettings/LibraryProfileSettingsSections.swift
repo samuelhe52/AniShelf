@@ -406,7 +406,8 @@ struct LibraryProfileSettingsCard: View {
         VStack(alignment: .leading, spacing: 12) {
             LibraryProfileSettingHeader(
                 title: "Backup & Restore",
-                subtitle: "Back up app data or export user-facing library records.",
+                subtitle:
+                    "App backups keep AniShelf data and settings for restore. Library exports create user-facing files in standard formats.",
                 systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90",
                 tint: .orange
             )
@@ -431,10 +432,6 @@ struct LibraryProfileSettingsCard: View {
             }
 
             libraryExportMenu
-
-            Text("Exports visible entries with title, year, IDs, score, and every saved user tracking field.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
 
             Text("* For security reasons, your TMDb API Key will not be exported.")
                 .font(.caption2)
@@ -532,7 +529,7 @@ struct LibraryProfileSettingsCard: View {
                 }
             }
         } label: {
-            Label("Export Library", systemImage: "square.and.arrow.up.on.square")
+            Label("Export as...", systemImage: "square.and.arrow.up.on.square")
         }
         .buttonStyle(LibraryProfileCommandButtonStyle(tint: .teal, filled: false))
     }

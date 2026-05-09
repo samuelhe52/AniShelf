@@ -22,7 +22,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "* セキュリティのため、TMDb APIキーはエクスポートされません。\n"
+            "value" : "* セキュリティのため、TMDb APIキーはエクスポートされません。"
           }
         },
         "zh-Hans" : {
@@ -167,6 +167,9 @@
           }
         }
       }
+    },
+    "%lld/5" : {
+
     },
     "•" : {
       "localizations" : {
@@ -554,6 +557,38 @@
         }
       }
     },
+    "App backups keep AniShelf data and settings for restore. Library exports create user-facing files in standard formats." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリバックアップは復元用にAniShelfのデータと設定を保存します。ライブラリエクスポートは標準形式のファイルを作成します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "应用备份会保存 AniShelf 数据和设置，以便日后恢复。资料库导出会生成标准格式文件。"
+          }
+        }
+      }
+    },
+    "Backup" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バックアップ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "备份"
+          }
+        }
+      }
+    },
     "Backup & Restore" : {
       "localizations" : {
         "ja" : {
@@ -845,6 +880,22 @@
         }
       }
     },
+    "Clear" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリア"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除"
+          }
+        }
+      }
+    },
     "Clear Cache" : {
       "localizations" : {
         "ja" : {
@@ -873,6 +924,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "关闭"
+          }
+        }
+      }
+    },
+    "Comma-Separated Values (.csv)" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カンマ区切り (.csv)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "逗号分隔值 (.csv)"
           }
         }
       }
@@ -1516,6 +1583,22 @@
         }
       }
     },
+    "Excel Workbook (.xlsx)" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Excelブック (.xlsx)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Excel 工作簿 (.xlsx)"
+          }
+        }
+      }
+    },
     "Expand Characters by Default" : {
       "localizations" : {
         "ja" : {
@@ -1549,6 +1632,7 @@
       }
     },
     "Export" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -1564,7 +1648,24 @@
         }
       }
     },
+    "Export as..." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "形式を選んで書き出し..."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出为..."
+          }
+        }
+      }
+    },
     "Export or restore your local library." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -1991,6 +2092,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "注册 TMDb"
+          }
+        }
+      }
+    },
+    "JSON (.json)" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JSON (.json)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JSON (.json)"
           }
         }
       }
@@ -2468,6 +2585,22 @@
         }
       }
     },
+    "No score" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未設定"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未评分"
+          }
+        }
+      }
+    },
     "No seasons available" : {
       "localizations" : {
         "ja" : {
@@ -2801,6 +2934,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "选择海报"
+          }
+        }
+      }
+    },
+    "Plain Text (.txt)" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プレーンテキスト (.txt)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "纯文本 (.txt)"
           }
         }
       }
@@ -3249,7 +3398,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "导入"
+            "value" : "恢复"
           }
         }
       }
@@ -3265,7 +3414,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "导入完成！"
+            "value" : "恢复完成！"
           }
         }
       }
@@ -3414,6 +3563,22 @@
         }
       }
     },
+    "Score" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スコア"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "评分"
+          }
+        }
+      }
+    },
     "Search" : {
       "localizations" : {
         "ja" : {
@@ -3558,54 +3723,6 @@
         }
       }
     },
-    "Clear" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "クリア"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "清除"
-          }
-        }
-      }
-    },
-    "No score" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未設定"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未评分"
-          }
-        }
-      }
-    },
-    "Score" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スコア"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "评分"
-          }
-        }
-      }
-    },
     "Share" : {
       "localizations" : {
         "ja" : {
@@ -3735,6 +3852,7 @@
       }
     },
     "Status: %@\nStarted: %@\nFinished: %@\nFavorite: %@\nNotes: %@\nCustom Poster: %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3834,6 +3952,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更换海报"
+          }
+        }
+      }
+    },
+    "Tab-Separated Values (.tsv)" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タブ区切り (.tsv)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "制表符分隔值 (.tsv)"
           }
         }
       }
