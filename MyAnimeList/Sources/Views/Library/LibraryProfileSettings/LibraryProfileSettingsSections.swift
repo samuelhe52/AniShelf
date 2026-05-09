@@ -432,7 +432,7 @@ struct LibraryProfileSettingsCard: View {
 
             libraryExportMenu
 
-            Text("Exports visible entries with title, year, IDs, and every saved user tracking field.")
+            Text("Exports visible entries with title, year, IDs, score, and every saved user tracking field.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
 

@@ -73,6 +73,7 @@ struct LibraryExportRecord: Codable, Equatable {
     let watchStatus: String
     let dateStarted: String?
     let dateFinished: String?
+    let score: Int?
     let favorite: Bool
     let notes: String
     let usingCustomPoster: Bool
@@ -91,6 +92,7 @@ struct LibraryExportRecord: Codable, Equatable {
         "watch_status",
         "date_started",
         "date_finished",
+        "score",
         "favorite",
         "notes",
         "using_custom_poster"
@@ -109,6 +111,7 @@ struct LibraryExportRecord: Codable, Equatable {
         watchStatus = Self.watchStatusString(for: entry.watchStatus)
         dateStarted = Self.optionalTimestampString(from: entry.dateStarted)
         dateFinished = Self.optionalTimestampString(from: entry.dateFinished)
+        score = entry.score
         favorite = entry.favorite
         notes = entry.notes
         usingCustomPoster = entry.usingCustomPoster
@@ -138,6 +141,7 @@ struct LibraryExportRecord: Codable, Equatable {
             watchStatus,
             dateStarted ?? "",
             dateFinished ?? "",
+            score.map(String.init) ?? "",
             favorite ? "true" : "false",
             notes,
             usingCustomPoster ? "true" : "false"
@@ -314,6 +318,7 @@ final class LibraryExportManager {
                 "Watch Status: \(entry.watchStatus)",
                 "Started At: \(entry.dateStarted ?? "N/A")",
                 "Finished At: \(entry.dateFinished ?? "N/A")",
+                "Score: \(entry.score.map(String.init) ?? "No score")",
                 "Favorite: \(entry.favorite ? "true" : "false")",
                 "Custom Poster: \(entry.usingCustomPoster ? "true" : "false")",
                 "Notes: \(entry.notes.isEmpty ? "N/A" : entry.notes)"
