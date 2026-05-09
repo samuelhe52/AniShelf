@@ -140,6 +140,7 @@ struct LibraryProfileSettingsCard: View {
 
     let restoreCompleted: Bool
     let createBackupItems: () -> [Any]?
+    let onExportLibrary: (LibraryExportFormat) -> Void
     let onRestore: () -> Void
     let onChangeAPIKey: () -> Void
     let onCheckMetadataCacheSize: () -> Void
@@ -405,13 +406,13 @@ struct LibraryProfileSettingsCard: View {
         VStack(alignment: .leading, spacing: 12) {
             LibraryProfileSettingHeader(
                 title: "Backup & Restore",
-                subtitle: "Export or restore your local library.",
+                subtitle: "Back up app data or export user-facing library records.",
                 systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90",
                 tint: .orange
             )
 
             HStack(spacing: 10) {
-                exportButton
+                backupButton
                     .frame(maxWidth: .infinity)
                 restoreButton
                     .frame(maxWidth: .infinity)
@@ -428,6 +429,12 @@ struct LibraryProfileSettingsCard: View {
                     Spacer()
                 }
             }
+
+            libraryExportMenu
+
+            Text("Exports visible entries with title, year, IDs, and every saved user tracking field.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
 
             Text("* For security reasons, your TMDb API Key will not be exported.")
                 .font(.caption2)
@@ -503,9 +510,9 @@ struct LibraryProfileSettingsCard: View {
     }
 
     @ViewBuilder
-    private var exportButton: some View {
+    private var backupButton: some View {
         LazyShareLink(prepareData: createBackupItems) {
-            Label("Export", systemImage: "document.badge.arrow.up")
+            Label("Backup", systemImage: "archivebox")
         }
         .buttonStyle(LibraryProfileCommandButtonStyle(tint: .blue, filled: false))
     }
@@ -513,6 +520,21 @@ struct LibraryProfileSettingsCard: View {
     private var restoreButton: some View {
         Button("Restore", systemImage: "document.badge.clock", role: .destructive, action: onRestore)
             .buttonStyle(LibraryProfileCommandButtonStyle(tint: .red, filled: false))
+    }
+
+    private var libraryExportMenu: some View {
+        Menu {
+            ForEach(LibraryExportFormat.allCases) { format in
+                Button {
+                    onExportLibrary(format)
+                } label: {
+                    Label(format.menuTitleResource, systemImage: format.menuSystemImage)
+                }
+            }
+        } label: {
+            Label("Export Library", systemImage: "square.and.arrow.up.on.square")
+        }
+        .buttonStyle(LibraryProfileCommandButtonStyle(tint: .teal, filled: false))
     }
 
     private var sectionCardTint: Color {
@@ -568,5 +590,37 @@ struct LibraryProfileSettingsCard: View {
 
     private func whatsNewSubtitleResource(for version: String) -> LocalizedStringResource {
         "Reopen the release note for version \(version)."
+    }
+}
+
+extension LibraryExportFormat {
+    fileprivate var menuTitleResource: LocalizedStringResource {
+        switch self {
+        case .plainText:
+            "Plain Text (.txt)"
+        case .csv:
+            "Comma-Separated Values (.csv)"
+        case .tsv:
+            "Tab-Separated Values (.tsv)"
+        case .json:
+            "JSON (.json)"
+        case .excel:
+            "Excel Workbook (.xlsx)"
+        }
+    }
+
+    fileprivate var menuSystemImage: String {
+        switch self {
+        case .plainText:
+            "doc.plaintext"
+        case .csv:
+            "tablecells"
+        case .tsv:
+            "tablecells.badge.ellipsis"
+        case .json:
+            "curlybraces"
+        case .excel:
+            "tablecells.fill"
+        }
     }
 }

@@ -228,6 +228,7 @@ struct LibraryProfileSettingsView: View {
             preferredLanguage: $preferredLanguage,
             restoreCompleted: restoreCompleted,
             createBackupItems: createBackupItems,
+            onExportLibrary: exportLibrary,
             onRestore: requestRestore,
             onChangeAPIKey: requestAPIKeySheet,
             onCheckMetadataCacheSize: checkMetadataCacheSize,
@@ -391,6 +392,15 @@ struct LibraryProfileSettingsView: View {
         } catch {
             presentExportError(error)
             return nil
+        }
+    }
+
+    private func exportLibrary(as format: LibraryExportFormat) {
+        do {
+            let exportURL = try actions.createLibraryExport(format: format)
+            ShareSheetPresenter.present(items: [exportURL])
+        } catch {
+            presentExportError(error)
         }
     }
 

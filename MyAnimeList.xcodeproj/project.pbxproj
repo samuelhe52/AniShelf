@@ -49,6 +49,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Resources/Info.plist,
+				Tests/MyAnimeListTests/LibraryExportManagerTests.swift,
 				Tests/MyAnimeListTests/MyAnimeListTests.swift,
 				Tests/MyAnimeListUITests/MyAnimeListUITests.swift,
 				Tests/MyAnimeListUITests/MyAnimeListUITestsLaunchTests.swift,
@@ -58,6 +59,7 @@
 		9F93FC182DE1FD800071FB56 /* Exceptions for "MyAnimeList" folder in "MyAnimeListTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Tests/MyAnimeListTests/LibraryExportManagerTests.swift,
 				Tests/MyAnimeListTests/MyAnimeListTests.swift,
 			);
 			target = 9F8D663F2D055FF000CF355D /* MyAnimeListTests */;

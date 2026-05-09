@@ -33,32 +33,6 @@ struct LazyShareLink<LabelView: View>: View {
         guard let data = prepareData() else {
             return
         }
-        let activityVC = UIActivityViewController(activityItems: data, applicationActivities: nil)
-
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            // otherwise iPad crashes
-            let thisViewVC = UIHostingController(rootView: self)
-            activityVC.popoverPresentationController?.sourceView = thisViewVC.view
-        }
-
-        // Get the root view controller
-        let rootViewController = UIApplication.shared.connectedScenes
-            .flatMap { ($0 as? UIWindowScene)?.windows ?? [] }
-            .first { $0.isKeyWindow }?
-            .rootViewController
-        guard let rootViewController else { return }
-
-        // Check if there is an existing presented view controller
-        if let presentedVC = rootViewController.presentedViewController {
-            // Dismiss the presented view controller if needed
-            presentedVC.dismiss(
-                animated: true,
-                completion: {
-                    rootViewController.present(activityVC, animated: true, completion: nil)
-                })
-        } else {
-            // No presented view controller, proceed to present the share sheet
-            rootViewController.present(activityVC, animated: true, completion: nil)
-        }
+        ShareSheetPresenter.present(items: data)
     }
 }

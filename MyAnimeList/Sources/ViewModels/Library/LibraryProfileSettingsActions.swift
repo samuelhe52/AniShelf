@@ -32,6 +32,10 @@ final class LibraryProfileSettingsActions {
         return try backupManager.createBackup()
     }
 
+    func createLibraryExport(format: LibraryExportFormat) throws -> URL {
+        try LibraryExportManager().createExport(for: store.library, format: format)
+    }
+
     func restoreBackup(from url: URL) throws {
         let accessedSecurityScopedResource = url.startAccessingSecurityScopedResource()
         defer {
