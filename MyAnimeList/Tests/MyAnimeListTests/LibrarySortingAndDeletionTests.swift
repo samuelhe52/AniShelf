@@ -103,6 +103,7 @@ struct LibrarySortingAndDeletionTests {
             store.groupStrategy = .watchStatus
             store.sortStrategy = .dateSaved
             store.sortReversed = false
+            store.hideDroppedByDefault = false
 
             let entries = [
                 makeLibraryEntry(name: "Watched Early", tmdbID: 31, watchStatus: .watched, daySaved: 1),
