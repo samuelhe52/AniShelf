@@ -1,5 +1,6 @@
 import DataProvider
 import Foundation
+import SwiftData
 import SwiftUI
 
 @MainActor
@@ -11,7 +12,7 @@ final class LibraryMetadataRefresher {
     }
 
     private enum LatestInfoFetchOutcome {
-        case success(Int, BasicInfo, AnimeEntryDetailDTO)
+        case success(PersistentIdentifier, BasicInfo, AnimeEntryDetailDTO)
         case failure(LatestInfoFailure)
     }
 
@@ -35,7 +36,7 @@ final class LibraryMetadataRefresher {
             )
         )
 
-        var fetchedInfos: [Int: (BasicInfo, AnimeEntryDetailDTO)] = [:]
+        var fetchedInfos: [PersistentIdentifier: (BasicInfo, AnimeEntryDetailDTO)] = [:]
         var failures: [LatestInfoFailure] = []
         let totalCount = library.count
 
@@ -65,7 +66,7 @@ final class LibraryMetadataRefresher {
                 .organizingLibrary(messageResource: "Organizing Library...")
             )
             for (id, fetchedInfo) in fetchedInfos {
-                if let entry = library.entryWithTMDbID(id) {
+                if let entry = library[id] {
                     let (info, detailDTO) = fetchedInfo
                     entry.replaceMetadata(
                         from: info,
@@ -209,16 +210,17 @@ final class LibraryMetadataRefresher {
         language: Language,
         updateProgress: @escaping (Int, Int) -> Void
     ) async -> (
-        successes: [(Int, BasicInfo, AnimeEntryDetailDTO)],
+        successes: [(PersistentIdentifier, BasicInfo, AnimeEntryDetailDTO)],
         failures: [LatestInfoFailure]
     ) {
         await withTaskGroup(
             of: LatestInfoFetchOutcome.self
         ) { group in
-            var fetchedInfos: [(Int, BasicInfo, AnimeEntryDetailDTO)] = []
+            var fetchedInfos: [(PersistentIdentifier, BasicInfo, AnimeEntryDetailDTO)] = []
             var failures: [LatestInfoFailure] = []
 
             for entry in entries {
+                let entryID = entry.id
                 let tmdbID = entry.tmdbID
                 let name = entry.name
                 let type = entry.type
@@ -227,6 +229,7 @@ final class LibraryMetadataRefresher {
                 group.addTask {
                     do {
                         let latestInfo = try await self.fetchLatestInfo(
+                            entryID: entryID,
                             tmdbID: tmdbID,
                             entryType: type,
                             originalPosterURL: originalPosterURL,
@@ -262,13 +265,14 @@ final class LibraryMetadataRefresher {
     }
 
     private func fetchLatestInfo(
+        entryID: PersistentIdentifier,
         tmdbID: Int,
         entryType: AnimeType,
         originalPosterURL: URL?,
         usingCustomPoster: Bool,
         fetcher: InfoFetcher,
         language: Language
-    ) async throws -> (Int, BasicInfo, AnimeEntryDetailDTO) {
+    ) async throws -> (PersistentIdentifier, BasicInfo, AnimeEntryDetailDTO) {
         let latestInfo = try await fetcher.latestInfo(
             entryType: entryType,
             tmdbID: tmdbID,
@@ -277,7 +281,7 @@ final class LibraryMetadataRefresher {
         if usingCustomPoster {
             resolvedInfo.posterURL = originalPosterURL
         }
-        return (tmdbID, resolvedInfo, latestInfo.1)
+        return (entryID, resolvedInfo, latestInfo.1)
     }
 
     private func resolveParentSeriesEntry(

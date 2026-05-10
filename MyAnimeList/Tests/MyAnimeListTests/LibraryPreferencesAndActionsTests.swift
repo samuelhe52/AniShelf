@@ -235,4 +235,41 @@ struct LibraryPreferencesAndActionsTests {
 
         #expect(store.library.isEmpty)
     }
+
+    @Test @MainActor func testRefreshInfosIncludesSharedHiddenParentEntryOnce() throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let parent = AnimeEntry(
+            name: "Frieren",
+            type: .series,
+            tmdbID: 209_867
+        )
+        parent.onDisplay = false
+
+        let firstSeason = AnimeEntry(
+            name: "Season 1",
+            type: .season(seasonNumber: 1, parentSeriesID: 209_867),
+            tmdbID: 400_234
+        )
+        firstSeason.parentSeriesEntry = parent
+
+        let secondSeason = AnimeEntry(
+            name: "Season 2",
+            type: .season(seasonNumber: 2, parentSeriesID: 209_867),
+            tmdbID: 400_235
+        )
+        secondSeason.parentSeriesEntry = parent
+
+        try store.repository.newEntry(parent)
+        try store.repository.newEntry(firstSeason)
+        try store.repository.newEntry(secondSeason)
+        try store.refreshLibrary()
+
+        #expect(store.library.count == 2)
+
+        let capturedEntries = try LibraryProfileSettingsActions.getRefreshEntries(for: store)
+
+        #expect(capturedEntries.count == 3)
+        #expect(Set(capturedEntries.map(\.id)).count == 3)
+        #expect(capturedEntries.filter { !$0.onDisplay && $0.tmdbID == 209_867 }.count == 1)
+    }
 }

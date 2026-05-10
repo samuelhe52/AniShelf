@@ -5,6 +5,7 @@
 //  Created by OpenAI Codex on 2026/5/7.
 //
 
+import DataProvider
 import Foundation
 import Kingfisher
 
@@ -90,13 +91,34 @@ final class LibraryProfileSettingsActions {
     ) {
         let metadataRefresher = LibraryMetadataRefresher(repository: store.repository)
         Task {
-            await metadataRefresher.refreshInfos(
-                for: store.library,
-                fetcher: store.infoFetcher,
-                language: store.language,
-                options: options
-            )
+            do {
+                let entries = try getRefreshEntries(for: store)
+                await metadataRefresher.refreshInfos(
+                    for: entries,
+                    fetcher: store.infoFetcher,
+                    language: store.language,
+                    options: options
+                )
+            } catch {
+                libraryStoreLogger.error(
+                    "Failed to load refresh entries: \(error.localizedDescription)"
+                )
+                options.reporter.report(
+                    .refreshComplete(
+                        .init(
+                            state: .failed,
+                            messageResource: LocalizedStringResource(
+                                stringLiteral: error.localizedDescription
+                            )
+                        )
+                    )
+                )
+            }
         }
+    }
+
+    static func getRefreshEntries(for store: LibraryStore) throws -> [AnimeEntry] {
+        try store.dataProvider.getAllModels(ofType: AnimeEntry.self)
     }
 
     func clearLibrary() {
