@@ -28,3 +28,4 @@
 ## Additional Notes
 
 - Use `@ViewBuilder` wisely. Do not simply add `return` to resolve compiler warnings.
+- During SwiftData schema version bumps, qualify versioned model references inside older schema helper/bridge files, for example `SchemaV2_7_3.AnimeEntrySeasonSummary` instead of bare `AnimeEntrySeasonSummary`. Once `CurrentSchema` advances, unqualified names in older versioned files can resolve to the new schema types and break the build.

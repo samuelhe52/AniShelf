@@ -1,5 +1,5 @@
 //
-//  AnimeEntryDetailBridgeV2_7_3.swift
+//  AnimeEntryDetailBridgeV2_7_4.swift
 //  DataProvider
 //
 //  Created by OpenAI Codex on 2026/5/10.
@@ -8,7 +8,7 @@
 import Foundation
 import SwiftData
 
-extension SchemaV2_7_3.AnimeEntryDetail {
+extension SchemaV2_7_4.AnimeEntryDetail {
     public convenience init(from dto: AnimeEntryDetailDTO) {
         self.init(
             language: dto.language,
@@ -27,7 +27,7 @@ extension SchemaV2_7_3.AnimeEntryDetail {
             seasonCount: dto.seasonCount,
             characters: Self.makeCharacters(from: dto.characters),
             staff: Self.makeStaff(from: dto.staff),
-            seasons: dto.seasons.map(SchemaV2_7_3.AnimeEntrySeasonSummary.init(from:)),
+            seasons: dto.seasons.map(SchemaV2_7_4.AnimeEntrySeasonSummary.init(from:)),
             episodes: Self.makeEpisodes(from: dto.episodes)
         )
     }
@@ -50,7 +50,7 @@ extension SchemaV2_7_3.AnimeEntryDetail {
             seasonCount: payload.seasonCount,
             characters: Self.makeCharacters(fromLegacy: payload.characters),
             staff: [],
-            seasons: payload.seasons.map(SchemaV2_7_3.AnimeEntrySeasonSummary.init(fromLegacy:)),
+            seasons: payload.seasons.map(SchemaV2_7_4.AnimeEntrySeasonSummary.init(fromLegacy:)),
             episodes: Self.makeEpisodes(fromLegacy: payload.episodes)
         )
     }
@@ -102,7 +102,7 @@ extension SchemaV2_7_3.AnimeEntryDetail {
                 modelContext.delete(season)
             }
         }
-        seasons = dtos.map(SchemaV2_7_3.AnimeEntrySeasonSummary.init(from:))
+        seasons = dtos.map(SchemaV2_7_4.AnimeEntrySeasonSummary.init(from:))
         seasons.forEach { $0.detail = self }
     }
 
@@ -118,41 +118,41 @@ extension SchemaV2_7_3.AnimeEntryDetail {
 
     private static func makeCharacters(
         from dtos: [AnimeEntryCharacterDTO]
-    ) -> [SchemaV2_7_3.AnimeEntryCharacter] {
+    ) -> [SchemaV2_7_4.AnimeEntryCharacter] {
         dtos.enumerated().map {
-            SchemaV2_7_3.AnimeEntryCharacter(from: $0.element, displayOrder: $0.offset)
+            SchemaV2_7_4.AnimeEntryCharacter(from: $0.element, displayOrder: $0.offset)
         }
     }
 
     private static func makeCharacters(
         fromLegacy payloads: [LegacyAnimeEntryCharacterPayload]
-    ) -> [SchemaV2_7_3.AnimeEntryCharacter] {
+    ) -> [SchemaV2_7_4.AnimeEntryCharacter] {
         payloads.enumerated().map {
-            SchemaV2_7_3.AnimeEntryCharacter(fromLegacy: $0.element, displayOrder: $0.offset)
+            SchemaV2_7_4.AnimeEntryCharacter(fromLegacy: $0.element, displayOrder: $0.offset)
         }
     }
 
     private static func makeStaff(
         from dtos: [AnimeEntryStaffDTO]
-    ) -> [SchemaV2_7_3.AnimeEntryStaff] {
+    ) -> [SchemaV2_7_4.AnimeEntryStaff] {
         dtos.enumerated().map {
-            SchemaV2_7_3.AnimeEntryStaff(from: $0.element, displayOrder: $0.offset)
+            SchemaV2_7_4.AnimeEntryStaff(from: $0.element, displayOrder: $0.offset)
         }
     }
 
     private static func makeEpisodes(
         from dtos: [AnimeEntryEpisodeSummaryDTO]
-    ) -> [SchemaV2_7_3.AnimeEntryEpisodeSummary] {
+    ) -> [SchemaV2_7_4.AnimeEntryEpisodeSummary] {
         dtos.enumerated().map {
-            SchemaV2_7_3.AnimeEntryEpisodeSummary(from: $0.element, displayOrder: $0.offset)
+            SchemaV2_7_4.AnimeEntryEpisodeSummary(from: $0.element, displayOrder: $0.offset)
         }
     }
 
     private static func makeEpisodes(
         fromLegacy payloads: [LegacyAnimeEntryEpisodeSummaryPayload]
-    ) -> [SchemaV2_7_3.AnimeEntryEpisodeSummary] {
+    ) -> [SchemaV2_7_4.AnimeEntryEpisodeSummary] {
         payloads.enumerated().map {
-            SchemaV2_7_3.AnimeEntryEpisodeSummary(fromLegacy: $0.element, displayOrder: $0.offset)
+            SchemaV2_7_4.AnimeEntryEpisodeSummary(fromLegacy: $0.element, displayOrder: $0.offset)
         }
     }
 }

@@ -109,6 +109,129 @@ struct InfoFetcherAndMigrationTests {
         #expect(migratedEntry.score == nil)
     }
 
+    @Test @MainActor func testParentSeriesCleanupMigrationDeduplicatesHiddenParents() throws {
+        let storeURL = temporaryStoreURL(name: "parent-series-cleanup-migration")
+
+        let legacySchema = Schema(versionedSchema: SchemaV2_7_3.self)
+        let legacyConfiguration = ModelConfiguration(schema: legacySchema, url: storeURL)
+        let legacyContainer = try ModelContainer(for: legacySchema, configurations: legacyConfiguration)
+
+        let visibleSeries = SchemaV2_7_3.AnimeEntry(
+            name: "Frieren",
+            type: .series,
+            tmdbID: 209867,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 9)
+        )
+        let hiddenParentA = SchemaV2_7_3.AnimeEntry(
+            name: "Frieren Hidden A",
+            type: .series,
+            tmdbID: 209867,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 1)
+        )
+        hiddenParentA.onDisplay = false
+        let hiddenParentB = SchemaV2_7_3.AnimeEntry(
+            name: "Frieren Hidden B",
+            type: .series,
+            tmdbID: 209867,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 2)
+        )
+        hiddenParentB.onDisplay = false
+        let seasonOne = SchemaV2_7_3.AnimeEntry(
+            name: "Frieren Season 1",
+            type: .season(seasonNumber: 1, parentSeriesID: 209867),
+            tmdbID: 307972,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 3)
+        )
+        seasonOne.parentSeriesEntry = hiddenParentA
+        let seasonTwo = SchemaV2_7_3.AnimeEntry(
+            name: "Frieren Season 2",
+            type: .season(seasonNumber: 2, parentSeriesID: 209867),
+            tmdbID: 407972,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 4)
+        )
+        seasonTwo.parentSeriesEntry = hiddenParentB
+
+        let orphanParentA = SchemaV2_7_3.AnimeEntry(
+            name: "Orphan Parent A",
+            type: .series,
+            tmdbID: 999001,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 5)
+        )
+        orphanParentA.onDisplay = false
+        let orphanParentB = SchemaV2_7_3.AnimeEntry(
+            name: "Orphan Parent B",
+            type: .series,
+            tmdbID: 999001,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 6)
+        )
+        orphanParentB.onDisplay = false
+
+        for entry in [
+            visibleSeries,
+            hiddenParentA,
+            hiddenParentB,
+            seasonOne,
+            seasonTwo,
+            orphanParentA,
+            orphanParentB
+        ] {
+            legacyContainer.mainContext.insert(entry)
+        }
+        try legacyContainer.mainContext.save()
+
+        let migratedProvider = DataProvider(url: storeURL)
+        let migratedEntries = try migratedProvider.getAllModels(ofType: AnimeEntry.self)
+
+        let migratedVisibleSeries = try #require(
+            migratedEntries.first(where: { $0.tmdbID == 209867 && $0.type == .series && $0.onDisplay })
+        )
+        let migratedSeasons = migratedEntries.filter {
+            guard case .season(_, let parentSeriesID) = $0.type else { return false }
+            return parentSeriesID == 209867
+        }
+
+        #expect(migratedEntries.count == 3)
+        #expect(migratedEntries.contains(where: { $0.tmdbID == 209867 && !$0.onDisplay }) == false)
+        #expect(migratedEntries.contains(where: { $0.tmdbID == 999001 }) == false)
+        #expect(migratedSeasons.count == 2)
+        #expect(migratedSeasons.allSatisfy { $0.parentSeriesEntry?.id == migratedVisibleSeries.id })
+    }
+
+    @Test @MainActor func testExistingEntryPrefersReferencedHiddenParentOverOrphanDuplicate() throws {
+        let dataProvider = DataProvider(inMemory: true)
+        let repository = LibraryRepository(dataProvider: dataProvider)
+
+        let orphanHiddenParent = AnimeEntry(
+            name: "Orphan Hidden Parent",
+            type: .series,
+            tmdbID: 209867,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 1)
+        )
+        orphanHiddenParent.onDisplay = false
+        try repository.newEntry(orphanHiddenParent)
+
+        let referencedHiddenParent = AnimeEntry(
+            name: "Referenced Hidden Parent",
+            type: .series,
+            tmdbID: 209867,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 2)
+        )
+        referencedHiddenParent.onDisplay = false
+        try repository.newEntry(referencedHiddenParent)
+
+        let seasonEntry = AnimeEntry(
+            name: "Frieren Season 1",
+            type: .season(seasonNumber: 1, parentSeriesID: 209867),
+            tmdbID: 307972,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 3)
+        )
+        seasonEntry.parentSeriesEntry = referencedHiddenParent
+        try repository.newEntry(seasonEntry)
+
+        let resolvedEntry = try #require(repository.existingEntry(tmdbID: 209867))
+        #expect(resolvedEntry.id == referencedHiddenParent.id)
+    }
+
     @Test @MainActor func testConvertSeasonToSeriesPreservesScore() async throws {
         let dataProvider = DataProvider(inMemory: true)
         let repository = LibraryRepository(dataProvider: dataProvider)

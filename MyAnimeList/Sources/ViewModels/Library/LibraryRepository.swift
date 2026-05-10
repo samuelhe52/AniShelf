@@ -37,14 +37,35 @@ final class LibraryRepository {
 
     func existingEntry(tmdbID: Int) -> AnimeEntry? {
         do {
-            return try dataProvider.getAllModels(
+            let entries = try dataProvider.getAllModels(
                 ofType: AnimeEntry.self,
                 predicate: #Predicate { $0.tmdbID == tmdbID }
-            ).first
+            )
+            return entries.sorted(by: compareExistingEntries).first
         } catch {
             libraryStoreLogger.warning(
                 "Failed to fetch existing entry \(tmdbID, privacy: .public): \(error.localizedDescription)")
             return nil
         }
+    }
+
+    private func compareExistingEntries(_ lhs: AnimeEntry, _ rhs: AnimeEntry) -> Bool {
+        if lhs.onDisplay != rhs.onDisplay {
+            return lhs.onDisplay && !rhs.onDisplay
+        }
+
+        if lhs.childSeasonEntries.count != rhs.childSeasonEntries.count {
+            return lhs.childSeasonEntries.count > rhs.childSeasonEntries.count
+        }
+
+        if (lhs.detail != nil) != (rhs.detail != nil) {
+            return lhs.detail != nil
+        }
+
+        if lhs.dateSaved != rhs.dateSaved {
+            return lhs.dateSaved > rhs.dateSaved
+        }
+
+        return lhs.name < rhs.name
     }
 }

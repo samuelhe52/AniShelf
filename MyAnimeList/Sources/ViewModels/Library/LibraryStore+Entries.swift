@@ -13,10 +13,11 @@ extension LibraryStore {
         tmdbID id: Int,
         type: AnimeType
     ) async throws -> AnimeEntry? {
-        guard library.map(\.tmdbID).contains(id) == false else {
-            library.entryWithTMDbID(id)?.onDisplay = true
+        if let existingEntry = repository.existingEntry(tmdbID: id) {
+            existingEntry.onDisplay = true
+            try repository.save()
             libraryStoreLogger.warning(
-                "Entry with id \(id) already exists. Setting `onDisplay` to `true` and returning..."
+                "Entry with id \(id) already exists in the store. Setting `onDisplay` to `true` and returning..."
             )
             return nil
         }
@@ -34,7 +35,7 @@ extension LibraryStore {
         applyNewEntryDefaults(to: entry)
         entry.replaceDetail(from: try await detail)
         if let parentSeriesID = entry.parentSeriesID {
-            if let parentSeriesEntry = library.first(where: { $0.tmdbID == parentSeriesID }) {
+            if let parentSeriesEntry = repository.existingEntry(tmdbID: parentSeriesID) {
                 entry.parentSeriesEntry = parentSeriesEntry
             } else {
                 let parentSeriesEntry =
