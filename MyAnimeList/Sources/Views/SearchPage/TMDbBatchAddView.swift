@@ -1,0 +1,492 @@
+//
+//  TMDbBatchAddView.swift
+//  MyAnimeList
+//
+//  Created by OpenAI Codex on 2026/5/10.
+//
+
+import SwiftUI
+
+fileprivate enum TMDbBatchAddStep {
+    case input
+    case results
+}
+
+struct TMDbBatchAddView: View {
+    @Environment(TMDbSearchService.self) private var tmdbSearchService: TMDbSearchService
+
+    let language: Language
+    let checkDuplicate: (Int) -> Bool
+    let onDuplicateTapped: (Int) -> Void
+    let onExit: () -> Void
+
+    @State private var step: TMDbBatchAddStep = .input
+    @State private var promptInput = ""
+    @FocusState private var isPromptEditorFocused: Bool
+
+    var body: some View {
+        Group {
+            switch step {
+            case .input:
+                inputStep
+            case .results:
+                resultsStep
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            bottomAction
+        }
+        .animation(.default, value: step)
+    }
+
+    private var inputStep: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                TMDbSetupPanel {
+                    VStack(alignment: .leading, spacing: 14) {
+                        Label {
+                            Text(inputSectionTitleResource)
+                        } icon: {
+                            Image(systemName: "text.badge.plus")
+                        }
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                        Text(inputSectionMessageResource)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        ZStack(alignment: .topLeading) {
+                            if promptInput.isEmpty {
+                                Text(inputPlaceholderResource)
+                                    .foregroundStyle(.tertiary)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 14)
+                                    .allowsHitTesting(false)
+                            }
+
+                            TextEditor(text: $promptInput)
+                                .focused($isPromptEditorFocused)
+                                .scrollContentBackground(.hidden)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled(true)
+                                .frame(minHeight: 180)
+                                .padding(12)
+                                .background(
+                                    Color(.secondarySystemBackground),
+                                    in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                )
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollDismissesKeyboard(.interactively)
+        .navigationTitle(Text(batchAddTitleResource))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    exitBatchAdd()
+                } label: {
+                    Image(systemName: "chevron.backward")
+                }
+                .accessibilityLabel(Text(backTitleResource))
+            }
+        }
+    }
+
+    private var resultsStep: some View {
+        Group {
+            switch tmdbSearchService.batchStatus {
+            case .idle:
+                ContentUnavailableView {
+                    Label {
+                        Text(batchReadyTitleResource)
+                    } icon: {
+                        Image(systemName: "text.badge.plus")
+                    }
+                } description: {
+                    Text(batchReadyMessageResource)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.top, 20)
+
+            case .loading:
+                VStack(spacing: 12) {
+                    ProgressView()
+                    Text(loadingMessageResource)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            case .loaded:
+                resultsList
+
+            case .error(let error):
+                ContentUnavailableView {
+                    Label {
+                        Text(errorTitleResource)
+                    } icon: {
+                        Image(systemName: "wifi.exclamationmark")
+                    }
+                } description: {
+                    VStack(spacing: 8) {
+                        Text(errorMessageResource)
+                        Text(error.localizedDescription)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.top, 20)
+            }
+        }
+        .navigationTitle(Text(batchResultsTitleResource))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    exitBatchAdd()
+                } label: {
+                    Image(systemName: "chevron.backward")
+                }
+                .accessibilityLabel(Text(backTitleResource))
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    returnToInputStep()
+                } label: {
+                    Image(systemName: "square.and.pencil")
+                }
+                .accessibilityLabel(Text(editTitleResource))
+            }
+        }
+        .animation(.default, value: tmdbSearchService.batchStatus)
+    }
+
+    @ViewBuilder
+    private var bottomAction: some View {
+        switch step {
+        case .input:
+            TMDbProminentButton(
+                title: searchButtonTitleResource,
+                systemImage: "sparkle.magnifyingglass",
+                iconPlacement: .leading,
+                isEnabled: canStartBatchSearch,
+                action: beginBatchSearch
+            )
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 8)
+
+        case .results:
+            switch tmdbSearchService.batchStatus {
+            case .loaded:
+                if tmdbSearchService.batchRegisteredCount != 0 {
+                    Button {
+                        tmdbSearchService.submit()
+                        exitBatchAdd()
+                    } label: {
+                        Text(addToLibraryTitleResource)
+                    }
+                    .buttonStyle(.glassProminent)
+                    .shadow(color: .blue, radius: 5)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .padding(.bottom, 8)
+                }
+
+            case .error:
+                TMDbProminentButton(
+                    title: retryButtonTitleResource,
+                    systemImage: "arrow.clockwise",
+                    iconPlacement: .leading,
+                    action: restartBatchSearch
+                )
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 8)
+
+            case .idle, .loading:
+                EmptyView()
+            }
+        }
+    }
+
+    private var seriesCandidates: [TMDbBatchPromptResult] {
+        tmdbSearchService.batchResults.filter { $0.series != nil }
+    }
+
+    private var movieCandidates: [TMDbBatchPromptResult] {
+        tmdbSearchService.batchResults.filter { $0.movie != nil }
+    }
+
+    private var noResultPrompts: [TMDbBatchPromptResult] {
+        tmdbSearchService.batchResults.filter(\.hasNoResults)
+    }
+
+    private var canStartBatchSearch: Bool {
+        !TMDbSearchService.batchPrompts(from: promptInput).isEmpty
+            && tmdbSearchService.batchStatus != .loading
+    }
+
+    private func beginBatchSearch() {
+        guard canStartBatchSearch else { return }
+        isPromptEditorFocused = false
+        step = .results
+        Task {
+            await tmdbSearchService.performBatchSearch(input: promptInput, language: language)
+        }
+    }
+
+    private func restartBatchSearch() {
+        Task {
+            await tmdbSearchService.performBatchSearch(input: promptInput, language: language)
+        }
+    }
+
+    private func returnToInputStep() {
+        step = .input
+    }
+
+    private func exitBatchAdd() {
+        isPromptEditorFocused = false
+        onExit()
+    }
+
+    private var resultsList: some View {
+        List {
+            if !seriesCandidates.isEmpty {
+                resultSection(title: seriesCandidatesTitleResource) {
+                    ForEach(seriesCandidates) { promptResult in
+                        if let series = promptResult.series {
+                            candidateRow(prompt: promptResult.prompt) {
+                                let isDuplicate = checkDuplicate(series.tmdbID)
+                                SeriesResultItem(
+                                    series: series,
+                                    initiallySelected: tmdbSearchService.isRegistered(info: series),
+                                    registerSelection: tmdbSearchService.registerBatchSelection,
+                                    unregisterSelection: tmdbSearchService.unregisterBatchSelection
+                                )
+                                .id(
+                                    "series-\(tmdbSearchService.batchSearchGeneration)-\(promptResult.id)-\(series.tmdbID)"
+                                )
+                                .indicateAlreadyAdded(
+                                    added: isDuplicate,
+                                    message: alreadyAddedMessageResource
+                                )
+                                .onTapGesture {
+                                    if isDuplicate { onDuplicateTapped(series.tmdbID) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if !movieCandidates.isEmpty {
+                resultSection(title: movieCandidatesTitleResource) {
+                    ForEach(movieCandidates) { promptResult in
+                        if let movie = promptResult.movie {
+                            candidateRow(prompt: promptResult.prompt) {
+                                let isDuplicate = checkDuplicate(movie.tmdbID)
+                                MovieResultItem(
+                                    movie: movie,
+                                    initiallySelected: tmdbSearchService.isRegistered(info: movie),
+                                    registerSelection: tmdbSearchService.registerBatchSelection,
+                                    unregisterSelection: tmdbSearchService.unregisterBatchSelection
+                                )
+                                .id(
+                                    "movie-\(tmdbSearchService.batchSearchGeneration)-\(promptResult.id)-\(movie.tmdbID)"
+                                )
+                                .indicateAlreadyAdded(
+                                    added: isDuplicate,
+                                    message: alreadyAddedMessageResource
+                                )
+                                .onTapGesture {
+                                    if isDuplicate { onDuplicateTapped(movie.tmdbID) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if !noResultPrompts.isEmpty {
+                resultSection(title: noResultsTitleResource) {
+                    ForEach(noResultPrompts) { promptResult in
+                        candidateRow(prompt: promptResult.prompt) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "magnifyingglass")
+                                Text(noResultsMessageResource)
+                            }
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+
+            checkoutSection
+        }
+        .listStyle(.inset)
+    }
+
+    private func resultSection<Content: View>(
+        title: LocalizedStringResource,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        Section {
+            content()
+        } header: {
+            Text(title)
+        }
+        .textCase(nil)
+    }
+
+    private var checkoutSection: some View {
+        Section {
+            checkoutRow(title: tvSeriesTitleResource, count: tmdbSearchService.batchRegisteredSeriesCount)
+            checkoutRow(title: seasonsTitleResource, count: tmdbSearchService.batchRegisteredSeasonCount)
+            checkoutRow(title: moviesTitleResource, count: tmdbSearchService.batchRegisteredMovieCount)
+        } header: {
+            Text(checkoutTitleResource)
+        }
+        .textCase(nil)
+    }
+
+    private func checkoutRow(title: LocalizedStringResource, count: Int) -> some View {
+        LabeledContent {
+            Text(count.formatted())
+                .monospacedDigit()
+                .contentTransition(.numericText())
+                .animation(.default, value: count)
+        } label: {
+            Text(title)
+        }
+    }
+
+    private func candidateRow<Content: View>(
+        prompt: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(prompt)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 4)
+    }
+
+    private var alreadyAddedMessageResource: LocalizedStringKey {
+        "Already in library."
+    }
+
+    private var batchAddTitleResource: LocalizedStringResource {
+        "Batch Add"
+    }
+
+    private var batchResultsTitleResource: LocalizedStringResource {
+        "Batch Results"
+    }
+
+    private var backTitleResource: LocalizedStringResource {
+        "Back"
+    }
+
+    private var editTitleResource: LocalizedStringResource {
+        "Edit"
+    }
+
+    private var inputSectionTitleResource: LocalizedStringResource {
+        "Batch Search"
+    }
+
+    private var inputSectionMessageResource: LocalizedStringResource {
+        "Enter one title per line. Only the top TMDb TV series result and top movie result are shown, so precise titles work best."
+    }
+
+    private var inputPlaceholderResource: LocalizedStringResource {
+        """
+        Frieren
+        A Silent Voice
+        Kiki's Delivery Service
+        """
+    }
+
+    private var searchButtonTitleResource: LocalizedStringResource {
+        "Search Titles"
+    }
+
+    private var batchReadyTitleResource: LocalizedStringResource {
+        "Ready for batch search"
+    }
+
+    private var batchReadyMessageResource: LocalizedStringResource {
+        "Paste a list of titles, then search TMDb."
+    }
+
+    private var loadingMessageResource: LocalizedStringResource {
+        "Searching TMDb..."
+    }
+
+    private var seriesCandidatesTitleResource: LocalizedStringResource {
+        "TV Series Candidates"
+    }
+
+    private var movieCandidatesTitleResource: LocalizedStringResource {
+        "Movie Candidates"
+    }
+
+    private var noResultsTitleResource: LocalizedStringResource {
+        "No Results"
+    }
+
+    private var noResultsMessageResource: LocalizedStringResource {
+        "No TMDb result found for this prompt."
+    }
+
+    private var addToLibraryTitleResource: LocalizedStringResource {
+        "Add To Library..."
+    }
+
+    private var checkoutTitleResource: LocalizedStringResource {
+        "Checkout"
+    }
+
+    private var retryButtonTitleResource: LocalizedStringResource {
+        "Retry Search"
+    }
+
+    private var errorTitleResource: LocalizedStringResource {
+        "Batch search failed"
+    }
+
+    private var errorMessageResource: LocalizedStringResource {
+        "Check your connection, then go back or retry the batch search."
+    }
+
+    private var tvSeriesTitleResource: LocalizedStringResource {
+        "TV Series"
+    }
+
+    private var moviesTitleResource: LocalizedStringResource {
+        "Movies"
+    }
+
+    private var seasonsTitleResource: LocalizedStringResource {
+        "Seasons"
+    }
+}

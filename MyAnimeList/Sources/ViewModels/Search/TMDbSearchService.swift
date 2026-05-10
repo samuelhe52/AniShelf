@@ -173,7 +173,7 @@ class TMDbSearchService {
     @ObservationIgnored private var latestRequest: SearchRequest?
     @ObservationIgnored private var latestBatchRequestID: UUID?
     @ObservationIgnored private var currentBatchDisplayedResults = OrderedSet<SearchResult>()
-    @ObservationIgnored private var batchOwnedResults = OrderedSet<SearchResult>()
+    private var batchOwnedResults = OrderedSet<SearchResult>()
     @ObservationIgnored private var batchPromptCacheKey: [String] = []
     private var resultsToSubmit: OrderedSet<SearchResult> = []
     @ObservationIgnored var checkDuplicate: (Int) -> Bool
@@ -193,13 +193,10 @@ class TMDbSearchService {
     func submit() { processResults(OrderedSet(resultsToSubmit.reversed())) }
     /// The count of all results pending submission.
     var registeredCount: Int { resultsToSubmit.count }
-    var batchRegisteredCount: Int {
-        currentBatchDisplayedResults.reduce(into: 0) { count, result in
-            if resultsToSubmit.contains(result) {
-                count += 1
-            }
-        }
-    }
+    var batchRegisteredCount: Int { batchOwnedResults.count }
+    var batchRegisteredSeriesCount: Int { batchRegisteredCount(for: .series) }
+    var batchRegisteredSeasonCount: Int { batchSelectionSeasonCount() }
+    var batchRegisteredMovieCount: Int { batchRegisteredCount(for: .movie) }
     func isRegistered(info: BasicInfo) -> Bool {
         resultsToSubmit.contains(.init(tmdbID: info.tmdbID, type: info.type))
     }
@@ -422,6 +419,22 @@ class TMDbSearchService {
         }
         batchOwnedResults.removeAll()
         currentBatchDisplayedResults.removeAll()
+    }
+
+    private func batchRegisteredCount(for type: AnimeType) -> Int {
+        batchOwnedResults.reduce(into: 0) { count, result in
+            if result.type == type {
+                count += 1
+            }
+        }
+    }
+
+    private func batchSelectionSeasonCount() -> Int {
+        batchOwnedResults.reduce(into: 0) { count, result in
+            if case .season = result.type {
+                count += 1
+            }
+        }
     }
 
     @discardableResult

@@ -461,6 +461,38 @@
         }
       }
     },
+    "Continue" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "続ける"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "继续"
+          }
+        }
+      }
+    },
+    "Checkout" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确认"
+          }
+        }
+      }
+    },
     "Enter one title per line. Only the top TMDb TV series result and top movie result are shown, so precise titles work best." : {
       "localizations" : {
         "ja" : {
@@ -477,6 +509,22 @@
         }
       }
     },
+    "Enter Batch Add?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一括追加に切り替えますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要进入批量添加吗？"
+          }
+        }
+      }
+    },
     "Frieren\nA Silent Voice\nKiki's Delivery Service" : {
       "localizations" : {
         "ja" : {
@@ -489,6 +537,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Frieren\nA Silent Voice\nKiki's Delivery Service"
+          }
+        }
+      }
+    },
+    "Back" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "戻る"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "返回"
+          }
+        }
+      }
+    },
+    "Batch add replaces the current TMDb search view until you go back." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "戻るまで、現在の TMDb 検索画面は一括追加画面に切り替わります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "进入后，当前 TMDb 搜索界面会切换为批量添加界面，直到你返回搜索。"
           }
         }
       }
