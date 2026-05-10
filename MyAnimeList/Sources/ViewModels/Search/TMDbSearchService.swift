@@ -360,32 +360,40 @@ class TMDbSearchService {
         let requestID = UUID()
         latestBatchRequestID = requestID
         clearSelections(in: .batch)
-        batchResults = []
-        batchStatus = .loading
-        batchSearchGeneration += 1
+        withAnimation {
+            batchResults = []
+            batchStatus = .loading
+            batchSearchGeneration += 1
+        }
 
         do {
             let promptResults = try await fetchBatchResults(prompts: prompts, language: language)
             guard latestBatchRequestID == requestID else { return }
-            applyBatchResults(promptResults, prompts: prompts)
-            batchStatus = .loaded
-            batchSearchGeneration += 1
+            withAnimation {
+                applyBatchResults(promptResults, prompts: prompts)
+                batchStatus = .loaded
+                batchSearchGeneration += 1
+            }
         } catch {
             guard latestBatchRequestID == requestID else { return }
             logger.error("Error fetching batch search results: \(error)")
-            batchResults = []
-            batchStatus = .error(error)
-            batchSearchGeneration += 1
+            withAnimation {
+                batchResults = []
+                batchStatus = .error(error)
+                batchSearchGeneration += 1
+            }
         }
     }
 
     func clearBatchSession() {
         latestBatchRequestID = UUID()
         clearSelections(in: .batch)
-        batchResults = []
-        batchPromptCacheKey = []
-        batchStatus = .idle
-        batchSearchGeneration += 1
+        withAnimation {
+            batchResults = []
+            batchPromptCacheKey = []
+            batchStatus = .idle
+            batchSearchGeneration += 1
+        }
     }
 
     func canReuseBatchResults(for input: String) -> Bool {

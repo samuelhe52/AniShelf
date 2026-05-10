@@ -29,14 +29,16 @@ struct TMDbBatchAddView: View {
             switch step {
             case .input:
                 inputStep
+                    .transition(batchInputTransition)
             case .results:
                 resultsStep
+                    .transition(batchResultsTransition)
             }
         }
         .safeAreaInset(edge: .bottom) {
             bottomAction
         }
-        .animation(.default, value: step)
+        .animation(batchStepAnimation, value: step)
     }
 
     private var inputStep: some View {
@@ -118,13 +120,19 @@ struct TMDbBatchAddView: View {
                 .padding(.top, 20)
 
             case .loading:
-                VStack(spacing: 12) {
-                    ProgressView()
-                    Text(loadingMessageResource)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                resultsList
+                    .disabled(true)
+                    .overlay {
+                        VStack(spacing: 12) {
+                            ProgressView()
+                            Text(loadingMessageResource)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(.regularMaterial)
+                        .transition(.opacity)
+                    }
 
             case .loaded:
                 resultsList
@@ -169,7 +177,8 @@ struct TMDbBatchAddView: View {
                 .accessibilityLabel(Text(editTitleResource))
             }
         }
-        .animation(.default, value: tmdbSearchService.batchStatus)
+        .animation(batchResultsAnimation, value: tmdbSearchService.batchStatus)
+        .animation(batchResultsAnimation, value: batchResultsAnimationKey)
     }
 
     @ViewBuilder
@@ -241,7 +250,9 @@ struct TMDbBatchAddView: View {
     private func beginBatchSearch() {
         guard canStartBatchSearch else { return }
         isPromptEditorFocused = false
-        step = .results
+        withAnimation(batchStepAnimation) {
+            step = .results
+        }
         Task {
             await tmdbSearchService.performBatchSearch(input: promptInput, language: language)
         }
@@ -254,7 +265,9 @@ struct TMDbBatchAddView: View {
     }
 
     private func returnToInputStep() {
-        step = .input
+        withAnimation(batchStepAnimation) {
+            step = .input
+        }
     }
 
     private func exitBatchAdd() {
@@ -313,9 +326,11 @@ struct TMDbBatchAddView: View {
                                     if isDuplicate { onDuplicateTapped(series.tmdbID) }
                                 }
                             }
+                            .transition(batchRowTransition)
                         }
                     }
                 }
+                .transition(batchSectionTransition)
             }
 
             if !movieCandidates.isEmpty {
@@ -346,9 +361,11 @@ struct TMDbBatchAddView: View {
                                     if isDuplicate { onDuplicateTapped(movie.tmdbID) }
                                 }
                             }
+                            .transition(batchRowTransition)
                         }
                     }
                 }
+                .transition(batchSectionTransition)
             }
 
             if !noResultPrompts.isEmpty {
@@ -362,13 +379,44 @@ struct TMDbBatchAddView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                         }
+                        .transition(batchRowTransition)
                     }
                 }
+                .transition(batchSectionTransition)
             }
 
             checkoutSection
         }
         .listStyle(.inset)
+        .animation(batchResultsAnimation, value: batchResultsAnimationKey)
+    }
+
+    private var batchResultsAnimationKey: [Int] {
+        tmdbSearchService.batchResults.map(\.id)
+    }
+
+    private var batchStepAnimation: Animation {
+        .spring(response: 0.34, dampingFraction: 0.88)
+    }
+
+    private var batchResultsAnimation: Animation {
+        .spring(response: 0.38, dampingFraction: 0.86)
+    }
+
+    private var batchInputTransition: AnyTransition {
+        .opacity
+    }
+
+    private var batchResultsTransition: AnyTransition {
+        .opacity
+    }
+
+    private var batchSectionTransition: AnyTransition {
+        .opacity
+    }
+
+    private var batchRowTransition: AnyTransition {
+        .opacity
     }
 
     private func resultSection<Content: View>(
