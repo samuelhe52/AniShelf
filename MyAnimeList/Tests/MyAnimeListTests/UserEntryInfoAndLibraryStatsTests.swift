@@ -1,0 +1,132 @@
+//
+//  UserEntryInfoAndLibraryStatsTests.swift
+//  MyAnimeListTests
+//
+//  Created by OpenAI Codex on 2026/5/10.
+//
+
+import Foundation
+import Testing
+import UIKit
+
+@testable import DataProvider
+@testable import MyAnimeList
+
+struct UserEntryInfoAndLibraryStatsTests {
+    @Test func testEntryScoreRoundTripAndChangeDetection() throws {
+        let entry = AnimeEntry.template(id: 101)
+        let originalUserInfo = entry.userInfo
+
+        entry.setScore(4)
+        #expect(entry.score == 4)
+        #expect(entry.userInfo.score == 4)
+        #expect(entry.userInfoHasChanges(comparedTo: originalUserInfo))
+
+        let encoded = try JSONEncoder().encode(entry.userInfo)
+        let decoded = try JSONDecoder().decode(UserEntryInfo.self, from: encoded)
+        #expect(decoded == entry.userInfo)
+
+        let restored = AnimeEntry.template(id: 202)
+        restored.updateUserInfo(from: decoded)
+        #expect(restored.score == 4)
+        #expect(restored.userInfo == decoded)
+
+        entry.setScore(nil)
+        #expect(entry.score == nil)
+        #expect(!entry.userInfoHasChanges(comparedTo: originalUserInfo))
+    }
+
+    @Test func testEntryScoreNormalizationRejectsOutOfRangeValues() throws {
+        let entry = AnimeEntry.template(id: 303)
+        entry.setScore(9)
+
+        #expect(entry.score == nil)
+
+        entry.setScore(1)
+        #expect(entry.score == 1)
+
+        var payload = try #require(
+            JSONSerialization.jsonObject(
+                with: try JSONEncoder().encode(entry.userInfo)
+            ) as? [String: Any]
+        )
+        payload["score"] = 99
+
+        let invalidData = try JSONSerialization.data(withJSONObject: payload)
+        let decoded = try JSONDecoder().decode(UserEntryInfo.self, from: invalidData)
+        #expect(decoded.score == nil)
+    }
+
+//    @Test @MainActor func testUserEntryInfoPasteboardRoundTripPreservesScore() throws {
+//        let pasteboard = UIPasteboard.general
+//        let originalItems = pasteboard.items
+//        defer { pasteboard.items = originalItems }
+//
+//        let entry = AnimeEntry.template(id: 404)
+//        entry.setScore(5)
+//        entry.notes = "Keep this"
+//
+//        entry.userInfo.copyToPasteboard()
+//
+//        let pasted = try #require(UserEntryInfo.fromPasteboard())
+//        #expect(pasted.score == 5)
+//        #expect(pasted.notes == "Keep this")
+//    }
+
+    @Test func testLibraryProfileStatsEmptyLibrary() {
+        let stats = LibraryProfileStats(entries: [])
+
+        #expect(stats.totalCount == 0)
+        #expect(stats.favoriteCount == 0)
+        #expect(stats.runtimeMinutes == 0)
+    }
+
+    @Test func testLibraryProfileStatsMixedLibrary() {
+        let movie = AnimeEntry(
+            name: "Movie",
+            type: .movie,
+            tmdbID: 1,
+            detail: AnimeEntryDetail(language: "en", title: "Movie", runtimeMinutes: 100),
+            dateSaved: referenceDate(year: 2026, month: 1, day: 3)
+        )
+        movie.setWatchStatus(.watched, now: referenceDate(year: 2026, month: 1, day: 3))
+        movie.favorite = true
+        movie.notes = "Worth rewatching"
+        movie.usingCustomPoster = true
+
+        let series = AnimeEntry(
+            name: "Series",
+            type: .series,
+            tmdbID: 2,
+            detail: AnimeEntryDetail(
+                language: "en",
+                title: "Series",
+                runtimeMinutes: 24,
+                episodeCount: 12
+            ),
+            dateSaved: referenceDate(year: 2026, month: 2, day: 8)
+        )
+        series.setWatchStatus(.watching, now: referenceDate(year: 2026, month: 2, day: 8))
+
+        let season = AnimeEntry(
+            name: "Season",
+            type: .season(seasonNumber: 1, parentSeriesID: 2),
+            tmdbID: 3
+        )
+        season.setWatchStatus(.dropped, now: referenceDate(year: 2026, month: 2, day: 8))
+
+        let stats = LibraryProfileStats(entries: [movie, series, season])
+
+        #expect(stats.totalCount == 3)
+        #expect(stats.watchedCount == 1)
+        #expect(stats.watchingCount == 1)
+        #expect(stats.planToWatchCount == 0)
+        #expect(stats.droppedCount == 1)
+        #expect(stats.favoriteCount == 1)
+        #expect(stats.movieCount == 1)
+        #expect(stats.seriesCount == 1)
+        #expect(stats.seasonCount == 1)
+        #expect(stats.entriesWithNotesCount == 1)
+        #expect(stats.runtimeMinutes == 388)
+    }
+}

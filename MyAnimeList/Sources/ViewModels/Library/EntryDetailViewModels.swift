@@ -480,7 +480,7 @@ final class EntryDetailViewModel {
     }
 
     private static func staffPriority(role: String, department: String?) -> Int {
-        return staffRoleComponents(role: role, department: department)
+        staffRoleComponents(role: role, department: department)
             .map(staffBucketIndex(for:))
             .min()
             ?? unprioritizedStaffBucketIndex
@@ -533,7 +533,8 @@ final class EntryDetailViewModel {
     }
 
     private static func staffRoleComponents(role: String, department: String?) -> [String] {
-        var components = role
+        var components =
+            role
             .components(separatedBy: " / ")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
