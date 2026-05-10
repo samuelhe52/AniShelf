@@ -81,14 +81,45 @@ struct TMDbSearchContent: View {
             Section("TV Series") {
                 ForEach(tmdbSearchService.seriesResults.prefix(8), id: \.tmdbID) { series in
                     let isDuplicate = checkDuplicate(series.tmdbID)
-                    SeriesResultItem(series: series)
-                        .indicateAlreadyAdded(
-                            added: isDuplicate,
-                            message: alreadyAddedMessage
-                        )
-                        .onTapGesture {
-                            if isDuplicate { onDuplicateTapped(series.tmdbID) }
+                    SeriesResultItem(
+                        series: series,
+                        selectionState: tmdbSearchService.seriesSelectionState(
+                            for: series,
+                            context: .regular
+                        ),
+                        isSeriesSelected: tmdbSearchService.isRegistered(info: series),
+                        onSeriesSelectionChanged: { isSelected in
+                            tmdbSearchService.setSelection(
+                                isSelected,
+                                for: series,
+                                context: .regular
+                            )
+                        },
+                        onSelectionModeChanged: { mode in
+                            Task {
+                                await tmdbSearchService.setSeriesSelectionMode(
+                                    mode,
+                                    for: series,
+                                    language: language,
+                                    context: .regular
+                                )
+                            }
+                        },
+                        onSeasonSelectionChanged: { season, isSelected in
+                            tmdbSearchService.setSeasonSelection(
+                                isSelected,
+                                for: season,
+                                context: .regular
+                            )
                         }
+                    )
+                    .indicateAlreadyAdded(
+                        added: isDuplicate,
+                        message: alreadyAddedMessage
+                    )
+                    .onTapGesture {
+                        if isDuplicate { onDuplicateTapped(series.tmdbID) }
+                    }
                 }
             }
         }
@@ -99,14 +130,24 @@ struct TMDbSearchContent: View {
             Section("Movies") {
                 ForEach(tmdbSearchService.movieResults.prefix(8), id: \.tmdbID) { movie in
                     let isDuplicate = checkDuplicate(movie.tmdbID)
-                    MovieResultItem(movie: movie)
-                        .indicateAlreadyAdded(
-                            added: isDuplicate,
-                            message: alreadyAddedMessage
-                        )
-                        .onTapGesture {
-                            if isDuplicate { onDuplicateTapped(movie.tmdbID) }
+                    MovieResultItem(
+                        movie: movie,
+                        isSelected: tmdbSearchService.isRegistered(info: movie),
+                        onSelectionChanged: { isSelected in
+                            tmdbSearchService.setSelection(
+                                isSelected,
+                                for: movie,
+                                context: .regular
+                            )
                         }
+                    )
+                    .indicateAlreadyAdded(
+                        added: isDuplicate,
+                        message: alreadyAddedMessage
+                    )
+                    .onTapGesture {
+                        if isDuplicate { onDuplicateTapped(movie.tmdbID) }
+                    }
                 }
             }
         }

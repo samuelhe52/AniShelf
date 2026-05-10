@@ -28,6 +28,29 @@ struct TMDbBatchPromptResult: Identifiable, Equatable, Hashable, Sendable {
     var allInfos: [BasicInfo] { [series, movie].compactMap { $0 } }
 }
 
+enum TMDbSelectionContext: Sendable {
+    case regular
+    case batch
+}
+
+enum TMDbSeriesSelectionMode: CaseIterable, Equatable, Sendable {
+    case series
+    case season
+}
+
+enum TMDbSeasonFetchStatus: Equatable, Sendable {
+    case notStarted
+    case fetching
+    case fetched
+}
+
+struct TMDbSeriesSelectionState: Equatable, Sendable {
+    var selectedMode: TMDbSeriesSelectionMode = .series
+    var seasons: [BasicInfo] = []
+    var seasonFetchStatus: TMDbSeasonFetchStatus = .notStarted
+    var selectedSeasonIDs: Set<Int> = []
+}
+
 struct TMDbSearchClient: Sendable {
     let searchMovies: @Sendable (String, Language) async throws -> [BasicInfo]
     let searchTVSeries: @Sendable (String, Language) async throws -> [BasicInfo]
@@ -170,12 +193,14 @@ class TMDbSearchService {
     private(set) var batchResults: [TMDbBatchPromptResult] = []
     private(set) var batchSearchGeneration = 0
 
+    private var regularResultsToSubmit: OrderedSet<SearchResult> = []
+    private var batchResultsToSubmit: OrderedSet<SearchResult> = []
+    private var regularSeriesSelectionStates: [Int: TMDbSeriesSelectionState] = [:]
+    private var batchSeriesSelectionStates: [Int: TMDbSeriesSelectionState] = [:]
+
     @ObservationIgnored private var latestRequest: SearchRequest?
     @ObservationIgnored private var latestBatchRequestID: UUID?
-    @ObservationIgnored private var currentBatchDisplayedResults = OrderedSet<SearchResult>()
-    private var batchOwnedResults = OrderedSet<SearchResult>()
     @ObservationIgnored private var batchPromptCacheKey: [String] = []
-    private var resultsToSubmit: OrderedSet<SearchResult> = []
     @ObservationIgnored var checkDuplicate: (Int) -> Bool
     @ObservationIgnored var processResults: (OrderedSet<SearchResult>) -> Void
 
@@ -190,59 +215,99 @@ class TMDbSearchService {
     }
 
     /// Submit the final results.
-    func submit() { processResults(OrderedSet(resultsToSubmit.reversed())) }
-    /// The count of all results pending submission.
-    var registeredCount: Int { resultsToSubmit.count }
-    var batchRegisteredCount: Int { batchOwnedResults.count }
+    func submit() { processResults(OrderedSet(regularResultsToSubmit.reversed())) }
+    /// Submit the final batch results.
+    func submitBatch() { processResults(OrderedSet(batchResultsToSubmit.reversed())) }
+    /// The count of all regular-search results pending submission.
+    var registeredCount: Int { regularResultsToSubmit.count }
+    var batchRegisteredCount: Int { batchResultsToSubmit.count }
     var batchRegisteredSeriesCount: Int { batchRegisteredCount(for: .series) }
     var batchRegisteredSeasonCount: Int { batchSelectionSeasonCount() }
     var batchRegisteredMovieCount: Int { batchRegisteredCount(for: .movie) }
+
     func isRegistered(info: BasicInfo) -> Bool {
-        resultsToSubmit.contains(.init(tmdbID: info.tmdbID, type: info.type))
+        containsSelection(.init(tmdbID: info.tmdbID, type: info.type), in: .regular)
     }
-    /// Appends a result to the submission queue.
+
+    func isBatchSelected(info: BasicInfo) -> Bool {
+        containsSelection(.init(tmdbID: info.tmdbID, type: info.type), in: .batch)
+    }
+
+    func seriesSelectionState(
+        for series: BasicInfo,
+        context: TMDbSelectionContext
+    ) -> TMDbSeriesSelectionState {
+        seriesSelectionState(forSeriesID: series.tmdbID, context: context)
+    }
+
+    /// Appends a result to the regular-search submission queue.
     func register(_ result: SearchResult) {
-        _ = insertResult(result)
+        setSelection(true, result: result, context: .regular)
     }
-    /// Creates a result from a `BasicInfo` to the submission queue.
+
+    /// Creates a result from a `BasicInfo` to the regular-search submission queue.
     func register(info: BasicInfo) {
-        _ = insertResult(.init(tmdbID: info.tmdbID, type: info.type))
+        setSelection(true, info: info, context: .regular)
     }
-    /// Removes a result from the submission queue if it is present.
+
+    /// Removes a result from the regular-search submission queue if it is present.
     func unregister(_ result: SearchResult) {
-        let unregistered = resultsToSubmit.remove(result) != nil
-        if unregistered {
-            logger.info("Unregistered result: \(result.tmdbID) of type \(result.type).")
-        } else {
-            logger.info("Result not found for unregistration: \(result.tmdbID) of type \(result.type).")
-        }
+        setSelection(false, result: result, context: .regular)
     }
-    /// Removes a result corresponding to the provided `BasicInfo` from the submission queue if it is present.
+
+    /// Removes a result corresponding to the provided `BasicInfo` from the regular-search submission queue if it is present.
     func unregister(info: BasicInfo) {
-        let unregistered = resultsToSubmit.remove(.init(tmdbID: info.tmdbID, type: info.type)) != nil
-        if unregistered {
-            logger.info("Unregistered result: \(info.tmdbID) of type \(info.type).")
-        } else {
-            logger.info("Result not found for unregistration: \(info.tmdbID) of type \(info.type).")
-        }
+        setSelection(false, info: info, context: .regular)
     }
+
     /// Registers a result that belongs to the active batch session.
     func registerBatchSelection(info: BasicInfo) {
-        let result = SearchResult(tmdbID: info.tmdbID, type: info.type)
-        if insertResult(result) {
-            batchOwnedResults.insert(result, at: 0)
-        }
+        setSelection(true, info: info, context: .batch)
     }
+
     /// Removes a batch-owned result from the submission queue if it is present.
     func unregisterBatchSelection(info: BasicInfo) {
-        let result = SearchResult(tmdbID: info.tmdbID, type: info.type)
-        batchOwnedResults.remove(result)
-        unregister(result)
+        setSelection(false, info: info, context: .batch)
     }
-    /// Removes all series/movie results.
+
+    func setSelection(_ isSelected: Bool, for info: BasicInfo, context: TMDbSelectionContext) {
+        setSelection(isSelected, info: info, context: context)
+    }
+
+    func setSeasonSelection(
+        _ isSelected: Bool,
+        for season: BasicInfo,
+        context: TMDbSelectionContext
+    ) {
+        setSelection(isSelected, info: season, context: context)
+    }
+
+    func setSeriesSelectionMode(
+        _ mode: TMDbSeriesSelectionMode,
+        for series: BasicInfo,
+        language: Language,
+        context: TMDbSelectionContext
+    ) async {
+        var state = seriesSelectionState(forSeriesID: series.tmdbID, context: context)
+        state.selectedMode = mode
+
+        switch mode {
+        case .series:
+            clearSeasonSelections(forSeriesID: series.tmdbID, context: context, state: &state)
+        case .season:
+            setSelection(false, info: series, context: context)
+        }
+
+        setSeriesSelectionState(state, forSeriesID: series.tmdbID, context: context)
+
+        guard mode == .season else { return }
+        await fetchSeasonsIfNeeded(for: series, language: language, context: context)
+    }
+
+    /// Removes all regular-search selections.
     func clearAll() {
-        resultsToSubmit.removeAll()
-        logger.info("Cleared all registered results.")
+        clearSelections(in: .regular)
+        logger.info("Cleared all regular registered results.")
     }
 
     func updateResults(query: String, language: Language) {
@@ -294,7 +359,7 @@ class TMDbSearchService {
 
         let requestID = UUID()
         latestBatchRequestID = requestID
-        clearBatchOwnedSelections()
+        clearSelections(in: .batch)
         batchResults = []
         batchStatus = .loading
         batchSearchGeneration += 1
@@ -316,7 +381,7 @@ class TMDbSearchService {
 
     func clearBatchSession() {
         latestBatchRequestID = UUID()
-        clearBatchOwnedSelections()
+        clearSelections(in: .batch)
         batchResults = []
         batchPromptCacheKey = []
         batchStatus = .idle
@@ -338,9 +403,7 @@ class TMDbSearchService {
     nonisolated static func chunkedBatchPrompts(
         _ prompts: [String],
         chunkSize: Int = 8
-    )
-        -> [[String]]
-    {
+    ) -> [[String]] {
         let normalizedChunkSize = max(1, chunkSize)
         return stride(from: 0, to: prompts.count, by: normalizedChunkSize).map { start in
             let end = min(start + normalizedChunkSize, prompts.count)
@@ -397,11 +460,6 @@ class TMDbSearchService {
 
     private func applyBatchResults(_ promptResults: [TMDbBatchPromptResult], prompts: [String]) {
         batchResults = promptResults
-        currentBatchDisplayedResults = OrderedSet(
-            promptResults
-                .flatMap(\.allInfos)
-                .map { SearchResult(tmdbID: $0.tmdbID, type: $0.type) }
-        )
         batchPromptCacheKey = prompts
 
         for info in promptResults.flatMap(\.allInfos) where !checkDuplicate(info.tmdbID) {
@@ -413,16 +471,8 @@ class TMDbSearchService {
         batchStatus == .loaded && batchPromptCacheKey == prompts
     }
 
-    private func clearBatchOwnedSelections() {
-        for result in batchOwnedResults {
-            unregister(result)
-        }
-        batchOwnedResults.removeAll()
-        currentBatchDisplayedResults.removeAll()
-    }
-
     private func batchRegisteredCount(for type: AnimeType) -> Int {
-        batchOwnedResults.reduce(into: 0) { count, result in
+        batchResultsToSubmit.reduce(into: 0) { count, result in
             if result.type == type {
                 count += 1
             }
@@ -430,7 +480,7 @@ class TMDbSearchService {
     }
 
     private func batchSelectionSeasonCount() -> Int {
-        batchOwnedResults.reduce(into: 0) { count, result in
+        batchResultsToSubmit.reduce(into: 0) { count, result in
             if case .season = result.type {
                 count += 1
             }
@@ -438,17 +488,189 @@ class TMDbSearchService {
     }
 
     @discardableResult
-    private func insertResult(_ result: SearchResult) -> Bool {
-        let (registered, _) = resultsToSubmit.insert(result, at: 0)
-        if registered {
-            logger.info("Registered result: \(result.tmdbID) of type \(result.type).")
-        } else {
-            logger.info("Result already registered: \(result.tmdbID) of type \(result.type).")
+    private func insertResult(_ result: SearchResult, context: TMDbSelectionContext) -> Bool {
+        let inserted: Bool
+        switch context {
+        case .regular:
+            let (didInsert, _) = regularResultsToSubmit.insert(result, at: 0)
+            inserted = didInsert
+        case .batch:
+            let (didInsert, _) = batchResultsToSubmit.insert(result, at: 0)
+            inserted = didInsert
         }
-        return registered
+        if inserted {
+            logger.info(
+                "Registered \(self.selectionContextLabel(context)) result: \(result.tmdbID) of type \(result.type)."
+            )
+        } else {
+            logger.info(
+                "\(self.selectionContextLabel(context)) result already registered: \(result.tmdbID) of type \(result.type)."
+            )
+        }
+        return inserted
     }
 
-    func fetchSeasons(for seriesInfo: BasicInfo, language: Language) async -> [BasicInfo] {
+    @discardableResult
+    private func removeResult(_ result: SearchResult, context: TMDbSelectionContext) -> Bool {
+        let removed: Bool
+        switch context {
+        case .regular:
+            removed = regularResultsToSubmit.remove(result) != nil
+        case .batch:
+            removed = batchResultsToSubmit.remove(result) != nil
+        }
+        if removed {
+            logger.info(
+                "Unregistered \(self.selectionContextLabel(context)) result: \(result.tmdbID) of type \(result.type)."
+            )
+        } else {
+            logger.info(
+                "\(self.selectionContextLabel(context)) result not found for unregistration: \(result.tmdbID) of type \(result.type)."
+            )
+        }
+        return removed
+    }
+
+    private func containsSelection(_ result: SearchResult, in context: TMDbSelectionContext) -> Bool {
+        switch context {
+        case .regular:
+            regularResultsToSubmit.contains(result)
+        case .batch:
+            batchResultsToSubmit.contains(result)
+        }
+    }
+
+    private func setSelection(
+        _ isSelected: Bool,
+        info: BasicInfo,
+        context: TMDbSelectionContext
+    ) {
+        setSelection(
+            isSelected,
+            result: .init(tmdbID: info.tmdbID, type: info.type),
+            context: context
+        )
+    }
+
+    private func setSelection(
+        _ isSelected: Bool,
+        result: SearchResult,
+        context: TMDbSelectionContext
+    ) {
+        if isSelected {
+            _ = insertResult(result, context: context)
+        } else {
+            _ = removeResult(result, context: context)
+        }
+        syncSeriesSelectionState(for: result, context: context, isSelected: isSelected)
+    }
+
+    private func syncSeriesSelectionState(
+        for result: SearchResult,
+        context: TMDbSelectionContext,
+        isSelected: Bool
+    ) {
+        switch result.type {
+        case .series:
+            var state = seriesSelectionState(forSeriesID: result.tmdbID, context: context)
+            state.selectedMode = .series
+            setSeriesSelectionState(state, forSeriesID: result.tmdbID, context: context)
+        case .season(_, let parentSeriesID):
+            var state = seriesSelectionState(forSeriesID: parentSeriesID, context: context)
+            state.selectedMode = .season
+            if isSelected {
+                state.selectedSeasonIDs.insert(result.tmdbID)
+            } else {
+                state.selectedSeasonIDs.remove(result.tmdbID)
+            }
+            setSeriesSelectionState(state, forSeriesID: parentSeriesID, context: context)
+        case .movie:
+            break
+        }
+    }
+
+    private func seriesSelectionState(
+        forSeriesID seriesID: Int,
+        context: TMDbSelectionContext
+    ) -> TMDbSeriesSelectionState {
+        switch context {
+        case .regular:
+            regularSeriesSelectionStates[seriesID] ?? .init()
+        case .batch:
+            batchSeriesSelectionStates[seriesID] ?? .init()
+        }
+    }
+
+    private func setSeriesSelectionState(
+        _ state: TMDbSeriesSelectionState,
+        forSeriesID seriesID: Int,
+        context: TMDbSelectionContext
+    ) {
+        switch context {
+        case .regular:
+            regularSeriesSelectionStates[seriesID] = state
+        case .batch:
+            batchSeriesSelectionStates[seriesID] = state
+        }
+    }
+
+    private func clearSeasonSelections(
+        forSeriesID seriesID: Int,
+        context: TMDbSelectionContext,
+        state: inout TMDbSeriesSelectionState
+    ) {
+        for season in state.seasons where state.selectedSeasonIDs.contains(season.tmdbID) {
+            _ = removeResult(.init(tmdbID: season.tmdbID, type: season.type), context: context)
+        }
+        state.selectedSeasonIDs.removeAll()
+    }
+
+    private func clearSelections(in context: TMDbSelectionContext) {
+        switch context {
+        case .regular:
+            regularResultsToSubmit.removeAll()
+            regularSeriesSelectionStates.removeAll()
+        case .batch:
+            batchResultsToSubmit.removeAll()
+            batchSeriesSelectionStates.removeAll()
+        }
+    }
+
+    private func selectionContextLabel(_ context: TMDbSelectionContext) -> String {
+        switch context {
+        case .regular:
+            "regular"
+        case .batch:
+            "batch"
+        }
+    }
+
+    private func fetchSeasonsIfNeeded(
+        for seriesInfo: BasicInfo,
+        language: Language,
+        context: TMDbSelectionContext
+    ) async {
+        var state = seriesSelectionState(forSeriesID: seriesInfo.tmdbID, context: context)
+        guard state.seasonFetchStatus == .notStarted else { return }
+
+        state.seasonFetchStatus = .fetching
+        setSeriesSelectionState(state, forSeriesID: seriesInfo.tmdbID, context: context)
+
+        let generation = context == .batch ? batchSearchGeneration : nil
+        let seasons = await fetchSeasons(for: seriesInfo, language: language)
+
+        if let generation, generation != batchSearchGeneration {
+            return
+        }
+
+        state = seriesSelectionState(forSeriesID: seriesInfo.tmdbID, context: context)
+        state.seasons = seasons
+        state.seasonFetchStatus = .fetched
+        state.selectedSeasonIDs.formIntersection(Set(seasons.map(\.tmdbID)))
+        setSeriesSelectionState(state, forSeriesID: seriesInfo.tmdbID, context: context)
+    }
+
+    private func fetchSeasons(for seriesInfo: BasicInfo, language: Language) async -> [BasicInfo] {
         do {
             return try await client.fetchSeasons(seriesInfo, language)
         } catch {

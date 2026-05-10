@@ -9,11 +9,9 @@ import Kingfisher
 import SwiftUI
 
 struct MovieResultItem: View {
-    @Environment(TMDbSearchService.self) var service
     let movie: BasicInfo
-    var initiallySelected: Bool = false
-    var registerSelection: ((BasicInfo) -> Void)? = nil
-    var unregisterSelection: ((BasicInfo) -> Void)? = nil
+    let isSelected: Bool
+    let onSelectionChanged: (Bool) -> Void
 
     var body: some View {
         HStack {
@@ -27,15 +25,13 @@ struct MovieResultItem: View {
                         .bold()
                         .lineLimit(1)
                     Spacer()
-                    ActionToggle(
-                        isOn: initiallySelected,
-                        on: { register(movie) },
-                        off: { unregister(movie) },
-                        label: { Image(systemName: "checkmark") }
-                    )
+                    Toggle(isOn: selectionBinding) {
+                        Image(systemName: "checkmark")
+                    }
                     .toggleStyle(.button)
                     .buttonStyle(.bordered)
                     .buttonBorderShape(.circle)
+                    .sensoryFeedback(.selection, trigger: isSelected)
                 }
                 if let date = movie.onAirDate {
                     Text(date.formatted(date: .abbreviated, time: .omitted))
@@ -50,19 +46,10 @@ struct MovieResultItem: View {
         }
     }
 
-    private func register(_ info: BasicInfo) {
-        if let registerSelection {
-            registerSelection(info)
-        } else {
-            service.register(info: info)
-        }
-    }
-
-    private func unregister(_ info: BasicInfo) {
-        if let unregisterSelection {
-            unregisterSelection(info)
-        } else {
-            service.unregister(info: info)
-        }
+    private var selectionBinding: Binding<Bool> {
+        Binding(
+            get: { isSelected },
+            set: { onSelectionChanged($0) }
+        )
     }
 }

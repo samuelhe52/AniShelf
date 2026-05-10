@@ -81,27 +81,32 @@ struct TMDbSearchServiceBatchTests {
     }
 
     @MainActor
-    @Test func testBatchSearchAutoRegistersNonDuplicateResults() async {
+    @Test func testBatchSearchAutoSelectsNonDuplicateResultsInBatchStateOnly() async {
+        let movie = makeInfo("Frieren Movie", tmdbID: 101, type: .movie)
+        let series = makeInfo("Frieren Series", tmdbID: 201, type: .series)
         let service = TMDbSearchService(
             client: makeClient(
                 moviesByPrompt: [
-                    "Frieren": [makeInfo("Frieren Movie", tmdbID: 101, type: .movie)]
+                    "Frieren": [movie]
                 ],
                 seriesByPrompt: [
-                    "Frieren": [makeInfo("Frieren Series", tmdbID: 201, type: .series)]
+                    "Frieren": [series]
                 ]
             )
         )
 
         await service.performBatchSearch(input: "Frieren", language: .english)
 
-        #expect(service.registeredCount == 2)
-        #expect(service.isRegistered(info: makeInfo("Frieren Movie", tmdbID: 101, type: .movie)))
-        #expect(service.isRegistered(info: makeInfo("Frieren Series", tmdbID: 201, type: .series)))
+        #expect(service.registeredCount == 0)
+        #expect(service.batchRegisteredCount == 2)
+        #expect(service.isBatchSelected(info: movie))
+        #expect(service.isBatchSelected(info: series))
+        #expect(!service.isRegistered(info: movie))
+        #expect(!service.isRegistered(info: series))
     }
 
     @MainActor
-    @Test func testBatchSearchLeavesDuplicatesVisibleButUnregistered() async {
+    @Test func testBatchSearchLeavesDuplicatesVisibleButUnselectedInBatchState() async {
         let duplicateMovie = makeInfo("Ghost in the Shell", tmdbID: 301, type: .movie)
         let service = TMDbSearchService(
             client: makeClient(
@@ -116,14 +121,116 @@ struct TMDbSearchServiceBatchTests {
 
         #expect(service.batchResults.count == 1)
         #expect(service.batchResults[0].movie?.tmdbID == 301)
-        #expect(service.registeredCount == 0)
-        #expect(!service.isRegistered(info: duplicateMovie))
+        #expect(service.batchRegisteredCount == 0)
+        #expect(!service.isBatchSelected(info: duplicateMovie))
+    }
+
+    @MainActor
+    @Test func testBatchSessionStaysIndependentFromRegularSelectionAndSubmission() async {
+        let regularMovie = makeInfo("Regular Movie", tmdbID: 401, type: .movie)
+        let batchSeries = makeInfo("Batch Series", tmdbID: 402, type: .series)
+        var submittedResults: [SearchResult] = []
+        let service = TMDbSearchService(
+            client: makeClient(
+                seriesByPrompt: [
+                    "Shared": [batchSeries]
+                ]
+            ),
+            processResults: { submittedResults = Array($0) }
+        )
+
+        service.register(info: regularMovie)
+        await service.performBatchSearch(input: "Shared", language: .english)
+        service.submitBatch()
+
+        #expect(service.registeredCount == 1)
+        #expect(service.batchRegisteredCount == 1)
+        #expect(service.isRegistered(info: regularMovie))
+        #expect(service.isBatchSelected(info: batchSeries))
+        #expect(submittedResults == [SearchResult(tmdbID: 402, type: .series)])
+    }
+
+    @MainActor
+    @Test func testChangingBatchSeriesModeDoesNotClearMatchingRegularSelection() async {
+        let sharedSeries = makeInfo("Shared Series", tmdbID: 501, type: .series)
+        let firstSeason = makeInfo(
+            "Season 1",
+            tmdbID: 511,
+            type: .season(seasonNumber: 1, parentSeriesID: 501)
+        )
+        let service = TMDbSearchService(
+            client: makeClient(
+                seriesByPrompt: [
+                    "Shared": [sharedSeries]
+                ],
+                seasonsBySeriesID: [
+                    501: [firstSeason]
+                ]
+            )
+        )
+
+        service.register(info: sharedSeries)
+        await service.performBatchSearch(input: "Shared", language: .english)
+        await service.setSeriesSelectionMode(
+            .season,
+            for: sharedSeries,
+            language: .english,
+            context: .batch
+        )
+
+        #expect(service.registeredCount == 1)
+        #expect(service.batchRegisteredSeriesCount == 0)
+        #expect(service.isRegistered(info: sharedSeries))
+        #expect(!service.isBatchSelected(info: sharedSeries))
+    }
+
+    @MainActor
+    @Test func testBatchSeasonSelectionStatePersistsInServiceModel() async {
+        let sharedSeries = makeInfo("Frieren", tmdbID: 601, type: .series)
+        let firstSeason = makeInfo(
+            "Season 1",
+            tmdbID: 611,
+            type: .season(seasonNumber: 1, parentSeriesID: 601)
+        )
+        let secondSeason = makeInfo(
+            "Season 2",
+            tmdbID: 612,
+            type: .season(seasonNumber: 2, parentSeriesID: 601)
+        )
+        let service = TMDbSearchService(
+            client: makeClient(
+                seriesByPrompt: [
+                    "Frieren": [sharedSeries]
+                ],
+                seasonsBySeriesID: [
+                    601: [firstSeason, secondSeason]
+                ]
+            )
+        )
+
+        await service.performBatchSearch(input: "Frieren", language: .english)
+        await service.setSeriesSelectionMode(
+            .season,
+            for: sharedSeries,
+            language: .english,
+            context: .batch
+        )
+        service.setSeasonSelection(true, for: firstSeason, context: .batch)
+
+        let state = service.seriesSelectionState(for: sharedSeries, context: .batch)
+
+        #expect(state.selectedMode == .season)
+        #expect(state.seasonFetchStatus == .fetched)
+        #expect(state.seasons.map(\.tmdbID) == [611, 612])
+        #expect(state.selectedSeasonIDs == Set([611]))
+        #expect(service.batchRegisteredSeriesCount == 0)
+        #expect(service.batchRegisteredSeasonCount == 1)
     }
 
     @MainActor
     @Test func testClearingBatchSessionUnregistersOnlyBatchOwnedSelections() async {
-        let sharedMovie = makeInfo("Shared Movie", tmdbID: 401, type: .movie)
-        let batchSeries = makeInfo("Batch Series", tmdbID: 402, type: .series)
+        let sharedMovie = makeInfo("Shared Movie", tmdbID: 701, type: .movie)
+        let batchSeries = makeInfo("Batch Series", tmdbID: 702, type: .series)
         let service = TMDbSearchService(
             client: makeClient(
                 moviesByPrompt: [
@@ -139,13 +246,16 @@ struct TMDbSearchServiceBatchTests {
 
         await service.performBatchSearch(input: "Shared", language: .english)
 
-        #expect(service.registeredCount == 2)
+        #expect(service.registeredCount == 1)
+        #expect(service.batchRegisteredCount == 2)
 
         service.clearBatchSession()
 
         #expect(service.registeredCount == 1)
+        #expect(service.batchRegisteredCount == 0)
         #expect(service.isRegistered(info: sharedMovie))
-        #expect(!service.isRegistered(info: batchSeries))
+        #expect(!service.isBatchSelected(info: sharedMovie))
+        #expect(!service.isBatchSelected(info: batchSeries))
         #expect(service.batchResults.isEmpty)
         #expect(service.batchStatus == .idle)
     }
@@ -156,8 +266,8 @@ struct TMDbSearchServiceBatchTests {
         let service = TMDbSearchService(
             client: makeClient(
                 moviesByPrompt: [
-                    "Frieren": [makeInfo("Frieren Movie", tmdbID: 501, type: .movie)],
-                    "Spirited Away": [makeInfo("Spirited Away", tmdbID: 502, type: .movie)]
+                    "Frieren": [makeInfo("Frieren Movie", tmdbID: 801, type: .movie)],
+                    "Spirited Away": [makeInfo("Spirited Away", tmdbID: 802, type: .movie)]
                 ],
                 recorder: recorder
             )
@@ -194,6 +304,7 @@ private actor SearchCallRecorder {
 fileprivate func makeClient(
     moviesByPrompt: [String: [BasicInfo]] = [:],
     seriesByPrompt: [String: [BasicInfo]] = [:],
+    seasonsBySeriesID: [Int: [BasicInfo]] = [:],
     movieDelays: [String: UInt64] = [:],
     seriesDelays: [String: UInt64] = [:],
     recorder: SearchCallRecorder? = nil
@@ -217,7 +328,9 @@ fileprivate func makeClient(
             }
             return seriesByPrompt[query, default: []]
         },
-        fetchSeasons: { _, _ in [] }
+        fetchSeasons: { seriesInfo, _ in
+            seasonsBySeriesID[seriesInfo.tmdbID, default: []]
+        }
     )
 }
 

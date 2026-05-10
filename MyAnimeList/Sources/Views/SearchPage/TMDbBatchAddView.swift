@@ -192,7 +192,7 @@ struct TMDbBatchAddView: View {
             case .loaded:
                 if tmdbSearchService.batchRegisteredCount != 0 {
                     Button {
-                        tmdbSearchService.submit()
+                        tmdbSearchService.submitBatch()
                         exitBatchAdd()
                     } label: {
                         Text(addToLibraryTitleResource)
@@ -272,9 +272,35 @@ struct TMDbBatchAddView: View {
                                 let isDuplicate = checkDuplicate(series.tmdbID)
                                 SeriesResultItem(
                                     series: series,
-                                    initiallySelected: tmdbSearchService.isRegistered(info: series),
-                                    registerSelection: tmdbSearchService.registerBatchSelection,
-                                    unregisterSelection: tmdbSearchService.unregisterBatchSelection
+                                    selectionState: tmdbSearchService.seriesSelectionState(
+                                        for: series,
+                                        context: .batch
+                                    ),
+                                    isSeriesSelected: tmdbSearchService.isBatchSelected(info: series),
+                                    onSeriesSelectionChanged: { isSelected in
+                                        tmdbSearchService.setSelection(
+                                            isSelected,
+                                            for: series,
+                                            context: .batch
+                                        )
+                                    },
+                                    onSelectionModeChanged: { mode in
+                                        Task {
+                                            await tmdbSearchService.setSeriesSelectionMode(
+                                                mode,
+                                                for: series,
+                                                language: language,
+                                                context: .batch
+                                            )
+                                        }
+                                    },
+                                    onSeasonSelectionChanged: { season, isSelected in
+                                        tmdbSearchService.setSeasonSelection(
+                                            isSelected,
+                                            for: season,
+                                            context: .batch
+                                        )
+                                    }
                                 )
                                 .id(
                                     "series-\(tmdbSearchService.batchSearchGeneration)-\(promptResult.id)-\(series.tmdbID)"
@@ -300,9 +326,14 @@ struct TMDbBatchAddView: View {
                                 let isDuplicate = checkDuplicate(movie.tmdbID)
                                 MovieResultItem(
                                     movie: movie,
-                                    initiallySelected: tmdbSearchService.isRegistered(info: movie),
-                                    registerSelection: tmdbSearchService.registerBatchSelection,
-                                    unregisterSelection: tmdbSearchService.unregisterBatchSelection
+                                    isSelected: tmdbSearchService.isBatchSelected(info: movie),
+                                    onSelectionChanged: { isSelected in
+                                        tmdbSearchService.setSelection(
+                                            isSelected,
+                                            for: movie,
+                                            context: .batch
+                                        )
+                                    }
                                 )
                                 .id(
                                     "movie-\(tmdbSearchService.batchSearchGeneration)-\(promptResult.id)-\(movie.tmdbID)"

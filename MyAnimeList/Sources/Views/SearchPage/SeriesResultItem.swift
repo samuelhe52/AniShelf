@@ -5,23 +5,16 @@
 //  Created by Samuel He on 2025/5/11.
 //
 
-import DataProvider
 import Kingfisher
 import SwiftUI
-import os
-
-fileprivate let logger = Logger(subsystem: .bundleIdentifier, category: "SeriesResultItem")
 
 struct SeriesResultItem: View {
-    @Environment(TMDbSearchService.self) var service
-    @AppStorage(.searchTMDbLanguage) private var language: Language = .english
     let series: BasicInfo
-    var initiallySelected: Bool = false
-    var registerSelection: ((BasicInfo) -> Void)? = nil
-    var unregisterSelection: ((BasicInfo) -> Void)? = nil
-    @State private var resultOption: ResultOption = .series
-    @State private var seasons: [BasicInfo] = []
-    @State private var seasonFetchStatus: SeasonFetchStatus = .notStarted
+    let selectionState: TMDbSeriesSelectionState
+    let isSeriesSelected: Bool
+    let onSeriesSelectionChanged: (Bool) -> Void
+    let onSelectionModeChanged: (TMDbSeriesSelectionMode) -> Void
+    let onSeasonSelectionChanged: (BasicInfo, Bool) -> Void
 
     var body: some View {
         HStack {
@@ -32,22 +25,6 @@ struct SeriesResultItem: View {
             VStack(alignment: .leading) {
                 infosAndSelection
                 resultOptionsView
-            }
-        }
-        .onChange(of: resultOption) {
-            unregister(series)
-            for season in seasons {
-                unregister(season)
-            }
-            if resultOption == .season && seasons.isEmpty {
-                guard seasonFetchStatus == .notStarted else { return }
-                logger.info("Fetching seasons for entry: \(series.tmdbID)")
-                Task {
-                    seasonFetchStatus = .fetching
-                    seasons = await service.fetchSeasons(for: series, language: language)
-                    logger.info("Fetched \(seasons.count) seasons for entry: \(series.tmdbID)")
-                    seasonFetchStatus = .fetched
-                }
             }
         }
     }
@@ -76,13 +53,9 @@ struct SeriesResultItem: View {
 
     @ViewBuilder
     private var resultOptionsView: some View {
-        Picker(selection: $resultOption) {
-            ForEach(ResultOption.allCases, id: \.hashValue) { option in
-                switch option {
-                case .series: Text("Series").tag(option)
-                case .season: Text("Season").tag(option)
-                }
-            }
+        Picker(selection: selectionModeBinding) {
+            Text(seriesTitleResource).tag(TMDbSeriesSelectionMode.series)
+            Text(seasonTitleResource).tag(TMDbSeriesSelectionMode.season)
         } label: {
             EmptyView()
         }
@@ -91,60 +64,57 @@ struct SeriesResultItem: View {
 
     @ViewBuilder
     private var selectionIndicator: some View {
-        if resultOption == .series {
-            ActionToggle(
-                isOn: initiallySelected,
-                on: { register(series) },
-                off: { unregister(series) },
-                label: { Image(systemName: "checkmark") }
-            )
+        switch selectionState.selectedMode {
+        case .series:
+            Toggle(isOn: seriesSelectionBinding) {
+                Image(systemName: "checkmark")
+            }
             .toggleStyle(.button)
             .buttonStyle(.bordered)
             .buttonBorderShape(.circle)
             .frame(height: 0)
-        } else {
+            .sensoryFeedback(.selection, trigger: isSeriesSelected)
+        case .season:
             SeasonSelector(
-                seasons: seasons, register: register, unregister: unregister
+                seasons: selectionState.seasons,
+                selectedSeasonIDs: selectionState.selectedSeasonIDs,
+                onSeasonSelectionChanged: onSeasonSelectionChanged
             )
             .padding(.trailing, 7)
-            .disabled(seasons.isEmpty)
-            .animation(.default, value: seasons.isEmpty)
+            .disabled(
+                selectionState.seasonFetchStatus == .fetching || selectionState.seasons.isEmpty
+            )
+            .animation(.default, value: selectionState.seasons.isEmpty)
         }
     }
 
-    enum ResultOption: CaseIterable, Equatable {
-        case series
-        case season
+    private var selectionModeBinding: Binding<TMDbSeriesSelectionMode> {
+        Binding(
+            get: { selectionState.selectedMode },
+            set: { onSelectionModeChanged($0) }
+        )
     }
 
-    enum SeasonFetchStatus {
-        case notStarted
-        case fetching
-        case fetched
+    private var seriesSelectionBinding: Binding<Bool> {
+        Binding(
+            get: { isSeriesSelected },
+            set: { onSeriesSelectionChanged($0) }
+        )
     }
 
-    private func register(_ info: BasicInfo) {
-        if let registerSelection {
-            registerSelection(info)
-        } else {
-            service.register(info: info)
-        }
+    private var seriesTitleResource: LocalizedStringResource {
+        "Series"
     }
 
-    private func unregister(_ info: BasicInfo) {
-        if let unregisterSelection {
-            unregisterSelection(info)
-        } else {
-            service.unregister(info: info)
-        }
+    private var seasonTitleResource: LocalizedStringResource {
+        "Season"
     }
 }
 
 fileprivate struct SeasonSelector: View {
     let seasons: [BasicInfo]
-    var register: (BasicInfo) -> Void
-    var unregister: (BasicInfo) -> Void
-    @State private var selectedSeasonIDs: Set<Int> = []
+    let selectedSeasonIDs: Set<Int>
+    let onSeasonSelectionChanged: (BasicInfo, Bool) -> Void
 
     var body: some View {
         Menu {
@@ -152,20 +122,14 @@ fileprivate struct SeasonSelector: View {
                 let selected = selectedSeasonIDs.contains(season.tmdbID)
                 if let seasonNumber = season.type.seasonNumber {
                     Button {
-                        if !selected {
-                            register(season)
-                            selectedSeasonIDs.insert(season.tmdbID)
-                        } else {
-                            unregister(season)
-                            selectedSeasonIDs.remove(season.tmdbID)
-                        }
+                        onSeasonSelectionChanged(season, !selected)
                     } label: {
                         let title: LocalizedStringKey =
                             seasonNumber != 0 ? "Season \(seasonNumber)" : "Specials"
-                        if !selected {
-                            Text(title)
-                        } else {
+                        if selected {
                             Label(title, systemImage: "checkmark")
+                        } else {
+                            Text(title)
                         }
                     }
                 }
