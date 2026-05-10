@@ -26,7 +26,7 @@ A beautiful, native iOS app for tracking and managing your anime library.
 - **📚 Library Management** - Keep track of all your anime in one place
 - **🔍 Smart Search** - Find anime using The Movie Database (TMDb) with multi-language support
 - **🎨 Beautiful UI** - Native SwiftUI interface, polished and consistent design language
-- **📊 Track Progress** - Monitor your viewing progress and status
+- **📊 Track Progress** - Monitor your viewing progress and status; Record scores for animes
 - **👤 Library Profile** - Overview your library with a dedicated profile page
 - **💾 Backup & Restore** - Export and import your library data
 - **🌍 Multi-language** - Support for anime titles and descriptions in multiple languages

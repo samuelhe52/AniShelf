@@ -98,6 +98,34 @@ enum WhatsNewRegistry {
                     kind: .openURL(projectURL)
                 )
             ]
+        ),
+        "1.70": .init(
+            version: "1.70",
+            summary:
+                "This version includes multiple bug fixes and improvements. It is recommended that existing users perform a metadata refresh by tapping the action button below, as this version includes important optimizations for metadata retrieval.",
+            highlights: [
+                "Added a rating feature: you can now rate anime in your library from 1 to 5.",
+                "Added TV anime / movie filtering.",
+                "Added multi-format export: you can now export your library in formats such as txt, csv, and xlsx.",
+                "Added grouped display: entries can now be grouped and sorted by watch status, rating, or favorite status.",
+                "Added bulk-add support: you can trigger it from the top-right button on the search screen.",
+                "Fixed an issue with Staff display on the details page.",
+                "Fixed an issue where some entries could not be updated after changing metadata language and refreshing metadata."
+            ],
+            primaryAction: .init(
+                id: "refresh-metadata",
+                title: "Refresh Metadata",
+                systemImage: "arrow.clockwise",
+                kind: .refreshMetadata
+            ),
+            secondaryActions: [
+                .init(
+                    id: "project-github",
+                    title: "AniShelf on GitHub",
+                    systemImage: "arrow.up.right.square",
+                    kind: .openURL(projectURL)
+                )
+            ]
         )
     ]
 

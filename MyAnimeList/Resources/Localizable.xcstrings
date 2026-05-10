@@ -169,7 +169,20 @@
       }
     },
     "%lld/5" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld/5"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld/5"
+          }
+        }
+      }
     },
     "•" : {
       "localizations" : {
@@ -267,6 +280,22 @@
         }
       }
     },
+    "Added a rating feature: you can now rate anime in your library from 1 to 5." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい評価機能を追加しました。ライブラリ内のアニメを1〜5点で評価できるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增打分功能，现可对资料库中的动画进行 1–5 分评分"
+          }
+        }
+      }
+    },
     "Added a setting option to open the details page with a single click." : {
       "localizations" : {
         "ja" : {
@@ -279,6 +308,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "新增了单击打开详情页的设置选项。"
+          }
+        }
+      }
+    },
+    "Added bulk-add support: you can trigger it from the top-right button on the search screen." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい一括追加機能を追加しました。検索画面右上のボタンから利用できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增批量添加条目功能，可在搜索界面右上角点击按钮触发"
+          }
+        }
+      }
+    },
+    "Added grouped display: entries can now be grouped and sorted by watch status, rating, or favorite status." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいグループ表示機能を追加しました。視聴状態、評価、お気に入り状態で項目をグループ化して並べ替えられるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增分组展示功能，支持按观看状态、评分及收藏状态对条目进行分组排序"
+          }
+        }
+      }
+    },
+    "Added multi-format export: you can now export your library in formats such as txt, csv, and xlsx." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい複数形式のエクスポート機能を追加しました。ライブラリを TXT、CSV、XLSX などの形式でエクスポートできるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增多格式导出功能，支持将资料库导出为 TXT、CSV、XLSX 等多种格式"
+          }
+        }
+      }
+    },
+    "Added TV anime / movie filtering." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい TV アニメと映画のフィルター機能を追加しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增 TV 动画与电影筛选功能"
           }
         }
       }
@@ -1426,7 +1519,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "当该条目标记为已中断时，日期会被锁定。"
+            "value" : "当该动画标记为已中断时，日期会被锁定。"
           }
         }
       }
@@ -1659,6 +1752,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "每行输入一个标题。每个标题只会显示 TMDb 排名最高的 TV 动画结果和电影结果，因此标题越准确越好。"
+          }
+        }
+      }
+    },
+    "Entry Type" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "項目タイプ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "动画类型"
           }
         }
       }
@@ -2107,6 +2216,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "修复了转换为动画系列时可能崩溃的问题。"
+          }
+        }
+      }
+    },
+    "Fixed an issue where some entries could not be updated after changing metadata language and refreshing metadata." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メタデータ言語を変更した後、一部の項目でメタデータ更新が正常に行えない問題を修正しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修复更改元数据语言后，部分条目在更新元数据时无法正常更新的问题"
+          }
+        }
+      }
+    },
+    "Fixed an issue with Staff display on the details page." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詳細ページで Staff 表示が正常に表示されない問題を修正しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修复详情页中 Staff 显示异常的问题"
           }
         }
       }
@@ -3605,7 +3746,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "删除所有已保存的资料库条目。"
+            "value" : "删除所有已保存的动画。"
           }
         }
       }
