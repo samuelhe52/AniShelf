@@ -127,14 +127,15 @@ struct TMDbSearchClient: Sendable {
     }
 }
 
-private func fetchPosterURLMap(
+fileprivate func fetchPosterURLMap(
     fetcher: InfoFetcher,
     from items: [(tmdbID: Int, path: URL?)]
 ) async throws -> [Int: URL?] {
     let posterURLs = try await withThrowingTaskGroup(of: (tmdbID: Int, url: URL?).self) { group in
         for item in items {
             group.addTask {
-                let url = try await fetcher
+                let url =
+                    try await fetcher
                     .tmdbClient
                     .imagesConfiguration
                     .posterURL(for: item.path, idealWidth: 200)
@@ -172,6 +173,8 @@ class TMDbSearchService {
     @ObservationIgnored private var latestRequest: SearchRequest?
     @ObservationIgnored private var latestBatchRequestID: UUID?
     @ObservationIgnored private var currentBatchDisplayedResults = OrderedSet<SearchResult>()
+    @ObservationIgnored private var batchOwnedResults = OrderedSet<SearchResult>()
+    @ObservationIgnored private var batchPromptCacheKey: [String] = []
     private var resultsToSubmit: OrderedSet<SearchResult> = []
     @ObservationIgnored var checkDuplicate: (Int) -> Bool
     @ObservationIgnored var processResults: (OrderedSet<SearchResult>) -> Void
@@ -202,21 +205,11 @@ class TMDbSearchService {
     }
     /// Appends a result to the submission queue.
     func register(_ result: SearchResult) {
-        let (registered, _) = resultsToSubmit.insert(result, at: 0)
-        if registered {
-            logger.info("Registered result: \(result.tmdbID) of type \(result.type).")
-        } else {
-            logger.info("Result already registered: \(result.tmdbID) of type \(result.type).")
-        }
+        _ = insertResult(result)
     }
     /// Creates a result from a `BasicInfo` to the submission queue.
     func register(info: BasicInfo) {
-        let (registered, _) = resultsToSubmit.insert(.init(tmdbID: info.tmdbID, type: info.type), at: 0)
-        if registered {
-            logger.info("Registered result: \(info.tmdbID) of type \(info.type).")
-        } else {
-            logger.info("Result already registered: \(info.tmdbID) of type \(info.type).")
-        }
+        _ = insertResult(.init(tmdbID: info.tmdbID, type: info.type))
     }
     /// Removes a result from the submission queue if it is present.
     func unregister(_ result: SearchResult) {
@@ -235,6 +228,19 @@ class TMDbSearchService {
         } else {
             logger.info("Result not found for unregistration: \(info.tmdbID) of type \(info.type).")
         }
+    }
+    /// Registers a result that belongs to the active batch session.
+    func registerBatchSelection(info: BasicInfo) {
+        let result = SearchResult(tmdbID: info.tmdbID, type: info.type)
+        if insertResult(result) {
+            batchOwnedResults.insert(result, at: 0)
+        }
+    }
+    /// Removes a batch-owned result from the submission queue if it is present.
+    func unregisterBatchSelection(info: BasicInfo) {
+        let result = SearchResult(tmdbID: info.tmdbID, type: info.type)
+        batchOwnedResults.remove(result)
+        unregister(result)
     }
     /// Removes all series/movie results.
     func clearAll() {
@@ -285,9 +291,13 @@ class TMDbSearchService {
             return
         }
 
+        if canReuseBatchResults(for: prompts) {
+            return
+        }
+
         let requestID = UUID()
         latestBatchRequestID = requestID
-        resetBatchSelections()
+        clearBatchOwnedSelections()
         batchResults = []
         batchStatus = .loading
         batchSearchGeneration += 1
@@ -295,7 +305,7 @@ class TMDbSearchService {
         do {
             let promptResults = try await fetchBatchResults(prompts: prompts, language: language)
             guard latestBatchRequestID == requestID else { return }
-            applyBatchResults(promptResults)
+            applyBatchResults(promptResults, prompts: prompts)
             batchStatus = .loaded
             batchSearchGeneration += 1
         } catch {
@@ -309,10 +319,16 @@ class TMDbSearchService {
 
     func clearBatchSession() {
         latestBatchRequestID = UUID()
-        resetBatchSelections()
+        clearBatchOwnedSelections()
         batchResults = []
+        batchPromptCacheKey = []
         batchStatus = .idle
         batchSearchGeneration += 1
+    }
+
+    func canReuseBatchResults(for input: String) -> Bool {
+        let prompts = Self.batchPrompts(from: input)
+        return canReuseBatchResults(for: prompts)
     }
 
     nonisolated static func batchPrompts(from input: String) -> [String] {
@@ -339,7 +355,7 @@ class TMDbSearchService {
         -> [TMDbBatchPromptResult]
     {
         let chunks = Self.chunkedBatchPrompts(prompts)
-        var orderedResults = Array<TMDbBatchPromptResult?>(repeating: nil, count: prompts.count)
+        var orderedResults = [TMDbBatchPromptResult?](repeating: nil, count: prompts.count)
 
         for (chunkIndex, chunk) in chunks.enumerated() {
             let baseIndex = chunkIndex * Self.batchPromptChunkSize
@@ -382,24 +398,41 @@ class TMDbSearchService {
         return orderedResults.compactMap { $0 }
     }
 
-    private func applyBatchResults(_ promptResults: [TMDbBatchPromptResult]) {
+    private func applyBatchResults(_ promptResults: [TMDbBatchPromptResult], prompts: [String]) {
         batchResults = promptResults
         currentBatchDisplayedResults = OrderedSet(
             promptResults
                 .flatMap(\.allInfos)
                 .map { SearchResult(tmdbID: $0.tmdbID, type: $0.type) }
         )
+        batchPromptCacheKey = prompts
 
         for info in promptResults.flatMap(\.allInfos) where !checkDuplicate(info.tmdbID) {
-            register(info: info)
+            registerBatchSelection(info: info)
         }
     }
 
-    private func resetBatchSelections() {
-        for result in currentBatchDisplayedResults {
+    private func canReuseBatchResults(for prompts: [String]) -> Bool {
+        batchStatus == .loaded && batchPromptCacheKey == prompts
+    }
+
+    private func clearBatchOwnedSelections() {
+        for result in batchOwnedResults {
             unregister(result)
         }
+        batchOwnedResults.removeAll()
         currentBatchDisplayedResults.removeAll()
+    }
+
+    @discardableResult
+    private func insertResult(_ result: SearchResult) -> Bool {
+        let (registered, _) = resultsToSubmit.insert(result, at: 0)
+        if registered {
+            logger.info("Registered result: \(result.tmdbID) of type \(result.type).")
+        } else {
+            logger.info("Result already registered: \(result.tmdbID) of type \(result.type).")
+        }
+        return registered
     }
 
     func fetchSeasons(for seriesInfo: BasicInfo, language: Language) async -> [BasicInfo] {

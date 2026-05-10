@@ -381,6 +381,246 @@
         }
       }
     },
+    "Batch Add" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一括追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批量添加"
+          }
+        }
+      }
+    },
+    "Batch Results" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一括検索結果"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批量搜索结果"
+          }
+        }
+      }
+    },
+    "Batch Search" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一括検索"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批量搜索"
+          }
+        }
+      }
+    },
+    "Batch search failed" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一括検索に失敗しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批量搜索失败"
+          }
+        }
+      }
+    },
+    "Check your connection, then go back or retry the batch search." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続を確認してから、戻るか一括検索をやり直してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请检查网络连接，然后返回或重试批量搜索。"
+          }
+        }
+      }
+    },
+    "Enter one title per line. Only the top TMDb TV series result and top movie result are shown, so precise titles work best." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1行に1タイトルずつ入力してください。各タイトルでは TMDb のTVシリーズと映画の最上位結果のみを表示するため、できるだけ正確なタイトルを入力してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每行输入一个标题。每个标题只会显示 TMDb 排名最高的 TV 动画结果和电影结果，因此标题越准确越好。"
+          }
+        }
+      }
+    },
+    "Frieren\nA Silent Voice\nKiki's Delivery Service" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frieren\nA Silent Voice\nKiki's Delivery Service"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frieren\nA Silent Voice\nKiki's Delivery Service"
+          }
+        }
+      }
+    },
+    "Movie Candidates" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "映画候補"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "电影候选"
+          }
+        }
+      }
+    },
+    "No TMDb result found for this prompt." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この入力に一致する TMDb 結果はありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个输入没有找到对应的 TMDb 结果。"
+          }
+        }
+      }
+    },
+    "Paste a list of titles, then search TMDb." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タイトル一覧を貼り付けて、TMDb を検索してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "粘贴标题列表，然后搜索 TMDb。"
+          }
+        }
+      }
+    },
+    "Ready for batch search" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一括検索の準備完了"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可开始批量搜索"
+          }
+        }
+      }
+    },
+    "Retry Search" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再検索"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重试搜索"
+          }
+        }
+      }
+    },
+    "Search Titles" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タイトルを検索"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索标题"
+          }
+        }
+      }
+    },
+    "Searching TMDb..." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb を検索中..."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在搜索 TMDb..."
+          }
+        }
+      }
+    },
+    "TV Series Candidates" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TVシリーズ候補"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TV 动画候选"
+          }
+        }
+      }
+    },
     "Anime Info Language" : {
       "localizations" : {
         "ja" : {

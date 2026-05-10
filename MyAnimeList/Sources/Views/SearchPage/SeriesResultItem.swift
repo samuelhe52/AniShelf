@@ -17,6 +17,8 @@ struct SeriesResultItem: View {
     @AppStorage(.searchTMDbLanguage) private var language: Language = .english
     let series: BasicInfo
     var initiallySelected: Bool = false
+    var registerSelection: ((BasicInfo) -> Void)? = nil
+    var unregisterSelection: ((BasicInfo) -> Void)? = nil
     @State private var resultOption: ResultOption = .series
     @State private var seasons: [BasicInfo] = []
     @State private var seasonFetchStatus: SeasonFetchStatus = .notStarted
@@ -33,9 +35,9 @@ struct SeriesResultItem: View {
             }
         }
         .onChange(of: resultOption) {
-            service.unregister(info: series)
+            unregister(series)
             for season in seasons {
-                service.unregister(info: season)
+                unregister(season)
             }
             if resultOption == .season && seasons.isEmpty {
                 guard seasonFetchStatus == .notStarted else { return }
@@ -92,8 +94,8 @@ struct SeriesResultItem: View {
         if resultOption == .series {
             ActionToggle(
                 isOn: initiallySelected,
-                on: { service.register(info: series) },
-                off: { service.unregister(info: series) },
+                on: { register(series) },
+                off: { unregister(series) },
                 label: { Image(systemName: "checkmark") }
             )
             .toggleStyle(.button)
@@ -102,7 +104,7 @@ struct SeriesResultItem: View {
             .frame(height: 0)
         } else {
             SeasonSelector(
-                seasons: seasons, register: service.register, unregister: service.unregister
+                seasons: seasons, register: register, unregister: unregister
             )
             .padding(.trailing, 7)
             .disabled(seasons.isEmpty)
@@ -119,6 +121,22 @@ struct SeriesResultItem: View {
         case notStarted
         case fetching
         case fetched
+    }
+
+    private func register(_ info: BasicInfo) {
+        if let registerSelection {
+            registerSelection(info)
+        } else {
+            service.register(info: info)
+        }
+    }
+
+    private func unregister(_ info: BasicInfo) {
+        if let unregisterSelection {
+            unregisterSelection(info)
+        } else {
+            service.unregister(info: info)
+        }
     }
 }
 

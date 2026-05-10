@@ -12,6 +12,8 @@ struct MovieResultItem: View {
     @Environment(TMDbSearchService.self) var service
     let movie: BasicInfo
     var initiallySelected: Bool = false
+    var registerSelection: ((BasicInfo) -> Void)? = nil
+    var unregisterSelection: ((BasicInfo) -> Void)? = nil
 
     var body: some View {
         HStack {
@@ -27,8 +29,8 @@ struct MovieResultItem: View {
                     Spacer()
                     ActionToggle(
                         isOn: initiallySelected,
-                        on: { service.register(info: movie) },
-                        off: { service.unregister(info: movie) },
+                        on: { register(movie) },
+                        off: { unregister(movie) },
                         label: { Image(systemName: "checkmark") }
                     )
                     .toggleStyle(.button)
@@ -45,6 +47,22 @@ struct MovieResultItem: View {
                     .foregroundStyle(.gray)
                     .lineLimit(3)
             }
+        }
+    }
+
+    private func register(_ info: BasicInfo) {
+        if let registerSelection {
+            registerSelection(info)
+        } else {
+            service.register(info: info)
+        }
+    }
+
+    private func unregister(_ info: BasicInfo) {
+        if let unregisterSelection {
+            unregisterSelection(info)
+        } else {
+            service.unregister(info: info)
         }
     }
 }
