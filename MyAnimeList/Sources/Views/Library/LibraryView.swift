@@ -163,12 +163,6 @@ struct LibraryView: View {
             }
 
             Section("Filter") {
-                ForEach(LibraryStore.AnimeFilter.allCases, id: \.self) { filter in
-                    Toggle(
-                        isOn: binding(for: filter),
-                        label: { Text(filter.name) }
-                    )
-                }
                 Toggle(
                     "All",
                     isOn: .init(
@@ -180,6 +174,15 @@ struct LibraryView: View {
                         }
                     )
                 )
+                ForEach(LibraryStore.AnimeFilter.typeCases, id: \.self) { filter in
+                    filterToggle(for: filter)
+                }
+                Menu("Watch Status") {
+                    ForEach(LibraryStore.AnimeFilter.watchStatusCases, id: \.self) { filter in
+                        filterToggle(for: filter)
+                    }
+                }
+                filterToggle(for: .favorited)
             }
         } label: {
             LibraryToolbarSummaryCapsule(
@@ -378,6 +381,14 @@ struct LibraryView: View {
     }
 
     // MARK: - Helpers
+
+    @ViewBuilder
+    private func filterToggle(for filter: LibraryStore.AnimeFilter) -> some View {
+        Toggle(
+            isOn: binding(for: filter),
+            label: { Text(filter.name) }
+        )
+    }
 
     private func binding(for filter: LibraryStore.AnimeFilter) -> Binding<Bool> {
         .init(

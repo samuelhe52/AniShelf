@@ -247,12 +247,6 @@ struct LibraryProfileSettingsCard: View {
                     .font(.subheadline.weight(.semibold))
                 Spacer(minLength: 12)
                 Menu {
-                    ForEach(LibraryStore.AnimeFilter.allCases, id: \.self) { filter in
-                        Toggle(
-                            isOn: defaultFilterBinding(for: filter),
-                            label: { Text(filter.name) }
-                        )
-                    }
                     Toggle(
                         "All",
                         isOn: .init(
@@ -264,6 +258,15 @@ struct LibraryProfileSettingsCard: View {
                             }
                         )
                     )
+                    ForEach(LibraryStore.AnimeFilter.typeCases, id: \.self) { filter in
+                        defaultFilterToggle(for: filter)
+                    }
+                    Menu("Watch Status") {
+                        ForEach(LibraryStore.AnimeFilter.watchStatusCases, id: \.self) { filter in
+                            defaultFilterToggle(for: filter)
+                        }
+                    }
+                    defaultFilterToggle(for: .favorited)
                 } label: {
                     LibraryProfileSelectionCapsule(
                         title: defaultFiltersSummaryResource,
@@ -570,6 +573,14 @@ struct LibraryProfileSettingsCard: View {
         default:
             return filter.name
         }
+    }
+
+    @ViewBuilder
+    private func defaultFilterToggle(for filter: LibraryStore.AnimeFilter) -> some View {
+        Toggle(
+            isOn: defaultFilterBinding(for: filter),
+            label: { Text(filter.name) }
+        )
     }
 
     private func defaultFilterBinding(for filter: LibraryStore.AnimeFilter) -> Binding<Bool> {

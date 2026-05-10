@@ -62,6 +62,29 @@ extension LibraryStore {
         lhs.tmdbID < rhs.tmdbID
     }
 
+    private enum EntryTypeBucket: Equatable {
+        case movies
+        case tvSeries
+
+        init(entry: AnimeEntry) {
+            switch entry.type {
+            case .movie:
+                self = .movies
+            case .series, .season(_, _):
+                self = .tvSeries
+            }
+        }
+
+        var rank: Int {
+            switch self {
+            case .movies:
+                return 1
+            case .tvSeries:
+                return 0
+            }
+        }
+    }
+
     struct AnimeFilter: Sendable, CaseIterable, Equatable, Hashable {
         static let favorited = AnimeFilter(id: "Favorites", name: "Favorites") { $0.favorite }
         static let watched = AnimeFilter(id: "Watched", name: "Watched") {
@@ -75,6 +98,12 @@ extension LibraryStore {
         }
         static let dropped = AnimeFilter(id: "Dropped", name: "Dropped") {
             $0.watchStatus == .dropped
+        }
+        static let movies = AnimeFilter(id: "Movies", name: "Movies") {
+            EntryTypeBucket(entry: $0) == .movies
+        }
+        static let tvSeries = AnimeFilter(id: "TV Series", name: "TV Series") {
+            EntryTypeBucket(entry: $0) == .tvSeries
         }
 
         private init(
@@ -98,7 +127,15 @@ extension LibraryStore {
         }
 
         static var allCases: [LibraryStore.AnimeFilter] {
-            [.favorited, .watched, .planToWatch, .watching, .dropped]
+            [.favorited, .watched, .planToWatch, .watching, .dropped, .movies, .tvSeries]
+        }
+
+        static var typeCases: [LibraryStore.AnimeFilter] {
+            [.tvSeries, .movies]
+        }
+
+        static var watchStatusCases: [LibraryStore.AnimeFilter] {
+            [.dropped, .watching, .planToWatch, .watched]
         }
 
         static func == (lhs: LibraryStore.AnimeFilter, rhs: LibraryStore.AnimeFilter) -> Bool {
@@ -145,7 +182,7 @@ extension LibraryStore {
         CustomLocalizedStringResourceConvertible,
         Codable
     {
-        case none, watchStatus, score, favorite
+        case none, watchStatus, score, favorite, entryType
 
         func rank(for entry: AnimeEntry) -> Int {
             switch self {
@@ -179,6 +216,8 @@ extension LibraryStore {
                 }
             case .favorite:
                 return entry.favorite ? 0 : 1
+            case .entryType:
+                return EntryTypeBucket(entry: entry).rank
             }
         }
 
@@ -188,6 +227,7 @@ extension LibraryStore {
             case .watchStatus: "Watch Status"
             case .score: "Score"
             case .favorite: "Favorite"
+            case .entryType: "Entry Type"
             }
         }
     }
