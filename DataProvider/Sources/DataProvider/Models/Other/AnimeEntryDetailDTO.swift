@@ -175,6 +175,51 @@ public struct AnimeEntryDetailDTO: Equatable, Sendable {
         self.seasons = seasons
         self.episodes = episodes
     }
+
+    init(fromLegacy payload: LegacyAnimeEntryDetailPayload) {
+        self.init(
+            language: payload.language,
+            title: payload.title,
+            subtitle: payload.subtitle,
+            overview: payload.overview,
+            status: payload.status,
+            airDate: payload.airDate,
+            primaryLinkURL: payload.primaryLinkURL,
+            heroImageURL: payload.heroImageURL,
+            logoImageURL: payload.logoImageURL,
+            genreIDs: payload.genreIDs,
+            voteAverage: payload.voteAverage,
+            runtimeMinutes: payload.runtimeMinutes,
+            episodeCount: payload.episodeCount,
+            seasonCount: payload.seasonCount,
+            characters: payload.characters.map {
+                AnimeEntryCharacterDTO(
+                    id: $0.id,
+                    characterName: $0.characterName,
+                    actorName: $0.actorName,
+                    profileURL: $0.profileURL
+                )
+            },
+            staff: [],
+            seasons: payload.seasons.map {
+                AnimeEntrySeasonSummaryDTO(
+                    id: $0.id,
+                    seasonNumber: $0.seasonNumber,
+                    title: $0.title,
+                    posterURL: $0.posterURL
+                )
+            },
+            episodes: payload.episodes.map {
+                AnimeEntryEpisodeSummaryDTO(
+                    id: $0.id,
+                    episodeNumber: $0.episodeNumber,
+                    title: $0.title,
+                    airDate: $0.airDate,
+                    imageURL: $0.imageURL
+                )
+            }
+        )
+    }
 }
 
 public struct AnimeEntryCharacterDTO: Equatable, Sendable, Identifiable {

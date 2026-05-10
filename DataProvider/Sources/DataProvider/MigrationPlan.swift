@@ -58,92 +58,6 @@ enum MigrationPlan: SchemaMigrationPlan {
 }
 
 extension MigrationStage {
-    private struct AnimeEntryV270Snapshot {
-        let oldID: PersistentIdentifier
-        let parentSeriesOldID: PersistentIdentifier?
-        let name: String
-        let nameTranslations: [String: String]
-        let overview: String?
-        let overviewTranslations: [String: String]
-        let onAirDate: Date?
-        let type: AnimeType
-        let linkToDetails: URL?
-        let posterURL: URL?
-        let backdropURL: URL?
-        let tmdbID: Int
-        let detail: LegacyAnimeEntryDetailPayload?
-        let onDisplay: Bool
-        let watchStatus: SchemaV2_6_0.AnimeEntry.WatchStatus
-        let dateSaved: Date
-        let dateStarted: Date?
-        let dateFinished: Date?
-        let favorite: Bool
-        let notes: String
-        let usingCustomPoster: Bool
-    }
-
-    private struct AnimeEntryV271Snapshot {
-        let oldID: PersistentIdentifier
-        let parentSeriesOldID: PersistentIdentifier?
-        let name: String
-        let nameTranslations: [String: String]
-        let overview: String?
-        let overviewTranslations: [String: String]
-        let onAirDate: Date?
-        let type: AnimeType
-        let linkToDetails: URL?
-        let posterURL: URL?
-        let backdropURL: URL?
-        let tmdbID: Int
-        let detail: AnimeEntryDetailDTO?
-        let onDisplay: Bool
-        let watchStatus: SchemaV2_7_0.AnimeEntry.WatchStatus
-        let dateSaved: Date
-        let dateStarted: Date?
-        let dateFinished: Date?
-        let favorite: Bool
-        let notes: String
-        let usingCustomPoster: Bool
-    }
-
-    private struct AnimeEntryV274Snapshot {
-        let originalIndex: Int
-        let oldID: PersistentIdentifier
-        let parentSeriesOldID: PersistentIdentifier?
-        let name: String
-        let nameTranslations: [String: String]
-        let overview: String?
-        let overviewTranslations: [String: String]
-        let onAirDate: Date?
-        let type: AnimeType
-        let linkToDetails: URL?
-        let posterURL: URL?
-        let backdropURL: URL?
-        let tmdbID: Int
-        let detail: AnimeEntryDetailDTO?
-        let onDisplay: Bool
-        let watchStatus: SchemaV2_7_3.AnimeEntry.WatchStatus
-        let dateSaved: Date
-        let dateStarted: Date?
-        let dateFinished: Date?
-        let score: Int?
-        let favorite: Bool
-        let notes: String
-        let usingCustomPoster: Bool
-
-        var isRootSeriesEntry: Bool {
-            parentSeriesOldID == nil && type == .series
-        }
-
-        var parentSeriesID: Int? {
-            type.parentSeriesID
-        }
-
-        var hasDetail: Bool {
-            detail != nil
-        }
-    }
-
     private struct ParentSeriesCleanupPlan {
         let canonicalParentOldIDByTMDbID: [Int: PersistentIdentifier]
         let discardedParentOldIDs: Set<PersistentIdentifier>
@@ -196,446 +110,156 @@ extension MigrationStage {
     }
 
     static func migrateV260ToV270() -> MigrationStage {
-        var snapshots: [AnimeEntryV270Snapshot] = []
+        var snapshots: [AnimeEntryMigrationDTO] = []
 
         return MigrationStage.custom(
             fromVersion: SchemaV2_6_0.self,
             toVersion: SchemaV2_7_0.self,
             willMigrate: { context in
-                let descriptor = FetchDescriptor<SchemaV2_6_0.AnimeEntry>()
-                let oldEntries = try context.fetch(descriptor)
-                snapshots = oldEntries.map { old in
-                    AnimeEntryV270Snapshot(
-                        oldID: old.persistentModelID,
-                        parentSeriesOldID: old.parentSeriesEntry?.persistentModelID,
-                        name: old.name,
-                        nameTranslations: old.nameTranslations,
-                        overview: old.overview,
-                        overviewTranslations: old.overviewTranslations,
-                        onAirDate: old.onAirDate,
-                        type: old.type,
-                        linkToDetails: old.linkToDetails,
-                        posterURL: old.posterURL,
-                        backdropURL: old.backdropURL,
-                        tmdbID: old.tmdbID,
-                        detail: old.detail,
-                        onDisplay: old.onDisplay,
-                        watchStatus: old.watchStatus,
-                        dateSaved: old.dateSaved,
-                        dateStarted: old.dateStarted,
-                        dateFinished: old.dateFinished,
-                        favorite: old.favorite,
-                        notes: old.notes,
-                        usingCustomPoster: old.usingCustomPoster
-                    )
+                snapshots = try Self.captureAndDeleteEntries(in: context) {
+                    (index: Int, entry: SchemaV2_6_0.AnimeEntry) in
+                    entry.migrationDTO(index: index)
                 }
-
-                for entry in oldEntries {
-                    context.delete(entry)
-                }
-                try context.save()
             },
             didMigrate: { context in
-                var newEntriesByOldID: [PersistentIdentifier: SchemaV2_7_0.AnimeEntry] = [:]
-
-                for snapshot in snapshots {
-                    let entry = SchemaV2_7_0.AnimeEntry(
-                        name: snapshot.name,
-                        nameTranslations: snapshot.nameTranslations,
-                        overview: snapshot.overview,
-                        overviewTranslations: snapshot.overviewTranslations,
-                        onAirDate: snapshot.onAirDate,
-                        type: snapshot.type,
-                        linkToDetails: snapshot.linkToDetails,
-                        posterURL: snapshot.posterURL,
-                        backdropURL: snapshot.backdropURL,
-                        tmdbID: snapshot.tmdbID,
-                        detail: snapshot.detail.map(SchemaV2_7_0.AnimeEntryDetail.init(fromLegacy:)),
-                        parentSeriesEntry: nil,
-                        onDisplay: snapshot.onDisplay,
-                        watchStatus: mapWatchStatus(snapshot.watchStatus),
-                        dateSaved: snapshot.dateSaved,
-                        dateStarted: snapshot.dateStarted,
-                        dateFinished: snapshot.dateFinished,
-                        favorite: snapshot.favorite,
-                        notes: snapshot.notes,
-                        usingCustomPoster: snapshot.usingCustomPoster
-                    )
-                    context.insert(entry)
-                    newEntriesByOldID[snapshot.oldID] = entry
-                }
-
-                for snapshot in snapshots {
-                    guard
-                        let parentSeriesOldID = snapshot.parentSeriesOldID,
-                        let entry = newEntriesByOldID[snapshot.oldID],
-                        let parentEntry = newEntriesByOldID[parentSeriesOldID]
-                    else {
-                        continue
+                try Self.rebuildEntries(
+                    from: snapshots,
+                    in: context,
+                    makeEntry: { snapshot in
+                        SchemaV2_7_0.AnimeEntry(
+                            migrationDTO: snapshot,
+                            detail: snapshot.detail.map(SchemaV2_7_0.AnimeEntryDetail.init(from:)),
+                            watchStatus: .init(snapshot.watchStatus)
+                        )
+                    },
+                    setParent: { entry, parentEntry in
+                        entry.parentSeriesEntry = parentEntry
                     }
-                    entry.parentSeriesEntry = parentEntry
-                }
-
-                try context.save()
+                )
             }
         )
     }
 
     static func migrateV270ToV271() -> MigrationStage {
-        var snapshots: [AnimeEntryV271Snapshot] = []
+        var snapshots: [AnimeEntryMigrationDTO] = []
 
         return MigrationStage.custom(
             fromVersion: SchemaV2_7_0.self,
             toVersion: SchemaV2_7_1.self,
             willMigrate: { context in
-                let descriptor = FetchDescriptor<SchemaV2_7_0.AnimeEntry>()
-                let oldEntries = try context.fetch(descriptor)
-                snapshots = oldEntries.map { old in
-                    AnimeEntryV271Snapshot(
-                        oldID: old.persistentModelID,
-                        parentSeriesOldID: old.parentSeriesEntry?.persistentModelID,
-                        name: old.name,
-                        nameTranslations: old.nameTranslations,
-                        overview: old.overview,
-                        overviewTranslations: old.overviewTranslations,
-                        onAirDate: old.onAirDate,
-                        type: old.type,
-                        linkToDetails: old.linkToDetails,
-                        posterURL: old.posterURL,
-                        backdropURL: old.backdropURL,
-                        tmdbID: old.tmdbID,
-                        detail: old.detail.map { Self.detailDTO(from: $0) },
-                        onDisplay: old.onDisplay,
-                        watchStatus: old.watchStatus,
-                        dateSaved: old.dateSaved,
-                        dateStarted: old.dateStarted,
-                        dateFinished: old.dateFinished,
-                        favorite: old.favorite,
-                        notes: old.notes,
-                        usingCustomPoster: old.usingCustomPoster
-                    )
+                snapshots = try Self.captureAndDeleteEntries(in: context) {
+                    (index: Int, entry: SchemaV2_7_0.AnimeEntry) in
+                    entry.migrationDTO(index: index)
                 }
-
-                for entry in oldEntries {
-                    context.delete(entry)
-                }
-                try context.save()
             },
             didMigrate: { context in
-                var newEntriesByOldID: [PersistentIdentifier: SchemaV2_7_1.AnimeEntry] = [:]
-
-                for snapshot in snapshots {
-                    let detail = snapshot.detail.map(SchemaV2_7_1.AnimeEntryDetail.init(from:))
-                    let entry = SchemaV2_7_1.AnimeEntry(
-                        name: snapshot.name,
-                        nameTranslations: snapshot.nameTranslations,
-                        overview: snapshot.overview,
-                        overviewTranslations: snapshot.overviewTranslations,
-                        onAirDate: snapshot.onAirDate,
-                        type: snapshot.type,
-                        linkToDetails: snapshot.linkToDetails,
-                        posterURL: snapshot.posterURL,
-                        backdropURL: snapshot.backdropURL,
-                        tmdbID: snapshot.tmdbID,
-                        detail: detail,
-                        parentSeriesEntry: nil,
-                        onDisplay: snapshot.onDisplay,
-                        watchStatus: mapWatchStatus(snapshot.watchStatus),
-                        dateSaved: snapshot.dateSaved,
-                        dateStarted: snapshot.dateStarted,
-                        dateFinished: snapshot.dateFinished,
-                        favorite: snapshot.favorite,
-                        notes: snapshot.notes,
-                        usingCustomPoster: snapshot.usingCustomPoster
-                    )
-                    context.insert(entry)
-                    newEntriesByOldID[snapshot.oldID] = entry
-                }
-
-                for snapshot in snapshots {
-                    guard
-                        let parentSeriesOldID = snapshot.parentSeriesOldID,
-                        let entry = newEntriesByOldID[snapshot.oldID],
-                        let parentEntry = newEntriesByOldID[parentSeriesOldID]
-                    else {
-                        continue
+                try Self.rebuildEntries(
+                    from: snapshots,
+                    in: context,
+                    makeEntry: { snapshot in
+                        SchemaV2_7_1.AnimeEntry(
+                            migrationDTO: snapshot,
+                            detail: snapshot.detail.map(SchemaV2_7_1.AnimeEntryDetail.init(from:)),
+                            watchStatus: .init(snapshot.watchStatus)
+                        )
+                    },
+                    setParent: { entry, parentEntry in
+                        entry.parentSeriesEntry = parentEntry
                     }
-                    entry.parentSeriesEntry = parentEntry
-                }
-
-                try context.save()
+                )
             }
         )
     }
 
     static func migrateV273ToV274() -> MigrationStage {
-        var snapshots: [AnimeEntryV274Snapshot] = []
-        var cleanupPlan = ParentSeriesCleanupPlan(
-            canonicalParentOldIDByTMDbID: [:],
-            discardedParentOldIDs: []
-        )
+        var snapshots: [AnimeEntryMigrationDTO] = []
 
         return MigrationStage.custom(
             fromVersion: SchemaV2_7_3.self,
             toVersion: SchemaV2_7_4.self,
             willMigrate: { context in
-                let descriptor = FetchDescriptor<SchemaV2_7_3.AnimeEntry>()
-                let oldEntries = try context.fetch(descriptor)
-                snapshots = oldEntries.enumerated().map { index, old in
-                    AnimeEntryV274Snapshot(
-                        originalIndex: index,
-                        oldID: old.persistentModelID,
-                        parentSeriesOldID: old.parentSeriesEntry?.persistentModelID,
-                        name: old.name,
-                        nameTranslations: old.nameTranslations,
-                        overview: old.overview,
-                        overviewTranslations: old.overviewTranslations,
-                        onAirDate: old.onAirDate,
-                        type: old.type,
-                        linkToDetails: old.linkToDetails,
-                        posterURL: old.posterURL,
-                        backdropURL: old.backdropURL,
-                        tmdbID: old.tmdbID,
-                        detail: old.detail.map { Self.detailDTO(from: $0) },
-                        onDisplay: old.onDisplay,
-                        watchStatus: old.watchStatus,
-                        dateSaved: old.dateSaved,
-                        dateStarted: old.dateStarted,
-                        dateFinished: old.dateFinished,
-                        score: old.score,
-                        favorite: old.favorite,
-                        notes: old.notes,
-                        usingCustomPoster: old.usingCustomPoster
-                    )
+                snapshots = try Self.captureAndDeleteEntries(in: context) {
+                    (index: Int, entry: SchemaV2_7_3.AnimeEntry) in
+                    entry.migrationDTO(index: index)
                 }
-                cleanupPlan = Self.parentSeriesCleanupPlan(from: snapshots)
-
-                for entry in oldEntries {
-                    context.delete(entry)
-                }
-                try context.save()
             },
             didMigrate: { context in
-                var newEntriesByOldID: [PersistentIdentifier: SchemaV2_7_4.AnimeEntry] = [:]
-
-                for snapshot in snapshots
-                where cleanupPlan.discardedParentOldIDs.contains(snapshot.oldID) == false {
-                    let entry = SchemaV2_7_4.AnimeEntry(
-                        name: snapshot.name,
-                        nameTranslations: snapshot.nameTranslations,
-                        overview: snapshot.overview,
-                        overviewTranslations: snapshot.overviewTranslations,
-                        onAirDate: snapshot.onAirDate,
-                        type: snapshot.type,
-                        linkToDetails: snapshot.linkToDetails,
-                        posterURL: snapshot.posterURL,
-                        backdropURL: snapshot.backdropURL,
-                        tmdbID: snapshot.tmdbID,
-                        detail: snapshot.detail.map(SchemaV2_7_4.AnimeEntryDetail.init(from:)),
-                        parentSeriesEntry: nil,
-                        onDisplay: snapshot.onDisplay,
-                        watchStatus: mapWatchStatus(snapshot.watchStatus),
-                        dateSaved: snapshot.dateSaved,
-                        dateStarted: snapshot.dateStarted,
-                        dateFinished: snapshot.dateFinished,
-                        score: snapshot.score,
-                        favorite: snapshot.favorite,
-                        notes: snapshot.notes,
-                        usingCustomPoster: snapshot.usingCustomPoster
-                    )
-                    context.insert(entry)
-                    newEntriesByOldID[snapshot.oldID] = entry
-                }
-
-                for snapshot in snapshots {
-                    guard let entry = newEntriesByOldID[snapshot.oldID] else { continue }
-                    guard
-                        let parentOldID = Self.resolvedParentOldID(
-                            for: snapshot,
-                            cleanupPlan: cleanupPlan
-                        ),
-                        let parentEntry = newEntriesByOldID[parentOldID]
-                    else {
-                        continue
-                    }
-                    entry.parentSeriesEntry = parentEntry
-                }
-
-                try context.save()
-            }
-        )
-    }
-
-    private static func mapWatchStatus(
-        _ status: SchemaV2_6_0.AnimeEntry.WatchStatus
-    ) -> SchemaV2_7_0.AnimeEntry.WatchStatus {
-        switch status {
-        case .planToWatch:
-            .planToWatch
-        case .watching:
-            .watching
-        case .watched:
-            .watched
-        case .dropped:
-            .dropped
-        }
-    }
-
-    private static func mapWatchStatus(
-        _ status: SchemaV2_7_0.AnimeEntry.WatchStatus
-    ) -> SchemaV2_7_1.AnimeEntry.WatchStatus {
-        switch status {
-        case .planToWatch:
-            .planToWatch
-        case .watching:
-            .watching
-        case .watched:
-            .watched
-        case .dropped:
-            .dropped
-        }
-    }
-
-    private static func mapWatchStatus(
-        _ status: SchemaV2_7_3.AnimeEntry.WatchStatus
-    ) -> SchemaV2_7_4.AnimeEntry.WatchStatus {
-        switch status {
-        case .planToWatch:
-            .planToWatch
-        case .watching:
-            .watching
-        case .watched:
-            .watched
-        case .dropped:
-            .dropped
-        }
-    }
-
-    private static func detailDTO(
-        from detail: SchemaV2_7_0.AnimeEntryDetail
-    ) -> AnimeEntryDetailDTO {
-        AnimeEntryDetailDTO(
-            language: detail.language,
-            title: detail.title,
-            subtitle: detail.subtitle,
-            overview: detail.overview,
-            status: detail.status,
-            airDate: detail.airDate,
-            primaryLinkURL: detail.primaryLinkURL,
-            heroImageURL: detail.heroImageURL,
-            logoImageURL: detail.logoImageURL,
-            genreIDs: detail.genreIDs,
-            voteAverage: detail.voteAverage,
-            runtimeMinutes: detail.runtimeMinutes,
-            episodeCount: detail.episodeCount,
-            seasonCount: detail.seasonCount,
-            characters: detail.characters.map {
-                AnimeEntryCharacterDTO(
-                    id: $0.id,
-                    characterName: $0.characterName,
-                    actorName: $0.actorName,
-                    profileURL: $0.profileURL
-                )
-            },
-            staff: detail.staff.map {
-                AnimeEntryStaffDTO(
-                    id: $0.id,
-                    name: $0.name,
-                    role: $0.role,
-                    department: $0.department,
-                    profileURL: $0.profileURL
-                )
-            },
-            seasons: detail.seasons.map {
-                AnimeEntrySeasonSummaryDTO(
-                    id: $0.id,
-                    seasonNumber: $0.seasonNumber,
-                    title: $0.title,
-                    posterURL: $0.posterURL
-                )
-            },
-            episodes: detail.episodes.sorted {
-                if $0.episodeNumber == $1.episodeNumber { return $0.id < $1.id }
-                return $0.episodeNumber < $1.episodeNumber
-            }.map {
-                AnimeEntryEpisodeSummaryDTO(
-                    id: $0.id,
-                    episodeNumber: $0.episodeNumber,
-                    title: $0.title,
-                    airDate: $0.airDate,
-                    imageURL: $0.imageURL
-                )
-            }
-        )
-    }
-
-    private static func detailDTO(
-        from detail: SchemaV2_7_3.AnimeEntryDetail
-    ) -> AnimeEntryDetailDTO {
-        AnimeEntryDetailDTO(
-            language: detail.language,
-            title: detail.title,
-            subtitle: detail.subtitle,
-            overview: detail.overview,
-            status: detail.status,
-            airDate: detail.airDate,
-            primaryLinkURL: detail.primaryLinkURL,
-            heroImageURL: detail.heroImageURL,
-            logoImageURL: detail.logoImageURL,
-            genreIDs: detail.genreIDs,
-            voteAverage: detail.voteAverage,
-            runtimeMinutes: detail.runtimeMinutes,
-            episodeCount: detail.episodeCount,
-            seasonCount: detail.seasonCount,
-            characters: detail.orderedCharacters.map {
-                AnimeEntryCharacterDTO(
-                    id: $0.id,
-                    characterName: $0.characterName,
-                    actorName: $0.actorName,
-                    profileURL: $0.profileURL
-                )
-            },
-            staff: detail.orderedStaff.map {
-                AnimeEntryStaffDTO(
-                    id: $0.id,
-                    name: $0.name,
-                    role: $0.role,
-                    department: $0.department,
-                    profileURL: $0.profileURL,
-                    jobs: $0.orderedJobs.map {
-                        AnimeEntryStaffJobDTO(
-                            creditID: $0.creditID,
-                            job: $0.job,
-                            episodeCount: $0.episodeCount
+                let cleanupPlan = Self.parentSeriesCleanupPlan(from: snapshots)
+                try Self.rebuildEntries(
+                    from: snapshots,
+                    in: context,
+                    include: { snapshot in
+                        cleanupPlan.discardedParentOldIDs.contains(snapshot.oldID) == false
+                    },
+                    makeEntry: { snapshot in
+                        SchemaV2_7_4.AnimeEntry(
+                            migrationDTO: snapshot,
+                            detail: snapshot.detail.map(SchemaV2_7_4.AnimeEntryDetail.init(from:)),
+                            watchStatus: .init(snapshot.watchStatus)
                         )
+                    },
+                    setParent: { entry, parentEntry in
+                        entry.parentSeriesEntry = parentEntry
+                    },
+                    resolveParentOldID: { snapshot in
+                        Self.resolvedParentOldID(for: snapshot, cleanupPlan: cleanupPlan)
                     }
-                )
-            },
-            seasons: detail.seasons.sorted {
-                if $0.seasonNumber == $1.seasonNumber { return $0.id < $1.id }
-                return $0.seasonNumber < $1.seasonNumber
-            }.map {
-                AnimeEntrySeasonSummaryDTO(
-                    id: $0.id,
-                    seasonNumber: $0.seasonNumber,
-                    title: $0.title,
-                    posterURL: $0.posterURL
-                )
-            },
-            episodes: detail.orderedEpisodes.map {
-                AnimeEntryEpisodeSummaryDTO(
-                    id: $0.id,
-                    episodeNumber: $0.episodeNumber,
-                    title: $0.title,
-                    airDate: $0.airDate,
-                    imageURL: $0.imageURL
                 )
             }
         )
+    }
+
+    private static func captureAndDeleteEntries<Entry: PersistentModel>(
+        in context: ModelContext,
+        map: (Int, Entry) -> AnimeEntryMigrationDTO
+    ) throws -> [AnimeEntryMigrationDTO] {
+        let oldEntries = try context.fetch(FetchDescriptor<Entry>())
+        let snapshots = oldEntries.enumerated().map { index, entry in
+            map(index, entry)
+        }
+
+        for entry in oldEntries {
+            context.delete(entry)
+        }
+        try context.save()
+
+        return snapshots
+    }
+
+    private static func rebuildEntries<Entry: PersistentModel>(
+        from snapshots: [AnimeEntryMigrationDTO],
+        in context: ModelContext,
+        include: (AnimeEntryMigrationDTO) -> Bool = { _ in true },
+        makeEntry: (AnimeEntryMigrationDTO) -> Entry,
+        setParent: (Entry, Entry) -> Void,
+        resolveParentOldID: (AnimeEntryMigrationDTO) -> PersistentIdentifier? = {
+            $0.parentSeriesOldID
+        }
+    ) throws {
+        var newEntriesByOldID: [PersistentIdentifier: Entry] = [:]
+
+        for snapshot in snapshots where include(snapshot) {
+            let entry = makeEntry(snapshot)
+            context.insert(entry)
+            newEntriesByOldID[snapshot.oldID] = entry
+        }
+
+        for snapshot in snapshots {
+            guard
+                let entry = newEntriesByOldID[snapshot.oldID],
+                let parentOldID = resolveParentOldID(snapshot),
+                let parentEntry = newEntriesByOldID[parentOldID]
+            else {
+                continue
+            }
+            setParent(entry, parentEntry)
+        }
+
+        try context.save()
     }
 
     private static func parentSeriesCleanupPlan(
-        from snapshots: [AnimeEntryV274Snapshot]
+        from snapshots: [AnimeEntryMigrationDTO]
     ) -> ParentSeriesCleanupPlan {
         let rootSeriesSnapshots = snapshots.filter(\.isRootSeriesEntry)
         let referencedChildCountByOldID = snapshots.reduce(into: [PersistentIdentifier: Int]()) {
@@ -695,9 +319,9 @@ extension MigrationStage {
     }
 
     private static func bestParentSeriesSnapshot(
-        from candidates: [AnimeEntryV274Snapshot],
+        from candidates: [AnimeEntryMigrationDTO],
         referencedChildCountByOldID: [PersistentIdentifier: Int]
-    ) -> AnimeEntryV274Snapshot? {
+    ) -> AnimeEntryMigrationDTO? {
         candidates.sorted { lhs, rhs in
             if lhs.onDisplay != rhs.onDisplay {
                 return lhs.onDisplay && !rhs.onDisplay
@@ -726,7 +350,7 @@ extension MigrationStage {
     }
 
     private static func resolvedParentOldID(
-        for snapshot: AnimeEntryV274Snapshot,
+        for snapshot: AnimeEntryMigrationDTO,
         cleanupPlan: ParentSeriesCleanupPlan
     ) -> PersistentIdentifier? {
         guard let parentSeriesID = snapshot.parentSeriesID else {
