@@ -57,21 +57,21 @@ struct UserEntryInfoAndLibraryStatsTests {
         #expect(decoded.score == nil)
     }
 
-//    @Test @MainActor func testUserEntryInfoPasteboardRoundTripPreservesScore() throws {
-//        let pasteboard = UIPasteboard.general
-//        let originalItems = pasteboard.items
-//        defer { pasteboard.items = originalItems }
-//
-//        let entry = AnimeEntry.template(id: 404)
-//        entry.setScore(5)
-//        entry.notes = "Keep this"
-//
-//        entry.userInfo.copyToPasteboard()
-//
-//        let pasted = try #require(UserEntryInfo.fromPasteboard())
-//        #expect(pasted.score == 5)
-//        #expect(pasted.notes == "Keep this")
-//    }
+    //    @Test @MainActor func testUserEntryInfoPasteboardRoundTripPreservesScore() throws {
+    //        let pasteboard = UIPasteboard.general
+    //        let originalItems = pasteboard.items
+    //        defer { pasteboard.items = originalItems }
+    //
+    //        let entry = AnimeEntry.template(id: 404)
+    //        entry.setScore(5)
+    //        entry.notes = "Keep this"
+    //
+    //        entry.userInfo.copyToPasteboard()
+    //
+    //        let pasted = try #require(UserEntryInfo.fromPasteboard())
+    //        #expect(pasted.score == 5)
+    //        #expect(pasted.notes == "Keep this")
+    //    }
 
     @Test func testLibraryProfileStatsEmptyLibrary() {
         let stats = LibraryProfileStats(entries: [])

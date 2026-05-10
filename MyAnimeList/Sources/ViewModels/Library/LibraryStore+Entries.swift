@@ -14,6 +14,11 @@ extension LibraryStore {
         type: AnimeType
     ) async throws -> AnimeEntry? {
         if let existingEntry = repository.existingEntry(tmdbID: id) {
+            if !existingEntry.onDisplay {
+                try await hydrateExistingEntry(existingEntry, type: type)
+                return existingEntry
+            }
+
             existingEntry.onDisplay = true
             try repository.save()
             libraryStoreLogger.warning(
@@ -49,6 +54,44 @@ extension LibraryStore {
         }
         try repository.newEntry(entry)
         return entry
+    }
+
+    func hydrateExistingEntry(_ entry: AnimeEntry, type: AnimeType) async throws {
+        let tmdbID = entry.tmdbID
+        async let info = infoFetcher.fetchInfoFromTMDB(
+            entryType: type,
+            tmdbID: tmdbID,
+            language: language
+        )
+        async let detail = infoFetcher.detailInfo(
+            entryType: type,
+            tmdbID: tmdbID,
+            language: language
+        )
+        let resolvedInfo = try await info
+        let resolvedDetail = try await detail
+        try hydrateExistingEntry(
+            entry,
+            from: resolvedInfo,
+            detail: resolvedDetail
+        )
+    }
+
+    func hydrateExistingEntry(
+        _ entry: AnimeEntry,
+        from info: BasicInfo,
+        detail: AnimeEntryDetailDTO
+    ) throws {
+        entry.replaceMetadata(from: info, preservingCustomPoster: entry.usingCustomPoster)
+        entry.replaceDetail(from: detail)
+        if entry.userInfo.isEmpty {
+            applyNewEntryDefaults(to: entry)
+        }
+        entry.onDisplay = true
+        try repository.save()
+        libraryStoreLogger.info(
+            "Hydrated hidden entry \(entry.tmdbID, privacy: .public) and set `onDisplay` to `true`."
+        )
     }
 
     func newEntry(tmdbID id: Int, type: AnimeType) async -> Bool {

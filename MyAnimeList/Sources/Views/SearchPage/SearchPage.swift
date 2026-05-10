@@ -20,7 +20,7 @@ enum SearchMode: String, CaseIterable, CustomLocalizedStringResourceConvertible 
     }
 }
 
-private enum TMDbContentMode {
+fileprivate enum TMDbContentMode {
     case search
     case batchAdd
 }
@@ -92,7 +92,8 @@ struct SearchPage: View {
             } label: {
                 Text(continueTitleResource)
             }
-            Button(role: .cancel) {} label: {
+            Button(role: .cancel) {
+            } label: {
                 Text(cancelTitleResource)
             }
         } message: {

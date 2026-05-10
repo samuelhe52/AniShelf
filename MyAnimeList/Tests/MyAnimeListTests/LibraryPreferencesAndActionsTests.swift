@@ -272,4 +272,51 @@ struct LibraryPreferencesAndActionsTests {
         #expect(Set(capturedEntries.map(\.id)).count == 3)
         #expect(capturedEntries.filter { !$0.onDisplay && $0.tmdbID == 209_867 }.count == 1)
     }
+
+    @Test @MainActor func testHydrateHiddenHelperParentAppliesDefaultsAndDetail() throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        store.defaultNewEntryWatchStatus = .watching
+
+        let hiddenParent = AnimeEntry(
+            name: "Frieren",
+            type: .series,
+            tmdbID: 209_867
+        )
+        hiddenParent.onDisplay = false
+        try store.repository.newEntry(hiddenParent)
+
+        try store.hydrateExistingEntry(
+            hiddenParent,
+            from: BasicInfo(
+                name: "Frieren: Beyond Journey's End",
+                nameTranslations: [:],
+                overview: "Elf mage travels onward.",
+                overviewTranslations: [:],
+                posterURL: nil,
+                backdropURL: nil,
+                logoURL: nil,
+                tmdbID: 209_867,
+                onAirDate: nil,
+                linkToDetails: nil,
+                type: .series
+            ),
+            detail: AnimeEntryDetailDTO(
+                language: "en-US",
+                title: "Frieren: Beyond Journey's End",
+                runtimeMinutes: 24,
+                episodeCount: 28,
+                seasonCount: 1
+            )
+        )
+
+        #expect(hiddenParent.onDisplay)
+        #expect(hiddenParent.watchStatus == .watching)
+        #expect(hiddenParent.dateStarted != nil)
+        #expect(hiddenParent.detail?.runtimeMinutes == 24)
+        #expect(hiddenParent.detail?.episodeCount == 28)
+        #expect(hiddenParent.name == "Frieren: Beyond Journey's End")
+
+        try store.refreshLibrary()
+        #expect(store.library.map(\.tmdbID) == [209_867])
+    }
 }
