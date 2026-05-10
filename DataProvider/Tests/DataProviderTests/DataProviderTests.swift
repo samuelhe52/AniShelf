@@ -65,7 +65,26 @@ import Testing
             )
         ],
         staff: [
-            AnimeEntryStaff(id: 20, name: "Second", role: "Director", displayOrder: 1),
+            AnimeEntryStaff(
+                id: 20,
+                name: "Second",
+                role: "Director",
+                jobs: [
+                    AnimeEntryStaffJob(
+                        creditID: "20-b",
+                        job: "Music",
+                        episodeCount: 8,
+                        displayOrder: 1
+                    ),
+                    AnimeEntryStaffJob(
+                        creditID: "20-a",
+                        job: "Director",
+                        episodeCount: 12,
+                        displayOrder: 0
+                    )
+                ],
+                displayOrder: 1
+            ),
             AnimeEntryStaff(id: 10, name: "First", role: "Writer", displayOrder: 0)
         ],
         episodes: [
@@ -76,6 +95,7 @@ import Testing
 
     #expect(detail.orderedCharacters.map(\.id) == [1, 2])
     #expect(detail.orderedStaff.map(\.id) == [10, 20])
+    #expect(detail.orderedStaff[1].orderedJobs.map(\.creditID) == ["20-a", "20-b"])
     #expect(detail.orderedEpisodes.map(\.id) == [100, 200])
 }
 
@@ -92,7 +112,23 @@ import Testing
                 AnimeEntryCharacterDTO(id: 20, characterName: "Second", actorName: "Actor B")
             ],
             staff: [
-                AnimeEntryStaffDTO(id: 200, name: "Second", role: "Director"),
+                AnimeEntryStaffDTO(
+                    id: 200,
+                    name: "Second",
+                    role: "Director",
+                    jobs: [
+                        AnimeEntryStaffJobDTO(
+                            creditID: "200-b",
+                            job: "Music",
+                            episodeCount: 8
+                        ),
+                        AnimeEntryStaffJobDTO(
+                            creditID: "200-a",
+                            job: "Director",
+                            episodeCount: 12
+                        )
+                    ]
+                ),
                 AnimeEntryStaffDTO(id: 100, name: "First", role: "Writer")
             ],
             episodes: [
@@ -104,7 +140,45 @@ import Testing
 
     #expect(detail.orderedCharacters.map(\.id) == [30, 10, 20])
     #expect(detail.orderedStaff.map(\.id) == [200, 100])
+    #expect(detail.orderedStaff[0].orderedJobs.map(\.creditID) == ["200-b", "200-a"])
     #expect(detail.orderedEpisodes.map(\.id) == [2, 1])
+}
+
+@Test func replaceDetailPersistsAggregateStaffJobs() async throws {
+    let entry = AnimeEntry.template()
+
+    let detail = entry.replaceDetail(
+        from: AnimeEntryDetailDTO(
+            language: "en-US",
+            title: "New",
+            staff: [
+                AnimeEntryStaffDTO(
+                    id: 300,
+                    name: "Creator",
+                    role: "Directing",
+                    department: "Directing",
+                    jobs: [
+                        AnimeEntryStaffJobDTO(
+                            creditID: "director",
+                            job: "Director",
+                            episodeCount: 12
+                        ),
+                        AnimeEntryStaffJobDTO(
+                            creditID: "music",
+                            job: "Music",
+                            episodeCount: 8
+                        )
+                    ]
+                )
+            ]
+        )
+    )
+
+    let staff = try #require(detail.orderedStaff.first)
+    #expect(detail.orderedStaff.count == 1)
+    #expect(staff.role == "Directing")
+    #expect(staff.orderedJobs.map(\.creditID) == ["director", "music"])
+    #expect(staff.orderedJobs.map(\.job) == ["Director", "Music"])
 }
 
 fileprivate func referenceDate(day: Int) -> Date {

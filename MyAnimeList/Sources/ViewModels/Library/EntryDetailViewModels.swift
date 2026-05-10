@@ -6,12 +6,141 @@
 //
 
 import DataProvider
+import Foundation
 import Observation
 import SwiftUI
 
 @MainActor
 @Observable
 final class EntryDetailViewModel {
+    private static let maxDisplayedStaffCount = 24
+    private static let prioritizedStaffRoleBuckets: [[String]] = [
+        [
+            "Director",
+            "Series Director",
+            "Co-Director",
+            "Assistant Director",
+            "Directing",
+            "Action Director",
+            "Storyboard Artist",
+            "Storyboard Assistant",
+            "Additional Storyboarding"
+        ],
+        ["Original Story", "Novel", "Comic Book", "Original Concept"],
+        ["Series Composition", "Screenplay", "Writer", "Writing"],
+        [
+            "Character Designer",
+            "Original Series Design",
+            "Mechanical Designer",
+            "Creature Design",
+            "Prop Designer",
+            "Settings",
+            "Art Designer"
+        ],
+        [
+            "Supervising Animation Director",
+            "Animation Director",
+            "Lead Animator",
+            "Key Animation",
+            "Opening/Ending Animation"
+        ],
+        [
+            "Supervising Art Director",
+            "Art Direction",
+            "Assistant Art Director",
+            "Art",
+            "Background Designer",
+            "Color Designer",
+            "Concept Artist",
+            "Conceptual Design",
+            "Production Design",
+            "Graphic Designer",
+            "Title Designer",
+            "Painter"
+        ],
+        [
+            "Director of Photography",
+            "Assistant Director of Photography",
+            "Camera",
+            "Compositing Lead",
+            "Compositing Artist",
+            "Compositor",
+            "Visual Effects",
+            "Special Effects",
+            "Effects Supervisor",
+            "CGI Director",
+            "CGI Supervisor",
+            "CG Supervisor",
+            "CG Artist",
+            "3D Director",
+            "3D Supervisor",
+            "3D Animator",
+            "3D Artist",
+            "Modeling"
+        ],
+        [
+            "Sound Director",
+            "Music",
+            "Original Music Composer",
+            "Music Director",
+            "Music Producer",
+            "Music Supervisor",
+            "Theme Song Performance",
+            "Songs",
+            "Musician",
+            "Sound",
+            "Sound Effects",
+            "Sound Mixer",
+            "Sound Recordist",
+            "Sound Assistant",
+            "Foley",
+            "Foley Artist"
+        ],
+        [
+            "Producer",
+            "Executive Producer",
+            "Supervising Producer",
+            "Line Producer",
+            "Production Supervisor",
+            "Production Manager",
+            "Co-Producer",
+            "Associate Producer",
+            "Co-Executive Producer",
+            "Development Producer",
+            "Production",
+            "Production Assistant",
+            "Assistant Production Manager"
+        ]
+    ]
+    private static let prioritizedStaffRoleRanks: [String: Int] = {
+        var ranks: [String: Int] = [:]
+        for (bucketIndex, roles) in prioritizedStaffRoleBuckets.enumerated() {
+            for role in roles where ranks[role] == nil {
+                ranks[role] = bucketIndex
+            }
+        }
+        return ranks
+    }()
+    private static let prioritizedStaffRoleOrdersByBucket: [[String: Int]] =
+        prioritizedStaffRoleBuckets.map { roles in
+            Dictionary(uniqueKeysWithValues: roles.enumerated().map { ($0.element, $0.offset) })
+        }
+    private static let unprioritizedStaffBucketIndex = prioritizedStaffRoleBuckets.count
+
+    private struct DisplayedStaffRow {
+        var id: Int
+        var name: String
+        var role: String
+        var originalIndex: Int
+        var bucketIndex: Int
+        var profileURL: URL?
+    }
+
+    private struct IndexedStaffJob {
+        var title: String
+        var originalIndex: Int
+    }
+
     private let repository: LibraryRepository
     private let infoFetcher: InfoFetcher
 
@@ -234,14 +363,7 @@ final class EntryDetailViewModel {
                 profileURL: $0.profileURL
             )
         }
-        staffCards = detail.orderedStaff.map {
-            EntryDetailPersonCard(
-                id: $0.id,
-                primaryText: $0.name,
-                secondaryText: Self.localizedStaffRole($0.role, language: language),
-                profileURL: $0.profileURL
-            )
-        }
+        staffCards = Self.displayedStaffCards(from: detail.orderedStaff, language: language)
         seasonCards = Self.orderedSeasonSummaries(detail.seasons).map {
             EntryDetailSeasonCard(
                 id: $0.id,
@@ -270,6 +392,161 @@ final class EntryDetailViewModel {
         }
     }
 
+    private static func displayedStaffCards(
+        from staff: [AnimeEntryStaff],
+        language: Language
+    ) -> [EntryDetailPersonCard] {
+        displayedStaffRows(from: staff)
+            .sorted { lhs, rhs in
+                if lhs.bucketIndex == rhs.bucketIndex {
+                    return lhs.originalIndex < rhs.originalIndex
+                }
+                return lhs.bucketIndex < rhs.bucketIndex
+            }
+            .prefix(maxDisplayedStaffCount)
+            .map {
+                EntryDetailPersonCard(
+                    id: $0.id,
+                    primaryText: $0.name,
+                    secondaryText: localizedStaffRole($0.role, language: language),
+                    profileURL: $0.profileURL
+                )
+            }
+    }
+
+    private static func displayedStaffRows(from staff: [AnimeEntryStaff]) -> [DisplayedStaffRow] {
+        staff.enumerated().flatMap { index, staffMember in
+            displayedStaffRows(for: staffMember, originalIndex: index)
+        }
+    }
+
+    private static func displayedStaffRows(
+        for staffMember: AnimeEntryStaff,
+        originalIndex: Int
+    ) -> [DisplayedStaffRow] {
+        let bucketedRows = bucketedDisplayedStaffRows(
+            for: staffMember,
+            originalIndex: originalIndex
+        )
+        guard bucketedRows.isEmpty else { return bucketedRows }
+
+        return [
+            DisplayedStaffRow(
+                id: staffMember.id,
+                name: staffMember.name,
+                role:
+                    normalizedNonEmpty(staffMember.role)
+                    ?? normalizedNonEmpty(staffMember.department)
+                    ?? "Staff",
+                originalIndex: originalIndex,
+                bucketIndex: staffPriority(
+                    role: staffMember.role,
+                    department: staffMember.department
+                ),
+                profileURL: staffMember.profileURL
+            )
+        ]
+    }
+
+    private static func bucketedDisplayedStaffRows(
+        for staffMember: AnimeEntryStaff,
+        originalIndex: Int
+    ) -> [DisplayedStaffRow] {
+        let jobs = staffMember.orderedJobs.enumerated().compactMap { offset, job -> IndexedStaffJob? in
+            guard let title = normalizedNonEmpty(job.job) else { return nil }
+            return IndexedStaffJob(title: title, originalIndex: offset)
+        }
+        guard !jobs.isEmpty else { return [] }
+
+        var jobsByBucket: [Int: [IndexedStaffJob]] = [:]
+        for job in jobs {
+            jobsByBucket[staffBucketIndex(for: job.title), default: []].append(job)
+        }
+
+        return jobsByBucket.keys.sorted().map { bucketIndex in
+            DisplayedStaffRow(
+                id: staffDisplayIdentifier(personID: staffMember.id, bucketIndex: bucketIndex),
+                name: staffMember.name,
+                role: bucketDisplayRole(
+                    jobsByBucket[bucketIndex] ?? [],
+                    bucketIndex: bucketIndex,
+                    department: staffMember.department
+                ),
+                originalIndex: originalIndex,
+                bucketIndex: bucketIndex,
+                profileURL: staffMember.profileURL
+            )
+        }
+    }
+
+    private static func staffPriority(role: String, department: String?) -> Int {
+        return staffRoleComponents(role: role, department: department)
+            .map(staffBucketIndex(for:))
+            .min()
+            ?? unprioritizedStaffBucketIndex
+    }
+
+    private static func staffBucketIndex(for roleComponent: String) -> Int {
+        prioritizedStaffRoleRanks[roleComponent] ?? unprioritizedStaffBucketIndex
+    }
+
+    private static func bucketDisplayRole(
+        _ jobs: [IndexedStaffJob],
+        bucketIndex: Int,
+        department: String?
+    ) -> String {
+        let orderedTitles = jobs.sorted { lhs, rhs in
+            let lhsPriority = staffRolePriority(for: lhs.title, in: bucketIndex)
+            let rhsPriority = staffRolePriority(for: rhs.title, in: bucketIndex)
+            if lhsPriority == rhsPriority {
+                return lhs.originalIndex < rhs.originalIndex
+            }
+            return lhsPriority < rhsPriority
+        }.prefix(2).map(\.title)
+
+        return
+            normalizedNonEmpty(orderedTitles.joined(separator: " / "))
+            ?? normalizedNonEmpty(department)
+            ?? "Staff"
+    }
+
+    private static func staffDisplayIdentifier(personID: Int, bucketIndex: Int) -> Int {
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        for byte in "\(personID)-\(bucketIndex)".utf8 {
+            hash ^= UInt64(byte)
+            hash &*= 1_099_511_628_211
+        }
+        return Int(truncatingIfNeeded: hash)
+    }
+
+    private static func staffRolePriority(for roleComponent: String, in bucketIndex: Int) -> Int {
+        guard bucketIndex < prioritizedStaffRoleOrdersByBucket.count else { return .max }
+        return prioritizedStaffRoleOrdersByBucket[bucketIndex][roleComponent] ?? .max
+    }
+
+    private static func normalizedNonEmpty(_ value: String?) -> String? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty
+        else {
+            return nil
+        }
+        return trimmed
+    }
+
+    private static func staffRoleComponents(role: String, department: String?) -> [String] {
+        var components = role
+            .components(separatedBy: " / ")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        if let department {
+            let normalizedDepartment = department.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !normalizedDepartment.isEmpty && !components.contains(normalizedDepartment) {
+                components.append(normalizedDepartment)
+            }
+        }
+
+        return components
+    }
 }
 
 @MainActor

@@ -197,19 +197,39 @@ public struct AnimeEntryStaffDTO: Equatable, Sendable, Identifiable {
     public var role: String
     public var department: String?
     public var profileURL: URL?
+    public var jobs: [AnimeEntryStaffJobDTO]
 
     public init(
         id: Int,
         name: String,
         role: String,
         department: String? = nil,
-        profileURL: URL? = nil
+        profileURL: URL? = nil,
+        jobs: [AnimeEntryStaffJobDTO] = []
     ) {
         self.id = id
         self.name = name
         self.role = role
         self.department = department
         self.profileURL = profileURL
+        self.jobs = jobs
+    }
+}
+
+public struct AnimeEntryStaffJobDTO: Equatable, Sendable, Identifiable {
+    public var id: String { creditID }
+    public var creditID: String
+    public var job: String
+    public var episodeCount: Int
+
+    public init(
+        creditID: String,
+        job: String,
+        episodeCount: Int
+    ) {
+        self.creditID = creditID
+        self.job = job
+        self.episodeCount = episodeCount
     }
 }
 

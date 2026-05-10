@@ -9,13 +9,14 @@ import Foundation
 import SwiftData
 
 /// The current schema version used by the data provider.
-public typealias CurrentSchema = SchemaV2_7_2
+public typealias CurrentSchema = SchemaV2_7_3
 
 /// The current anime entry type used by the data provider.
 public typealias AnimeEntry = CurrentSchema.AnimeEntry
 public typealias AnimeEntryDetail = CurrentSchema.AnimeEntryDetail
 public typealias AnimeEntryCharacter = CurrentSchema.AnimeEntryCharacter
 public typealias AnimeEntryStaff = CurrentSchema.AnimeEntryStaff
+public typealias AnimeEntryStaffJob = CurrentSchema.AnimeEntryStaffJob
 public typealias AnimeEntrySeasonSummary = CurrentSchema.AnimeEntrySeasonSummary
 public typealias AnimeEntryEpisodeSummary = CurrentSchema.AnimeEntryEpisodeSummary
 

@@ -425,7 +425,7 @@ final class InfoFetcher: Sendable {
                 language: language
             ),
             staff: makeStaff(
-                from: credits.crew.prefix(12),
+                from: credits.crew,
                 imagesConfiguration: imagesConfiguration,
                 language: language
             ),
@@ -475,7 +475,7 @@ final class InfoFetcher: Sendable {
                 language: language
             ),
             staff: makeStaff(
-                from: credits.crew.prefix(12),
+                from: credits.crew,
                 imagesConfiguration: imagesConfiguration,
                 language: language
             ),
@@ -788,7 +788,7 @@ final class InfoFetcher: Sendable {
                 language: language
             ),
             staff: makeStaff(
-                from: credits.crew.prefix(12),
+                from: credits.crew,
                 imagesConfiguration: imagesConfiguration,
                 language: language
             ),
@@ -833,7 +833,7 @@ final class InfoFetcher: Sendable {
                 language: language
             ),
             staff: makeStaff(
-                from: credits.crew.prefix(12),
+                from: credits.crew,
                 imagesConfiguration: imagesConfiguration,
                 language: language
             ),
@@ -941,39 +941,92 @@ final class InfoFetcher: Sendable {
         imagesConfiguration: ImagesConfiguration,
         language: Language
     ) -> [AnimeEntryStaffDTO] where S.Element == AggregrateCrewMember {
-        crew.map {
-            let jobs = Self.uniqueNonEmptyStrings(
-                $0.jobs.sorted { lhs, rhs in
-                    lhs.episodeCount > rhs.episodeCount
-                }.map(\.job)
-            )
-            let department = $0.knownForDepartment?.nilIfEmpty
+        Self.aggregateStaffDTOs(
+            from: crew,
+            imagesConfiguration: imagesConfiguration,
+            language: language
+        )
+    }
+
+    private struct MergedAggregateCrewMember {
+        var id: Int
+        var name: String
+        var originalName: String
+        var profilePath: URL?
+        var jobs: [CrewJob]
+        var knownForDepartment: String?
+    }
+
+    static func aggregateStaffDTOs<S: Sequence>(
+        from crew: S,
+        imagesConfiguration: ImagesConfiguration,
+        language: Language
+    ) -> [AnimeEntryStaffDTO] where S.Element == AggregrateCrewMember {
+        mergedAggregateCrewMembers(from: crew).map { member in
+            let department = member.knownForDepartment?.nilIfEmpty
 
             return AnimeEntryStaffDTO(
-                id: $0.id,
-                name: Self.preferredActorName(
-                    localizedName: $0.name,
-                    originalName: $0.originalName,
+                id: member.id,
+                name: preferredActorName(
+                    localizedName: member.name,
+                    originalName: member.originalName,
                     language: language
                 ),
-                role: jobs.prefix(2).joined(separator: " / ").nilIfEmpty ?? department ?? "Staff",
+                role: department ?? "Staff",
                 department: department,
-                profileURL: imagesConfiguration.profileURL(for: $0.profilePath, idealWidth: 185)
+                profileURL: imagesConfiguration.profileURL(
+                    for: member.profilePath,
+                    idealWidth: 185
+                ),
+                jobs: member.jobs.map {
+                    AnimeEntryStaffJobDTO(
+                        creditID: $0.creditID,
+                        job: $0.job,
+                        episodeCount: $0.episodeCount
+                    )
+                }
             )
         }
     }
 
-    private static func uniqueNonEmptyStrings<S: Sequence>(_ values: S) -> [String]
-    where S.Element == String {
-        var seen: Set<String> = []
-        var result: [String] = []
+    private static func mergedAggregateCrewMembers<S: Sequence>(
+        from crew: S
+    ) -> [MergedAggregateCrewMember] where S.Element == AggregrateCrewMember {
+        var mergedMembers: [MergedAggregateCrewMember] = []
+        var mergedIndexByPersonID: [Int: Int] = [:]
 
-        for value in values {
-            guard let value = value.nilIfEmpty, seen.insert(value).inserted else { continue }
-            result.append(value)
+        for member in crew {
+            if let existingIndex = mergedIndexByPersonID[member.id] {
+                mergedMembers[existingIndex].jobs.append(contentsOf: member.jobs)
+                if mergedMembers[existingIndex].profilePath == nil {
+                    mergedMembers[existingIndex].profilePath = member.profilePath
+                }
+                if mergedMembers[existingIndex].knownForDepartment?.isEmpty ?? true {
+                    mergedMembers[existingIndex].knownForDepartment = member.knownForDepartment
+                }
+                if mergedMembers[existingIndex].name.isEmpty {
+                    mergedMembers[existingIndex].name = member.name
+                }
+                if mergedMembers[existingIndex].originalName.isEmpty {
+                    mergedMembers[existingIndex].originalName = member.originalName
+                }
+                continue
+            }
+
+            mergedIndexByPersonID[member.id] = mergedMembers.count
+            mergedMembers.append(
+                MergedAggregateCrewMember(
+                    id: member.id,
+                    name: member.name,
+                    originalName: member.originalName,
+                    profilePath: member.profilePath,
+                    jobs: member.jobs,
+                    knownForDepartment: member.knownForDepartment
+                )
+            )
         }
 
-        return result
+        return mergedMembers
     }
 
     static func stableStaffIdentifier(creditID: String, fallbackID: Int) -> Int {
