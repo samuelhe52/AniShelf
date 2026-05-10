@@ -13,7 +13,7 @@ import SwiftUI
 @MainActor
 @Observable
 final class EntryDetailViewModel {
-    private static let maxDisplayedStaffCount = 24
+    private static let maxDisplayedStaffCount = 36
     private static let prioritizedStaffRoleBuckets: [[String]] = [
         [
             "Director",

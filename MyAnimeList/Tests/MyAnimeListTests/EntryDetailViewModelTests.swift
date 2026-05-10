@@ -237,9 +237,9 @@ struct EntryDetailViewModelTests {
 
         await viewModel.load(for: entry, language: .english, dataHandler: nil)
 
-        #expect(viewModel.staffCards.count == 24)
+        #expect(viewModel.staffCards.count == 36)
         #expect(viewModel.staffCards.prefix(9).map(\.id) == [101, 105, 102, 103, 104, 106, 107, 100, 108])
-        #expect(viewModel.staffCards.suffix(15).map(\.id) == Array(0..<15))
+        #expect(viewModel.staffCards.suffix(27).map(\.id) == Array(0..<27))
         #expect(entry.detail?.orderedStaff.map(\.id) == Array(0..<40) + Array(100...108))
     }
 
@@ -342,7 +342,7 @@ struct EntryDetailViewModelTests {
         #expect(viewModel.staffCards[0].secondaryText == "Sound Director / Music")
     }
 
-    @Test @MainActor func testEntryDetailCapsDisplayedAggregateStaffRowsAtTwentyFour() async {
+    @Test @MainActor func testEntryDetailCapsDisplayedAggregateStaffRowsAtThirtySix() async {
         let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
         let viewModel = EntryDetailViewModel(repository: repository)
         let entry = AnimeEntry(
@@ -381,9 +381,9 @@ struct EntryDetailViewModelTests {
 
         await viewModel.load(for: entry, language: .english, dataHandler: nil)
 
-        #expect(viewModel.staffCards.count == 24)
+        #expect(viewModel.staffCards.count == 26)
         #expect(viewModel.staffCards.prefix(13).allSatisfy { $0.secondaryText == "Director" })
-        #expect(viewModel.staffCards.suffix(11).allSatisfy { $0.secondaryText == "Music" })
+        #expect(viewModel.staffCards.suffix(13).allSatisfy { $0.secondaryText == "Music" })
     }
 
     @Test @MainActor func testEntryDetailRendersLegacyFlattenedStaffWithoutJobs() async {
