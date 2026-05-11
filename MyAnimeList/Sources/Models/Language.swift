@@ -20,10 +20,10 @@ enum Language: String, CaseIterable, CustomLocalizedStringResourceConvertible {
     }
 
     static func followsSystemPreference(defaults: UserDefaults = .standard) -> Bool {
-        if defaults.object(forKey: .useCurrentLocaleForAnimeInfoLanguage) != nil {
-            return defaults.bool(forKey: .useCurrentLocaleForAnimeInfoLanguage)
-        }
-        return defaults.string(forKey: .preferredAnimeInfoLanguage) == nil
+        defaults.bool(
+            forKey: .useCurrentLocaleForAnimeInfoLanguage,
+            defaultValue: defaults.string(forKey: .preferredAnimeInfoLanguage) == nil
+        )
     }
 
     static func resolvedAnimeInfoLanguage(defaults: UserDefaults = .standard) -> Language {

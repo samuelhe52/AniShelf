@@ -22,6 +22,7 @@ extension String {
     static let libraryOpenDetailWithSingleTap = "LibraryOpenDetailWithSingleTap"
     static let entryDetailCharactersExpandedByDefault = "EntryDetailCharactersExpandedByDefault"
     static let entryDetailStaffExpandedByDefault = "EntryDetailStaffExpandedByDefault"
+    static let libraryScoringEnabled = "LibraryScoringEnabled"
     static let libraryHideDroppedByDefault = "LibraryHideDroppedByDefault"
     static let libraryDefaultWatchStatus = "LibraryDefaultWatchStatus"
     static let libraryDefaultFilters = "LibraryDefaultFilters"
@@ -43,6 +44,7 @@ extension String {
         .libraryOpenDetailWithSingleTap,
         .entryDetailCharactersExpandedByDefault,
         .entryDetailStaffExpandedByDefault,
+        .libraryScoringEnabled,
         .libraryHideDroppedByDefault,
         .libraryDefaultWatchStatus,
         .libraryDefaultFilters,

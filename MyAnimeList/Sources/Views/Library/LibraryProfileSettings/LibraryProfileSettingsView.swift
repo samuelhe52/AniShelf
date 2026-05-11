@@ -24,6 +24,7 @@ struct LibraryProfileSettingsView: View {
     private var entryDetailCharactersExpandedByDefault = true
     @AppStorage(.entryDetailStaffExpandedByDefault)
     private var entryDetailStaffExpandedByDefault = false
+    @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
     @AppStorage(.useTMDbRelayServer) private var useTMDbRelayServer = true
 
     @State private var changeAPIKey = false
@@ -223,6 +224,7 @@ struct LibraryProfileSettingsView: View {
             openDetailWithSingleTap: $openDetailWithSingleTap,
             entryDetailCharactersExpandedByDefault: $entryDetailCharactersExpandedByDefault,
             entryDetailStaffExpandedByDefault: $entryDetailStaffExpandedByDefault,
+            scoringEnabled: $scoringEnabled,
             autoPrefetchImagesOnAddAndRestore: $store.autoPrefetchImagesOnAddAndRestore,
             useTMDbRelayServer: $useTMDbRelayServer,
             preferredLanguage: $preferredLanguage,
@@ -240,6 +242,7 @@ struct LibraryProfileSettingsView: View {
             onDeleteAllAnimes: requestClearLibrary
         )
         .animation(languagePickerAnimation, value: followsSystemLanguage)
+        .onChange(of: scoringEnabled, handleScoringEnabledChange)
         .onChange(of: useTMDbRelayServer, handleTMDbRelayServerChange)
     }
 
@@ -317,6 +320,11 @@ struct LibraryProfileSettingsView: View {
             object: nil
         )
         showTMDbRelayRestartAlert = true
+    }
+
+    private func handleScoringEnabledChange(old: Bool, new: Bool) {
+        guard old != new, !new, store.groupStrategy == .score else { return }
+        store.groupStrategy = .none
     }
 
     private func requestAPIKeySheet() {

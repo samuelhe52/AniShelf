@@ -134,6 +134,7 @@ struct LibraryProfileSettingsCard: View {
     @Binding var openDetailWithSingleTap: Bool
     @Binding var entryDetailCharactersExpandedByDefault: Bool
     @Binding var entryDetailStaffExpandedByDefault: Bool
+    @Binding var scoringEnabled: Bool
     @Binding var autoPrefetchImagesOnAddAndRestore: Bool
     @Binding var useTMDbRelayServer: Bool
     @Binding var preferredLanguage: Language
@@ -327,6 +328,24 @@ struct LibraryProfileSettingsCard: View {
                 }
                 Spacer(minLength: 12)
                 Toggle("Expand Staff by Default", isOn: $entryDetailStaffExpandedByDefault)
+                    .labelsHidden()
+                    .tint(.mint)
+                    .scaleEffect(0.78, anchor: .trailing)
+                    .frame(width: 42, height: 26, alignment: .trailing)
+            }
+            .padding(.vertical, 2)
+
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Enable Scoring")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Turning this off does not delete previously saved scores.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 12)
+                Toggle("Enable Scoring", isOn: $scoringEnabled)
                     .labelsHidden()
                     .tint(.mint)
                     .scaleEffect(0.78, anchor: .trailing)

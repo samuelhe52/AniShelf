@@ -1707,6 +1707,22 @@
         }
       }
     },
+    "Enable Scoring" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スコアを有効化"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用评分"
+          }
+        }
+      }
+    },
     "English" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4228,6 +4244,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "显示详情"
+          }
+        }
+      }
+    },
+    "Turning this off does not delete previously saved scores." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オフにしても、以前に保存したスコアは削除されません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭后不会删除之前保存的评分。"
           }
         }
       }

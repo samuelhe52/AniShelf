@@ -45,12 +45,3 @@ struct RedirectingHTTPClient: HTTPClient {
         )
     }
 }
-
-extension UserDefaults {
-    var usesTMDbRelayServer: Bool {
-        if object(forKey: .useTMDbRelayServer) == nil {
-            return true
-        }
-        return bool(forKey: .useTMDbRelayServer)
-    }
-}

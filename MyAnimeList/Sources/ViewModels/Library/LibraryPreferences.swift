@@ -63,10 +63,15 @@ struct LibraryPreferences {
     }
 
     private func loadGroupStrategy() -> LibraryStore.LibraryGroupStrategy {
-        defaults
+        let strategy =
+            defaults
             .string(forKey: .libraryGroupStrategy)
             .flatMap(LibraryStore.LibraryGroupStrategy.init(rawValue:))
             ?? .none
+        if strategy == .score, !defaults.isLibraryScoringEnabled {
+            return .none
+        }
+        return strategy
     }
 
     private func loadSortStrategy() -> LibraryStore.AnimeSortStrategy {
@@ -94,11 +99,7 @@ struct LibraryPreferences {
     }
 
     private func loadBool(forKey key: String, defaultValue: Bool) -> Bool {
-        if defaults.object(forKey: key) != nil {
-            defaults.bool(forKey: key)
-        } else {
-            defaultValue
-        }
+        defaults.bool(forKey: key, defaultValue: defaultValue)
     }
 
     private func legacyDefaultFilters(for preset: String) -> Set<LibraryStore.AnimeFilter> {

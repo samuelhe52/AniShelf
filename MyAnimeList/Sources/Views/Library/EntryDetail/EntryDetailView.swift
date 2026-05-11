@@ -16,6 +16,7 @@ struct EntryDetailView: View {
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
+    @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
 
     let entry: AnimeEntry
     private let startInEditingMode: Bool
@@ -459,56 +460,72 @@ struct EntryDetailView: View {
 
     @ViewBuilder
     private var editingSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            EntryScoreCard(entry: entry)
-
-            Divider()
-
-            PopupNestedDisclosureSection(
-                "Tracking",
-                systemImage: "checklist",
-                isExpanded: $isEditingDetails
-            ) {
-                VStack(alignment: .leading, spacing: 18) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Watch Status")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        AnimeEntryWatchedStatusPicker(for: entry)
-                            .pickerStyle(.segmented)
-                        AnimeEntryDatePickers(entry: entry)
-                    }
-
+        Group {
+            if scoringEnabled {
+                VStack(alignment: .leading, spacing: 16) {
+                    EntryScoreCard(entry: entry)
                     Divider()
 
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Notes")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        PlaceholderTextEditor(
-                            text: Binding(
-                                get: { entry.notes },
-                                set: { entry.notes = $0 }
-                            ),
-                            placeholder: "Write some thoughts..."
-                        )
-                        .frame(height: 180)
-                        .padding(12)
-                        .background(
-                            .thinMaterial,
-                            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        )
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(.white.opacity(0.1), lineWidth: 0.5)
-                        }
+                    PopupNestedDisclosureSection(
+                        "Tracking",
+                        systemImage: "checklist",
+                        isExpanded: $isEditingDetails
+                    ) {
+                        trackingEditorContent
                     }
+                }
+                .padding(18)
+                .popupGlassPanel(cornerRadius: 24)
+            } else {
+                PopupDisclosureCard(
+                    "Tracking",
+                    systemImage: "checklist",
+                    isExpanded: $isEditingDetails
+                ) {
+                    trackingEditorContent
                 }
             }
         }
-        .padding(18)
-        .popupGlassPanel(cornerRadius: 24)
         .id(EntryDetailScrollTarget.editingSection)
+    }
+
+    @ViewBuilder
+    private var trackingEditorContent: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Watch Status")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                AnimeEntryWatchedStatusPicker(for: entry)
+                    .pickerStyle(.segmented)
+                AnimeEntryDatePickers(entry: entry)
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Notes")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                PlaceholderTextEditor(
+                    text: Binding(
+                        get: { entry.notes },
+                        set: { entry.notes = $0 }
+                    ),
+                    placeholder: "Write some thoughts..."
+                )
+                .frame(height: 180)
+                .padding(12)
+                .background(
+                    .thinMaterial,
+                    in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(.white.opacity(0.1), lineWidth: 0.5)
+                }
+            }
+        }
     }
 
     private var statColumns: [GridItem] {
@@ -748,11 +765,7 @@ fileprivate struct EntryDetailPreviewHost: View {
 
 extension EntryDetailView {
     private static func defaultExpansionState(forKey key: String, defaultValue: Bool) -> Bool {
-        let defaults = UserDefaults.standard
-        guard defaults.object(forKey: key) != nil else {
-            return defaultValue
-        }
-        return defaults.bool(forKey: key)
+        UserDefaults.standard.bool(forKey: key, defaultValue: defaultValue)
     }
 }
 

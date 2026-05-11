@@ -33,6 +33,7 @@ struct LibraryView: View {
 
     // Persistent UI preference
     @AppStorage(.libraryViewStyle) var libraryViewStyle: LibraryViewStyle = .gallery
+    @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
 
     // MARK: - Body
 
@@ -52,6 +53,10 @@ struct LibraryView: View {
             }
         }
         .animation(profileSettingsAnimation, value: showProfileSettings)
+        .onChange(of: scoringEnabled) { _, newValue in
+            guard !newValue, store.groupStrategy == .score else { return }
+            store.groupStrategy = .none
+        }
     }
 
     private var libraryNavigation: some View {
@@ -135,9 +140,9 @@ struct LibraryView: View {
                 Picker(
                     "Group By",
                     systemImage: "square.grid.2x2",
-                    selection: $store.groupStrategy
+                    selection: groupStrategyBinding
                 ) {
-                    ForEach(LibraryStore.LibraryGroupStrategy.allCases, id: \.self) { strategy in
+                    ForEach(availableGroupStrategies, id: \.self) { strategy in
                         Text(strategy.localizedStringResource).tag(strategy)
                     }
                 }
@@ -190,6 +195,26 @@ struct LibraryView: View {
             )
         }
         .menuActionDismissBehavior(.disabled)
+    }
+
+    private var availableGroupStrategies: [LibraryStore.LibraryGroupStrategy] {
+        if scoringEnabled {
+            LibraryStore.LibraryGroupStrategy.allCases
+        } else {
+            LibraryStore.LibraryGroupStrategy.allCases.filter { $0 != .score }
+        }
+    }
+
+    private var groupStrategyBinding: Binding<LibraryStore.LibraryGroupStrategy> {
+        Binding(
+            get: {
+                if !scoringEnabled, store.groupStrategy == .score {
+                    return .none
+                }
+                return store.groupStrategy
+            },
+            set: { store.groupStrategy = $0 }
+        )
     }
 
     private var libraryViewStyleBinding: Binding<LibraryViewStyle> {
