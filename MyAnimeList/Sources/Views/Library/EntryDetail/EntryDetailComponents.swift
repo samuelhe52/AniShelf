@@ -246,7 +246,7 @@ fileprivate struct EntryDetailTrackingEditor: View {
 
                     Button {
                         withAnimation(.default) {
-                            entry.isDateTrackingEnabled.toggle()
+                            entry.setDateTrackingEnabled(!entry.isDateTrackingEnabled)
                         }
                     } label: {
                         Text(dateTrackingButtonLabel)

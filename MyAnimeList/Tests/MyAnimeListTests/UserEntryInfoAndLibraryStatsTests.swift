@@ -68,6 +68,31 @@ struct UserEntryInfoAndLibraryStatsTests {
         #expect(!entry.userInfoHasChanges(comparedTo: originalUserInfo))
     }
 
+    @Test func testReEnablingDateTrackingNormalizesCurrentWatchStatus() {
+        let watching = AnimeEntry.template(id: 211)
+        watching.setDateTrackingEnabled(false)
+        watching.setWatchStatus(.watching, now: referenceDate(year: 2026, month: 5, day: 9))
+        watching.setDateTrackingEnabled(true, now: referenceDate(year: 2026, month: 5, day: 10))
+        #expect(watching.dateStarted == referenceDate(year: 2026, month: 5, day: 10))
+        #expect(watching.dateFinished == nil)
+
+        let watched = AnimeEntry.template(id: 212)
+        watched.setDateTrackingEnabled(false)
+        watched.setWatchStatus(.watched, now: referenceDate(year: 2026, month: 5, day: 9))
+        watched.setDateTrackingEnabled(true, now: referenceDate(year: 2026, month: 5, day: 10))
+        #expect(watched.dateStarted == referenceDate(year: 2026, month: 5, day: 10))
+        #expect(watched.dateFinished == referenceDate(year: 2026, month: 5, day: 10))
+
+        let planned = AnimeEntry.template(id: 213)
+        planned.setDateTrackingEnabled(false)
+        planned.dateStarted = referenceDate(year: 2026, month: 5, day: 3)
+        planned.dateFinished = referenceDate(year: 2026, month: 5, day: 7)
+        planned.setWatchStatus(.planToWatch, now: referenceDate(year: 2026, month: 5, day: 9))
+        planned.setDateTrackingEnabled(true, now: referenceDate(year: 2026, month: 5, day: 10))
+        #expect(planned.dateStarted == nil)
+        #expect(planned.dateFinished == nil)
+    }
+
     @Test func testEntryScoreNormalizationRejectsOutOfRangeValues() throws {
         let entry = AnimeEntry.template(id: 303)
         entry.setScore(9)

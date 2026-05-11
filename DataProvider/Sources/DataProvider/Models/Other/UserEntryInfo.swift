@@ -138,6 +138,12 @@ extension UserEntryInfo: CustomStringConvertible {
 extension AnimeEntry {
     public static let validScoreRange = 1...5
 
+    public func setDateTrackingEnabled(_ isEnabled: Bool, now: Date = .now) {
+        isDateTrackingEnabled = isEnabled
+        guard isEnabled else { return }
+        normalizeTrackingDates(now: now)
+    }
+
     public func setWatchStatus(_ status: WatchStatus, now: Date = .now) {
         watchStatus = status
         guard isDateTrackingEnabled else { return }
