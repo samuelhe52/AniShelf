@@ -32,11 +32,11 @@
 - 查看番剧/动画电影在 TMDb 上的评分
 - 精美的 UI 设计、流畅的交互体验
 
-## 🧪 TestFlight Beta
+## 📱 获取方式
 
-在这里加入最新 Beta 版本：
+AniShelf 现已上架 iOS App Store，你可以在这里下载：[App Store Link](https://apps.apple.com/us/app/anishelf/id6759359144)。目前除中国大陆外，其他国家和地区均可下载。
 
-- [AniShelf TestFlight](https://testflight.apple.com/join/ns3sR38X)
+新功能会先通过 TestFlight 发布，之后再推送到 App Store。你也可以在这里加入 TestFlight 测试版：[AniShelf TestFlight](https://testflight.apple.com/join/ns3sR38X)。
 
 > 使用应用仍然需要 TMDb API key，可以从 [The Movie Database](https://www.themoviedb.org/settings/api) 免费获取。
 

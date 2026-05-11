@@ -31,11 +31,11 @@ A beautiful, native iOS app for tracking and managing your anime library.
 - **💾 Backup & Restore** - Export and import your library data
 - **🌍 Multi-language** - Support for anime titles and descriptions in multiple languages
 
-## 🧪 TestFlight Beta
+## 📱 Availability
 
-Join the latest beta build here:
+AniShelf is currently available on the iOS App Store. You can download it here: [App Store Link](https://apps.apple.com/us/app/anishelf/id6759359144). The app is available in all countries except for China Mainland.
 
-- [AniShelf TestFlight](https://testflight.apple.com/join/ns3sR38X)
+Note that new features will first be released on TestFlight before being pushed to the App Store. You can join the TestFlight beta here: [AniShelf TestFlight](https://testflight.apple.com/join/ns3sR38X).
 
 > You still need a TMDb API key to use the app, which can be obtained for free from [The Movie Database](https://www.themoviedb.org/settings/api).
 
