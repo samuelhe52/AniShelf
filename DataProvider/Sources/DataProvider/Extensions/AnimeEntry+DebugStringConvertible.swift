@@ -22,6 +22,7 @@ extension AnimeEntry {
           dateSaved: \(dateSaved),
           dateStarted: \(dateStarted?.description ?? "nil"),
           dateFinished: \(dateFinished?.description ?? "nil"),
+          isDateTrackingEnabled: \(isDateTrackingEnabled),
           favorite: \(favorite),
           status: \(watchStatus)
         )

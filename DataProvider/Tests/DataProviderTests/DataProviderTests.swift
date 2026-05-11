@@ -13,6 +13,17 @@ import Testing
     #expect(entry.dateFinished == referenceDate(day: 10))
 }
 
+@Test func watchingStatusSetsStartDateWhenDateTrackingIsEnabled() async throws {
+    let entry = AnimeEntry.template()
+
+    entry.dateStarted = nil
+    entry.dateFinished = nil
+    entry.setWatchStatus(.watching, now: referenceDate(day: 10))
+
+    #expect(entry.dateStarted == referenceDate(day: 10))
+    #expect(entry.dateFinished == nil)
+}
+
 @Test func planToWatchClearsTrackingDates() async throws {
     let entry = AnimeEntry.template()
 
@@ -22,6 +33,32 @@ import Testing
 
     #expect(entry.dateStarted == nil)
     #expect(entry.dateFinished == nil)
+}
+
+@Test func statusChangesDoNotMutateDatesWhenDateTrackingIsDisabled() async throws {
+    let entry = AnimeEntry.template()
+
+    entry.isDateTrackingEnabled = false
+    entry.dateStarted = nil
+    entry.dateFinished = nil
+    entry.setWatchStatus(.watched, now: referenceDate(day: 10))
+
+    #expect(entry.watchStatus == .watched)
+    #expect(entry.dateStarted == nil)
+    #expect(entry.dateFinished == nil)
+}
+
+@Test func disabledDateTrackingPreservesExistingDatesAcrossStatusChanges() async throws {
+    let entry = AnimeEntry.template()
+
+    entry.isDateTrackingEnabled = false
+    entry.dateStarted = referenceDate(day: 3)
+    entry.dateFinished = referenceDate(day: 7)
+    entry.setWatchStatus(.planToWatch, now: referenceDate(day: 10))
+
+    #expect(entry.watchStatus == .planToWatch)
+    #expect(entry.dateStarted == referenceDate(day: 3))
+    #expect(entry.dateFinished == referenceDate(day: 7))
 }
 
 @Test func droppedStatusPreservesStartedDate() async throws {

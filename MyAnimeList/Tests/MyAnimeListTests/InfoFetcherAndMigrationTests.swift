@@ -501,6 +501,41 @@ struct InfoFetcherAndMigrationTests {
         #expect(migratedStaff.orderedJobs.map(\.job) == ["Director", "Music"])
     }
 
+    @Test @MainActor func testDateTrackingMigrationFromV274DefaultsToEnabled() throws {
+        let storeURL = temporaryStoreURL(name: "date-tracking-migration-v274")
+
+        let legacySchema = Schema(versionedSchema: SchemaV2_7_4.self)
+        let legacyConfiguration = ModelConfiguration(schema: legacySchema, url: storeURL)
+        let legacyContainer = try ModelContainer(for: legacySchema, configurations: legacyConfiguration)
+
+        let legacyEntry = SchemaV2_7_4.AnimeEntry(
+            name: "Legacy 2.7.4 Entry",
+            type: .movie,
+            tmdbID: 800001,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 10),
+            dateStarted: referenceDate(year: 2026, month: 5, day: 8),
+            dateFinished: referenceDate(year: 2026, month: 5, day: 9),
+            score: 3
+        )
+        legacyEntry.watchStatus = .watched
+        legacyEntry.favorite = true
+        legacyEntry.notes = "Preserve me"
+        legacyContainer.mainContext.insert(legacyEntry)
+        try legacyContainer.mainContext.save()
+
+        let migratedProvider = DataProvider(url: storeURL)
+        let migratedEntries = try migratedProvider.getAllModels(ofType: AnimeEntry.self)
+        let migratedEntry = try #require(migratedEntries.first(where: { $0.tmdbID == 800001 }))
+
+        #expect(migratedEntry.watchStatus == .watched)
+        #expect(migratedEntry.dateStarted == referenceDate(year: 2026, month: 5, day: 8))
+        #expect(migratedEntry.dateFinished == referenceDate(year: 2026, month: 5, day: 9))
+        #expect(migratedEntry.score == 3)
+        #expect(migratedEntry.favorite)
+        #expect(migratedEntry.notes == "Preserve me")
+        #expect(migratedEntry.isDateTrackingEnabled)
+    }
+
     @Test @MainActor func testExistingEntryPrefersReferencedHiddenParentOverOrphanDuplicate() throws {
         let dataProvider = DataProvider(inMemory: true)
         let repository = LibraryRepository(dataProvider: dataProvider)
@@ -536,7 +571,7 @@ struct InfoFetcherAndMigrationTests {
         #expect(resolvedEntry.id == referencedHiddenParent.id)
     }
 
-    @Test @MainActor func testConvertSeasonToSeriesPreservesScore() async throws {
+    @Test @MainActor func testConvertSeasonToSeriesPreservesScoreAndDateTrackingSetting() async throws {
         let dataProvider = DataProvider(inMemory: true)
         let repository = LibraryRepository(dataProvider: dataProvider)
         let converter = LibraryEntryConverter(repository: repository)
@@ -546,6 +581,9 @@ struct InfoFetcherAndMigrationTests {
             tmdbID: 400_234
         )
         seasonEntry.setScore(5)
+        seasonEntry.isDateTrackingEnabled = false
+        seasonEntry.dateStarted = referenceDate(year: 2026, month: 5, day: 1)
+        seasonEntry.dateFinished = referenceDate(year: 2026, month: 5, day: 2)
         seasonEntry.notes = "Season-side score"
         try repository.newEntry(seasonEntry)
 
@@ -562,9 +600,12 @@ struct InfoFetcherAndMigrationTests {
 
         #expect(seriesEntry.score == 5)
         #expect(seriesEntry.notes == "Season-side score")
+        #expect(!seriesEntry.isDateTrackingEnabled)
+        #expect(seriesEntry.dateStarted == referenceDate(year: 2026, month: 5, day: 1))
+        #expect(seriesEntry.dateFinished == referenceDate(year: 2026, month: 5, day: 2))
     }
 
-    @Test @MainActor func testConvertSeriesToSeasonPreservesScore() async throws {
+    @Test @MainActor func testConvertSeriesToSeasonPreservesScoreAndDateTrackingSetting() async throws {
         let dataProvider = DataProvider(inMemory: true)
         let repository = LibraryRepository(dataProvider: dataProvider)
         let converter = LibraryEntryConverter(repository: repository)
@@ -574,6 +615,9 @@ struct InfoFetcherAndMigrationTests {
             tmdbID: 209867
         )
         seriesEntry.setScore(2)
+        seriesEntry.isDateTrackingEnabled = false
+        seriesEntry.dateStarted = referenceDate(year: 2026, month: 5, day: 3)
+        seriesEntry.dateFinished = referenceDate(year: 2026, month: 5, day: 4)
         seriesEntry.notes = "Series-side score"
         try repository.newEntry(seriesEntry)
 
@@ -599,6 +643,9 @@ struct InfoFetcherAndMigrationTests {
 
         #expect(seasonEntry.score == 2)
         #expect(seasonEntry.notes == "Series-side score")
+        #expect(!seasonEntry.isDateTrackingEnabled)
+        #expect(seasonEntry.dateStarted == referenceDate(year: 2026, month: 5, day: 3))
+        #expect(seasonEntry.dateFinished == referenceDate(year: 2026, month: 5, day: 4))
         #expect(hiddenSeriesEntry.tmdbID == 209867)
     }
 

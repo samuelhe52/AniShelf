@@ -1621,6 +1621,7 @@
       }
     },
     "Discard all changes?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -2376,6 +2377,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "分组方式"
+          }
+        }
+      }
+    },
+    "Hide Dates" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日付を隠す"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐藏日期"
           }
         }
       }
@@ -4248,22 +4265,6 @@
         }
       }
     },
-    "Turning this off does not delete previously saved scores." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "オフにしても、以前に保存したスコアは削除されません。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "关闭后不会删除之前保存的评分。"
-          }
-        }
-      }
-    },
     "Sibling Season Exists" : {
       "localizations" : {
         "ja" : {
@@ -4384,6 +4385,7 @@
       }
     },
     "Status: %@\nStarted: %@\nFinished: %@\nScore: %lld\nFavorite: %@\nNotes: %@\nCustom Poster: %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4406,6 +4408,7 @@
       }
     },
     "Status: %@\nStarted: %@\nFinished: %@\nScore: No score\nFavorite: %@\nNotes: %@\nCustom Poster: %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4423,6 +4426,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "状态: %1$@\n开始: %2$@\n结束: %3$@\n评分: 未评分\n特别收藏: %4$@\n笔记: %5$@\n使用自选海报: %6$@"
+          }
+        }
+      }
+    },
+    "Status: %@\nStarted: %@\nFinished: %@\nTrack Dates: %@\nScore: %lld\nFavorite: %@\nNotes: %@\nCustom Poster: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Status: %1$@\nStarted: %2$@\nFinished: %3$@\nTrack Dates: %4$@\nScore: %5$lld\nFavorite: %6$@\nNotes: %7$@\nCustom Poster: %8$@"
+          }
+        }
+      }
+    },
+    "Status: %@\nStarted: %@\nFinished: %@\nTrack Dates: %@\nScore: No score\nFavorite: %@\nNotes: %@\nCustom Poster: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Status: %1$@\nStarted: %2$@\nFinished: %3$@\nTrack Dates: %4$@\nScore: No score\nFavorite: %5$@\nNotes: %6$@\nCustom Poster: %7$@"
           }
         }
       }
@@ -4721,6 +4744,22 @@
         }
       }
     },
+    "Track Dates" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日付を記録"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记录日期"
+          }
+        }
+      }
+    },
     "Tracking" : {
       "localizations" : {
         "ja" : {
@@ -4765,6 +4804,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "如果你已长期使用代理，或直连 TMDb 更快，可以关闭此选项。"
+          }
+        }
+      }
+    },
+    "Turning this off does not delete previously saved scores." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オフにしても、以前に保存したスコアは削除されません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭后不会删除之前保存的评分。"
           }
         }
       }

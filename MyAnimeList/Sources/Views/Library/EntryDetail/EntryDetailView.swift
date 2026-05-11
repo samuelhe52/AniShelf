@@ -272,7 +272,7 @@ struct EntryDetailView: View {
             isFavorite: entry.favorite,
             showsConvertAction: entry.type != .movie,
             conversionInProgress: conversion.inProgress,
-            convertMenuTitle: convertMenuTitle,
+            convertMenuTitle: { convertMenuTitle },
             dropActionTitle: dropActionTitle,
             dropActionSystemImage: dropActionSystemImage,
             dropActionIsDestructive: entry.watchStatus != .dropped,

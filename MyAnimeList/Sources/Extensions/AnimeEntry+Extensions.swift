@@ -131,6 +131,7 @@ extension AnimeEntry {
         _ = dateSaved
         _ = dateStarted
         _ = dateFinished
+        _ = isDateTrackingEnabled
 
         if let detail {
             _ = detail.runtimeMinutes

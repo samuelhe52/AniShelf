@@ -36,6 +36,38 @@ struct UserEntryInfoAndLibraryStatsTests {
         #expect(!entry.userInfoHasChanges(comparedTo: originalUserInfo))
     }
 
+    @Test func testDateTrackingFlagRoundTripAndChangeDetection() throws {
+        let entry = AnimeEntry.template(id: 111)
+        let originalUserInfo = entry.userInfo
+
+        entry.isDateTrackingEnabled = false
+        entry.dateStarted = referenceDate(year: 2026, month: 5, day: 9)
+        entry.dateFinished = referenceDate(year: 2026, month: 5, day: 10)
+
+        #expect(!entry.userInfo.isDateTrackingEnabled)
+        #expect(!entry.userInfo.isEmpty)
+        #expect(entry.userInfoHasChanges(comparedTo: originalUserInfo))
+
+        let encoded = try JSONEncoder().encode(entry.userInfo)
+        let decoded = try JSONDecoder().decode(UserEntryInfo.self, from: encoded)
+        #expect(decoded == entry.userInfo)
+        #expect(!decoded.isDateTrackingEnabled)
+
+        let restored = AnimeEntry.template(id: 112)
+        restored.updateUserInfo(from: decoded)
+
+        #expect(!restored.isDateTrackingEnabled)
+        #expect(restored.dateStarted == referenceDate(year: 2026, month: 5, day: 9))
+        #expect(restored.dateFinished == referenceDate(year: 2026, month: 5, day: 10))
+        #expect(restored.userInfo == decoded)
+
+        entry.isDateTrackingEnabled = true
+        entry.dateStarted = nil
+        entry.dateFinished = nil
+        #expect(entry.userInfo == originalUserInfo)
+        #expect(!entry.userInfoHasChanges(comparedTo: originalUserInfo))
+    }
+
     @Test func testEntryScoreNormalizationRejectsOutOfRangeValues() throws {
         let entry = AnimeEntry.template(id: 303)
         entry.setScore(9)

@@ -38,6 +38,7 @@ extension AnimeEntry {
         // Date saved and id is not updated.
         dateStarted = other.dateStarted
         dateFinished = other.dateFinished
+        isDateTrackingEnabled = other.isDateTrackingEnabled
         favorite = other.favorite
     }
 

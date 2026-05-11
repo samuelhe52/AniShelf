@@ -19,6 +19,12 @@ enum EntryDetailL10n {
     static let overview: LocalizedStringResource = "Overview"
     static let tracking: LocalizedStringResource = "Tracking"
     static let watchStatus: LocalizedStringResource = "Watch Status"
+    static let trackDates: LocalizedStringResource = "Track Dates"
+    static let hideDates: LocalizedStringResource = "Hide Dates"
+    static let dateStarted: LocalizedStringResource = "Date Started"
+    static let dateFinished: LocalizedStringResource = "Date Finished"
+    static let droppedDatesLocked: LocalizedStringResource =
+        "Dates are locked while this entry is dropped."
     static let notes: LocalizedStringResource = "Notes"
     static let writeSomeThoughts: LocalizedStringResource = "Write some thoughts..."
     static let score: LocalizedStringResource = "Score"

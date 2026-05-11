@@ -90,7 +90,7 @@ struct AnimeEntryDatePickers: View {
                     in: Date.distantPast...(entry.dateFinished ?? .now),
                     displayedComponents: [.date]
                 ) {
-                    Text("Date Started")
+                    Text(EntryDetailL10n.dateStarted)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -104,7 +104,7 @@ struct AnimeEntryDatePickers: View {
                     in: (entry.dateStarted ?? .now)...Date.distantFuture,
                     displayedComponents: [.date]
                 ) {
-                    Text("Date Finished")
+                    Text(EntryDetailL10n.dateFinished)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -115,7 +115,7 @@ struct AnimeEntryDatePickers: View {
             .animation(.default, value: isLocked)
 
             if isLocked {
-                Label("Dates are locked while this entry is dropped.", systemImage: "lock.fill")
+                Label(EntryDetailL10n.droppedDatesLocked, systemImage: "lock.fill")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

@@ -34,7 +34,7 @@ struct EntryDetailQuickActionsRow: View {
     let isFavorite: Bool
     let showsConvertAction: Bool
     let conversionInProgress: Bool
-    let convertMenuTitle: LocalizedStringResource
+    let convertMenuTitle: () -> LocalizedStringResource
     let dropActionTitle: LocalizedStringResource
     let dropActionSystemImage: String
     let dropActionIsDestructive: Bool
@@ -81,7 +81,7 @@ struct EntryDetailQuickActionsRow: View {
                     Button {
                         Task { await onConvert() }
                     } label: {
-                        Label(convertMenuTitle, systemImage: "arrow.triangle.2.circlepath")
+                        Label(convertMenuTitle(), systemImage: "arrow.triangle.2.circlepath")
                     }
                     .disabled(conversionInProgress)
                 }
@@ -230,15 +230,37 @@ struct EntryDetailTrackingSection: View {
 fileprivate struct EntryDetailTrackingEditor: View {
     let entry: AnimeEntry
 
+    private var dateTrackingButtonLabel: LocalizedStringResource {
+        entry.isDateTrackingEnabled ? EntryDetailL10n.hideDates : EntryDetailL10n.trackDates
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 10) {
-                Text(EntryDetailL10n.watchStatus)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                HStack(alignment: .center, spacing: 12) {
+                    Text(EntryDetailL10n.watchStatus)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    Spacer(minLength: 12)
+
+                    Button {
+                        withAnimation(.default) {
+                            entry.isDateTrackingEnabled.toggle()
+                        }
+                    } label: {
+                        Text(dateTrackingButtonLabel)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
                 AnimeEntryWatchedStatusPicker(for: entry)
                     .pickerStyle(.segmented)
-                AnimeEntryDatePickers(entry: entry)
+
+                if entry.isDateTrackingEnabled {
+                    AnimeEntryDatePickers(entry: entry)
+                }
             }
 
             Divider()

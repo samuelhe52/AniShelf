@@ -18,6 +18,9 @@ public struct UserEntryInfo: Equatable, Codable {
     /// Date marked finished.
     public var dateFinished: Date?
 
+    /// Whether status changes should automatically manage tracking dates for this entry.
+    public var isDateTrackingEnabled: Bool
+
     /// User's optional score for this entry.
     public var score: Int?
 
@@ -34,6 +37,7 @@ public struct UserEntryInfo: Equatable, Codable {
         watchStatus: AnimeEntry.WatchStatus,
         dateStarted: Date? = nil,
         dateFinished: Date? = nil,
+        isDateTrackingEnabled: Bool = true,
         score: Int? = nil,
         favorite: Bool,
         notes: String,
@@ -42,6 +46,7 @@ public struct UserEntryInfo: Equatable, Codable {
         self.watchStatus = watchStatus
         self.dateStarted = dateStarted
         self.dateFinished = dateFinished
+        self.isDateTrackingEnabled = isDateTrackingEnabled
         self.score = normalizedEntryScore(score)
         self.favorite = favorite
         self.notes = notes
@@ -52,6 +57,7 @@ public struct UserEntryInfo: Equatable, Codable {
         self.watchStatus = entry.watchStatus
         self.dateStarted = entry.dateStarted
         self.dateFinished = entry.dateFinished
+        self.isDateTrackingEnabled = entry.isDateTrackingEnabled
         self.score = normalizedEntryScore(entry.score)
         self.favorite = entry.favorite
         self.notes = entry.notes
@@ -61,6 +67,7 @@ public struct UserEntryInfo: Equatable, Codable {
     /// Whether this user info is "empty", i.e. has no meaningful user data.
     public var isEmpty: Bool {
         watchStatus == .planToWatch && dateStarted == nil && dateFinished == nil
+            && isDateTrackingEnabled
             && score == nil && favorite == false && notes.isEmpty && usingCustomPoster == false
     }
 
@@ -68,6 +75,7 @@ public struct UserEntryInfo: Equatable, Codable {
         case watchStatus
         case dateStarted
         case dateFinished
+        case isDateTrackingEnabled
         case score
         case favorite
         case notes
@@ -80,6 +88,7 @@ public struct UserEntryInfo: Equatable, Codable {
             watchStatus: try container.decode(AnimeEntry.WatchStatus.self, forKey: .watchStatus),
             dateStarted: try container.decodeIfPresent(Date.self, forKey: .dateStarted),
             dateFinished: try container.decodeIfPresent(Date.self, forKey: .dateFinished),
+            isDateTrackingEnabled: try container.decodeIfPresent(Bool.self, forKey: .isDateTrackingEnabled) ?? true,
             score: normalizedEntryScore(try container.decodeIfPresent(Int.self, forKey: .score)),
             favorite: try container.decode(Bool.self, forKey: .favorite),
             notes: try container.decode(String.self, forKey: .notes),
@@ -92,6 +101,7 @@ public struct UserEntryInfo: Equatable, Codable {
         try container.encode(watchStatus, forKey: .watchStatus)
         try container.encodeIfPresent(dateStarted, forKey: .dateStarted)
         try container.encodeIfPresent(dateFinished, forKey: .dateFinished)
+        try container.encode(isDateTrackingEnabled, forKey: .isDateTrackingEnabled)
         try container.encodeIfPresent(normalizedEntryScore(score), forKey: .score)
         try container.encode(favorite, forKey: .favorite)
         try container.encode(notes, forKey: .notes)
@@ -116,6 +126,7 @@ extension UserEntryInfo: CustomStringConvertible {
         Status: \(watchStatus)
         Started: \(dateStarted?.description ?? "N/A")
         Finished: \(dateFinished?.description ?? "N/A")
+        Track Dates: \(isDateTrackingEnabled)
         Score: \(score.map(String.init) ?? "No score")
         Favorite: \(favorite)
         Notes: \(notes)
@@ -129,6 +140,7 @@ extension AnimeEntry {
 
     public func setWatchStatus(_ status: WatchStatus, now: Date = .now) {
         watchStatus = status
+        guard isDateTrackingEnabled else { return }
         normalizeTrackingDates(now: now)
     }
 
@@ -151,10 +163,12 @@ extension AnimeEntry {
         watchStatus = userInfo.watchStatus
         dateStarted = userInfo.dateStarted
         dateFinished = userInfo.dateFinished
+        isDateTrackingEnabled = userInfo.isDateTrackingEnabled
         score = normalizedEntryScore(userInfo.score)
         favorite = userInfo.favorite
         notes = userInfo.notes
         usingCustomPoster = userInfo.usingCustomPoster
+        guard isDateTrackingEnabled else { return }
         normalizeTrackingDates()
     }
 }

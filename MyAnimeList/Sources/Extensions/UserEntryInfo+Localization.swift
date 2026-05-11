@@ -27,6 +27,7 @@ extension UserEntryInfo: @retroactive CustomLocalizedStringResourceConvertible {
             Status: \(watchStatus)
             Started: \(dateStarted?.description ?? "N/A")
             Finished: \(dateFinished?.description ?? "N/A")
+            Track Dates: \(isDateTrackingEnabled ? "Yes" : "No")
             Score: \(score)
             Favorite: \(favorite ? "Yes" : "No")
             Notes: \(notes)
@@ -37,6 +38,7 @@ extension UserEntryInfo: @retroactive CustomLocalizedStringResourceConvertible {
             Status: \(watchStatus)
             Started: \(dateStarted?.description ?? "N/A")
             Finished: \(dateFinished?.description ?? "N/A")
+            Track Dates: \(isDateTrackingEnabled ? "Yes" : "No")
             Score: No score
             Favorite: \(favorite ? "Yes" : "No")
             Notes: \(notes)
