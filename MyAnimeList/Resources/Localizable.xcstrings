@@ -3832,23 +3832,6 @@
         }
       }
     },
-    "Restart app to see changes." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "変更を適用するにはアプリを再起動してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重启 App 以应用更改。"
-          }
-        }
-      }
-    },
     "Restore" : {
       "localizations" : {
         "ja" : {
@@ -4361,81 +4344,24 @@
         }
       }
     },
-    "Status: %@\nStarted: %@\nFinished: %@\nFavorite: %@\nNotes: %@\nCustom Poster: %@" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Status: %1$@\nStarted: %2$@\nFinished: %3$@\nFavorite: %4$@\nNotes: %5$@\nCustom Poster: %6$@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ステータス: %1$@\n開始日: %2$@\n終了日: %3$@\nお気に入り: %4$@\nノート: %5$@\nカスタムポスター: %6$@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "状态: %1$@\n开始: %2$@\n结束: %3$@\n特别收藏: %4$@\n笔记: %5$@\n使用自选海报: %6$@"
-          }
-        }
-      }
-    },
-    "Status: %@\nStarted: %@\nFinished: %@\nScore: %lld\nFavorite: %@\nNotes: %@\nCustom Poster: %@" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Status: %1$@\nStarted: %2$@\nFinished: %3$@\nScore: %4$lld\nFavorite: %5$@\nNotes: %6$@\nCustom Poster: %7$@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ステータス: %1$@\n開始日: %2$@\n終了日: %3$@\nスコア: %4$lld\nお気に入り: %5$@\nノート: %6$@\nカスタムポスター: %7$@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "状态: %1$@\n开始: %2$@\n结束: %3$@\n评分: %4$lld\n特别收藏: %5$@\n笔记: %6$@\n使用自选海报: %7$@"
-          }
-        }
-      }
-    },
-    "Status: %@\nStarted: %@\nFinished: %@\nScore: No score\nFavorite: %@\nNotes: %@\nCustom Poster: %@" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Status: %1$@\nStarted: %2$@\nFinished: %3$@\nScore: No score\nFavorite: %4$@\nNotes: %5$@\nCustom Poster: %6$@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ステータス: %1$@\n開始日: %2$@\n終了日: %3$@\nスコア: 未設定\nお気に入り: %4$@\nノート: %5$@\nカスタムポスター: %6$@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "状态: %1$@\n开始: %2$@\n结束: %3$@\n评分: 未评分\n特别收藏: %4$@\n笔记: %5$@\n使用自选海报: %6$@"
-          }
-        }
-      }
-    },
     "Status: %@\nStarted: %@\nFinished: %@\nTrack Dates: %@\nScore: %lld\nFavorite: %@\nNotes: %@\nCustom Poster: %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "Status: %1$@\nStarted: %2$@\nFinished: %3$@\nTrack Dates: %4$@\nScore: %5$lld\nFavorite: %6$@\nNotes: %7$@\nCustom Poster: %8$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ステータス: %1$@\n開始日: %2$@\n終了日: %3$@\n日付を記録: %4$@\nスコア: %5$lld\nお気に入り: %6$@\nノート: %7$@\nカスタムポスター: %8$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "状态: %1$@\n开始: %2$@\n结束: %3$@\n记录日期: %4$@\n评分: %5$lld\n特别收藏: %6$@\n笔记: %7$@\n使用自选海报: %8$@"
           }
         }
       }
@@ -4446,6 +4372,18 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Status: %1$@\nStarted: %2$@\nFinished: %3$@\nTrack Dates: %4$@\nScore: No score\nFavorite: %5$@\nNotes: %6$@\nCustom Poster: %7$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ステータス: %1$@\n開始日: %2$@\n終了日: %3$@\n日付を記録: %4$@\nスコア: 未設定\nお気に入り: %5$@\nノート: %6$@\nカスタムポスター: %7$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "状态: %1$@\n开始: %2$@\n结束: %3$@\n记录日期: %4$@\n评分: 未评分\n特别收藏: %5$@\n笔记: %6$@\n使用自选海报: %7$@"
           }
         }
       }
