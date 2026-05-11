@@ -9,7 +9,7 @@ import SwiftUI
 
 struct PlaceholderTextEditor: View {
     @Binding var text: String
-    var placeholder: LocalizedStringKey
+    var placeholder: LocalizedStringResource
 
     var body: some View {
         ZStack(alignment: .topLeading) {

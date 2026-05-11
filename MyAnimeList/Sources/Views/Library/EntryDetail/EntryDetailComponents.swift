@@ -29,6 +29,87 @@ struct DetailStatCard: View {
     }
 }
 
+struct EntryDetailQuickActionsRow: View {
+    let detailURL: URL?
+    let isFavorite: Bool
+    let showsConvertAction: Bool
+    let conversionInProgress: Bool
+    let convertMenuTitle: LocalizedStringResource
+    let dropActionTitle: LocalizedStringResource
+    let dropActionSystemImage: String
+    let dropActionIsDestructive: Bool
+    let onShare: () -> Void
+    let onToggleFavorite: () -> Void
+    let onChangePoster: () -> Void
+    let onConvert: () async -> Void
+    let onToggleDroppedStatus: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Spacer(minLength: 0)
+
+            if let detailURL {
+                Link(destination: detailURL) {
+                    Image(systemName: "safari")
+                        .font(.title2)
+                        .frame(width: 20, height: 20)
+                        .padding(10)
+                }
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+                .tint(.primary)
+            }
+
+            PopupActionCircleButton(
+                systemImage: "square.and.arrow.up",
+                verticalOffset: -1,
+                action: onShare
+            )
+
+            PopupActionCircleButton(
+                systemImage: isFavorite ? "heart.fill" : "heart",
+                tint: isFavorite ? .pink : .primary,
+                action: onToggleFavorite
+            )
+
+            Menu {
+                Button(action: onChangePoster) {
+                    Label(EntryDetailL10n.changePoster, systemImage: "photo.on.rectangle")
+                }
+
+                if showsConvertAction {
+                    Button {
+                        Task { await onConvert() }
+                    } label: {
+                        Label(convertMenuTitle, systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    .disabled(conversionInProgress)
+                }
+
+                Divider()
+
+                Button(
+                    dropActionTitle,
+                    systemImage: dropActionSystemImage,
+                    role: dropActionIsDestructive ? .destructive : nil,
+                    action: onToggleDroppedStatus
+                )
+                .tint(dropActionIsDestructive ? .red : .primary)
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.title2)
+                    .frame(width: 20, height: 20)
+                    .padding(10)
+            }
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
+            .tint(.primary)
+
+            Spacer(minLength: 0)
+        }
+    }
+}
+
 struct EntryScoreCard: View {
     let entry: AnimeEntry
 
@@ -106,6 +187,83 @@ struct EntryScoreCard: View {
             guard bouncingScore == value else { return }
             withAnimation(bounceOutAnimation) {
                 bouncingScore = nil
+            }
+        }
+    }
+}
+
+struct EntryDetailTrackingSection: View {
+    let entry: AnimeEntry
+    let scoringEnabled: Bool
+    @Binding var isEditingDetails: Bool
+
+    var body: some View {
+        Group {
+            if scoringEnabled {
+                VStack(alignment: .leading, spacing: 16) {
+                    EntryScoreCard(entry: entry)
+                    Divider()
+
+                    PopupNestedDisclosureSection(
+                        EntryDetailL10n.tracking,
+                        systemImage: "checklist",
+                        isExpanded: $isEditingDetails
+                    ) {
+                        EntryDetailTrackingEditor(entry: entry)
+                    }
+                }
+                .padding(18)
+                .popupGlassPanel(cornerRadius: 24)
+            } else {
+                PopupDisclosureCard(
+                    EntryDetailL10n.tracking,
+                    systemImage: "checklist",
+                    isExpanded: $isEditingDetails
+                ) {
+                    EntryDetailTrackingEditor(entry: entry)
+                }
+            }
+        }
+    }
+}
+
+fileprivate struct EntryDetailTrackingEditor: View {
+    let entry: AnimeEntry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(EntryDetailL10n.watchStatus)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                AnimeEntryWatchedStatusPicker(for: entry)
+                    .pickerStyle(.segmented)
+                AnimeEntryDatePickers(entry: entry)
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text(EntryDetailL10n.notes)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                PlaceholderTextEditor(
+                    text: Binding(
+                        get: { entry.notes },
+                        set: { entry.notes = $0 }
+                    ),
+                    placeholder: EntryDetailL10n.writeSomeThoughts
+                )
+                .frame(height: 180)
+                .padding(12)
+                .background(
+                    .thinMaterial,
+                    in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(.white.opacity(0.1), lineWidth: 0.5)
+                }
             }
         }
     }

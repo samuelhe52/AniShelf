@@ -22,16 +22,10 @@ struct EntryDetailView: View {
     private let startInEditingMode: Bool
 
     @State private var model: EntryDetailViewModel
-    @State private var showSharingSheet = false
-    @State private var showPosterSelectionView = false
-    @State private var showCancelEditsConfirmation = false
+    @State private var presentation = EntryDetailPresentationState()
     @State private var isEditingDetails: Bool
     @State private var originalUserInfo: UserEntryInfo
-    @State private var conversionInProgress = false
-    @State private var showSeasonPicker = false
-    @State private var showSiblingSeasonWarning = false
-    @State private var isFetchingSeasons = false
-    @State private var seasonNumberOptions: [Int] = []
+    @State private var conversion = EntryDetailConversionState()
     @State private var didAutoScrollToEditingSection = false
     @State private var isCharacterExpanded = true
     @State private var isStaffExpanded = false
@@ -103,59 +97,50 @@ struct EntryDetailView: View {
         .toolbar { toolbarContent }
         .presentationDragIndicator(.visible)
         .interactiveDismissDisabled(entry.userInfoHasChanges(comparedTo: originalUserInfo))
-        .sheet(isPresented: $showPosterSelectionView) {
-            NavigationStack {
-                PosterSelectionView(
-                    tmdbID: entry.tmdbID,
-                    type: entry.type
-                ) { url in
-                    if url != entry.posterURL {
-                        entry.usingCustomPoster = true
+        .sheet(item: $presentation.activeSheet) { activeSheet in
+            switch activeSheet {
+            case .changePoster:
+                NavigationStack {
+                    PosterSelectionView(
+                        tmdbID: entry.tmdbID,
+                        type: entry.type
+                    ) { url in
+                        if url != entry.posterURL {
+                            entry.usingCustomPoster = true
+                        }
+                        entry.posterURL = url
                     }
-                    entry.posterURL = url
+                    .navigationTitle(EntryDetailL10n.changePoster)
                 }
-                .navigationTitle("Change Poster")
+            case .sharing:
+                AnimeSharingSheet(entry: entry)
             }
         }
-        .sheet(isPresented: $showSharingSheet) {
-            AnimeSharingSheet(entry: entry)
-        }
         .confirmationDialog(
-            "Convert to which season?",
-            isPresented: $showSeasonPicker,
+            EntryDetailL10n.convertToWhichSeason,
+            isPresented: $presentation.showSeasonPicker,
             titleVisibility: .visible
         ) {
-            if isFetchingSeasons {
+            if conversion.isFetchingSeasons {
                 ProgressView()
-            } else if seasonNumberOptions.isEmpty {
-                Button("No seasons available", role: .cancel) {}
+            } else if conversion.seasonNumberOptions.isEmpty {
+                Button(EntryDetailL10n.noSeasonsAvailable, role: .cancel) {}
             } else {
-                ForEach(seasonNumberOptions, id: \.self) { seasonNumber in
+                ForEach(conversion.seasonNumberOptions, id: \.self) { seasonNumber in
                     Button("Season \(seasonNumber)") {
                         Task { await convertSeriesToSeason(seasonNumber: seasonNumber) }
                     }
                 }
             }
-            Button("Cancel", role: .cancel) {}
+            Button(EntryDetailL10n.cancel, role: .cancel) {}
         }
-        .confirmationDialog("Discard all changes?", isPresented: $showCancelEditsConfirmation) {
-            Button("Discard", role: .destructive) {
-                discardUserEdits()
-                if startInEditingMode {
-                    dismiss()
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        }
-        .alert("Sibling Season Exists", isPresented: $showSiblingSeasonWarning) {
-            Button("Convert Anyway", role: .destructive) {
+        .alert(EntryDetailL10n.siblingSeasonExists, isPresented: $presentation.showSiblingSeasonWarning) {
+            Button(EntryDetailL10n.convertAnyway, role: .destructive) {
                 Task { await convertSeasonToSeries() }
             }
-            Button("Cancel", role: .cancel) {}
+            Button(EntryDetailL10n.cancel, role: .cancel) {}
         } message: {
-            Text(
-                "Another season entry for this series is already in your library. Converting this season to a series can leave both the series and the sibling season entries in the library."
-            )
+            Text(EntryDetailL10n.siblingSeasonExistsMessage)
         }
         .task(id: "\(entry.tmdbID)-\(currentLanguage.rawValue)") {
             await model.load(for: entry, language: currentLanguage, dataHandler: dataHandler)
@@ -282,68 +267,21 @@ struct EntryDetailView: View {
     // MARK: - Quick Actions
 
     private var quickActionsRow: some View {
-        HStack(spacing: 10) {
-            Spacer(minLength: 0)
-
-            if let url = model.primaryLinkURL ?? entry.linkToDetails {
-                Link(destination: url) {
-                    Image(systemName: "safari")
-                        .font(.title2)
-                        .frame(width: 20, height: 20)
-                        .padding(10)
-                }
-                .buttonStyle(.glass)
-                .buttonBorderShape(.circle)
-                .tint(.primary)
-            }
-
-            PopupActionCircleButton(
-                systemImage: "square.and.arrow.up",
-                verticalOffset: -1
-            ) { showSharingSheet = true }
-
-            PopupActionCircleButton(
-                systemImage: entry.favorite ? "heart.fill" : "heart",
-                tint: entry.favorite ? .pink : .primary
-            ) { toggleFavorite() }
-
-            Menu {
-                Button {
-                    showPosterSelectionView = true
-                } label: {
-                    Label("Change Poster", systemImage: "photo.on.rectangle")
-                }
-
-                if entry.type != .movie {
-                    Button {
-                        Task { await handleConvertTap() }
-                    } label: {
-                        Label(convertMenuTitle, systemImage: "arrow.triangle.2.circlepath")
-                    }
-                    .disabled(conversionInProgress)
-                }
-
-                Divider()
-
-                Button(
-                    dropActionTitle,
-                    systemImage: dropActionSystemImage,
-                    role: entry.watchStatus == .dropped ? nil : .destructive,
-                    action: toggleDroppedStatus
-                )
-                .tint(entry.watchStatus == .dropped ? .primary : .red)
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.title2)
-                    .frame(width: 20, height: 20)
-                    .padding(10)
-            }
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
-            .tint(.primary)
-
-            Spacer(minLength: 0)
-        }
+        EntryDetailQuickActionsRow(
+            detailURL: model.primaryLinkURL ?? entry.linkToDetails,
+            isFavorite: entry.favorite,
+            showsConvertAction: entry.type != .movie,
+            conversionInProgress: conversion.inProgress,
+            convertMenuTitle: convertMenuTitle,
+            dropActionTitle: dropActionTitle,
+            dropActionSystemImage: dropActionSystemImage,
+            dropActionIsDestructive: entry.watchStatus != .dropped,
+            onShare: { presentation.activeSheet = .sharing },
+            onToggleFavorite: toggleFavorite,
+            onChangePoster: { presentation.activeSheet = .changePoster },
+            onConvert: handleConvertTap,
+            onToggleDroppedStatus: toggleDroppedStatus
+        )
     }
 
     // MARK: - Details Content
@@ -460,72 +398,12 @@ struct EntryDetailView: View {
 
     @ViewBuilder
     private var editingSection: some View {
-        Group {
-            if scoringEnabled {
-                VStack(alignment: .leading, spacing: 16) {
-                    EntryScoreCard(entry: entry)
-                    Divider()
-
-                    PopupNestedDisclosureSection(
-                        "Tracking",
-                        systemImage: "checklist",
-                        isExpanded: $isEditingDetails
-                    ) {
-                        trackingEditorContent
-                    }
-                }
-                .padding(18)
-                .popupGlassPanel(cornerRadius: 24)
-            } else {
-                PopupDisclosureCard(
-                    "Tracking",
-                    systemImage: "checklist",
-                    isExpanded: $isEditingDetails
-                ) {
-                    trackingEditorContent
-                }
-            }
-        }
+        EntryDetailTrackingSection(
+            entry: entry,
+            scoringEnabled: scoringEnabled,
+            isEditingDetails: $isEditingDetails
+        )
         .id(EntryDetailScrollTarget.editingSection)
-    }
-
-    @ViewBuilder
-    private var trackingEditorContent: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Watch Status")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                AnimeEntryWatchedStatusPicker(for: entry)
-                    .pickerStyle(.segmented)
-                AnimeEntryDatePickers(entry: entry)
-            }
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Notes")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                PlaceholderTextEditor(
-                    text: Binding(
-                        get: { entry.notes },
-                        set: { entry.notes = $0 }
-                    ),
-                    placeholder: "Write some thoughts..."
-                )
-                .frame(height: 180)
-                .padding(12)
-                .background(
-                    .thinMaterial,
-                    in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                )
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(.white.opacity(0.1), lineWidth: 0.5)
-                }
-            }
-        }
     }
 
     private var statColumns: [GridItem] {
@@ -587,7 +465,7 @@ struct EntryDetailView: View {
     }
 
     private var dropActionTitle: LocalizedStringResource {
-        entry.watchStatus == .dropped ? "Undrop" : "Mark as Dropped"
+        entry.watchStatus == .dropped ? EntryDetailL10n.undrop : EntryDetailL10n.markAsDropped
     }
 
     private var dropActionSystemImage: String {
@@ -604,10 +482,10 @@ struct EntryDetailView: View {
             .foregroundStyle(.primary)
         } else {
             Menu {
-                Button("Save") {
+                Button(EntryDetailL10n.save) {
                     saveAndDismissIfNeeded()
                 }
-                Button("Discard Changes", role: .destructive) {
+                Button(EntryDetailL10n.discardChanges, role: .destructive) {
                     discardUserEdits()
                     dismiss()
                 }
@@ -638,9 +516,9 @@ struct EntryDetailView: View {
     private var convertMenuTitle: LocalizedStringResource {
         switch entry.type {
         case .series:
-            "Convert to Season"
+            EntryDetailL10n.convertToSeason
         case .season:
-            "Convert to Series"
+            EntryDetailL10n.convertToSeries
         case .movie:
             preconditionFailure("Movies do not expose conversion actions.")
         }
@@ -668,13 +546,13 @@ struct EntryDetailView: View {
     }
 
     private func handleConvertTap() async {
-        guard !conversionInProgress else { return }
+        guard !conversion.inProgress else { return }
         switch entry.type {
         case .series:
             await presentSeasonPicker()
         case .season:
             if hasSiblingSeasonEntry {
-                showSiblingSeasonWarning = true
+                presentation.showSiblingSeasonWarning = true
             } else {
                 await convertSeasonToSeries()
             }
@@ -688,51 +566,51 @@ struct EntryDetailView: View {
     }
 
     private func presentSeasonPicker() async {
-        isFetchingSeasons = true
-        conversionInProgress = true
+        conversion.isFetchingSeasons = true
+        conversion.inProgress = true
         do {
-            seasonNumberOptions = try await model.seasonNumberOptions(
+            conversion.seasonNumberOptions = try await model.seasonNumberOptions(
                 for: entry,
                 language: currentLanguage
             )
-            showSeasonPicker = true
+            presentation.showSeasonPicker = true
         } catch {
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
-        isFetchingSeasons = false
-        conversionInProgress = false
+        conversion.isFetchingSeasons = false
+        conversion.inProgress = false
     }
 
     private func convertSeasonToSeries() async {
         guard case .season(_, _) = entry.type else { return }
-        conversionInProgress = true
+        conversion.inProgress = true
         do {
             try await model.convertSeasonToSeries(
                 entry,
                 language: currentLanguage
             )
-            ToastCenter.global.completionState = .completed("Converted to series")
+            ToastCenter.global.completionState = .completed(EntryDetailL10n.convertedToSeries)
             dismiss()
         } catch {
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
-        conversionInProgress = false
+        conversion.inProgress = false
     }
 
     private func convertSeriesToSeason(seasonNumber: Int) async {
-        conversionInProgress = true
+        conversion.inProgress = true
         do {
             try await model.convertSeriesToSeason(
                 entry,
                 seasonNumber: seasonNumber,
                 language: currentLanguage
             )
-            ToastCenter.global.completionState = .completed("Converted to season")
+            ToastCenter.global.completionState = .completed(EntryDetailL10n.convertedToSeason)
             dismiss()
         } catch {
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
-        conversionInProgress = false
+        conversion.inProgress = false
     }
 }
 
