@@ -19,6 +19,10 @@ struct KFImageView: View {
     @Binding var imageLoaded: Bool
     @State private var image: UIImage? = nil
 
+    private var missingImage: UIImage? {
+        UIImage(named: "missing_image_resource")
+    }
+
     init(
         url: URL?,
         targetWidth: CGFloat? = nil,
@@ -35,20 +39,32 @@ struct KFImageView: View {
 
     var body: some View {
         Group {
-            if let image {
-                Image(uiImage: image)
+            if let displayImage {
+                Image(uiImage: displayImage)
                     .resizable()
             } else {
                 ProgressView()
                     .frame(minWidth: 100, minHeight: 100)
             }
         }
-        .onChange(of: url, initial: true) {
-            Task.detached { await loadImage() }
-        }
+        .task(id: url) { await loadImage() }
     }
 
+    private var displayImage: UIImage? {
+        image ?? (url == nil ? missingImage : nil)
+    }
+
+    @MainActor
     private func loadImage() async {
+        guard let url else {
+            image = missingImage
+            imageLoaded = false
+            return
+        }
+
+        image = nil
+        imageLoaded = false
+
         var kfRetrieveOptions: KingfisherOptionsInfo = [
             .cacheOriginalImage,
             .diskCacheExpiration(diskCacheExpiration),
@@ -61,22 +77,18 @@ struct KFImageView: View {
             kfRetrieveOptions.append(.processor(processor))
         }
 
-        if let url {
-            do {
-                let result = try await KingfisherManager.shared
-                    .retrieveImage(with: url, options: kfRetrieveOptions)
-                // Only animate if the image was fetched from network (not cached)
-                let shouldAnimate = result.cacheType == .none
-                withAnimation(shouldAnimate ? animation : nil) {
-                    image = result.image
-                    imageLoaded = true
-                }
-            } catch {
-                logger.warning("Error loading image: \(error)")
-                imageLoaded = false
+        do {
+            let result = try await KingfisherManager.shared
+                .retrieveImage(with: url, options: kfRetrieveOptions)
+            // Only animate if the image was fetched from network (not cached)
+            let shouldAnimate = result.cacheType == .none
+            withAnimation(shouldAnimate ? animation : nil) {
+                image = result.image
+                imageLoaded = true
             }
-        } else {
-            image = UIImage(named: "missing_image_resource")
+        } catch {
+            logger.warning("Error loading image: \(error)")
+            image = missingImage
             imageLoaded = false
         }
     }

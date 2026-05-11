@@ -42,13 +42,6 @@ private actor TMDbResourceCache {
     }
 }
 
-fileprivate func firstJapanesePNGPath(from resources: [ImageMetadata]) -> URL? {
-    resources
-        .filter { $0.languageCode == Language.japanese.rawValue }
-        .first { $0.filePath.pathExtension.caseInsensitiveCompare("png") == .orderedSame }?
-        .filePath
-}
-
 fileprivate func isNoLanguageResource(_ resource: ImageMetadata) -> Bool {
     let languageCode = (resource.languageCode ?? "")
         .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -56,15 +49,21 @@ fileprivate func isNoLanguageResource(_ resource: ImageMetadata) -> Bool {
     return languageCode.isEmpty || ["null", "xx", "und", "zxx"].contains(languageCode)
 }
 
+fileprivate func preferredLogoPath(from resources: [ImageMetadata]) -> URL? {
+    let pngResources = resources.filter {
+        $0.filePath.pathExtension.caseInsensitiveCompare("png") == .orderedSame
+    }
+    return pngResources.first(where: { $0.languageCode == Language.japanese.rawValue })?.filePath
+        ?? pngResources.first(where: isNoLanguageResource)?.filePath
+        ?? pngResources.first?.filePath
+}
+
 fileprivate func preferredBackdropPath(from resources: [ImageMetadata]) -> URL? {
     resources.first(where: isNoLanguageResource)?.filePath ?? resources.first?.filePath
 }
 
 fileprivate func preferredPosterPath(from resources: [ImageMetadata]) -> URL? {
-    resources
-        .filter { $0.languageCode == Language.japanese.rawValue }
-        .first?
-        .filePath
+    resources.first(where: isNoLanguageResource)?.filePath ?? resources.first?.filePath
 }
 
 /// A class for fetching media infos from TMDb.
@@ -640,7 +639,7 @@ final class InfoFetcher: Sendable {
                 idealWidth: .max
             ),
             logoURL: imagesConfiguration.logoURL(
-                for: firstJapanesePNGPath(from: imageResources.logos),
+                for: preferredLogoPath(from: imageResources.logos),
                 idealWidth: .max
             ),
             tmdbID: movie.id,
@@ -670,7 +669,7 @@ final class InfoFetcher: Sendable {
                 idealWidth: .max
             ),
             logoURL: imagesConfiguration.logoURL(
-                for: firstJapanesePNGPath(from: imageResources.logos),
+                for: preferredLogoPath(from: imageResources.logos),
                 idealWidth: .max
             ),
             tmdbID: series.id,
@@ -698,7 +697,7 @@ final class InfoFetcher: Sendable {
                 idealWidth: .max
             ),
             logoURL: imagesConfiguration.logoURL(
-                for: firstJapanesePNGPath(from: parentSeriesImages.logos),
+                for: preferredLogoPath(from: parentSeriesImages.logos),
                 idealWidth: .max
             ),
             tmdbID: season.id,
@@ -728,7 +727,7 @@ final class InfoFetcher: Sendable {
                 idealWidth: 1_280
             ),
             logoImageURL: imagesConfiguration.logoURL(
-                for: firstJapanesePNGPath(from: imageResources.logos),
+                for: preferredLogoPath(from: imageResources.logos),
                 idealWidth: 500
             ),
             genreIDs: movie.genres?.map(\.id) ?? [],
@@ -774,7 +773,7 @@ final class InfoFetcher: Sendable {
                 idealWidth: 1_280
             ),
             logoImageURL: imagesConfiguration.logoURL(
-                for: firstJapanesePNGPath(from: imageResources.logos),
+                for: preferredLogoPath(from: imageResources.logos),
                 idealWidth: 500
             ),
             genreIDs: series.genres?.map(\.id) ?? [],
@@ -820,7 +819,7 @@ final class InfoFetcher: Sendable {
                 idealWidth: 1_280
             ),
             logoImageURL: imagesConfiguration.logoURL(
-                for: firstJapanesePNGPath(from: parentSeriesImages.logos),
+                for: preferredLogoPath(from: parentSeriesImages.logos),
                 idealWidth: 500
             ),
             genreIDs: parentSeries.genres?.map(\.id) ?? [],

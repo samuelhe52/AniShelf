@@ -11,13 +11,6 @@ import os
 
 fileprivate let logger = Logger(subsystem: .bundleIdentifier, category: "TMDbMediaInfoFetching")
 
-fileprivate func firstJapanesePNGPath(from resources: [ImageMetadata]) -> URL? {
-    resources
-        .filter { $0.languageCode == Language.japanese.rawValue }
-        .first { $0.filePath.pathExtension.caseInsensitiveCompare("png") == .orderedSame }?
-        .filePath
-}
-
 fileprivate func isNoLanguageResource(_ resource: ImageMetadata) -> Bool {
     let languageCode = (resource.languageCode ?? "")
         .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -25,7 +18,20 @@ fileprivate func isNoLanguageResource(_ resource: ImageMetadata) -> Bool {
     return languageCode.isEmpty || ["null", "xx", "und", "zxx"].contains(languageCode)
 }
 
+fileprivate func preferredLogoPath(from resources: [ImageMetadata]) -> URL? {
+    let pngResources = resources.filter {
+        $0.filePath.pathExtension.caseInsensitiveCompare("png") == .orderedSame
+    }
+    return pngResources.first(where: { $0.languageCode == Language.japanese.rawValue })?.filePath
+        ?? pngResources.first(where: isNoLanguageResource)?.filePath
+        ?? pngResources.first?.filePath
+}
+
 fileprivate func preferredBackdropPath(from resources: [ImageMetadata]) -> URL? {
+    resources.first(where: isNoLanguageResource)?.filePath ?? resources.first?.filePath
+}
+
+fileprivate func preferredPosterPath(from resources: [ImageMetadata]) -> URL? {
     resources.first(where: isNoLanguageResource)?.filePath ?? resources.first?.filePath
 }
 
@@ -84,10 +90,7 @@ extension Movie {
     /// - Throws: An error if the request fails.
     func posterURL(client: TMDb.TMDbClient, idealWidth: Int = .max) async throws -> URL? {
         let imageResources = try await client.movies.images(forMovie: id)
-        let posterPath = imageResources.posters
-            .filter { $0.languageCode == Language.japanese.rawValue }
-            .first?
-            .filePath
+        let posterPath = preferredPosterPath(from: imageResources.posters)
         let url = try await client.imagesConfiguration.posterURL(
             for: posterPath, idealWidth: idealWidth)
         return url
@@ -102,7 +105,7 @@ extension Movie {
     /// - Throws: An error if the request fails.
     func logoURL(client: TMDb.TMDbClient, idealWidth: Int = .max) async throws -> URL? {
         let imageResources = try await client.movies.images(forMovie: id)
-        let logoPath = firstJapanesePNGPath(from: imageResources.logos)
+        let logoPath = preferredLogoPath(from: imageResources.logos)
         let url = try await client.imagesConfiguration.logoURL(
             for: logoPath, idealWidth: idealWidth)
         return url
@@ -176,10 +179,7 @@ extension TVSeries {
     /// - Throws: An error if the request fails.
     func posterURL(client: TMDbClient, idealWidth: Int = .max) async throws -> URL? {
         let imageResources = try await client.tvSeries.images(forTVSeries: id)
-        let posterPath = imageResources.posters
-            .filter { $0.languageCode == Language.japanese.rawValue }
-            .first?
-            .filePath
+        let posterPath = preferredPosterPath(from: imageResources.posters)
         return try await client.imagesConfiguration.posterURL(
             for: posterPath, idealWidth: idealWidth)
     }
@@ -207,7 +207,7 @@ extension TVSeries {
     /// - Throws: An error if the request fails.
     func logoURL(client: TMDbClient, idealWidth: Int = .max) async throws -> URL? {
         let imageResources = try await client.tvSeries.images(forTVSeries: id)
-        let logoPath = firstJapanesePNGPath(from: imageResources.logos)
+        let logoPath = preferredLogoPath(from: imageResources.logos)
         return try await client.imagesConfiguration.logoURL(for: logoPath, idealWidth: idealWidth)
     }
 
@@ -295,10 +295,7 @@ extension TVSeason {
     {
         let imageResources = try await client.tvSeasons.images(
             forSeason: seasonNumber, inTVSeries: parentSeriesID)
-        let posterPath = imageResources.posters
-            .filter { $0.languageCode == Language.japanese.rawValue }
-            .first?
-            .filePath
+        let posterPath = preferredPosterPath(from: imageResources.posters)
         return try await client.imagesConfiguration.posterURL(
             for: posterPath, idealWidth: idealWidth)
     }
