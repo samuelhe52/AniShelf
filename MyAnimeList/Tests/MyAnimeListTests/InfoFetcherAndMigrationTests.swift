@@ -25,9 +25,7 @@ struct InfoFetcherAndMigrationTests {
     @Test func testFetchInfo() async throws {
         let result = try await fetcher.searchTVSeries(name: "Frieren", language: language).first
         try #require(result != nil, "No search results for 'Frieren'")
-        let series = try await fetcher.tmdbClient.tvSeries
-            .details(forTVSeries: result!.id, language: language.rawValue)
-        let info = try await series.basicInfo(client: fetcher.tmdbClient)
+        let info = try await fetcher.tvSeriesInfo(tmdbID: result!.id, language: language)
         let entry = AnimeEntry(fromInfo: info)
         #expect(!entry.name.isEmpty)
     }
@@ -42,8 +40,6 @@ struct InfoFetcherAndMigrationTests {
 
     @Test func testBackdropPrefersNoLanguageForSeries() async throws {
         let seriesID = 209867
-        let series = try await fetcher.tmdbClient.tvSeries
-            .details(forTVSeries: seriesID, language: language.rawValue)
         let images = try await fetcher.tmdbClient.tvSeries.images(forTVSeries: seriesID)
         let expectedPath = try #require(
             images.backdrops.first(where: { $0.languageCode == nil })?.filePath,
@@ -53,8 +49,120 @@ struct InfoFetcherAndMigrationTests {
             for: expectedPath,
             idealWidth: 1_280
         )
-        let actualURL = try await series.backdropURL(client: fetcher.tmdbClient, idealWidth: 1_280)
+        let actualURL = try await fetcher.detailInfo(
+            entryType: .series,
+            tmdbID: seriesID,
+            language: language
+        ).heroImageURL
         #expect(actualURL == expectedURL)
+    }
+
+    @Test func testPosterSelectionPrefersOriginalLanguageThenNoLanguageThenOtherLanguages() throws {
+        let englishPoster = URL(string: "https://example.com/poster-en.jpg")!
+        let noLanguagePoster = URL(string: "https://example.com/poster-none.jpg")!
+        let chinesePoster = URL(string: "https://example.com/poster-zh.jpg")!
+
+        #expect(
+            TMDbImageSelection.preferredPosterPath(
+                from: [
+                    .init(languageCode: "en", filePath: englishPoster),
+                    .init(languageCode: nil, filePath: noLanguagePoster),
+                    .init(languageCode: "zh", filePath: chinesePoster)
+                ],
+                preferredLanguageCode: "zh"
+            ) == chinesePoster
+        )
+        #expect(
+            TMDbImageSelection.preferredPosterPath(
+                from: [
+                    .init(languageCode: "en", filePath: englishPoster),
+                    .init(languageCode: nil, filePath: noLanguagePoster),
+                    .init(languageCode: "zh", filePath: chinesePoster)
+                ],
+                preferredLanguageCode: "ja"
+            ) == noLanguagePoster
+        )
+        #expect(
+            TMDbImageSelection.preferredPosterPath(
+                from: [
+                    .init(languageCode: "en", filePath: englishPoster),
+                    .init(languageCode: "zh", filePath: chinesePoster)
+                ],
+                preferredLanguageCode: "ja"
+            ) == englishPoster
+        )
+    }
+
+    @Test func testPosterSelectionFallsBackToNoLanguageWithoutPreferredLanguage() throws {
+        let englishPoster = URL(string: "https://example.com/poster-en.jpg")!
+        let noLanguagePoster = URL(string: "https://example.com/poster-none.jpg")!
+
+        #expect(
+            TMDbImageSelection.preferredPosterPath(from: [
+                .init(languageCode: "en", filePath: englishPoster),
+                .init(languageCode: nil, filePath: noLanguagePoster)
+            ]) == noLanguagePoster
+        )
+        #expect(
+            TMDbImageSelection.preferredPosterPath(from: [
+                .init(languageCode: "en", filePath: englishPoster)
+            ]) == englishPoster
+        )
+    }
+
+    @Test func testLogoSelectionPrefersOriginalLanguageThenNoLanguageThenOtherLanguages() throws {
+        let englishLogo = URL(string: "https://example.com/logo-en.png")!
+        let noLanguageLogo = URL(string: "https://example.com/logo-none.png")!
+        let chineseLogo = URL(string: "https://example.com/logo-zh.png")!
+        let ignoredJPGLogo = URL(string: "https://example.com/logo-zh.jpg")!
+
+        #expect(
+            TMDbImageSelection.preferredLogoPath(
+                from: [
+                    .init(languageCode: "zh", filePath: ignoredJPGLogo),
+                    .init(languageCode: "en", filePath: englishLogo),
+                    .init(languageCode: nil, filePath: noLanguageLogo),
+                    .init(languageCode: "zh", filePath: chineseLogo)
+                ],
+                preferredLanguageCode: "zh"
+            ) == chineseLogo
+        )
+        #expect(
+            TMDbImageSelection.preferredLogoPath(
+                from: [
+                    .init(languageCode: "en", filePath: englishLogo),
+                    .init(languageCode: nil, filePath: noLanguageLogo),
+                    .init(languageCode: "zh", filePath: chineseLogo)
+                ],
+                preferredLanguageCode: "ja"
+            ) == noLanguageLogo
+        )
+        #expect(
+            TMDbImageSelection.preferredLogoPath(
+                from: [
+                    .init(languageCode: "en", filePath: englishLogo),
+                    .init(languageCode: "zh", filePath: chineseLogo)
+                ],
+                preferredLanguageCode: "ja"
+            ) == englishLogo
+        )
+    }
+
+    @Test func testLogoSelectionFallsBackToNoLanguageWithoutPreferredLanguage() throws {
+        let englishLogo = URL(string: "https://example.com/logo-en.png")!
+        let noLanguageLogo = URL(string: "https://example.com/logo-none.png")!
+
+        #expect(
+            TMDbImageSelection.preferredLogoPath(from: [
+                .init(languageCode: "en", filePath: englishLogo),
+                .init(languageCode: nil, filePath: noLanguageLogo)
+            ]) == noLanguageLogo
+        )
+        #expect(
+            TMDbImageSelection.preferredLogoPath(from: [
+                .init(languageCode: "en", filePath: englishLogo)
+            ]) == englishLogo
+        )
     }
 
     @Test @MainActor func testBackup() throws {

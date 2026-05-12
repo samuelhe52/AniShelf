@@ -36,6 +36,7 @@ struct PosterSelectionView: View {
     @State private var seriesPosters: [Poster] = []
     @State private var previewPoster: Poster?
     @State private var useSeriesPoster: Bool = false
+    @State private var preferredPosterLanguageCode: String?
     @Environment(\.dismiss) private var dismiss
     @Namespace private var preview
 
@@ -134,8 +135,16 @@ struct PosterSelectionView: View {
     private func fetchPrimaryPosters() async {
         do {
             loadState = .loading
-            let posters = try await primaryPosterRequest()
-            availablePosters = posters.filteredAndSorted()
+            async let posters = primaryPosterRequest()
+            async let preferredLanguageCode = fetcher.preferredImageLanguageCode(
+                entryType: type,
+                tmdbID: tmdbID
+            )
+            preferredPosterLanguageCode = try await preferredLanguageCode
+            let resolvedPosters = try await posters
+            availablePosters = resolvedPosters.filteredAndSorted(
+                preferredLanguageCode: preferredPosterLanguageCode
+            )
             syncLoadState()
         } catch {
             logger.error("Error fetching posters: \(error.localizedDescription)")
@@ -157,7 +166,7 @@ struct PosterSelectionView: View {
                 seriesID: parentSeriesID,
                 idealWidth: Constants.idealPosterWidth
             )
-            .filteredAndSorted()
+            .filteredAndSorted(preferredLanguageCode: preferredPosterLanguageCode)
             syncLoadState()
         } catch {
             logger.error("Error fetching posters: \(error.localizedDescription)")
@@ -203,13 +212,21 @@ struct PosterSelectionView: View {
 }
 
 extension Array where Element == Poster {
-    func filteredAndSorted(language: Language = .japanese) -> [Poster] {
-        let prioritized = self.sorted {
-            $0.metadata.width > $1.metadata.width
+    func filteredAndSorted(preferredLanguageCode: String? = nil) -> [Poster] {
+        self.sorted { lhs, rhs in
+            let lhsPriority = TMDbImageSelection.languagePriority(
+                for: lhs.metadata.languageCode,
+                preferredLanguageCode: preferredLanguageCode
+            )
+            let rhsPriority = TMDbImageSelection.languagePriority(
+                for: rhs.metadata.languageCode,
+                preferredLanguageCode: preferredLanguageCode
+            )
+            if lhsPriority != rhsPriority {
+                return lhsPriority < rhsPriority
+            }
+            return lhs.metadata.width > rhs.metadata.width
         }
-
-        let filtered = prioritized.filter { $0.metadata.languageCode == language.rawValue }
-        return filtered.isEmpty ? prioritized : filtered
     }
 }
 

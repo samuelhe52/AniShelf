@@ -16,6 +16,113 @@ fileprivate struct TranslationDictionaries {
     var overview: [String: String] = [:]
 }
 
+enum TMDbImageSelection {
+    struct Resource: Equatable {
+        let languageCode: String?
+        let filePath: URL
+    }
+
+    static func preferredPosterPath(
+        from resources: [ImageMetadata],
+        preferredLanguageCode: String? = nil
+    ) -> URL? {
+        preferredPosterPath(
+            from: resources.map(Resource.init),
+            preferredLanguageCode: preferredLanguageCode
+        )
+    }
+
+    static func preferredBackdropPath(from resources: [ImageMetadata]) -> URL? {
+        preferredBackdropPath(from: resources.map(Resource.init))
+    }
+
+    static func preferredLogoPath(
+        from resources: [ImageMetadata],
+        preferredLanguageCode: String? = nil
+    ) -> URL? {
+        preferredLogoPath(
+            from: resources.map(Resource.init),
+            preferredLanguageCode: preferredLanguageCode
+        )
+    }
+
+    static func preferredPosterPath(
+        from resources: [Resource],
+        preferredLanguageCode: String? = nil
+    ) -> URL? {
+        preferredLocalizedPath(
+            from: resources,
+            preferredLanguageCode: preferredLanguageCode
+        )
+    }
+
+    static func preferredBackdropPath(from resources: [Resource]) -> URL? {
+        resources.first(where: { isNoLanguageCode($0.languageCode) })?.filePath
+            ?? resources.first?.filePath
+    }
+
+    static func preferredLogoPath(
+        from resources: [Resource],
+        preferredLanguageCode: String? = nil
+    ) -> URL? {
+        let pngResources = resources.filter {
+            $0.filePath.pathExtension.caseInsensitiveCompare("png") == .orderedSame
+        }
+        return preferredLocalizedPath(
+            from: pngResources,
+            preferredLanguageCode: preferredLanguageCode
+        )
+    }
+
+    static func isNoLanguageCode(_ languageCode: String?) -> Bool {
+        let normalizedCode = normalizedLanguageCode(languageCode)
+        return normalizedCode.isEmpty
+            || ["null", "xx", "und", "zxx"].contains(normalizedCode)
+    }
+
+    static func languagePriority(
+        for languageCode: String?,
+        preferredLanguageCode: String? = nil
+    ) -> Int {
+        let normalizedCode = normalizedLanguageCode(languageCode)
+        let normalizedPreferredCode = normalizedLanguageCode(preferredLanguageCode)
+        if !normalizedPreferredCode.isEmpty
+            && normalizedCode == normalizedPreferredCode
+        {
+            return 0
+        }
+        if isNoLanguageCode(languageCode) {
+            return 1
+        }
+        return 2
+    }
+
+    private static func preferredLocalizedPath(
+        from resources: [Resource],
+        preferredLanguageCode: String?
+    ) -> URL? {
+        let normalizedPreferredLanguageCode = normalizedLanguageCode(preferredLanguageCode)
+        return resources.first(where: {
+            !normalizedPreferredLanguageCode.isEmpty
+                && normalizedLanguageCode($0.languageCode) == normalizedPreferredLanguageCode
+        })?.filePath
+            ?? resources.first(where: { isNoLanguageCode($0.languageCode) })?.filePath
+            ?? resources.first?.filePath
+    }
+
+    private static func normalizedLanguageCode(_ languageCode: String?) -> String {
+        (languageCode ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+    }
+}
+
+extension TMDbImageSelection.Resource {
+    fileprivate init(_ metadata: ImageMetadata) {
+        self.init(languageCode: metadata.languageCode, filePath: metadata.filePath)
+    }
+}
+
 private actor TMDbResourceCache {
     private var cachedImagesConfiguration: ImagesConfiguration?
     private var imagesConfigurationTask: Task<ImagesConfiguration, Error>?
@@ -40,30 +147,6 @@ private actor TMDbResourceCache {
             throw error
         }
     }
-}
-
-fileprivate func isNoLanguageResource(_ resource: ImageMetadata) -> Bool {
-    let languageCode = (resource.languageCode ?? "")
-        .trimmingCharacters(in: .whitespacesAndNewlines)
-        .lowercased()
-    return languageCode.isEmpty || ["null", "xx", "und", "zxx"].contains(languageCode)
-}
-
-fileprivate func preferredLogoPath(from resources: [ImageMetadata]) -> URL? {
-    let pngResources = resources.filter {
-        $0.filePath.pathExtension.caseInsensitiveCompare("png") == .orderedSame
-    }
-    return pngResources.first(where: { $0.languageCode == Language.japanese.rawValue })?.filePath
-        ?? pngResources.first(where: isNoLanguageResource)?.filePath
-        ?? pngResources.first?.filePath
-}
-
-fileprivate func preferredBackdropPath(from resources: [ImageMetadata]) -> URL? {
-    resources.first(where: isNoLanguageResource)?.filePath ?? resources.first?.filePath
-}
-
-fileprivate func preferredPosterPath(from resources: [ImageMetadata]) -> URL? {
-    resources.first(where: isNoLanguageResource)?.filePath ?? resources.first?.filePath
 }
 
 /// A class for fetching media infos from TMDb.
@@ -130,6 +213,21 @@ final class InfoFetcher: Sendable {
         return results.results.filter { $0.genreIDs.contains(16) }
     }
 
+    func preferredImageLanguageCode(
+        entryType: AnimeType,
+        tmdbID: Int,
+        language: Language = .english
+    ) async throws -> String? {
+        switch entryType {
+        case .movie:
+            return try await movie(tmdbID, language: language).originalLanguage
+        case .series:
+            return try await tvSeries(tmdbID, language: language).originalLanguage
+        case .season(_, let parentSeriesID):
+            return try await tvSeries(parentSeriesID, language: language).originalLanguage
+        }
+    }
+
     func fetchInfoFromTMDB(entryType: AnimeType, tmdbID: Int, language: Language) async throws
         -> BasicInfo
     {
@@ -147,37 +245,55 @@ final class InfoFetcher: Sendable {
     func tvSeasonInfo(seasonNumber: Int, parentSeriesID: Int, language: Language) async throws
         -> BasicInfo
     {
-        let season = try await tmdbClient.tvSeasons.details(
+        async let parentSeries = tvSeries(parentSeriesID, language: language)
+        async let season = tvSeason(parentSeriesID, seasonNumber: seasonNumber, language: language)
+        async let parentSeriesImages = tmdbClient.tvSeries.images(forTVSeries: parentSeriesID)
+        async let seasonImages = tmdbClient.tvSeasons.images(
             forSeason: seasonNumber,
-            inTVSeries: parentSeriesID,
-            language: language.rawValue)
-        let parentSeries = try await tmdbClient.tvSeries.details(
-            forTVSeries: parentSeriesID,
-            language: language.rawValue)
-        let backdropURL = try await parentSeries.backdropURL(client: tmdbClient)
-        let logoURL = try await parentSeries.logoURL(client: tmdbClient)
-        let linkToDetails = parentSeries.linkToDetails
+            inTVSeries: parentSeriesID
+        )
+        async let translations = tvSeasonTranslations(
+            parentSeriesID: parentSeriesID,
+            seasonNumber: seasonNumber
+        )
+        async let imagesConfiguration = imagesConfiguration()
 
-        // Use the parent series' shared brand assets for the season.
-        let basicInfo = try await season.basicInfo(
-            client: tmdbClient,
-            backdropURL: backdropURL,
-            logoURL: logoURL,
-            linkToDetails: linkToDetails,
-            parentSeriesID: parentSeriesID)
-        return basicInfo
+        return tvSeasonBasicInfo(
+            from: try await season,
+            parentSeries: try await parentSeries,
+            parentSeriesImages: try await parentSeriesImages,
+            seasonPosters: try await seasonImages.posters,
+            translations: try await translations,
+            imagesConfiguration: try await imagesConfiguration
+        )
     }
 
     func movieInfo(tmdbID: Int, language: Language) async throws -> BasicInfo {
-        let movie = try await tmdbClient.movies.details(
-            forMovie: tmdbID, language: language.rawValue)
-        return try await movie.basicInfo(client: tmdbClient)
+        async let movie = movie(tmdbID, language: language)
+        async let imageResources = tmdbClient.movies.images(forMovie: tmdbID)
+        async let translations = movieTranslations(tmdbID: tmdbID)
+        async let imagesConfiguration = imagesConfiguration()
+
+        return movieBasicInfo(
+            from: try await movie,
+            imageResources: try await imageResources,
+            translations: try await translations,
+            imagesConfiguration: try await imagesConfiguration
+        )
     }
 
     func tvSeriesInfo(tmdbID: Int, language: Language) async throws -> BasicInfo {
-        let series = try await tmdbClient.tvSeries.details(
-            forTVSeries: tmdbID, language: language.rawValue)
-        return try await series.basicInfo(client: tmdbClient)
+        async let series = tvSeries(tmdbID, language: language)
+        async let imageResources = tmdbClient.tvSeries.images(forTVSeries: tmdbID)
+        async let translations = tvSeriesTranslations(tmdbID: tmdbID)
+        async let imagesConfiguration = imagesConfiguration()
+
+        return tvSeriesBasicInfo(
+            from: try await series,
+            imageResources: try await imageResources,
+            translations: try await translations,
+            imagesConfiguration: try await imagesConfiguration
+        )
     }
 
     func postersForMovie(for tmdbID: Int, idealWidth: Int = .max) async throws
@@ -261,20 +377,32 @@ final class InfoFetcher: Sendable {
     ) async throws -> [BasicInfo] {
         let series = try await tvSeries(tmdbID, language: language)
         guard let seasons = series.seasons else { return [] }
-        let backdropURL = try await series.backdropURL(client: tmdbClient)
-        let logoURL = try await series.logoURL(client: tmdbClient)
-        let linkToDetails = series.linkToDetails
+        async let parentSeriesImages = tmdbClient.tvSeries.images(forTVSeries: tmdbID)
+        async let imagesConfiguration = imagesConfiguration()
+        let resolvedParentSeriesImages = try await parentSeriesImages
+        let resolvedImagesConfiguration = try await imagesConfiguration
 
         return try await withThrowingTaskGroup(of: BasicInfo.self) { group in
             var results: [BasicInfo] = []
             for season in seasons {
                 group.addTask {
-                    try await season.basicInfo(
-                        client: self.tmdbClient,
-                        backdropURL: backdropURL,
-                        logoURL: logoURL,
-                        linkToDetails: linkToDetails,
-                        parentSeriesID: tmdbID)
+                    async let seasonImages = self.tmdbClient.tvSeasons.images(
+                        forSeason: season.seasonNumber,
+                        inTVSeries: tmdbID
+                    )
+                    async let translations = self.tvSeasonTranslations(
+                        parentSeriesID: tmdbID,
+                        seasonNumber: season.seasonNumber
+                    )
+
+                    return self.tvSeasonBasicInfo(
+                        from: season,
+                        parentSeries: series,
+                        parentSeriesImages: resolvedParentSeriesImages,
+                        seasonPosters: try await seasonImages.posters,
+                        translations: try await translations,
+                        imagesConfiguration: resolvedImagesConfiguration
+                    )
                 }
             }
             for try await info in group {
@@ -351,42 +479,17 @@ final class InfoFetcher: Sendable {
         tmdbID: Int,
         language: Language
     ) async throws -> AnimeEntryDetailDTO {
-        let movie = try await movie(tmdbID, language: language)
-        let heroImageURL = try await movie.backdropURL(client: tmdbClient, idealWidth: 1_280)
-        let logoImageURL = try await movie.logoURL(client: tmdbClient, idealWidth: 500)
-        let credits = try await tmdbClient.movies.credits(forMovie: movie.id, language: language.rawValue)
-        let imagesConfiguration = try await imagesConfiguration()
+        async let movie = movie(tmdbID, language: language)
+        async let imageResources = tmdbClient.movies.images(forMovie: tmdbID)
+        async let credits = tmdbClient.movies.credits(forMovie: tmdbID, language: language.rawValue)
+        async let imagesConfiguration = imagesConfiguration()
 
-        return AnimeEntryDetailDTO(
-            language: language.rawValue,
-            title: movie.title,
-            subtitle: movie.tagline?.nilIfEmpty,
-            overview: movie.overview?.nilIfEmpty,
-            status: movie.status?.rawValue,
-            airDate: movie.releaseDate,
-            primaryLinkURL: movie.homepageURL,
-            heroImageURL: heroImageURL,
-            logoImageURL: logoImageURL,
-            genreIDs: movie.genres?.map(\.id) ?? [],
-            voteAverage: movie.voteAverage,
-            runtimeMinutes: movie.runtime,
-            characters: credits.cast.prefix(12).map {
-                AnimeEntryCharacterDTO(
-                    id: $0.id,
-                    characterName: $0.character.strippingVoiceQualifier.nilIfEmpty ?? "Character",
-                    actorName: Self.preferredActorName(
-                        localizedName: $0.name,
-                        originalName: nil,
-                        language: language
-                    ),
-                    profileURL: imagesConfiguration.profileURL(for: $0.profilePath, idealWidth: 185)
-                )
-            },
-            staff: makeStaff(
-                from: credits.crew.prefix(12),
-                imagesConfiguration: imagesConfiguration,
-                language: language
-            )
+        return movieDetail(
+            from: try await movie,
+            imageResources: try await imageResources,
+            credits: try await credits,
+            imagesConfiguration: try await imagesConfiguration,
+            language: language
         )
     }
 
@@ -394,44 +497,20 @@ final class InfoFetcher: Sendable {
         tmdbID: Int,
         language: Language
     ) async throws -> AnimeEntryDetailDTO {
-        let series = try await tvSeries(tmdbID, language: language)
-        let heroImageURL = try await series.backdropURL(client: tmdbClient, idealWidth: 1_280)
-        let logoImageURL = try await series.logoURL(client: tmdbClient, idealWidth: 500)
-        let credits = try await tmdbClient.tvSeries.aggregateCredits(
-            forTVSeries: series.id,
+        async let series = tvSeries(tmdbID, language: language)
+        async let imageResources = tmdbClient.tvSeries.images(forTVSeries: tmdbID)
+        async let credits = tmdbClient.tvSeries.aggregateCredits(
+            forTVSeries: tmdbID,
             language: language.rawValue
         )
-        let imagesConfiguration = try await imagesConfiguration()
+        async let imagesConfiguration = imagesConfiguration()
 
-        return AnimeEntryDetailDTO(
-            language: language.rawValue,
-            title: series.name,
-            subtitle: series.tagline?.nilIfEmpty,
-            overview: series.overview?.nilIfEmpty,
-            status: series.status,
-            airDate: series.firstAirDate,
-            primaryLinkURL: series.homepageURL,
-            heroImageURL: heroImageURL,
-            logoImageURL: logoImageURL,
-            genreIDs: series.genres?.map(\.id) ?? [],
-            voteAverage: series.voteAverage,
-            runtimeMinutes: series.episodeRunTime?.first,
-            episodeCount: series.numberOfEpisodes,
-            seasonCount: series.numberOfSeasons,
-            characters: makeCharacters(
-                from: credits.cast.prefix(12),
-                imagesConfiguration: imagesConfiguration,
-                language: language
-            ),
-            staff: makeStaff(
-                from: credits.crew,
-                imagesConfiguration: imagesConfiguration,
-                language: language
-            ),
-            seasons: makeSeasonSummaries(
-                from: series.seasons ?? [],
-                imagesConfiguration: imagesConfiguration
-            )
+        return tvSeriesDetail(
+            from: try await series,
+            imageResources: try await imageResources,
+            credits: try await credits,
+            imagesConfiguration: try await imagesConfiguration,
+            language: language
         )
     }
 
@@ -442,46 +521,21 @@ final class InfoFetcher: Sendable {
     ) async throws -> AnimeEntryDetailDTO {
         async let parentSeries = tvSeries(parentSeriesID, language: language)
         async let season = tvSeason(parentSeriesID, seasonNumber: seasonNumber, language: language)
-
-        let resolvedParentSeries = try await parentSeries
-        let resolvedSeason = try await season
-        let heroImageURL = try await resolvedParentSeries.backdropURL(client: tmdbClient, idealWidth: 1_280)
-        let logoImageURL = try await resolvedParentSeries.logoURL(client: tmdbClient, idealWidth: 500)
+        async let parentSeriesImages = tmdbClient.tvSeries.images(forTVSeries: parentSeriesID)
         let credits = try await tmdbClient.tvSeasons.aggregateCredits(
-            forSeason: resolvedSeason.seasonNumber,
-            inTVSeries: resolvedParentSeries.id,
+            forSeason: seasonNumber,
+            inTVSeries: parentSeriesID,
             language: language.rawValue
         )
         let imagesConfiguration = try await imagesConfiguration()
 
-        return AnimeEntryDetailDTO(
-            language: language.rawValue,
-            title: resolvedParentSeries.name,
-            subtitle: resolvedSeason.name,
-            overview: resolvedSeason.overview?.nilIfEmpty,
-            status: resolvedParentSeries.status,
-            airDate: resolvedSeason.airDate,
-            primaryLinkURL: resolvedParentSeries.homepageURL,
-            heroImageURL: heroImageURL,
-            logoImageURL: logoImageURL,
-            genreIDs: resolvedParentSeries.genres?.map(\.id) ?? [],
-            voteAverage: resolvedParentSeries.voteAverage,
-            runtimeMinutes: resolvedParentSeries.episodeRunTime?.first,
-            episodeCount: resolvedSeason.episodes?.count,
-            characters: makeCharacters(
-                from: credits.cast.prefix(12),
-                imagesConfiguration: imagesConfiguration,
-                language: language
-            ),
-            staff: makeStaff(
-                from: credits.crew,
-                imagesConfiguration: imagesConfiguration,
-                language: language
-            ),
-            episodes: makeEpisodeSummaries(
-                from: resolvedSeason.episodes ?? [],
-                imagesConfiguration: imagesConfiguration
-            )
+        return tvSeasonDetail(
+            from: try await season,
+            parentSeries: try await parentSeries,
+            parentSeriesImages: try await parentSeriesImages,
+            credits: credits,
+            imagesConfiguration: imagesConfiguration,
+            language: language
         )
     }
 
@@ -582,6 +636,10 @@ final class InfoFetcher: Sendable {
         async let parentSeries = tvSeries(parentSeriesID, language: language)
         async let season = tvSeason(parentSeriesID, seasonNumber: seasonNumber, language: language)
         async let parentSeriesImages = tmdbClient.tvSeries.images(forTVSeries: parentSeriesID)
+        async let seasonImages = tmdbClient.tvSeasons.images(
+            forSeason: seasonNumber,
+            inTVSeries: parentSeriesID
+        )
         async let translations = tvSeasonTranslations(
             parentSeriesID: parentSeriesID,
             seasonNumber: seasonNumber
@@ -605,6 +663,7 @@ final class InfoFetcher: Sendable {
                 from: resolvedSeason,
                 parentSeries: resolvedParentSeries,
                 parentSeriesImages: resolvedParentSeriesImages,
+                seasonPosters: try await seasonImages.posters,
                 translations: resolvedTranslations,
                 imagesConfiguration: resolvedImagesConfiguration
             ),
@@ -631,15 +690,21 @@ final class InfoFetcher: Sendable {
             overview: movie.overview,
             overviewTranslations: translations.overview,
             posterURL: imagesConfiguration.posterURL(
-                for: preferredPosterPath(from: imageResources.posters),
+                for: TMDbImageSelection.preferredPosterPath(
+                    from: imageResources.posters,
+                    preferredLanguageCode: movie.originalLanguage
+                ),
                 idealWidth: .max
             ),
             backdropURL: imagesConfiguration.backdropURL(
-                for: preferredBackdropPath(from: imageResources.backdrops),
+                for: TMDbImageSelection.preferredBackdropPath(from: imageResources.backdrops),
                 idealWidth: .max
             ),
             logoURL: imagesConfiguration.logoURL(
-                for: preferredLogoPath(from: imageResources.logos),
+                for: TMDbImageSelection.preferredLogoPath(
+                    from: imageResources.logos,
+                    preferredLanguageCode: movie.originalLanguage
+                ),
                 idealWidth: .max
             ),
             tmdbID: movie.id,
@@ -661,15 +726,21 @@ final class InfoFetcher: Sendable {
             overview: series.overview,
             overviewTranslations: translations.overview,
             posterURL: imagesConfiguration.posterURL(
-                for: preferredPosterPath(from: imageResources.posters),
+                for: TMDbImageSelection.preferredPosterPath(
+                    from: imageResources.posters,
+                    preferredLanguageCode: series.originalLanguage
+                ),
                 idealWidth: .max
             ),
             backdropURL: imagesConfiguration.backdropURL(
-                for: preferredBackdropPath(from: imageResources.backdrops),
+                for: TMDbImageSelection.preferredBackdropPath(from: imageResources.backdrops),
                 idealWidth: .max
             ),
             logoURL: imagesConfiguration.logoURL(
-                for: preferredLogoPath(from: imageResources.logos),
+                for: TMDbImageSelection.preferredLogoPath(
+                    from: imageResources.logos,
+                    preferredLanguageCode: series.originalLanguage
+                ),
                 idealWidth: .max
             ),
             tmdbID: series.id,
@@ -683,6 +754,7 @@ final class InfoFetcher: Sendable {
         from season: TVSeason,
         parentSeries: TVSeries,
         parentSeriesImages: ImageCollection,
+        seasonPosters: [ImageMetadata],
         translations: TranslationDictionaries,
         imagesConfiguration: ImagesConfiguration
     ) -> BasicInfo {
@@ -691,13 +763,21 @@ final class InfoFetcher: Sendable {
             nameTranslations: translations.name,
             overview: season.overview,
             overviewTranslations: translations.overview,
-            posterURL: imagesConfiguration.posterURL(for: season.posterPath),
+            posterURL: imagesConfiguration.posterURL(
+                for: TMDbImageSelection.preferredPosterPath(
+                    from: seasonPosters,
+                    preferredLanguageCode: parentSeries.originalLanguage
+                ) ?? season.posterPath
+            ),
             backdropURL: imagesConfiguration.backdropURL(
-                for: preferredBackdropPath(from: parentSeriesImages.backdrops),
+                for: TMDbImageSelection.preferredBackdropPath(from: parentSeriesImages.backdrops),
                 idealWidth: .max
             ),
             logoURL: imagesConfiguration.logoURL(
-                for: preferredLogoPath(from: parentSeriesImages.logos),
+                for: TMDbImageSelection.preferredLogoPath(
+                    from: parentSeriesImages.logos,
+                    preferredLanguageCode: parentSeries.originalLanguage
+                ),
                 idealWidth: .max
             ),
             tmdbID: season.id,
@@ -723,11 +803,14 @@ final class InfoFetcher: Sendable {
             airDate: movie.releaseDate,
             primaryLinkURL: movie.homepageURL,
             heroImageURL: imagesConfiguration.backdropURL(
-                for: preferredBackdropPath(from: imageResources.backdrops),
+                for: TMDbImageSelection.preferredBackdropPath(from: imageResources.backdrops),
                 idealWidth: 1_280
             ),
             logoImageURL: imagesConfiguration.logoURL(
-                for: preferredLogoPath(from: imageResources.logos),
+                for: TMDbImageSelection.preferredLogoPath(
+                    from: imageResources.logos,
+                    preferredLanguageCode: movie.originalLanguage
+                ),
                 idealWidth: 500
             ),
             genreIDs: movie.genres?.map(\.id) ?? [],
@@ -769,11 +852,14 @@ final class InfoFetcher: Sendable {
             airDate: series.firstAirDate,
             primaryLinkURL: series.homepageURL,
             heroImageURL: imagesConfiguration.backdropURL(
-                for: preferredBackdropPath(from: imageResources.backdrops),
+                for: TMDbImageSelection.preferredBackdropPath(from: imageResources.backdrops),
                 idealWidth: 1_280
             ),
             logoImageURL: imagesConfiguration.logoURL(
-                for: preferredLogoPath(from: imageResources.logos),
+                for: TMDbImageSelection.preferredLogoPath(
+                    from: imageResources.logos,
+                    preferredLanguageCode: series.originalLanguage
+                ),
                 idealWidth: 500
             ),
             genreIDs: series.genres?.map(\.id) ?? [],
@@ -815,11 +901,14 @@ final class InfoFetcher: Sendable {
             airDate: season.airDate,
             primaryLinkURL: parentSeries.homepageURL,
             heroImageURL: imagesConfiguration.backdropURL(
-                for: preferredBackdropPath(from: parentSeriesImages.backdrops),
+                for: TMDbImageSelection.preferredBackdropPath(from: parentSeriesImages.backdrops),
                 idealWidth: 1_280
             ),
             logoImageURL: imagesConfiguration.logoURL(
-                for: preferredLogoPath(from: parentSeriesImages.logos),
+                for: TMDbImageSelection.preferredLogoPath(
+                    from: parentSeriesImages.logos,
+                    preferredLanguageCode: parentSeries.originalLanguage
+                ),
                 idealWidth: 500
             ),
             genreIDs: parentSeries.genres?.map(\.id) ?? [],

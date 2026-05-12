@@ -27,18 +27,14 @@ extension LibraryStore {
             return nil
         }
         libraryStoreLogger.debug("Creating new entry with id: \(id), type: \(type)...")
-        async let info = infoFetcher.fetchInfoFromTMDB(
-            entryType: type,
-            tmdbID: id,
-            language: language)
-        async let detail = infoFetcher.detailInfo(
+        let latestInfo = try await infoFetcher.latestInfo(
             entryType: type,
             tmdbID: id,
             language: language
         )
-        let entry = AnimeEntry(fromInfo: try await info)
+        let entry = AnimeEntry(fromInfo: latestInfo.0)
         applyNewEntryDefaults(to: entry)
-        entry.replaceDetail(from: try await detail)
+        entry.replaceDetail(from: latestInfo.1)
         if let parentSeriesID = entry.parentSeriesID {
             if let parentSeriesEntry = repository.existingEntry(tmdbID: parentSeriesID) {
                 entry.parentSeriesEntry = parentSeriesEntry
@@ -58,22 +54,15 @@ extension LibraryStore {
 
     func hydrateExistingEntry(_ entry: AnimeEntry, type: AnimeType) async throws {
         let tmdbID = entry.tmdbID
-        async let info = infoFetcher.fetchInfoFromTMDB(
+        let latestInfo = try await infoFetcher.latestInfo(
             entryType: type,
             tmdbID: tmdbID,
             language: language
         )
-        async let detail = infoFetcher.detailInfo(
-            entryType: type,
-            tmdbID: tmdbID,
-            language: language
-        )
-        let resolvedInfo = try await info
-        let resolvedDetail = try await detail
         try hydrateExistingEntry(
             entry,
-            from: resolvedInfo,
-            detail: resolvedDetail
+            from: latestInfo.0,
+            detail: latestInfo.1
         )
     }
 

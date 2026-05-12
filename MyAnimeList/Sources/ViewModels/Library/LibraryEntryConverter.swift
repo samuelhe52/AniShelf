@@ -23,14 +23,13 @@ final class LibraryEntryConverter {
             parentEntry = existingParent
             parentEntry.onDisplay = true
         } else {
-            let parentInfo = try await fetcher.tvSeriesInfo(tmdbID: parentSeriesID, language: language)
-            parentEntry = AnimeEntry(fromInfo: parentInfo)
-            parentEntry.replaceDetail(
-                from: try await fetcher.detailInfo(
-                    entryType: .series,
-                    tmdbID: parentSeriesID,
-                    language: language
-                ))
+            let parentLatestInfo = try await fetcher.latestInfo(
+                entryType: .series,
+                tmdbID: parentSeriesID,
+                language: language
+            )
+            parentEntry = AnimeEntry(fromInfo: parentLatestInfo.0)
+            parentEntry.replaceDetail(from: parentLatestInfo.1)
             parentEntry.onDisplay = true
             try repository.newEntry(parentEntry)
         }
@@ -60,23 +59,19 @@ final class LibraryEntryConverter {
         let originalPosterURL = entry.posterURL
         let seasonTMDbID = entry.tmdbID
 
-        async let parentInfo = fetcher.tvSeriesInfo(tmdbID: parentSeriesID, language: language)
-        async let parentDetail = fetcher.detailInfo(
+        async let parentLatestInfo = fetcher.latestInfo(
             entryType: .series,
             tmdbID: parentSeriesID,
             language: language
         )
-        async let seasonInfo = fetcher.tvSeasonInfo(
-            seasonNumber: seasonNumber,
-            parentSeriesID: parentSeriesID,
-            language: language)
-        async let seasonDetail = fetcher.detailInfo(
+        async let seasonLatestInfo = fetcher.latestInfo(
             entryType: .season(seasonNumber: seasonNumber, parentSeriesID: parentSeriesID),
             tmdbID: seasonTMDbID,
             language: language
         )
-        let resolvedParentInfo = try await parentInfo
-        var resolvedSeasonInfo = try await seasonInfo
+        let resolvedParentLatestInfo = try await parentLatestInfo
+        let resolvedSeasonLatestInfo = try await seasonLatestInfo
+        var resolvedSeasonInfo = resolvedSeasonLatestInfo.0
 
         try repository.deleteEntry(entry)
 
@@ -84,12 +79,12 @@ final class LibraryEntryConverter {
             resolvedSeasonInfo.posterURL = originalPosterURL
         }
 
-        let parentEntry = AnimeEntry(fromInfo: resolvedParentInfo)
-        parentEntry.replaceDetail(from: try await parentDetail)
+        let parentEntry = AnimeEntry(fromInfo: resolvedParentLatestInfo.0)
+        parentEntry.replaceDetail(from: resolvedParentLatestInfo.1)
         parentEntry.onDisplay = false
 
         let seasonEntry = AnimeEntry(fromInfo: resolvedSeasonInfo)
-        seasonEntry.replaceDetail(from: try await seasonDetail)
+        seasonEntry.replaceDetail(from: resolvedSeasonLatestInfo.1)
         seasonEntry.parentSeriesEntry = parentEntry
         seasonEntry.updateUserInfo(from: userInfo)
         if userInfo.usingCustomPoster {
