@@ -126,6 +126,30 @@ enum WhatsNewRegistry {
                     kind: .openURL(projectURL)
                 )
             ]
+        ),
+        "1.72": .init(
+            version: "1.72",
+            summary:
+                "This version includes multiple bug fixes and improvements. It is recommended that existing users perform a metadata refresh by tapping the action button below, as this version includes important optimizations for metadata retrieval.",
+            highlights: [
+                "Added an option in settings to enable the rating feature, allowing the rating module to be shown or hidden on the details page.",
+                "Allowed showing or hiding start/end dates for individual entries in entry detail sheet.",
+                "Fixed bugs related to default poster selection."
+            ],
+            primaryAction: .init(
+                id: "refresh-metadata",
+                title: "Refresh Metadata",
+                systemImage: "arrow.clockwise",
+                kind: .refreshMetadata
+            ),
+            secondaryActions: [
+                .init(
+                    id: "project-github",
+                    title: "AniShelf on GitHub",
+                    systemImage: "arrow.up.right.square",
+                    kind: .openURL(projectURL)
+                )
+            ]
         )
     ]
 

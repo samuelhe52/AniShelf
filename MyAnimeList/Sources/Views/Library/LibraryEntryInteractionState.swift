@@ -214,7 +214,12 @@ extension View {
                 )
             ) { entry in
                 NavigationStack {
-                    PosterSelectionView(tmdbID: entry.tmdbID, type: entry.type) { url in
+                    PosterSelectionView(
+                        tmdbID: entry.tmdbID,
+                        type: entry.type,
+                        originalPosterLanguageCode: entry.originalLanguageCode
+                            ?? entry.parentSeriesEntry?.originalLanguageCode
+                    ) { url in
                         if url != entry.posterURL {
                             entry.usingCustomPoster = true
                         }

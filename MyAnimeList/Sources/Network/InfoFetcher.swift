@@ -22,13 +22,20 @@ enum TMDbImageSelection {
         let filePath: URL
     }
 
+    private enum LanguageMatchRule: Equatable {
+        case exact(String)
+        case noLanguage
+    }
+
     static func preferredPosterPath(
         from resources: [ImageMetadata],
-        preferredLanguageCode: String? = nil
+        originalLanguageCode: String? = nil,
+        metadataLanguageCode: String? = nil
     ) -> URL? {
         preferredPosterPath(
             from: resources.map(Resource.init),
-            preferredLanguageCode: preferredLanguageCode
+            originalLanguageCode: originalLanguageCode,
+            metadataLanguageCode: metadataLanguageCode
         )
     }
 
@@ -38,21 +45,27 @@ enum TMDbImageSelection {
 
     static func preferredLogoPath(
         from resources: [ImageMetadata],
-        preferredLanguageCode: String? = nil
+        originalLanguageCode: String? = nil,
+        metadataLanguageCode: String? = nil
     ) -> URL? {
         preferredLogoPath(
             from: resources.map(Resource.init),
-            preferredLanguageCode: preferredLanguageCode
+            originalLanguageCode: originalLanguageCode,
+            metadataLanguageCode: metadataLanguageCode
         )
     }
 
     static func preferredPosterPath(
         from resources: [Resource],
-        preferredLanguageCode: String? = nil
+        originalLanguageCode: String? = nil,
+        metadataLanguageCode: String? = nil
     ) -> URL? {
-        preferredLocalizedPath(
+        preferredPath(
             from: resources,
-            preferredLanguageCode: preferredLanguageCode
+            rules: posterMatchRules(
+                originalLanguageCode: originalLanguageCode,
+                metadataLanguageCode: metadataLanguageCode
+            )
         )
     }
 
@@ -63,14 +76,18 @@ enum TMDbImageSelection {
 
     static func preferredLogoPath(
         from resources: [Resource],
-        preferredLanguageCode: String? = nil
+        originalLanguageCode: String? = nil,
+        metadataLanguageCode: String? = nil
     ) -> URL? {
         let pngResources = resources.filter {
             $0.filePath.pathExtension.caseInsensitiveCompare("png") == .orderedSame
         }
-        return preferredLocalizedPath(
+        return preferredPath(
             from: pngResources,
-            preferredLanguageCode: preferredLanguageCode
+            rules: logoMatchRules(
+                originalLanguageCode: originalLanguageCode,
+                metadataLanguageCode: metadataLanguageCode
+            )
         )
     }
 
@@ -80,34 +97,94 @@ enum TMDbImageSelection {
             || ["null", "xx", "und", "zxx"].contains(normalizedCode)
     }
 
-    static func languagePriority(
+    static func posterLanguagePriority(
         for languageCode: String?,
-        preferredLanguageCode: String? = nil
-    ) -> Int {
-        let normalizedCode = normalizedLanguageCode(languageCode)
-        let normalizedPreferredCode = normalizedLanguageCode(preferredLanguageCode)
-        if !normalizedPreferredCode.isEmpty
-            && normalizedCode == normalizedPreferredCode
-        {
-            return 0
+        originalLanguageCode: String? = nil,
+        metadataLanguageCode: String? = nil
+    ) -> Int? {
+        for (index, rule) in posterMatchRules(
+            originalLanguageCode: originalLanguageCode,
+            metadataLanguageCode: metadataLanguageCode
+        ).enumerated() where matches(languageCode: languageCode, rule: rule) {
+            return index
         }
-        if isNoLanguageCode(languageCode) {
-            return 1
-        }
-        return 2
+        return nil
     }
 
-    private static func preferredLocalizedPath(
+    private static func preferredPath(
         from resources: [Resource],
-        preferredLanguageCode: String?
+        rules: [LanguageMatchRule]
     ) -> URL? {
-        let normalizedPreferredLanguageCode = normalizedLanguageCode(preferredLanguageCode)
-        return resources.first(where: {
-            !normalizedPreferredLanguageCode.isEmpty
-                && normalizedLanguageCode($0.languageCode) == normalizedPreferredLanguageCode
-        })?.filePath
-            ?? resources.first(where: { isNoLanguageCode($0.languageCode) })?.filePath
-            ?? resources.first?.filePath
+        for rule in rules {
+            if let match = resources.first(where: { matches(languageCode: $0.languageCode, rule: rule) }) {
+                return match.filePath
+            }
+        }
+        return nil
+    }
+
+    private static func posterMatchRules(
+        originalLanguageCode: String?,
+        metadataLanguageCode: String?
+    ) -> [LanguageMatchRule] {
+        var rules: [LanguageMatchRule] = []
+
+        func appendLanguage(_ code: String?) {
+            let normalizedCode = normalizedLanguageCode(code)
+            guard !normalizedCode.isEmpty else { return }
+            let rule = LanguageMatchRule.exact(normalizedCode)
+            guard !rules.contains(rule) else { return }
+            rules.append(rule)
+        }
+
+        appendLanguage(originalLanguageCode)
+        appendLanguage(metadataLanguageCode)
+        rules.append(.noLanguage)
+        return rules
+    }
+
+    private static func logoMatchRules(
+        originalLanguageCode: String?,
+        metadataLanguageCode: String?
+    ) -> [LanguageMatchRule] {
+        var rules = prioritizedRules(
+            originalLanguageCode: originalLanguageCode,
+            metadataLanguageCode: metadataLanguageCode,
+            includeNoLanguageInMiddle: false
+        )
+        rules.append(.noLanguage)
+        return rules
+    }
+
+    private static func prioritizedRules(
+        originalLanguageCode: String?,
+        metadataLanguageCode: String?,
+        includeNoLanguageInMiddle: Bool
+    ) -> [LanguageMatchRule] {
+        var rules: [LanguageMatchRule] = []
+        func appendLanguage(_ code: String?) {
+            let normalizedCode = normalizedLanguageCode(code)
+            guard !normalizedCode.isEmpty else { return }
+            let rule = LanguageMatchRule.exact(normalizedCode)
+            guard !rules.contains(rule) else { return }
+            rules.append(rule)
+        }
+
+        appendLanguage(originalLanguageCode)
+        if includeNoLanguageInMiddle {
+            rules.append(.noLanguage)
+        }
+        appendLanguage(metadataLanguageCode)
+        return rules
+    }
+
+    private static func matches(languageCode: String?, rule: LanguageMatchRule) -> Bool {
+        switch rule {
+        case .exact(let code):
+            return normalizedLanguageCode(languageCode) == code
+        case .noLanguage:
+            return isNoLanguageCode(languageCode)
+        }
     }
 
     private static func normalizedLanguageCode(_ languageCode: String?) -> String {
@@ -213,21 +290,6 @@ final class InfoFetcher: Sendable {
         return results.results.filter { $0.genreIDs.contains(16) }
     }
 
-    func preferredImageLanguageCode(
-        entryType: AnimeType,
-        tmdbID: Int,
-        language: Language = .english
-    ) async throws -> String? {
-        switch entryType {
-        case .movie:
-            return try await movie(tmdbID, language: language).originalLanguage
-        case .series:
-            return try await tvSeries(tmdbID, language: language).originalLanguage
-        case .season(_, let parentSeriesID):
-            return try await tvSeries(parentSeriesID, language: language).originalLanguage
-        }
-    }
-
     func fetchInfoFromTMDB(entryType: AnimeType, tmdbID: Int, language: Language) async throws
         -> BasicInfo
     {
@@ -248,7 +310,7 @@ final class InfoFetcher: Sendable {
         async let parentSeries = tvSeries(parentSeriesID, language: language)
         async let season = tvSeason(parentSeriesID, seasonNumber: seasonNumber, language: language)
         async let parentSeriesImages = tmdbClient.tvSeries.images(forTVSeries: parentSeriesID)
-        async let seasonImages = tmdbClient.tvSeasons.images(
+        async let seasonPosters = bestEffortSeasonPosters(
             forSeason: seasonNumber,
             inTVSeries: parentSeriesID
         )
@@ -262,9 +324,10 @@ final class InfoFetcher: Sendable {
             from: try await season,
             parentSeries: try await parentSeries,
             parentSeriesImages: try await parentSeriesImages,
-            seasonPosters: try await seasonImages.posters,
+            seasonPosters: await seasonPosters,
             translations: try await translations,
-            imagesConfiguration: try await imagesConfiguration
+            imagesConfiguration: try await imagesConfiguration,
+            language: language
         )
     }
 
@@ -278,7 +341,8 @@ final class InfoFetcher: Sendable {
             from: try await movie,
             imageResources: try await imageResources,
             translations: try await translations,
-            imagesConfiguration: try await imagesConfiguration
+            imagesConfiguration: try await imagesConfiguration,
+            language: language
         )
     }
 
@@ -292,7 +356,8 @@ final class InfoFetcher: Sendable {
             from: try await series,
             imageResources: try await imageResources,
             translations: try await translations,
-            imagesConfiguration: try await imagesConfiguration
+            imagesConfiguration: try await imagesConfiguration,
+            language: language
         )
     }
 
@@ -386,7 +451,7 @@ final class InfoFetcher: Sendable {
             var results: [BasicInfo] = []
             for season in seasons {
                 group.addTask {
-                    async let seasonImages = self.tmdbClient.tvSeasons.images(
+                    async let seasonPosters = self.bestEffortSeasonPosters(
                         forSeason: season.seasonNumber,
                         inTVSeries: tmdbID
                     )
@@ -399,9 +464,10 @@ final class InfoFetcher: Sendable {
                         from: season,
                         parentSeries: series,
                         parentSeriesImages: resolvedParentSeriesImages,
-                        seasonPosters: try await seasonImages.posters,
+                        seasonPosters: await seasonPosters,
                         translations: try await translations,
-                        imagesConfiguration: resolvedImagesConfiguration
+                        imagesConfiguration: resolvedImagesConfiguration,
+                        language: language
                     )
                 }
             }
@@ -581,7 +647,8 @@ final class InfoFetcher: Sendable {
                 from: resolvedMovie,
                 imageResources: resolvedImageResources,
                 translations: resolvedTranslations,
-                imagesConfiguration: resolvedImagesConfiguration
+                imagesConfiguration: resolvedImagesConfiguration,
+                language: language
             ),
             movieDetail(
                 from: resolvedMovie,
@@ -616,7 +683,8 @@ final class InfoFetcher: Sendable {
                 from: resolvedSeries,
                 imageResources: resolvedImageResources,
                 translations: resolvedTranslations,
-                imagesConfiguration: resolvedImagesConfiguration
+                imagesConfiguration: resolvedImagesConfiguration,
+                language: language
             ),
             tvSeriesDetail(
                 from: resolvedSeries,
@@ -636,7 +704,7 @@ final class InfoFetcher: Sendable {
         async let parentSeries = tvSeries(parentSeriesID, language: language)
         async let season = tvSeason(parentSeriesID, seasonNumber: seasonNumber, language: language)
         async let parentSeriesImages = tmdbClient.tvSeries.images(forTVSeries: parentSeriesID)
-        async let seasonImages = tmdbClient.tvSeasons.images(
+        async let seasonPosters = bestEffortSeasonPosters(
             forSeason: seasonNumber,
             inTVSeries: parentSeriesID
         )
@@ -663,9 +731,10 @@ final class InfoFetcher: Sendable {
                 from: resolvedSeason,
                 parentSeries: resolvedParentSeries,
                 parentSeriesImages: resolvedParentSeriesImages,
-                seasonPosters: try await seasonImages.posters,
+                seasonPosters: await seasonPosters,
                 translations: resolvedTranslations,
-                imagesConfiguration: resolvedImagesConfiguration
+                imagesConfiguration: resolvedImagesConfiguration,
+                language: language
             ),
             tvSeasonDetail(
                 from: resolvedSeason,
@@ -682,7 +751,8 @@ final class InfoFetcher: Sendable {
         from movie: Movie,
         imageResources: ImageCollection,
         translations: TranslationDictionaries,
-        imagesConfiguration: ImagesConfiguration
+        imagesConfiguration: ImagesConfiguration,
+        language: Language
     ) -> BasicInfo {
         BasicInfo(
             name: movie.title,
@@ -692,7 +762,8 @@ final class InfoFetcher: Sendable {
             posterURL: imagesConfiguration.posterURL(
                 for: TMDbImageSelection.preferredPosterPath(
                     from: imageResources.posters,
-                    preferredLanguageCode: movie.originalLanguage
+                    originalLanguageCode: movie.originalLanguage,
+                    metadataLanguageCode: language.rawValue
                 ),
                 idealWidth: .max
             ),
@@ -703,10 +774,12 @@ final class InfoFetcher: Sendable {
             logoURL: imagesConfiguration.logoURL(
                 for: TMDbImageSelection.preferredLogoPath(
                     from: imageResources.logos,
-                    preferredLanguageCode: movie.originalLanguage
+                    originalLanguageCode: movie.originalLanguage,
+                    metadataLanguageCode: language.rawValue
                 ),
                 idealWidth: .max
             ),
+            originalLanguageCode: movie.originalLanguage,
             tmdbID: movie.id,
             onAirDate: movie.releaseDate,
             linkToDetails: movie.homepageURL,
@@ -718,7 +791,8 @@ final class InfoFetcher: Sendable {
         from series: TVSeries,
         imageResources: ImageCollection,
         translations: TranslationDictionaries,
-        imagesConfiguration: ImagesConfiguration
+        imagesConfiguration: ImagesConfiguration,
+        language: Language
     ) -> BasicInfo {
         BasicInfo(
             name: series.name,
@@ -728,7 +802,8 @@ final class InfoFetcher: Sendable {
             posterURL: imagesConfiguration.posterURL(
                 for: TMDbImageSelection.preferredPosterPath(
                     from: imageResources.posters,
-                    preferredLanguageCode: series.originalLanguage
+                    originalLanguageCode: series.originalLanguage,
+                    metadataLanguageCode: language.rawValue
                 ),
                 idealWidth: .max
             ),
@@ -739,10 +814,12 @@ final class InfoFetcher: Sendable {
             logoURL: imagesConfiguration.logoURL(
                 for: TMDbImageSelection.preferredLogoPath(
                     from: imageResources.logos,
-                    preferredLanguageCode: series.originalLanguage
+                    originalLanguageCode: series.originalLanguage,
+                    metadataLanguageCode: language.rawValue
                 ),
                 idealWidth: .max
             ),
+            originalLanguageCode: series.originalLanguage,
             tmdbID: series.id,
             onAirDate: series.firstAirDate,
             linkToDetails: series.homepageURL,
@@ -754,9 +831,10 @@ final class InfoFetcher: Sendable {
         from season: TVSeason,
         parentSeries: TVSeries,
         parentSeriesImages: ImageCollection,
-        seasonPosters: [ImageMetadata],
+        seasonPosters: [ImageMetadata]?,
         translations: TranslationDictionaries,
-        imagesConfiguration: ImagesConfiguration
+        imagesConfiguration: ImagesConfiguration,
+        language: Language
     ) -> BasicInfo {
         BasicInfo(
             name: season.name,
@@ -765,8 +843,9 @@ final class InfoFetcher: Sendable {
             overviewTranslations: translations.overview,
             posterURL: imagesConfiguration.posterURL(
                 for: TMDbImageSelection.preferredPosterPath(
-                    from: seasonPosters,
-                    preferredLanguageCode: parentSeries.originalLanguage
+                    from: seasonPosters ?? [],
+                    originalLanguageCode: parentSeries.originalLanguage,
+                    metadataLanguageCode: language.rawValue
                 ) ?? season.posterPath
             ),
             backdropURL: imagesConfiguration.backdropURL(
@@ -776,10 +855,12 @@ final class InfoFetcher: Sendable {
             logoURL: imagesConfiguration.logoURL(
                 for: TMDbImageSelection.preferredLogoPath(
                     from: parentSeriesImages.logos,
-                    preferredLanguageCode: parentSeries.originalLanguage
+                    originalLanguageCode: parentSeries.originalLanguage,
+                    metadataLanguageCode: language.rawValue
                 ),
                 idealWidth: .max
             ),
+            originalLanguageCode: parentSeries.originalLanguage,
             tmdbID: season.id,
             onAirDate: season.airDate,
             linkToDetails: parentSeries.homepageURL,
@@ -809,7 +890,8 @@ final class InfoFetcher: Sendable {
             logoImageURL: imagesConfiguration.logoURL(
                 for: TMDbImageSelection.preferredLogoPath(
                     from: imageResources.logos,
-                    preferredLanguageCode: movie.originalLanguage
+                    originalLanguageCode: movie.originalLanguage,
+                    metadataLanguageCode: language.rawValue
                 ),
                 idealWidth: 500
             ),
@@ -858,7 +940,8 @@ final class InfoFetcher: Sendable {
             logoImageURL: imagesConfiguration.logoURL(
                 for: TMDbImageSelection.preferredLogoPath(
                     from: imageResources.logos,
-                    preferredLanguageCode: series.originalLanguage
+                    originalLanguageCode: series.originalLanguage,
+                    metadataLanguageCode: language.rawValue
                 ),
                 idealWidth: 500
             ),
@@ -907,7 +990,8 @@ final class InfoFetcher: Sendable {
             logoImageURL: imagesConfiguration.logoURL(
                 for: TMDbImageSelection.preferredLogoPath(
                     from: parentSeriesImages.logos,
-                    preferredLanguageCode: parentSeries.originalLanguage
+                    originalLanguageCode: parentSeries.originalLanguage,
+                    metadataLanguageCode: language.rawValue
                 ),
                 idealWidth: 500
             ),
@@ -1158,6 +1242,16 @@ final class InfoFetcher: Sendable {
                 imageURL: imagesConfiguration.stillURL(for: $0.stillPath, idealWidth: 500)
             )
         }
+    }
+
+    private func bestEffortSeasonPosters(
+        forSeason seasonNumber: Int,
+        inTVSeries parentSeriesID: Int
+    ) async -> [ImageMetadata]? {
+        try? await tmdbClient.tvSeasons.images(
+            forSeason: seasonNumber,
+            inTVSeries: parentSeriesID
+        ).posters
     }
 
     private static func preferredActorName(localizedName: String, originalName: String?, language: Language)

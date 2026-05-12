@@ -18,15 +18,20 @@ typealias Poster = ImageURLWithMetadata
 struct PosterSelectionView: View {
     let tmdbID: Int
     let type: AnimeType
+    let originalPosterLanguageCode: String?
     let fetcher: InfoFetcher
     let onPosterSelected: (URL) -> Void
 
     init(
-        tmdbID: Int, type: AnimeType, infoFetcher: InfoFetcher = .init(),
+        tmdbID: Int,
+        type: AnimeType,
+        originalPosterLanguageCode: String? = nil,
+        infoFetcher: InfoFetcher = .init(),
         onPosterSelected: @escaping (URL) -> Void
     ) {
         self.tmdbID = tmdbID
         self.type = type
+        self.originalPosterLanguageCode = originalPosterLanguageCode
         self.fetcher = infoFetcher
         self.onPosterSelected = onPosterSelected
     }
@@ -36,12 +41,17 @@ struct PosterSelectionView: View {
     @State private var seriesPosters: [Poster] = []
     @State private var previewPoster: Poster?
     @State private var useSeriesPoster: Bool = false
-    @State private var preferredPosterLanguageCode: String?
     @Environment(\.dismiss) private var dismiss
     @Namespace private var preview
+    @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
+    @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
+        Language.followsSystemPreference()
 
     private var currentPosters: [Poster] {
         useSeriesPoster ? seriesPosters : availablePosters
+    }
+    private var metadataLanguageCode: String {
+        (followsSystemLanguage ? Language.current : preferredLanguage).rawValue
     }
 
     @MainActor
@@ -135,15 +145,10 @@ struct PosterSelectionView: View {
     private func fetchPrimaryPosters() async {
         do {
             loadState = .loading
-            async let posters = primaryPosterRequest()
-            async let preferredLanguageCode = fetcher.preferredImageLanguageCode(
-                entryType: type,
-                tmdbID: tmdbID
-            )
-            preferredPosterLanguageCode = try await preferredLanguageCode
-            let resolvedPosters = try await posters
+            let resolvedPosters = try await primaryPosterRequest()
             availablePosters = resolvedPosters.filteredAndSorted(
-                preferredLanguageCode: preferredPosterLanguageCode
+                originalLanguageCode: originalPosterLanguageCode,
+                metadataLanguageCode: metadataLanguageCode
             )
             syncLoadState()
         } catch {
@@ -166,7 +171,10 @@ struct PosterSelectionView: View {
                 seriesID: parentSeriesID,
                 idealWidth: Constants.idealPosterWidth
             )
-            .filteredAndSorted(preferredLanguageCode: preferredPosterLanguageCode)
+            .filteredAndSorted(
+                originalLanguageCode: originalPosterLanguageCode,
+                metadataLanguageCode: metadataLanguageCode
+            )
             syncLoadState()
         } catch {
             logger.error("Error fetching posters: \(error.localizedDescription)")
@@ -212,21 +220,33 @@ struct PosterSelectionView: View {
 }
 
 extension Array where Element == Poster {
-    func filteredAndSorted(preferredLanguageCode: String? = nil) -> [Poster] {
-        self.sorted { lhs, rhs in
-            let lhsPriority = TMDbImageSelection.languagePriority(
-                for: lhs.metadata.languageCode,
-                preferredLanguageCode: preferredLanguageCode
-            )
-            let rhsPriority = TMDbImageSelection.languagePriority(
-                for: rhs.metadata.languageCode,
-                preferredLanguageCode: preferredLanguageCode
-            )
-            if lhsPriority != rhsPriority {
-                return lhsPriority < rhsPriority
-            }
-            return lhs.metadata.width > rhs.metadata.width
+    func filteredAndSorted(
+        originalLanguageCode: String? = nil,
+        metadataLanguageCode: String? = nil
+    ) -> [Poster] {
+        let fallbackPosters = sorted { lhs, rhs in
+            lhs.metadata.width > rhs.metadata.width
         }
+        let rankedPosters: [(poster: Poster, priority: Int)] = compactMap { poster in
+            guard
+                let priority = TMDbImageSelection.posterLanguagePriority(
+                    for: poster.metadata.languageCode,
+                    originalLanguageCode: originalLanguageCode,
+                    metadataLanguageCode: metadataLanguageCode
+                )
+            else {
+                return nil
+            }
+            return (poster: poster, priority: priority)
+        }
+        guard !rankedPosters.isEmpty else { return fallbackPosters }
+        return rankedPosters.sorted { lhs, rhs in
+            if lhs.1 != rhs.1 {
+                return lhs.1 < rhs.1
+            }
+            return lhs.0.metadata.width > rhs.0.metadata.width
+        }
+        .map(\.0)
     }
 }
 

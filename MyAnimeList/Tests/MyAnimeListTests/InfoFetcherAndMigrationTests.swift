@@ -11,6 +11,7 @@ import Testing
 
 import struct TMDb.AggregrateCrewMember
 import struct TMDb.CrewJob
+import struct TMDb.ImageMetadata
 
 @testable import DataProvider
 @testable import MyAnimeList
@@ -57,7 +58,7 @@ struct InfoFetcherAndMigrationTests {
         #expect(actualURL == expectedURL)
     }
 
-    @Test func testPosterSelectionPrefersOriginalLanguageThenNoLanguageThenOtherLanguages() throws {
+    @Test func testPosterSelectionAllowsOnlyOriginalNoLanguageAndMetadataLanguage() throws {
         let englishPoster = URL(string: "https://example.com/poster-en.jpg")!
         let noLanguagePoster = URL(string: "https://example.com/poster-none.jpg")!
         let chinesePoster = URL(string: "https://example.com/poster-zh.jpg")!
@@ -69,7 +70,8 @@ struct InfoFetcherAndMigrationTests {
                     .init(languageCode: nil, filePath: noLanguagePoster),
                     .init(languageCode: "zh", filePath: chinesePoster)
                 ],
-                preferredLanguageCode: "zh"
+                originalLanguageCode: "zh",
+                metadataLanguageCode: "en"
             ) == chinesePoster
         )
         #expect(
@@ -79,8 +81,9 @@ struct InfoFetcherAndMigrationTests {
                     .init(languageCode: nil, filePath: noLanguagePoster),
                     .init(languageCode: "zh", filePath: chinesePoster)
                 ],
-                preferredLanguageCode: "ja"
-            ) == noLanguagePoster
+                originalLanguageCode: "ja",
+                metadataLanguageCode: "zh"
+            ) == chinesePoster
         )
         #expect(
             TMDbImageSelection.preferredPosterPath(
@@ -88,15 +91,10 @@ struct InfoFetcherAndMigrationTests {
                     .init(languageCode: "en", filePath: englishPoster),
                     .init(languageCode: "zh", filePath: chinesePoster)
                 ],
-                preferredLanguageCode: "ja"
-            ) == englishPoster
+                originalLanguageCode: "ja",
+                metadataLanguageCode: "zh"
+            ) == chinesePoster
         )
-    }
-
-    @Test func testPosterSelectionFallsBackToNoLanguageWithoutPreferredLanguage() throws {
-        let englishPoster = URL(string: "https://example.com/poster-en.jpg")!
-        let noLanguagePoster = URL(string: "https://example.com/poster-none.jpg")!
-
         #expect(
             TMDbImageSelection.preferredPosterPath(from: [
                 .init(languageCode: "en", filePath: englishPoster),
@@ -104,13 +102,49 @@ struct InfoFetcherAndMigrationTests {
             ]) == noLanguagePoster
         )
         #expect(
-            TMDbImageSelection.preferredPosterPath(from: [
-                .init(languageCode: "en", filePath: englishPoster)
-            ]) == englishPoster
+            TMDbImageSelection.preferredPosterPath(
+                from: [.init(languageCode: "en", filePath: englishPoster)],
+                originalLanguageCode: "ja",
+                metadataLanguageCode: "zh"
+            ) == nil
         )
     }
 
-    @Test func testLogoSelectionPrefersOriginalLanguageThenNoLanguageThenOtherLanguages() throws {
+    @Test func testPosterPickerFallsBackToAllPostersWhenNoLanguageMatches() {
+        let englishPoster = ImageURLWithMetadata(
+            metadata: ImageMetadata(
+                filePath: URL(string: "/poster-en.jpg")!,
+                width: 500,
+                height: 750,
+                aspectRatio: 2.0 / 3.0,
+                voteAverage: nil,
+                voteCount: nil,
+                languageCode: "en"
+            ),
+            url: URL(string: "https://example.com/poster-en.jpg")!
+        )
+        let koreanPoster = ImageURLWithMetadata(
+            metadata: ImageMetadata(
+                filePath: URL(string: "/poster-ko.jpg")!,
+                width: 900,
+                height: 1_350,
+                aspectRatio: 2.0 / 3.0,
+                voteAverage: nil,
+                voteCount: nil,
+                languageCode: "ko"
+            ),
+            url: URL(string: "https://example.com/poster-ko.jpg")!
+        )
+
+        let posters = [englishPoster, koreanPoster].filteredAndSorted(
+            originalLanguageCode: "ja",
+            metadataLanguageCode: "zh"
+        )
+
+        #expect(posters.map(\.url) == [koreanPoster.url, englishPoster.url])
+    }
+
+    @Test func testLogoSelectionUsesNoLanguageAsFinalFallback() throws {
         let englishLogo = URL(string: "https://example.com/logo-en.png")!
         let noLanguageLogo = URL(string: "https://example.com/logo-none.png")!
         let chineseLogo = URL(string: "https://example.com/logo-zh.png")!
@@ -124,7 +158,8 @@ struct InfoFetcherAndMigrationTests {
                     .init(languageCode: nil, filePath: noLanguageLogo),
                     .init(languageCode: "zh", filePath: chineseLogo)
                 ],
-                preferredLanguageCode: "zh"
+                originalLanguageCode: "zh",
+                metadataLanguageCode: "en"
             ) == chineseLogo
         )
         #expect(
@@ -134,8 +169,9 @@ struct InfoFetcherAndMigrationTests {
                     .init(languageCode: nil, filePath: noLanguageLogo),
                     .init(languageCode: "zh", filePath: chineseLogo)
                 ],
-                preferredLanguageCode: "ja"
-            ) == noLanguageLogo
+                originalLanguageCode: "ja",
+                metadataLanguageCode: "zh"
+            ) == chineseLogo
         )
         #expect(
             TMDbImageSelection.preferredLogoPath(
@@ -143,26 +179,41 @@ struct InfoFetcherAndMigrationTests {
                     .init(languageCode: "en", filePath: englishLogo),
                     .init(languageCode: "zh", filePath: chineseLogo)
                 ],
-                preferredLanguageCode: "ja"
-            ) == englishLogo
+                originalLanguageCode: "ja",
+                metadataLanguageCode: "zh"
+            ) == chineseLogo
+        )
+        #expect(
+            TMDbImageSelection.preferredLogoPath(
+                from: [
+                    .init(languageCode: "en", filePath: englishLogo),
+                    .init(languageCode: nil, filePath: noLanguageLogo)
+                ],
+                originalLanguageCode: "ja",
+                metadataLanguageCode: "ko"
+            ) == noLanguageLogo
         )
     }
 
-    @Test func testLogoSelectionFallsBackToNoLanguageWithoutPreferredLanguage() throws {
-        let englishLogo = URL(string: "https://example.com/logo-en.png")!
-        let noLanguageLogo = URL(string: "https://example.com/logo-none.png")!
+    @Test func testAnimeEntryStoresOriginalLanguageCodeFromBasicInfo() {
+        let entry = AnimeEntry(
+            fromInfo: BasicInfo(
+                name: "Frieren",
+                nameTranslations: [:],
+                overview: nil,
+                overviewTranslations: [:],
+                posterURL: nil,
+                backdropURL: nil,
+                logoURL: nil,
+                originalLanguageCode: "ja",
+                tmdbID: 20_9867,
+                onAirDate: nil,
+                linkToDetails: nil,
+                type: .series
+            )
+        )
 
-        #expect(
-            TMDbImageSelection.preferredLogoPath(from: [
-                .init(languageCode: "en", filePath: englishLogo),
-                .init(languageCode: nil, filePath: noLanguageLogo)
-            ]) == noLanguageLogo
-        )
-        #expect(
-            TMDbImageSelection.preferredLogoPath(from: [
-                .init(languageCode: "en", filePath: englishLogo)
-            ]) == englishLogo
-        )
+        #expect(entry.originalLanguageCode == "ja")
     }
 
     @Test @MainActor func testBackup() throws {
@@ -215,6 +266,29 @@ struct InfoFetcherAndMigrationTests {
         #expect(migratedEntry.notes == "Migrated notes")
         #expect(migratedEntry.favorite)
         #expect(migratedEntry.score == nil)
+    }
+
+    @Test @MainActor func testOriginalLanguageCodeMigrationFromV275DefaultsToNil() throws {
+        let storeURL = temporaryStoreURL(name: "original-language-code-migration")
+
+        let legacySchema = Schema(versionedSchema: SchemaV2_7_5.self)
+        let legacyConfiguration = ModelConfiguration(schema: legacySchema, url: storeURL)
+        let legacyContainer = try ModelContainer(for: legacySchema, configurations: legacyConfiguration)
+        let legacyEntry = SchemaV2_7_5.AnimeEntry(
+            name: "Legacy Entry",
+            type: .series,
+            tmdbID: 8_888,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 1)
+        )
+        legacyContainer.mainContext.insert(legacyEntry)
+        try legacyContainer.mainContext.save()
+
+        let migratedProvider = DataProvider(url: storeURL)
+        let migratedEntries = try migratedProvider.getAllModels(ofType: AnimeEntry.self)
+        let migratedEntry = try #require(migratedEntries.first)
+
+        #expect(migratedEntry.tmdbID == 8_888)
+        #expect(migratedEntry.originalLanguageCode == nil)
     }
 
     @Test @MainActor func testDetailGraphMigrationFromV260PreservesFieldsAndParentLinks() throws {

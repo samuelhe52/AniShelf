@@ -19,6 +19,7 @@ struct BasicInfo: Equatable, Identifiable, Hashable, Sendable {
     var posterURL: URL?
     var backdropURL: URL?
     var logoURL: URL?
+    var originalLanguageCode: String? = nil
     /// The TMDb (The Movie Database) identifier.
     var tmdbID: Int
     var onAirDate: Date?

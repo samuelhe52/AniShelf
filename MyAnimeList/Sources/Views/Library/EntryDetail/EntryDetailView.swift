@@ -103,7 +103,9 @@ struct EntryDetailView: View {
                 NavigationStack {
                     PosterSelectionView(
                         tmdbID: entry.tmdbID,
-                        type: entry.type
+                        type: entry.type,
+                        originalPosterLanguageCode: entry.originalLanguageCode
+                            ?? entry.parentSeriesEntry?.originalLanguageCode
                     ) { url in
                         if url != entry.posterURL {
                             entry.usingCustomPoster = true

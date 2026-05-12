@@ -73,6 +73,8 @@ struct AnimeSharingSheet: View {
                     PosterSelectionView(
                         tmdbID: viewModel.entry.tmdbID,
                         type: viewModel.entry.type,
+                        originalPosterLanguageCode: viewModel.entry.originalLanguageCode
+                            ?? viewModel.entry.parentSeriesEntry?.originalLanguageCode,
                         onPosterSelected: { url in
                             viewModel.updateSelectedPosterURL(url)
                         }

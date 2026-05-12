@@ -24,6 +24,7 @@ extension AnimeEntry {
             posterURL: info.posterURL,
             backdropURL: info.backdropURL,
             tmdbID: info.tmdbID,
+            originalLanguageCode: info.originalLanguageCode,
             dateSaved: .now)
     }
 
@@ -45,6 +46,7 @@ extension AnimeEntry {
         onAirDate = info.onAirDate ?? self.onAirDate
         type = info.type
         tmdbID = info.tmdbID
+        originalLanguageCode = info.originalLanguageCode
     }
 
     /// Replaces remote metadata during an explicit refresh.
@@ -64,6 +66,7 @@ extension AnimeEntry {
         onAirDate = info.onAirDate
         type = info.type
         tmdbID = info.tmdbID
+        originalLanguageCode = info.originalLanguageCode
     }
 
     /// Converts the AnimeEntry to BasicInfo.
@@ -75,6 +78,7 @@ extension AnimeEntry {
             overviewTranslations: overviewTranslations,
             posterURL: posterURL,
             backdropURL: backdropURL,
+            originalLanguageCode: originalLanguageCode,
             tmdbID: tmdbID,
             onAirDate: onAirDate,
             linkToDetails: linkToDetails,
