@@ -312,6 +312,22 @@
         }
       }
     },
+    "Added an option in settings to enable the rating feature, allowing the rating module to be shown or hidden on the details page." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定に評価機能を有効にするオプションを追加し、詳細ページで評価モジュールを表示または非表示にできるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增了启用打分功能的设置选项，可在详情页显示或隐藏打分模块。"
+          }
+        }
+      }
+    },
     "Added bulk-add support: you can trigger it from the top-right button on the search screen." : {
       "localizations" : {
         "ja" : {
@@ -405,6 +421,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "全部"
+          }
+        }
+      }
+    },
+    "Allowed showing or hiding start/end dates for individual entries in entry detail sheet." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "条目詳細シートで、各項目の開始日と終了日を表示または非表示にできるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "支持在条目详情页中为单个条目显示或隐藏开始/结束日期。"
           }
         }
       }
@@ -2265,6 +2297,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "修复详情页中 Staff 显示异常的问题"
+          }
+        }
+      }
+    },
+    "Fixed bugs related to default poster selection." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デフォルトポスター選択に関する不具合を修正しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修复了与默认海报选择相关的问题。"
           }
         }
       }
