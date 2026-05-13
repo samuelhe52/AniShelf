@@ -67,6 +67,8 @@ struct LibraryView: View {
             .environment(\.toggleFavorite, toggleFavorite)
             .environment(interaction)
             .toolbar(content: { toolbarContent })
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
             .sensoryFeedback(.success, trigger: newEntriesAddedToggle)
             .allowsHitTesting(!showProfileSettings)
             .accessibilityHidden(showProfileSettings)
@@ -434,8 +436,6 @@ struct LibraryView: View {
     ) -> some View {
         content()
             .id(id)
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
             .transition(libraryViewTransition)
     }
 

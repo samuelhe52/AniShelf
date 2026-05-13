@@ -54,10 +54,8 @@ struct LibraryGridView: View {
 
     private func onGridViewAppear(proxy: ScrollViewProxy) {
         // Prevent the problem of programmatic scrolling doesn't work when images aren't loaded yet.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            if let scrolledID {
-                proxy.scrollTo(scrolledID, anchor: .center)
-            }
+        if let scrolledID {
+            proxy.scrollTo(scrolledID, anchor: .center)
         }
     }
 

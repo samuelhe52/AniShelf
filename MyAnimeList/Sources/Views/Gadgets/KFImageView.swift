@@ -20,7 +20,7 @@ struct KFImageView: View {
     @State private var image: UIImage? = nil
 
     private var missingImage: UIImage? {
-        UIImage(named: "missing_image_resource")
+        UIImage(named: "missing-image-resource")
     }
 
     init(

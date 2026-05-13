@@ -47,7 +47,7 @@ struct AnimeEntryCard: View {
 
     private var posterImage: some View {
         KFImageView(
-            url: snapshot.posterURL, targetWidth: 720, diskCacheExpiration: .longTerm,
+            url: snapshot.posterURL, diskCacheExpiration: .longTerm,
             imageLoaded: $imageLoaded
         )
         .scaledToFill()

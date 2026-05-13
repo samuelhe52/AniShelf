@@ -13,6 +13,7 @@ struct LibraryGalleryView: View {
     @Environment(LibraryStore.self) private var store
     @Environment(LibraryEntryInteractionState.self) var interaction
     @Binding var scrolledID: Int?
+    @State private var localScrolledID: Int?
 
     var body: some View {
         Group {
@@ -45,19 +46,37 @@ struct LibraryGalleryView: View {
                             scrolledID: $scrolledID
                         )
                         .frame(width: geometry.size.width, height: geometry.size.height)
-                        .onScrollVisibilityChange { _ in }
                     }
                 }
-                .scrollTargetLayout()
             }
             .animation(.default, value: store.groupStrategy)
             .animation(.default, value: store.sortReversed)
             .animation(.default, value: store.sortStrategy)
             .animation(.default, value: store.filters)
             .scrollClipDisabled()
-            .scrollPosition(id: $scrolledID)
-            .scrollTargetBehavior(.viewAligned)
+            .scrollPosition(id: $localScrolledID)
+            .scrollTargetBehavior(.paging)
+            .onAppear {
+                localScrolledID = scrolledID
+            }
+            .onChange(of: scrolledID) {
+                guard localScrolledID != scrolledID else { return }
+                localScrolledID = scrolledID
+            }
+            .onScrollPhaseChange { _, newPhase in
+                if !newPhase.isScrolling {
+                    commitLocalScrollPosition()
+                }
+            }
+            .onDisappear {
+                commitLocalScrollPosition()
+            }
         }
+    }
+
+    private func commitLocalScrollPosition() {
+        guard scrolledID != localScrolledID else { return }
+        scrolledID = localScrolledID
     }
 
     private var emptyLibraryResource: LocalizedStringResource {
