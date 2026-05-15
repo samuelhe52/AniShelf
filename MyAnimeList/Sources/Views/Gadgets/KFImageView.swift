@@ -18,9 +18,14 @@ struct KFImageView: View {
     let animation: Animation?
     @Binding var imageLoaded: Bool
     @State private var image: UIImage? = nil
+    @State private var loadedRequestID: String? = nil
 
     private var missingImage: UIImage? {
         UIImage(named: "missing-image-resource")
+    }
+
+    private var requestID: String {
+        "\(url?.absoluteString ?? "nil")|\(targetWidth?.description ?? "nil")"
     }
 
     init(
@@ -47,28 +52,35 @@ struct KFImageView: View {
                     .frame(minWidth: 100, minHeight: 100)
             }
         }
-        .task(id: url) { await loadImage() }
+        .task(id: requestID) { await loadImage(requestID: requestID) }
     }
 
     private var displayImage: UIImage? {
-        image ?? (url == nil ? missingImage : nil)
+        if url == nil {
+            return missingImage
+        }
+
+        guard loadedRequestID == requestID else { return nil }
+        return image
     }
 
     @MainActor
-    private func loadImage() async {
+    private func loadImage(requestID: String) async {
         guard let url else {
-            image = missingImage
+            image = nil
+            loadedRequestID = nil
             imageLoaded = false
             return
         }
 
         image = nil
+        loadedRequestID = nil
         imageLoaded = false
 
         var kfRetrieveOptions: KingfisherOptionsInfo = [
             .cacheOriginalImage,
             .diskCacheExpiration(diskCacheExpiration),
-            .onFailureImage(UIImage(named: "missing_image_resource"))
+            .onFailureImage(missingImage)
         ]
 
         if let targetWidth {
@@ -80,15 +92,19 @@ struct KFImageView: View {
         do {
             let result = try await KingfisherManager.shared
                 .retrieveImage(with: url, options: kfRetrieveOptions)
+            guard !Task.isCancelled, requestID == self.requestID else { return }
             // Only animate if the image was fetched from network (not cached)
             let shouldAnimate = result.cacheType == .none
             withAnimation(shouldAnimate ? animation : nil) {
                 image = result.image
+                loadedRequestID = requestID
                 imageLoaded = true
             }
         } catch {
+            guard !Task.isCancelled, requestID == self.requestID else { return }
             logger.warning("Error loading image: \(error)")
             image = missingImage
+            loadedRequestID = requestID
             imageLoaded = false
         }
     }
