@@ -7,7 +7,7 @@ fileprivate struct LibraryCapsuleSurface<Content: View>: View {
 
     init(
         horizontalPadding: CGFloat = 13,
-        verticalPadding: CGFloat = 6,
+        verticalPadding: CGFloat = 7,
         @ViewBuilder content: () -> Content
     ) {
         self.horizontalPadding = horizontalPadding
@@ -19,14 +19,6 @@ fileprivate struct LibraryCapsuleSurface<Content: View>: View {
         content
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
-            .background {
-                Capsule(style: .continuous)
-                    .fill(.white.opacity(0.055))
-            }
-            .overlay {
-                Capsule(style: .continuous)
-                    .stroke(.white.opacity(0.11), lineWidth: 1)
-            }
     }
 }
 
@@ -37,11 +29,11 @@ struct LibraryNavigationTitleCapsule: View {
         LibraryCapsuleSurface {
             HStack(alignment: .firstTextBaseline, spacing: 5) {
                 Text("\(count)")
-                    .font(.title3.weight(.bold))
+                    .font(.title2.weight(.bold))
                     .monospacedDigit()
                     .contentTransition(.numericText(countsDown: false))
                 Text(animeTitleResource)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.headline.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .contentTransition(.identity)
             }

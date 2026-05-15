@@ -48,12 +48,13 @@ struct LibraryGridView: View {
 
     private func onChangeOfScrolledID(proxy: ScrollViewProxy) {
         if let scrolledID {
-            proxy.scrollTo(scrolledID)
+            withAnimation(.bouncy) {
+                proxy.scrollTo(scrolledID)
+            }
         }
     }
 
     private func onGridViewAppear(proxy: ScrollViewProxy) {
-        // Prevent the problem of programmatic scrolling doesn't work when images aren't loaded yet.
         if let scrolledID {
             proxy.scrollTo(scrolledID, anchor: .center)
         }
@@ -61,14 +62,49 @@ struct LibraryGridView: View {
 
     @ViewBuilder
     private func configuredGridItem(for item: LibraryEntryDisplayItem) -> some View {
-        let baseItem = LibraryGridItem(snapshot: item.snapshot)
-            .highlightEffect(
-                showHighlight: interaction.highlightBinding(
-                    for: item.id,
-                    highlightedEntryID: $highlightedEntryID
-                ),
-                delay: 0.2
-            )
+        let baseItem = LibraryGridItem(
+            snapshot: item.snapshot,
+            isSelected: !interaction.isMultiSelecting || interaction.isSelected(item.id)
+        )
+        .highlightEffect(
+            showHighlight: interaction.highlightBinding(
+                for: item.id,
+                highlightedEntryID: $highlightedEntryID
+            ),
+            delay: 0.2
+        )
+
+        if openDetailWithSingleTap {
+            baseItem
+                .contextMenu {
+                    interaction.contextMenu(
+                        for: item.entry,
+                        toggleFavorite: toggleFavorite
+                    )
+                    .onAppear { scrolledID = item.id }
+                } preview: {
+                    EntryContextMenuPreview(snapshot: item.snapshot)
+                        .onAppear { scrolledID = item.id }
+                }
+                .onTapGesture {
+                    scrolledID = item.id
+                    if interaction.isMultiSelecting {
+                        toggleSelection(for: item.id)
+                    } else {
+                        interaction.detailingEntry = item.entry
+                    }
+
+                }
+        } else {
+            gridItemWithDoubleTapDetail(baseItem: baseItem, item: item)
+        }
+    }
+
+    private func gridItemWithDoubleTapDetail(
+        baseItem: some View,
+        item: LibraryEntryDisplayItem
+    ) -> some View {
+        baseItem
             .contextMenu {
                 interaction.contextMenu(
                     for: item.entry,
@@ -79,26 +115,47 @@ struct LibraryGridView: View {
                 EntryContextMenuPreview(snapshot: item.snapshot)
                     .onAppear { scrolledID = item.id }
             }
+            .modifier(
+                LibraryGridDoubleTapOpenModifier(
+                    isMultiSelecting: interaction.isMultiSelecting,
+                    onSingleTap: {
+                        scrolledID = item.id
+                        if interaction.isMultiSelecting {
+                            toggleSelection(for: item.id)
+                        }
+                    },
+                    onDoubleTap: {
+                        interaction.detailingEntry = item.entry
+                        scrolledID = item.id
+                    }
+                )
+            )
+    }
 
-        if openDetailWithSingleTap {
-            baseItem
-                .onTapGesture {
-                    scrolledID = item.id
-                    interaction.detailingEntry = item.entry
-                }
+    private func toggleSelection(for id: Int) {
+        interaction.toggleSelection(for: id)
+    }
+}
+
+fileprivate struct LibraryGridDoubleTapOpenModifier: ViewModifier {
+    let isMultiSelecting: Bool
+    let onSingleTap: () -> Void
+    let onDoubleTap: () -> Void
+
+    func body(content: Content) -> some View {
+        if isMultiSelecting {
+            content.onTapGesture(perform: onSingleTap)
         } else {
-            baseItem
-                .onTapGesture { scrolledID = item.id }
-                .onTapGesture(count: 2) {
-                    interaction.detailingEntry = item.entry
-                    scrolledID = item.id
-                }
+            content
+                .onTapGesture(perform: onSingleTap)
+                .onTapGesture(count: 2, perform: onDoubleTap)
         }
     }
 }
 
 fileprivate struct LibraryGridItem: View {
     var snapshot: LibraryEntrySnapshot
+    var isSelected: Bool = true
     private let posterShape = RoundedRectangle(cornerRadius: 16, style: .continuous)
 
     var body: some View {
@@ -106,7 +163,10 @@ fileprivate struct LibraryGridItem: View {
             poster
             titleLabel
         }
+        .opacity(selectionOpacity)
+        .scaleEffect(selectionScale)
         .contentShape(.rect)
+        .animation(.bouncy(duration: 0.18, extraBounce: 0.1), value: isSelected)
     }
 
     private var poster: some View {
@@ -171,6 +231,14 @@ fileprivate struct LibraryGridItem: View {
             )
             .padding(8)
         }
+    }
+
+    private var selectionOpacity: Double {
+        isSelected ? 1 : 0.48
+    }
+
+    private var selectionScale: CGFloat {
+        isSelected ? 1 : 0.95
     }
 }
 

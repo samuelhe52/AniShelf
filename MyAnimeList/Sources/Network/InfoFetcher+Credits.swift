@@ -9,7 +9,7 @@ import DataProvider
 import Foundation
 import TMDb
 
-private struct MergedAggregateCrewMember {
+fileprivate struct MergedAggregateCrewMember {
     var id: Int
     var name: String
     var originalName: String

@@ -30,6 +30,7 @@ struct LibraryView: View {
     @State private var scrollState = ScrollState()
     @State private var newEntriesAddedToggle = false
     @State private var highlightedEntryID: Int?
+    @State private var isShowingBatchDeleteConfirmation = false
 
     // Persistent UI preference
     @AppStorage(.libraryViewStyle) var libraryViewStyle: LibraryViewStyle = .gallery
@@ -64,14 +65,28 @@ struct LibraryView: View {
             ZStack {
                 libraryView
             }
+            .toolbar { topBarContent }
+            .toolbar { bottomBarContent }
             .environment(\.toggleFavorite, toggleFavorite)
             .environment(interaction)
-            .toolbar(content: { toolbarContent })
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            .animation(libraryViewStyleAnimation, value: libraryViewStyle)
+            .animation(.default, value: selectedEntries.isEmpty)
             .sensoryFeedback(.success, trigger: newEntriesAddedToggle)
             .allowsHitTesting(!showProfileSettings)
             .accessibilityHidden(showProfileSettings)
+            .alert(
+                batchDeleteConfirmationTitle,
+                isPresented: $isShowingBatchDeleteConfirmation
+            ) {
+                Button("Delete", role: .destructive) {
+                    deleteSelectedEntries()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(batchDeleteConfirmationMessage)
+            }
         }
     }
 
@@ -110,27 +125,123 @@ struct LibraryView: View {
     // MARK: - Toolbar
 
     @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .principal) {
-            LibraryNavigationTitleCapsule(count: store.libraryOnDisplay.count)
+    private var bottomBarContent: some ToolbarContent {
+        if interaction.isMultiSelecting {
+            ToolbarItem(placement: .bottomBar) {
+                Button("Delete", systemImage: "trash", role: .destructive) {
+                    isShowingBatchDeleteConfirmation = true
+                }
+                .disabled(selectedEntries.isEmpty)
+                .tint(.red)
+            }
+            ToolbarItemGroup(placement: .status) {
+                Menu("Mark Status", systemImage: "checklist") {
+                    ForEach(AnimeEntry.WatchStatus.allCases, id: \.self) { status in
+                        Button {
+                            applyBatchAction(.watchStatus(status))
+                        } label: {
+                            Label(status.localizedStringResource, systemImage: status.batchActionSystemImage)
+                        }
+                    }
+                }
+                .disabled(selectedEntries.isEmpty)
+
+                Button(
+                    allFavorite ? "Unfavorite" : "Favorite",
+                    systemImage: allFavorite ? "heart.slash.fill" : "heart.fill"
+                ) {
+                    applyBatchAction(.favorite(allFavorite ? false : true))
+                }
+                .disabled(selectedEntries.isEmpty)
+                .animation(.snappy(duration: 0.3), value: allFavorite)
+            }
+            ToolbarItem(placement: .bottomBar) {
+                batchActionsMenu
+            }
+        } else {
+            ToolbarItem(placement: .bottomBar) {
+                Picker("View Style", selection: libraryViewStyleBinding) {
+                    ForEach(LibraryViewStyle.allCases, id: \.self) { style in
+                        Label(style.nameKey, systemImage: style.systemImageName).tag(style)
+                    }
+                }
+                .labelsHidden()
+            }
+            ToolbarItem(placement: .status) {
+                libraryBrowseSummaryMenu
+            }
+            ToolbarItem(placement: .bottomBar) {
+                searchButton
+            }
         }
-        ToolbarItem(placement: .bottomBar) {
-            Picker("View Style", selection: libraryViewStyleBinding) {
-                ForEach(LibraryViewStyle.allCases, id: \.self) { style in
-                    Label(style.nameKey, systemImage: style.systemImageName).tag(style)
+    }
+
+    @ToolbarContentBuilder
+    private var topBarContent: some ToolbarContent {
+        ToolbarItem(placement: .principal) {
+            LibraryNavigationTitleCapsule(
+                count:
+                    interaction.isMultiSelecting ? selectedEntries.count : store.libraryOnDisplay.count
+            )
+        }
+        if supportsMultiSelection && !interaction.isMultiSelecting {
+            ToolbarItem(placement: .topBarTrailing) {
+                Color.clear
+                    .frame(width: 10, height: 0)
+            }
+            .sharedBackgroundVisibility(.hidden)
+        }
+        if interaction.isMultiSelecting {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    exitMultiSelection()
+                } label: {
+                    Image(systemName: "xmark")
+                }
+                .accessibilityLabel(Text("Dismiss Selection"))
+            }
+        } else {
+            ToolbarItem(placement: .topBarTrailing) {
+                if supportsMultiSelection {
+                    Button(action: enterMultiSelection) {
+                        Text("Select").font(.headline.weight(.semibold))
+                    }
+                    .accessibilityLabel(Text("Anime Multi-selection"))
+                    .padding(.leading, 3)
                 }
             }
-            .labelsHidden()
+            ToolbarItem(placement: .topBarTrailing) {
+                profileSettingsButton
+            }
         }
-        ToolbarItem(placement: .status) {
-            libraryBrowseSummaryMenu
+    }
+
+    @ViewBuilder
+    private var batchActionsMenu: some View {
+        Menu {
+            Button("Track Dates", systemImage: "calendar.badge.checkmark") {
+                applyBatchAction(.dateTracking(true))
+            }
+            Button("Hide Dates", systemImage: "calendar.badge.minus") {
+                applyBatchAction(.dateTracking(false))
+            }
+
+            if scoringEnabled {
+                Menu("Score", systemImage: "star") {
+                    ForEach(Array(AnimeEntry.validScoreRange), id: \.self) { score in
+                        Button("\(score)/5") {
+                            applyBatchAction(.score(score))
+                        }
+                    }
+                    Button("Clear Score", systemImage: "xmark.circle") {
+                        applyBatchAction(.score(nil))
+                    }
+                }
+            }
+        } label: {
+            Label("Actions", systemImage: "ellipsis")
         }
-        ToolbarItem(placement: .bottomBar) {
-            searchButton
-        }
-        ToolbarItemGroup(placement: .topBarTrailing) {
-            profileSettingsButton
-        }
+        .disabled(selectedEntries.isEmpty)
     }
 
     @ViewBuilder
@@ -207,6 +318,24 @@ struct LibraryView: View {
         }
     }
 
+    private var supportsMultiSelection: Bool {
+        libraryViewStyle == .list || libraryViewStyle == .grid
+    }
+
+    private var selectedEntries: [AnimeEntry] {
+        interaction.selectedEntries(from: store.libraryOnDisplay)
+    }
+
+    var allFavorite: Bool { selectedEntries.allSatisfy(\.favorite) }
+
+    private var batchDeleteConfirmationTitle: LocalizedStringResource {
+        "Delete Selected Anime?"
+    }
+
+    private var batchDeleteConfirmationMessage: LocalizedStringResource {
+        "This will delete \(interaction.selectedEntryCount) selected anime from your library."
+    }
+
     private var groupStrategyBinding: Binding<LibraryStore.LibraryGroupStrategy> {
         Binding(
             get: {
@@ -224,11 +353,19 @@ struct LibraryView: View {
             get: { libraryViewStyle },
             set: { newValue in
                 guard newValue != libraryViewStyle else { return }
-                withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+                withAnimation(libraryViewStyleAnimation) {
                     libraryViewStyle = newValue
                 }
             }
         )
+    }
+
+    private var libraryViewStyleAnimation: Animation? {
+        reduceMotion ? nil : .smooth(duration: 0.34, extraBounce: 0.12)
+    }
+
+    private var selectionModeAnimation: Animation? {
+        reduceMotion ? nil : .smooth(duration: 0.26, extraBounce: 0.06)
     }
 
     private var libraryViewTransition: AnyTransition {
@@ -407,6 +544,46 @@ struct LibraryView: View {
         }
     }
 
+    private func applyBatchAction(_ action: LibraryBatchAction) {
+        let entries = selectedEntries
+        guard !entries.isEmpty else { return }
+
+        action.apply(to: entries)
+        exitMultiSelection()
+    }
+
+    private func deleteSelectedEntries() {
+        let entries = selectedEntries
+        guard !entries.isEmpty else {
+            exitMultiSelection()
+            return
+        }
+
+        let remainingEntries = store.libraryOnDisplay.filter { entry in
+            !interaction.selectedEntryIDs.contains(entry.tmdbID)
+        }
+        let scrollTarget = remainingEntries.first?.tmdbID
+
+        for entry in entries {
+            _ = store.deleteEntry(entry)
+        }
+
+        scrollState.scrolledID = scrollTarget
+        exitMultiSelection()
+    }
+
+    private func enterMultiSelection() {
+        withAnimation(selectionModeAnimation) {
+            interaction.enterMultiSelection()
+        }
+    }
+
+    private func exitMultiSelection() {
+        withAnimation(selectionModeAnimation) {
+            interaction.exitMultiSelection()
+        }
+    }
+
     // MARK: - Helpers
 
     @ViewBuilder
@@ -478,6 +655,21 @@ fileprivate struct LibraryProfileLauncherBadge: View {
                     Circle().stroke(.white.opacity(0.4), lineWidth: 0.7)
                 }
                 .offset(x: 4, y: 4)
+        }
+    }
+}
+
+extension AnimeEntry.WatchStatus {
+    fileprivate var batchActionSystemImage: String {
+        switch self {
+        case .planToWatch:
+            "bookmark"
+        case .watching:
+            "play.circle"
+        case .watched:
+            "checkmark.circle"
+        case .dropped:
+            "xmark.circle"
         }
     }
 }

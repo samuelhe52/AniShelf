@@ -21,6 +21,37 @@ final class LibraryEntryInteractionState {
     var sharingAnimeEntry: AnimeEntry?
     var showPasteAlert: Bool = false
     var pasteAction: (() -> Void)?
+    var isMultiSelecting: Bool = false
+    var selectedEntryIDs: Set<Int> = []
+
+    var selectedEntryCount: Int {
+        selectedEntryIDs.count
+    }
+
+    func enterMultiSelection() {
+        isMultiSelecting = true
+    }
+
+    func exitMultiSelection() {
+        isMultiSelecting = false
+        selectedEntryIDs.removeAll()
+    }
+
+    func toggleSelection(for entryID: Int) {
+        if selectedEntryIDs.contains(entryID) {
+            selectedEntryIDs.remove(entryID)
+        } else {
+            selectedEntryIDs.insert(entryID)
+        }
+    }
+
+    func isSelected(_ entryID: Int) -> Bool {
+        selectedEntryIDs.contains(entryID)
+    }
+
+    func selectedEntries(from entries: [AnimeEntry]) -> [AnimeEntry] {
+        entries.filter { selectedEntryIDs.contains($0.tmdbID) }
+    }
 
     func prepareDeletion(for entry: AnimeEntry) {
         deletingEntry = entry

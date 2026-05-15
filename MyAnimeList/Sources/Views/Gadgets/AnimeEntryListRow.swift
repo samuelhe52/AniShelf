@@ -14,7 +14,7 @@ struct AnimeEntryListRow: View {
 
     var entry: AnimeEntry
     var snapshot: LibraryEntrySnapshot
-    var onSelect: (() -> Void)? = nil
+    var onTap: (() -> Void)? = nil
     var onOpenDetails: (() -> Void)? = nil
 
     private let metadataFont = Font.system(size: 10.5, weight: .medium)
@@ -27,12 +27,12 @@ struct AnimeEntryListRow: View {
     init(
         entry: AnimeEntry,
         snapshot: LibraryEntrySnapshot? = nil,
-        onSelect: (() -> Void)? = nil,
+        onTap: (() -> Void)? = nil,
         onOpenDetails: (() -> Void)? = nil
     ) {
         self.entry = entry
         self.snapshot = snapshot ?? LibraryEntrySnapshot(entry: entry)
-        self.onSelect = onSelect
+        self.onTap = onTap
         self.onOpenDetails = onOpenDetails
     }
 
@@ -66,19 +66,19 @@ struct AnimeEntryListRow: View {
                 Color.clear
                     .contentShape(.rect)
                     .onTapGesture {
-                        onSelect?()
+                        onTap?()
                         onOpenDetails()
                     }
             } else {
                 Color.clear
                     .contentShape(.rect)
-                    .onTapGesture { onSelect?() }
+                    .onTapGesture { onTap?() }
                     .onTapGesture(count: 2) { onOpenDetails() }
             }
         } else {
             Color.clear
                 .contentShape(.rect)
-                .onTapGesture { onSelect?() }
+                .onTapGesture { onTap?() }
         }
     }
 

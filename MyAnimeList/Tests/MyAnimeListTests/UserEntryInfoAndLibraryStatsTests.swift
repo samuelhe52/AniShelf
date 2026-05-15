@@ -13,6 +13,44 @@ import UIKit
 @testable import MyAnimeList
 
 struct UserEntryInfoAndLibraryStatsTests {
+    @Test func testLibraryBatchActionsApplySafeCoreEntryMutations() {
+        let first = AnimeEntry.template(id: 11)
+        let second = AnimeEntry.template(id: 12)
+        let entries = [first, second]
+
+        LibraryBatchAction.favorite(true).apply(to: entries)
+        #expect(first.favorite)
+        #expect(second.favorite)
+
+        LibraryBatchAction.favorite(false).apply(to: entries)
+        #expect(!first.favorite)
+        #expect(!second.favorite)
+
+        LibraryBatchAction.dateTracking(false).apply(to: entries)
+        #expect(!first.isDateTrackingEnabled)
+        #expect(!second.isDateTrackingEnabled)
+
+        LibraryBatchAction.watchStatus(.watched).apply(to: entries)
+        #expect(first.watchStatus == .watched)
+        #expect(second.watchStatus == .watched)
+        #expect(first.dateStarted == nil)
+        #expect(second.dateFinished == nil)
+
+        LibraryBatchAction.dateTracking(true).apply(to: entries)
+        #expect(first.isDateTrackingEnabled)
+        #expect(second.isDateTrackingEnabled)
+        #expect(first.dateStarted != nil)
+        #expect(second.dateFinished != nil)
+
+        LibraryBatchAction.score(5).apply(to: entries)
+        #expect(first.score == 5)
+        #expect(second.score == 5)
+
+        LibraryBatchAction.score(nil).apply(to: entries)
+        #expect(first.score == nil)
+        #expect(second.score == nil)
+    }
+
     @Test func testEntryScoreRoundTripAndChangeDetection() throws {
         let entry = AnimeEntry.template(id: 101)
         let originalUserInfo = entry.userInfo

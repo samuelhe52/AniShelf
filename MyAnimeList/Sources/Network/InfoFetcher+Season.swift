@@ -9,7 +9,7 @@ import DataProvider
 import Foundation
 import TMDb
 
-private struct TVSeasonPayload {
+fileprivate struct TVSeasonPayload {
     let parentSeries: TVSeries
     let season: TVSeason
     let parentSeriesImages: ImageCollection
@@ -202,7 +202,8 @@ extension InfoFetcher {
         async let resolvedParentSeriesImages = tmdbClient.tvSeries.images(forTVSeries: parentSeriesID)
         async let resolvedImagesConfiguration = imagesConfiguration()
 
-        let translationsTask = includeTranslations
+        let translationsTask =
+            includeTranslations
             ? Task {
                 try await tvSeasonTranslations(
                     parentSeriesID: parentSeriesID,
@@ -210,7 +211,8 @@ extension InfoFetcher {
                 )
             }
             : nil
-        let creditsTask = includeCredits
+        let creditsTask =
+            includeCredits
             ? Task {
                 try await tmdbClient.tvSeasons.aggregateCredits(
                     forSeason: seasonNumber,
@@ -219,7 +221,8 @@ extension InfoFetcher {
                 )
             }
             : nil
-        let seasonPostersTask = includeSeasonPosters
+        let seasonPostersTask =
+            includeSeasonPosters
             ? Task {
                 await bestEffortSeasonPosters(
                     forSeason: seasonNumber,

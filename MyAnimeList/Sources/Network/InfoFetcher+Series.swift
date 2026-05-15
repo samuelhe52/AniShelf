@@ -9,7 +9,7 @@ import DataProvider
 import Foundation
 import TMDb
 
-private struct TVSeriesPayload {
+fileprivate struct TVSeriesPayload {
     let series: TVSeries
     let imageResources: ImageCollection
     let imagesConfiguration: ImagesConfiguration
@@ -130,10 +130,12 @@ extension InfoFetcher {
         async let resolvedImageResources = tmdbClient.tvSeries.images(forTVSeries: tmdbID)
         async let resolvedImagesConfiguration = imagesConfiguration()
 
-        let translationsTask = includeTranslations
+        let translationsTask =
+            includeTranslations
             ? Task { try await tvSeriesTranslations(tmdbID: tmdbID) }
             : nil
-        let creditsTask = includeCredits
+        let creditsTask =
+            includeCredits
             ? Task {
                 try await tmdbClient.tvSeries.aggregateCredits(
                     forTVSeries: tmdbID,

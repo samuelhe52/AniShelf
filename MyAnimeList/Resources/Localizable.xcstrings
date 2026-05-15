@@ -522,6 +522,22 @@
         }
       }
     },
+    "Anime Multi-selection" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アニメ複数選択"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "动画多选"
+          }
+        }
+      }
+    },
     "AniShelf" : {
       "localizations" : {
         "ja" : {
@@ -1165,6 +1181,22 @@
         }
       }
     },
+    "Clear Score" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スコアを消去"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除评分"
+          }
+        }
+      }
+    },
     "Close" : {
       "localizations" : {
         "ja" : {
@@ -1636,6 +1668,22 @@
         }
       }
     },
+    "Delete Selected Anime?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択したアニメを削除？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除所选动画？"
+          }
+        }
+      }
+    },
     "Discard" : {
       "localizations" : {
         "ja" : {
@@ -1681,6 +1729,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "放弃更改"
+          }
+        }
+      }
+    },
+    "Dismiss Selection" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択を終了"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出选择"
           }
         }
       }
@@ -2791,6 +2855,22 @@
         }
       }
     },
+    "Mark Status" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ステータスを変更"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改状态"
+          }
+        }
+      }
+    },
     "Metadata" : {
       "localizations" : {
         "ja" : {
@@ -3091,6 +3171,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无"
+          }
+        }
+      }
+    },
+    "Not Selected" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未選択"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未选择"
           }
         }
       }
@@ -4232,6 +4329,39 @@
         }
       }
     },
+    "Select" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择"
+          }
+        }
+      }
+    },
+    "Selected" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已选择"
+          }
+        }
+      }
+    },
     "Series" : {
       "localizations" : {
         "ja" : {
@@ -4582,6 +4712,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此版本包含多项问题修复和改进。由于本版本对元数据获取做了重要优化，建议现有用户点击下方操作按钮执行一次元数据刷新。"
+          }
+        }
+      }
+    },
+    "This will delete %lld selected anime from your library." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択した%lld件のアニメをライブラリから削除します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这会从资料库中删除已选择的 %lld 部动画。"
           }
         }
       }

@@ -84,7 +84,11 @@ final class LibraryProfileSettingsActions {
     }
 
     /// Default production implementation for `refreshInfos(options:)`.
-    /// Refreshes visible library metadata and prefetches any updated images.
+    /// Refreshes all persisted entries and prefetches any updated images.
+    ///
+    /// Hidden helper rows are intentionally included, even when they are not currently visible.
+    /// Some season entries still rely on those rows for parent-series relationships, so skipping
+    /// them here can leave the store in a partially refreshed state.
     private static func performRefreshInfos(
         for store: LibraryStore,
         options: LibraryRefreshOptions
@@ -118,6 +122,9 @@ final class LibraryProfileSettingsActions {
     }
 
     static func getRefreshEntries(for store: LibraryStore) throws -> [AnimeEntry] {
+        // Refresh the full persisted set, not just `store.library`.
+        // Hidden helper parents may still be required by season entries, including rows that are
+        // not currently surfaced in the visible library UI.
         try store.dataProvider.getAllModels(ofType: AnimeEntry.self)
     }
 
