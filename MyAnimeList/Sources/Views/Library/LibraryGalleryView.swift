@@ -15,6 +15,11 @@ struct LibraryGalleryView: View {
     @Binding var scrolledID: Int?
     @State private var localScrolledID: Int?
 
+    init(scrolledID: Binding<Int?>) {
+        self._scrolledID = scrolledID
+        self._localScrolledID = State(initialValue: scrolledID.wrappedValue)
+    }
+
     var body: some View {
         Group {
             if !store.libraryDisplayItems.isEmpty {
@@ -48,6 +53,7 @@ struct LibraryGalleryView: View {
                         .frame(width: geometry.size.width, height: geometry.size.height)
                     }
                 }
+                .scrollTargetLayout()
             }
             .animation(.default, value: store.groupStrategy)
             .animation(.default, value: store.sortReversed)
@@ -55,10 +61,7 @@ struct LibraryGalleryView: View {
             .animation(.default, value: store.filters)
             .scrollClipDisabled()
             .scrollPosition(id: $localScrolledID)
-            .scrollTargetBehavior(.paging)
-            .onAppear {
-                localScrolledID = scrolledID
-            }
+            .scrollTargetBehavior(.viewAligned)
             .onChange(of: scrolledID) {
                 guard localScrolledID != scrolledID else { return }
                 localScrolledID = scrolledID

@@ -212,6 +212,7 @@ struct LibraryView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 profileSettingsButton
+                    .padding(.trailing, 3)
             }
         }
     }
