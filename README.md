@@ -50,8 +50,6 @@ Note that new features will first be released on TestFlight before being pushed 
 ## 🗺 Plans
 
 - More granular watch progress tracking, such as episode-level progress
-- A more detailed rating system; currently the app only supports normal/special favorites, with star ratings planned for later
-- Batch import
 - Watch-data sync with platforms such as TMDb, Bangumi, and AniList; this is a large feature and may take time
 
 ## 📋 Build/Run Requirements

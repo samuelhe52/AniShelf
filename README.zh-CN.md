@@ -51,8 +51,6 @@ AniShelf 现已上架 iOS App Store，你可以在这里下载：[App Store Link
 ## 🗺 计划
 
 - 更细的观看进度记录，例如精确到集
-- 更细的评分机制；目前只有普通/特别收藏，后续考虑添加星级评分
-- 批量导入功能
 - 与 TMDb、Bangumi、AniList 等平台的观看数据同步功能；这个比较复杂，可能会比较晚再做
 
 ## 📋 Build/Run Requirements
