@@ -137,7 +137,12 @@ class BackupManager {
         }
 
         do {
-            try fileManager.zipItem(at: backupDirectoryURL, to: archiveURL)
+            try fileManager.zipItem(
+                at: backupDirectoryURL,
+                to: archiveURL,
+                shouldKeepParent: true,
+                compressionMethod: .deflate
+            )
         } catch {
             throw BackupError.archiveCreationFailed
         }

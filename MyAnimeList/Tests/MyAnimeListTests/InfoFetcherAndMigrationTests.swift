@@ -8,6 +8,7 @@
 import Foundation
 import SwiftData
 import Testing
+import ZIPFoundation
 
 import struct TMDb.AggregrateCrewMember
 import struct TMDb.CrewJob
@@ -226,6 +227,32 @@ struct InfoFetcherAndMigrationTests {
 
         let parentDirectoryURL = backupURL.deletingLastPathComponent()
         try fileManager.unzipItem(at: backupURL, to: parentDirectoryURL)
+    }
+
+    @Test @MainActor func testBackupUsesDeflateCompression() throws {
+        let storeDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AniShelfTests-compressed-backup-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: storeDirectory,
+            withIntermediateDirectories: true
+        )
+        let dataProvider = DataProvider(url: storeDirectory.appendingPathComponent("compressed.store"))
+        let entry = AnimeEntry(
+            name: "Compression Fixture",
+            type: .movie,
+            tmdbID: 400_003,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 19)
+        )
+        entry.notes = String(repeating: "backup compression fixture ", count: 1_024)
+        try dataProvider.dataHandler.newEntry(entry)
+
+        let backupURL = try BackupManager(dataProvider: dataProvider).createBackup()
+        let archive = try #require(Archive(url: backupURL, accessMode: .read))
+        let storeEntry = try #require(
+            archive.first { $0.path.hasSuffix("/compressed.store") }
+        )
+
+        #expect(storeEntry.compressedSize < storeEntry.uncompressedSize)
     }
 
     @Test @MainActor func testParentChildRelationshipInference() async throws {
