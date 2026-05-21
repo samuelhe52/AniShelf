@@ -241,13 +241,33 @@ struct EntryDetailTrackingSection: View {
 }
 
 fileprivate struct EntryDetailTrackingEditor: View {
-    let entry: AnimeEntry
+    @Bindable var entry: AnimeEntry
     let episodeProgressTrackingEnabled: Bool
     let onWatchStatusSelected: (AnimeEntry.WatchStatus) -> Void
     let onEpisodeProgressCompletionSuggested: (AnimeEntryEpisodeProgressCompletionPrompt) -> Void
 
     private var dateTrackingButtonLabel: LocalizedStringResource {
         entry.isDateTrackingEnabled ? EntryDetailL10n.hideDates : EntryDetailL10n.trackDates
+    }
+
+    private var isDateTrackingLocked: Bool {
+        entry.watchStatus == .dropped
+    }
+
+    private var activeWatchStatusBinding: Binding<AnimeEntry.WatchStatus> {
+        Binding(
+            get: {
+                switch entry.watchStatus {
+                case .planToWatch, .watching, .watched:
+                    return entry.watchStatus
+                case .dropped:
+                    return .watching
+                }
+            },
+            set: {
+                onWatchStatusSelected($0)
+            }
+        )
     }
 
     var body: some View {
@@ -272,13 +292,17 @@ fileprivate struct EntryDetailTrackingEditor: View {
                     .buttonStyle(.plain)
                 }
                 AnimeEntryWatchedStatusPicker(
-                    for: entry,
-                    onStatusSelected: onWatchStatusSelected
+                    selection: activeWatchStatusBinding,
+                    isDisabled: isDateTrackingLocked
                 )
                 .pickerStyle(.segmented)
 
                 if entry.isDateTrackingEnabled {
-                    AnimeEntryDatePickers(entry: entry)
+                    AnimeEntryDatePickers(
+                        dateStarted: $entry.dateStarted,
+                        dateFinished: $entry.dateFinished,
+                        isLocked: isDateTrackingLocked
+                    )
                 }
             }
 

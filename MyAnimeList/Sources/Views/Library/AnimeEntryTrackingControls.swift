@@ -8,44 +8,19 @@
 import DataProvider
 import SwiftUI
 
-typealias WatchedStatus = AnimeEntry.WatchStatus
-
 struct AnimeEntryWatchedStatusPicker: View {
-    var entry: AnimeEntry
-    let onStatusSelected: (WatchedStatus) -> Void
-
-    init(
-        for entry: AnimeEntry,
-        onStatusSelected: @escaping (WatchedStatus) -> Void
-    ) {
-        self.entry = entry
-        self.onStatusSelected = onStatusSelected
-    }
-
-    private var activeStatusBinding: Binding<WatchedStatus> {
-        Binding(
-            get: {
-                switch entry.watchStatus {
-                case .planToWatch, .watching, .watched:
-                    return entry.watchStatus
-                case .dropped:
-                    return .watching
-                }
-            },
-            set: {
-                onStatusSelected($0)
-            })
-    }
+    @Binding var selection: AnimeEntry.WatchStatus
+    var isDisabled = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Picker(selection: activeStatusBinding) {
-                Text("Planned").tag(WatchedStatus.planToWatch)
-                Text("Watching").tag(WatchedStatus.watching)
-                Text("Watched").tag(WatchedStatus.watched)
+            Picker(selection: $selection) {
+                Text(EntryDetailL10n.planned).tag(AnimeEntry.WatchStatus.planToWatch)
+                Text(EntryDetailL10n.watching).tag(AnimeEntry.WatchStatus.watching)
+                Text(EntryDetailL10n.watched).tag(AnimeEntry.WatchStatus.watched)
             } label: {
             }
-            .disabled(entry.watchStatus == .dropped)
+            .disabled(isDisabled)
             .lineLimit(1)
             .transaction { transaction in
                 transaction.animation = nil
@@ -55,33 +30,39 @@ struct AnimeEntryWatchedStatusPicker: View {
 }
 
 struct AnimeEntryDatePickers: View {
-    var entry: AnimeEntry
+    @Binding var dateStarted: Date?
+    @Binding var dateFinished: Date?
+    let isLocked: Bool
     var labelsHidden: Bool = false
 
-    var isLocked: Bool {
-        entry.watchStatus == .dropped
-    }
-
-    private var dateStartedBinding: Binding<Date> {
+    private var dateStartedPickerBinding: Binding<Date> {
         Binding(
             get: {
-                entry.dateStarted ?? .now
+                dateStarted ?? .now
             },
             set: {
-                guard !isLocked else { return }
-                entry.dateStarted = $0
-            })
+                dateStarted = $0
+            }
+        )
     }
 
-    private var dateFinishedBinding: Binding<Date> {
+    private var dateFinishedPickerBinding: Binding<Date> {
         Binding(
             get: {
-                entry.dateFinished ?? .now
+                dateFinished ?? .now
             },
             set: {
-                guard !isLocked else { return }
-                entry.dateFinished = $0
-            })
+                dateFinished = $0
+            }
+        )
+    }
+
+    private var dateStartedRange: ClosedRange<Date> {
+        Date.distantPast...(dateFinished ?? .now)
+    }
+
+    private var dateFinishedRange: ClosedRange<Date> {
+        (dateStarted ?? .now)...Date.distantFuture
     }
 
     var body: some View {
@@ -89,14 +70,15 @@ struct AnimeEntryDatePickers: View {
             HStack {
                 Spacer()
                 DatePicker(
-                    selection: dateStartedBinding,
-                    in: Date.distantPast...(entry.dateFinished ?? .now),
+                    selection: dateStartedPickerBinding,
+                    in: dateStartedRange,
                     displayedComponents: [.date]
                 ) {
                     Text(EntryDetailL10n.dateStarted)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
+                .opacity(dateStarted == nil ? 0.5 : 1)
 
                 Image(systemName: "ellipsis")
                     .alignmentGuide(VerticalAlignment.center) { d in
@@ -105,14 +87,15 @@ struct AnimeEntryDatePickers: View {
                     .foregroundStyle(.secondary)
 
                 DatePicker(
-                    selection: dateFinishedBinding,
-                    in: (entry.dateStarted ?? .now)...Date.distantFuture,
+                    selection: dateFinishedPickerBinding,
+                    in: dateFinishedRange,
                     displayedComponents: [.date]
                 ) {
                     Text(EntryDetailL10n.dateFinished)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
+                .opacity(dateFinished == nil ? 0.5 : 1)
 
                 Spacer()
             }

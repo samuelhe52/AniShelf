@@ -1197,6 +1197,22 @@
         }
       }
     },
+    "Clear Dates" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日付をクリア"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除日期"
+          }
+        }
+      }
+    },
     "Clear Score" : {
       "localizations" : {
         "ja" : {
@@ -2716,6 +2732,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "语言"
+          }
+        }
+      }
+    },
+    "Later" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "後で"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "稍后"
           }
         }
       }
@@ -4521,6 +4553,22 @@
         }
       }
     },
+    "Set to Now" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在時刻に設定"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设为现在"
+          }
+        }
+      }
+    },
     "Settings" : {
       "localizations" : {
         "ja" : {
@@ -5233,6 +5281,22 @@
         }
       }
     },
+    "Update Dates?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日付を更新しますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新日期？"
+          }
+        }
+      }
+    },
     "Update the TMDb key used for metadata." : {
       "localizations" : {
         "ja" : {
@@ -5571,6 +5635,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你可能需要重启App才能让此更改生效。"
+          }
+        }
+      }
+    },
+    "You're setting this entry to Planned. Clear all tracked dates?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この項目を「予定」に設定します。記録済みの日付をすべてクリアしますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你正在将此条目标记为计划观看。要清除所有记录的日期吗？"
+          }
+        }
+      }
+    },
+    "You're setting this entry to Watched. Set the finish date to now?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この項目を「視聴済み」に設定します。完了日を現在時刻に設定しますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你正在将此条目标记为已看完。要将完成日期设为现在吗？"
+          }
+        }
+      }
+    },
+    "You're setting this entry to Watching. Set the start date to now?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この項目を「視聴中」に設定します。開始日を現在時刻に設定しますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你正在将此条目标记为正在观看。要将开始日期设为现在吗？"
           }
         }
       }

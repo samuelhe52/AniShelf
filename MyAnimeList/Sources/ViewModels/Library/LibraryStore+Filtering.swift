@@ -88,7 +88,7 @@ extension LibraryStore {
     struct AnimeFilter: Sendable, CaseIterable, Equatable, Hashable {
         static let favorited = AnimeFilter(id: "Favorites", name: "Favorites") { $0.favorite }
         static let watched = AnimeFilter(id: "Watched", name: "Watched") {
-            $0.watchStatus == WatchedStatus.watched
+            $0.watchStatus == .watched
         }
         static let planToWatch = AnimeFilter(id: "Plan to Watch", name: "Planned") {
             $0.watchStatus == .planToWatch
