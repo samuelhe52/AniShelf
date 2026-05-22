@@ -207,10 +207,7 @@ struct LibraryProfileSettingsView: View {
     }
 
     private var libraryDetailsCard: some View {
-        LibraryProfileLibraryDetailsCard(
-            stats: stats,
-            runtimeDescription: stats.runtimeDescription
-        )
+        LibraryProfileLibraryDetailsCard(stats: stats)
     }
 
     @ViewBuilder

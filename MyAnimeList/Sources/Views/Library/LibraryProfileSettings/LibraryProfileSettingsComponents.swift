@@ -51,6 +51,7 @@ struct LibraryProfileDetailRow: View {
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.trailing)
+                .contentTransition(.numericText())
         }
         .padding(.vertical, 2)
     }

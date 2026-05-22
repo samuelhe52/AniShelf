@@ -19,19 +19,33 @@ struct LibraryProfileStats: Equatable {
     let seriesCount: Int
     let seasonCount: Int
     let entriesWithNotesCount: Int
-    let runtimeMinutes: Int
+    let totalRuntimeMinutes: Int
+    let watchedRuntimeMinutes: Int
+    let plannedRuntimeMinutes: Int
 
-    var runtimeDescription: String {
-        guard runtimeMinutes > 0 else { return String(localized: "N/A") }
-        let hours = runtimeMinutes / 60
-        let minutes = runtimeMinutes % 60
-        if hours > 0 && minutes > 0 {
-            return "\(hours)h \(minutes)m"
+    static func runtimeDescription(minutes: Int) -> String {
+        guard minutes > 0 else { return String(localized: "N/A") }
+        let hours = minutes / 60
+        let remainingMinutes = minutes % 60
+        if hours > 0 && remainingMinutes > 0 {
+            return "\(hours)h \(remainingMinutes)m"
         }
         if hours > 0 {
             return "\(hours)h"
         }
-        return "\(minutes)m"
+        return "\(remainingMinutes)m"
+    }
+
+    var totalRuntimeDescription: String {
+        Self.runtimeDescription(minutes: totalRuntimeMinutes)
+    }
+
+    var watchedRuntimeDescription: String {
+        Self.runtimeDescription(minutes: watchedRuntimeMinutes)
+    }
+
+    var plannedRuntimeDescription: String {
+        Self.runtimeDescription(minutes: plannedRuntimeMinutes)
     }
 
     init(entries: [AnimeEntry]) {
@@ -51,12 +65,64 @@ struct LibraryProfileStats: Equatable {
             }
         }
         entriesWithNotesCount = entries.count { !$0.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-        runtimeMinutes = entries.reduce(0) { partialResult, entry in
-            guard let runtime = entry.detail?.runtimeMinutes else {
+        totalRuntimeMinutes = Self.runtimeMinutes(for: entries)
+        watchedRuntimeMinutes = Self.runtimeMinutes(for: entries) { $0.watchStatus == .watched }
+        plannedRuntimeMinutes = Self.runtimeMinutes(for: entries) { $0.watchStatus == .planToWatch }
+    }
+
+    private static func runtimeMinutes(
+        for entries: [AnimeEntry],
+        where shouldInclude: (AnimeEntry) -> Bool = { _ in true }
+    ) -> Int {
+        entries.reduce(0) { partialResult, entry in
+            guard shouldInclude(entry), let runtime = entry.detail?.runtimeMinutes else {
                 return partialResult
             }
             let multiplier = max(entry.detail?.episodeCount ?? 1, 1)
             return partialResult + runtime * multiplier
+        }
+    }
+}
+
+enum LibraryProfileRuntimeMode: Equatable {
+    case total
+    case watched
+    case planned
+
+    mutating func advance() {
+        switch self {
+        case .total:
+            self = .watched
+        case .watched:
+            self = .planned
+        case .planned:
+            self = .total
+        }
+    }
+
+    var title: LocalizedStringResource {
+        switch self {
+        case .total:
+            "Runtime"
+        case .watched:
+            "Watched Runtime"
+        case .planned:
+            "Planned Runtime"
+        }
+    }
+
+    var accessibilityHint: LocalizedStringResource {
+        "Tap to cycle runtime statistics."
+    }
+
+    func description(for stats: LibraryProfileStats) -> String {
+        switch self {
+        case .total:
+            stats.totalRuntimeDescription
+        case .watched:
+            stats.watchedRuntimeDescription
+        case .planned:
+            stats.plannedRuntimeDescription
         }
     }
 }

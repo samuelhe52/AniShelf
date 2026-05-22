@@ -90,9 +90,9 @@ struct LibraryProfilePrimaryStatsGrid: View {
 
 struct LibraryProfileLibraryDetailsCard: View {
     @Environment(\.colorScheme) private var colorScheme
+    @State private var runtimeMode: LibraryProfileRuntimeMode = .total
 
     let stats: LibraryProfileStats
-    let runtimeDescription: String
 
     var body: some View {
         PopupSectionCard(
@@ -114,13 +114,27 @@ struct LibraryProfileLibraryDetailsCard: View {
                     value: "\(stats.entriesWithNotesCount)",
                     systemImage: "note.text"
                 )
-                LibraryProfileDetailRow(title: "Runtime", value: runtimeDescription, systemImage: "clock")
+                LibraryProfileDetailRow(
+                    title: runtimeMode.title,
+                    value: runtimeMode.description(for: stats),
+                    systemImage: "clock"
+                )
+                .contentShape(Rectangle())
+                .onTapGesture(perform: cycleRuntimeMode)
+                .accessibilityAddTraits(.isButton)
+                .accessibilityHint(Text(runtimeMode.accessibilityHint))
             }
         }
     }
 
     private var sectionCardTint: Color {
         colorScheme == .dark ? .black.opacity(0.22) : .white.opacity(0.05)
+    }
+
+    private func cycleRuntimeMode() {
+        withAnimation {
+            runtimeMode.advance()
+        }
     }
 }
 

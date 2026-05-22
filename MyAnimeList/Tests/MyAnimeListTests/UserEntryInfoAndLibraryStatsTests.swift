@@ -276,7 +276,12 @@ struct UserEntryInfoAndLibraryStatsTests {
 
         #expect(stats.totalCount == 0)
         #expect(stats.favoriteCount == 0)
-        #expect(stats.runtimeMinutes == 0)
+        #expect(stats.totalRuntimeMinutes == 0)
+        #expect(stats.watchedRuntimeMinutes == 0)
+        #expect(stats.plannedRuntimeMinutes == 0)
+        #expect(stats.totalRuntimeDescription == "N/A")
+        #expect(stats.watchedRuntimeDescription == "N/A")
+        #expect(stats.plannedRuntimeDescription == "N/A")
     }
 
     @Test func testLibraryProfileStatsMixedLibrary() {
@@ -306,6 +311,19 @@ struct UserEntryInfoAndLibraryStatsTests {
         )
         series.setWatchStatus(.watching)
 
+        let plannedSeason = AnimeEntry(
+            name: "Planned Season",
+            type: .season(seasonNumber: 2, parentSeriesID: 2),
+            tmdbID: 4,
+            detail: AnimeEntryDetail(
+                language: "en",
+                title: "Planned Season",
+                runtimeMinutes: 30,
+                episodeCount: 10
+            )
+        )
+        plannedSeason.setWatchStatus(.planToWatch)
+
         let season = AnimeEntry(
             name: "Season",
             type: .season(seasonNumber: 1, parentSeriesID: 2),
@@ -313,19 +331,21 @@ struct UserEntryInfoAndLibraryStatsTests {
         )
         season.setWatchStatus(.dropped)
 
-        let stats = LibraryProfileStats(entries: [movie, series, season])
+        let stats = LibraryProfileStats(entries: [movie, series, plannedSeason, season])
 
-        #expect(stats.totalCount == 3)
+        #expect(stats.totalCount == 4)
         #expect(stats.watchedCount == 1)
         #expect(stats.watchingCount == 1)
-        #expect(stats.planToWatchCount == 0)
+        #expect(stats.planToWatchCount == 1)
         #expect(stats.droppedCount == 1)
         #expect(stats.favoriteCount == 1)
         #expect(stats.movieCount == 1)
         #expect(stats.seriesCount == 1)
-        #expect(stats.seasonCount == 1)
+        #expect(stats.seasonCount == 2)
         #expect(stats.entriesWithNotesCount == 1)
-        #expect(stats.runtimeMinutes == 388)
+        #expect(stats.totalRuntimeMinutes == 688)
+        #expect(stats.watchedRuntimeMinutes == 100)
+        #expect(stats.plannedRuntimeMinutes == 300)
     }
 
     @Test func testLibraryEntrySnapshotIncludesEpisodeProgressSummary() {
