@@ -31,7 +31,7 @@ struct LibraryNavigationTitleCapsule: View {
                 Text("\(count)")
                     .font(.title2.weight(.bold))
                     .monospacedDigit()
-                    .contentTransition(.numericText(countsDown: false))
+                    .contentTransition(.numericText(value: Double(count)))
                 Text(animeTitleResource)
                     .font(.headline.weight(.semibold))
                     .foregroundStyle(.secondary)

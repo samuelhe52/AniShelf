@@ -207,7 +207,7 @@ struct LibraryPosterEpisodeProgressBar: View {
         if episodeProgressTrackingEnabled, let clampedFractionCompleted {
             LibraryEpisodeProgressTrack(fractionCompleted: clampedFractionCompleted)
                 .frame(maxWidth: .infinity)
-                .frame(height: 28)
+                .frame(height: 16)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
         }
@@ -220,39 +220,47 @@ struct LibraryPosterEpisodeProgressBar: View {
 
 fileprivate struct LibraryEpisodeProgressTrack: View {
     let fractionCompleted: Double
+    private let minimumFillWidth: CGFloat = 14
+    private let barHeight: CGFloat = 5
+    private let fadeHeight: CGFloat = 16
 
     var body: some View {
         GeometryReader { geometry in
-            let horizontalInset: CGFloat = 8
-            let availableWidth = max(geometry.size.width - (horizontalInset * 2), 0)
+            let availableWidth = max(geometry.size.width, 0)
             let fillWidth = min(
                 availableWidth,
-                max(availableWidth * fractionCompleted, 18)
+                max(availableWidth * fractionCompleted, minimumFillWidth)
             )
 
             ZStack(alignment: .bottomLeading) {
                 LinearGradient(
                     colors: [
                         .clear,
-                        .black.opacity(0.08),
-                        .black.opacity(0.26)
+                        .black.opacity(0.1),
+                        .black.opacity(0.22)
                     ],
                     startPoint: .top,
                     endPoint: .bottom
                 )
+                .frame(height: fadeHeight)
+                .frame(maxHeight: .infinity, alignment: .bottom)
 
                 Capsule(style: .continuous)
-                    .fill(progressFillColor)
-                    .frame(width: fillWidth, height: 6)
-                    .shadow(color: .black.opacity(0.2), radius: 4, y: 1)
-                    .padding(.leading, horizontalInset)
-                    .padding(.bottom, 8)
+                    .fill(progressFill)
+                    .frame(width: fillWidth, height: barHeight)
             }
         }
     }
 
-    private var progressFillColor: Color {
-        Color(red: 0.98, green: 0.56, blue: 0.16)
+    private var progressFill: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(red: 1.0, green: 0.69, blue: 0.26),
+                Color(red: 0.98, green: 0.56, blue: 0.16)
+            ],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
     }
 }
 
