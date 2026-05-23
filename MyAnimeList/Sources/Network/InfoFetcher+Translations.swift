@@ -15,12 +15,12 @@ struct TranslationDictionaries {
 
 extension InfoFetcher {
     func movieTranslations(tmdbID: Int) async throws -> TranslationDictionaries {
-        let translations = try await tmdbClient.movies.translations(forMovie: tmdbID).translations
+        let translations = try await tmdbClient.movies.translations(forMovie: tmdbID)
         return translationDictionaries(from: translations)
     }
 
     func tvSeriesTranslations(tmdbID: Int) async throws -> TranslationDictionaries {
-        let translations = try await tmdbClient.tvSeries.translations(forTVSeries: tmdbID).translations
+        let translations = try await tmdbClient.tvSeries.translations(forTVSeries: tmdbID)
         return translationDictionaries(from: translations)
     }
 
@@ -30,15 +30,53 @@ extension InfoFetcher {
         let translations = try await tmdbClient.tvSeasons.translations(
             forSeason: seasonNumber,
             inTVSeries: parentSeriesID
-        ).translations
+        )
         return translationDictionaries(from: translations)
     }
 
-    func translationDictionaries(from translations: [Translations]) -> TranslationDictionaries {
-        translations.reduce(into: TranslationDictionaries()) { result, translation in
-            result.name[translation.languageCode + "-" + translation.countryCode] = translation.data.name
-            result.overview[translation.languageCode + "-" + translation.countryCode] =
-                translation.data.overview
+    func translationDictionaries(
+        from translations: TranslationCollection<MovieTranslationData>
+    ) -> TranslationDictionaries {
+        translationDictionaries(
+            from: translations,
+            name: { $0.title },
+            overview: { $0.overview }
+        )
+    }
+
+    func translationDictionaries(
+        from translations: TranslationCollection<TVSeriesTranslationData>
+    ) -> TranslationDictionaries {
+        translationDictionaries(
+            from: translations,
+            name: { $0.name },
+            overview: { $0.overview }
+        )
+    }
+
+    func translationDictionaries(
+        from translations: TranslationCollection<TVSeasonTranslationData>
+    ) -> TranslationDictionaries {
+        translationDictionaries(
+            from: translations,
+            name: { $0.name },
+            overview: { $0.overview }
+        )
+    }
+
+    func translationDictionaries<DataType>(
+        from translations: TranslationCollection<DataType>,
+        name: (DataType) -> String?,
+        overview: (DataType) -> String?
+    ) -> TranslationDictionaries where DataType: Codable & Equatable & Hashable & Sendable {
+        translations.translations.reduce(into: TranslationDictionaries()) { result, translation in
+            let key = "\(translation.languageCode)-\(translation.countryCode)"
+            if let translatedName = name(translation.data) {
+                result.name[key] = translatedName
+            }
+            if let translatedOverview = overview(translation.data) {
+                result.overview[key] = translatedOverview
+            }
         }
     }
 }

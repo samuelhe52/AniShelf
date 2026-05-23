@@ -7,9 +7,10 @@
 
 import Foundation
 import Testing
+import TMDb
 import ZIPFoundation
 
-import struct TMDb.AggregrateCrewMember
+import struct TMDb.AggregateCrewMember
 import struct TMDb.CrewJob
 import struct TMDb.ImageMetadata
 
@@ -18,7 +19,7 @@ import struct TMDb.ImageMetadata
 
 struct InfoFetcherAndLibraryTests {
     let fetcher = InfoFetcher()
-    let language: Language = .japanese
+    let language: MyAnimeList.Language = .japanese
 
     @MainActor let dataProviderForPreview = DataProvider.forPreview
     @MainActor let backupManager = BackupManager(dataProvider: .forPreview)
@@ -216,6 +217,110 @@ struct InfoFetcherAndLibraryTests {
         #expect(entry.originalLanguageCode == "ja")
     }
 
+    @Test func testMovieTranslationsMapTitleIntoNameDictionary() {
+        let result = fetcher.translationDictionaries(
+            from: TranslationCollection(
+                id: 1,
+                translations: [
+                    Translation(
+                        countryCode: "JP",
+                        languageCode: "ja",
+                        name: "Japanese",
+                        englishName: "Japanese",
+                        data: MovieTranslationData(title: "劇場版", overview: "映画の概要")
+                    )
+                ]
+            )
+        )
+
+        #expect(result.name == ["ja-JP": "劇場版"])
+        #expect(result.overview == ["ja-JP": "映画の概要"])
+    }
+
+    @Test func testTVSeriesTranslationsMapNameAndOverview() {
+        let result = fetcher.translationDictionaries(
+            from: TranslationCollection(
+                id: 2,
+                translations: [
+                    Translation(
+                        countryCode: "US",
+                        languageCode: "en",
+                        name: "English",
+                        englishName: "English",
+                        data: TVSeriesTranslationData(name: "Frieren", overview: "A journey continues")
+                    )
+                ]
+            )
+        )
+
+        #expect(result.name == ["en-US": "Frieren"])
+        #expect(result.overview == ["en-US": "A journey continues"])
+    }
+
+    @Test func testTVSeasonTranslationsMapNameAndOverview() {
+        let result = fetcher.translationDictionaries(
+            from: TranslationCollection(
+                id: 3,
+                translations: [
+                    Translation(
+                        countryCode: "TW",
+                        languageCode: "zh",
+                        name: "Traditional Chinese",
+                        englishName: "Traditional Chinese",
+                        data: TVSeasonTranslationData(name: "第一季", overview: "旅程開始")
+                    )
+                ]
+            )
+        )
+
+        #expect(result.name == ["zh-TW": "第一季"])
+        #expect(result.overview == ["zh-TW": "旅程開始"])
+    }
+
+    @Test func testTranslationDictionariesOmitMissingFields() {
+        let result = fetcher.translationDictionaries(
+            from: TranslationCollection(
+                id: 4,
+                translations: [
+                    Translation(
+                        countryCode: "JP",
+                        languageCode: "ja",
+                        name: "Japanese",
+                        englishName: "Japanese",
+                        data: OptionalTranslationData(name: nil, overview: "概要")
+                    ),
+                    Translation(
+                        countryCode: "US",
+                        languageCode: "en",
+                        name: "English",
+                        englishName: "English",
+                        data: OptionalTranslationData(name: "Localized Title", overview: nil)
+                    )
+                ]
+            ),
+            name: { $0.name },
+            overview: { $0.overview }
+        )
+
+        #expect(result.name == ["en-US": "Localized Title"])
+        #expect(result.overview == ["ja-JP": "概要"])
+    }
+
+    @Test func testResolvedEpisodeCountPrefersUpstreamSeasonCount() {
+        let season = TVSeason(
+            id: 99,
+            name: "Season 1",
+            seasonNumber: 1,
+            episodeCount: 12,
+            episodes: [
+                TVEpisode(id: 1, name: "Episode 1", episodeNumber: 1, seasonNumber: 1),
+                TVEpisode(id: 2, name: "Episode 2", episodeNumber: 2, seasonNumber: 1)
+            ]
+        )
+
+        #expect(fetcher.resolvedEpisodeCount(for: season) == 12)
+    }
+
     @Test @MainActor func testBackup() throws {
         let backupURL = try backupManager.createBackup()
         let fileManager = FileManager.default
@@ -402,7 +507,7 @@ struct InfoFetcherAndLibraryTests {
         let imagesConfiguration = makeImagesConfiguration()
         let staffDTOs = InfoFetcher.aggregateStaffDTOs(
             from: [
-                AggregrateCrewMember(
+                AggregateCrewMember(
                     id: 10,
                     name: "Creator",
                     originalName: "Creator Original",
@@ -413,11 +518,11 @@ struct InfoFetcherAndLibraryTests {
                         CrewJob(creditID: "music", job: "Music", episodeCount: 8)
                     ],
                     knownForDepartment: "Directing",
-                    adult: nil,
+                    isAdultOnly: nil,
                     totalEpisodeCount: 12,
                     popularity: nil
                 ),
-                AggregrateCrewMember(
+                AggregateCrewMember(
                     id: 10,
                     name: "Creator",
                     originalName: "Creator Original",
@@ -427,7 +532,7 @@ struct InfoFetcherAndLibraryTests {
                         CrewJob(creditID: "writer", job: "Writer", episodeCount: 10)
                     ],
                     knownForDepartment: "Writing",
-                    adult: nil,
+                    isAdultOnly: nil,
                     totalEpisodeCount: 10,
                     popularity: nil
                 )
@@ -439,7 +544,12 @@ struct InfoFetcherAndLibraryTests {
         #expect(staffDTOs.count == 1)
         #expect(staffDTOs[0].id == 10)
         #expect(staffDTOs[0].role == "Directing")
-        #expect(staffDTOs[0].jobs.map(\.job) == ["Director", "Music", "Writer"])
-        #expect(staffDTOs[0].jobs.map(\.creditID) == ["director", "music", "writer"])
+        #expect(staffDTOs[0].jobs.map { $0.job } == ["Director", "Music", "Writer"])
+        #expect(staffDTOs[0].jobs.map { $0.creditID } == ["director", "music", "writer"])
+    }
+
+    private struct OptionalTranslationData: Codable, Equatable, Hashable, Sendable {
+        let name: String?
+        let overview: String?
     }
 }

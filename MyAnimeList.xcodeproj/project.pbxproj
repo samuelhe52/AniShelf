@@ -694,7 +694,7 @@
 		};
 		9F8D665D2D05609200CF355D /* XCRemoteSwiftPackageReference "TMDb" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/samuelhe52/TMDb";
+			repositoryURL = "https://github.com/adamayoung/TMDb";
 			requirement = {
 				branch = main;
 				kind = branch;

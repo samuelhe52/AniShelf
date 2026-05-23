@@ -42,7 +42,7 @@ extension InfoFetcher {
         from cast: S,
         imagesConfiguration: ImagesConfiguration,
         language: Language
-    ) -> [AnimeEntryCharacterDTO] where S.Element == AggregrateCastMember {
+    ) -> [AnimeEntryCharacterDTO] where S.Element == AggregateCastMember {
         cast.map {
             let primaryRole = $0.roles.max { lhs, rhs in
                 lhs.episodeCount < rhs.episodeCount
@@ -87,7 +87,7 @@ extension InfoFetcher {
         from crew: S,
         imagesConfiguration: ImagesConfiguration,
         language: Language
-    ) -> [AnimeEntryStaffDTO] where S.Element == AggregrateCrewMember {
+    ) -> [AnimeEntryStaffDTO] where S.Element == AggregateCrewMember {
         Self.aggregateStaffDTOs(
             from: crew,
             imagesConfiguration: imagesConfiguration,
@@ -99,7 +99,7 @@ extension InfoFetcher {
         from crew: S,
         imagesConfiguration: ImagesConfiguration,
         language: Language
-    ) -> [AnimeEntryStaffDTO] where S.Element == AggregrateCrewMember {
+    ) -> [AnimeEntryStaffDTO] where S.Element == AggregateCrewMember {
         mergedAggregateCrewMembers(from: crew).map { member in
             let department = member.knownForDepartment?.nilIfEmpty
 
@@ -155,7 +155,7 @@ extension InfoFetcher {
 
     private static func mergedAggregateCrewMembers<S: Sequence>(
         from crew: S
-    ) -> [MergedAggregateCrewMember] where S.Element == AggregrateCrewMember {
+    ) -> [MergedAggregateCrewMember] where S.Element == AggregateCrewMember {
         var mergedMembers: [MergedAggregateCrewMember] = []
         var mergedIndexByPersonID: [Int: Int] = [:]
 
