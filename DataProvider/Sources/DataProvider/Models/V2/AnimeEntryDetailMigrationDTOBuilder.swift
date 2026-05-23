@@ -101,13 +101,15 @@ func makeAnimeEntrySeasonSummaryDTO(
     id: Int,
     seasonNumber: Int,
     title: String,
-    posterURL: URL?
+    posterURL: URL?,
+    episodeCount: Int? = nil
 ) -> AnimeEntrySeasonSummaryDTO {
     AnimeEntrySeasonSummaryDTO(
         id: id,
         seasonNumber: seasonNumber,
         title: title,
-        posterURL: posterURL
+        posterURL: posterURL,
+        episodeCount: episodeCount
     )
 }
 

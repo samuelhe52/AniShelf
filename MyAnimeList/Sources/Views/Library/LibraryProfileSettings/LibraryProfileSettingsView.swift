@@ -26,6 +26,8 @@ struct LibraryProfileSettingsView: View {
     private var entryDetailStaffExpandedByDefault = false
     @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
     @AppStorage(.episodeProgressTrackingEnabled) private var episodeProgressTrackingEnabled = false
+    @AppStorage(.libraryPosterProgressBarOverlayEnabled)
+    private var posterProgressBarOverlayEnabled = true
     @AppStorage(.useTMDbRelayServer) private var useTMDbRelayServer = false
 
     @State private var changeAPIKey = false
@@ -224,6 +226,7 @@ struct LibraryProfileSettingsView: View {
             entryDetailStaffExpandedByDefault: $entryDetailStaffExpandedByDefault,
             scoringEnabled: $scoringEnabled,
             episodeProgressTrackingEnabled: $episodeProgressTrackingEnabled,
+            posterProgressBarOverlayEnabled: $posterProgressBarOverlayEnabled,
             autoPrefetchImagesOnAddAndRestore: $store.autoPrefetchImagesOnAddAndRestore,
             useTMDbRelayServer: $useTMDbRelayServer,
             preferredLanguage: $preferredLanguage,

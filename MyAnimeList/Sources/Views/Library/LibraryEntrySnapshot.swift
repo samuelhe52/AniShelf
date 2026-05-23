@@ -30,7 +30,7 @@ struct LibraryEntrySnapshot: Identifiable, Equatable {
     let dateFinished: Date?
 
     init(entry: AnimeEntry) {
-        let progressSummary = Self.latestEpisodeProgressSummary(for: entry)
+        let episodeProgress = Self.episodeProgressDisplay(for: entry)
 
         id = entry.tmdbID
         posterURL = entry.posterURL
@@ -41,10 +41,17 @@ struct LibraryEntrySnapshot: Identifiable, Equatable {
         watchStatus = entry.watchStatus
         score = entry.score
         isFavorite = entry.favorite
-        episodeProgressLabel = Self.episodeProgressLabel(for: entry, summary: progressSummary)
-        episodeProgressFraction = Self.episodeProgressFraction(for: progressSummary)
+        episodeProgressLabel = episodeProgress.label
+        episodeProgressFraction = episodeProgress.fraction
         dateStarted = entry.dateStarted
         dateFinished = entry.dateFinished
+    }
+
+    private struct EpisodeProgressDisplay {
+        let label: String?
+        let fraction: Double?
+
+        static let empty = EpisodeProgressDisplay(label: nil, fraction: nil)
     }
 
     private static func cleanOverview(_ overview: String?) -> String? {
@@ -107,50 +114,97 @@ struct LibraryEntrySnapshot: Identifiable, Equatable {
         "\(count) episodes"
     }
 
-    private static func latestEpisodeProgressSummary(
-        for entry: AnimeEntry
-    ) -> AnimeEntryEpisodeProgressSummary? {
-        guard entry.watchStatus == .watching else { return nil }
+    private static func episodeProgressDisplay(for entry: AnimeEntry) -> EpisodeProgressDisplay {
+        guard entry.watchStatus == .watching else { return .empty }
 
         switch entry.type {
         case .movie:
-            return nil
-        case .series, .season:
-            return entry.latestEpisodeProgressSummary
+            return .empty
+        case .series:
+            return seriesEpisodeProgressDisplay(for: entry)
+        case .season:
+            return seasonEpisodeProgressDisplay(summary: entry.latestEpisodeProgressSummary)
         }
     }
 
-    private static func episodeProgressLabel(
-        for entry: AnimeEntry,
+    private static func seasonEpisodeProgressDisplay(
         summary: AnimeEntryEpisodeProgressSummary?
+    ) -> EpisodeProgressDisplay {
+        guard let summary else { return .empty }
+
+        return EpisodeProgressDisplay(
+            label: "EP\(summary.watchedThroughEpisode)",
+            fraction: episodeProgressFraction(
+                watchedThroughEpisode: summary.watchedThroughEpisode,
+                episodeCount: summary.episodeCount
+            )
+        )
+    }
+
+    private static func seriesEpisodeProgressDisplay(for entry: AnimeEntry) -> EpisodeProgressDisplay {
+        let seasonNumbers = Set(
+            (entry.detail?.seasons.map(\.seasonNumber) ?? []).filter { $0 > 0 }
+                + entry.orderedEpisodeProgresses.map(\.seasonNumber)
+        )
+        .sorted()
+
+        let summaries =
+            seasonNumbers
+            .map(entry.episodeProgressSummary(forSeason:))
+
+        guard !summaries.isEmpty else {
+            return .empty
+        }
+
+        let watchedThroughEpisode = summaries.reduce(0) { partialResult, summary in
+            partialResult + summary.watchedThroughEpisode
+        }
+        guard watchedThroughEpisode > 0 else {
+            return .empty
+        }
+
+        let summariesWithKnownCounts = summaries.filter { summary in
+            guard let episodeCount = summary.episodeCount else { return false }
+            return episodeCount > 0
+        }
+        let watchedThroughKnownEpisodes = summariesWithKnownCounts.reduce(0) { partialResult, summary in
+            partialResult + summary.watchedThroughEpisode
+        }
+        let totalEpisodeCount = summariesWithKnownCounts.reduce(0) { partialResult, summary in
+            partialResult + (summary.episodeCount ?? 0)
+        }
+
+        return EpisodeProgressDisplay(
+            label: latestSeriesEpisodeProgressLabel(for: entry.latestEpisodeProgressSummary),
+            fraction: episodeProgressFraction(
+                watchedThroughEpisode: watchedThroughKnownEpisodes,
+                episodeCount: totalEpisodeCount > 0 ? totalEpisodeCount : nil
+            )
+        )
+    }
+
+    private static func latestSeriesEpisodeProgressLabel(
+        for summary: AnimeEntryEpisodeProgressSummary?
     ) -> String? {
         guard let summary else { return nil }
-
-        switch entry.type {
-        case .movie:
-            return nil
-        case .series:
-            if summary.seasonNumber == 0 {
-                return "SP\(summary.watchedThroughEpisode)"
-            }
-            return "S\(summary.seasonNumber)E\(summary.watchedThroughEpisode)"
-        case .season:
-            return "EP\(summary.watchedThroughEpisode)"
+        if summary.seasonNumber == 0 {
+            return "SP\(summary.watchedThroughEpisode)"
         }
+        return "S\(summary.seasonNumber)E\(summary.watchedThroughEpisode)"
     }
 
     private static func episodeProgressFraction(
-        for summary: AnimeEntryEpisodeProgressSummary?
+        watchedThroughEpisode: Int,
+        episodeCount: Int?
     ) -> Double? {
         guard
-            let summary,
-            let episodeCount = summary.episodeCount,
+            let episodeCount,
             episodeCount > 0
         else {
             return nil
         }
 
-        let rawFraction = Double(summary.watchedThroughEpisode) / Double(episodeCount)
+        let rawFraction = Double(watchedThroughEpisode) / Double(episodeCount)
         return min(max(rawFraction, 0), 1)
     }
 }

@@ -24,6 +24,7 @@ extension String {
     static let entryDetailStaffExpandedByDefault = "EntryDetailStaffExpandedByDefault"
     static let libraryScoringEnabled = "LibraryScoringEnabled"
     static let episodeProgressTrackingEnabled = "EpisodeProgressTrackingEnabled"
+    static let libraryPosterProgressBarOverlayEnabled = "LibraryPosterProgressBarOverlayEnabled"
     static let libraryHideDroppedByDefault = "LibraryHideDroppedByDefault"
     static let libraryDefaultWatchStatus = "LibraryDefaultWatchStatus"
     static let libraryDefaultFilters = "LibraryDefaultFilters"
@@ -47,6 +48,7 @@ extension String {
         .entryDetailStaffExpandedByDefault,
         .libraryScoringEnabled,
         .episodeProgressTrackingEnabled,
+        .libraryPosterProgressBarOverlayEnabled,
         .libraryHideDroppedByDefault,
         .libraryDefaultWatchStatus,
         .libraryDefaultFilters,

@@ -27,4 +27,8 @@ extension UserDefaults {
     var isEpisodeProgressTrackingEnabled: Bool {
         bool(forKey: .episodeProgressTrackingEnabled, defaultValue: false)
     }
+
+    var isLibraryPosterProgressBarOverlayEnabled: Bool {
+        bool(forKey: .libraryPosterProgressBarOverlayEnabled, defaultValue: true)
+    }
 }

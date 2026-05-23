@@ -406,23 +406,29 @@ import Testing
 }
 
 @Test func seriesEpisodeProgressCompletionPromptRequiresAllNumberedSeasons() async throws {
-    let series = AnimeEntry(name: "Series", type: .series, tmdbID: 71)
-    let firstSeason = AnimeEntry(
-        name: "Season 1",
-        type: .season(seasonNumber: 1, parentSeriesID: 71),
-        tmdbID: 72,
-        detail: AnimeEntryDetail(language: "en-US", title: "Season 1", episodeCount: 12)
+    let series = AnimeEntry(
+        name: "Series",
+        type: .series,
+        tmdbID: 71,
+        detail: AnimeEntryDetail(
+            language: "en-US",
+            title: "Series",
+            seasons: [
+                AnimeEntrySeasonSummary(
+                    id: 72,
+                    seasonNumber: 1,
+                    title: "Season 1",
+                    episodeCount: 12
+                ),
+                AnimeEntrySeasonSummary(
+                    id: 73,
+                    seasonNumber: 2,
+                    title: "Season 2",
+                    episodeCount: 10
+                )
+            ]
+        )
     )
-    let secondSeason = AnimeEntry(
-        name: "Season 2",
-        type: .season(seasonNumber: 2, parentSeriesID: 71),
-        tmdbID: 73,
-        detail: AnimeEntryDetail(language: "en-US", title: "Season 2", episodeCount: 10)
-    )
-
-    firstSeason.parentSeriesEntry = series
-    secondSeason.parentSeriesEntry = series
-    series.childSeasonEntries = [firstSeason, secondSeason]
     series.setWatchStatus(.watching)
 
     series.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 12)
@@ -441,7 +447,58 @@ import Testing
     )
 }
 
-@Test func episodeProgressAllowsUnknownCountsAndClampsKnownSeriesChildren() async throws {
+@Test func episodeProgressUsesParentSeriesSeasonCountsForSeriesLimits() async throws {
+    let series = AnimeEntry(
+        name: "Series",
+        type: .series,
+        tmdbID: 41,
+        detail: AnimeEntryDetail(
+            language: "en-US",
+            title: "Series",
+            seasons: [
+                AnimeEntrySeasonSummary(
+                    id: 42,
+                    seasonNumber: 0,
+                    title: "Specials",
+                    episodeCount: 2
+                ),
+                AnimeEntrySeasonSummary(
+                    id: 43,
+                    seasonNumber: 2,
+                    title: "Season 2",
+                    episodeCount: 12
+                )
+            ]
+        )
+    )
+
+    series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 50)
+
+    #expect(series.episodeProgressSummary(forSeason: 2).watchedThroughEpisode == 12)
+    #expect(series.episodeProgressSummary(forSeason: 2).episodeCount == 12)
+    #expect(series.episodeProgressLimit(forSeason: 0) == nil)
+}
+
+@Test func episodeProgressFallsBackToParentSeriesEpisodeCountForSingleSeasonDetail() async throws {
+    let series = AnimeEntry(
+        name: "Series",
+        type: .series,
+        tmdbID: 44,
+        detail: AnimeEntryDetail(
+            language: "en-US",
+            title: "Series",
+            episodeCount: 12,
+            seasons: [AnimeEntrySeasonSummary(id: 45, seasonNumber: 2, title: "Season 2")]
+        )
+    )
+
+    series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 50)
+
+    #expect(series.episodeProgressSummary(forSeason: 2).watchedThroughEpisode == 12)
+    #expect(series.episodeProgressSummary(forSeason: 2).episodeCount == 12)
+}
+
+@Test func episodeProgressUsesChildSeasonLimitsWhenParentSeriesCountsAreMissing() async throws {
     let series = AnimeEntry(name: "Series", type: .series, tmdbID: 41)
     series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 50)
     #expect(series.episodeProgressSummary(forSeason: 2).watchedThroughEpisode == 50)
@@ -456,6 +513,15 @@ import Testing
     childSeason.parentSeriesEntry = series
     series.childSeasonEntries = [childSeason]
 
+    series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 50)
+    #expect(series.episodeProgressSummary(forSeason: 2).watchedThroughEpisode == 12)
+    #expect(series.episodeProgressSummary(forSeason: 2).episodeCount == 12)
+
+    series.detail = AnimeEntryDetail(
+        language: "en-US",
+        title: "Series",
+        seasons: [AnimeEntrySeasonSummary(id: 43, seasonNumber: 2, title: "Season 2", episodeCount: 12)]
+    )
     series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 50)
     #expect(series.episodeProgressSummary(forSeason: 2).watchedThroughEpisode == 12)
     #expect(series.episodeProgressSummary(forSeason: 2).episodeCount == 12)

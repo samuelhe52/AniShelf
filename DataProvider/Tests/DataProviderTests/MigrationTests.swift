@@ -481,6 +481,42 @@ struct MigrationTests {
         #expect(migratedEntry.notes == "Preserve me")
         #expect(migratedEntry.isDateTrackingEnabled)
     }
+
+    @Test @MainActor func seasonEpisodeCountMigrationFromV277DefaultsToNil() throws {
+        let storeURL = temporaryStoreURL(name: "season-episode-count-migration-v277")
+
+        let legacySchema = Schema(versionedSchema: SchemaV2_7_7.self)
+        let legacyConfiguration = ModelConfiguration(schema: legacySchema, url: storeURL)
+        let legacyContainer = try ModelContainer(for: legacySchema, configurations: legacyConfiguration)
+
+        let legacyEntry = SchemaV2_7_7.AnimeEntry(
+            name: "Legacy 2.7.7 Entry",
+            type: .series,
+            tmdbID: 900001,
+            detail: SchemaV2_7_7.AnimeEntryDetail(
+                language: "en-US",
+                title: "Legacy Detail",
+                seasons: [
+                    SchemaV2_7_7.AnimeEntrySeasonSummary(
+                        id: 1,
+                        seasonNumber: 1,
+                        title: "Season 1"
+                    )
+                ]
+            ),
+            dateSaved: referenceDate(year: 2026, month: 5, day: 11)
+        )
+        legacyContainer.mainContext.insert(legacyEntry)
+        try legacyContainer.mainContext.save()
+
+        let migratedProvider = DataProvider(url: storeURL)
+        let migratedEntries = try migratedProvider.getAllModels(ofType: AnimeEntry.self)
+        let migratedEntry = try #require(migratedEntries.first(where: { $0.tmdbID == 900001 }))
+        let migratedSeason = try #require(migratedEntry.detail?.seasons.first)
+
+        #expect(migratedSeason.seasonNumber == 1)
+        #expect(migratedSeason.episodeCount == nil)
+    }
 }
 
 fileprivate func referenceDate(year: Int, month: Int, day: Int) -> Date {

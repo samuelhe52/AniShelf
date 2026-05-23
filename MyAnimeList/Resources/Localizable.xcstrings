@@ -376,6 +376,22 @@
         }
       }
     },
+    "Added optional episode-level progress tracking." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エピソードごとの進捗追跡（オプション機能）を追加しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增可选的按集进度跟踪功能。"
+          }
+        }
+      }
+    },
     "Added sorting by name (A–Z)." : {
       "localizations" : {
         "ja" : {
@@ -586,22 +602,6 @@
         }
       }
     },
-    "If you use a VPN or another network proxy, turning off Use TMDb Proxy in Settings may help." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "VPNやほかのネットワークプロキシを使っている場合は、設定で「TMDbプロキシを使用」をオフにすると改善することがあります。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "如果你在使用VPN或其他网络代理，关闭“设置”中的“使用TMDb代理”后，问题可能会改善。"
-          }
-        }
-      }
-    },
     "AniShelf keeps watch status, dates, and quick notes together so your collection stays useful over time." : {
       "localizations" : {
         "ja" : {
@@ -646,22 +646,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "GitHub上的AniShelf"
-          }
-        }
-      }
-    },
-    "Turn this on if direct TMDb access is unstable on your network." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "TMDbへの直接接続がネットワーク上で不安定な場合は、これをオンにしてください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "如果你的网络直连TMDb不稳定，可以打开此选项。"
           }
         }
       }
@@ -1047,6 +1031,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "角色"
+          }
+        }
+      }
+    },
+    "Check if Use TMDb Proxy is turned off in Settings." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定で「TMDbプロキシを使用」がオフになっているか確認してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "检查一下设置里的“使用TMDb代理”是不是已经关闭。"
           }
         }
       }
@@ -2626,6 +2626,22 @@
         }
       }
     },
+    "If you use a VPN or another network proxy, turning off Use TMDb Proxy in Settings may help." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPNやほかのネットワークプロキシを使っている場合は、設定で「TMDbプロキシを使用」をオフにすると改善することがあります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果你在使用VPN或其他网络代理，关闭“设置”中的“使用TMDb代理”后，问题可能会改善。"
+          }
+        }
+      }
+    },
     "Important release notes can now appear once after you update the app." : {
       "localizations" : {
         "ja" : {
@@ -2638,6 +2654,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更新App后，现在可以显示一次重要版本说明。"
+          }
+        }
+      }
+    },
+    "Improved watch status switching and date selection UX." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "視聴ステータスの切り替えと日付選択のUXを改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "优化了观看状态切换与日期选择体验。"
           }
         }
       }
@@ -2834,6 +2866,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "详情"
+          }
+        }
+      }
+    },
+    "Library overview now supports tap-to-toggle watched time, planned time, and total time." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリ概要画面で、視聴済み時間・視聴予定時間・合計時間をタップで切り替えられるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "资料库总览界面现在支持点击切换已看时长、想看时长与总时长。"
           }
         }
       }
@@ -4671,6 +4719,38 @@
         }
       }
     },
+    "Show episode progress as a poster overlay in the library." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリで、ポスター上にエピソード進捗をオーバーレイ表示します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在资料库中以海报覆盖层显示分集进度。"
+          }
+        }
+      }
+    },
+    "Show Poster Progress Bar" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ポスターの進捗バーを表示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示海报进度条"
+          }
+        }
+      }
+    },
     "Sibling Season Exists" : {
       "localizations" : {
         "ja" : {
@@ -4993,6 +5073,39 @@
         }
       }
     },
+    "This version includes multiple UX optimizations and feature improvements." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このバージョンには複数のUX最適化と機能改善が含まれています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此版本包含多项 UX 优化和功能改进。"
+          }
+        }
+      }
+    },
+    "This version includes multiple UX optimizations and feature improvements. It is recommended that existing users perform an info refresh by tapping the action button below so existing entries can pick up the latest metadata improvements." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このバージョンには複数のUX最適化と機能改善が含まれています。既存の項目で最新のメタデータ改善を反映できるよう、下のアクションボタンから情報を更新することをおすすめします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此版本包含多项 UX 优化和功能改进。建议现有用户点击下方操作按钮执行一次信息刷新，让已有条目获得最新的元数据改进。"
+          }
+        }
+      }
+    },
     "This will delete %lld selected anime from your library." : {
       "localizations" : {
         "ja" : {
@@ -5121,6 +5234,22 @@
         }
       }
     },
+    "TMDb Proxy is now disabled by default, with improved search error UX." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb Proxyはデフォルトで無効になり、検索エラー時のUXも改善されました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb Proxy 现在默认关闭，并优化了搜索页面的出错体验。"
+          }
+        }
+      }
+    },
     "TMDb Proxy troubleshooting" : {
       "localizations" : {
         "ja" : {
@@ -5245,6 +5374,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "如果你在使用VPN或其他代理，请关闭此选项。"
+          }
+        }
+      }
+    },
+    "Turn this on if direct TMDb access is unstable on your network." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDbへの直接接続がネットワーク上で不安定な場合は、これをオンにしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果你的网络直连TMDb不稳定，可以打开此选项。"
           }
         }
       }
@@ -5475,22 +5620,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用TMDb代理"
-          }
-        }
-      }
-    },
-    "Check if Use TMDb Proxy is turned off in Settings." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "設定で「TMDbプロキシを使用」がオフになっているか確認してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "检查一下设置里的“使用TMDb代理”是不是已经关闭。"
           }
         }
       }

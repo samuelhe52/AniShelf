@@ -84,12 +84,20 @@ public struct LegacyAnimeEntrySeasonSummaryPayload: Codable, Equatable, Sendable
     public var seasonNumber: Int
     public var title: String
     public var posterURL: URL?
+    public var episodeCount: Int?
 
-    public init(id: Int, seasonNumber: Int, title: String, posterURL: URL? = nil) {
+    public init(
+        id: Int,
+        seasonNumber: Int,
+        title: String,
+        posterURL: URL? = nil,
+        episodeCount: Int? = nil
+    ) {
         self.id = id
         self.seasonNumber = seasonNumber
         self.title = title
         self.posterURL = posterURL
+        self.episodeCount = episodeCount
     }
 }
 
@@ -206,7 +214,8 @@ public struct AnimeEntryDetailDTO: Equatable, Sendable {
                     id: $0.id,
                     seasonNumber: $0.seasonNumber,
                     title: $0.title,
-                    posterURL: $0.posterURL
+                    posterURL: $0.posterURL,
+                    episodeCount: $0.episodeCount
                 )
             },
             episodes: payload.episodes.map {
@@ -283,12 +292,20 @@ public struct AnimeEntrySeasonSummaryDTO: Equatable, Sendable, Identifiable {
     public var seasonNumber: Int
     public var title: String
     public var posterURL: URL?
+    public var episodeCount: Int?
 
-    public init(id: Int, seasonNumber: Int, title: String, posterURL: URL? = nil) {
+    public init(
+        id: Int,
+        seasonNumber: Int,
+        title: String,
+        posterURL: URL? = nil,
+        episodeCount: Int? = nil
+    ) {
         self.id = id
         self.seasonNumber = seasonNumber
         self.title = title
         self.posterURL = posterURL
+        self.episodeCount = episodeCount
     }
 }
 

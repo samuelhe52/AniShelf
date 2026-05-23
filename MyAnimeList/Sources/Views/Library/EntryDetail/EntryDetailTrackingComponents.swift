@@ -274,11 +274,20 @@ fileprivate struct EntryEpisodeProgressControl: View {
         entry.episodeProgressSeasonOptions
     }
 
+    private var preferredSelectedSeason: Int? {
+        if let latestChangedSeason = entry.latestEpisodeProgressSummary?.seasonNumber,
+            seasonOptions.contains(latestChangedSeason)
+        {
+            return latestChangedSeason
+        }
+        return seasonOptions.first
+    }
+
     private var selectedSeason: Int? {
         if let selectedSeasonNumber, seasonOptions.contains(selectedSeasonNumber) {
             return selectedSeasonNumber
         }
-        return seasonOptions.first
+        return preferredSelectedSeason
     }
 
     private var summary: AnimeEntryEpisodeProgressSummary? {
@@ -301,8 +310,8 @@ fileprivate struct EntryEpisodeProgressControl: View {
                         Menu {
                             ForEach(seasonOptions, id: \.self) { seasonNumber in
                                 Button {
-                                    selectedSeasonNumber = seasonNumber
                                     withAnimation(progressAnimation) {
+                                        selectedSeasonNumber = seasonNumber
                                         progressInteractionState = .idle
                                     }
                                 } label: {
@@ -393,7 +402,6 @@ fileprivate struct EntryEpisodeProgressControl: View {
                                 commitSliderInteraction(for: selectedSeason, summary: summary)
                             }
                         )
-                        .id(selectedSeason)
                         .padding(.horizontal, 18)
                         .accessibilityLabel(Text(EntryDetailL10n.episodeProgress))
                         .accessibilityValue(
@@ -405,6 +413,12 @@ fileprivate struct EntryEpisodeProgressControl: View {
             }
             .onChange(of: summary.watchedThroughEpisode) { _, newValue in
                 synchronizeInteractionState(with: newValue)
+            }
+            .onAppear {
+                synchronizeSelectedSeasonWithLatestProgress()
+            }
+            .onChange(of: preferredSelectedSeason) { _, _ in
+                synchronizeSelectedSeasonWithLatestProgress()
             }
         }
     }
@@ -559,6 +573,16 @@ fileprivate struct EntryEpisodeProgressControl: View {
             }
         }
     }
+
+    private func synchronizeSelectedSeasonWithLatestProgress() {
+        guard let preferredSelectedSeason else { return }
+        guard selectedSeasonNumber != preferredSelectedSeason else { return }
+
+        withAnimation(progressAnimation) {
+            selectedSeasonNumber = preferredSelectedSeason
+            progressInteractionState = .idle
+        }
+    }
 }
 
 struct EntryEpisodeProgressSlider: View {
@@ -592,23 +616,37 @@ struct EntryEpisodeProgressSlider: View {
 }
 
 struct EntryEpisodeProgressButtonStyle: ButtonStyle {
+    @Environment(\.colorScheme) private var colorScheme
+
     let tint: Color
 
     func makeBody(configuration: Configuration) -> some View {
+        let isPressed = configuration.isPressed
+
         configuration.label
-            .foregroundStyle(tint.opacity(configuration.isPressed ? 0.9 : 0.72))
+            .foregroundStyle(tint.opacity(isPressed ? 0.9 : 0.76))
             .background {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(.white.opacity(configuration.isPressed ? 0.12 : 0.07))
+                    .fill(backgroundColor(pressed: isPressed))
             }
             .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(.white.opacity(configuration.isPressed ? 0.14 : 0.08), lineWidth: 0.8)
+                if colorScheme == .dark {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(.white.opacity(isPressed ? 0.14 : 0.08))
+                }
             }
-            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .scaleEffect(isPressed ? 0.96 : 1)
             .animation(
                 .spring(response: 0.22, dampingFraction: 0.82),
-                value: configuration.isPressed
+                value: isPressed
             )
+    }
+
+    private func backgroundColor(pressed: Bool) -> Color {
+        if colorScheme == .dark {
+            return .white.opacity(pressed ? 0.12 : 0.07)
+        }
+
+        return .primary.opacity(pressed ? 0.10 : 0.06)
     }
 }

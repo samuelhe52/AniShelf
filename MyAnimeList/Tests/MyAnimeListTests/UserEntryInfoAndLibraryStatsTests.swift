@@ -349,27 +349,48 @@ struct UserEntryInfoAndLibraryStatsTests {
     }
 
     @Test func testLibraryEntrySnapshotIncludesEpisodeProgressSummary() {
-        let series = AnimeEntry(name: "Series", type: .series, tmdbID: 501)
-        let season = AnimeEntry(
-            name: "Season 2",
-            type: .season(seasonNumber: 2, parentSeriesID: 501),
-            tmdbID: 502,
-            detail: AnimeEntryDetail(language: "en-US", title: "Season 2", episodeCount: 12)
+        let series = AnimeEntry(
+            name: "Series",
+            type: .series,
+            tmdbID: 501,
+            detail: AnimeEntryDetail(
+                language: "en-US",
+                title: "Series",
+                seasons: [
+                    AnimeEntrySeasonSummary(
+                        id: 504,
+                        seasonNumber: 1,
+                        title: "Season 1",
+                        episodeCount: 12
+                    ),
+                    AnimeEntrySeasonSummary(
+                        id: 502,
+                        seasonNumber: 2,
+                        title: "Season 2",
+                        episodeCount: 12
+                    )
+                ]
+            )
         )
-        season.parentSeriesEntry = series
-        series.childSeasonEntries = [season]
         series.setWatchStatus(.watching)
+        series.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 12)
         series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 5)
 
         let seriesSnapshot = LibraryEntrySnapshot(entry: series)
         #expect(seriesSnapshot.episodeProgressLabel == "S2E5")
-        #expect(seriesSnapshot.episodeProgressFraction == 5.0 / 12.0)
+        #expect(seriesSnapshot.episodeProgressFraction == 17.0 / 24.0)
 
         series.setEpisodeProgress(seasonNumber: 0, watchedThroughEpisode: 1)
         let seriesSnapshotAfterSpecialsAttempt = LibraryEntrySnapshot(entry: series)
         #expect(seriesSnapshotAfterSpecialsAttempt.episodeProgressLabel == "S2E5")
-        #expect(seriesSnapshotAfterSpecialsAttempt.episodeProgressFraction == 5.0 / 12.0)
+        #expect(seriesSnapshotAfterSpecialsAttempt.episodeProgressFraction == 17.0 / 24.0)
 
+        let season = AnimeEntry(
+            name: "Season 2",
+            type: .season(seasonNumber: 2, parentSeriesID: 501),
+            tmdbID: 503,
+            detail: AnimeEntryDetail(language: "en-US", title: "Season 2", episodeCount: 12)
+        )
         season.setWatchStatus(.watching)
         season.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 3)
         let seasonSnapshot = LibraryEntrySnapshot(entry: season)
@@ -382,16 +403,146 @@ struct UserEntryInfoAndLibraryStatsTests {
         #expect(LibraryEntrySnapshot(entry: movie).episodeProgressFraction == nil)
     }
 
-    @Test func testEpisodeProgressHelpersKeepStatusIndependentAndHandleSeasonPartitions() {
-        let series = AnimeEntry(name: "Series", type: .series, tmdbID: 601)
-        let season = AnimeEntry(
-            name: "Season 2",
-            type: .season(seasonNumber: 2, parentSeriesID: 601),
-            tmdbID: 602,
-            detail: AnimeEntryDetail(language: "en-US", title: "Season 2", episodeCount: 12)
+    @Test func testLibraryEntrySnapshotSeriesAggregateRequiresRefreshedParentSeasonCounts() {
+        let series = AnimeEntry(
+            name: "Series",
+            type: .series,
+            tmdbID: 511,
+            detail: AnimeEntryDetail(
+                language: "en-US",
+                title: "Series",
+                seasons: [
+                    AnimeEntrySeasonSummary(id: 512, seasonNumber: 1, title: "Season 1"),
+                    AnimeEntrySeasonSummary(id: 513, seasonNumber: 2, title: "Season 2")
+                ]
+            )
         )
-        season.parentSeriesEntry = series
-        series.childSeasonEntries = [season]
+
+        series.setWatchStatus(.watching)
+        series.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 12)
+        series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 5)
+
+        let staleSnapshot = LibraryEntrySnapshot(entry: series)
+        #expect(staleSnapshot.episodeProgressLabel == "S2E5")
+        #expect(staleSnapshot.episodeProgressFraction == nil)
+
+        series.detail = AnimeEntryDetail(
+            language: "en-US",
+            title: "Series",
+            seasons: [
+                AnimeEntrySeasonSummary(
+                    id: 512,
+                    seasonNumber: 1,
+                    title: "Season 1",
+                    episodeCount: 12
+                ),
+                AnimeEntrySeasonSummary(
+                    id: 513,
+                    seasonNumber: 2,
+                    title: "Season 2",
+                    episodeCount: 12
+                )
+            ]
+        )
+
+        let refreshedSnapshot = LibraryEntrySnapshot(entry: series)
+        #expect(refreshedSnapshot.episodeProgressLabel == "S2E5")
+        #expect(refreshedSnapshot.episodeProgressFraction == 17.0 / 24.0)
+    }
+
+    @Test func testLibraryEntrySnapshotSeriesAggregateIgnoresUnknownFutureSeasonCounts() {
+        let series = AnimeEntry(
+            name: "Series",
+            type: .series,
+            tmdbID: 514,
+            detail: AnimeEntryDetail(
+                language: "en-US",
+                title: "Series",
+                seasons: [
+                    AnimeEntrySeasonSummary(
+                        id: 515,
+                        seasonNumber: 1,
+                        title: "Season 1",
+                        episodeCount: 12
+                    ),
+                    AnimeEntrySeasonSummary(id: 516, seasonNumber: 2, title: "Season 2")
+                ]
+            )
+        )
+
+        series.setWatchStatus(.watching)
+        series.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 6)
+
+        let snapshot = LibraryEntrySnapshot(entry: series)
+        #expect(snapshot.episodeProgressLabel == "S1E6")
+        #expect(snapshot.episodeProgressFraction == 0.5)
+    }
+
+    @Test func testLibraryEntrySnapshotSeriesAggregateExcludesSpecialsEvenIfStored() {
+        let series = AnimeEntry(
+            name: "Series",
+            type: .series,
+            tmdbID: 521,
+            detail: AnimeEntryDetail(
+                language: "en-US",
+                title: "Series",
+                seasons: [
+                    AnimeEntrySeasonSummary(
+                        id: 522,
+                        seasonNumber: 0,
+                        title: "Specials",
+                        episodeCount: 2
+                    ),
+                    AnimeEntrySeasonSummary(
+                        id: 523,
+                        seasonNumber: 1,
+                        title: "Season 1",
+                        episodeCount: 12
+                    ),
+                    AnimeEntrySeasonSummary(
+                        id: 524,
+                        seasonNumber: 2,
+                        title: "Season 2",
+                        episodeCount: 12
+                    )
+                ]
+            )
+        )
+
+        series.setWatchStatus(.watching)
+        series.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 12)
+        series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 5)
+        let specialsProgress = AnimeEntryEpisodeProgress(
+            seasonNumber: 0,
+            watchedThroughEpisode: 2,
+            updatedAt: referenceDate(year: 2026, month: 5, day: 13)
+        )
+        specialsProgress.entry = series
+        series.episodeProgresses.append(specialsProgress)
+
+        let snapshot = LibraryEntrySnapshot(entry: series)
+        #expect(snapshot.episodeProgressLabel == "S2E5")
+        #expect(snapshot.episodeProgressFraction == 17.0 / 24.0)
+    }
+
+    @Test func testEpisodeProgressHelpersKeepStatusIndependentAndHandleSeasonPartitions() {
+        let series = AnimeEntry(
+            name: "Series",
+            type: .series,
+            tmdbID: 601,
+            detail: AnimeEntryDetail(
+                language: "en-US",
+                title: "Series",
+                seasons: [
+                    AnimeEntrySeasonSummary(
+                        id: 602,
+                        seasonNumber: 2,
+                        title: "Season 2",
+                        episodeCount: 12
+                    )
+                ]
+            )
+        )
 
         series.setWatchStatus(.planToWatch)
         series.setEpisodeProgress(seasonNumber: 0, watchedThroughEpisode: 1)

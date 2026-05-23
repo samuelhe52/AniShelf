@@ -197,6 +197,14 @@ extension AnimeEntry {
             guard seasonNumber == entrySeasonNumber else { return nil }
             return detail?.knownEpisodeProgressLimit
         case .series:
+            guard seasonNumber != 0 else { return nil }
+            if let seasonLimit = detail?.seasons.first(where: { $0.seasonNumber == seasonNumber })?
+                .episodeCount,
+                seasonLimit > 0
+            {
+                return seasonLimit
+            }
+
             if let childSeasonLimit =
                 childSeasonEntries
                 .first(where: { $0.seasonNumber == seasonNumber })?
@@ -206,7 +214,6 @@ extension AnimeEntry {
                 return childSeasonLimit
             }
 
-            guard seasonNumber != 0 else { return nil }
             let numberedSeasons = detail?.seasons.filter { $0.seasonNumber != 0 } ?? []
             if numberedSeasons.count == 1, numberedSeasons.first?.seasonNumber == seasonNumber {
                 return detail?.knownEpisodeProgressLimit

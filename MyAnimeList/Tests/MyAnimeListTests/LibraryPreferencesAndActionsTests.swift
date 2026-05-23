@@ -47,6 +47,23 @@ struct LibraryPreferencesAndActionsTests {
         #expect(String.allPreferenceKeys.contains(.entryDetailStaffExpandedByDefault))
     }
 
+    @Test func testPosterProgressBarOverlayPreferenceDefaultsAndBackupInclusion() {
+        let suiteName = "MyAnimeListTests.PosterProgressBarOverlayPreference"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        #expect(defaults.object(forKey: .libraryPosterProgressBarOverlayEnabled) == nil)
+        #expect(defaults.bool(forKey: .libraryPosterProgressBarOverlayEnabled) == false)
+        #expect(defaults.bool(forKey: .libraryPosterProgressBarOverlayEnabled, defaultValue: true))
+        #expect(defaults.isLibraryPosterProgressBarOverlayEnabled)
+
+        defaults.set(false, forKey: .libraryPosterProgressBarOverlayEnabled)
+
+        #expect(!defaults.isLibraryPosterProgressBarOverlayEnabled)
+        #expect(String.allPreferenceKeys.contains(.libraryPosterProgressBarOverlayEnabled))
+    }
+
     @Test @MainActor func testLibraryGroupStrategyPreferenceRoundTripAndBackupInclusion() {
         let suiteName = "MyAnimeListTests.LibraryGroupStrategy"
         let defaults = UserDefaults(suiteName: suiteName)!

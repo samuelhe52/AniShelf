@@ -169,6 +169,31 @@ enum WhatsNewRegistry {
                     kind: .openURL(projectURL)
                 )
             ]
+        ),
+        "1.90": .init(
+            version: "1.90",
+            summary:
+                "This version includes multiple UX optimizations and feature improvements. It is recommended that existing users perform an info refresh by tapping the action button below so existing entries can pick up the latest metadata improvements.",
+            highlights: [
+                "Added optional episode-level progress tracking.",
+                "Improved watch status switching and date selection UX.",
+                "Library overview now supports tap-to-toggle watched time, planned time, and total time.",
+                "TMDb Proxy is now disabled by default, with improved search error UX."
+            ],
+            primaryAction: .init(
+                id: "refresh-metadata",
+                title: "Refresh Metadata",
+                systemImage: "arrow.clockwise",
+                kind: .refreshMetadata
+            ),
+            secondaryActions: [
+                .init(
+                    id: "project-github",
+                    title: "AniShelf on GitHub",
+                    systemImage: "arrow.up.right.square",
+                    kind: .openURL(projectURL)
+                )
+            ]
         )
     ]
 

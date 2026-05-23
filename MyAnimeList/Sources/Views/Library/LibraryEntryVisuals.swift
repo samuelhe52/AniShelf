@@ -226,12 +226,14 @@ struct LibraryPosterEpisodeProgressBar: View {
     }
 
     @AppStorage(.episodeProgressTrackingEnabled) private var episodeProgressTrackingEnabled = false
+    @AppStorage(.libraryPosterProgressBarOverlayEnabled)
+    private var posterProgressBarOverlayEnabled = true
 
     let fractionCompleted: Double?
     var style: Style = .regular
 
     var body: some View {
-        if episodeProgressTrackingEnabled, let clampedFractionCompleted {
+        if episodeProgressTrackingEnabled, posterProgressBarOverlayEnabled, let clampedFractionCompleted {
             LibraryEpisodeProgressTrack(
                 fractionCompleted: clampedFractionCompleted,
                 style: style

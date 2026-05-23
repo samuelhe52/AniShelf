@@ -255,7 +255,8 @@ extension InfoFetcher {
                 id: $0.id,
                 seasonNumber: $0.seasonNumber,
                 title: $0.name,
-                posterURL: imagesConfiguration.posterURL(for: $0.posterPath, idealWidth: 300)
+                posterURL: imagesConfiguration.posterURL(for: $0.posterPath, idealWidth: 300),
+                episodeCount: $0.episodeCount
             )
         }
     }

@@ -176,7 +176,8 @@ enum LibraryImageCacheService {
         return [""] + downsampledIdentifiers
     }()
 
-    private final class PrefetchSession: @unchecked Sendable {
+    @MainActor
+    private final class PrefetchSession {
         var prefetcher: ImagePrefetcher?
     }
 }

@@ -150,6 +150,7 @@ struct LibraryProfileSettingsCard: View {
     @Binding var entryDetailStaffExpandedByDefault: Bool
     @Binding var scoringEnabled: Bool
     @Binding var episodeProgressTrackingEnabled: Bool
+    @Binding var posterProgressBarOverlayEnabled: Bool
     @Binding var autoPrefetchImagesOnAddAndRestore: Bool
     @Binding var useTMDbRelayServer: Bool
     @Binding var preferredLanguage: Language
@@ -386,6 +387,28 @@ struct LibraryProfileSettingsCard: View {
             }
             .padding(.vertical, 2)
 
+            if episodeProgressTrackingEnabled {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Show Poster Progress Bar")
+                            .font(.subheadline.weight(.semibold))
+                        Text(
+                            "Show episode progress as a poster overlay in the library."
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 12)
+                    Toggle("Show Poster Progress Bar", isOn: $posterProgressBarOverlayEnabled)
+                        .labelsHidden()
+                        .tint(.mint)
+                        .scaleEffect(0.78, anchor: .trailing)
+                        .frame(width: 42, height: 26, alignment: .trailing)
+                }
+                .padding(.vertical, 2)
+            }
+
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Hide Dropped Entries")
@@ -423,6 +446,7 @@ struct LibraryProfileSettingsCard: View {
             .padding(.vertical, 2)
         }
         .padding(14)
+        .animation(.default, value: episodeProgressTrackingEnabled)
         .libraryProfileInsetPanel(cornerRadius: 22, tint: .mint)
     }
 
