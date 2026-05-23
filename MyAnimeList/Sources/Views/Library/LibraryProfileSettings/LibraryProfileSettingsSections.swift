@@ -446,7 +446,6 @@ struct LibraryProfileSettingsCard: View {
             .padding(.vertical, 2)
         }
         .padding(14)
-        .animation(.default, value: episodeProgressTrackingEnabled)
         .libraryProfileInsetPanel(cornerRadius: 22, tint: .mint)
     }
 

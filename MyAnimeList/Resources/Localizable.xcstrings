@@ -377,6 +377,7 @@
       }
     },
     "Added optional episode-level progress tracking." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -388,6 +389,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "新增可选的按集进度跟踪功能。"
+          }
+        }
+      }
+    },
+    "Added optional episode-level progress tracking. To use this feature, enable it in settings." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エピソードごとの進捗追跡（オプション機能）を追加しました。設定画面からオンにすることで利用可能です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增可选的按集进度跟踪功能。您需要在设置中启用该功能。"
           }
         }
       }

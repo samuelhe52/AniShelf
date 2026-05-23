@@ -244,6 +244,7 @@ struct LibraryProfileSettingsView: View {
             onDeleteAllAnimes: requestClearLibrary
         )
         .animation(languagePickerAnimation, value: followsSystemLanguage)
+        .animation(languagePickerAnimation, value: episodeProgressTrackingEnabled)
         .onChange(of: scoringEnabled, handleScoringEnabledChange)
         .onChange(of: useTMDbRelayServer, handleTMDbRelayServerChange)
     }
