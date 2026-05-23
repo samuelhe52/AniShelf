@@ -294,159 +294,83 @@ struct LibraryProfileSettingsCard: View {
             }
             .padding(.vertical, 2)
 
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Open Detail with Single Tap")
-                        .font(.subheadline.weight(.semibold))
-                    Text("By default, double tap opens detail. Turn this on to use single tap instead.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 12)
-                Toggle("Open Detail with Single Tap", isOn: $openDetailWithSingleTap)
-                    .labelsHidden()
-                    .tint(.mint)
-                    .scaleEffect(0.78, anchor: .trailing)
-                    .frame(width: 42, height: 26, alignment: .trailing)
-            }
-            .padding(.vertical, 2)
+            settingToggleRow(
+                title: "Open Detail with Single Tap",
+                subtitle: "By default, double tap opens detail. Turn this on to use single tap instead.",
+                isOn: $openDetailWithSingleTap
+            )
 
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Expand Characters by Default")
-                        .font(.subheadline.weight(.semibold))
-                    Text("Open the Characters section automatically in entry detail view.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 12)
-                Toggle(
-                    "Expand Characters by Default",
-                    isOn: $entryDetailCharactersExpandedByDefault
-                )
-                .labelsHidden()
-                .tint(.mint)
-                .scaleEffect(0.78, anchor: .trailing)
-                .frame(width: 42, height: 26, alignment: .trailing)
-            }
-            .padding(.vertical, 2)
+            settingToggleRow(
+                title: "Expand Characters by Default",
+                subtitle: "Open the Characters section automatically in entry detail view.",
+                isOn: $entryDetailCharactersExpandedByDefault
+            )
 
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Expand Staff by Default")
-                        .font(.subheadline.weight(.semibold))
-                    Text("Open the Staff section automatically in entry detail view.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 12)
-                Toggle("Expand Staff by Default", isOn: $entryDetailStaffExpandedByDefault)
-                    .labelsHidden()
-                    .tint(.mint)
-                    .scaleEffect(0.78, anchor: .trailing)
-                    .frame(width: 42, height: 26, alignment: .trailing)
-            }
-            .padding(.vertical, 2)
+            settingToggleRow(
+                title: "Expand Staff by Default",
+                subtitle: "Open the Staff section automatically in entry detail view.",
+                isOn: $entryDetailStaffExpandedByDefault
+            )
 
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Enable Scoring")
-                        .font(.subheadline.weight(.semibold))
-                    Text("Turning this off does not delete previously saved scores.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 12)
-                Toggle("Enable Scoring", isOn: $scoringEnabled)
-                    .labelsHidden()
-                    .tint(.mint)
-                    .scaleEffect(0.78, anchor: .trailing)
-                    .frame(width: 42, height: 26, alignment: .trailing)
-            }
-            .padding(.vertical, 2)
+            settingToggleRow(
+                title: "Enable Scoring",
+                subtitle: "Turning this off does not delete previously saved scores.",
+                isOn: $scoringEnabled
+            )
 
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Track Episode Progress")
-                        .font(.subheadline.weight(.semibold))
-                    Text("Turning this off hides episode progress without deleting saved progress.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 12)
-                Toggle("Track Episode Progress", isOn: $episodeProgressTrackingEnabled)
-                    .labelsHidden()
-                    .tint(.mint)
-                    .scaleEffect(0.78, anchor: .trailing)
-                    .frame(width: 42, height: 26, alignment: .trailing)
-            }
-            .padding(.vertical, 2)
+            settingToggleRow(
+                title: "Track Episode Progress",
+                subtitle: "Turning this off hides episode progress without deleting saved progress.",
+                isOn: $episodeProgressTrackingEnabled
+            )
 
             if episodeProgressTrackingEnabled {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Show Poster Progress Bar")
-                            .font(.subheadline.weight(.semibold))
-                        Text(
-                            "Show episode progress as a poster overlay in the library."
-                        )
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer(minLength: 12)
-                    Toggle("Show Poster Progress Bar", isOn: $posterProgressBarOverlayEnabled)
-                        .labelsHidden()
-                        .tint(.mint)
-                        .scaleEffect(0.78, anchor: .trailing)
-                        .frame(width: 42, height: 26, alignment: .trailing)
-                }
-                .padding(.vertical, 2)
+                settingToggleRow(
+                    title: "Show Poster Progress Bar",
+                    subtitle: "Show episode progress as a poster overlay in the library.",
+                    isOn: $posterProgressBarOverlayEnabled
+                )
             }
 
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Hide Dropped Entries")
-                        .font(.subheadline.weight(.semibold))
-                    Text("Only show dropped entries after you explicitly enable the Dropped filter.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 12)
-                Toggle("Hide Dropped Entries", isOn: $hideDroppedByDefault)
-                    .labelsHidden()
-                    .tint(.mint)
-                    .scaleEffect(0.78, anchor: .trailing)
-                    .frame(width: 42, height: 26, alignment: .trailing)
-            }
-            .padding(.vertical, 2)
+            settingToggleRow(
+                title: "Hide Dropped Entries",
+                subtitle: "Only show dropped entries after you explicitly enable the Dropped filter.",
+                isOn: $hideDroppedByDefault
+            )
 
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Auto Prefetch Images")
-                        .font(.subheadline.weight(.semibold))
-                    Text("Prefetch images when adding titles or restoring a backup.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 12)
-                Toggle("Auto Prefetch Images", isOn: $autoPrefetchImagesOnAddAndRestore)
-                    .labelsHidden()
-                    .tint(.mint)
-                    .scaleEffect(0.78, anchor: .trailing)
-                    .frame(width: 42, height: 26, alignment: .trailing)
-            }
-            .padding(.vertical, 2)
+            settingToggleRow(
+                title: "Auto Prefetch Images",
+                subtitle: "Prefetch images when adding titles or restoring a backup.",
+                isOn: $autoPrefetchImagesOnAddAndRestore
+            )
         }
         .padding(14)
         .libraryProfileInsetPanel(cornerRadius: 22, tint: .mint)
+    }
+
+    private func settingToggleRow(
+        title: LocalizedStringResource,
+        subtitle: LocalizedStringResource,
+        isOn: Binding<Bool>,
+        tint: Color = .mint
+    ) -> some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 12)
+            Toggle(title, isOn: isOn)
+                .labelsHidden()
+                .tint(tint)
+                .scaleEffect(0.78, anchor: .trailing)
+                .frame(width: 42, height: 26, alignment: .trailing)
+        }
+        .padding(.vertical, 2)
     }
 
     private var tmdbConnectionRow: some View {
