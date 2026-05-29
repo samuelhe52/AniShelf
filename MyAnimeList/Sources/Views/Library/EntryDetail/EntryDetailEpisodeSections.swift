@@ -13,6 +13,8 @@ struct SeriesSeasonEpisodeGroupView: View {
     let season: EntryDetailSeasonCard
     let seriesTMDbID: Int
     let language: Language
+    let watchStatus: AnimeEntry.WatchStatus
+    let episodeProgressSummary: AnimeEntryEpisodeProgressSummary?
     let sectionTitle: LocalizedStringResource?
     let sectionSystemImage: String?
 
@@ -31,6 +33,8 @@ struct SeriesSeasonEpisodeGroupView: View {
         season: EntryDetailSeasonCard,
         seriesTMDbID: Int,
         language: Language,
+        watchStatus: AnimeEntry.WatchStatus,
+        episodeProgressSummary: AnimeEntryEpisodeProgressSummary? = nil,
         collapseByDefault: Bool = false,
         sectionTitle: LocalizedStringResource? = nil,
         sectionSystemImage: String? = nil
@@ -38,6 +42,8 @@ struct SeriesSeasonEpisodeGroupView: View {
         self.season = season
         self.seriesTMDbID = seriesTMDbID
         self.language = language
+        self.watchStatus = watchStatus
+        self.episodeProgressSummary = episodeProgressSummary
         self.sectionTitle = sectionTitle
         self.sectionSystemImage = sectionSystemImage
         _isExpanded = State(initialValue: !collapseByDefault && season.seasonNumber != 0)
@@ -129,6 +135,12 @@ struct SeriesSeasonEpisodeGroupView: View {
                             seriesTMDbID: seriesTMDbID,
                             seasonNumber: season.seasonNumber,
                             language: language
+                        ),
+                        isWatched: EntryDetailEpisodePresentation.isEpisodeWatched(
+                            episode.episodeNumber,
+                            inSeason: season.seasonNumber,
+                            watchStatus: watchStatus,
+                            summary: episodeProgressSummary
                         )
                     )
                 }

@@ -384,6 +384,10 @@ struct EntryDetailView: View {
                             season: season,
                             seriesTMDbID: entry.tmdbID,
                             language: currentLanguage,
+                            watchStatus: entry.watchStatus,
+                            episodeProgressSummary: entry.episodeProgressSummary(
+                                forSeason: season.seasonNumber
+                            ),
                             collapseByDefault: model.collapseSeriesSeasonsByDefault,
                             sectionTitle: season.id == model.seasonCards.first?.id
                                 ? EntryDetailL10n.episodes
@@ -408,6 +412,14 @@ struct EntryDetailView: View {
                                     seriesTMDbID: entry.type.parentSeriesID ?? entry.tmdbID,
                                     seasonNumber: entry.type.seasonNumber ?? 0,
                                     language: currentLanguage
+                                ),
+                                isWatched: EntryDetailEpisodePresentation.isEpisodeWatched(
+                                    episode.episodeNumber,
+                                    inSeason: entry.type.seasonNumber ?? 0,
+                                    watchStatus: entry.watchStatus,
+                                    summary: entry.episodeProgressSummary(
+                                        forSeason: entry.type.seasonNumber ?? 0
+                                    )
                                 )
                             )
                         }

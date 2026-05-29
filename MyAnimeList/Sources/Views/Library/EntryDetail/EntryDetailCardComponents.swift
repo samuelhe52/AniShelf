@@ -5,6 +5,7 @@
 //  Created by OpenAI Codex on 2026/5/21.
 //
 
+import DataProvider
 import Kingfisher
 import SwiftUI
 
@@ -50,12 +51,18 @@ struct PersonCardView: View {
 struct EpisodeRowView: View {
     let card: EntryDetailEpisodeCard
     let previewContext: EpisodePreviewContext?
+    let isWatched: Bool
     @State private var showPreview = false
     @State private var previewHapticTrigger = false
 
-    init(card: EntryDetailEpisodeCard, previewContext: EpisodePreviewContext? = nil) {
+    init(
+        card: EntryDetailEpisodeCard,
+        previewContext: EpisodePreviewContext? = nil,
+        isWatched: Bool = false
+    ) {
         self.card = card
         self.previewContext = previewContext
+        self.isWatched = isWatched
     }
 
     var body: some View {
@@ -77,6 +84,7 @@ struct EpisodeRowView: View {
             }
             .frame(width: 126, height: 74)
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(card.title)
@@ -85,12 +93,17 @@ struct EpisodeRowView: View {
                 Text(card.subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .lineLimit(2)
             }
 
             Spacer(minLength: 0)
+
+            statusAccessory
         }
         .padding(12)
         .popupGlassPanel(cornerRadius: 22)
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(Text(verbatim: isWatched ? String(localized: EntryDetailL10n.watched) : ""))
         .onLongPressGesture {
             guard previewContext != nil else { return }
             previewHapticTrigger.toggle()
@@ -102,6 +115,19 @@ struct EpisodeRowView: View {
                 EpisodePreviewCard(card: card, context: previewContext)
                     .presentationCompactAdaptation(.popover)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var statusAccessory: some View {
+        if isWatched {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.subheadline.weight(.semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(.blue)
+                .accessibilityHidden(true)
+        } else {
+            EmptyView()
         }
     }
 }

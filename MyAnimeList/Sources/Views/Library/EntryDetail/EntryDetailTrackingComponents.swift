@@ -9,7 +9,8 @@ import DataProvider
 import SwiftUI
 
 struct EntryScoreCard: View {
-    let entry: AnimeEntry
+    let score: Int?
+    let onSetScore: (Int?) -> Void
 
     @State private var bouncingScore: Int?
 
@@ -33,7 +34,7 @@ struct EntryScoreCard: View {
 
                 Button {
                     withAnimation(selectionAnimation) {
-                        entry.setScore(nil)
+                        onSetScore(nil)
                     }
                 } label: {
                     Text(EntryDetailL10n.clear)
@@ -41,8 +42,8 @@ struct EntryScoreCard: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .disabled(entry.score == nil)
-                .opacity(entry.score == nil ? 0.42 : 1)
+                .disabled(score == nil)
+                .opacity(score == nil ? 0.42 : 1)
             }
 
             HStack(spacing: 10) {
@@ -55,7 +56,7 @@ struct EntryScoreCard: View {
     }
 
     private func scoreButton(for value: Int) -> some View {
-        let isFilled = (entry.score ?? 0) >= value
+        let isFilled = (score ?? 0) >= value
         let isBouncing = bouncingScore == value
 
         return Button {
@@ -75,7 +76,7 @@ struct EntryScoreCard: View {
 
     private func setScore(_ value: Int) {
         withAnimation(selectionAnimation) {
-            entry.setScore(value)
+            onSetScore(value)
         }
         withAnimation(bounceInAnimation) {
             bouncingScore = value
@@ -102,7 +103,7 @@ struct EntryDetailTrackingSection: View {
         Group {
             if scoringEnabled {
                 VStack(alignment: .leading, spacing: 16) {
-                    EntryScoreCard(entry: entry)
+                    EntryScoreCard(score: entry.score) { entry.setScore($0) }
                     Divider()
 
                     PopupNestedDisclosureSection(

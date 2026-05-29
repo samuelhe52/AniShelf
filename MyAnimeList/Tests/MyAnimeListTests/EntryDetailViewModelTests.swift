@@ -465,4 +465,138 @@ struct EntryDetailViewModelTests {
         #expect(staff.orderedJobs.map(\.creditID) == ["director", "music"])
         #expect(staff.orderedJobs.map(\.job) == ["Director", "Music"])
     }
+
+    @Test func testEpisodePresentationMarksWatchedEpisodesFromContiguousProgress() {
+        #expect(
+            EntryDetailEpisodePresentation.isEpisodeWatched(
+                1,
+                inSeason: 1,
+                watchStatus: .watching,
+                summary: AnimeEntryEpisodeProgressSummary(
+                    seasonNumber: 1,
+                    watchedThroughEpisode: 3,
+                    episodeCount: 12,
+                    updatedAt: .distantPast
+                )
+            )
+        )
+        #expect(
+            EntryDetailEpisodePresentation.isEpisodeWatched(
+                3,
+                inSeason: 1,
+                watchStatus: .watching,
+                summary: AnimeEntryEpisodeProgressSummary(
+                    seasonNumber: 1,
+                    watchedThroughEpisode: 3,
+                    episodeCount: 12,
+                    updatedAt: .distantPast
+                )
+            )
+        )
+        #expect(
+            !EntryDetailEpisodePresentation.isEpisodeWatched(
+                4,
+                inSeason: 1,
+                watchStatus: .watching,
+                summary: AnimeEntryEpisodeProgressSummary(
+                    seasonNumber: 1,
+                    watchedThroughEpisode: 3,
+                    episodeCount: 12,
+                    updatedAt: .distantPast
+                )
+            )
+        )
+    }
+
+    @Test func testEpisodePresentationIgnoresNonTrackableProgress() {
+        #expect(
+            !EntryDetailEpisodePresentation.isEpisodeWatched(
+                1,
+                inSeason: 1,
+                watchStatus: .watching,
+                summary: AnimeEntryEpisodeProgressSummary(
+                    seasonNumber: 1,
+                    watchedThroughEpisode: 0,
+                    episodeCount: 12,
+                    updatedAt: .distantPast
+                )
+            )
+        )
+        #expect(
+            !EntryDetailEpisodePresentation.isEpisodeWatched(
+                1,
+                inSeason: 0,
+                watchStatus: .watching,
+                summary: AnimeEntryEpisodeProgressSummary(
+                    seasonNumber: 0,
+                    watchedThroughEpisode: 3,
+                    episodeCount: 12,
+                    updatedAt: .distantPast
+                )
+            )
+        )
+    }
+
+    @Test func testEpisodePresentationStopsAtWatchedThroughEpisode() {
+        #expect(
+            EntryDetailEpisodePresentation.isEpisodeWatched(
+                4,
+                inSeason: 1,
+                watchStatus: .watching,
+                summary: AnimeEntryEpisodeProgressSummary(
+                    seasonNumber: 1,
+                    watchedThroughEpisode: 4,
+                    episodeCount: 4,
+                    updatedAt: .distantPast
+                )
+            )
+        )
+        #expect(
+            !EntryDetailEpisodePresentation.isEpisodeWatched(
+                5,
+                inSeason: 1,
+                watchStatus: .watching,
+                summary: AnimeEntryEpisodeProgressSummary(
+                    seasonNumber: 1,
+                    watchedThroughEpisode: 4,
+                    episodeCount: 4,
+                    updatedAt: .distantPast
+                )
+            )
+        )
+    }
+
+    @Test func testEpisodePresentationOnlyMarksWatchedEpisodesWhileWatching() {
+        let summary = AnimeEntryEpisodeProgressSummary(
+            seasonNumber: 1,
+            watchedThroughEpisode: 4,
+            episodeCount: 12,
+            updatedAt: .distantPast
+        )
+
+        #expect(
+            !EntryDetailEpisodePresentation.isEpisodeWatched(
+                1,
+                inSeason: 1,
+                watchStatus: .planToWatch,
+                summary: summary
+            )
+        )
+        #expect(
+            EntryDetailEpisodePresentation.isEpisodeWatched(
+                1,
+                inSeason: 1,
+                watchStatus: .watching,
+                summary: summary
+            )
+        )
+        #expect(
+            !EntryDetailEpisodePresentation.isEpisodeWatched(
+                1,
+                inSeason: 1,
+                watchStatus: .watched,
+                summary: summary
+            )
+        )
+    }
 }

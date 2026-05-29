@@ -5,6 +5,7 @@
 //  Created by OpenAI Codex on 2026/5/6.
 //
 
+import DataProvider
 import SwiftUI
 
 struct EntryDetailStatCard: Identifiable {
@@ -41,6 +42,19 @@ struct EpisodePreviewContext {
     let seriesTMDbID: Int
     let seasonNumber: Int
     let language: Language
+}
+
+enum EntryDetailEpisodePresentation {
+    static func isEpisodeWatched(
+        _ episodeNumber: Int,
+        inSeason seasonNumber: Int,
+        watchStatus: AnimeEntry.WatchStatus,
+        summary: AnimeEntryEpisodeProgressSummary?
+    ) -> Bool {
+        guard watchStatus == .watching, seasonNumber > 0, let summary, summary.watchedThroughEpisode > 0
+        else { return false }
+        return episodeNumber <= summary.watchedThroughEpisode
+    }
 }
 
 enum EntryDetailSeasonExpansionPolicy {

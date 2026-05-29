@@ -106,8 +106,10 @@ struct KFImageView: View {
         } catch {
             guard !Task.isCancelled, requestID == self.requestID else { return }
             logger.warning("Error loading image: \(error)")
-            loadState = .fallback
-            imageLoaded = false
+            withAnimation(animation) {
+                loadState = .fallback
+                imageLoaded = false
+            }
         }
     }
 }
