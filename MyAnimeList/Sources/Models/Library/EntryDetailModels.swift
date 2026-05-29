@@ -38,6 +38,13 @@ struct EntryDetailEpisodeCard: Identifiable, Equatable {
     let imageURL: URL?
 }
 
+struct EpisodePreviewStaffRow: Identifiable, Equatable {
+    let role: String
+    let names: String
+
+    var id: String { role }
+}
+
 struct EpisodePreviewContext {
     let seriesTMDbID: Int
     let seasonNumber: Int

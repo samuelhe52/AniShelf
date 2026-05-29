@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import TMDb
 import Testing
 
 @testable import DataProvider
@@ -466,6 +467,127 @@ struct EntryDetailViewModelTests {
         #expect(staff.orderedJobs.map(\.job) == ["Director", "Music"])
     }
 
+    @Test @MainActor func testEpisodePreviewShowsTargetStaffRolesInConfiguredOrder() async {
+        let viewModel = EpisodePreviewViewModel { _, _ in
+            makeEpisodePreviewDetail(
+                overview: "Episode overview",
+                crew: [
+                    makeCrewMember(id: 1, name: "Director Person", job: "Director"),
+                    makeCrewMember(id: 2, name: "Writer Person", job: "Writer"),
+                    makeCrewMember(id: 3, name: "Storyboard Person", job: "Storyboard Artist"),
+                    makeCrewMember(id: 4, name: "Animation Person", job: "Animation Director"),
+                    makeCrewMember(id: 5, name: "Supervising Person", job: "Supervising Animation Director")
+                ]
+            )
+        }
+
+        await viewModel.load(card: makeEpisodePreviewCard(), context: makeEpisodePreviewContext())
+
+        #expect(viewModel.overviewText == "Episode overview")
+        #expect(
+            viewModel.staffRows.map(\.role) == [
+                "Director",
+                "Writer",
+                "Storyboard Artist",
+                "Animation Director",
+                "Supervising Animation Director"
+            ])
+        #expect(
+            viewModel.staffRows.map(\.names) == [
+                "Director Person",
+                "Writer Person",
+                "Storyboard Person",
+                "Animation Person",
+                "Supervising Person"
+            ])
+    }
+
+    @Test @MainActor func testEpisodePreviewOmitsMissingAndNoisyStaffRoles() async {
+        let viewModel = EpisodePreviewViewModel { _, _ in
+            makeEpisodePreviewDetail(
+                crew: [
+                    makeCrewMember(id: 1, name: "Director Person", job: "Director"),
+                    makeCrewMember(id: 2, name: "Key Animator", job: "Key Animation"),
+                    makeCrewMember(id: 3, name: "Compositor", job: "Compositing Artist")
+                ]
+            )
+        }
+
+        await viewModel.load(card: makeEpisodePreviewCard(), context: makeEpisodePreviewContext())
+
+        #expect(viewModel.staffRows.map(\.role) == ["Director"])
+        #expect(viewModel.staffRows.map(\.names) == ["Director Person"])
+    }
+
+    @Test @MainActor func testEpisodePreviewCollapsesMultipleCrewNamesPerRole() async {
+        let viewModel = EpisodePreviewViewModel { _, _ in
+            makeEpisodePreviewDetail(
+                crew: [
+                    makeCrewMember(id: 1, name: "Writer One", job: "Writer"),
+                    makeCrewMember(id: 2, name: "Writer Two", job: "Writer"),
+                    makeCrewMember(id: 3, name: "Writer Three", job: "Writer"),
+                    makeCrewMember(id: 4, name: "Writer Four", job: "Writer")
+                ]
+            )
+        }
+
+        await viewModel.load(card: makeEpisodePreviewCard(), context: makeEpisodePreviewContext())
+
+        #expect(
+            viewModel.staffRows == [
+                EpisodePreviewStaffRow(
+                    role: "Writer",
+                    names: "Writer One, Writer Two, Writer Three +1"
+                )
+            ])
+    }
+
+    @Test @MainActor func testEpisodePreviewUsesLocalizedRoleNames() async {
+        let viewModel = EpisodePreviewViewModel { _, _ in
+            makeEpisodePreviewDetail(
+                crew: [makeCrewMember(id: 1, name: "Yasuko Kobayashi", job: "Writer")]
+            )
+        }
+
+        await viewModel.load(
+            card: makeEpisodePreviewCard(),
+            context: .init(seriesTMDbID: 1429, seasonNumber: 1, language: .japanese)
+        )
+
+        #expect(
+            viewModel.staffRows == [
+                EpisodePreviewStaffRow(role: "脚本", names: "Yasuko Kobayashi")
+            ])
+    }
+
+    @Test @MainActor func testEpisodePreviewFallsBackToOverviewOnlyWhenFetchFailsOrCrewIsEmpty() async {
+        let emptyCrewViewModel = EpisodePreviewViewModel { _, _ in
+            makeEpisodePreviewDetail(overview: nil, crew: [])
+        }
+
+        await emptyCrewViewModel.load(
+            card: makeEpisodePreviewCard(),
+            context: makeEpisodePreviewContext()
+        )
+
+        #expect(
+            emptyCrewViewModel.overviewText == String(localized: EntryDetailL10n.noOverviewAvailable)
+        )
+        #expect(emptyCrewViewModel.staffRows.isEmpty)
+
+        struct EpisodePreviewError: Error {}
+        let failingViewModel = EpisodePreviewViewModel { _, _ in
+            throw EpisodePreviewError()
+        }
+
+        await failingViewModel.load(card: makeEpisodePreviewCard(), context: makeEpisodePreviewContext())
+
+        #expect(
+            failingViewModel.overviewText == String(localized: EntryDetailL10n.noOverviewAvailable)
+        )
+        #expect(failingViewModel.staffRows.isEmpty)
+    }
+
     @Test func testEpisodePresentationMarksWatchedEpisodesFromContiguousProgress() {
         #expect(
             EntryDetailEpisodePresentation.isEpisodeWatched(
@@ -599,4 +721,44 @@ struct EntryDetailViewModelTests {
             )
         )
     }
+}
+
+fileprivate func makeEpisodePreviewContext(
+    language: MyAnimeList.Language = .english
+) -> EpisodePreviewContext {
+    .init(seriesTMDbID: 1429, seasonNumber: 1, language: language)
+}
+
+fileprivate func makeEpisodePreviewCard() -> EntryDetailEpisodeCard {
+    .init(
+        id: 65_480,
+        episodeNumber: 1,
+        title: "1. Preview",
+        subtitle: "Apr 7, 2013",
+        imageURL: nil
+    )
+}
+
+fileprivate func makeEpisodePreviewDetail(
+    overview: String? = "Episode overview",
+    crew: [CrewMember]
+) -> TVEpisode {
+    TVEpisode(
+        id: 65_480,
+        name: "Preview",
+        episodeNumber: 1,
+        seasonNumber: 1,
+        overview: overview,
+        crew: crew
+    )
+}
+
+fileprivate func makeCrewMember(id: Int, name: String, job: String) -> CrewMember {
+    CrewMember(
+        id: id,
+        creditID: "\(job)-\(id)",
+        name: name,
+        job: job,
+        department: "Directing"
+    )
 }

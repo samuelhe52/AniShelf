@@ -9,6 +9,7 @@ import DataProvider
 import Foundation
 import Observation
 import SwiftUI
+import TMDb
 
 @MainActor
 @Observable
@@ -553,39 +554,105 @@ final class EntryDetailViewModel {
 @MainActor
 @Observable
 final class EpisodePreviewViewModel {
+    private static let prioritizedEpisodeStaffRoles = [
+        "Director",
+        "Writer",
+        "Storyboard Artist",
+        "Animation Director",
+        "Supervising Animation Director"
+    ]
     private let detailLoadAnimation: Animation = .easeInOut(duration: 0.3)
+    private let fetchEpisodeDetail: @Sendable (EpisodePreviewContext, Int) async throws -> TVEpisode
 
     private(set) var overviewText = String(localized: EntryDetailL10n.loading)
+    private(set) var staffRows: [EpisodePreviewStaffRow] = []
     private(set) var isLoading = false
 
     private var lastRequestKey: String?
+
+    init(
+        fetchEpisodeDetail: @escaping @Sendable (EpisodePreviewContext, Int) async throws -> TVEpisode = {
+            context,
+            episodeNumber in
+            try await InfoFetcher().episodePreviewInfo(
+                parentSeriesID: context.seriesTMDbID,
+                seasonNumber: context.seasonNumber,
+                episodeNumber: episodeNumber,
+                language: context.language
+            )
+        }
+    ) {
+        self.fetchEpisodeDetail = fetchEpisodeDetail
+    }
 
     func load(card: EntryDetailEpisodeCard, context: EpisodePreviewContext) async {
         let requestKey =
             "\(context.seriesTMDbID)-\(context.seasonNumber)-\(card.episodeNumber)-\(context.language.rawValue)"
         guard lastRequestKey != requestKey else { return }
         lastRequestKey = requestKey
+        overviewText = String(localized: EntryDetailL10n.loading)
+        staffRows = []
         isLoading = true
         defer { isLoading = false }
 
         do {
-            let detail = try await InfoFetcher().episodePreviewInfo(
-                parentSeriesID: context.seriesTMDbID,
-                seasonNumber: context.seasonNumber,
-                episodeNumber: card.episodeNumber,
-                language: context.language
-            )
+            let detail = try await fetchEpisodeDetail(context, card.episodeNumber)
             let resolvedOverviewText =
                 detail.overview?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
                 ? detail.overview!
                 : String(localized: EntryDetailL10n.noOverviewAvailable)
+            let resolvedStaffRows = Self.makeEpisodePreviewStaffRows(
+                from: detail.crew ?? [],
+                language: context.language
+            )
             withAnimation(detailLoadAnimation) {
                 overviewText = resolvedOverviewText
+                staffRows = resolvedStaffRows
             }
         } catch {
             withAnimation(detailLoadAnimation) {
                 overviewText = String(localized: EntryDetailL10n.noOverviewAvailable)
+                staffRows = []
             }
         }
+    }
+
+    private static func makeEpisodePreviewStaffRows(
+        from crew: [CrewMember],
+        language: Language
+    ) -> [EpisodePreviewStaffRow] {
+        prioritizedEpisodeStaffRoles.compactMap { role in
+            let members = crew.filter { $0.job == role }
+            guard !members.isEmpty else { return nil }
+
+            let names = uniqueOrderedCrewNames(from: members)
+            guard !names.isEmpty else { return nil }
+
+            return EpisodePreviewStaffRow(
+                role: EntryDetailViewModel.localizedStaffRole(role, language: language),
+                names: collapsedCrewNames(names)
+            )
+        }
+    }
+
+    private static func uniqueOrderedCrewNames(from crew: [CrewMember]) -> [String] {
+        var seenIdentifiers: Set<String> = []
+        var names: [String] = []
+
+        for member in crew {
+            let identifier = "\(member.id)-\(member.name)"
+            guard seenIdentifiers.insert(identifier).inserted else { continue }
+            names.append(member.name)
+        }
+
+        return names
+    }
+
+    private static func collapsedCrewNames(_ names: [String]) -> String {
+        guard names.count > 3 else {
+            return names.joined(separator: ", ")
+        }
+
+        return "\(names[0]), \(names[1]), \(names[2]) +\(names.count - 3)"
     }
 }

@@ -257,13 +257,39 @@ struct EpisodePreviewCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentTransition(.opacity)
                 .animation(.easeInOut(duration: 0.2), value: previewModel.overviewText)
+
+            if !previewModel.staffRows.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(EntryDetailL10n.staff)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(previewModel.staffRows) { row in
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                Text(row.role)
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(.secondary)
+
+                                Text(row.names)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary.opacity(0.9))
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                }
+                .transition(.opacity)
+            }
         }
         .frame(width: 320, alignment: .leading)
         .padding(18)
-        .popupGlassPanel(cornerRadius: 28, tint: .white.opacity(0.08))
-        .task(id: "\(context.seriesTMDbID)-\(context.seasonNumber)-\(card.episodeNumber)-\(context.language.rawValue)")
-        {
+        .task(id: taskID) {
             await previewModel.load(card: card, context: context)
         }
+    }
+
+    private var taskID: String {
+        "\(context.seriesTMDbID)-\(context.seasonNumber)-\(card.episodeNumber)-\(context.language.rawValue)"
     }
 }
