@@ -274,6 +274,8 @@ class BackupManager {
     /// Replaces the current SwiftData store with the one from the backup package.
     private func restoreSwiftDataStore(from directoryURL: URL) throws {
         let storeDirectory = dataProvider.url.deletingLastPathComponent()
+        let rollbackDirectoryURL = fileManager.temporaryDirectory.appendingPathComponent(
+            UUID().uuidString, isDirectory: true)
 
         do {
             // Check schema version compatibility
@@ -290,26 +292,56 @@ class BackupManager {
                 }
             }
 
-            // Remove current store files
-            let currentFiles = try fileManager.contentsOfDirectory(
-                at: storeDirectory, includingPropertiesForKeys: nil)
-            for fileURL in currentFiles {
-                try fileManager.removeItem(at: fileURL)
-            }
-
-            // Copy backed up files from the backup package
             let backupFolderURL = directoryURL.appendingPathComponent(dataStoreFolderName)
             try validateSwiftDataStore(at: backupFolderURL)
             let backupFiles = try fileManager.contentsOfDirectory(
                 at: backupFolderURL, includingPropertiesForKeys: nil)
-            for fileURL in backupFiles {
-                let destinationURL = storeDirectory.appendingPathComponent(
-                    fileURL.lastPathComponent)
-                try fileManager.copyItem(at: fileURL, to: destinationURL)
+            let currentFiles = try fileManager.contentsOfDirectory(
+                at: storeDirectory, includingPropertiesForKeys: nil)
+
+            try fileManager.createDirectory(
+                at: rollbackDirectoryURL,
+                withIntermediateDirectories: true
+            )
+            try copyFiles(currentFiles, to: rollbackDirectoryURL)
+
+            do {
+                try removeFiles(currentFiles)
+                try copyFiles(backupFiles, to: storeDirectory)
+            } catch {
+                try? removeFiles(in: storeDirectory)
+                let rollbackFiles = try fileManager.contentsOfDirectory(
+                    at: rollbackDirectoryURL,
+                    includingPropertiesForKeys: nil
+                )
+                try copyFiles(rollbackFiles, to: storeDirectory)
+                throw error
             }
         } catch {
             throw BackupError.restoreFailed(
                 reason: "Could not replace the database files. \(error.localizedDescription)")
         }
+        try? fileManager.removeItem(at: rollbackDirectoryURL)
+    }
+
+    private func copyFiles(_ files: [URL], to directoryURL: URL) throws {
+        for fileURL in files {
+            let destinationURL = directoryURL.appendingPathComponent(fileURL.lastPathComponent)
+            try fileManager.copyItem(at: fileURL, to: destinationURL)
+        }
+    }
+
+    private func removeFiles(_ files: [URL]) throws {
+        for fileURL in files {
+            try fileManager.removeItem(at: fileURL)
+        }
+    }
+
+    private func removeFiles(in directoryURL: URL) throws {
+        let files = try fileManager.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: nil
+        )
+        try removeFiles(files)
     }
 }

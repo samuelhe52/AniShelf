@@ -336,12 +336,67 @@ struct InfoFetcherAndLibraryTests {
         try dataProvider.dataHandler.newEntry(entry)
 
         let backupURL = try BackupManager(dataProvider: dataProvider).createBackup()
-        let archive = try #require(Archive(url: backupURL, accessMode: .read))
+        let archive = try Archive(url: backupURL, accessMode: .read)
         let storeEntry = try #require(
             archive.first { $0.path.hasSuffix("/compressed.store") }
         )
 
         #expect(storeEntry.compressedSize < storeEntry.uncompressedSize)
+    }
+
+    @Test @MainActor func testRestoreBackupDoesNotDeleteCurrentStoreWhenArchiveIsInvalid() throws {
+        let fileManager = FileManager.default
+        let storeDirectory = fileManager.temporaryDirectory
+            .appendingPathComponent("AniShelfTests-restore-rollback-\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(
+            at: storeDirectory,
+            withIntermediateDirectories: true
+        )
+        defer { try? fileManager.removeItem(at: storeDirectory) }
+
+        let dataProvider = DataProvider(url: storeDirectory.appendingPathComponent("restore.store"))
+        let entry = AnimeEntry(
+            name: "Keep Me",
+            type: .movie,
+            tmdbID: 400_004,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 20)
+        )
+        try dataProvider.dataHandler.newEntry(entry)
+        #expect(try dataProvider.getAllModels(ofType: AnimeEntry.self).count == 1)
+
+        let malformedRootURL = fileManager.temporaryDirectory
+            .appendingPathComponent("AniShelfTests-invalid-backup-\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(
+            at: malformedRootURL,
+            withIntermediateDirectories: true
+        )
+        defer { try? fileManager.removeItem(at: malformedRootURL) }
+
+        let stagedBackupURL = malformedRootURL.appendingPathComponent("BrokenBackup", isDirectory: true)
+        try fileManager.createDirectory(
+            at: stagedBackupURL,
+            withIntermediateDirectories: true
+        )
+
+        let archiveURL = fileManager.temporaryDirectory.appendingPathComponent(
+            "AniShelf-invalid-\(UUID().uuidString).mallib"
+        )
+        defer { try? fileManager.removeItem(at: archiveURL) }
+        try fileManager.zipItem(
+            at: stagedBackupURL,
+            to: archiveURL,
+            shouldKeepParent: true,
+            compressionMethod: .deflate
+        )
+
+        let manager = BackupManager(dataProvider: dataProvider)
+
+        #expect(throws: Error.self) {
+            try manager.restoreBackup(from: archiveURL)
+        }
+
+        dataProvider.reloadDataStore()
+        #expect(try dataProvider.getAllModels(ofType: AnimeEntry.self).map(\.tmdbID) == [400_004])
     }
 
     @Test @MainActor func testParentChildRelationshipInference() async throws {
