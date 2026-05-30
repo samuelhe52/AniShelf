@@ -155,6 +155,7 @@ struct LibraryProfileSettingsCard: View {
     @Binding var useTMDbRelayServer: Bool
     @Binding var preferredLanguage: Language
 
+    let syncStatus: CloudKitSyncMonitor.Status
     let restoreCompleted: Bool
     let createBackupItems: () -> [Any]?
     let onExportLibrary: (LibraryExportFormat) -> Void
@@ -180,6 +181,7 @@ struct LibraryProfileSettingsCard: View {
                 languagePickerRow
                 defaultLibraryBehaviorRow
                 tmdbConnectionRow
+                cloudKitSyncStatusRow
                 backupManagementRow
                 maintenanceActions
             }
@@ -444,6 +446,29 @@ struct LibraryProfileSettingsCard: View {
         .libraryProfileInsetPanel(cornerRadius: 22, tint: .orange)
     }
 
+    private var cloudKitSyncStatusRow: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            LibraryProfileSettingHeader(
+                title: "iCloud Sync",
+                subtitle: syncStatusSubtitle,
+                systemImage: syncStatusSystemImage,
+                tint: syncStatusTint
+            )
+
+            HStack(spacing: 8) {
+                Image(systemName: syncStatusBadgeImage)
+                    .font(.caption.weight(.bold))
+                Text(syncStatusTitle)
+                    .font(.caption.weight(.semibold))
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(syncStatusTint)
+            .padding(.vertical, 2)
+        }
+        .padding(14)
+        .libraryProfileInsetPanel(cornerRadius: 22, tint: syncStatusTint)
+    }
+
     private var maintenanceActions: some View {
         VStack(spacing: 0) {
             LibraryProfileActionRow(
@@ -528,6 +553,67 @@ struct LibraryProfileSettingsCard: View {
     private var restoreButton: some View {
         Button("Restore", systemImage: "document.badge.clock", role: .destructive, action: onRestore)
             .buttonStyle(LibraryProfileCommandButtonStyle(tint: .red, filled: false))
+    }
+
+    private var syncStatusTitle: LocalizedStringResource {
+        switch syncStatus {
+        case .idle:
+            return "Idle"
+        case .importing:
+            return "Importing"
+        case .exporting:
+            return "Exporting"
+        case .error:
+            return "Needs attention"
+        }
+    }
+
+    private var syncStatusSubtitle: LocalizedStringResource {
+        switch syncStatus {
+        case .idle:
+            return "Library changes sync with your private iCloud database automatically."
+        case .importing:
+            return "Receiving library updates from iCloud."
+        case .exporting:
+            return "Sending library updates to iCloud."
+        case .error(let message):
+            return LocalizedStringResource(stringLiteral: message)
+        }
+    }
+
+    private var syncStatusSystemImage: String {
+        switch syncStatus {
+        case .idle:
+            return "icloud"
+        case .importing:
+            return "icloud.and.arrow.down"
+        case .exporting:
+            return "icloud.and.arrow.up"
+        case .error:
+            return "exclamationmark.icloud"
+        }
+    }
+
+    private var syncStatusBadgeImage: String {
+        switch syncStatus {
+        case .idle:
+            return "checkmark.circle.fill"
+        case .importing, .exporting:
+            return "arrow.triangle.2.circlepath.circle.fill"
+        case .error:
+            return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var syncStatusTint: Color {
+        switch syncStatus {
+        case .idle:
+            return .blue
+        case .importing, .exporting:
+            return .teal
+        case .error:
+            return .red
+        }
     }
 
     private var libraryExportMenu: some View {

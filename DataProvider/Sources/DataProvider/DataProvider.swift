@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 /// The current schema version used by the data provider.
-public typealias CurrentSchema = SchemaV2_7_8
+public typealias CurrentSchema = SchemaV2_7_9
 
 /// The current anime entry type used by the data provider.
 public typealias AnimeEntry = CurrentSchema.AnimeEntry
@@ -25,6 +25,8 @@ public typealias AnimeEntryEpisodeProgress = CurrentSchema.AnimeEntryEpisodeProg
 let persistenStoreURL = URL.applicationSupportDirectory
     .appendingPathComponent("DataProvider")
     .appendingPathComponent("mal.store")
+
+fileprivate let cloudKitContainerIdentifier = "iCloud.com.samuelhe.MyAnimeList"
 
 /// A data provider for SwiftData model containers and data operations, stored in MainActor.
 @MainActor public final class DataProvider {
@@ -43,6 +45,9 @@ let persistenStoreURL = URL.applicationSupportDirectory
     /// Whether this instance's data is stored in memory.
     public let inMemory: Bool
 
+    /// Whether this instance mirrors its persistent store through CloudKit.
+    public let cloudKitEnabled: Bool
+
     /// The URL of the persistent store used by the model container.
     public let url: URL
 
@@ -52,15 +57,25 @@ let persistenStoreURL = URL.applicationSupportDirectory
     ///     - url: The URL of the persistent store.
     /// - Important: This initializer will fatalError if the model container cannot be created.
     ///              This is intentional as the app cannot function without proper data storage.
-    public init(inMemory: Bool = false, url: URL = persistenStoreURL) {
+    public init(
+        inMemory: Bool = false,
+        url: URL = persistenStoreURL,
+        cloudKitEnabled: Bool? = nil
+    ) {
+        let shouldEnableCloudKit = cloudKitEnabled ?? (!inMemory && url == persistenStoreURL)
         // Data migration happens here
         let container: ModelContainer
         do {
-            container = try Self.createModelContainer(inMemory: inMemory, url: url)
+            container = try Self.createModelContainer(
+                inMemory: inMemory,
+                url: url,
+                cloudKitEnabled: shouldEnableCloudKit
+            )
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
         self.inMemory = inMemory
+        self.cloudKitEnabled = shouldEnableCloudKit
         self.sharedModelContainer = container
         self.dataHandler = .init(modelContainer: container)
         self.url = url
@@ -79,7 +94,11 @@ let persistenStoreURL = URL.applicationSupportDirectory
     private func setupContainer() {
         // Data migration happens here
         do {
-            sharedModelContainer = try Self.createModelContainer(inMemory: inMemory, url: url)
+            sharedModelContainer = try Self.createModelContainer(
+                inMemory: inMemory,
+                url: url,
+                cloudKitEnabled: cloudKitEnabled
+            )
         } catch {
             fatalError("Could not create or reload ModelContainer: \(error)")
         }
@@ -88,15 +107,24 @@ let persistenStoreURL = URL.applicationSupportDirectory
 
     private static func createModelContainer(
         inMemory: Bool = false,
-        url: URL
+        url: URL,
+        cloudKitEnabled: Bool
     ) throws -> ModelContainer {
         let schema = Schema(versionedSchema: CurrentSchema.self)
         let modelConfiguration: ModelConfiguration
         if !inMemory {
-            modelConfiguration = ModelConfiguration(
-                schema: schema,
-                url: url
-            )
+            if cloudKitEnabled {
+                modelConfiguration = ModelConfiguration(
+                    schema: schema,
+                    url: url,
+                    cloudKitDatabase: .private(cloudKitContainerIdentifier)
+                )
+            } else {
+                modelConfiguration = ModelConfiguration(
+                    schema: schema,
+                    url: url
+                )
+            }
         } else {
             modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
         }

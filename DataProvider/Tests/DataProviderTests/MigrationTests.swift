@@ -5,6 +5,186 @@ import Testing
 @testable import DataProvider
 
 struct MigrationTests {
+    @Test func currentSyncedSchemaAvoidsUnsupportedCloudKitRules() throws {
+        let source = try currentSchemaSourceText()
+
+        #expect(!source.contains("@Attribute(.unique)"))
+        #expect(!source.contains("deleteRule: .deny"))
+
+        let relationshipLines = source.split(separator: "\n")
+            .map(String.init)
+            .filter { $0.contains("@Relationship") }
+        #expect(!relationshipLines.isEmpty)
+        #expect(relationshipLines.allSatisfy { $0.contains("inverse:") })
+    }
+
+    @Test func currentSyncedSchemaPersistedRequiredFieldsHaveDefaults() throws {
+        let linesWithoutDefaults = try currentSchemaModelFileURLs().flatMap { url in
+            try String(contentsOf: url, encoding: .utf8)
+                .split(separator: "\n")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { line in
+                    line.hasPrefix("public var ")
+                        && !line.contains("?")
+                        && !line.contains("=")
+                        && !line.contains("{")
+                }
+                .map { "\(url.lastPathComponent): \($0)" }
+        }
+
+        #expect(linesWithoutDefaults.isEmpty)
+    }
+
+    @Test @MainActor func cloudKitReadinessMigrationFromV278PreservesLibraryGraph() throws {
+        let storeURL = temporaryStoreURL(name: "cloudkit-readiness-migration-v278")
+
+        let legacySchema = Schema(versionedSchema: SchemaV2_7_8.self)
+        let legacyConfiguration = ModelConfiguration(schema: legacySchema, url: storeURL)
+        let legacyContainer = try ModelContainer(for: legacySchema, configurations: legacyConfiguration)
+
+        let seriesDetail = SchemaV2_7_8.AnimeEntryDetail(
+            language: "ja-JP",
+            title: "Frieren",
+            subtitle: "Beyond Journey's End",
+            overview: "Detail overview",
+            status: "Ended",
+            airDate: referenceDate(year: 2023, month: 9, day: 29),
+            primaryLinkURL: URL(string: "https://example.com/frieren")!,
+            heroImageURL: URL(string: "https://example.com/frieren-hero.jpg")!,
+            logoImageURL: URL(string: "https://example.com/frieren-logo.png")!,
+            genreIDs: [16, 18],
+            voteAverage: 8.8,
+            runtimeMinutes: 24,
+            episodeCount: 28,
+            seasonCount: 1,
+            characters: [
+                SchemaV2_7_8.AnimeEntryCharacter(
+                    id: 101,
+                    characterName: "Frieren",
+                    actorName: "Atsumi Tanezaki",
+                    profileURL: URL(string: "https://example.com/frieren.png"),
+                    displayOrder: 0
+                )
+            ],
+            staff: [
+                SchemaV2_7_8.AnimeEntryStaff(
+                    id: 201,
+                    name: "Director",
+                    role: "Directing",
+                    department: "Directing",
+                    profileURL: URL(string: "https://example.com/director.png"),
+                    jobs: [
+                        SchemaV2_7_8.AnimeEntryStaffJob(
+                            creditID: "director",
+                            job: "Director",
+                            episodeCount: 28,
+                            displayOrder: 0
+                        )
+                    ],
+                    displayOrder: 0
+                )
+            ],
+            seasons: [
+                SchemaV2_7_8.AnimeEntrySeasonSummary(
+                    id: 301,
+                    seasonNumber: 1,
+                    title: "Season 1",
+                    posterURL: URL(string: "https://example.com/season.jpg"),
+                    episodeCount: 28
+                )
+            ],
+            episodes: [
+                SchemaV2_7_8.AnimeEntryEpisodeSummary(
+                    id: 401,
+                    episodeNumber: 1,
+                    title: "The Journey's End",
+                    airDate: referenceDate(year: 2023, month: 9, day: 29),
+                    imageURL: URL(string: "https://example.com/episode.jpg"),
+                    displayOrder: 0
+                )
+            ]
+        )
+        let seriesEntry = SchemaV2_7_8.AnimeEntry(
+            name: "Frieren",
+            nameTranslations: ["zh-CN": "葬送的芙莉莲"],
+            overview: "Series overview",
+            overviewTranslations: ["zh-CN": "系列简介"],
+            onAirDate: referenceDate(year: 2023, month: 9, day: 29),
+            type: .series,
+            linkToDetails: URL(string: "https://example.com/series")!,
+            posterURL: URL(string: "https://example.com/poster.jpg")!,
+            backdropURL: URL(string: "https://example.com/backdrop.jpg")!,
+            tmdbID: 209867,
+            originalLanguageCode: "ja",
+            detail: seriesDetail,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 21),
+            dateStarted: referenceDate(year: 2026, month: 5, day: 22),
+            dateFinished: referenceDate(year: 2026, month: 5, day: 23),
+            isDateTrackingEnabled: false,
+            score: 5,
+            usingCustomPoster: true
+        )
+        seriesEntry.favorite = true
+        seriesEntry.notes = "Preserve notes"
+        seriesEntry.watchStatus = .watched
+        let seriesProgress = SchemaV2_7_8.AnimeEntryEpisodeProgress(
+            seasonNumber: 1,
+            watchedThroughEpisode: 12,
+            updatedAt: referenceDate(year: 2026, month: 5, day: 24)
+        )
+        seriesProgress.entry = seriesEntry
+        seriesEntry.episodeProgresses.append(seriesProgress)
+
+        let seasonEntry = SchemaV2_7_8.AnimeEntry(
+            name: "Frieren Season 1",
+            type: .season(seasonNumber: 1, parentSeriesID: 209867),
+            tmdbID: 307972,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 25)
+        )
+        seasonEntry.parentSeriesEntry = seriesEntry
+        seasonEntry.watchStatus = .watching
+        let seasonProgress = SchemaV2_7_8.AnimeEntryEpisodeProgress(
+            seasonNumber: 1,
+            watchedThroughEpisode: 6,
+            updatedAt: referenceDate(year: 2026, month: 5, day: 26)
+        )
+        seasonProgress.entry = seasonEntry
+        seasonEntry.episodeProgresses.append(seasonProgress)
+
+        legacyContainer.mainContext.insert(seriesEntry)
+        legacyContainer.mainContext.insert(seasonEntry)
+        try legacyContainer.mainContext.save()
+
+        let migratedProvider = DataProvider(url: storeURL)
+        let migratedEntries = try migratedProvider.getAllModels(ofType: AnimeEntry.self)
+        let migratedSeries = try #require(migratedEntries.first { $0.tmdbID == 209867 })
+        let migratedSeason = try #require(migratedEntries.first { $0.tmdbID == 307972 })
+        let migratedDetail = try #require(migratedSeries.detail)
+
+        #expect(migratedEntries.count == 2)
+        #expect(migratedSeries.nameTranslations["zh-CN"] == "葬送的芙莉莲")
+        #expect(migratedSeries.overviewTranslations["zh-CN"] == "系列简介")
+        #expect(migratedSeries.watchStatus == .watched)
+        #expect(migratedSeries.dateStarted == referenceDate(year: 2026, month: 5, day: 22))
+        #expect(migratedSeries.dateFinished == referenceDate(year: 2026, month: 5, day: 23))
+        #expect(!migratedSeries.isDateTrackingEnabled)
+        #expect(migratedSeries.score == 5)
+        #expect(migratedSeries.favorite)
+        #expect(migratedSeries.notes == "Preserve notes")
+        #expect(migratedSeries.usingCustomPoster)
+        #expect(migratedSeries.episodeProgressSummary(forSeason: 1).watchedThroughEpisode == 12)
+        #expect(migratedSeries.episodeProgress(forSeason: 1)?.updatedAt == referenceDate(year: 2026, month: 5, day: 24))
+        #expect(migratedSeason.parentSeriesEntry?.id == migratedSeries.id)
+        #expect(migratedSeason.episodeProgressSummary(forSeason: 1).watchedThroughEpisode == 6)
+
+        #expect(migratedDetail.language == "ja-JP")
+        #expect(migratedDetail.orderedCharacters.map(\.id) == [101])
+        #expect(migratedDetail.orderedStaff.map(\.id) == [201])
+        #expect(migratedDetail.orderedStaff.first?.orderedJobs.map(\.creditID) == ["director"])
+        #expect(migratedDetail.seasons.map(\.episodeCount) == [28])
+        #expect(migratedDetail.orderedEpisodes.map(\.id) == [401])
+    }
+
     @Test @MainActor func scoreMigrationFromV271DefaultsToNil() throws {
         let storeURL = temporaryStoreURL(name: "score-migration")
 
@@ -533,4 +713,39 @@ fileprivate func temporaryStoreURL(name: String) -> URL {
         withIntermediateDirectories: true
     )
     return directory.appendingPathComponent("store.sqlite")
+}
+
+fileprivate func currentSchemaSourceText() throws -> String {
+    try currentSchemaSourceFileURLs()
+        .map { try String(contentsOf: $0, encoding: .utf8) }
+        .joined(separator: "\n")
+}
+
+fileprivate func currentSchemaModelFileURLs() throws -> [URL] {
+    let schemaDirectory = try dataProviderPackageDirectory()
+        .appendingPathComponent("Sources/DataProvider/Models/V2", isDirectory: true)
+    return [
+        "AnimeEntryV2_7_9.swift",
+        "AnimeEntryDetailV2_7_9.swift",
+        "AnimeEntryDetailChildrenV2_7_9.swift"
+    ].map { schemaDirectory.appendingPathComponent($0) }
+}
+
+fileprivate func currentSchemaSourceFileURLs() throws -> [URL] {
+    let schemaDirectory = try dataProviderPackageDirectory()
+        .appendingPathComponent("Sources/DataProvider/Models/V2", isDirectory: true)
+    return try currentSchemaModelFileURLs()
+        + [
+            "SchemaV2_7_9.swift",
+            "AnimeEntry+DetailV2_7_9.swift",
+            "AnimeEntryDetailBridgeV2_7_9.swift",
+            "AnimeEntryDetailOrderingV2_7_9.swift"
+        ].map { schemaDirectory.appendingPathComponent($0) }
+}
+
+fileprivate func dataProviderPackageDirectory() throws -> URL {
+    URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
 }

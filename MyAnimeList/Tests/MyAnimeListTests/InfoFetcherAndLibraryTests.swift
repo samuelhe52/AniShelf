@@ -399,6 +399,68 @@ struct InfoFetcherAndLibraryTests {
         #expect(try dataProvider.getAllModels(ofType: AnimeEntry.self).map(\.tmdbID) == [400_004])
     }
 
+    @Test @MainActor func testRestoreBackupReloadsCurrentSchemaLibraryAndAllowsSave() throws {
+        let fileManager = FileManager.default
+        let sourceDirectory = fileManager.temporaryDirectory
+            .appendingPathComponent("AniShelfTests-restore-source-\(UUID().uuidString)", isDirectory: true)
+        let targetDirectory = fileManager.temporaryDirectory
+            .appendingPathComponent("AniShelfTests-restore-target-\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(at: sourceDirectory, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: targetDirectory, withIntermediateDirectories: true)
+        defer {
+            try? fileManager.removeItem(at: sourceDirectory)
+            try? fileManager.removeItem(at: targetDirectory)
+        }
+
+        let sourceProvider = DataProvider(url: sourceDirectory.appendingPathComponent("library.store"))
+        let restoredEntry = AnimeEntry(
+            name: "Restored Cloud Library",
+            type: .series,
+            tmdbID: 500_001,
+            detail: AnimeEntryDetail(
+                language: "en-US",
+                title: "Restored Cloud Library",
+                episodeCount: 12
+            ),
+            dateSaved: referenceDate(year: 2026, month: 5, day: 27),
+            dateStarted: referenceDate(year: 2026, month: 5, day: 28),
+            score: 4,
+            usingCustomPoster: true
+        )
+        restoredEntry.favorite = true
+        restoredEntry.notes = "Restored notes"
+        restoredEntry.setEpisodeProgress(
+            seasonNumber: 1,
+            watchedThroughEpisode: 7,
+            now: referenceDate(year: 2026, month: 5, day: 29)
+        )
+        try sourceProvider.dataHandler.newEntry(restoredEntry)
+        let backupURL = try BackupManager(dataProvider: sourceProvider).createBackup()
+        defer { try? fileManager.removeItem(at: backupURL) }
+
+        let targetProvider = DataProvider(url: targetDirectory.appendingPathComponent("library.store"))
+        try targetProvider.dataHandler.newEntry(
+            AnimeEntry(name: "Replace Me", type: .movie, tmdbID: 500_002)
+        )
+
+        try BackupManager(dataProvider: targetProvider).restoreBackup(from: backupURL)
+        let entries = try targetProvider.getAllModels(ofType: AnimeEntry.self)
+        let entry = try #require(entries.first)
+
+        #expect(entries.count == 1)
+        #expect(entry.tmdbID == 500_001)
+        #expect(entry.notes == "Restored notes")
+        #expect(entry.favorite)
+        #expect(entry.score == 4)
+        #expect(entry.usingCustomPoster)
+        #expect(entry.episodeProgressSummary(forSeason: 1).watchedThroughEpisode == 7)
+
+        entry.notes = "Saved after restore"
+        try targetProvider.dataHandler.modelContext.save()
+        targetProvider.reloadDataStore()
+        #expect(try targetProvider.getAllModels(ofType: AnimeEntry.self).first?.notes == "Saved after restore")
+    }
+
     @Test @MainActor func testParentChildRelationshipInference() async throws {
         let dataProvider = dataProviderForPreview
         let parent = AnimeEntry.frieren

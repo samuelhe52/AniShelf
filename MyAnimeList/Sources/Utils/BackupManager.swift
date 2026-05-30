@@ -112,7 +112,7 @@ class BackupManager {
         }
 
         // 2. Save SwiftData schema version
-        let schemaVersion = DataProvider.default.sharedModelContainer.schema.version
+        let schemaVersion = dataProvider.sharedModelContainer.schema.version
         let versionFileURL = backupDirectoryURL.appendingPathComponent(schemaVersionFileName)
         do {
             let schemaVersionJson = try JSONEncoder().encode(schemaVersion)
@@ -285,7 +285,7 @@ class BackupManager {
                 let versionData = try Data(contentsOf: versionFileURL)
                 let backupSchemaVersion = try JSONDecoder().decode(
                     Schema.Version.self, from: versionData)
-                let currentSchemaVersion = DataProvider.default.sharedModelContainer.schema.version
+                let currentSchemaVersion = dataProvider.sharedModelContainer.schema.version
                 guard backupSchemaVersion <= currentSchemaVersion else {
                     throw BackupError.schemaVersionIncompatible(
                         highest: currentSchemaVersion, found: backupSchemaVersion)

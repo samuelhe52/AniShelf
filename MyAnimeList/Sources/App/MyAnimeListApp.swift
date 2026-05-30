@@ -15,6 +15,7 @@ struct MyAnimeListApp: App {
     @State var keyStorage: TMDbAPIKeyStorage = .init()
     @State var whatsNew: WhatsNewController = .init()
     @State var supportStore: SupportStore = .init()
+    @State var cloudKitSyncMonitor: CloudKitSyncMonitor = .init()
     @AppStorage(.preferredAnimeInfoLanguage) var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
@@ -37,6 +38,7 @@ struct MyAnimeListApp: App {
             .environment(keyStorage)
             .environment(whatsNew)
             .environment(supportStore)
+            .environment(cloudKitSyncMonitor)
             .environment(\.dataHandler, DataProvider.default.dataHandler)
             .sheet(item: presentedWhatsNewEntry) { entry in
                 NavigationStack {
