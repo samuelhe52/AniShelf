@@ -360,6 +360,22 @@
         }
       }
     },
+    "Added a tipping option in Settings (tips are available only in the App Store version). Thanks for your support!" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定に投げ銭オプションを追加しました（投げ銭は App Store 版でのみ利用できます）。応援ありがとうございます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置页中，添加了打赏选项（需在 App Store 版本中才能打赏）。欢迎支持喵"
+          }
+        }
+      }
+    },
     "Added an option in settings to enable the rating feature, allowing the rating module to be shown or hidden on the details page." : {
       "localizations" : {
         "ja" : {
@@ -3533,6 +3549,38 @@
         }
       }
     },
+    "On the details page, long-press an episode to view that episode's staff." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詳細ページでエピソードを長押しすると、そのエピソードのスタッフ情報を表示できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "详情页中，长按某集可展示当前集的 staff 信息"
+          }
+        }
+      }
+    },
+    "On the details page, the Episodes section now shows watch progress." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詳細ページのエピソードセクションで、視聴進捗を表示できるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "详情页中，分集模块现在支持展示观看进度"
+          }
+        }
+      }
+    },
     "Open API Page" : {
       "localizations" : {
         "ja" : {
@@ -5329,6 +5377,22 @@
         }
       }
     },
+    "This version includes feature updates and visual improvements." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このバージョンには機能アップデートとビジュアル改善が含まれています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此版本包含功能更新和视觉改进。"
+          }
+        }
+      }
+    },
     "This version includes multiple bug fixes and improvements." : {
       "localizations" : {
         "ja" : {
@@ -5876,6 +5940,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更新用于元数据的TMDb密钥。"
+          }
+        }
+      }
+    },
+    "Updated the icon shown when loading fails." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "読み込みに失敗した際に表示されるアイコンを更新しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新了加载失败图标"
           }
         }
       }

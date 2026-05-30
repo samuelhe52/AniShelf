@@ -194,6 +194,26 @@ enum WhatsNewRegistry {
                     kind: .openURL(projectURL)
                 )
             ]
+        ),
+        "1.91": .init(
+            version: "1.91",
+            summary:
+                "This version includes feature updates and visual improvements.",
+            highlights: [
+                "On the details page, long-press an episode to view that episode's staff.",
+                "On the details page, the Episodes section now shows watch progress.",
+                "Added a tipping option in Settings (tips are available only in the App Store version). Thanks for your support!",
+                "Updated the icon shown when loading fails."
+            ],
+            primaryAction: nil,
+            secondaryActions: [
+                .init(
+                    id: "project-github",
+                    title: "AniShelf on GitHub",
+                    systemImage: "arrow.up.right.square",
+                    kind: .openURL(projectURL)
+                )
+            ]
         )
     ]
 
