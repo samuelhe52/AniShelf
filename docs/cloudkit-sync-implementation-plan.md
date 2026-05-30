@@ -15,11 +15,18 @@ For failure patterns from the earlier full-store mirroring attempt, see
   merge rules.
 - Rejected direction: a separate SwiftData snapshot/sync container created
   mainly to use builtin SwiftData+CloudKit mirroring.
-- In progress: Stage 1 local sync contract, merge semantics, and clock
-  ownership.
+- Stage 1 local sync contract, merge semantics, and clock ownership are
+  implemented.
 - Completed so far: `LibrarySync` target, deterministic sync identity,
-  snapshot model, merge tests, duplicate decoded progress normalization, stale
-  custom-poster cleanup.
+  snapshot model, persisted optional `libraryUpdatedAt` / `trackingUpdatedAt`
+  fields on `AnimeEntry`, lightweight schema migration, snapshot creation from
+  entry-owned clocks, nil-clock merge/apply semantics, duplicate decoded
+  progress normalization, stale custom-poster cleanup, tombstone/dateSaved
+  protection for migrated nil-clock entries, and user mutation routing for
+  clock stamping.
+- Next: Stage 2 CloudKit record mapping. Stage 3 will add the durable dirty
+  queue; until then the entry clocks are the local recency contract rather than
+  a persisted upload queue.
 
 ## Direction
 

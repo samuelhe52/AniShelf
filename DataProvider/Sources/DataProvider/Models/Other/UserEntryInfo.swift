@@ -243,16 +243,103 @@ extension UserEntryInfo: CustomStringConvertible {
 extension AnimeEntry {
     public static let validScoreRange = 1...5
 
+    public func markLibraryModified(at date: Date = .now) {
+        libraryUpdatedAt = date
+    }
+
+    public func markTrackingModified(at date: Date = .now) {
+        trackingUpdatedAt = date
+    }
+
+    public func markCreatedForLibrary(at date: Date = .now) {
+        libraryUpdatedAt = date
+    }
+
+    public func updateDisplayState(_ isOnDisplay: Bool, at date: Date = .now) {
+        onDisplay = isOnDisplay
+        markLibraryModified(at: date)
+    }
+
     public func setDateTrackingEnabled(_ isEnabled: Bool) {
         isDateTrackingEnabled = isEnabled
+    }
+
+    @discardableResult
+    public func updateDateTrackingEnabled(_ isEnabled: Bool, at date: Date = .now) -> Bool {
+        guard isDateTrackingEnabled != isEnabled else { return false }
+        setDateTrackingEnabled(isEnabled)
+        markTrackingModified(at: date)
+        return true
     }
 
     public func setWatchStatus(_ status: WatchStatus) {
         watchStatus = status
     }
 
+    @discardableResult
+    public func updateWatchStatus(_ status: WatchStatus, at date: Date = .now) -> Bool {
+        guard watchStatus != status else { return false }
+        setWatchStatus(status)
+        markTrackingModified(at: date)
+        return true
+    }
+
     public func setScore(_ score: Int?) {
         self.score = normalizedEntryScore(score)
+    }
+
+    @discardableResult
+    public func updateScore(_ score: Int?, at date: Date = .now) -> Bool {
+        let normalizedScore = normalizedEntryScore(score)
+        guard self.score != normalizedScore else { return false }
+        self.score = normalizedScore
+        markTrackingModified(at: date)
+        return true
+    }
+
+    @discardableResult
+    public func updateFavorite(_ isFavorite: Bool, at date: Date = .now) -> Bool {
+        guard favorite != isFavorite else { return false }
+        favorite = isFavorite
+        markTrackingModified(at: date)
+        return true
+    }
+
+    public func toggleFavorite(at date: Date = .now) {
+        updateFavorite(!favorite, at: date)
+    }
+
+    @discardableResult
+    public func updateNotes(_ notes: String, at date: Date = .now) -> Bool {
+        guard self.notes != notes else { return false }
+        self.notes = notes
+        markTrackingModified(at: date)
+        return true
+    }
+
+    @discardableResult
+    public func updateDateStarted(_ dateStarted: Date?, at date: Date = .now) -> Bool {
+        guard self.dateStarted != dateStarted else { return false }
+        self.dateStarted = dateStarted
+        markTrackingModified(at: date)
+        return true
+    }
+
+    @discardableResult
+    public func updateDateFinished(_ dateFinished: Date?, at date: Date = .now) -> Bool {
+        guard self.dateFinished != dateFinished else { return false }
+        self.dateFinished = dateFinished
+        markTrackingModified(at: date)
+        return true
+    }
+
+    @discardableResult
+    public func updateCustomPosterURL(_ posterURL: URL?, at date: Date = .now) -> Bool {
+        guard usingCustomPoster != true || self.posterURL != posterURL else { return false }
+        usingCustomPoster = true
+        self.posterURL = posterURL
+        markTrackingModified(at: date)
+        return true
     }
 
     public func updateUserInfo(from userInfo: UserEntryInfo) {
@@ -273,6 +360,11 @@ extension AnimeEntry {
                 now: progress.updatedAt
             )
         }
+    }
+
+    public func updateUserInfoFromUserAction(_ userInfo: UserEntryInfo, at date: Date = .now) {
+        updateUserInfo(from: userInfo)
+        markTrackingModified(at: date)
     }
 
     private func filteredEpisodeProgresses(from userInfo: UserEntryInfo) -> [UserEntryInfo.EpisodeProgressSnapshot] {

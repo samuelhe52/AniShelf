@@ -110,7 +110,7 @@ extension AnimeEntry {
         let parentSeriesInfo = try await fetcher.tvSeriesInfo(
             tmdbID: parentSeriesID, language: language)
         let parentSeriesEntry = AnimeEntry(fromInfo: parentSeriesInfo)
-        parentSeriesEntry.onDisplay = false
+        parentSeriesEntry.updateDisplayState(false)
         return parentSeriesEntry
     }
 

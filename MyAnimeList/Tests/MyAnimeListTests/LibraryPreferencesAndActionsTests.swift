@@ -144,6 +144,30 @@ struct LibraryPreferencesAndActionsTests {
         #expect(entry.watchStatus == .watching)
     }
 
+    @Test @MainActor func testApplyNewEntryDefaultsDoesNotStampTrackingClockForUntouchedTrackingState() {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let entry = AnimeEntry.template(id: 777)
+
+        store.defaultNewEntryWatchStatus = .planToWatch
+        store.applyNewEntryDefaults(to: entry)
+
+        #expect(entry.watchStatus == .planToWatch)
+        #expect(entry.libraryUpdatedAt != nil)
+        #expect(entry.trackingUpdatedAt == nil)
+    }
+
+    @Test @MainActor func testApplyNewEntryDefaultsStampsTrackingClockWhenDefaultStatusChanges() {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let entry = AnimeEntry.template(id: 778)
+
+        store.defaultNewEntryWatchStatus = .watching
+        store.applyNewEntryDefaults(to: entry)
+
+        #expect(entry.watchStatus == .watching)
+        #expect(entry.libraryUpdatedAt != nil)
+        #expect(entry.trackingUpdatedAt != nil)
+    }
+
     @Test @MainActor func testLibraryImageCacheCollectsRelatedDetailURLs() throws {
         let posterURL = try #require(URL(string: "https://example.com/poster.jpg"))
         let backdropURL = try #require(URL(string: "https://example.com/backdrop.jpg"))

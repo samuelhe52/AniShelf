@@ -22,13 +22,13 @@ enum LibraryBatchAction: Equatable {
     private func apply(to entry: AnimeEntry) {
         switch self {
         case .favorite(let isFavorite):
-            entry.favorite = isFavorite
+            entry.updateFavorite(isFavorite)
         case .dateTracking(let isEnabled):
-            entry.setDateTrackingEnabled(isEnabled)
+            entry.updateDateTrackingEnabled(isEnabled)
         case .watchStatus(let status):
-            entry.setWatchStatus(status)
+            entry.updateWatchStatus(status)
         case .score(let score):
-            entry.setScore(score)
+            entry.updateScore(score)
         }
     }
 }

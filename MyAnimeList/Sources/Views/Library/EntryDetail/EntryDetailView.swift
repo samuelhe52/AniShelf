@@ -6,6 +6,7 @@
 //
 
 import DataProvider
+import Foundation
 import SwiftData
 import SwiftUI
 
@@ -26,6 +27,7 @@ struct EntryDetailView: View {
     @State private var presentation = EntryDetailPresentationState()
     @State private var isEditingDetails: Bool
     @State private var originalUserInfo: UserEntryInfo
+    @State private var originalTrackingUpdatedAt: Date?
     @State private var conversion = EntryDetailConversionState()
     @State private var didAutoScrollToEditingSection = false
     @State private var isCharacterExpanded = true
@@ -46,6 +48,7 @@ struct EntryDetailView: View {
         self._model = State(initialValue: EntryDetailViewModel(repository: repository))
         self._isEditingDetails = State(initialValue: startInEditingMode)
         self._originalUserInfo = State(initialValue: entry.userInfo)
+        self._originalTrackingUpdatedAt = State(initialValue: entry.trackingUpdatedAt)
         self._isCharacterExpanded = State(
             initialValue: Self.defaultExpansionState(
                 forKey: .entryDetailCharactersExpandedByDefault,
@@ -108,10 +111,9 @@ struct EntryDetailView: View {
                         originalPosterLanguageCode: entry.originalLanguageCode
                             ?? entry.parentSeriesEntry?.originalLanguageCode
                     ) { url in
-                        if url != entry.posterURL {
-                            entry.usingCustomPoster = true
+                        if url != entry.posterURL || !entry.usingCustomPoster {
+                            entry.updateCustomPosterURL(url)
                         }
-                        entry.posterURL = url
                     }
                     .navigationTitle(EntryDetailL10n.changePoster)
                 }
@@ -583,7 +585,7 @@ struct EntryDetailView: View {
         guard entry.watchStatus != status else { return }
 
         withAnimation(.default) {
-            entry.setWatchStatus(status)
+            _ = entry.updateWatchStatus(status)
         }
         presentation.dateUpdateSuggestion = entry.dateUpdateSuggestion(forTargetStatus: status)
     }
@@ -620,6 +622,7 @@ struct EntryDetailView: View {
         do {
             try modelContext.save()
             originalUserInfo = entry.userInfo
+            originalTrackingUpdatedAt = entry.trackingUpdatedAt
         } catch {
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
@@ -627,6 +630,7 @@ struct EntryDetailView: View {
 
     private func discardUserEdits() {
         entry.updateUserInfo(from: originalUserInfo)
+        entry.trackingUpdatedAt = originalTrackingUpdatedAt
         do {
             try modelContext.save()
         } catch {

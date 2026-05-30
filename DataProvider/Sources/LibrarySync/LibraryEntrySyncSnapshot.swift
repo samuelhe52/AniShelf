@@ -362,10 +362,11 @@ extension AnimeEntry {
     }
 
     private func applySyncTombstone(deletedAt: Date) {
-        if let latestLocalClock = [dateSaved, libraryUpdatedAt, trackingUpdatedAt, episodeProgresses.map(\.updatedAt).max()]
-            .compactMap(\.self)
-            .max()
-        {
+        if let latestLocalClock = [
+            dateSaved, libraryUpdatedAt, trackingUpdatedAt, episodeProgresses.map(\.updatedAt).max()
+        ]
+        .compactMap(\.self)
+        .max() {
             guard deletedAt > latestLocalClock else { return }
         }
         onDisplay = false

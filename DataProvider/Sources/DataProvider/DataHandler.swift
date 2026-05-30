@@ -46,52 +46,49 @@ public final class DataHandler {
     /// - Parameter entry: The entry to update.
     public func markEntryAsPlanToWatch(_ entry: AnimeEntry) {
         logger.debug("Marking entry as unwatched: \(entry.tmdbID), name: \(entry.name)")
-        entry.setWatchStatus(.planToWatch)
+        entry.updateWatchStatus(.planToWatch)
     }
 
     /// Marks an anime entry as currently watching.
     /// - Parameter entry: The entry to update.
     public func markEntryAsWatching(_ entry: AnimeEntry) {
         logger.debug("Marking entry as watching: \(entry.tmdbID), name: \(entry.name)")
-        entry.setWatchStatus(.watching)
+        entry.updateWatchStatus(.watching)
     }
 
     /// Marks an anime entry as watched.
     /// - Parameter entry: The entry to update.
     public func markEntryAsWatched(_ entry: AnimeEntry) {
         logger.debug("Marking entry as watched: \(entry.tmdbID), name: \(entry.name)")
-        entry.setWatchStatus(.watched)
+        entry.updateWatchStatus(.watched)
     }
 
     /// Marks an anime entry as dropped and preserves any existing tracking dates.
     /// - Parameter entry: The entry to update.
     public func markEntryAsDropped(_ entry: AnimeEntry) {
         logger.debug("Marking entry as dropped: \(entry.tmdbID), name: \(entry.name)")
-        entry.setWatchStatus(.dropped)
+        entry.updateWatchStatus(.dropped)
     }
 
     /// Marks an anime entry as a favorite.
     /// - Parameter entry: The entry to update.
     public func favorite(entry: AnimeEntry) {
         logger.debug("Marking entry as favorite: \(entry.tmdbID), name: \(entry.name)")
-        entry.favorite = true
+        entry.updateFavorite(true)
     }
 
     /// Unmarks an anime entry as a favorite.
     /// - Parameter entry: The entry to update.
     public func unfavorite(entry: AnimeEntry) {
         logger.debug("Unmarking entry as favorite: \(entry.tmdbID), name: \(entry.name)")
-        entry.favorite = false
+        entry.updateFavorite(false)
     }
 
     /// Toggles the favorite status of an anime entry.
     /// - Parameter entry: The entry to update.
     public func toggleFavorite(entry: AnimeEntry) {
-        if entry.favorite {
-            unfavorite(entry: entry)
-        } else {
-            favorite(entry: entry)
-        }
+        logger.debug("Toggling favorite status for entry: \(entry.tmdbID), name: \(entry.name)")
+        entry.toggleFavorite()
     }
 
     /// Deletes a specific anime entry.

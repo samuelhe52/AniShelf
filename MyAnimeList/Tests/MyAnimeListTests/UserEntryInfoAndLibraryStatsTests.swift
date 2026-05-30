@@ -51,6 +51,20 @@ struct UserEntryInfoAndLibraryStatsTests {
         #expect(second.score == nil)
     }
 
+    @Test func testLibraryBatchActionsSkipTrackingClockForNoOpEntries() {
+        let first = AnimeEntry.template(id: 21)
+        let second = AnimeEntry.template(id: 22)
+        second.favorite = true
+        let timestamp = referenceDate(year: 2026, month: 5, day: 20)
+        second.trackingUpdatedAt = timestamp
+
+        LibraryBatchAction.favorite(false).apply(to: [first])
+        #expect(first.trackingUpdatedAt == nil)
+
+        LibraryBatchAction.favorite(true).apply(to: [second])
+        #expect(second.trackingUpdatedAt == timestamp)
+    }
+
     @Test func testEntryScoreRoundTripAndChangeDetection() throws {
         let entry = AnimeEntry.template(id: 101)
         let originalUserInfo = entry.userInfo

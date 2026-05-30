@@ -147,6 +147,26 @@ extension AnimeEntry {
         }
     }
 
+    @discardableResult
+    public func updateEpisodeProgress(
+        seasonNumber requestedSeasonNumber: Int,
+        watchedThroughEpisode requestedEpisode: Int,
+        at date: Date = .now
+    ) -> Bool {
+        guard let seasonNumber = progressWritableSeasonNumber(requestedSeasonNumber) else { return false }
+        let episode = clampedEpisodeProgress(requestedEpisode, seasonNumber: seasonNumber)
+        let currentEpisode = episodeProgress(forSeason: seasonNumber)?.watchedThroughEpisode ?? 0
+        guard currentEpisode != episode else { return false }
+
+        setEpisodeProgress(
+            seasonNumber: seasonNumber,
+            watchedThroughEpisode: episode,
+            now: date
+        )
+        markTrackingModified(at: date)
+        return true
+    }
+
     public func incrementEpisodeProgress(seasonNumber: Int, by amount: Int = 1, now: Date = .now) {
         let current = episodeProgress(forSeason: seasonNumber)?.watchedThroughEpisode ?? 0
         setEpisodeProgress(

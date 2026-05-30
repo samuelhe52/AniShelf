@@ -103,7 +103,7 @@ struct EntryDetailTrackingSection: View {
         Group {
             if scoringEnabled {
                 VStack(alignment: .leading, spacing: 16) {
-                    EntryScoreCard(score: entry.score) { entry.setScore($0) }
+                    EntryScoreCard(score: entry.score) { entry.updateScore($0) }
                     Divider()
 
                     PopupNestedDisclosureSection(
@@ -181,7 +181,7 @@ fileprivate struct EntryDetailTrackingEditor: View {
 
                     Button {
                         withAnimation(.default) {
-                            entry.setDateTrackingEnabled(!entry.isDateTrackingEnabled)
+                            _ = entry.updateDateTrackingEnabled(!entry.isDateTrackingEnabled)
                         }
                     } label: {
                         Text(dateTrackingButtonLabel)
@@ -198,8 +198,8 @@ fileprivate struct EntryDetailTrackingEditor: View {
 
                 if entry.isDateTrackingEnabled {
                     AnimeEntryDatePickers(
-                        dateStarted: $entry.dateStarted,
-                        dateFinished: $entry.dateFinished,
+                        dateStarted: $entry.dateStarted.onSet { entry.markTrackingModified() },
+                        dateFinished: $entry.dateFinished.onSet { entry.markTrackingModified() },
                         isLocked: isDateTrackingLocked
                     )
                 }
@@ -221,7 +221,7 @@ fileprivate struct EntryDetailTrackingEditor: View {
                 PlaceholderTextEditor(
                     text: Binding(
                         get: { entry.notes },
-                        set: { entry.notes = $0 }
+                        set: { entry.updateNotes($0) }
                     ),
                     placeholder: EntryDetailL10n.writeSomeThoughts
                 )
@@ -552,7 +552,7 @@ fileprivate struct EntryEpisodeProgressControl: View {
         }
 
         withAnimation(progressAnimation) {
-            entry.setEpisodeProgress(
+            entry.updateEpisodeProgress(
                 seasonNumber: seasonNumber,
                 watchedThroughEpisode: clampedEpisode
             )

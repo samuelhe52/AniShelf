@@ -19,7 +19,7 @@ extension LibraryStore {
                 return existingEntry
             }
 
-            existingEntry.onDisplay = true
+            existingEntry.updateDisplayState(true)
             try repository.save()
             libraryStoreLogger.warning(
                 "Entry with id \(id) already exists in the store. Setting `onDisplay` to `true` and returning..."
@@ -76,7 +76,7 @@ extension LibraryStore {
         if entry.userInfo.isEmpty {
             applyNewEntryDefaults(to: entry)
         }
-        entry.onDisplay = true
+        entry.updateDisplayState(true)
         try repository.save()
         libraryStoreLogger.info(
             "Hydrated hidden entry \(entry.tmdbID, privacy: .public) and set `onDisplay` to `true`."

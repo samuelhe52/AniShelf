@@ -21,7 +21,7 @@ final class LibraryEntryConverter {
         let parentEntry: AnimeEntry
         if let existingParent = entry.parentSeriesEntry {
             parentEntry = existingParent
-            parentEntry.onDisplay = true
+            parentEntry.updateDisplayState(true)
         } else {
             let parentLatestInfo = try await fetcher.latestInfo(
                 entryType: .series,
@@ -30,13 +30,13 @@ final class LibraryEntryConverter {
             )
             parentEntry = AnimeEntry(fromInfo: parentLatestInfo.0)
             parentEntry.replaceDetail(from: parentLatestInfo.1)
-            parentEntry.onDisplay = true
+            parentEntry.updateDisplayState(true)
             try repository.newEntry(parentEntry)
         }
 
-        parentEntry.updateUserInfo(from: userInfo)
+        parentEntry.updateUserInfoFromUserAction(userInfo)
         if userInfo.usingCustomPoster {
-            parentEntry.posterURL = originalPosterURL
+            parentEntry.updateCustomPosterURL(originalPosterURL)
         }
 
         try repository.deleteEntry(entry)
@@ -81,14 +81,15 @@ final class LibraryEntryConverter {
 
         let parentEntry = AnimeEntry(fromInfo: resolvedParentLatestInfo.0)
         parentEntry.replaceDetail(from: resolvedParentLatestInfo.1)
-        parentEntry.onDisplay = false
+        parentEntry.updateDisplayState(false)
 
         let seasonEntry = AnimeEntry(fromInfo: resolvedSeasonInfo)
         seasonEntry.replaceDetail(from: resolvedSeasonLatestInfo.1)
         seasonEntry.parentSeriesEntry = parentEntry
-        seasonEntry.updateUserInfo(from: userInfo)
+        seasonEntry.updateDisplayState(true)
+        seasonEntry.updateUserInfoFromUserAction(userInfo)
         if userInfo.usingCustomPoster {
-            seasonEntry.posterURL = originalPosterURL
+            seasonEntry.updateCustomPosterURL(originalPosterURL)
         }
 
         try repository.newEntry(parentEntry)

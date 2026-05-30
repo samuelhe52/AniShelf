@@ -166,7 +166,9 @@ class LibraryStore {
     }
 
     func applyNewEntryDefaults(to entry: AnimeEntry) {
-        entry.setWatchStatus(defaultNewEntryWatchStatus)
+        let now = Date.now
+        entry.updateWatchStatus(defaultNewEntryWatchStatus, at: now)
+        entry.markCreatedForLibrary(at: now)
     }
 
     func applyDefaultFilters() {

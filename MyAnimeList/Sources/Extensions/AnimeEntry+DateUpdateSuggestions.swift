@@ -41,5 +41,6 @@ extension AnimeEntry {
         case .setFinishDateToNow:
             dateFinished = now
         }
+        markTrackingModified(at: now)
     }
 }

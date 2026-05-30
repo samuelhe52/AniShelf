@@ -77,7 +77,7 @@ final class LibraryEntryInteractionState {
     func pasteInfo(for entry: AnimeEntry) {
         if let pasted = UserEntryInfo.fromPasteboard() {
             let paste = {
-                entry.updateUserInfo(from: pasted)
+                entry.updateUserInfoFromUserAction(pasted)
                 ToastCenter.global.pasted = true
             }
             if entry.userInfo.isEmpty {
@@ -251,10 +251,9 @@ extension View {
                         originalPosterLanguageCode: entry.originalLanguageCode
                             ?? entry.parentSeriesEntry?.originalLanguageCode
                     ) { url in
-                        if url != entry.posterURL {
-                            entry.usingCustomPoster = true
+                        if url != entry.posterURL || !entry.usingCustomPoster {
+                            entry.updateCustomPosterURL(url)
                         }
-                        entry.posterURL = url
                     }
                     .navigationTitle("Pick a poster")
                 }
