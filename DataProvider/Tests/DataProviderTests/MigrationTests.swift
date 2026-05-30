@@ -517,6 +517,34 @@ struct MigrationTests {
         #expect(migratedSeason.seasonNumber == 1)
         #expect(migratedSeason.episodeCount == nil)
     }
+
+    @Test @MainActor func syncClockMigrationFromV278DefaultsToNil() throws {
+        let storeURL = temporaryStoreURL(name: "sync-clock-migration-v278")
+
+        let legacySchema = Schema(versionedSchema: SchemaV2_7_8.self)
+        let legacyConfiguration = ModelConfiguration(schema: legacySchema, url: storeURL)
+        let legacyContainer = try ModelContainer(for: legacySchema, configurations: legacyConfiguration)
+
+        let legacyEntry = SchemaV2_7_8.AnimeEntry(
+            name: "Legacy 2.7.8 Entry",
+            type: .series,
+            tmdbID: 910001,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 12)
+        )
+        legacyEntry.favorite = true
+        legacyEntry.notes = "Migrated"
+        legacyContainer.mainContext.insert(legacyEntry)
+        try legacyContainer.mainContext.save()
+
+        let migratedProvider = DataProvider(url: storeURL)
+        let migratedEntries = try migratedProvider.getAllModels(ofType: AnimeEntry.self)
+        let migratedEntry = try #require(migratedEntries.first(where: { $0.tmdbID == 910001 }))
+
+        #expect(migratedEntry.favorite)
+        #expect(migratedEntry.notes == "Migrated")
+        #expect(migratedEntry.libraryUpdatedAt == nil)
+        #expect(migratedEntry.trackingUpdatedAt == nil)
+    }
 }
 
 fileprivate func referenceDate(year: Int, month: Int, day: Int) -> Date {

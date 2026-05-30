@@ -18,6 +18,10 @@ test:
 	@[ -n "$(CONNECTED_IOS_DEVICE_ID)" ] || { echo "No connected iPhone found."; exit 1; }
 	@echo "Using device $(CONNECTED_IOS_DEVICE_ID)"
 	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "id=$(CONNECTED_IOS_DEVICE_ID)" test -only-testing:MyAnimeListTests
+	$(MAKE) test-dataprovider
+
+.PHONY: test-dataprovider
+test-dataprovider:
 	swift test --package-path DataProvider
 
 .PHONY: clean
