@@ -47,6 +47,9 @@ final class LibraryProfileSettingsActions {
 
         let backupManager = BackupManager(dataProvider: store.dataProvider)
         try backupManager.restoreBackup(from: url)
+        // TODO: Decide whether backup restore should also reconcile remote CloudKit state.
+        // For now, only clear the local dirty queue so stale tombstones do not survive restore.
+        try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([])
         store.reloadPersistedPreferences()
         store.rebuildSyncChangeTracking()
         try store.refreshLibrary()
