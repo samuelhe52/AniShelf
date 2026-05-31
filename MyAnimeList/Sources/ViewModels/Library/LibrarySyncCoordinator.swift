@@ -28,6 +28,7 @@ final class LibrarySyncCoordinator {
 
     private var isSyncing = false
     private var syncRequestedWhileRunning = false
+    private var syncWaiters: [CheckedContinuation<Bool, Never>] = []
 
     init(
         store: LibraryStore,
@@ -76,23 +77,34 @@ final class LibrarySyncCoordinator {
         }
     }
 
-    func sync(trigger: Trigger) async {
+    @discardableResult
+    func sync(trigger: Trigger) async -> Bool {
         if isSyncing {
             syncRequestedWhileRunning = true
-            return
+            return await withCheckedContinuation { continuation in
+                syncWaiters.append(continuation)
+            }
         }
 
         isSyncing = true
-        defer { isSyncing = false }
+        var succeeded = true
 
         repeat {
             syncRequestedWhileRunning = false
-            await runSync(trigger: trigger)
+            succeeded = await runSync(trigger: trigger) && succeeded
         } while syncRequestedWhileRunning
+
+        isSyncing = false
+        let waiters = syncWaiters
+        syncWaiters.removeAll()
+        for waiter in waiters {
+            waiter.resume(returning: succeeded)
+        }
+        return succeeded
     }
 
-    private func runSync(trigger: Trigger) async {
-        guard let store else { return }
+    private func runSync(trigger: Trigger) async -> Bool {
+        guard let store else { return false }
 
         do {
             try await importer.prepareRemoteSync()
@@ -100,7 +112,7 @@ final class LibrarySyncCoordinator {
                 libraryStoreLogger.warning(
                     "Skipping library sync \(trigger.rawValue, privacy: .public): missing CloudKit namespace"
                 )
-                return
+                return false
             }
 
             let localSnapshots = try localSnapshotsByIdentity(for: store)
@@ -121,10 +133,12 @@ final class LibrarySyncCoordinator {
             for identity in exportResult.exportedIdentities {
                 try store.syncChangeRecorder.dirtyQueueStore.removeEntry(for: identity)
             }
+            return true
         } catch {
             libraryStoreLogger.error(
                 "Library sync \(trigger.rawValue, privacy: .public) degraded: \(error.localizedDescription)"
             )
+            return false
         }
     }
 

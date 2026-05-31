@@ -163,10 +163,15 @@ class LibraryStore {
     }
 
     func syncLibrary(trigger: LibrarySyncCoordinator.Trigger) {
-        guard let syncCoordinator else { return }
         Task {
-            await syncCoordinator.sync(trigger: trigger)
+            await performLibrarySync(trigger: trigger)
         }
+    }
+
+    @discardableResult
+    func performLibrarySync(trigger: LibrarySyncCoordinator.Trigger) async -> Bool {
+        guard let syncCoordinator else { return false }
+        return await syncCoordinator.sync(trigger: trigger)
     }
 
     func setupTMDbAPIConfigurationChangeMonitor() {

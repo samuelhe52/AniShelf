@@ -8,14 +8,19 @@
 import UIKit
 
 final class LibrarySyncNotificationBridge: NSObject, UIApplicationDelegate {
-    var onSyncRequested: (@MainActor () -> Void)?
+    var onSyncRequested: (@MainActor () async -> UIBackgroundFetchResult)?
 
     func application(
         _ application: UIApplication,
         didReceiveRemoteNotification userInfo: [AnyHashable: Any],
         fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
     ) {
-        onSyncRequested?()
-        completionHandler(.newData)
+        Task { @MainActor in
+            guard let onSyncRequested else {
+                completionHandler(.noData)
+                return
+            }
+            completionHandler(await onSyncRequested())
+        }
     }
 }

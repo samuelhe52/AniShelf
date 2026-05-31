@@ -8,6 +8,7 @@
 import DataProvider
 import SwiftData
 import SwiftUI
+import UIKit
 
 @main
 struct MyAnimeListApp: App {
@@ -45,9 +46,9 @@ struct MyAnimeListApp: App {
                     guard let key = keyStorage.key,
                           !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     else {
-                        return
+                        return .noData
                     }
-                    libraryStore.syncLibrary(trigger: .cloudNotification)
+                    return await libraryStore.performLibrarySync(trigger: .cloudNotification) ? .newData : .failed
                 }
                 requestSync(trigger: .appLaunch)
             }
