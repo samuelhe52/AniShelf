@@ -8,6 +8,12 @@
 import CloudKit
 import DataProvider
 import Foundation
+import os
+
+private let cloudLibrarySyncLogger = Logger(
+    subsystem: "com.samuelhe.MyAnimeList",
+    category: "LibrarySync.CloudKit"
+)
 
 public struct CloudLibrarySyncClient: @unchecked Sendable {
     public static let defaultContainerIdentifier = "iCloud.com.samuelhe.MyAnimeList"
@@ -87,6 +93,15 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
     }
 
     public func snapshot(from record: CKRecord) throws -> LibraryEntrySyncSnapshot {
+        do {
+            return try decodedSnapshot(from: record)
+        } catch let error as CloudLibrarySyncDecodeError {
+            Self.logDecodeFailure(error, record: record)
+            throw error
+        }
+    }
+
+    private func decodedSnapshot(from record: CKRecord) throws -> LibraryEntrySyncSnapshot {
         guard record.recordType == Self.recordType else {
             throw CloudLibrarySyncDecodeError.wrongRecordType(actual: record.recordType)
         }
@@ -160,6 +175,39 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
             trackingUpdatedAt: trackingUpdatedAt,
             deletedAt: deletedAt
         )
+    }
+
+    private static func logDecodeFailure(_ error: CloudLibrarySyncDecodeError, record: CKRecord) {
+        switch error {
+        case .wrongRecordType(let actual):
+            cloudLibrarySyncLogger.error(
+                "operation=decodeSnapshot result=failure reason=wrongRecordType expectedRecordType=\(Self.recordType, privacy: .public) actualRecordType=\(actual, privacy: .public)"
+            )
+        case .unsupportedSchemaVersion(let schemaVersion):
+            cloudLibrarySyncLogger.error(
+                "operation=decodeSnapshot result=failure recordType=\(record.recordType, privacy: .public) field=\(Field.schemaVersion, privacy: .public) reason=unsupportedSchemaVersion schemaVersion=\(schemaVersion, privacy: .public)"
+            )
+        case .missingRequiredField(let field):
+            cloudLibrarySyncLogger.error(
+                "operation=decodeSnapshot result=failure recordType=\(record.recordType, privacy: .public) field=\(field, privacy: .public) reason=missingRequiredField"
+            )
+        case .invalidScalarValue(let field):
+            cloudLibrarySyncLogger.error(
+                "operation=decodeSnapshot result=failure recordType=\(record.recordType, privacy: .public) field=\(field, privacy: .public) reason=invalidScalarValue"
+            )
+        case .invalidEnumValue(let field):
+            cloudLibrarySyncLogger.error(
+                "operation=decodeSnapshot result=failure recordType=\(record.recordType, privacy: .public) field=\(field, privacy: .public) reason=invalidEnumValue"
+            )
+        case .invalidIdentityCombination(let recordName):
+            cloudLibrarySyncLogger.error(
+                "operation=decodeSnapshot result=failure recordType=\(record.recordType, privacy: .public) field=identity reason=invalidIdentityCombination recordName=\(recordName, privacy: .private)"
+            )
+        case .corruptEpisodeProgressPayload:
+            cloudLibrarySyncLogger.error(
+                "operation=decodeSnapshot result=failure recordType=\(record.recordType, privacy: .public) field=\(Field.episodeProgresses, privacy: .public) reason=corruptEpisodeProgressPayload"
+            )
+        }
     }
 }
 

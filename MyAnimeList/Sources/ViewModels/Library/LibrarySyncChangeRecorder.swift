@@ -10,6 +10,12 @@ import DataProvider
 import Foundation
 import LibrarySync
 import SwiftData
+import os
+
+private let syncRecorderLogger = Logger(
+    subsystem: .bundleIdentifier,
+    category: "LibrarySync.Recorder"
+)
 
 @MainActor
 final class LibrarySyncChangeRecorder {
@@ -67,7 +73,11 @@ final class LibrarySyncChangeRecorder {
     }
 
     func rebuildBaseline() {
-        lastSeenClocksByIdentifier = Self.makeBaseline(from: dataProvider)
+        let baseline = Self.makeBaseline(from: dataProvider)
+        lastSeenClocksByIdentifier = baseline
+        syncRecorderLogger.debug(
+            "operation=rebuildBaseline count=\(baseline.count, privacy: .public)"
+        )
     }
 
     func withSuppressedRecording<T>(_ operation: () throws -> T) rethrows -> T {
@@ -89,7 +99,18 @@ final class LibrarySyncChangeRecorder {
         let pendingDelete = LibraryEntrySyncPendingDelete(
             tombstone: LibraryEntrySyncTombstone(entry: entry, deletedAt: deletedAt)
         )
-        let previousEntry = try dirtyQueueStore.setPendingDelete(pendingDelete)
+        let previousEntry: LibraryEntrySyncDirtyQueueEntry?
+        do {
+            previousEntry = try dirtyQueueStore.setPendingDelete(pendingDelete)
+        } catch {
+            syncRecorderLogger.error(
+                "operation=recordDeletion result=queueWriteFailed identity=\(pendingDelete.identity.rawID, privacy: .private) errorType=\(String(describing: type(of: error)), privacy: .public) error=\(error.localizedDescription, privacy: .private)"
+            )
+            throw error
+        }
+        syncRecorderLogger.debug(
+            "operation=recordDeletion result=queued identity=\(pendingDelete.identity.rawID, privacy: .private) deletedAt=\(pendingDelete.tombstone.deletedAt, privacy: .public) previousEntryPresent=\(previousEntry != nil, privacy: .public)"
+        )
         return .init(identity: pendingDelete.identity, previousEntry: previousEntry)
     }
 
@@ -120,12 +141,32 @@ final class LibrarySyncChangeRecorder {
             return .init(identity: pendingDelete.identity, previousEntry: previousEntry)
         }
 
-        try dirtyQueueStore.replaceEntries(Array(entriesByID.values))
+        do {
+            try dirtyQueueStore.replaceEntries(Array(entriesByID.values))
+        } catch {
+            syncRecorderLogger.error(
+                "operation=recordDeletions result=queueWriteFailed count=\(tokens.count, privacy: .public) errorType=\(String(describing: type(of: error)), privacy: .public) error=\(error.localizedDescription, privacy: .private)"
+            )
+            throw error
+        }
+        syncRecorderLogger.debug(
+            "operation=recordDeletions result=queued count=\(tokens.count, privacy: .public)"
+        )
         return tokens
     }
 
     func restoreDeleteRecord(_ token: PendingDeleteRestoreToken) throws {
-        try dirtyQueueStore.replaceEntry(token.previousEntry, for: token.identity)
+        do {
+            try dirtyQueueStore.replaceEntry(token.previousEntry, for: token.identity)
+        } catch {
+            syncRecorderLogger.error(
+                "operation=restoreDeleteRecord result=queueWriteFailed identity=\(token.identity.rawID, privacy: .private) errorType=\(String(describing: type(of: error)), privacy: .public) error=\(error.localizedDescription, privacy: .private)"
+            )
+            throw error
+        }
+        syncRecorderLogger.debug(
+            "operation=restoreDeleteRecord result=restored identity=\(token.identity.rawID, privacy: .private) previousEntryPresent=\(token.previousEntry != nil, privacy: .public)"
+        )
     }
 
     func restoreDeleteRecords(_ tokens: [PendingDeleteRestoreToken]) throws {
@@ -144,22 +185,42 @@ final class LibrarySyncChangeRecorder {
             }
         }
 
-        try dirtyQueueStore.replaceEntries(Array(entriesByID.values))
+        do {
+            try dirtyQueueStore.replaceEntries(Array(entriesByID.values))
+        } catch {
+            syncRecorderLogger.error(
+                "operation=restoreDeleteRecords result=queueWriteFailed count=\(tokens.count, privacy: .public) errorType=\(String(describing: type(of: error)), privacy: .public) error=\(error.localizedDescription, privacy: .private)"
+            )
+            throw error
+        }
+        syncRecorderLogger.debug(
+            "operation=restoreDeleteRecords result=restored count=\(tokens.count, privacy: .public)"
+        )
     }
 
     func processSaveNotification(_ notification: Notification) {
-        guard suppressionDepth == 0 else { return }
-
+        let insertedIdentifiers = persistentIdentifiers(for: .insertedIdentifiers, in: notification)
+        let updatedIdentifiers = persistentIdentifiers(for: .updatedIdentifiers, in: notification)
         let deletedIdentifiers = persistentIdentifiers(
             for: .deletedIdentifiers,
             in: notification
         )
+        guard suppressionDepth == 0 else {
+            syncRecorderLogger.debug(
+                "operation=processSaveNotification result=suppressed insertedCount=\(insertedIdentifiers.count, privacy: .public) updatedCount=\(updatedIdentifiers.count, privacy: .public) deletedCount=\(deletedIdentifiers.count, privacy: .public) suppressionDepth=\(self.suppressionDepth, privacy: .public)"
+            )
+            return
+        }
+
+        syncRecorderLogger.debug(
+            "operation=processSaveNotification result=received insertedCount=\(insertedIdentifiers.count, privacy: .public) updatedCount=\(updatedIdentifiers.count, privacy: .public) deletedCount=\(deletedIdentifiers.count, privacy: .public)"
+        )
+
         for identifier in deletedIdentifiers {
             lastSeenClocksByIdentifier.removeValue(forKey: identifier)
         }
 
-        let observedIdentifiers = persistentIdentifiers(for: .insertedIdentifiers, in: notification)
-            .union(persistentIdentifiers(for: .updatedIdentifiers, in: notification))
+        let observedIdentifiers = insertedIdentifiers.union(updatedIdentifiers)
 
         for identifier in observedIdentifiers {
             guard let entry = dataProvider.dataHandler[identifier, as: AnimeEntry.self] else {
@@ -183,6 +244,9 @@ final class LibrarySyncChangeRecorder {
                 try dirtyQueueStore.setPendingUpsert(
                     .init(identity: entry.syncIdentity, dirtyAt: dirtyAt)
                 )
+                syncRecorderLogger.debug(
+                    "operation=processSaveNotification result=queuedUpsert identity=\(entry.syncIdentity.rawID, privacy: .private) dirtyAt=\(dirtyAt, privacy: .public) libraryClock=\(String(describing: currentBaseline.libraryUpdatedAt), privacy: .public) trackingClock=\(String(describing: currentBaseline.trackingUpdatedAt), privacy: .public)"
+                )
                 lastSeenClocksByIdentifier[identifier] = currentBaseline
             } catch {
                 if let previousBaseline {
@@ -190,8 +254,8 @@ final class LibrarySyncChangeRecorder {
                 } else {
                     lastSeenClocksByIdentifier.removeValue(forKey: identifier)
                 }
-                libraryStoreLogger.error(
-                    "Failed to persist sync upsert for \(entry.tmdbID, privacy: .public): \(error.localizedDescription)"
+                syncRecorderLogger.error(
+                    "operation=processSaveNotification result=queueWriteFailed identity=\(entry.syncIdentity.rawID, privacy: .private) errorType=\(String(describing: type(of: error)), privacy: .public) error=\(error.localizedDescription, privacy: .private)"
                 )
             }
         }
