@@ -233,17 +233,18 @@ struct LibrarySyncCoordinatorTests {
         store.rebuildSyncChangeTracking()
 
         let client = CloudLibrarySyncClient()
-        var remoteSnapshot = makeSnapshot(
+        let remoteTombstone = LibraryEntrySyncTombstone(
             identity: entry.syncIdentity,
             tmdbID: entry.tmdbID,
-            notes: "Remote stale",
-            trackingUpdatedAt: referenceDate(year: 2026, month: 5, day: 2)
+            parentSeriesID: entry.type.parentSeriesID,
+            seasonNumber: entry.type.seasonNumber,
+            entryType: entry.type,
+            deletedAt: referenceDate(year: 2026, month: 5, day: 3)
         )
-        remoteSnapshot.deletedAt = referenceDate(year: 2026, month: 5, day: 3)
         let database = FakeCloudLibrarySyncDatabase(changes: [
             .init(
                 modifiedRecordsByID: [
-                    client.recordID(for: entry.syncIdentity): try client.record(from: remoteSnapshot)
+                    client.recordID(for: entry.syncIdentity): try client.record(from: remoteTombstone)
                 ],
                 deletedRecordIDs: [],
                 changeToken: makeToken(),
@@ -286,17 +287,18 @@ struct LibrarySyncCoordinatorTests {
         store.rebuildSyncChangeTracking()
 
         let client = CloudLibrarySyncClient()
-        var remoteSnapshot = makeSnapshot(
+        let remoteTombstone = LibraryEntrySyncTombstone(
             identity: entry.syncIdentity,
             tmdbID: entry.tmdbID,
-            notes: "Remote delete",
-            trackingUpdatedAt: referenceDate(year: 2026, month: 5, day: 10)
+            parentSeriesID: entry.type.parentSeriesID,
+            seasonNumber: entry.type.seasonNumber,
+            entryType: entry.type,
+            deletedAt: referenceDate(year: 2026, month: 5, day: 11)
         )
-        remoteSnapshot.deletedAt = referenceDate(year: 2026, month: 5, day: 11)
         let database = FakeCloudLibrarySyncDatabase(changes: [
             .init(
                 modifiedRecordsByID: [
-                    client.recordID(for: entry.syncIdentity): try client.record(from: remoteSnapshot)
+                    client.recordID(for: entry.syncIdentity): try client.record(from: remoteTombstone)
                 ],
                 deletedRecordIDs: [],
                 changeToken: makeToken(),

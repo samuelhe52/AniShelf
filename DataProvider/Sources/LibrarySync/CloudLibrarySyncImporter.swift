@@ -16,8 +16,8 @@ fileprivate let cloudLibrarySyncImportLogger = Logger(
 
 /// Remote change batch after decoding and local conflict resolution.
 public struct CloudLibrarySyncImportBatch {
-    public var snapshots: [LibraryEntrySyncSnapshot]
-    public var remoteSnapshots: [LibraryEntrySyncSnapshot]
+    public var changes: [LibraryEntrySyncRemoteChange]
+    public var remoteChanges: [LibraryEntrySyncRemoteChange]
     public var ignoredDeletedRecordIDs: [CKRecord.ID]
     public var changeToken: CKServerChangeToken
     public var namespace: CloudLibrarySyncChangeTokenStore.Namespace
@@ -26,10 +26,10 @@ public struct CloudLibrarySyncImportBatch {
     /// Creates an import batch ready for application to the local store.
     ///
     /// - Parameters:
-    ///   - snapshots: Remote snapshots after merging with local snapshots for
-    ///     the same identity.
-    ///   - remoteSnapshots: Decoded remote snapshots before local conflict
-    ///     merging. The coordinator uses this to reconcile dirty-queue entries.
+    ///   - changes: Remote changes after merging snapshots with local snapshots
+    ///     for the same identity.
+    ///   - remoteChanges: Decoded remote changes before local conflict merging.
+    ///     The coordinator uses this to reconcile dirty-queue entries.
     ///   - ignoredDeletedRecordIDs: Raw CloudKit record deletions. AniShelf
     ///     applies tombstone records instead of raw deletes, so these are kept
     ///     for logging and diagnostics.
@@ -38,15 +38,15 @@ public struct CloudLibrarySyncImportBatch {
     ///   - namespace: Container/account namespace for the token.
     ///   - zoneID: CloudKit zone that produced the token.
     public init(
-        snapshots: [LibraryEntrySyncSnapshot],
-        remoteSnapshots: [LibraryEntrySyncSnapshot],
+        changes: [LibraryEntrySyncRemoteChange],
+        remoteChanges: [LibraryEntrySyncRemoteChange],
         ignoredDeletedRecordIDs: [CKRecord.ID],
         changeToken: CKServerChangeToken,
         namespace: CloudLibrarySyncChangeTokenStore.Namespace,
         zoneID: CKRecordZone.ID
     ) {
-        self.snapshots = snapshots
-        self.remoteSnapshots = remoteSnapshots
+        self.changes = changes
+        self.remoteChanges = remoteChanges
         self.ignoredDeletedRecordIDs = ignoredDeletedRecordIDs
         self.changeToken = changeToken
         self.namespace = namespace
@@ -132,10 +132,10 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
 
     /// Fetches all CloudKit pages for the zone starting at a specific token.
     ///
-    /// Modified records are coalesced by sync identity before they are merged
-    /// with local snapshots. Raw CloudKit deletes are intentionally not applied
-    /// as library deletes because AniShelf's sync deletion semantics flow
-    /// through explicit tombstone records.
+    /// Modified records are coalesced by sync identity before snapshots are
+    /// merged with local snapshots. Raw CloudKit deletes are intentionally not
+    /// applied as library deletes because AniShelf's sync deletion semantics
+    /// flow through explicit tombstone records.
     private func fetchChanges(
         namespace: CloudLibrarySyncChangeTokenStore.Namespace,
         localSnapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot],
@@ -143,7 +143,7 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
     ) async throws -> CloudLibrarySyncImportBatch {
         var currentToken = startingToken
         var finalToken: CKServerChangeToken?
-        var remoteSnapshotsByID: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot] = [:]
+        var remoteChangesByID: [LibraryEntrySyncIdentity: LibraryEntrySyncRemoteChange] = [:]
         var ignoredDeletedRecordIDs: [CKRecord.ID] = []
         repeat {
             let batch = try await database.fetchRecordZoneChanges(
@@ -151,11 +151,11 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
                 since: currentToken
             )
             for record in batch.modifiedRecordsByID.values {
-                let snapshot = try client.snapshot(from: record)
-                if let existing = remoteSnapshotsByID[snapshot.identity] {
-                    remoteSnapshotsByID[snapshot.identity] = try existing.merged(with: snapshot)
+                let change = try client.remoteChange(from: record)
+                if let existing = remoteChangesByID[change.identity] {
+                    remoteChangesByID[change.identity] = try existing.merged(with: change)
                 } else {
-                    remoteSnapshotsByID[snapshot.identity] = snapshot
+                    remoteChangesByID[change.identity] = change
                 }
             }
             ignoredDeletedRecordIDs.append(contentsOf: batch.deletedRecordIDs)
@@ -167,12 +167,14 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
             }
         } while true
 
-        let remoteSnapshots = remoteSnapshotsByID.values.sorted { $0.identity.rawID < $1.identity.rawID }
-        let resolvedSnapshots = try remoteSnapshots.map { remoteSnapshot in
-            guard let localSnapshot = localSnapshotsByIdentity[remoteSnapshot.identity] else {
-                return remoteSnapshot
+        let remoteChanges = remoteChangesByID.values.sorted { $0.identity.rawID < $1.identity.rawID }
+        let resolvedChanges = try remoteChanges.map { remoteChange in
+            guard case .snapshot(let remoteSnapshot) = remoteChange,
+                let localSnapshot = localSnapshotsByIdentity[remoteSnapshot.identity]
+            else {
+                return remoteChange
             }
-            return try localSnapshot.merged(with: remoteSnapshot)
+            return .snapshot(try localSnapshot.merged(with: remoteSnapshot))
         }
 
         guard let finalToken else {
@@ -180,8 +182,8 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
         }
 
         return .init(
-            snapshots: resolvedSnapshots,
-            remoteSnapshots: remoteSnapshots,
+            changes: resolvedChanges,
+            remoteChanges: remoteChanges,
             ignoredDeletedRecordIDs: ignoredDeletedRecordIDs,
             changeToken: finalToken,
             namespace: namespace,

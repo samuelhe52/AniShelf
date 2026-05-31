@@ -335,16 +335,18 @@ struct LibraryEntrySyncTests {
         )
         local.libraryUpdatedAt = referenceDate(year: 2026, month: 5, day: 10)
 
-        var staleTombstone = LibraryEntrySyncSnapshot(entry: local)
-        staleTombstone.deletedAt = referenceDate(year: 2026, month: 5, day: 9)
-        try local.applySyncSnapshot(staleTombstone)
+        let staleTombstone = LibraryEntrySyncTombstone(
+            entry: local,
+            deletedAt: referenceDate(year: 2026, month: 5, day: 9)
+        )
+        try local.applySyncTombstone(staleTombstone)
         #expect(local.onDisplay)
 
-        var freshTombstone = LibraryEntrySyncSnapshot(entry: local)
-        freshTombstone.deletedAt = referenceDate(year: 2026, month: 5, day: 12)
-        freshTombstone.libraryUpdatedAt = referenceDate(year: 2026, month: 5, day: 12)
-        freshTombstone.trackingUpdatedAt = referenceDate(year: 2026, month: 5, day: 12)
-        try local.applySyncSnapshot(freshTombstone)
+        let freshTombstone = LibraryEntrySyncTombstone(
+            entry: local,
+            deletedAt: referenceDate(year: 2026, month: 5, day: 12)
+        )
+        try local.applySyncTombstone(freshTombstone)
         #expect(!local.onDisplay)
     }
 
@@ -356,14 +358,18 @@ struct LibraryEntrySyncTests {
             dateSaved: referenceDate(year: 2026, month: 5, day: 10)
         )
 
-        var staleTombstone = LibraryEntrySyncSnapshot(entry: local)
-        staleTombstone.deletedAt = referenceDate(year: 2026, month: 5, day: 9)
-        try local.applySyncSnapshot(staleTombstone)
+        let staleTombstone = LibraryEntrySyncTombstone(
+            entry: local,
+            deletedAt: referenceDate(year: 2026, month: 5, day: 9)
+        )
+        try local.applySyncTombstone(staleTombstone)
         #expect(local.onDisplay)
 
-        var freshTombstone = LibraryEntrySyncSnapshot(entry: local)
-        freshTombstone.deletedAt = referenceDate(year: 2026, month: 5, day: 11)
-        try local.applySyncSnapshot(freshTombstone)
+        let freshTombstone = LibraryEntrySyncTombstone(
+            entry: local,
+            deletedAt: referenceDate(year: 2026, month: 5, day: 11)
+        )
+        try local.applySyncTombstone(freshTombstone)
         #expect(!local.onDisplay)
     }
 

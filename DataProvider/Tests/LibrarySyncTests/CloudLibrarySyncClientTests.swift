@@ -59,8 +59,7 @@ struct CloudLibrarySyncClientTests {
                 )
             ],
             libraryUpdatedAt: referenceDate(year: 2026, month: 5, day: 10),
-            trackingUpdatedAt: referenceDate(year: 2026, month: 5, day: 11),
-            deletedAt: referenceDate(year: 2026, month: 5, day: 12)
+            trackingUpdatedAt: referenceDate(year: 2026, month: 5, day: 11)
         )
 
         let record = try client.record(from: snapshot)
@@ -69,6 +68,28 @@ struct CloudLibrarySyncClientTests {
         #expect(record.recordType == CloudLibrarySyncClient.recordType)
         #expect(record.recordID == client.recordID(for: snapshot.identity))
         #expect(decoded == snapshot)
+    }
+
+    @Test func leanTombstoneRoundTripsThroughRemoteChangeRecord() throws {
+        let entry = AnimeEntry(name: "Deleted", type: .series, tmdbID: 56)
+        let tombstone = LibraryEntrySyncTombstone(
+            entry: entry,
+            deletedAt: referenceDate(year: 2026, month: 5, day: 12)
+        )
+
+        let record = try client.record(from: tombstone)
+        let change = try client.remoteChange(from: record)
+
+        #expect(record.recordType == CloudLibrarySyncClient.recordType)
+        #expect(record.recordID == client.recordID(for: tombstone.identity))
+        #expect(record["deletedAt"] as? Date == tombstone.deletedAt)
+        #expect(!record.allKeys().contains("notes"))
+        #expect(!record.allKeys().contains("episodeProgresses"))
+        #expect(!record.allKeys().contains("watchStatus"))
+        #expect(record.changedKeys().contains("notes"))
+        #expect(record.changedKeys().contains("episodeProgresses"))
+        #expect(record.changedKeys().contains("watchStatus"))
+        #expect(change == .tombstone(tombstone))
     }
 
     @Test func unknownFutureSchemaVersionThrowsTypedError() throws {

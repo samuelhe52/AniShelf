@@ -107,7 +107,7 @@ including all-or-nothing handling for batch delete rollback.
 - prepares the custom CloudKit zone and silent subscription
 - resolves the current iCloud account namespace automatically
 - imports remote changes before exporting local dirty work
-- suppresses the local recorder while remote snapshots are applied
+- suppresses the local recorder while remote changes are applied
 - commits the server change token only after local apply succeeds
 - reconciles dirty queue entries after remote conflict resolution
 - exports only the CloudKit-accepted dirty entries and leaves partial failures
@@ -131,6 +131,17 @@ Add the user-facing sync surface only after the coordinator exists:
 - import/export/degraded status
 - last successful sync date
 - manual retry / reset actions if needed
+
+Initial rollout direction:
+
+- Keep the sync policy simple: sync is allowed only when the user has enabled
+  iCloud sync and a TMDb API key is available.
+- Default the user setting to off. Do not include in-memory store checks in the
+  product policy; keep test/store guards local to the implementation.
+- Add an explicit first-enable bootstrap helper. It should prepare CloudKit,
+  resolve the account namespace, seed dirty work from the current local library,
+  then run the normal import-before-export sync pass.
+- Do not hide first-enable bootstrapping inside launch or foreground sync.
 
 ### Stage 7. Backup And Restore Policy
 

@@ -43,7 +43,7 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
     /// - Parameters:
     ///   - entries: Coalesced dirty-queue entries to attempt to save.
     ///   - localSnapshotsByIdentity: Current local snapshots used to materialize
-    ///     upsert records. Delete entries use their tombstone snapshot directly.
+    ///     upsert records. Delete entries use lean tombstone records.
     /// - Returns: The subset of identities CloudKit reported as saved.
     /// - Throws: Encoding or CloudKit errors that prevent the export attempt.
     public func export(
@@ -88,8 +88,7 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
                 }
                 recordsByIdentity[pendingUpsert.identity] = try client.record(from: snapshot)
             case .delete(let pendingDelete):
-                let snapshot = pendingDelete.tombstone.syncSnapshot()
-                recordsByIdentity[pendingDelete.identity] = try client.record(from: snapshot)
+                recordsByIdentity[pendingDelete.identity] = try client.record(from: pendingDelete.tombstone)
             }
         }
 

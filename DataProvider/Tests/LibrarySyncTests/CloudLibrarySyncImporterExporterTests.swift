@@ -61,8 +61,12 @@ struct CloudLibrarySyncImporterExporterTests {
             localSnapshotsByIdentity: [:]
         )
 
-        #expect(batch.snapshots.count == 1)
-        #expect(batch.snapshots.first?.notes == "Newer")
+        #expect(batch.changes.count == 1)
+        if case .snapshot(let snapshot)? = batch.changes.first {
+            #expect(snapshot.notes == "Newer")
+        } else {
+            #expect(Bool(false))
+        }
         #expect(tokenStore.token(for: CloudLibrarySyncClient.recordZoneID, namespace: namespace) == nil)
 
         importer.commit(batch)
@@ -110,7 +114,7 @@ struct CloudLibrarySyncImporterExporterTests {
             localSnapshotsByIdentity: [:]
         )
 
-        #expect(batch.snapshots.count == 1)
+        #expect(batch.changes.count == 1)
         #expect(database.requestedTokens.count == 2)
         if let requestedToken = database.requestedTokens[0] {
             #expect(try tokenStore.encodeToken(requestedToken) == tokenStore.encodeToken(expiredToken))
@@ -120,7 +124,7 @@ struct CloudLibrarySyncImporterExporterTests {
         #expect(database.requestedTokens[1] == nil)
     }
 
-    @Test func importerReturnsTombstoneSnapshotsAndIgnoresRawDeletes() async throws {
+    @Test func importerReturnsLeanTombstonesAndIgnoresRawDeletes() async throws {
         let namespace = makeNamespace()
         let suiteName = "CloudLibrarySyncImporterExporterTests.\(UUID().uuidString)"
         let userDefaults = try #require(UserDefaults(suiteName: suiteName))
@@ -128,8 +132,14 @@ struct CloudLibrarySyncImporterExporterTests {
         let tokenStore = CloudLibrarySyncChangeTokenStore(userDefaults: userDefaults)
         let finalToken = try makeToken()
         let identity = LibraryEntrySyncIdentity(entryType: .series, tmdbID: 903)
-        var tombstone = makeSnapshot(identity: identity, tmdbID: 903)
-        tombstone.deletedAt = referenceDate(year: 2026, month: 5, day: 9)
+        let tombstone = LibraryEntrySyncTombstone(
+            identity: identity,
+            tmdbID: 903,
+            parentSeriesID: nil,
+            seasonNumber: nil,
+            entryType: .series,
+            deletedAt: referenceDate(year: 2026, month: 5, day: 9)
+        )
         let rawDeleteID = CKRecord.ID(
             recordName: "series:904",
             zoneID: CloudLibrarySyncClient.recordZoneID
@@ -153,7 +163,7 @@ struct CloudLibrarySyncImporterExporterTests {
             localSnapshotsByIdentity: [:]
         )
 
-        #expect(batch.snapshots.first?.deletedAt == tombstone.deletedAt)
+        #expect(batch.changes.first == .tombstone(tombstone))
         #expect(batch.ignoredDeletedRecordIDs == [rawDeleteID])
     }
 
@@ -184,8 +194,11 @@ struct CloudLibrarySyncImporterExporterTests {
         let savedTombstoneRecord = try #require(
             database.savedRecords.first { $0.recordID == client.recordID(for: second.syncIdentity) }
         )
-        let savedTombstone = try client.snapshot(from: savedTombstoneRecord)
-        #expect(savedTombstone.deletedAt == tombstone.deletedAt)
+        let savedTombstoneChange = try client.remoteChange(from: savedTombstoneRecord)
+        #expect(savedTombstoneChange == .tombstone(tombstone))
+        #expect(!savedTombstoneRecord.allKeys().contains("notes"))
+        #expect(!savedTombstoneRecord.allKeys().contains("episodeProgresses"))
+        #expect(!savedTombstoneRecord.allKeys().contains("watchStatus"))
     }
 }
 

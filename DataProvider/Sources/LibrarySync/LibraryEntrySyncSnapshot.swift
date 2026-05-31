@@ -37,10 +37,9 @@ public struct LibraryEntrySyncIdentity: Codable, Hashable, Sendable {
 ///
 /// This snapshot intentionally excludes fetched TMDb metadata. It carries only
 /// the library membership, display, tracking, poster override, note, episode
-/// progress, and tombstone fields needed to replay a user's library state on
-/// another device.
+/// progress fields needed to replay a user's library state on another device.
 public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
-    public static let currentSchemaVersion = 1
+    public static let currentSchemaVersion = 2
 
     private enum CodingKeys: String, CodingKey {
         case schemaVersion
@@ -63,7 +62,6 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         case episodeProgresses
         case libraryUpdatedAt
         case trackingUpdatedAt
-        case deletedAt
     }
 
     /// Per-season episode progress included in a sync snapshot.
@@ -107,12 +105,22 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     public var episodeProgresses: [EpisodeProgress]
     public var libraryUpdatedAt: Date?
     public var trackingUpdatedAt: Date?
-    public var deletedAt: Date?
-
     /// Newest top-level clock used when deciding whether remote state can clear
     /// a local dirty-queue entry.
     public var latestSyncClock: Date? {
-        [libraryUpdatedAt, trackingUpdatedAt, deletedAt].compactMap(\.self).max()
+        [libraryUpdatedAt, trackingUpdatedAt].compactMap(\.self).max()
+    }
+
+    /// Newest user-state clock used when comparing a snapshot against a tombstone.
+    public var latestUserStateClock: Date? {
+        [
+            dateSaved,
+            libraryUpdatedAt,
+            trackingUpdatedAt,
+            episodeProgresses.map(\.updatedAt).max()
+        ]
+        .compactMap(\.self)
+        .max()
     }
 
     /// Creates a normalized sync snapshot.
@@ -146,8 +154,6 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     ///   - libraryUpdatedAt: Clock for membership/display changes.
     ///   - trackingUpdatedAt: Clock for status, date, score, favorite, notes,
     ///     poster, and progress changes.
-    ///   - deletedAt: Optional tombstone clock. When present, the snapshot
-    ///     represents a delete instead of an upsert.
     public init(
         schemaVersion: Int = Self.currentSchemaVersion,
         identity: LibraryEntrySyncIdentity,
@@ -168,8 +174,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         customPosterURL: URL?,
         episodeProgresses: [EpisodeProgress],
         libraryUpdatedAt: Date?,
-        trackingUpdatedAt: Date?,
-        deletedAt: Date? = nil
+        trackingUpdatedAt: Date?
     ) {
         self.schemaVersion = schemaVersion
         self.identity = identity
@@ -191,7 +196,6 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         self.episodeProgresses = Self.normalizedEpisodeProgresses(episodeProgresses)
         self.libraryUpdatedAt = libraryUpdatedAt
         self.trackingUpdatedAt = trackingUpdatedAt
-        self.deletedAt = deletedAt
     }
 
     /// Projects a local `AnimeEntry` into the lean sync model.
@@ -250,8 +254,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             episodeProgresses: try container.decodeIfPresent([EpisodeProgress].self, forKey: .episodeProgresses)
                 ?? [],
             libraryUpdatedAt: try container.decodeIfPresent(Date.self, forKey: .libraryUpdatedAt),
-            trackingUpdatedAt: try container.decodeIfPresent(Date.self, forKey: .trackingUpdatedAt),
-            deletedAt: try container.decodeIfPresent(Date.self, forKey: .deletedAt)
+            trackingUpdatedAt: try container.decodeIfPresent(Date.self, forKey: .trackingUpdatedAt)
         )
     }
 
@@ -259,8 +262,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     ///
     /// Library membership/display fields follow `libraryUpdatedAt`; tracking
     /// fields follow `trackingUpdatedAt`; episode progress merges per season by
-    /// progress clock; tombstones win only when the delete clock is newer than
-    /// the remaining relevant local clocks.
+    /// progress clock.
     public func merged(with other: LibraryEntrySyncSnapshot) throws -> LibraryEntrySyncSnapshot {
         guard identity == other.identity else {
             throw MergeError.identityMismatch(local: identity, remote: other.identity)
@@ -291,41 +293,13 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             other.episodeProgresses
         )
 
-        merged.deletedAt = Self.resolvedDeletedAt(local: merged, remote: other)
         return merged
-    }
-
-    /// Keeps a tombstone only when it is newer than the surviving user-state clocks.
-    ///
-    /// A stale delete should not hide an entry after a newer membership,
-    /// tracking, or episode-progress edit has already revived it.
-    private static func resolvedDeletedAt(
-        local: LibraryEntrySyncSnapshot,
-        remote: LibraryEntrySyncSnapshot
-    ) -> Date? {
-        let newestDelete = [local.deletedAt, remote.deletedAt].compactMap(\.self).max()
-        guard let newestDelete else { return nil }
-
-        guard
-            let relevantClock = latestDate(
-                local.libraryUpdatedAt,
-                local.trackingUpdatedAt,
-                local.episodeProgresses.map(\.updatedAt).max()
-            )
-        else {
-            return newestDelete
-        }
-        return newestDelete > relevantClock ? newestDelete : nil
     }
 
     fileprivate static func isNewer(_ candidate: Date?, than existing: Date?) -> Bool {
         guard let candidate else { return false }
         guard let existing else { return true }
         return candidate > existing
-    }
-
-    private static func latestDate(_ dates: Date?...) -> Date? {
-        dates.compactMap(\.self).max()
     }
 
     /// Merges progress from both snapshots one season at a time.
@@ -402,8 +376,7 @@ extension AnimeEntry {
     /// Applies a merged remote snapshot to an existing local entry.
     ///
     /// This method respects the snapshot clocks instead of blindly overwriting
-    /// local state. Tombstones hide the entry only when the delete clock is newer
-    /// than the local library/tracking/progress clocks.
+    /// local state.
     ///
     /// - Parameters:
     ///   - snapshot: Remote or merged snapshot for the same sync identity.
@@ -417,11 +390,6 @@ extension AnimeEntry {
                 local: syncIdentity,
                 remote: snapshot.identity
             )
-        }
-
-        if let deletedAt = snapshot.deletedAt {
-            applySyncTombstone(deletedAt: deletedAt)
-            return
         }
 
         if LibraryEntrySyncSnapshot.isNewer(snapshot.libraryUpdatedAt, than: libraryUpdatedAt) {
@@ -472,11 +440,6 @@ extension AnimeEntry {
             )
         }
 
-        if let deletedAt = snapshot.deletedAt {
-            applySyncTombstone(deletedAt: deletedAt)
-            return
-        }
-
         onDisplay = snapshot.onDisplay
         dateSaved = snapshot.dateSaved
         libraryUpdatedAt = snapshot.libraryUpdatedAt
@@ -494,6 +457,20 @@ extension AnimeEntry {
         trackingUpdatedAt = snapshot.trackingUpdatedAt
 
         applySyncEpisodeProgresses(snapshot.episodeProgresses, now: now)
+    }
+
+    /// Applies a delete tombstone when it is newer than local user-state clocks.
+    ///
+    /// Delete sync hides the entry rather than removing the local row, preserving
+    /// enough local metadata for later rehydration and conflict resolution.
+    public func applySyncTombstone(_ tombstone: LibraryEntrySyncTombstone) throws {
+        guard syncIdentity == tombstone.identity else {
+            throw LibraryEntrySyncSnapshot.MergeError.identityMismatch(
+                local: syncIdentity,
+                remote: tombstone.identity
+            )
+        }
+        applySyncTombstone(deletedAt: tombstone.deletedAt)
     }
 
     /// Applies a delete tombstone when it is newer than local user-state clocks.

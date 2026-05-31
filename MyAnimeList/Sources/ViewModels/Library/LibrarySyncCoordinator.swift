@@ -215,33 +215,42 @@ final class LibrarySyncCoordinator {
         }
     }
 
-    /// Applies remote snapshots to local entries, hydrating missing ones first.
+    /// Applies remote changes to local entries, hydrating missing snapshots first.
     ///
-    /// The method suppresses change recording while the imported snapshots are
+    /// The method suppresses change recording while the imported changes are
     /// written so the local save pass does not enqueue its own changes.
     private func apply(
         _ batch: CloudLibrarySyncImportBatch,
         to store: LibraryStore
-    ) async throws -> (appliedSnapshotsCount: Int, hydratedEntriesCount: Int) {
-        var appliedSnapshotsCount = 0
+    ) async throws -> (appliedChangesCount: Int, hydratedEntriesCount: Int) {
+        var appliedChangesCount = 0
         var hydratedEntriesCount = 0
         try await store.syncChangeRecorder.withSuppressedRecording {
-            for snapshot in batch.snapshots {
-                let applicationTarget = try await entryForApplying(snapshot, store: store)
-                guard let applicationTarget else { continue }
-                appliedSnapshotsCount += 1
-                if applicationTarget.isInitialMaterialization {
-                    hydratedEntriesCount += 1
-                    try applicationTarget.entry.applyInitialSyncSnapshot(snapshot)
-                } else {
-                    try applicationTarget.entry.applySyncSnapshot(snapshot)
+            for change in batch.changes {
+                switch change {
+                case .snapshot(let snapshot):
+                    let applicationTarget = try await entryForApplying(snapshot, store: store)
+                    guard let applicationTarget else { continue }
+                    appliedChangesCount += 1
+                    if applicationTarget.isInitialMaterialization {
+                        hydratedEntriesCount += 1
+                        try applicationTarget.entry.applyInitialSyncSnapshot(snapshot)
+                    } else {
+                        try applicationTarget.entry.applySyncSnapshot(snapshot)
+                    }
+                case .tombstone(let tombstone):
+                    guard let entry = store.repository.existingEntry(identity: tombstone.identity) else {
+                        continue
+                    }
+                    appliedChangesCount += 1
+                    try entry.applySyncTombstone(tombstone)
                 }
             }
             try store.repository.save()
         }
         store.rebuildSyncChangeTracking()
         try store.refreshLibrary()
-        return (appliedSnapshotsCount, hydratedEntriesCount)
+        return (appliedChangesCount, hydratedEntriesCount)
     }
 
     /// Returns the local entry to update, hydrating a new one when needed.
@@ -251,10 +260,6 @@ final class LibrarySyncCoordinator {
     ) async throws -> ApplicationTarget? {
         if let entry = store.repository.existingEntry(identity: snapshot.identity) {
             return .init(entry: entry, isInitialMaterialization: false)
-        }
-
-        guard snapshot.deletedAt == nil else {
-            return nil
         }
 
         return .init(
@@ -311,19 +316,19 @@ final class LibrarySyncCoordinator {
         keptLocalWonCount: Int,
         importUnaffectedCount: Int
     ) {
-        let remoteSnapshotsByIdentity = Dictionary(
-            uniqueKeysWithValues: batch.remoteSnapshots.map { ($0.identity, $0) }
+        let remoteChangesByIdentity = Dictionary(
+            uniqueKeysWithValues: batch.remoteChanges.map { ($0.identity, $0) }
         )
         let dirtyEntries = store.syncChangeRecorder.dirtyQueueStore.load().entries
         var removedRemoteWonCount = 0
         var keptLocalWonCount = 0
         var importUnaffectedCount = 0
         let entries = dirtyEntries.filter { dirtyEntry in
-            guard let remoteSnapshot = remoteSnapshotsByIdentity[dirtyEntry.identity] else {
+            guard let remoteChange = remoteChangesByIdentity[dirtyEntry.identity] else {
                 importUnaffectedCount += 1
                 return true
             }
-            if remoteSnapshot.isNewer(than: dirtyEntry) {
+            if remoteChange.isNewer(than: dirtyEntry) {
                 removedRemoteWonCount += 1
                 return false
             }
@@ -358,7 +363,7 @@ fileprivate struct ApplicationTarget {
     let isInitialMaterialization: Bool
 }
 
-extension LibraryEntrySyncSnapshot {
+extension LibraryEntrySyncRemoteChange {
     /// Returns true when this remote snapshot is newer than the queued local work.
     ///
     /// Upserts compare against the local dirty timestamp, while deletes compare

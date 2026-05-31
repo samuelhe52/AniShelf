@@ -16,32 +16,96 @@ fileprivate let dirtyQueueLogger = Logger(
 
 /// Persisted delete intent for one sync identity.
 ///
-/// Tombstones carry the last known user-owned snapshot plus `deletedAt` so
-/// another device can decide whether the delete is newer than its local edits.
+/// Tombstones carry only stable identity fields plus `deletedAt` so another
+/// device can decide whether the delete is newer than its local edits without
+/// keeping full user-state payloads in iCloud.
 public struct LibraryEntrySyncTombstone: Codable, Equatable, Sendable {
-    public var snapshot: LibraryEntrySyncSnapshot
+    public static let currentSchemaVersion = 2
 
-    /// Captures an entry's current sync state as a delete tombstone.
+    public var schemaVersion: Int
+    public var identity: LibraryEntrySyncIdentity
+    public var tmdbID: Int
+    public var parentSeriesID: Int?
+    public var seasonNumber: Int?
+    public var entryType: AnimeType
+    public var deletedAt: Date
+
+    /// Captures an entry's stable sync identity as a delete tombstone.
     public init(entry: AnimeEntry, deletedAt: Date = .now) {
-        var snapshot = LibraryEntrySyncSnapshot(entry: entry)
-        snapshot.deletedAt = deletedAt
-        self.snapshot = snapshot
+        self.init(
+            identity: entry.syncIdentity,
+            tmdbID: entry.tmdbID,
+            parentSeriesID: entry.type.parentSeriesID,
+            seasonNumber: entry.type.seasonNumber,
+            entryType: entry.type,
+            deletedAt: deletedAt
+        )
     }
 
-    /// Wraps an existing delete snapshot.
-    ///
-    /// The snapshot must already contain a `deletedAt` value.
-    public init(snapshot: LibraryEntrySyncSnapshot) {
-        precondition(snapshot.deletedAt != nil)
-        self.snapshot = snapshot
+    /// Creates a tombstone from stable identity fields.
+    public init(
+        schemaVersion: Int = Self.currentSchemaVersion,
+        identity: LibraryEntrySyncIdentity,
+        tmdbID: Int,
+        parentSeriesID: Int?,
+        seasonNumber: Int?,
+        entryType: AnimeType,
+        deletedAt: Date
+    ) {
+        self.schemaVersion = schemaVersion
+        self.identity = identity
+        self.tmdbID = tmdbID
+        self.parentSeriesID = parentSeriesID
+        self.seasonNumber = seasonNumber
+        self.entryType = entryType
+        self.deletedAt = deletedAt
+    }
+}
+
+/// Decoded CloudKit change for one library entry identity.
+public enum LibraryEntrySyncRemoteChange: Equatable, Sendable {
+    case snapshot(LibraryEntrySyncSnapshot)
+    case tombstone(LibraryEntrySyncTombstone)
+
+    public var identity: LibraryEntrySyncIdentity {
+        switch self {
+        case .snapshot(let snapshot):
+            snapshot.identity
+        case .tombstone(let tombstone):
+            tombstone.identity
+        }
     }
 
-    public var identity: LibraryEntrySyncIdentity { snapshot.identity }
-    public var deletedAt: Date { snapshot.deletedAt ?? .distantPast }
+    public var latestSyncClock: Date? {
+        switch self {
+        case .snapshot(let snapshot):
+            snapshot.latestSyncClock
+        case .tombstone(let tombstone):
+            tombstone.deletedAt
+        }
+    }
 
-    /// Returns the tombstone as the snapshot to upload.
-    public func syncSnapshot() -> LibraryEntrySyncSnapshot {
-        snapshot
+    /// Coalesces multiple remote changes for the same identity.
+    public func merged(with other: LibraryEntrySyncRemoteChange) throws -> LibraryEntrySyncRemoteChange {
+        guard identity == other.identity else {
+            throw LibraryEntrySyncSnapshot.MergeError.identityMismatch(
+                local: identity,
+                remote: other.identity
+            )
+        }
+
+        switch (self, other) {
+        case (.snapshot(let lhs), .snapshot(let rhs)):
+            return .snapshot(try lhs.merged(with: rhs))
+        case (.tombstone(let lhs), .tombstone(let rhs)):
+            return .tombstone(lhs.deletedAt >= rhs.deletedAt ? lhs : rhs)
+        case (.snapshot(let snapshot), .tombstone(let tombstone)):
+            let snapshotClock = snapshot.latestUserStateClock ?? .distantPast
+            return tombstone.deletedAt > snapshotClock ? .tombstone(tombstone) : self
+        case (.tombstone(let tombstone), .snapshot(let snapshot)):
+            let snapshotClock = snapshot.latestUserStateClock ?? .distantPast
+            return snapshotClock > tombstone.deletedAt ? other : self
+        }
     }
 }
 
@@ -117,7 +181,7 @@ public enum LibraryEntrySyncDirtyQueueEntry: Codable, Equatable, Sendable {
 
 /// Persisted collection of pending local sync work.
 public struct LibraryEntrySyncDirtyQueue: Codable, Equatable, Sendable {
-    public static let currentSchemaVersion = 1
+    public static let currentSchemaVersion = 2
 
     public var schemaVersion: Int
     public var entries: [LibraryEntrySyncDirtyQueueEntry]
@@ -362,9 +426,9 @@ public final class LibraryEntrySyncDirtyQueueStore: @unchecked Sendable {
         do {
             let data = try Data(contentsOf: url)
             let queue = try JSONDecoder().decode(LibraryEntrySyncDirtyQueue.self, from: data)
-            guard queue.schemaVersion <= LibraryEntrySyncDirtyQueue.currentSchemaVersion else {
+            guard queue.schemaVersion == LibraryEntrySyncDirtyQueue.currentSchemaVersion else {
                 dirtyQueueLogger.warning(
-                    "Resetting the iCloud sync dirty queue because schema version \(queue.schemaVersion, privacy: .public) is no longer supported."
+                    "Resetting the iCloud sync dirty queue because schema version \(queue.schemaVersion, privacy: .public) does not match \(LibraryEntrySyncDirtyQueue.currentSchemaVersion, privacy: .public)."
                 )
                 resetToEmptyQueueUnlocked()
                 return .init()
