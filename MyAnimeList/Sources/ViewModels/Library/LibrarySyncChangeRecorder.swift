@@ -12,18 +12,25 @@ import LibrarySync
 import SwiftData
 import os
 
-private let syncRecorderLogger = Logger(
+fileprivate let syncRecorderLogger = Logger(
     subsystem: .bundleIdentifier,
     category: "LibrarySync.Recorder"
 )
 
+/// Watches SwiftData saves and persists the local sync dirty queue.
+///
+/// The recorder converts `ModelContext.didSave` notifications into upsert or
+/// delete queue entries, while also exposing explicit helpers for bulk delete
+/// rollback and restore flows.
 @MainActor
 final class LibrarySyncChangeRecorder {
+    /// Restores one previously queued delete if a bulk operation is rolled back.
     struct PendingDeleteRestoreToken {
         var identity: LibraryEntrySyncIdentity
         var previousEntry: LibraryEntrySyncDirtyQueueEntry?
     }
 
+    /// Local baseline clock snapshot used to avoid enqueuing redundant saves.
     private struct ClockBaseline: Equatable {
         var libraryUpdatedAt: Date?
         var trackingUpdatedAt: Date?
@@ -60,6 +67,13 @@ final class LibrarySyncChangeRecorder {
     private var lastSeenClocksByIdentifier: [PersistentIdentifier: ClockBaseline]
     private var suppressionDepth = 0
 
+    /// Creates a recorder for one `DataProvider` store.
+    ///
+    /// - Parameters:
+    ///   - dataProvider: SwiftData backing store to observe.
+    ///   - dirtyQueueStore: Optional queue store override for tests.
+    ///   - notificationCenter: Notification center used to observe
+    ///     `ModelContext.didSave`.
     init(
         dataProvider: DataProvider,
         dirtyQueueStore: LibraryEntrySyncDirtyQueueStore? = nil,
@@ -72,6 +86,7 @@ final class LibrarySyncChangeRecorder {
         observeSaves()
     }
 
+    /// Rebuilds the in-memory clock baseline from the current store contents.
     func rebuildBaseline() {
         let baseline = Self.makeBaseline(from: dataProvider)
         lastSeenClocksByIdentifier = baseline
@@ -80,18 +95,24 @@ final class LibrarySyncChangeRecorder {
         )
     }
 
+    /// Executes a synchronous operation without recording queue mutations.
     func withSuppressedRecording<T>(_ operation: () throws -> T) rethrows -> T {
         suppressionDepth += 1
         defer { suppressionDepth -= 1 }
         return try operation()
     }
 
+    /// Executes an async operation without recording queue mutations.
     func withSuppressedRecording<T>(_ operation: () async throws -> T) async rethrows -> T {
         suppressionDepth += 1
         defer { suppressionDepth -= 1 }
         return try await operation()
     }
 
+    /// Queues a tombstone for a single deleted entry.
+    ///
+    /// - Returns: A restore token that can put the previous queue entry back if
+    ///   the delete must be rolled back.
     func recordDeletion(
         for entry: AnimeEntry,
         deletedAt: Date = .now
@@ -114,6 +135,9 @@ final class LibrarySyncChangeRecorder {
         return .init(identity: pendingDelete.identity, previousEntry: previousEntry)
     }
 
+    /// Queues tombstones for a bulk delete as one atomic queue rewrite.
+    ///
+    /// - Returns: Restore tokens in the same order as the input entries.
     func recordDeletions(
         for entries: [AnimeEntry],
         deletedAt: Date = .now
@@ -132,7 +156,7 @@ final class LibrarySyncChangeRecorder {
             )
             let previousEntry = entriesByID[pendingDelete.identity.rawID]
             if case .delete(let previousDelete) = previousEntry,
-               previousDelete.tombstone.deletedAt >= pendingDelete.tombstone.deletedAt
+                previousDelete.tombstone.deletedAt >= pendingDelete.tombstone.deletedAt
             {
                 return .init(identity: pendingDelete.identity, previousEntry: previousEntry)
             }
@@ -155,6 +179,7 @@ final class LibrarySyncChangeRecorder {
         return tokens
     }
 
+    /// Restores one delete queue entry captured by `recordDeletion`.
     func restoreDeleteRecord(_ token: PendingDeleteRestoreToken) throws {
         do {
             try dirtyQueueStore.replaceEntry(token.previousEntry, for: token.identity)
@@ -169,6 +194,7 @@ final class LibrarySyncChangeRecorder {
         )
     }
 
+    /// Restores a bulk delete queue mutation as a single queue rewrite.
     func restoreDeleteRecords(_ tokens: [PendingDeleteRestoreToken]) throws {
         // Roll back the bulk delete queue mutation as a single queue rewrite so
         // we do not leave partially restored tombstones on disk.
@@ -198,6 +224,7 @@ final class LibrarySyncChangeRecorder {
         )
     }
 
+    /// Converts one `didSave` notification into queue mutations.
     func processSaveNotification(_ notification: Notification) {
         let insertedIdentifiers = persistentIdentifiers(for: .insertedIdentifiers, in: notification)
         let updatedIdentifiers = persistentIdentifiers(for: .updatedIdentifiers, in: notification)
@@ -261,6 +288,7 @@ final class LibrarySyncChangeRecorder {
         }
     }
 
+    /// Subscribes to SwiftData save notifications and routes them to recording.
     private func observeSaves() {
         notificationCenter
             .publisher(for: ModelContext.didSave)
@@ -270,6 +298,7 @@ final class LibrarySyncChangeRecorder {
             .store(in: &cancellables)
     }
 
+    /// Extracts persistent identifiers from a `didSave` notification payload.
     private func persistentIdentifiers(
         for key: ModelContext.NotificationKey,
         in notification: Notification
@@ -283,6 +312,7 @@ final class LibrarySyncChangeRecorder {
         return []
     }
 
+    /// Builds the initial clock baseline from the current library contents.
     private static func makeBaseline(from dataProvider: DataProvider) -> [PersistentIdentifier: ClockBaseline] {
         guard let entries = try? dataProvider.getAllModels(ofType: AnimeEntry.self) else {
             return [:]
@@ -293,6 +323,7 @@ final class LibrarySyncChangeRecorder {
         }
     }
 
+    /// Picks an on-disk or temporary dirty-queue store for the current backing mode.
     private static func makeDefaultDirtyQueueStore(inMemory: Bool) -> LibraryEntrySyncDirtyQueueStore {
         guard inMemory else {
             return .init()

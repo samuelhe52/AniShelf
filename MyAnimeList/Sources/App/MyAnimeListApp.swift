@@ -44,7 +44,7 @@ struct MyAnimeListApp: App {
             .onAppear {
                 notificationBridge.onSyncRequested = { [libraryStore, keyStorage] in
                     guard let key = keyStorage.key,
-                          !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     else {
                         return .noData
                     }

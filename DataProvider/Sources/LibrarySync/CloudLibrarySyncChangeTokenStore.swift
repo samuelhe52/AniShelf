@@ -8,11 +8,19 @@
 import CloudKit
 import Foundation
 
+/// Persists CloudKit zone change tokens per container, account, owner, and zone.
 public final class CloudLibrarySyncChangeTokenStore: @unchecked Sendable {
+    /// Namespace separating one iCloud account/container's token from another.
     public struct Namespace: Hashable, Sendable {
         public let containerIdentifier: String
         public let accountIdentifier: String
 
+        /// Creates a token namespace.
+        ///
+        /// - Parameters:
+        ///   - containerIdentifier: CloudKit container identifier.
+        ///   - accountIdentifier: CloudKit user record name for the current
+        ///     iCloud account.
         public init(containerIdentifier: String, accountIdentifier: String) {
             self.containerIdentifier = containerIdentifier
             self.accountIdentifier = accountIdentifier
@@ -22,6 +30,12 @@ public final class CloudLibrarySyncChangeTokenStore: @unchecked Sendable {
     private let userDefaults: UserDefaults
     private let keyPrefix: String
 
+    /// Creates a change-token store.
+    ///
+    /// - Parameters:
+    ///   - userDefaults: Storage backend for archived `CKServerChangeToken`
+    ///     values.
+    ///   - keyPrefix: Prefix used for all token keys.
     public init(
         userDefaults: UserDefaults = .standard,
         keyPrefix: String = "AniShelf.LibrarySync.ChangeToken"
@@ -30,6 +44,9 @@ public final class CloudLibrarySyncChangeTokenStore: @unchecked Sendable {
         self.keyPrefix = keyPrefix
     }
 
+    /// Loads the last committed server token for a zone/account namespace.
+    ///
+    /// Corrupt archived tokens are removed and treated as missing.
     public func token(for zoneID: CKRecordZone.ID, namespace: Namespace) -> CKServerChangeToken? {
         let key = tokenKey(for: zoneID, namespace: namespace)
         guard let data = userDefaults.data(forKey: key) else { return nil }
@@ -42,6 +59,10 @@ public final class CloudLibrarySyncChangeTokenStore: @unchecked Sendable {
         }
     }
 
+    /// Persists or clears a server token.
+    ///
+    /// Passing `nil` removes the stored token. Encoding failures also remove the
+    /// token so the next import can safely refetch from the beginning.
     public func setToken(
         _ token: CKServerChangeToken?,
         for zoneID: CKRecordZone.ID,
@@ -60,6 +81,7 @@ public final class CloudLibrarySyncChangeTokenStore: @unchecked Sendable {
         }
     }
 
+    /// Removes the stored token for a zone/account namespace.
     public func removeToken(for zoneID: CKRecordZone.ID, namespace: Namespace) {
         userDefaults.removeObject(forKey: tokenKey(for: zoneID, namespace: namespace))
     }

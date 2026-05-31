@@ -33,7 +33,9 @@ struct LibrarySyncCoordinatorTests {
         )
         let database = FakeCloudLibrarySyncDatabase(changes: [
             .init(
-                modifiedRecordsByID: [client.recordID(for: entry.syncIdentity): try client.record(from: remoteSnapshot)],
+                modifiedRecordsByID: [
+                    client.recordID(for: entry.syncIdentity): try client.record(from: remoteSnapshot)
+                ],
                 deletedRecordIDs: [],
                 changeToken: makeToken(),
                 moreComing: false
@@ -159,10 +161,11 @@ struct LibrarySyncCoordinatorTests {
         entry.libraryUpdatedAt = referenceDate(year: 2026, month: 5, day: 20)
         try store.repository.newEntry(entry)
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([
-            .upsert(.init(
-                identity: entry.syncIdentity,
-                dirtyAt: referenceDate(year: 2026, month: 5, day: 20)
-            ))
+            .upsert(
+                .init(
+                    identity: entry.syncIdentity,
+                    dirtyAt: referenceDate(year: 2026, month: 5, day: 20)
+                ))
         ])
         store.rebuildSyncChangeTracking()
 
@@ -176,7 +179,9 @@ struct LibrarySyncCoordinatorTests {
         remoteSnapshot.deletedAt = referenceDate(year: 2026, month: 5, day: 3)
         let database = FakeCloudLibrarySyncDatabase(changes: [
             .init(
-                modifiedRecordsByID: [client.recordID(for: entry.syncIdentity): try client.record(from: remoteSnapshot)],
+                modifiedRecordsByID: [
+                    client.recordID(for: entry.syncIdentity): try client.record(from: remoteSnapshot)
+                ],
                 deletedRecordIDs: [],
                 changeToken: makeToken(),
                 moreComing: false
@@ -209,10 +214,11 @@ struct LibrarySyncCoordinatorTests {
         entry.libraryUpdatedAt = referenceDate(year: 2026, month: 5, day: 3)
         try store.repository.newEntry(entry)
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([
-            .upsert(.init(
-                identity: entry.syncIdentity,
-                dirtyAt: referenceDate(year: 2026, month: 5, day: 3)
-            ))
+            .upsert(
+                .init(
+                    identity: entry.syncIdentity,
+                    dirtyAt: referenceDate(year: 2026, month: 5, day: 3)
+                ))
         ])
         store.rebuildSyncChangeTracking()
 
@@ -226,7 +232,9 @@ struct LibrarySyncCoordinatorTests {
         remoteSnapshot.deletedAt = referenceDate(year: 2026, month: 5, day: 11)
         let database = FakeCloudLibrarySyncDatabase(changes: [
             .init(
-                modifiedRecordsByID: [client.recordID(for: entry.syncIdentity): try client.record(from: remoteSnapshot)],
+                modifiedRecordsByID: [
+                    client.recordID(for: entry.syncIdentity): try client.record(from: remoteSnapshot)
+                ],
                 deletedRecordIDs: [],
                 changeToken: makeToken(),
                 moreComing: false
@@ -266,7 +274,8 @@ struct LibrarySyncCoordinatorTests {
                 moreComing: false
             )
         ])
-        let tokenStore = CloudLibrarySyncChangeTokenStore(userDefaults: UserDefaults(suiteName: "LibrarySyncCoordinatorTests.\(UUID().uuidString)")!)
+        let tokenStore = CloudLibrarySyncChangeTokenStore(
+            userDefaults: UserDefaults(suiteName: "LibrarySyncCoordinatorTests.\(UUID().uuidString)")!)
         let coordinator = LibrarySyncCoordinator(
             store: store,
             client: client,
@@ -285,11 +294,11 @@ struct LibrarySyncCoordinatorTests {
     }
 }
 
-private enum HydrationFailure: Error {
+fileprivate enum HydrationFailure: Error {
     case unavailable
 }
 
-private final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, @unchecked Sendable {
+fileprivate final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, @unchecked Sendable {
     private var changes: [CloudLibrarySyncZoneChangeBatch]
     var savedRecords: [CKRecord] = []
 
@@ -315,18 +324,18 @@ private final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, @unc
     }
 }
 
-private func makeNamespace() -> CloudLibrarySyncChangeTokenStore.Namespace {
+fileprivate func makeNamespace() -> CloudLibrarySyncChangeTokenStore.Namespace {
     .init(
         containerIdentifier: CloudLibrarySyncClient.defaultContainerIdentifier,
         accountIdentifier: "test-account"
     )
 }
 
-private func makeToken() -> CKServerChangeToken {
+fileprivate func makeToken() -> CKServerChangeToken {
     class_createInstance(CKServerChangeToken.self, 0) as! CKServerChangeToken
 }
 
-private func makeSnapshot(
+fileprivate func makeSnapshot(
     identity: LibraryEntrySyncIdentity,
     tmdbID: Int,
     entryType: AnimeType = .series,

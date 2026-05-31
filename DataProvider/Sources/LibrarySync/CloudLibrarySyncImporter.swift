@@ -9,11 +9,12 @@ import CloudKit
 import Foundation
 import os
 
-private let cloudLibrarySyncImportLogger = Logger(
+fileprivate let cloudLibrarySyncImportLogger = Logger(
     subsystem: "com.samuelhe.MyAnimeList",
     category: "LibrarySync.Import"
 )
 
+/// Remote change batch after decoding and local conflict resolution.
 public struct CloudLibrarySyncImportBatch {
     public var snapshots: [LibraryEntrySyncSnapshot]
     public var remoteSnapshots: [LibraryEntrySyncSnapshot]
@@ -22,6 +23,20 @@ public struct CloudLibrarySyncImportBatch {
     public var namespace: CloudLibrarySyncChangeTokenStore.Namespace
     public var zoneID: CKRecordZone.ID
 
+    /// Creates an import batch ready for application to the local store.
+    ///
+    /// - Parameters:
+    ///   - snapshots: Remote snapshots after merging with local snapshots for
+    ///     the same identity.
+    ///   - remoteSnapshots: Decoded remote snapshots before local conflict
+    ///     merging. The coordinator uses this to reconcile dirty-queue entries.
+    ///   - ignoredDeletedRecordIDs: Raw CloudKit record deletions. AniShelf
+    ///     applies tombstone records instead of raw deletes, so these are kept
+    ///     for logging and diagnostics.
+    ///   - changeToken: Server change token to commit after local application
+    ///     succeeds.
+    ///   - namespace: Container/account namespace for the token.
+    ///   - zoneID: CloudKit zone that produced the token.
     public init(
         snapshots: [LibraryEntrySyncSnapshot],
         remoteSnapshots: [LibraryEntrySyncSnapshot],
@@ -39,11 +54,18 @@ public struct CloudLibrarySyncImportBatch {
     }
 }
 
+/// Fetches remote CloudKit changes and prepares them for local application.
 public struct CloudLibrarySyncImporter: @unchecked Sendable {
     private let client: CloudLibrarySyncClient
     private let database: CloudLibrarySyncDatabase
     private let changeTokenStore: CloudLibrarySyncChangeTokenStore
 
+    /// Creates an importer for a client/database/token-store combination.
+    ///
+    /// - Parameters:
+    ///   - client: Encoder/decoder for the library sync record schema.
+    ///   - database: Database adapter used to prepare the zone and fetch changes.
+    ///   - changeTokenStore: Store for per-container/per-account zone tokens.
     public init(
         client: CloudLibrarySyncClient,
         database: CloudLibrarySyncDatabase,
@@ -54,6 +76,7 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
         self.changeTokenStore = changeTokenStore
     }
 
+    /// Ensures the remote zone and silent subscription are available.
     public func prepareRemoteSync() async throws {
         cloudLibrarySyncImportLogger.debug(
             "operation=prepareRemoteSync state=start"
@@ -74,6 +97,19 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
         }
     }
 
+    /// Fetches remote changes and resolves them against the current local state.
+    ///
+    /// If the stored token has expired, the importer clears it and retries once
+    /// from the beginning of the zone.
+    ///
+    /// - Parameters:
+    ///   - namespace: Container/account namespace for loading the previous token.
+    ///   - localSnapshotsByIdentity: Current local snapshots used to merge
+    ///     incoming remote changes before application.
+    /// - Returns: A batch whose token must be committed only after local
+    ///   application succeeds.
+    /// - Throws: CloudKit fetch errors, decode errors, merge errors, or
+    ///   `CloudLibrarySyncImportError.missingChangeToken`.
     public func fetchChanges(
         namespace: CloudLibrarySyncChangeTokenStore.Namespace,
         localSnapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot]
@@ -115,6 +151,7 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
         }
     }
 
+    /// Persists the server change token for a successfully applied batch.
     public func commit(_ batch: CloudLibrarySyncImportBatch) {
         changeTokenStore.setToken(batch.changeToken, for: batch.zoneID, namespace: batch.namespace)
         cloudLibrarySyncImportLogger.debug(
@@ -122,6 +159,12 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
         )
     }
 
+    /// Fetches all CloudKit pages for the zone starting at a specific token.
+    ///
+    /// Modified records are coalesced by sync identity before they are merged
+    /// with local snapshots. Raw CloudKit deletes are intentionally not applied
+    /// as library deletes because AniShelf's sync deletion semantics flow
+    /// through explicit tombstone records.
     private func fetchChanges(
         namespace: CloudLibrarySyncChangeTokenStore.Namespace,
         localSnapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot],

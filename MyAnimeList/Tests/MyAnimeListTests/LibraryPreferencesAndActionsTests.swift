@@ -397,20 +397,22 @@ struct LibraryPreferencesAndActionsTests {
 
         var queue = store.syncChangeRecorder.dirtyQueueStore.load()
         #expect(queue.entries.count == 2)
-        #expect(queue.entries.contains { entry in
-            guard case .delete(let pendingDelete) = entry else { return false }
-            return pendingDelete.identity == first.syncIdentity
-        })
+        #expect(
+            queue.entries.contains { entry in
+                guard case .delete(let pendingDelete) = entry else { return false }
+                return pendingDelete.identity == first.syncIdentity
+            })
 
         let actions = LibraryProfileSettingsActions(store: store)
         actions.clearLibrary()
 
         queue = store.syncChangeRecorder.dirtyQueueStore.load()
         #expect(queue.entries.count == 2)
-        #expect(queue.entries.allSatisfy {
-            if case .delete = $0 { return true }
-            return false
-        })
+        #expect(
+            queue.entries.allSatisfy {
+                if case .delete = $0 { return true }
+                return false
+            })
     }
 
     @Test @MainActor func testLibrarySyncRecorderRecordsBulkDeletesWithSingleQueueRewrite() throws {
@@ -453,12 +455,18 @@ struct LibraryPreferencesAndActionsTests {
         let queue = dirtyQueueStore.load()
         #expect(queue.entries.count == 3)
         #expect(queue.entry(for: retainedUpsert.identity) == .upsert(retainedUpsert))
-        #expect(queue.entry(for: first.syncIdentity) == .delete(.init(
-            tombstone: .init(entry: first, deletedAt: deletedAt)
-        )))
-        #expect(queue.entry(for: second.syncIdentity) == .delete(.init(
-            tombstone: .init(entry: second, deletedAt: deletedAt)
-        )))
+        #expect(
+            queue.entry(for: first.syncIdentity)
+                == .delete(
+                    .init(
+                        tombstone: .init(entry: first, deletedAt: deletedAt)
+                    )))
+        #expect(
+            queue.entry(for: second.syncIdentity)
+                == .delete(
+                    .init(
+                        tombstone: .init(entry: second, deletedAt: deletedAt)
+                    )))
     }
 
     @Test @MainActor func testLibrarySyncRecorderRestoreDeleteRecordsRewritesPriorQueueOnce() throws {
@@ -696,18 +704,18 @@ struct LibraryPreferencesAndActionsTests {
     }
 }
 
-private enum QueueWriteTestError: Error {
+fileprivate enum QueueWriteTestError: Error {
     case injectedWriteFailure
     case unexpectedAdditionalWrite
 }
 
-private func makeTemporaryQueueURL(name: String) -> URL {
+fileprivate func makeTemporaryQueueURL(name: String) -> URL {
     let directoryURL = FileManager.default.temporaryDirectory
         .appendingPathComponent("AniShelfTests-\(name)-\(UUID().uuidString)", isDirectory: true)
     return directoryURL.appendingPathComponent("queue.json")
 }
 
-private func persistQueue(_ queue: LibraryEntrySyncDirtyQueue, to url: URL) throws {
+fileprivate func persistQueue(_ queue: LibraryEntrySyncDirtyQueue, to url: URL) throws {
     try FileManager.default.createDirectory(
         at: url.deletingLastPathComponent(),
         withIntermediateDirectories: true

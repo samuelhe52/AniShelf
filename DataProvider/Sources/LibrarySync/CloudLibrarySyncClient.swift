@@ -10,11 +10,16 @@ import DataProvider
 import Foundation
 import os
 
-private let cloudLibrarySyncLogger = Logger(
+fileprivate let cloudLibrarySyncLogger = Logger(
     subsystem: "com.samuelhe.MyAnimeList",
     category: "LibrarySync.CloudKit"
 )
 
+/// Converts AniShelf sync snapshots to and from CloudKit records.
+///
+/// `CloudLibrarySyncClient` owns the stable CloudKit schema constants and the
+/// validation rules that keep record names, entry types, and season identifiers
+/// aligned with `LibraryEntrySyncIdentity`.
 public struct CloudLibrarySyncClient: @unchecked Sendable {
     public static let defaultContainerIdentifier = "iCloud.com.samuelhe.MyAnimeList"
     public static let zoneName = "AniShelfLibrary"
@@ -27,22 +32,35 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
 
     public let container: CKContainer?
 
+    /// Private CloudKit database used for user library sync.
     public var privateDatabase: CKDatabase? {
         container?.privateCloudDatabase
     }
 
+    /// Identifier used to namespace persisted change tokens.
     public var containerIdentifier: String? {
         container?.containerIdentifier ?? Bundle.main.bundleIdentifier
     }
 
+    /// Creates a client for a CloudKit container.
+    ///
+    /// - Parameter container: CloudKit container to use. Pass `nil` in tests or
+    ///   when sync is intentionally disabled.
     public init(container: CKContainer? = nil) {
         self.container = container
     }
 
+    /// Returns the CloudKit record ID for a sync identity in AniShelf's library zone.
     public func recordID(for identity: LibraryEntrySyncIdentity) -> CKRecord.ID {
         CKRecord.ID(recordName: identity.rawID, zoneID: Self.recordZoneID)
     }
 
+    /// Builds the change-token namespace for the active container/account pair.
+    ///
+    /// - Parameter accountRecordID: CloudKit user record ID for the currently
+    ///   signed-in iCloud account.
+    /// - Returns: A namespace suitable for `CloudLibrarySyncChangeTokenStore`,
+    ///   or `nil` when the container identity cannot be determined.
     public func changeTokenNamespace(
         accountRecordID: CKRecord.ID
     ) -> CloudLibrarySyncChangeTokenStore.Namespace? {
@@ -53,12 +71,25 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
         )
     }
 
+    /// Resolves the current iCloud account and builds its change-token namespace.
+    ///
+    /// - Returns: A namespace for the active container/account pair, or `nil`
+    ///   when the client has no container.
     public func changeTokenNamespace() async throws -> CloudLibrarySyncChangeTokenStore.Namespace? {
         guard let container else { return nil }
         let accountRecordID = try await container.userRecordID()
         return changeTokenNamespace(accountRecordID: accountRecordID)
     }
 
+    /// Encodes a sync snapshot as a CloudKit record.
+    ///
+    /// The snapshot identity is validated against the entry type, TMDb ID,
+    /// parent series ID, and season number before a record is produced. Delete
+    /// snapshots are represented as ordinary records with `deletedAt` set so
+    /// devices can receive tombstones through zone changes.
+    ///
+    /// - Throws: `CloudLibrarySyncDecodeError.invalidIdentityCombination` when
+    ///   the snapshot fields do not match the derived record identity.
     public func record(from snapshot: LibraryEntrySyncSnapshot) throws -> CKRecord {
         let identity = try Self.validatedIdentity(
             recordName: snapshot.identity.rawID,
@@ -92,6 +123,13 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
         return record
     }
 
+    /// Decodes and validates a CloudKit record into a sync snapshot.
+    ///
+    /// Throws `CloudLibrarySyncDecodeError` when the record type, schema version,
+    /// required fields, enum values, identity composition, or episode progress
+    /// payload are invalid.
+    ///
+    /// - Throws: `CloudLibrarySyncDecodeError` for invalid CloudKit records.
     public func snapshot(from record: CKRecord) throws -> LibraryEntrySyncSnapshot {
         do {
             return try decodedSnapshot(from: record)
@@ -101,6 +139,10 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
         }
     }
 
+    /// Performs the strict record-to-snapshot decode without logging side effects.
+    ///
+    /// Keeping the decode pure lets the public wrapper centralize diagnostic
+    /// logging while tests can still exercise each validation failure.
     private func decodedSnapshot(from record: CKRecord) throws -> LibraryEntrySyncSnapshot {
         guard record.recordType == Self.recordType else {
             throw CloudLibrarySyncDecodeError.wrongRecordType(actual: record.recordType)
@@ -177,6 +219,7 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
         )
     }
 
+    /// Logs decode failures with public schema context and private identities.
     private static func logDecodeFailure(_ error: CloudLibrarySyncDecodeError, record: CKRecord) {
         switch error {
         case .wrongRecordType(let actual):
@@ -235,6 +278,7 @@ extension CloudLibrarySyncClient {
         fileprivate static let deletedAt = "deletedAt"
     }
 
+    /// Reads a required CloudKit field and distinguishes missing from mistyped values.
     fileprivate static func requiredValue<T>(for field: String, in record: CKRecord) throws -> T {
         if let value = record[field] as? T {
             return value
@@ -253,6 +297,11 @@ extension CloudLibrarySyncClient {
         return value
     }
 
+    /// Reconstructs the AniShelf entry type from the CloudKit kind fields.
+    ///
+    /// Movies and series must not carry season context, while season records
+    /// must carry both parent series and season number. The `recordName` is only
+    /// used for precise decode errors.
     fileprivate static func entryType(
         recordName: String,
         entryTypeValue: String,
@@ -282,6 +331,10 @@ extension CloudLibrarySyncClient {
         }
     }
 
+    /// Derives the sync identity and verifies it exactly matches the record name.
+    ///
+    /// This prevents mismatched CloudKit records from applying a season payload
+    /// to a movie/series identity or to the wrong TMDb entry.
     fileprivate static func validatedIdentity(
         recordName: String,
         entryTypeValue: String,
@@ -302,6 +355,7 @@ extension CloudLibrarySyncClient {
         return identity
     }
 
+    /// Decodes the optional custom poster string into a URL.
     fileprivate static func customPosterURL(from record: CKRecord) throws -> URL? {
         guard let value = record[Field.customPosterURL] else { return nil }
         guard let rawURL = value as? String, let url = URL(string: rawURL) else {
@@ -310,6 +364,7 @@ extension CloudLibrarySyncClient {
         return url
     }
 
+    /// Encodes episode progress as deterministic JSON inside one CloudKit field.
     fileprivate static func encodeEpisodeProgresses(
         _ progresses: [LibraryEntrySyncSnapshot.EpisodeProgress]
     ) throws -> Data {
@@ -318,6 +373,7 @@ extension CloudLibrarySyncClient {
         return try encoder.encode(progresses)
     }
 
+    /// Decodes the JSON episode progress payload stored in CloudKit.
     fileprivate static func decodeEpisodeProgresses(
         _ data: Data
     ) throws -> [LibraryEntrySyncSnapshot.EpisodeProgress] {

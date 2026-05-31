@@ -11,11 +11,17 @@ import Foundation
 import LibrarySync
 import os
 
-private let librarySyncCoordinatorLogger = Logger(
+fileprivate let librarySyncCoordinatorLogger = Logger(
     subsystem: .bundleIdentifier,
     category: "LibrarySync.Coordinator"
 )
 
+/// Orchestrates the full local<->CloudKit library sync cycle.
+///
+/// The coordinator owns the end-to-end sequence: prepare the remote zone,
+/// resolve the CloudKit namespace, fetch and apply remote changes, commit the
+/// server token, reconcile the local dirty queue, and finally export remaining
+/// local edits.
 @MainActor
 final class LibrarySyncCoordinator {
     enum Trigger: String {
@@ -46,6 +52,20 @@ final class LibrarySyncCoordinator {
         case export
     }
 
+    /// Creates the coordinator and wires the sync pipeline dependencies.
+    ///
+    /// - Parameters:
+    ///   - store: Owning library store.
+    ///   - client: Optional preconfigured CloudKit client for tests or custom
+    ///     containers.
+    ///   - database: Optional CloudKit database adapter. When omitted, the
+    ///     coordinator uses the client's private database if available.
+    ///   - changeTokenStore: Storage for zone change tokens.
+    ///   - namespaceProvider: Async namespace resolver. This is injected for
+    ///     tests and otherwise resolves the current iCloud account through the
+    ///     client.
+    ///   - hydrateMissingEntry: Entry hydration hook used when remote state
+    ///     refers to an entry the local store does not currently have.
     init(
         store: LibraryStore,
         client: CloudLibrarySyncClient? = nil,
@@ -55,18 +75,21 @@ final class LibrarySyncCoordinator {
         hydrateMissingEntry: @escaping @MainActor (LibraryEntrySyncSnapshot, LibraryStore) async throws -> AnimeEntry =
             LibrarySyncCoordinator.hydrateMissingEntry
     ) {
-        let resolvedClient = client ?? CloudLibrarySyncClient(
-            container: CKContainer(identifier: CloudLibrarySyncClient.defaultContainerIdentifier)
-        )
+        let resolvedClient =
+            client
+            ?? CloudLibrarySyncClient(
+                container: CKContainer(identifier: CloudLibrarySyncClient.defaultContainerIdentifier)
+            )
         let resolvedDatabase =
             database
             ?? resolvedClient.privateDatabase.map(CloudLibrarySyncLiveDatabase.init(database:))
 
         self.store = store
         self.client = resolvedClient
-        self.namespaceProvider = namespaceProvider ?? {
-            try await resolvedClient.changeTokenNamespace()
-        }
+        self.namespaceProvider =
+            namespaceProvider ?? {
+                try await resolvedClient.changeTokenNamespace()
+            }
         self.hydrateMissingEntry = hydrateMissingEntry
 
         if let resolvedDatabase {
@@ -94,6 +117,10 @@ final class LibrarySyncCoordinator {
     }
 
     @discardableResult
+    /// Runs one coalesced sync pass for the requested trigger.
+    ///
+    /// Concurrent requests are serialized and merged so callers do not start
+    /// overlapping CloudKit work.
     func sync(trigger: Trigger) async -> Bool {
         librarySyncCoordinatorLogger.debug(
             "trigger=\(trigger.rawValue, privacy: .public) action=request isSyncing=\(self.isSyncing, privacy: .public)"
@@ -128,6 +155,7 @@ final class LibrarySyncCoordinator {
         return succeeded
     }
 
+    /// Executes the ordered sync phases and records diagnostics for each stage.
     private func runSync(trigger: Trigger) async -> Bool {
         guard let store else {
             librarySyncCoordinatorLogger.warning(
@@ -259,6 +287,10 @@ final class LibrarySyncCoordinator {
         }
     }
 
+    /// Applies remote snapshots to local entries, hydrating missing ones first.
+    ///
+    /// The method suppresses change recording while the imported snapshots are
+    /// written so the local save pass does not enqueue its own changes.
     private func apply(
         _ batch: CloudLibrarySyncImportBatch,
         to store: LibraryStore
@@ -284,6 +316,7 @@ final class LibrarySyncCoordinator {
         return (appliedSnapshotsCount, hydratedEntriesCount)
     }
 
+    /// Returns the local entry to update, hydrating a new one when needed.
     private func entryForApplying(
         _ snapshot: LibraryEntrySyncSnapshot,
         store: LibraryStore
@@ -302,6 +335,7 @@ final class LibrarySyncCoordinator {
         )
     }
 
+    /// Rebuilds a missing local entry from TMDb before remote data is applied.
     private static func hydrateMissingEntry(
         _ snapshot: LibraryEntrySyncSnapshot,
         store: LibraryStore
@@ -335,6 +369,10 @@ final class LibrarySyncCoordinator {
         return entry
     }
 
+    /// Drops queued local edits that were superseded by newer remote changes.
+    ///
+    /// - Returns: Pre/post dirty counts plus diagnostic counts for queue
+    ///   reconciliation decisions.
     private func reconcileDirtyQueue(
         with batch: CloudLibrarySyncImportBatch,
         in store: LibraryStore
@@ -374,6 +412,7 @@ final class LibrarySyncCoordinator {
         )
     }
 
+    /// Builds the current local snapshot map used by importer and exporter.
     private func localSnapshotsByIdentity(
         for store: LibraryStore
     ) throws -> [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot] {
@@ -386,13 +425,17 @@ final class LibrarySyncCoordinator {
     }
 }
 
-private struct ApplicationTarget {
+fileprivate struct ApplicationTarget {
     let entry: AnimeEntry
     let isInitialMaterialization: Bool
 }
 
-private extension LibraryEntrySyncSnapshot {
-    func isNewer(than dirtyEntry: LibraryEntrySyncDirtyQueueEntry) -> Bool {
+extension LibraryEntrySyncSnapshot {
+    /// Returns true when this remote snapshot is newer than the queued local work.
+    ///
+    /// Upserts compare against the local dirty timestamp, while deletes compare
+    /// against the tombstone's delete clock.
+    fileprivate func isNewer(than dirtyEntry: LibraryEntrySyncDirtyQueueEntry) -> Bool {
         switch dirtyEntry {
         case .upsert(let pendingUpsert):
             guard let latestSyncClock else { return false }
@@ -404,7 +447,7 @@ private extension LibraryEntrySyncSnapshot {
     }
 }
 
-private struct DisabledCloudLibrarySyncDatabase: CloudLibrarySyncDatabase {
+fileprivate struct DisabledCloudLibrarySyncDatabase: CloudLibrarySyncDatabase {
     enum DisabledError: Error {
         case unavailable
     }

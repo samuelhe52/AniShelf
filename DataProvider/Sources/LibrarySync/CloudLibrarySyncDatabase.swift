@@ -9,17 +9,29 @@ import CloudKit
 import Foundation
 import os
 
-private let cloudLibrarySyncDatabaseLogger = Logger(
+fileprivate let cloudLibrarySyncDatabaseLogger = Logger(
     subsystem: "com.samuelhe.MyAnimeList",
     category: "LibrarySync.CloudKit"
 )
 
+/// One CloudKit zone-change page normalized for the library sync pipeline.
 public struct CloudLibrarySyncZoneChangeBatch {
     public var modifiedRecordsByID: [CKRecord.ID: CKRecord]
     public var deletedRecordIDs: [CKRecord.ID]
     public var changeToken: CKServerChangeToken
     public var moreComing: Bool
 
+    /// Creates a normalized change batch.
+    ///
+    /// - Parameters:
+    ///   - modifiedRecordsByID: Records created or modified in CloudKit, keyed
+    ///     by record ID.
+    ///   - deletedRecordIDs: Raw CloudKit deletes observed in the zone.
+    ///     AniShelf normally syncs deletes as tombstone records, so callers keep
+    ///     this list for diagnostics and token advancement rather than applying
+    ///     it directly.
+    ///   - changeToken: Server token to persist after the batch is applied.
+    ///   - moreComing: Whether CloudKit has additional pages after this batch.
     public init(
         modifiedRecordsByID: [CKRecord.ID: CKRecord],
         deletedRecordIDs: [CKRecord.ID],
@@ -33,27 +45,44 @@ public struct CloudLibrarySyncZoneChangeBatch {
     }
 }
 
+/// Minimal CloudKit database surface used by library sync.
+///
+/// The protocol keeps importer/exporter logic testable while the live
+/// implementation owns CloudKit-specific operation calls and partial-failure
+/// handling.
 public protocol CloudLibrarySyncDatabase: Sendable {
+    /// Ensures the custom record zone and silent push subscription exist.
     func ensureZoneAndSubscription(
         zoneID: CKRecordZone.ID,
         subscriptionID: CKSubscription.ID
     ) async throws
 
+    /// Fetches one page of zone changes after an optional previous token.
     func fetchRecordZoneChanges(
         in zoneID: CKRecordZone.ID,
         since changeToken: CKServerChangeToken?
     ) async throws -> CloudLibrarySyncZoneChangeBatch
 
+    /// Saves records and returns only the record IDs CloudKit accepted.
     func save(records: [CKRecord]) async throws -> [CKRecord.ID]
 }
 
+/// Live `CloudLibrarySyncDatabase` backed by a `CKDatabase`.
 public final class CloudLibrarySyncLiveDatabase: CloudLibrarySyncDatabase, @unchecked Sendable {
     private let database: CKDatabase
 
+    /// Creates a live database adapter.
+    ///
+    /// - Parameter database: CloudKit private database for the configured
+    ///   container.
     public init(database: CKDatabase) {
         self.database = database
     }
 
+    /// Creates or reuses AniShelf's library zone and background subscription.
+    ///
+    /// The method treats CloudKit's common already-exists responses as success
+    /// so repeated sync attempts remain idempotent.
     public func ensureZoneAndSubscription(
         zoneID: CKRecordZone.ID,
         subscriptionID: CKSubscription.ID
@@ -75,6 +104,15 @@ public final class CloudLibrarySyncLiveDatabase: CloudLibrarySyncDatabase, @unch
         }
     }
 
+    /// Fetches a single page of changes for a record zone.
+    ///
+    /// - Parameters:
+    ///   - zoneID: Custom library zone to read.
+    ///   - changeToken: Previously committed server token, or `nil` for an
+    ///     initial fetch.
+    /// - Returns: Modified records, raw CloudKit deletes, the next token, and
+    ///   CloudKit's pagination flag.
+    /// - Throws: CloudKit errors from the underlying zone-change request.
     public func fetchRecordZoneChanges(
         in zoneID: CKRecordZone.ID,
         since changeToken: CKServerChangeToken?
@@ -113,6 +151,12 @@ public final class CloudLibrarySyncLiveDatabase: CloudLibrarySyncDatabase, @unch
         }
     }
 
+    /// Saves records non-atomically and reports the subset that succeeded.
+    ///
+    /// Partial CloudKit failures are converted into a successful return value
+    /// containing only accepted record IDs. Non-partial failures are rethrown.
+    ///
+    /// - Throws: Non-partial CloudKit errors from the modify-records request.
     public func save(records: [CKRecord]) async throws -> [CKRecord.ID] {
         guard !records.isEmpty else { return [] }
         cloudLibrarySyncDatabaseLogger.debug(
@@ -157,6 +201,7 @@ public final class CloudLibrarySyncLiveDatabase: CloudLibrarySyncDatabase, @unch
         }
     }
 
+    /// Creates the custom zone when CloudKit reports it as missing.
     private func ensureZone(_ zoneID: CKRecordZone.ID) async throws {
         let results = try await database.recordZones(for: [zoneID])
         switch results[zoneID] {
@@ -183,6 +228,7 @@ public final class CloudLibrarySyncLiveDatabase: CloudLibrarySyncDatabase, @unch
         }
     }
 
+    /// Creates the silent push subscription when CloudKit reports it as missing.
     private func ensureSubscription(
         _ subscriptionID: CKSubscription.ID,
         zoneID: CKRecordZone.ID
@@ -200,6 +246,7 @@ public final class CloudLibrarySyncLiveDatabase: CloudLibrarySyncDatabase, @unch
         }
     }
 
+    /// Saves a zone subscription and tolerates already-existing responses.
     private func saveSubscription(
         _ subscriptionID: CKSubscription.ID,
         zoneID: CKRecordZone.ID
@@ -217,7 +264,7 @@ public final class CloudLibrarySyncLiveDatabase: CloudLibrarySyncDatabase, @unch
             deleting: []
         )
         if case .failure(let error)? = saveResults.saveResults[subscriptionID],
-           !error.isCloudLibrarySyncAlreadyExists
+            !error.isCloudLibrarySyncAlreadyExists
         {
             throw error
         }

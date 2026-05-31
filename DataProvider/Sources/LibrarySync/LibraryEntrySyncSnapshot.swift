@@ -8,9 +8,19 @@
 import DataProvider
 import Foundation
 
+/// Stable CloudKit-facing identity for one library entry.
+///
+/// The identity is derived from AniShelf's entry type plus TMDb identifiers so
+/// every device can address the same movie, series, or season record without
+/// depending on local SwiftData identifiers.
 public struct LibraryEntrySyncIdentity: Codable, Hashable, Sendable {
     public let rawID: String
 
+    /// Creates the record identity for a library entry.
+    ///
+    /// - Parameters:
+    ///   - entryType: Entry kind and, for seasons, the parent series context.
+    ///   - tmdbID: TMDb identifier for the concrete entry being synced.
     public init(entryType: AnimeType, tmdbID: Int) {
         switch entryType {
         case .movie:
@@ -23,6 +33,12 @@ public struct LibraryEntrySyncIdentity: Codable, Hashable, Sendable {
     }
 }
 
+/// Lean user-owned state that is safe to sync through iCloud.
+///
+/// This snapshot intentionally excludes fetched TMDb metadata. It carries only
+/// the library membership, display, tracking, poster override, note, episode
+/// progress, and tombstone fields needed to replay a user's library state on
+/// another device.
 public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     public static let currentSchemaVersion = 1
 
@@ -50,11 +66,16 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         case deletedAt
     }
 
+    /// Per-season episode progress included in a sync snapshot.
     public struct EpisodeProgress: Codable, Equatable, Sendable {
         public var seasonNumber: Int
         public var watchedThroughEpisode: Int
         public var updatedAt: Date
 
+        /// Creates normalized episode progress for one season.
+        ///
+        /// Negative episode counts are clamped to zero so malformed input does
+        /// not advance a remote device.
         public init(seasonNumber: Int, watchedThroughEpisode: Int, updatedAt: Date) {
             self.seasonNumber = seasonNumber
             self.watchedThroughEpisode = max(0, watchedThroughEpisode)
@@ -88,10 +109,45 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     public var trackingUpdatedAt: Date?
     public var deletedAt: Date?
 
+    /// Newest top-level clock used when deciding whether remote state can clear
+    /// a local dirty-queue entry.
     public var latestSyncClock: Date? {
         [libraryUpdatedAt, trackingUpdatedAt, deletedAt].compactMap(\.self).max()
     }
 
+    /// Creates a normalized sync snapshot.
+    ///
+    /// - Parameters:
+    ///   - schemaVersion: Snapshot schema version. Defaults to the current
+    ///     version for newly created local snapshots.
+    ///   - identity: Stable identity used as the CloudKit record name.
+    ///   - tmdbID: TMDb identifier for the concrete movie, series, or season.
+    ///   - parentSeriesID: Parent series TMDb identifier for seasons; `nil` for
+    ///     movies and series.
+    ///   - seasonNumber: Season number for season entries; `nil` for movies and
+    ///     series.
+    ///   - entryType: AniShelf entry type, including season context.
+    ///   - onDisplay: Whether the entry is currently visible in the user's
+    ///     library.
+    ///   - dateSaved: Local date the user saved the entry.
+    ///   - watchStatus: User tracking status.
+    ///   - dateStarted: User-entered start date.
+    ///   - dateFinished: User-entered finish date.
+    ///   - isDateTrackingEnabled: Whether automatic date suggestions are enabled.
+    ///   - score: Optional user score. Values outside AniShelf's valid score
+    ///     range are dropped.
+    ///   - favorite: Favorite flag.
+    ///   - notes: User notes.
+    ///   - usingCustomPoster: Whether `customPosterURL` should be applied.
+    ///   - customPosterURL: User-selected poster URL. Ignored unless
+    ///     `usingCustomPoster` is true.
+    ///   - episodeProgresses: Per-season episode progress. Entries are
+    ///     normalized to one positive progress value per positive season.
+    ///   - libraryUpdatedAt: Clock for membership/display changes.
+    ///   - trackingUpdatedAt: Clock for status, date, score, favorite, notes,
+    ///     poster, and progress changes.
+    ///   - deletedAt: Optional tombstone clock. When present, the snapshot
+    ///     represents a delete instead of an upsert.
     public init(
         schemaVersion: Int = Self.currentSchemaVersion,
         identity: LibraryEntrySyncIdentity,
@@ -138,6 +194,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         self.deletedAt = deletedAt
     }
 
+    /// Projects a local `AnimeEntry` into the lean sync model.
     public init(entry: AnimeEntry) {
         self.init(
             identity: entry.syncIdentity,
@@ -198,6 +255,12 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         )
     }
 
+    /// Returns the last-writer-wins merge of two snapshots with the same identity.
+    ///
+    /// Library membership/display fields follow `libraryUpdatedAt`; tracking
+    /// fields follow `trackingUpdatedAt`; episode progress merges per season by
+    /// progress clock; tombstones win only when the delete clock is newer than
+    /// the remaining relevant local clocks.
     public func merged(with other: LibraryEntrySyncSnapshot) throws -> LibraryEntrySyncSnapshot {
         guard identity == other.identity else {
             throw MergeError.identityMismatch(local: identity, remote: other.identity)
@@ -232,6 +295,10 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         return merged
     }
 
+    /// Keeps a tombstone only when it is newer than the surviving user-state clocks.
+    ///
+    /// A stale delete should not hide an entry after a newer membership,
+    /// tracking, or episode-progress edit has already revived it.
     private static func resolvedDeletedAt(
         local: LibraryEntrySyncSnapshot,
         remote: LibraryEntrySyncSnapshot
@@ -261,6 +328,10 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         dates.compactMap(\.self).max()
     }
 
+    /// Merges progress from both snapshots one season at a time.
+    ///
+    /// Each season keeps the newest progress clock, with the higher episode
+    /// number winning when two updates have the same timestamp.
     private static func mergedEpisodeProgresses(
         _ lhs: [EpisodeProgress],
         _ rhs: [EpisodeProgress]
@@ -285,6 +356,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         return normalizedEpisodeProgresses(Array(progressBySeason.values))
     }
 
+    /// Chooses the progress value that should win for a single season.
     private static func newerEpisodeProgress(
         _ lhs: EpisodeProgress,
         _ rhs: EpisodeProgress
@@ -295,6 +367,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         return lhs.updatedAt > rhs.updatedAt ? lhs : rhs
     }
 
+    /// Drops invalid/empty progress and returns one sorted value per season.
     private static func normalizedEpisodeProgresses(
         _ progresses: [EpisodeProgress]
     ) -> [EpisodeProgress] {
@@ -321,10 +394,23 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
 }
 
 extension AnimeEntry {
+    /// Stable sync identity for this local entry.
     public var syncIdentity: LibraryEntrySyncIdentity {
         LibraryEntrySyncIdentity(entryType: type, tmdbID: tmdbID)
     }
 
+    /// Applies a merged remote snapshot to an existing local entry.
+    ///
+    /// This method respects the snapshot clocks instead of blindly overwriting
+    /// local state. Tombstones hide the entry only when the delete clock is newer
+    /// than the local library/tracking/progress clocks.
+    ///
+    /// - Parameters:
+    ///   - snapshot: Remote or merged snapshot for the same sync identity.
+    ///   - now: Reserved clock injection point for callers/tests. Episode
+    ///     progress application uses each progress value's own `updatedAt`.
+    /// - Throws: `MergeError.identityMismatch` when the snapshot targets a
+    ///   different sync identity.
     public func applySyncSnapshot(_ snapshot: LibraryEntrySyncSnapshot, now: Date = .now) throws {
         guard syncIdentity == snapshot.identity else {
             throw LibraryEntrySyncSnapshot.MergeError.identityMismatch(
@@ -365,6 +451,19 @@ extension AnimeEntry {
         applySyncEpisodeProgresses(snapshot.episodeProgresses, now: now)
     }
 
+    /// Applies a remote snapshot to a newly hydrated local entry.
+    ///
+    /// Use this when the app had to recreate a missing entry from TMDb metadata
+    /// before applying user-owned sync fields. Unlike `applySyncSnapshot`, this
+    /// seeds all snapshot fields because there is no meaningful local user state
+    /// to preserve.
+    ///
+    /// - Parameters:
+    ///   - snapshot: Remote snapshot used to initialize the entry.
+    ///   - now: Reserved clock injection point for callers/tests. Episode
+    ///     progress application uses each progress value's own `updatedAt`.
+    /// - Throws: `MergeError.identityMismatch` when the snapshot targets a
+    ///   different sync identity.
     public func applyInitialSyncSnapshot(_ snapshot: LibraryEntrySyncSnapshot, now: Date = .now) throws {
         guard syncIdentity == snapshot.identity else {
             throw LibraryEntrySyncSnapshot.MergeError.identityMismatch(
@@ -397,6 +496,10 @@ extension AnimeEntry {
         applySyncEpisodeProgresses(snapshot.episodeProgresses, now: now)
     }
 
+    /// Applies a delete tombstone when it is newer than local user-state clocks.
+    ///
+    /// Delete sync hides the entry rather than removing the local row, preserving
+    /// enough local metadata for later rehydration and conflict resolution.
     private func applySyncTombstone(deletedAt: Date) {
         if let latestLocalClock = [
             dateSaved, libraryUpdatedAt, trackingUpdatedAt, episodeProgresses.map(\.updatedAt).max()
@@ -408,6 +511,10 @@ extension AnimeEntry {
         onDisplay = false
     }
 
+    /// Applies per-season progress without regressing local progress.
+    ///
+    /// A remote progress value must have a newer timestamp, or the same
+    /// timestamp with a higher episode count, before it updates the entry.
     private func applySyncEpisodeProgresses(
         _ progresses: [LibraryEntrySyncSnapshot.EpisodeProgress],
         now: Date

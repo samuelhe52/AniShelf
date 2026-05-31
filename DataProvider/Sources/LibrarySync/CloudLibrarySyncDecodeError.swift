@@ -7,6 +7,7 @@
 
 import Foundation
 
+/// Validation failures while decoding a CloudKit library sync record.
 public enum CloudLibrarySyncDecodeError: Error, Equatable, Sendable {
     case wrongRecordType(actual: String)
     case unsupportedSchemaVersion(Int)

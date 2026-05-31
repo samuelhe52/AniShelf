@@ -7,9 +7,11 @@
 
 import UIKit
 
+/// Bridges CloudKit remote notifications into the async library sync trigger.
 final class LibrarySyncNotificationBridge: NSObject, UIApplicationDelegate {
     var onSyncRequested: (@MainActor () async -> UIBackgroundFetchResult)?
 
+    /// Forwards a silent push notification to the async sync handler.
     func application(
         _ application: UIApplication,
         didReceiveRemoteNotification userInfo: [AnyHashable: Any],

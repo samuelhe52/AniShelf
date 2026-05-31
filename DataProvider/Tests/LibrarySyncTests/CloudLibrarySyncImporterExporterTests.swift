@@ -84,11 +84,14 @@ struct CloudLibrarySyncImporterExporterTests {
         let database = FakeCloudLibrarySyncDatabase(
             changes: [
                 .init(
-                    modifiedRecordsByID: [client.recordID(for: identity): try client.record(from: makeSnapshot(
-                        identity: identity,
-                        tmdbID: 902,
-                        entryType: .movie
-                    ))],
+                    modifiedRecordsByID: [
+                        client.recordID(for: identity): try client.record(
+                            from: makeSnapshot(
+                                identity: identity,
+                                tmdbID: 902,
+                                entryType: .movie
+                            ))
+                    ],
                     deletedRecordIDs: [],
                     changeToken: finalToken,
                     moreComing: false
@@ -186,7 +189,7 @@ struct CloudLibrarySyncImporterExporterTests {
     }
 }
 
-private final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, @unchecked Sendable {
+fileprivate final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, @unchecked Sendable {
     private var changes: [CloudLibrarySyncZoneChangeBatch]
     private let firstFetchError: Error?
     private let successfulSaveRecordIDs: [CKRecord.ID]?
@@ -231,18 +234,18 @@ private final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, @unc
     }
 }
 
-private func makeNamespace() -> CloudLibrarySyncChangeTokenStore.Namespace {
+fileprivate func makeNamespace() -> CloudLibrarySyncChangeTokenStore.Namespace {
     .init(
         containerIdentifier: CloudLibrarySyncClient.defaultContainerIdentifier,
         accountIdentifier: "test-account"
     )
 }
 
-private func makeToken() throws -> CKServerChangeToken {
+fileprivate func makeToken() throws -> CKServerChangeToken {
     try #require(class_createInstance(CKServerChangeToken.self, 0) as? CKServerChangeToken)
 }
 
-private func makeSnapshot(
+fileprivate func makeSnapshot(
     identity: LibraryEntrySyncIdentity,
     tmdbID: Int,
     entryType: AnimeType = .series,
@@ -272,7 +275,7 @@ private func makeSnapshot(
     )
 }
 
-private func referenceDate(year: Int, month: Int, day: Int) -> Date {
+fileprivate func referenceDate(year: Int, month: Int, day: Int) -> Date {
     Calendar(identifier: .gregorian).date(
         from: DateComponents(year: year, month: month, day: day)
     )!

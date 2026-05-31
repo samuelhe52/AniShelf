@@ -9,20 +9,28 @@ import DataProvider
 import Foundation
 import os
 
-private let dirtyQueueLogger = Logger(
+fileprivate let dirtyQueueLogger = Logger(
     subsystem: "com.samuelhe.MyAnimeList",
     category: "LibrarySync.DirtyQueue"
 )
 
+/// Persisted delete intent for one sync identity.
+///
+/// Tombstones carry the last known user-owned snapshot plus `deletedAt` so
+/// another device can decide whether the delete is newer than its local edits.
 public struct LibraryEntrySyncTombstone: Codable, Equatable, Sendable {
     public var snapshot: LibraryEntrySyncSnapshot
 
+    /// Captures an entry's current sync state as a delete tombstone.
     public init(entry: AnimeEntry, deletedAt: Date = .now) {
         var snapshot = LibraryEntrySyncSnapshot(entry: entry)
         snapshot.deletedAt = deletedAt
         self.snapshot = snapshot
     }
 
+    /// Wraps an existing delete snapshot.
+    ///
+    /// The snapshot must already contain a `deletedAt` value.
     public init(snapshot: LibraryEntrySyncSnapshot) {
         precondition(snapshot.deletedAt != nil)
         self.snapshot = snapshot
@@ -31,11 +39,13 @@ public struct LibraryEntrySyncTombstone: Codable, Equatable, Sendable {
     public var identity: LibraryEntrySyncIdentity { snapshot.identity }
     public var deletedAt: Date { snapshot.deletedAt ?? .distantPast }
 
+    /// Returns the tombstone as the snapshot to upload.
     public func syncSnapshot() -> LibraryEntrySyncSnapshot {
         snapshot
     }
 }
 
+/// Dirty-queue entry for a local insert or update.
 public struct LibraryEntrySyncPendingUpsert: Codable, Equatable, Sendable {
     public var identity: LibraryEntrySyncIdentity
     public var dirtyAt: Date
@@ -46,6 +56,7 @@ public struct LibraryEntrySyncPendingUpsert: Codable, Equatable, Sendable {
     }
 }
 
+/// Dirty-queue entry for a local delete tombstone.
 public struct LibraryEntrySyncPendingDelete: Codable, Equatable, Sendable {
     public var tombstone: LibraryEntrySyncTombstone
 
@@ -56,6 +67,7 @@ public struct LibraryEntrySyncPendingDelete: Codable, Equatable, Sendable {
     public var identity: LibraryEntrySyncIdentity { tombstone.identity }
 }
 
+/// Coalesced local sync work waiting to be exported.
 public enum LibraryEntrySyncDirtyQueueEntry: Codable, Equatable, Sendable {
     case upsert(LibraryEntrySyncPendingUpsert)
     case delete(LibraryEntrySyncPendingDelete)
@@ -103,12 +115,16 @@ public enum LibraryEntrySyncDirtyQueueEntry: Codable, Equatable, Sendable {
     }
 }
 
+/// Persisted collection of pending local sync work.
 public struct LibraryEntrySyncDirtyQueue: Codable, Equatable, Sendable {
     public static let currentSchemaVersion = 1
 
     public var schemaVersion: Int
     public var entries: [LibraryEntrySyncDirtyQueueEntry]
 
+    /// Creates a queue and coalesces duplicate identities.
+    ///
+    /// When multiple entries share an identity, the last entry in the input wins.
     public init(
         schemaVersion: Int = Self.currentSchemaVersion,
         entries: [LibraryEntrySyncDirtyQueueEntry] = []
@@ -117,6 +133,7 @@ public struct LibraryEntrySyncDirtyQueue: Codable, Equatable, Sendable {
         self.entries = Self.coalesced(entries)
     }
 
+    /// Returns the queued entry for an identity, if any.
     public func entry(for identity: LibraryEntrySyncIdentity) -> LibraryEntrySyncDirtyQueueEntry? {
         entries.first { $0.identity == identity }
     }
@@ -131,6 +148,10 @@ public struct LibraryEntrySyncDirtyQueue: Codable, Equatable, Sendable {
     }
 }
 
+/// File-backed store for local library sync work.
+///
+/// The queue is small JSON state, written atomically, that lets AniShelf retry
+/// local edits after app restarts or transient CloudKit failures.
 public final class LibraryEntrySyncDirtyQueueStore: @unchecked Sendable {
     public static let defaultDirectoryURL = URL.applicationSupportDirectory
         .appendingPathComponent("AniShelf")
@@ -144,6 +165,12 @@ public final class LibraryEntrySyncDirtyQueueStore: @unchecked Sendable {
     private let writeQueueHandler: (LibraryEntrySyncDirtyQueue) throws -> Void
     public let url: URL
 
+    /// Creates a file-backed dirty-queue store.
+    ///
+    /// - Parameters:
+    ///   - url: JSON file used for the queue.
+    ///   - fileManager: File manager used for reads, writes, and directory
+    ///     creation.
     public init(
         url: URL = LibraryEntrySyncDirtyQueueStore.defaultFileURL,
         fileManager: FileManager = .default
@@ -165,6 +192,7 @@ public final class LibraryEntrySyncDirtyQueueStore: @unchecked Sendable {
         self.writeQueueHandler = writeQueueHandler
     }
 
+    /// Loads the persisted queue, resetting corrupt or unsupported files.
     public func load() -> LibraryEntrySyncDirtyQueue {
         guard fileManager.fileExists(atPath: url.path) else {
             return .init()
@@ -191,6 +219,12 @@ public final class LibraryEntrySyncDirtyQueueStore: @unchecked Sendable {
     }
 
     @discardableResult
+    /// Stores an upsert unless an equal or newer upsert is already queued.
+    ///
+    /// A queued delete for the same identity is replaced by the upsert because
+    /// the local entry now exists again.
+    ///
+    /// - Returns: The previous entry for the identity, when one existed.
     public func setPendingUpsert(_ pendingUpsert: LibraryEntrySyncPendingUpsert) throws
         -> LibraryEntrySyncDirtyQueueEntry?
     {
@@ -209,6 +243,9 @@ public final class LibraryEntrySyncDirtyQueueStore: @unchecked Sendable {
     }
 
     @discardableResult
+    /// Stores a delete tombstone unless an equal or newer tombstone is queued.
+    ///
+    /// - Returns: The previous entry for the identity, when one existed.
     public func setPendingDelete(_ pendingDelete: LibraryEntrySyncPendingDelete) throws
         -> LibraryEntrySyncDirtyQueueEntry?
     {
@@ -228,6 +265,12 @@ public final class LibraryEntrySyncDirtyQueueStore: @unchecked Sendable {
     }
 
     @discardableResult
+    /// Replaces or removes the queued entry for one identity.
+    ///
+    /// This is used by delete rollback and export confirmation paths that need
+    /// to restore an exact previous queue state.
+    ///
+    /// - Returns: The previous entry for the identity, when one existed.
     public func replaceEntry(
         _ entry: LibraryEntrySyncDirtyQueueEntry?,
         for identity: LibraryEntrySyncIdentity
@@ -251,6 +294,7 @@ public final class LibraryEntrySyncDirtyQueueStore: @unchecked Sendable {
         }
     }
 
+    /// Removes queued work for an identity.
     public func removeEntry(for identity: LibraryEntrySyncIdentity) throws {
         _ = try replaceEntry(nil, for: identity)
     }
@@ -275,6 +319,10 @@ public final class LibraryEntrySyncDirtyQueueStore: @unchecked Sendable {
         try writeQueue(queue)
     }
 
+    /// Applies one identity-scoped queue mutation against the persisted JSON.
+    ///
+    /// The helper loads the current queue, asks the caller how to transform the
+    /// existing entry, then writes the rewritten queue back only if it changed.
     private func mutateQueue(
         for identity: LibraryEntrySyncIdentity,
         mutation: String,
@@ -321,6 +369,7 @@ public final class LibraryEntrySyncDirtyQueueStore: @unchecked Sendable {
         return existing
     }
 
+    /// Writes the queue through the injected persistence hook.
     private func writeQueue(_ queue: LibraryEntrySyncDirtyQueue) throws {
         dirtyQueueLogger.debug(
             "operation=writeQueue entryCount=\(queue.entries.count, privacy: .public)"
@@ -328,6 +377,7 @@ public final class LibraryEntrySyncDirtyQueueStore: @unchecked Sendable {
         try writeQueueHandler(queue)
     }
 
+    /// Replaces a corrupt queue file with an empty queue if recovery succeeds.
     private func resetToEmptyQueue() {
         do {
             try writeQueue(.init())
