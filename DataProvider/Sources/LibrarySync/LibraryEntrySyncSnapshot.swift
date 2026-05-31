@@ -88,6 +88,10 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     public var trackingUpdatedAt: Date?
     public var deletedAt: Date?
 
+    public var latestSyncClock: Date? {
+        [libraryUpdatedAt, trackingUpdatedAt, deletedAt].compactMap(\.self).max()
+    }
+
     public init(
         schemaVersion: Int = Self.currentSchemaVersion,
         identity: LibraryEntrySyncIdentity,

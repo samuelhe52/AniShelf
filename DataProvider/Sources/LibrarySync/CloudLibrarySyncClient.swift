@@ -9,9 +9,11 @@ import CloudKit
 import DataProvider
 import Foundation
 
-public struct CloudLibrarySyncClient {
+public struct CloudLibrarySyncClient: @unchecked Sendable {
+    public static let defaultContainerIdentifier = "iCloud.com.samuelhe.MyAnimeList"
     public static let zoneName = "AniShelfLibrary"
     public static let recordType = "LibraryEntry"
+    public static let subscriptionID = "AniShelfLibrary.zone"
     public static let recordZoneID = CKRecordZone.ID(
         zoneName: zoneName,
         ownerName: CKCurrentUserDefaultName

@@ -11,10 +11,12 @@ import SwiftUI
 
 @main
 struct MyAnimeListApp: App {
+    @UIApplicationDelegateAdaptor(LibrarySyncNotificationBridge.self) private var notificationBridge
     @State var libraryStore: LibraryStore = .init(dataProvider: .default)
     @State var keyStorage: TMDbAPIKeyStorage = .init()
     @State var whatsNew: WhatsNewController = .init()
     @State var supportStore: SupportStore = .init()
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage(.preferredAnimeInfoLanguage) var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
@@ -38,6 +40,22 @@ struct MyAnimeListApp: App {
             .environment(whatsNew)
             .environment(supportStore)
             .environment(\.dataHandler, DataProvider.default.dataHandler)
+            .onAppear {
+                notificationBridge.onSyncRequested = { [libraryStore, keyStorage] in
+                    guard let key = keyStorage.key,
+                          !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    else {
+                        return
+                    }
+                    libraryStore.syncLibrary(trigger: .cloudNotification)
+                }
+                requestSync(trigger: .appLaunch)
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    requestSync(trigger: .foreground)
+                }
+            }
             .sheet(item: presentedWhatsNewEntry) { entry in
                 NavigationStack {
                     WhatsNewRootSheet(
@@ -71,6 +89,11 @@ struct MyAnimeListApp: App {
 
     private func updateWhatsNewPresentation() {
         whatsNew.presentIfNeeded(allowsAutoPresentation: hasTMDbAPIKey)
+    }
+
+    private func requestSync(trigger: LibrarySyncCoordinator.Trigger) {
+        guard hasTMDbAPIKey else { return }
+        libraryStore.syncLibrary(trigger: trigger)
     }
 
     private var hasTMDbAPIKey: Bool {

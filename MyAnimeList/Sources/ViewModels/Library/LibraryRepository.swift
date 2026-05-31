@@ -1,5 +1,6 @@
 import DataProvider
 import Foundation
+import LibrarySync
 import SwiftData
 
 @MainActor
@@ -69,6 +70,17 @@ final class LibraryRepository {
         } catch {
             libraryStoreLogger.warning(
                 "Failed to fetch existing entry \(tmdbID, privacy: .public): \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    func existingEntry(identity: LibraryEntrySyncIdentity) -> AnimeEntry? {
+        do {
+            return try dataProvider.getAllModels(ofType: AnimeEntry.self)
+                .first { $0.syncIdentity == identity }
+        } catch {
+            libraryStoreLogger.warning(
+                "Failed to fetch sync entry \(identity.rawID, privacy: .public): \(error.localizedDescription)")
             return nil
         }
     }

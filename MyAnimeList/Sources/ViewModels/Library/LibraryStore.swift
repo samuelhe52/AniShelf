@@ -21,6 +21,7 @@ class LibraryStore {
     @ObservationIgnored let dataProvider: DataProvider
     @ObservationIgnored let repository: LibraryRepository
     @ObservationIgnored let syncChangeRecorder: LibrarySyncChangeRecorder
+    @ObservationIgnored private(set) var syncCoordinator: LibrarySyncCoordinator?
     @ObservationIgnored let preferences: LibraryPreferences
     @ObservationIgnored private var cancellables = Set<AnyCancellable>()
 
@@ -104,6 +105,7 @@ class LibraryStore {
         setupUpdateLibrary()
         setupTMDbAPIConfigurationChangeMonitor()
         try? refreshLibrary()
+        self.syncCoordinator = LibrarySyncCoordinator(store: self)
     }
 
     func reloadPersistedPreferences() {
@@ -158,6 +160,13 @@ class LibraryStore {
 
     func rebuildSyncChangeTracking() {
         syncChangeRecorder.rebuildBaseline()
+    }
+
+    func syncLibrary(trigger: LibrarySyncCoordinator.Trigger) {
+        guard let syncCoordinator else { return }
+        Task {
+            await syncCoordinator.sync(trigger: trigger)
+        }
     }
 
     func setupTMDbAPIConfigurationChangeMonitor() {

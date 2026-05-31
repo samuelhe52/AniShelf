@@ -52,6 +52,7 @@ final class LibrarySyncChangeRecorder {
     private let notificationCenter: NotificationCenter
     private var cancellables = Set<AnyCancellable>()
     private var lastSeenClocksByIdentifier: [PersistentIdentifier: ClockBaseline]
+    private var suppressionDepth = 0
 
     init(
         dataProvider: DataProvider,
@@ -67,6 +68,18 @@ final class LibrarySyncChangeRecorder {
 
     func rebuildBaseline() {
         lastSeenClocksByIdentifier = Self.makeBaseline(from: dataProvider)
+    }
+
+    func withSuppressedRecording<T>(_ operation: () throws -> T) rethrows -> T {
+        suppressionDepth += 1
+        defer { suppressionDepth -= 1 }
+        return try operation()
+    }
+
+    func withSuppressedRecording<T>(_ operation: () async throws -> T) async rethrows -> T {
+        suppressionDepth += 1
+        defer { suppressionDepth -= 1 }
+        return try await operation()
     }
 
     func recordDeletion(
@@ -135,6 +148,8 @@ final class LibrarySyncChangeRecorder {
     }
 
     func processSaveNotification(_ notification: Notification) {
+        guard suppressionDepth == 0 else { return }
+
         let deletedIdentifiers = persistentIdentifiers(
             for: .deletedIdentifiers,
             in: notification

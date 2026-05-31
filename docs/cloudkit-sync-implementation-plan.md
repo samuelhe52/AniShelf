@@ -30,7 +30,17 @@ For failure patterns from the earlier full-store mirroring attempt, see
   - persisted JSON dirty queue in Application Support
   - `ModelContext.didSave`-based local change recorder
   - explicit delete tombstones, including batch-delete rollback handling
-- Stages 4-8 are still pending.
+- Stage 4 is complete:
+  - remote CloudKit import loop
+  - zone-delta decode and merge by sync identity
+  - hydration of missing rows through TMDb
+  - tombstone resolution against local clocks
+- Stage 5 is complete:
+  - `LibrarySyncCoordinator`
+  - remote-import-before-export sequencing
+  - recorder suppression around remote applies
+  - token advancement only after local save succeeds
+- Stages 6-8 are still pending.
 
 ## Plan Maintenance
 
@@ -94,6 +104,8 @@ DO NOT follow the stages below as strict implementation requirements. You can be
 
 ### Stage 4. Import And Hydration
 
+Status: Complete as of 2026-05-31.
+
 Build the remote import path:
 
 - fetch CloudKit changes from the custom zone
@@ -107,6 +119,8 @@ local repository lookup is not enough once multiple devices can add the same
 TMDb entry independently.
 
 ### Stage 5. Sync Coordinator
+
+Status: Complete as of 2026-05-31.
 
 Add one coordinator/service responsible for:
 
