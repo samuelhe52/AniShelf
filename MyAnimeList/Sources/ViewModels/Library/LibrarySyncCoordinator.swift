@@ -148,9 +148,13 @@ final class LibrarySyncCoordinator {
     ) async throws {
         try await store.syncChangeRecorder.withSuppressedRecording {
             for snapshot in batch.snapshots {
-                let entry = try await entryForApplying(snapshot, store: store)
-                guard let entry else { continue }
-                try entry.applySyncSnapshot(snapshot)
+                let applicationTarget = try await entryForApplying(snapshot, store: store)
+                guard let applicationTarget else { continue }
+                if applicationTarget.isInitialMaterialization {
+                    try applicationTarget.entry.applyInitialSyncSnapshot(snapshot)
+                } else {
+                    try applicationTarget.entry.applySyncSnapshot(snapshot)
+                }
             }
             try store.repository.save()
         }
@@ -161,16 +165,19 @@ final class LibrarySyncCoordinator {
     private func entryForApplying(
         _ snapshot: LibraryEntrySyncSnapshot,
         store: LibraryStore
-    ) async throws -> AnimeEntry? {
+    ) async throws -> ApplicationTarget? {
         if let entry = store.repository.existingEntry(identity: snapshot.identity) {
-            return entry
+            return .init(entry: entry, isInitialMaterialization: false)
         }
 
         guard snapshot.deletedAt == nil else {
             return nil
         }
 
-        return try await hydrateMissingEntry(snapshot, store)
+        return .init(
+            entry: try await hydrateMissingEntry(snapshot, store),
+            isInitialMaterialization: true
+        )
     }
 
     private static func hydrateMissingEntry(
@@ -232,6 +239,11 @@ final class LibrarySyncCoordinator {
             }
         )
     }
+}
+
+private struct ApplicationTarget {
+    let entry: AnimeEntry
+    let isInitialMaterialization: Bool
 }
 
 private extension LibraryEntrySyncSnapshot {

@@ -365,6 +365,38 @@ extension AnimeEntry {
         applySyncEpisodeProgresses(snapshot.episodeProgresses, now: now)
     }
 
+    public func applyInitialSyncSnapshot(_ snapshot: LibraryEntrySyncSnapshot, now: Date = .now) throws {
+        guard syncIdentity == snapshot.identity else {
+            throw LibraryEntrySyncSnapshot.MergeError.identityMismatch(
+                local: syncIdentity,
+                remote: snapshot.identity
+            )
+        }
+
+        if let deletedAt = snapshot.deletedAt {
+            applySyncTombstone(deletedAt: deletedAt)
+            return
+        }
+
+        onDisplay = snapshot.onDisplay
+        dateSaved = snapshot.dateSaved
+        libraryUpdatedAt = snapshot.libraryUpdatedAt
+        watchStatus = snapshot.watchStatus
+        dateStarted = snapshot.dateStarted
+        dateFinished = snapshot.dateFinished
+        isDateTrackingEnabled = snapshot.isDateTrackingEnabled
+        score = normalizedSyncScore(snapshot.score)
+        favorite = snapshot.favorite
+        notes = snapshot.notes
+        usingCustomPoster = snapshot.usingCustomPoster
+        if snapshot.usingCustomPoster {
+            posterURL = snapshot.customPosterURL
+        }
+        trackingUpdatedAt = snapshot.trackingUpdatedAt
+
+        applySyncEpisodeProgresses(snapshot.episodeProgresses, now: now)
+    }
+
     private func applySyncTombstone(deletedAt: Date) {
         if let latestLocalClock = [
             dateSaved, libraryUpdatedAt, trackingUpdatedAt, episodeProgresses.map(\.updatedAt).max()

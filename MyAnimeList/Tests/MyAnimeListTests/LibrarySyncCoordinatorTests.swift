@@ -97,6 +97,56 @@ struct LibrarySyncCoordinatorTests {
         #expect(hydrated.tmdbID == 702)
     }
 
+    @Test @MainActor func missingRowWithNilClocksAppliesRemoteState() async throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let namespace = makeNamespace()
+        let identity = LibraryEntrySyncIdentity(entryType: .series, tmdbID: 706)
+        let client = CloudLibrarySyncClient()
+        var snapshot = makeSnapshot(
+            identity: identity,
+            tmdbID: 706,
+            notes: "Nil clock remote",
+            trackingUpdatedAt: nil
+        )
+        snapshot.libraryUpdatedAt = nil
+        snapshot.favorite = true
+        snapshot.score = 5
+        snapshot.watchStatus = .dropped
+        let database = FakeCloudLibrarySyncDatabase(changes: [
+            .init(
+                modifiedRecordsByID: [client.recordID(for: identity): try client.record(from: snapshot)],
+                deletedRecordIDs: [],
+                changeToken: makeToken(),
+                moreComing: false
+            )
+        ])
+        let coordinator = LibrarySyncCoordinator(
+            store: store,
+            client: client,
+            database: database,
+            namespaceProvider: { namespace },
+            hydrateMissingEntry: { snapshot, store in
+                let entry = AnimeEntry(
+                    name: "Hydrated Defaults",
+                    type: snapshot.entryType,
+                    tmdbID: snapshot.tmdbID
+                )
+                store.repository.insert(entry)
+                return entry
+            }
+        )
+
+        await coordinator.sync(trigger: .manualRetry)
+
+        try store.refreshLibrary()
+        let hydrated = try #require(store.library.first { $0.syncIdentity == identity })
+        #expect(hydrated.notes == "Nil clock remote")
+        #expect(hydrated.favorite)
+        #expect(hydrated.score == 5)
+        #expect(hydrated.watchStatus == .dropped)
+        #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
+    }
+
     @Test @MainActor func staleTombstonePreservesNewerLocalState() async throws {
         let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
         let entry = AnimeEntry(
