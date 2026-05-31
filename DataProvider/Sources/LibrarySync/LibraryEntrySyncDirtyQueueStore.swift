@@ -134,6 +134,8 @@ public final class LibraryEntrySyncDirtyQueueStore: @unchecked Sendable {
         .appendingPathComponent("library-entry-sync-dirty-queue.json")
 
     private let fileManager: FileManager
+    /// Injected handler for writing the queue, used for testing purposes.
+    private let writeQueueHandler: (LibraryEntrySyncDirtyQueue) throws -> Void
     public let url: URL
 
     public init(
@@ -142,6 +144,19 @@ public final class LibraryEntrySyncDirtyQueueStore: @unchecked Sendable {
     ) {
         self.url = url
         self.fileManager = fileManager
+        self.writeQueueHandler = { queue in
+            try Self.writeQueue(queue, to: url, fileManager: fileManager)
+        }
+    }
+
+    init(
+        url: URL,
+        fileManager: FileManager = .default,
+        writeQueueHandler: @escaping (LibraryEntrySyncDirtyQueue) throws -> Void
+    ) {
+        self.url = url
+        self.fileManager = fileManager
+        self.writeQueueHandler = writeQueueHandler
     }
 
     public func load() -> LibraryEntrySyncDirtyQueue {
@@ -198,6 +213,15 @@ public final class LibraryEntrySyncDirtyQueueStore: @unchecked Sendable {
         _ = try replaceEntry(nil, for: identity)
     }
 
+    /// Replaces the persisted dirty queue in one atomic file write.
+    ///
+    /// Callers that need all-or-nothing multi-entry mutations should stage the
+    /// full post-mutation queue in memory, then persist it through this method
+    /// instead of chaining per-entry updates.
+    public func replaceEntries(_ entries: [LibraryEntrySyncDirtyQueueEntry]) throws {
+        try writeQueue(.init(entries: entries))
+    }
+
     private func mutateQueue(
         for identity: LibraryEntrySyncIdentity,
         _ transform: (_ queue: LibraryEntrySyncDirtyQueue, _ existing: LibraryEntrySyncDirtyQueueEntry?) ->
@@ -211,22 +235,31 @@ public final class LibraryEntrySyncDirtyQueueStore: @unchecked Sendable {
         let existing = entriesByID[identity.rawID]
         guard let newEntry = transform(queue, existing) else {
             entriesByID.removeValue(forKey: identity.rawID)
-            try writeQueue(entriesByID.values.sorted { lhs, rhs in lhs.identity.rawID < rhs.identity.rawID })
+            try writeQueue(
+                .init(entries: entriesByID.values.sorted { lhs, rhs in lhs.identity.rawID < rhs.identity.rawID }))
             return existing
         }
         entriesByID[newEntry.identity.rawID] = newEntry
-        try writeQueue(entriesByID.values.sorted { lhs, rhs in lhs.identity.rawID < rhs.identity.rawID })
+        try writeQueue(
+            .init(entries: entriesByID.values.sorted { lhs, rhs in lhs.identity.rawID < rhs.identity.rawID }))
         return existing
     }
 
-    private func writeQueue(_ entries: [LibraryEntrySyncDirtyQueueEntry]) throws {
-        try createParentDirectoryIfNeeded()
-        let queue = LibraryEntrySyncDirtyQueue(entries: entries)
+    private func writeQueue(_ queue: LibraryEntrySyncDirtyQueue) throws {
+        try writeQueueHandler(queue)
+    }
+
+    private static func writeQueue(
+        _ queue: LibraryEntrySyncDirtyQueue,
+        to url: URL,
+        fileManager: FileManager
+    ) throws {
+        try createParentDirectoryIfNeeded(for: url, fileManager: fileManager)
         let data = try JSONEncoder().encode(queue)
         try data.write(to: url, options: [.atomic])
     }
 
-    private func createParentDirectoryIfNeeded() throws {
+    private static func createParentDirectoryIfNeeded(for url: URL, fileManager: FileManager) throws {
         let directoryURL = url.deletingLastPathComponent()
         try fileManager.createDirectory(
             at: directoryURL,

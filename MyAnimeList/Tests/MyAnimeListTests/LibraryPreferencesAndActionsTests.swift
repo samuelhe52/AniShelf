@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftData
 import Testing
 
 @testable import DataProvider
@@ -311,6 +312,62 @@ struct LibraryPreferencesAndActionsTests {
         }
     }
 
+    @Test @MainActor func testLibrarySyncRecorderKeepsBaselineWhenUpsertWriteFails() throws {
+        let fileManager = FileManager.default
+        let queueDirectory = fileManager.temporaryDirectory
+            .appendingPathComponent("AniShelfTests-sync-queue-\(UUID().uuidString)", isDirectory: true)
+        let queueURL = queueDirectory.appendingPathComponent("queue.json")
+        try fileManager.createDirectory(at: queueDirectory, withIntermediateDirectories: true)
+        defer {
+            try? fileManager.setAttributes(
+                [.posixPermissions: 0o755],
+                ofItemAtPath: queueDirectory.path
+            )
+            try? fileManager.removeItem(at: queueDirectory)
+        }
+
+        try fileManager.setAttributes(
+            [.posixPermissions: 0o555],
+            ofItemAtPath: queueDirectory.path
+        )
+
+        let dataProvider = DataProvider(inMemory: true)
+        let recorder = LibrarySyncChangeRecorder(
+            dataProvider: dataProvider,
+            dirtyQueueStore: LibraryEntrySyncDirtyQueueStore(url: queueURL),
+            notificationCenter: .init()
+        )
+        let entry = AnimeEntry(
+            name: "Failed Queue Entry",
+            type: .series,
+            tmdbID: 200_002
+        )
+        entry.markCreatedForLibrary(at: referenceDate(year: 2026, month: 5, day: 30))
+        try dataProvider.dataHandler.newEntry(entry)
+
+        let notification = Notification(
+            name: ModelContext.didSave,
+            object: nil,
+            userInfo: [
+                ModelContext.NotificationKey.insertedIdentifiers.rawValue: Set([entry.id])
+            ]
+        )
+
+        recorder.processSaveNotification(notification)
+        #expect(recorder.dirtyQueueStore.load().entries.isEmpty)
+
+        try fileManager.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: queueDirectory.path
+        )
+
+        recorder.processSaveNotification(notification)
+
+        let queue = recorder.dirtyQueueStore.load()
+        #expect(queue.entries.count == 1)
+        #expect(queue.entries.first?.identity == entry.syncIdentity)
+    }
+
     @Test @MainActor func testLibrarySyncRecorderQueuesDeleteTombstonesAndBulkDeletes() throws {
         let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
         let first = AnimeEntry(
@@ -346,6 +403,108 @@ struct LibraryPreferencesAndActionsTests {
             if case .delete = $0 { return true }
             return false
         })
+    }
+
+    @Test @MainActor func testLibrarySyncRecorderRecordsBulkDeletesWithSingleQueueRewrite() throws {
+        let queueURL = makeTemporaryQueueURL(name: "batch-delete")
+        defer { try? FileManager.default.removeItem(at: queueURL.deletingLastPathComponent()) }
+
+        let retainedUpsert = LibraryEntrySyncPendingUpsert(
+            identity: .init(entryType: .series, tmdbID: 399_999),
+            dirtyAt: referenceDate(year: 2026, month: 5, day: 29)
+        )
+        try persistQueue(
+            .init(entries: [.upsert(retainedUpsert)]),
+            to: queueURL
+        )
+
+        let dataProvider = DataProvider(inMemory: true)
+        var writeCount = 0
+        let dirtyQueueStore = LibraryEntrySyncDirtyQueueStore(url: queueURL) { queue in
+            writeCount += 1
+            if writeCount > 1 {
+                throw QueueWriteTestError.unexpectedAdditionalWrite
+            }
+            try persistQueue(queue, to: queueURL)
+        }
+        let recorder = LibrarySyncChangeRecorder(
+            dataProvider: dataProvider,
+            dirtyQueueStore: dirtyQueueStore,
+            notificationCenter: .init()
+        )
+
+        let first = AnimeEntry(name: "Batch Delete 1", type: .movie, tmdbID: 300_101)
+        let second = AnimeEntry(name: "Batch Delete 2", type: .movie, tmdbID: 300_102)
+        let deletedAt = referenceDate(year: 2026, month: 5, day: 30)
+
+        let tokens = try recorder.recordDeletions(for: [first, second], deletedAt: deletedAt)
+
+        #expect(writeCount == 1)
+        #expect(tokens.count == 2)
+
+        let queue = dirtyQueueStore.load()
+        #expect(queue.entries.count == 3)
+        #expect(queue.entry(for: retainedUpsert.identity) == .upsert(retainedUpsert))
+        #expect(queue.entry(for: first.syncIdentity) == .delete(.init(
+            tombstone: .init(entry: first, deletedAt: deletedAt)
+        )))
+        #expect(queue.entry(for: second.syncIdentity) == .delete(.init(
+            tombstone: .init(entry: second, deletedAt: deletedAt)
+        )))
+    }
+
+    @Test @MainActor func testLibrarySyncRecorderRestoreDeleteRecordsRewritesPriorQueueOnce() throws {
+        let queueURL = makeTemporaryQueueURL(name: "delete-rollback")
+        defer { try? FileManager.default.removeItem(at: queueURL.deletingLastPathComponent()) }
+
+        let restoredUpsert = LibraryEntrySyncPendingUpsert(
+            identity: .init(entryType: .movie, tmdbID: 300_201),
+            dirtyAt: referenceDate(year: 2026, month: 5, day: 27)
+        )
+        let retainedUpsert = LibraryEntrySyncPendingUpsert(
+            identity: .init(entryType: .series, tmdbID: 300_202),
+            dirtyAt: referenceDate(year: 2026, month: 5, day: 28)
+        )
+        let deletedAt = referenceDate(year: 2026, month: 5, day: 30)
+        let deletedFirst = AnimeEntry(name: "Rollback Delete 1", type: .movie, tmdbID: 300_201)
+        let deletedSecond = AnimeEntry(name: "Rollback Delete 2", type: .movie, tmdbID: 300_203)
+
+        try persistQueue(
+            .init(entries: [
+                .delete(.init(tombstone: .init(entry: deletedFirst, deletedAt: deletedAt))),
+                .delete(.init(tombstone: .init(entry: deletedSecond, deletedAt: deletedAt))),
+                .upsert(retainedUpsert)
+            ]),
+            to: queueURL
+        )
+
+        let dataProvider = DataProvider(inMemory: true)
+        var writeCount = 0
+        let dirtyQueueStore = LibraryEntrySyncDirtyQueueStore(url: queueURL) { queue in
+            writeCount += 1
+            if writeCount > 1 {
+                throw QueueWriteTestError.unexpectedAdditionalWrite
+            }
+            try persistQueue(queue, to: queueURL)
+        }
+        let recorder = LibrarySyncChangeRecorder(
+            dataProvider: dataProvider,
+            dirtyQueueStore: dirtyQueueStore,
+            notificationCenter: .init()
+        )
+
+        try recorder.restoreDeleteRecords([
+            .init(identity: deletedFirst.syncIdentity, previousEntry: .upsert(restoredUpsert)),
+            .init(identity: deletedSecond.syncIdentity, previousEntry: nil)
+        ])
+
+        #expect(writeCount == 1)
+
+        let queue = dirtyQueueStore.load()
+        #expect(queue.entries.count == 2)
+        #expect(queue.entry(for: restoredUpsert.identity) == .upsert(restoredUpsert))
+        #expect(queue.entry(for: retainedUpsert.identity) == .upsert(retainedUpsert))
+        #expect(queue.entry(for: deletedSecond.syncIdentity) == nil)
     }
 
     @Test @MainActor func testRefreshInfosIncludesSharedHiddenParentEntryOnce() throws {
@@ -527,6 +686,25 @@ struct LibraryPreferencesAndActionsTests {
 
         #expect(state.presentedSheet == .support)
     }
+}
+
+private enum QueueWriteTestError: Error {
+    case unexpectedAdditionalWrite
+}
+
+private func makeTemporaryQueueURL(name: String) -> URL {
+    let directoryURL = FileManager.default.temporaryDirectory
+        .appendingPathComponent("AniShelfTests-\(name)-\(UUID().uuidString)", isDirectory: true)
+    return directoryURL.appendingPathComponent("queue.json")
+}
+
+private func persistQueue(_ queue: LibraryEntrySyncDirtyQueue, to url: URL) throws {
+    try FileManager.default.createDirectory(
+        at: url.deletingLastPathComponent(),
+        withIntermediateDirectories: true
+    )
+    let data = try JSONEncoder().encode(queue)
+    try data.write(to: url, options: [.atomic])
 }
 
 fileprivate struct MockSupportProvider: SupportStoreProviding {

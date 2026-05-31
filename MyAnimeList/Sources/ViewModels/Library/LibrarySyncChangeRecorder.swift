@@ -84,9 +84,31 @@ final class LibrarySyncChangeRecorder {
         for entries: [AnimeEntry],
         deletedAt: Date = .now
     ) throws -> [PendingDeleteRestoreToken] {
-        try entries.map { entry in
-            try recordDeletion(for: entry, deletedAt: deletedAt)
+        // Stage the full queue mutation first so bulk delete tombstones are
+        // either all persisted together or not written at all.
+        let initialQueue = dirtyQueueStore.load()
+        var entriesByID = initialQueue.entries.reduce(into: [String: LibraryEntrySyncDirtyQueueEntry]()) {
+            partialResult, entry in
+            partialResult[entry.identity.rawID] = entry
         }
+
+        let tokens = entries.map { entry -> PendingDeleteRestoreToken in
+            let pendingDelete = LibraryEntrySyncPendingDelete(
+                tombstone: LibraryEntrySyncTombstone(entry: entry, deletedAt: deletedAt)
+            )
+            let previousEntry = entriesByID[pendingDelete.identity.rawID]
+            if case .delete(let previousDelete) = previousEntry,
+               previousDelete.tombstone.deletedAt >= pendingDelete.tombstone.deletedAt
+            {
+                return .init(identity: pendingDelete.identity, previousEntry: previousEntry)
+            }
+
+            entriesByID[pendingDelete.identity.rawID] = .delete(pendingDelete)
+            return .init(identity: pendingDelete.identity, previousEntry: previousEntry)
+        }
+
+        try dirtyQueueStore.replaceEntries(Array(entriesByID.values))
+        return tokens
     }
 
     func restoreDeleteRecord(_ token: PendingDeleteRestoreToken) throws {
@@ -94,9 +116,22 @@ final class LibrarySyncChangeRecorder {
     }
 
     func restoreDeleteRecords(_ tokens: [PendingDeleteRestoreToken]) throws {
-        for token in tokens.reversed() {
-            try restoreDeleteRecord(token)
+        // Roll back the bulk delete queue mutation as a single queue rewrite so
+        // we do not leave partially restored tombstones on disk.
+        var entriesByID = dirtyQueueStore.load().entries.reduce(into: [String: LibraryEntrySyncDirtyQueueEntry]()) {
+            partialResult, entry in
+            partialResult[entry.identity.rawID] = entry
         }
+
+        for token in tokens.reversed() {
+            if let previousEntry = token.previousEntry {
+                entriesByID[token.identity.rawID] = previousEntry
+            } else {
+                entriesByID.removeValue(forKey: token.identity.rawID)
+            }
+        }
+
+        try dirtyQueueStore.replaceEntries(Array(entriesByID.values))
     }
 
     func processSaveNotification(_ notification: Notification) {
@@ -119,12 +154,13 @@ final class LibrarySyncChangeRecorder {
 
             let currentBaseline = ClockBaseline(entry: entry)
             let previousBaseline = lastSeenClocksByIdentifier[identifier]
-            lastSeenClocksByIdentifier[identifier] = currentBaseline
 
             guard currentBaseline.hasAdvanced(since: previousBaseline) else {
+                lastSeenClocksByIdentifier[identifier] = currentBaseline
                 continue
             }
             guard let dirtyAt = currentBaseline.dirtyAt else {
+                lastSeenClocksByIdentifier[identifier] = currentBaseline
                 continue
             }
 
@@ -132,7 +168,13 @@ final class LibrarySyncChangeRecorder {
                 try dirtyQueueStore.setPendingUpsert(
                     .init(identity: entry.syncIdentity, dirtyAt: dirtyAt)
                 )
+                lastSeenClocksByIdentifier[identifier] = currentBaseline
             } catch {
+                if let previousBaseline {
+                    lastSeenClocksByIdentifier[identifier] = previousBaseline
+                } else {
+                    lastSeenClocksByIdentifier.removeValue(forKey: identifier)
+                }
                 libraryStoreLogger.error(
                     "Failed to persist sync upsert for \(entry.tmdbID, privacy: .public): \(error.localizedDescription)"
                 )

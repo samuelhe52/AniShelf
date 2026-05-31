@@ -38,6 +38,8 @@ final class LibraryRepository {
 
     func clearLibrary() throws {
         let entries = try dataProvider.getAllModels(ofType: AnimeEntry.self)
+        // Persist the delete tombstones before mutating SwiftData so a later
+        // sync can still observe the deletion intent if the local delete succeeds.
         let deleteTokens = try syncChangeRecorder?.recordDeletions(for: entries)
         do {
             try dataProvider.dataHandler.deleteAllEntries()
