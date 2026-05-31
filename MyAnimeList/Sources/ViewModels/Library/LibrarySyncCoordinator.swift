@@ -225,7 +225,7 @@ final class LibrarySyncCoordinator {
     ) async throws -> (appliedChangesCount: Int, hydratedEntriesCount: Int) {
         var appliedChangesCount = 0
         var hydratedEntriesCount = 0
-        try await store.syncChangeRecorder.withSuppressedRecording {
+        try await store.syncChangeRecorder.withSuppressedRecordingAsync {
             for change in batch.changes {
                 switch change {
                 case .snapshot(let snapshot):

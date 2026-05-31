@@ -100,7 +100,7 @@ final class LibrarySyncChangeRecorder {
     }
 
     /// Executes an async operation without recording queue mutations.
-    func withSuppressedRecording<T>(_ operation: () async throws -> T) async rethrows -> T {
+    func withSuppressedRecordingAsync<T>(_ operation: () async throws -> T) async rethrows -> T {
         suppressionDepth += 1
         defer { suppressionDepth -= 1 }
         return try await operation()

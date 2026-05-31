@@ -71,12 +71,14 @@ final class LibraryProfileSettingsActions {
     }
 
     /// Runs the canonical metadata refresh flow for the current library.
+    ///
     /// Production uses `performRefreshInfos(for:options:)`; tests can inject a stub.
     func refreshInfos(options: LibraryRefreshOptions = .toastDefault) {
         refreshInfosHandler(store, options)
     }
 
     /// Builds the narrow action surface used by the What's New modal.
+    ///
     /// The refresh CTA deliberately reuses `refreshInfos()` so there is only
     /// one in-app metadata refresh path to maintain.
     func makeWhatsNewActionRunner() -> WhatsNewActionRunner {
@@ -88,6 +90,7 @@ final class LibraryProfileSettingsActions {
     }
 
     /// Default production implementation for `refreshInfos(options:)`.
+    ///
     /// Refreshes all persisted entries and prefetches any updated images.
     ///
     /// Hidden helper rows are intentionally included, even when they are not currently visible.

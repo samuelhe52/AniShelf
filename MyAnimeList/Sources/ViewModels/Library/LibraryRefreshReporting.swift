@@ -32,7 +32,9 @@ struct LibraryRefreshCompletion {
     }
 }
 
-/// Phase-complete events are non-terminal. Reporters should treat
+/// Phase-complete events are non-terminal.
+///
+/// Reporters should treat
 /// `refreshComplete` as the only overall completion signal.
 enum LibraryRefreshEvent {
     case metadataProgress(current: Int, total: Int, messageResource: LocalizedStringResource)
