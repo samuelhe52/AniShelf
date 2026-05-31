@@ -48,6 +48,7 @@ final class LibraryProfileSettingsActions {
         let backupManager = BackupManager(dataProvider: store.dataProvider)
         try backupManager.restoreBackup(from: url)
         store.reloadPersistedPreferences()
+        store.rebuildSyncChangeTracking()
         try store.refreshLibrary()
         if store.autoPrefetchImagesOnAddAndRestore {
             prefetchAllImages()

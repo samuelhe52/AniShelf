@@ -13,10 +13,7 @@ let package = Package(
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "DataProvider",
-            targets: ["DataProvider"]),
-        .library(
-            name: "LibrarySync",
-            targets: ["LibrarySync"])
+            targets: ["DataProvider", "LibrarySync"])
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.

@@ -23,7 +23,7 @@ public struct LibraryEntrySyncIdentity: Codable, Hashable, Sendable {
     }
 }
 
-public struct LibraryEntrySyncSnapshot: Codable, Equatable {
+public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     public static let currentSchemaVersion = 1
 
     private enum CodingKeys: String, CodingKey {

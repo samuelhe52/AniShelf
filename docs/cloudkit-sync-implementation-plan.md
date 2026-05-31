@@ -317,6 +317,23 @@ Verification:
 - Test transient errors do not permanently pin sync as failed.
 - Test change tokens are not advanced when local import application fails.
 
+Possible direction to validate during implementation:
+
+- Treat the current dirty "queue" as a per-identity durable worklist rather
+  than a strict FIFO queue.
+- Centralize CloudKit import/export in a single sync coordinator/actor that is
+  the only code allowed to consume or acknowledge dirty entries.
+- Apply pulled remote snapshots/tombstones into the local store before export,
+  and suppress recorder feedback for those coordinator-owned imports so remote
+  applies do not immediately re-enqueue themselves as local dirty changes.
+- Acknowledge exported work conditionally: remove a pending entry only if the
+  current stored entry still matches the exported payload or timestamp. If a
+  newer local `upsert` or `delete` for the same identity appeared during the
+  upload, keep the newer work item.
+- Preserve the existing tombstone-vs-local-clock rule as the delete conflict
+  contract: a remote delete should only win when its `deletedAt` is newer than
+  the relevant local clocks.
+
 ## Stage 6: Settings UI And Opt-In Rollout
 
 Expose sync as an explicit user-controlled feature.

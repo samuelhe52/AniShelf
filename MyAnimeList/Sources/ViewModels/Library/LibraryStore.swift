@@ -20,6 +20,7 @@ class LibraryStore {
 
     @ObservationIgnored let dataProvider: DataProvider
     @ObservationIgnored let repository: LibraryRepository
+    @ObservationIgnored let syncChangeRecorder: LibrarySyncChangeRecorder
     @ObservationIgnored let preferences: LibraryPreferences
     @ObservationIgnored private var cancellables = Set<AnyCancellable>()
 
@@ -89,7 +90,12 @@ class LibraryStore {
 
     init(dataProvider: DataProvider) {
         self.dataProvider = dataProvider
-        let repository = LibraryRepository(dataProvider: dataProvider)
+        let syncChangeRecorder = LibrarySyncChangeRecorder(dataProvider: dataProvider)
+        let repository = LibraryRepository(
+            dataProvider: dataProvider,
+            syncChangeRecorder: syncChangeRecorder
+        )
+        self.syncChangeRecorder = syncChangeRecorder
         self.repository = repository
         self.preferences = LibraryPreferences()
         self.infoFetcher = .init()
@@ -148,6 +154,10 @@ class LibraryStore {
                 }
             }
             .store(in: &cancellables)
+    }
+
+    func rebuildSyncChangeTracking() {
+        syncChangeRecorder.rebuildBaseline()
     }
 
     func setupTMDbAPIConfigurationChangeMonitor() {

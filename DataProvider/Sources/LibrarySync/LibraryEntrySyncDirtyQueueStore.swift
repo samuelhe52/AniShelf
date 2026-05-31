@@ -1,0 +1,237 @@
+//
+//  LibraryEntrySyncDirtyQueueStore.swift
+//  AniShelf
+//
+//  Created by OpenAI Codex on behalf of Samuel He on 2026/5/30.
+//
+
+import DataProvider
+import Foundation
+
+public struct LibraryEntrySyncTombstone: Codable, Equatable, Sendable {
+    public var snapshot: LibraryEntrySyncSnapshot
+
+    public init(entry: AnimeEntry, deletedAt: Date = .now) {
+        var snapshot = LibraryEntrySyncSnapshot(entry: entry)
+        snapshot.deletedAt = deletedAt
+        self.snapshot = snapshot
+    }
+
+    public init(snapshot: LibraryEntrySyncSnapshot) {
+        precondition(snapshot.deletedAt != nil)
+        self.snapshot = snapshot
+    }
+
+    public var identity: LibraryEntrySyncIdentity { snapshot.identity }
+    public var deletedAt: Date { snapshot.deletedAt ?? .distantPast }
+
+    public func syncSnapshot() -> LibraryEntrySyncSnapshot {
+        snapshot
+    }
+}
+
+public struct LibraryEntrySyncPendingUpsert: Codable, Equatable, Sendable {
+    public var identity: LibraryEntrySyncIdentity
+    public var dirtyAt: Date
+
+    public init(identity: LibraryEntrySyncIdentity, dirtyAt: Date) {
+        self.identity = identity
+        self.dirtyAt = dirtyAt
+    }
+}
+
+public struct LibraryEntrySyncPendingDelete: Codable, Equatable, Sendable {
+    public var tombstone: LibraryEntrySyncTombstone
+
+    public init(tombstone: LibraryEntrySyncTombstone) {
+        self.tombstone = tombstone
+    }
+
+    public var identity: LibraryEntrySyncIdentity { tombstone.identity }
+}
+
+public enum LibraryEntrySyncDirtyQueueEntry: Codable, Equatable, Sendable {
+    case upsert(LibraryEntrySyncPendingUpsert)
+    case delete(LibraryEntrySyncPendingDelete)
+
+    public var identity: LibraryEntrySyncIdentity {
+        switch self {
+        case .upsert(let upsert):
+            upsert.identity
+        case .delete(let delete):
+            delete.identity
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case kind
+        case payload
+    }
+
+    private enum Kind: String, Codable {
+        case upsert
+        case delete
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let kind = try container.decode(Kind.self, forKey: .kind)
+        switch kind {
+        case .upsert:
+            self = .upsert(try container.decode(LibraryEntrySyncPendingUpsert.self, forKey: .payload))
+        case .delete:
+            self = .delete(try container.decode(LibraryEntrySyncPendingDelete.self, forKey: .payload))
+        }
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .upsert(let upsert):
+            try container.encode(Kind.upsert, forKey: .kind)
+            try container.encode(upsert, forKey: .payload)
+        case .delete(let delete):
+            try container.encode(Kind.delete, forKey: .kind)
+            try container.encode(delete, forKey: .payload)
+        }
+    }
+}
+
+public struct LibraryEntrySyncDirtyQueue: Codable, Equatable, Sendable {
+    public static let currentSchemaVersion = 1
+
+    public var schemaVersion: Int
+    public var entries: [LibraryEntrySyncDirtyQueueEntry]
+
+    public init(
+        schemaVersion: Int = Self.currentSchemaVersion,
+        entries: [LibraryEntrySyncDirtyQueueEntry] = []
+    ) {
+        self.schemaVersion = schemaVersion
+        self.entries = Self.coalesced(entries)
+    }
+
+    public func entry(for identity: LibraryEntrySyncIdentity) -> LibraryEntrySyncDirtyQueueEntry? {
+        entries.first { $0.identity == identity }
+    }
+
+    fileprivate static func coalesced(
+        _ entries: [LibraryEntrySyncDirtyQueueEntry]
+    ) -> [LibraryEntrySyncDirtyQueueEntry] {
+        let byIdentity = entries.reduce(into: [String: LibraryEntrySyncDirtyQueueEntry]()) { partialResult, entry in
+            partialResult[entry.identity.rawID] = entry
+        }
+        return byIdentity.values.sorted { lhs, rhs in lhs.identity.rawID < rhs.identity.rawID }
+    }
+}
+
+public final class LibraryEntrySyncDirtyQueueStore: @unchecked Sendable {
+    public static let defaultDirectoryURL = URL.applicationSupportDirectory
+        .appendingPathComponent("AniShelf")
+        .appendingPathComponent("Sync")
+    public static let defaultFileURL =
+        defaultDirectoryURL
+        .appendingPathComponent("library-entry-sync-dirty-queue.json")
+
+    private let fileManager: FileManager
+    public let url: URL
+
+    public init(
+        url: URL = LibraryEntrySyncDirtyQueueStore.defaultFileURL,
+        fileManager: FileManager = .default
+    ) {
+        self.url = url
+        self.fileManager = fileManager
+    }
+
+    public func load() -> LibraryEntrySyncDirtyQueue {
+        guard fileManager.fileExists(atPath: url.path) else {
+            return .init()
+        }
+
+        do {
+            let data = try Data(contentsOf: url)
+            let queue = try JSONDecoder().decode(LibraryEntrySyncDirtyQueue.self, from: data)
+            guard queue.schemaVersion <= LibraryEntrySyncDirtyQueue.currentSchemaVersion else {
+                return .init()
+            }
+            return queue
+        } catch {
+            return .init()
+        }
+    }
+
+    @discardableResult
+    public func setPendingUpsert(_ pendingUpsert: LibraryEntrySyncPendingUpsert) throws
+        -> LibraryEntrySyncDirtyQueueEntry?
+    {
+        try mutateQueue(for: pendingUpsert.identity) { _, existing in
+            if case .upsert(let previous) = existing, previous.dirtyAt >= pendingUpsert.dirtyAt {
+                return existing
+            }
+            return .upsert(pendingUpsert)
+        }
+    }
+
+    @discardableResult
+    public func setPendingDelete(_ pendingDelete: LibraryEntrySyncPendingDelete) throws
+        -> LibraryEntrySyncDirtyQueueEntry?
+    {
+        try mutateQueue(for: pendingDelete.identity) { _, existing in
+            if case .delete(let previous) = existing, previous.tombstone.deletedAt >= pendingDelete.tombstone.deletedAt
+            {
+                return existing
+            }
+            return .delete(pendingDelete)
+        }
+    }
+
+    @discardableResult
+    public func replaceEntry(
+        _ entry: LibraryEntrySyncDirtyQueueEntry?,
+        for identity: LibraryEntrySyncIdentity
+    ) throws -> LibraryEntrySyncDirtyQueueEntry? {
+        try mutateQueue(for: identity) { _, _ in entry }
+    }
+
+    public func removeEntry(for identity: LibraryEntrySyncIdentity) throws {
+        _ = try replaceEntry(nil, for: identity)
+    }
+
+    private func mutateQueue(
+        for identity: LibraryEntrySyncIdentity,
+        _ transform: (_ queue: LibraryEntrySyncDirtyQueue, _ existing: LibraryEntrySyncDirtyQueueEntry?) ->
+            LibraryEntrySyncDirtyQueueEntry?
+    ) throws -> LibraryEntrySyncDirtyQueueEntry? {
+        let queue = load()
+        var entriesByID = queue.entries.reduce(into: [String: LibraryEntrySyncDirtyQueueEntry]()) {
+            partialResult, entry in
+            partialResult[entry.identity.rawID] = entry
+        }
+        let existing = entriesByID[identity.rawID]
+        guard let newEntry = transform(queue, existing) else {
+            entriesByID.removeValue(forKey: identity.rawID)
+            try writeQueue(entriesByID.values.sorted { lhs, rhs in lhs.identity.rawID < rhs.identity.rawID })
+            return existing
+        }
+        entriesByID[newEntry.identity.rawID] = newEntry
+        try writeQueue(entriesByID.values.sorted { lhs, rhs in lhs.identity.rawID < rhs.identity.rawID })
+        return existing
+    }
+
+    private func writeQueue(_ entries: [LibraryEntrySyncDirtyQueueEntry]) throws {
+        try createParentDirectoryIfNeeded()
+        let queue = LibraryEntrySyncDirtyQueue(entries: entries)
+        let data = try JSONEncoder().encode(queue)
+        try data.write(to: url, options: [.atomic])
+    }
+
+    private func createParentDirectoryIfNeeded() throws {
+        let directoryURL = url.deletingLastPathComponent()
+        try fileManager.createDirectory(
+            at: directoryURL,
+            withIntermediateDirectories: true,
+            attributes: nil
+        )
+    }
+}

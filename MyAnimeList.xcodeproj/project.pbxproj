@@ -13,6 +13,7 @@
 		9F6845BF2E7E4CFE007FC6CF /* AlertToast in Frameworks */ = {isa = PBXBuildFile; productRef = 9F6845BE2E7E4CFE007FC6CF /* AlertToast */; };
 		9F720B892E584AD400C23949 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 9F720B882E584AD400C23949 /* ZIPFoundation */; };
 		9F8D665F2D05609200CF355D /* TMDb in Frameworks */ = {isa = PBXBuildFile; productRef = 9F8D665E2D05609200CF355D /* TMDb */; };
+		9F8F3B3C3009D56A00812833 /* DataProvider in Frameworks */ = {isa = PBXBuildFile; productRef = 9F93FC212DE202E10071FB56 /* DataProvider */; };
 		9F93FC222DE202E10071FB56 /* DataProvider in Frameworks */ = {isa = PBXBuildFile; productRef = 9F93FC212DE202E10071FB56 /* DataProvider */; };
 		9FB6FEF12D8FCE5A00B423D0 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 9FB6FEF02D8FCE5A00B423D0 /* Kingfisher */; };
 		9FE2B51D2E0FE91900E4898C /* SHContainers in Frameworks */ = {isa = PBXBuildFile; productRef = 9FE2B51C2E0FE91900E4898C /* SHContainers */; };
@@ -127,6 +128,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9F8F3B3C3009D56A00812833 /* DataProvider in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -219,6 +221,7 @@
 			);
 			name = MyAnimeListTests;
 			packageProductDependencies = (
+				9F93FC212DE202E10071FB56 /* DataProvider */,
 			);
 			productName = MyAnimeListTests;
 			productReference = 9F8D66402D055FF000CF355D /* MyAnimeListTests.xctest */;

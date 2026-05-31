@@ -9,6 +9,7 @@ import Foundation
 import Testing
 
 @testable import DataProvider
+@testable import LibrarySync
 @testable import MyAnimeList
 
 struct LibraryPreferencesAndActionsTests {
@@ -275,6 +276,76 @@ struct LibraryPreferencesAndActionsTests {
         try store.refreshLibrary()
 
         #expect(store.library.isEmpty)
+    }
+
+    @Test @MainActor func testLibrarySyncRecorderQueuesUpsertsAndIgnoresMetadataOnlySaves() throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let entry = AnimeEntry(
+            name: "Tracked Entry",
+            type: .series,
+            tmdbID: 200_001
+        )
+        store.applyNewEntryDefaults(to: entry)
+
+        try store.repository.newEntry(entry)
+
+        var queue = store.syncChangeRecorder.dirtyQueueStore.load()
+        #expect(queue.entries.count == 1)
+        #expect(queue.entries.first?.identity.rawID == entry.syncIdentity.rawID)
+
+        entry.name = "Metadata Only"
+        try store.repository.save()
+
+        queue = store.syncChangeRecorder.dirtyQueueStore.load()
+        #expect(queue.entries.count == 1)
+
+        entry.updateFavorite(true)
+        try store.repository.save()
+
+        queue = store.syncChangeRecorder.dirtyQueueStore.load()
+        #expect(queue.entries.count == 1)
+        if case .upsert(let pendingUpsert)? = queue.entries.first {
+            #expect(pendingUpsert.dirtyAt == entry.trackingUpdatedAt)
+        } else {
+            #expect(Bool(false))
+        }
+    }
+
+    @Test @MainActor func testLibrarySyncRecorderQueuesDeleteTombstonesAndBulkDeletes() throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let first = AnimeEntry(
+            name: "Delete Me 1",
+            type: .movie,
+            tmdbID: 300_001
+        )
+        let second = AnimeEntry(
+            name: "Delete Me 2",
+            type: .movie,
+            tmdbID: 300_002
+        )
+        store.applyNewEntryDefaults(to: first)
+        store.applyNewEntryDefaults(to: second)
+        try store.repository.newEntry(first)
+        try store.repository.newEntry(second)
+
+        try store.repository.deleteEntry(first)
+
+        var queue = store.syncChangeRecorder.dirtyQueueStore.load()
+        #expect(queue.entries.count == 2)
+        #expect(queue.entries.contains { entry in
+            guard case .delete(let pendingDelete) = entry else { return false }
+            return pendingDelete.identity == first.syncIdentity
+        })
+
+        let actions = LibraryProfileSettingsActions(store: store)
+        actions.clearLibrary()
+
+        queue = store.syncChangeRecorder.dirtyQueueStore.load()
+        #expect(queue.entries.count == 2)
+        #expect(queue.entries.allSatisfy {
+            if case .delete = $0 { return true }
+            return false
+        })
     }
 
     @Test @MainActor func testRefreshInfosIncludesSharedHiddenParentEntryOnce() throws {

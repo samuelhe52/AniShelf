@@ -149,7 +149,7 @@ extension SchemaV2_7_9 {
             episodeProgresses.forEach { $0.entry = self }
         }
 
-        public enum WatchStatus: Equatable, CaseIterable, Codable {
+        public enum WatchStatus: Equatable, CaseIterable, Codable, Sendable {
             case planToWatch
             case watching
             case watched

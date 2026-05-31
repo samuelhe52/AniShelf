@@ -5,9 +5,14 @@ import SwiftData
 @MainActor
 final class LibraryRepository {
     private let dataProvider: DataProvider
+    private let syncChangeRecorder: LibrarySyncChangeRecorder?
 
-    init(dataProvider: DataProvider) {
+    init(
+        dataProvider: DataProvider,
+        syncChangeRecorder: LibrarySyncChangeRecorder? = nil
+    ) {
         self.dataProvider = dataProvider
+        self.syncChangeRecorder = syncChangeRecorder
     }
 
     func visibleLibraryEntries() throws -> [AnimeEntry] {
@@ -20,11 +25,28 @@ final class LibraryRepository {
 
     func deleteEntry(_ entry: AnimeEntry) throws {
         entry.resolveLibraryDisplayFaultsBeforeDeletion()
-        try dataProvider.dataHandler.deleteEntry(entry)
+        let deleteToken = try syncChangeRecorder?.recordDeletion(for: entry)
+        do {
+            try dataProvider.dataHandler.deleteEntry(entry)
+        } catch {
+            if let deleteToken {
+                try? syncChangeRecorder?.restoreDeleteRecord(deleteToken)
+            }
+            throw error
+        }
     }
 
     func clearLibrary() throws {
-        try dataProvider.dataHandler.deleteAllEntries()
+        let entries = try dataProvider.getAllModels(ofType: AnimeEntry.self)
+        let deleteTokens = try syncChangeRecorder?.recordDeletions(for: entries)
+        do {
+            try dataProvider.dataHandler.deleteAllEntries()
+        } catch {
+            if let deleteTokens {
+                try? syncChangeRecorder?.restoreDeleteRecords(deleteTokens)
+            }
+            throw error
+        }
     }
 
     func save() throws {
