@@ -13,14 +13,35 @@ import UIKit
 @main
 struct MyAnimeListApp: App {
     @UIApplicationDelegateAdaptor(LibrarySyncNotificationBridge.self) private var notificationBridge
-    @State var libraryStore: LibraryStore = .init(dataProvider: .default)
-    @State var keyStorage: TMDbAPIKeyStorage = .init()
-    @State var whatsNew: WhatsNewController = .init()
-    @State var supportStore: SupportStore = .init()
+    @State var libraryStore: LibraryStore
+    @State var keyStorage: TMDbAPIKeyStorage
+    @State var whatsNew: WhatsNewController
+    @State var supportStore: SupportStore
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(.preferredAnimeInfoLanguage) var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
+
+    init() {
+        let libraryStore = LibraryStore(dataProvider: .default)
+        let keyStorage = TMDbAPIKeyStorage()
+        let whatsNew = WhatsNewController()
+        let supportStore = SupportStore()
+
+        _libraryStore = State(initialValue: libraryStore)
+        _keyStorage = State(initialValue: keyStorage)
+        _whatsNew = State(initialValue: whatsNew)
+        _supportStore = State(initialValue: supportStore)
+
+        LibrarySyncNotificationBridge.configureSyncHandler { [libraryStore, keyStorage] in
+            guard let key = keyStorage.key,
+                !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            else {
+                return .noData
+            }
+            return await libraryStore.performLibrarySync(trigger: .cloudNotification) ? .newData : .failed
+        }
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -42,14 +63,6 @@ struct MyAnimeListApp: App {
             .environment(supportStore)
             .environment(\.dataHandler, DataProvider.default.dataHandler)
             .onAppear {
-                notificationBridge.onSyncRequested = { [libraryStore, keyStorage] in
-                    guard let key = keyStorage.key,
-                        !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    else {
-                        return .noData
-                    }
-                    return await libraryStore.performLibrarySync(trigger: .cloudNotification) ? .newData : .failed
-                }
                 requestSync(trigger: .appLaunch)
             }
             .onChange(of: scenePhase) { _, newPhase in

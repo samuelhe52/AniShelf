@@ -15,6 +15,7 @@ import UIKit
 struct LibrarySyncNotificationBridgeTests {
     @Test func remoteNotificationWaitsForAsyncSyncResult() async throws {
         let bridge = LibrarySyncNotificationBridge()
+        defer { bridge.onSyncRequested = nil }
         var syncContinuation: CheckedContinuation<UIBackgroundFetchResult, Never>?
         var syncStarted = false
         var completionResult: UIBackgroundFetchResult?
@@ -53,6 +54,7 @@ struct LibrarySyncNotificationBridgeTests {
 
     @Test func remoteNotificationWithoutSyncHandlerReportsNoData() async {
         let bridge = LibrarySyncNotificationBridge()
+        bridge.onSyncRequested = nil
         var completionResult: UIBackgroundFetchResult?
 
         bridge.application(
