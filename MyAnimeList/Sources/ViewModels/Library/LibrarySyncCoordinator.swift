@@ -59,6 +59,7 @@ final class LibrarySyncCoordinator {
         case remoteFetch
         case hydrationApply
         case tokenCommit
+        case libraryRefresh
         case dirtyQueueReconciliation
         case export
     }
@@ -198,10 +199,13 @@ final class LibrarySyncCoordinator {
             )
 
             currentPhase = .hydrationApply
-            _ = try await apply(importBatch, to: store)
+            _ = try await applyImportedChanges(importBatch, to: store)
 
             currentPhase = .tokenCommit
             importer.commit(importBatch)
+
+            currentPhase = .libraryRefresh
+            try refreshLibraryAfterImport(in: store)
 
             currentPhase = .dirtyQueueReconciliation
             _ = try reconcileDirtyQueue(with: importBatch, in: store)
@@ -236,7 +240,7 @@ final class LibrarySyncCoordinator {
     ///
     /// The method suppresses change recording while the imported changes are
     /// written so the local save pass does not enqueue its own changes.
-    private func apply(
+    private func applyImportedChanges(
         _ batch: CloudLibrarySyncImportBatch,
         to store: LibraryStore
     ) async throws -> (appliedChangesCount: Int, hydratedEntriesCount: Int) {
@@ -270,8 +274,12 @@ final class LibrarySyncCoordinator {
             try store.repository.save()
         }
         store.rebuildSyncChangeTracking()
-        try store.refreshLibrary()
         return (appliedChangesCount, hydratedEntriesCount)
+    }
+
+    /// Refreshes derived library view state after imported changes are persisted.
+    private func refreshLibraryAfterImport(in store: LibraryStore) throws {
+        try store.refreshLibrary()
     }
 
     /// Returns the local entry to update, hydrating a new one when needed.
