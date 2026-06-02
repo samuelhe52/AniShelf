@@ -29,7 +29,7 @@ public struct CloudLibrarySyncImportBatch {
     ///   - changes: Remote changes after merging snapshots with local snapshots
     ///     for the same identity.
     ///   - remoteChanges: Decoded remote changes before local conflict merging.
-    ///     The coordinator uses this to reconcile dirty-queue entries.
+    ///     Kept for diagnostics and review comparisons.
     ///   - ignoredDeletedRecordIDs: Raw CloudKit record deletions. AniShelf
     ///     applies tombstone records instead of raw deletes, so these are kept
     ///     for logging and diagnostics.

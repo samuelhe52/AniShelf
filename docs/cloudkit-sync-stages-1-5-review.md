@@ -16,32 +16,13 @@ No confirmed critical Stage 1–5 correctness issue remains after narrowing the 
 | Severity | Count | Themes |
 |----------|-------|--------|
 | **🔴 Critical** | 0 | None confirmed |
-| **🟡 Stage 1–5 Warning** | 9 | Retry behavior, token commit ordering, setup hardening, test gaps |
+| **🟡 Stage 1–5 Warning** | 8 | Retry behavior, token commit ordering, setup hardening, test gaps |
 | **⚪ Out of Stage 1–5 Scope** | 5 | Account-change policy, restore recovery, rate/quota UX, rollout settings |
 | **🟢 Positive** | 10 | Strong architecture, good test coverage on core logic, correct sequencing |
 
 ---
 
 ## 🟡 Valid Stage 1–5 Warning Issues
-
-### WARN-1: Dirty Queue Reconciliation Uses Pre-Merge Remote Changes
-
-**File:** `MyAnimeList/Sources/ViewModels/Library/LibrarySyncCoordinator.swift:324-326`  
-**Status:** Partially valid
-
-```swift
-let remoteChangesByIdentity = Dictionary(
-    uniqueKeysWithValues: batch.remoteChanges.map { ($0.identity, $0) }  // ← pre-merge
-)
-```
-
-The plan states "reconciles dirty queue entries after remote conflict resolution," which implies using the **merged** result (`batch.changes`). The code currently applies `batch.changes` but reconciles the queue from `batch.remoteChanges`.
-
-The original same-field example was overstated: if a local tracking edit has `dirtyAt=T+10` and the raw remote tracking clock is `T+5`, the current `isNewer` check does not drop the local upsert. The stronger problem is consistency: reconciliation should use the same post-merge effective result and local clock basis as remote application, especially for tombstone-vs-local-state decisions.
-
-**Fix:** Use `batch.changes` instead of `batch.remoteChanges`, and align the comparison with the local snapshot/user-state clocks used during application.
-
----
 
 ### WARN-2: TMDb API Key Guard Missing from Coordinator
 
@@ -375,12 +356,11 @@ Already covered: bulk delete rollback is tested in `LibraryPreferencesAndActions
 ### Before Stage 6 (Settings & Rollout)
 
 1. **WARN-7:** Commit change token after successful local save, not after UI refresh
-2. **WARN-1:** Use `batch.changes` (post-merge) instead of `batch.remoteChanges` for reconciliation, with clock semantics aligned to application
-3. **WARN-3:** Stop indefinite poison-pill retries or classify permanent failures
-4. **WARN-2:** Enforce TMDb key availability at scheduler/coordinator boundaries, or make hydration gracefully defer missing rows
-5. **WARN-6:** Narrow `.serverRejectedRequest` handling so CloudKit setup errors are not masked
-6. **WARN-12:** Add `@MainActor` dispatch in Combine sink for future Swift 6 compatibility
-7. **Hydration cleanup:** Add coverage or cleanup for staged hydrated inserts if later apply/save fails; this is a downgraded partial finding, not a confirmed critical orphan bug
+2. **WARN-3:** Stop indefinite poison-pill retries or classify permanent failures
+3. **WARN-2:** Enforce TMDb key availability at scheduler/coordinator boundaries, or make hydration gracefully defer missing rows
+4. **WARN-6:** Narrow `.serverRejectedRequest` handling so CloudKit setup errors are not masked
+5. **WARN-12:** Add `@MainActor` dispatch in Combine sink for future Swift 6 compatibility
+6. **Hydration cleanup:** Add coverage or cleanup for staged hydrated inserts if later apply/save fails; this is a downgraded partial finding, not a confirmed critical orphan bug
 
 ### Before Stage 8 (Manual Validation)
 

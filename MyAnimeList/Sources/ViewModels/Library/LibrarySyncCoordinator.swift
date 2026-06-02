@@ -322,7 +322,7 @@ final class LibrarySyncCoordinator {
         importUnaffectedCount: Int
     ) {
         let remoteChangesByIdentity = Dictionary(
-            uniqueKeysWithValues: batch.remoteChanges.map { ($0.identity, $0) }
+            uniqueKeysWithValues: batch.changes.map { ($0.identity, $0) }
         )
         let dirtyEntries = store.syncChangeRecorder.dirtyQueueStore.load().entries
         var removedRemoteWonCount = 0
