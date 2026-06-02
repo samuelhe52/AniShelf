@@ -340,6 +340,56 @@ struct LibrarySyncCoordinatorTests {
         #expect(database.savedRecords.isEmpty)
     }
 
+    @Test @MainActor func partialExportOnlyDequeuesAcceptedDirtyEntries() async throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let first = AnimeEntry(name: "First Export", type: .movie, tmdbID: 707)
+        let second = AnimeEntry(name: "Second Export", type: .series, tmdbID: 708)
+        first.markCreatedForLibrary(at: referenceDate(year: 2026, month: 5, day: 1))
+        second.markCreatedForLibrary(at: referenceDate(year: 2026, month: 5, day: 1))
+        try store.repository.newEntry(first)
+        try store.repository.newEntry(second)
+        try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([
+            .upsert(
+                .init(
+                    identity: first.syncIdentity,
+                    dirtyAt: referenceDate(year: 2026, month: 5, day: 8)
+                )),
+            .upsert(
+                .init(
+                    identity: second.syncIdentity,
+                    dirtyAt: referenceDate(year: 2026, month: 5, day: 9)
+                ))
+        ])
+        store.rebuildSyncChangeTracking()
+
+        let client = CloudLibrarySyncClient()
+        let database = FakeCloudLibrarySyncDatabase(
+            changes: [
+                .init(
+                    modifiedRecordsByID: [:],
+                    deletedRecordIDs: [],
+                    changeToken: makeToken(),
+                    moreComing: false
+                )
+            ],
+            successfulSaveRecordIDs: [client.recordID(for: first.syncIdentity)]
+        )
+        let coordinator = LibrarySyncCoordinator(
+            store: store,
+            client: client,
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        await coordinator.sync(trigger: .manualRetry)
+
+        let remainingEntries = store.syncChangeRecorder.dirtyQueueStore.load().entries
+        #expect(database.savedRecords.count == 2)
+        #expect(remainingEntries.count == 1)
+        #expect(remainingEntries.first?.identity == second.syncIdentity)
+        #expect(store.syncChangeRecorder.dirtyQueueStore.load().entry(for: first.syncIdentity) == nil)
+    }
+
     @Test @MainActor func failedHydrationLeavesTokenUncommitted() async throws {
         let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
         let client = CloudLibrarySyncClient()
@@ -385,10 +435,15 @@ fileprivate enum HydrationFailure: Error {
 
 fileprivate final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, @unchecked Sendable {
     private var changes: [CloudLibrarySyncZoneChangeBatch]
+    private let successfulSaveRecordIDs: [CKRecord.ID]?
     var savedRecords: [CKRecord] = []
 
-    init(changes: [CloudLibrarySyncZoneChangeBatch]) {
+    init(
+        changes: [CloudLibrarySyncZoneChangeBatch],
+        successfulSaveRecordIDs: [CKRecord.ID]? = nil
+    ) {
         self.changes = changes
+        self.successfulSaveRecordIDs = successfulSaveRecordIDs
     }
 
     func ensureZoneAndSubscription(
@@ -405,7 +460,7 @@ fileprivate final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, 
 
     func save(records: [CKRecord]) async throws -> [CKRecord.ID] {
         savedRecords.append(contentsOf: records)
-        return records.map(\.recordID)
+        return successfulSaveRecordIDs ?? records.map(\.recordID)
     }
 }
 
