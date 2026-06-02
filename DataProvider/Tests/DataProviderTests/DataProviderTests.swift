@@ -273,7 +273,8 @@ import Testing
     #expect(decoded == userInfo)
 
     let restoredSeries = AnimeEntry(name: "Restored", type: .series, tmdbID: 32)
-    restoredSeries.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 9, updatedAt: referenceDate(day: 3))
+    restoredSeries.applyEpisodeProgressSnapshot(
+        seasonNumber: 1, watchedThroughEpisode: 9, updatedAt: referenceDate(day: 3))
     restoredSeries.updateUserInfo(from: decoded)
 
     #expect(restoredSeries.orderedEpisodeProgresses.map(\.seasonNumber) == [2])
@@ -285,16 +286,20 @@ import Testing
 
 @Test func userEntryInfoRestoreFiltersEpisodeProgressForSeasonEntries() async throws {
     let sourceSeries = AnimeEntry(name: "Series", type: .series, tmdbID: 41)
-    sourceSeries.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 3, updatedAt: referenceDate(day: 1))
-    sourceSeries.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 7, updatedAt: referenceDate(day: 2))
-    sourceSeries.applyEpisodeProgressSnapshot(seasonNumber: 0, watchedThroughEpisode: 1, updatedAt: referenceDate(day: 3))
+    sourceSeries.applyEpisodeProgressSnapshot(
+        seasonNumber: 1, watchedThroughEpisode: 3, updatedAt: referenceDate(day: 1))
+    sourceSeries.applyEpisodeProgressSnapshot(
+        seasonNumber: 2, watchedThroughEpisode: 7, updatedAt: referenceDate(day: 2))
+    sourceSeries.applyEpisodeProgressSnapshot(
+        seasonNumber: 0, watchedThroughEpisode: 1, updatedAt: referenceDate(day: 3))
 
     let seasonEntry = AnimeEntry(
         name: "Season 2",
         type: .season(seasonNumber: 2, parentSeriesID: 41),
         tmdbID: 42
     )
-    seasonEntry.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 1, updatedAt: referenceDate(day: 4))
+    seasonEntry.applyEpisodeProgressSnapshot(
+        seasonNumber: 2, watchedThroughEpisode: 1, updatedAt: referenceDate(day: 4))
 
     seasonEntry.updateUserInfo(from: UserEntryInfo(from: sourceSeries))
 
