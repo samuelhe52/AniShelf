@@ -50,17 +50,23 @@ struct PosterGridView: View {
         let aspectRatio = CGFloat(width) / CGFloat(max(height, 1))
 
         VStack {
-            KFImageView(
-                url: poster.url,
-                targetWidth: 300,
-                diskCacheExpiration: Constants.cacheExpiration
-            )
-            .aspectRatio(aspectRatio, contentMode: .fit)
-            .overlay {
-                RoundedRectangle(cornerRadius: Constants.posterCornerRadius, style: .continuous)
-                    .stroke(.white.opacity(0.18), lineWidth: 1)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: Constants.posterCornerRadius))
+            Color.clear
+                .aspectRatio(aspectRatio, contentMode: .fit)
+                .overlay {
+                    KFImageView(
+                        url: poster.url,
+                        targetWidth: 300,
+                        diskCacheExpiration: Constants.cacheExpiration
+                    )
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: Constants.posterCornerRadius, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 1)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: Constants.posterCornerRadius))
             Text("\(width) x \(height)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
