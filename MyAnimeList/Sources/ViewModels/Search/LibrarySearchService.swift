@@ -5,27 +5,23 @@
 //  Created by Samuel He on 2025/10/5.
 //
 
-
 import DataProvider
 import Foundation
-import SwiftData
 import SwiftUI
-import os
-
-fileprivate let logger = Logger(subsystem: .bundleIdentifier, category: "LibrarySearchService")
 
 @Observable @MainActor
 class LibrarySearchService {
-    private let dataProvider = DataProvider.default
-    private var entries: [AnimeEntry] = []
+    @ObservationIgnored var entriesProvider: @MainActor () -> [AnimeEntry] = { [] }
     var jumpToEntryInLibrary: (Int) -> Void
 
     private(set) var results: [AnimeEntry] = []
     private(set) var status: Status = .loaded
 
     init(
+        entriesProvider: @escaping @MainActor () -> [AnimeEntry] = { [] },
         jumpToEntryInLibrary: @escaping (Int) -> Void = { _ in }
     ) {
+        self.entriesProvider = entriesProvider
         self.jumpToEntryInLibrary = jumpToEntryInLibrary
     }
 
@@ -49,28 +45,21 @@ class LibrarySearchService {
 
     func updateResults(query: String) {
         status = .loading
-        loadModels()
         if query.isEmpty {
             results = []
+            status = .loaded
         } else {
-            let lowercasedQuery = query.lowercased()
             withAnimation {
-                results = searchInLibrary(query: lowercasedQuery)
+                results = searchInLibrary(
+                    query: query.lowercased(),
+                    entries: entriesProvider()
+                )
             }
-        }
-        status = .loaded
-    }
-
-    private func loadModels() {
-        do {
-            entries = try dataProvider.getAllModels(ofType: AnimeEntry.self)
-        } catch {
-            logger.error("Error loading AnimeEntry models: \(error)")
-            status = .error(error)
+            status = .loaded
         }
     }
 
-    private func searchInLibrary(query: String) -> [AnimeEntry] {
+    private func searchInLibrary(query: String, entries: [AnimeEntry]) -> [AnimeEntry] {
         let lowercasedQuery = query.lowercased()
 
         var results: [AnimeEntry] = []

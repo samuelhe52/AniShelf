@@ -43,7 +43,7 @@ final class LibraryRepository {
         // sync can still observe the deletion intent if the local delete succeeds.
         let deleteTokens = try syncChangeRecorder?.recordDeletions(for: entries)
         do {
-            try dataProvider.dataHandler.deleteAllEntries()
+            try dataProvider.dataHandler.deleteEntries(entries)
         } catch {
             if let deleteTokens {
                 try? syncChangeRecorder?.restoreDeleteRecords(deleteTokens)

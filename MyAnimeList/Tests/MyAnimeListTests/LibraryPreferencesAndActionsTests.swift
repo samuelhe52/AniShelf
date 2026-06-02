@@ -279,6 +279,53 @@ struct LibraryPreferencesAndActionsTests {
         #expect(store.library.isEmpty)
     }
 
+    @Test @MainActor func testLibrarySearchServiceUsesCurrentLibraryStoreEntries() throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        store.newEntryFromBasicInfo(
+            BasicInfo(
+                name: "First Match",
+                nameTranslations: [:],
+                overview: nil,
+                overviewTranslations: [:],
+                posterURL: nil,
+                backdropURL: nil,
+                logoURL: nil,
+                tmdbID: 500_001,
+                onAirDate: nil,
+                linkToDetails: nil,
+                type: .movie
+            )
+        )
+        try store.refreshLibrary()
+
+        let service = LibrarySearchService(
+            entriesProvider: { store.library }
+        )
+
+        service.updateResults(query: "first")
+        #expect(service.results.map(\.tmdbID) == [500_001])
+
+        store.newEntryFromBasicInfo(
+            BasicInfo(
+                name: "Second Match",
+                nameTranslations: [:],
+                overview: nil,
+                overviewTranslations: [:],
+                posterURL: nil,
+                backdropURL: nil,
+                logoURL: nil,
+                tmdbID: 500_002,
+                onAirDate: nil,
+                linkToDetails: nil,
+                type: .movie
+            )
+        )
+        try store.refreshLibrary()
+
+        service.updateResults(query: "second")
+        #expect(service.results.map(\.tmdbID) == [500_002])
+    }
+
     @Test @MainActor func testLibrarySyncRecorderQueuesUpsertsAndIgnoresMetadataOnlySaves() throws {
         let queueURL = makeTemporaryQueueURL(name: "metadata-only-save")
         defer { try? FileManager.default.removeItem(at: queueURL.deletingLastPathComponent()) }

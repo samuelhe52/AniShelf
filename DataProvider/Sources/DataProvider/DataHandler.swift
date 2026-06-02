@@ -101,15 +101,23 @@ public final class DataHandler {
         try modelContext.save()
     }
 
+    /// Deletes the provided anime entries from the database.
+    /// - Parameter entries: The entries to delete.
+    /// - Throws: An error if the save operation fails.
+    public func deleteEntries(_ entries: [AnimeEntry]) throws {
+        logger.debug("Deleting \(entries.count) anime entries")
+        for entry in entries {
+            modelContext.delete(entry)
+        }
+        try modelContext.save()
+    }
+
     /// Deletes all anime entries from the database.
     /// - Throws: An error if the fetch save operation fails.
     public func deleteAllEntries() throws {
         logger.debug("Deleting all anime entries")
         let descriptor = FetchDescriptor<AnimeEntry>()
         let allEntries = try modelContext.fetch(descriptor)
-        for entry in allEntries {
-            modelContext.delete(entry)
-        }
-        try modelContext.save()
+        try deleteEntries(allEntries)
     }
 }

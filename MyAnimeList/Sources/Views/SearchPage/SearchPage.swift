@@ -6,6 +6,7 @@
 //
 
 import Collections
+import DataProvider
 import SwiftUI
 
 enum SearchMode: String, CaseIterable, CustomLocalizedStringResourceConvertible {
@@ -27,6 +28,7 @@ fileprivate enum TMDbContentMode {
 
 /// Main search page that coordinates between TMDb and Library search modes.
 struct SearchPage: View {
+    @Environment(LibraryStore.self) private var store
     @AppStorage(.searchMode) private var mode: SearchMode = .tmdb
     @AppStorage(.searchPageQuery) private var query: String = ""
     @AppStorage(.searchTMDbLanguage) private var tmdbLanguage: Language = .english
@@ -178,6 +180,7 @@ struct SearchPage: View {
     private func configureSearchServices() {
         tmdbSearchService.processResults = processTMDbSearchResults
         tmdbSearchService.checkDuplicate = checkDuplicate
+        librarySearchService.entriesProvider = { store.library }
         librarySearchService.jumpToEntryInLibrary = jumpToEntryInLibrary
     }
 
@@ -237,4 +240,5 @@ struct SearchPage: View {
             }
         )
     }
+    .environment(LibraryStore(dataProvider: DataProvider(inMemory: true)))
 }

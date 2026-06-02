@@ -40,23 +40,26 @@ struct InfoFetcherAndLibraryTests {
         #expect(!jaPosters.isEmpty, "Expected at least one Japanese poster")
     }
 
-    @Test func testBackdropPrefersNoLanguageForSeries() async throws {
-        let seriesID = 209867
-        let images = try await fetcher.tmdbClient.tvSeries.images(forTVSeries: seriesID)
-        let expectedPath = try #require(
-            images.backdrops.first(where: { $0.languageCode == nil })?.filePath,
-            "Expected at least one no-language backdrop"
+    @Test func testBackdropPrefersNoLanguageForSeries() throws {
+        let localizedBackdrop = URL(string: "/localized-backdrop.jpg")!
+        let noLanguageBackdrop = URL(string: "/no-language-backdrop.jpg")!
+        let nilLanguageBackdrop = URL(string: "/nil-language-backdrop.jpg")!
+        let fallbackBackdrop = URL(string: "/fallback-backdrop.jpg")!
+        let imagesConfiguration = makeImagesConfiguration()
+
+        let selectedPath = try #require(
+            TMDbImageSelection.preferredBackdropPath(from: [
+                .init(languageCode: "ja", filePath: localizedBackdrop),
+                .init(languageCode: "xx", filePath: noLanguageBackdrop),
+                .init(languageCode: nil, filePath: nilLanguageBackdrop),
+                .init(languageCode: "en", filePath: fallbackBackdrop)
+            ])
         )
-        let expectedURL = try await fetcher.tmdbClient.imagesConfiguration.backdropURL(
-            for: expectedPath,
-            idealWidth: 1_280
+
+        #expect(
+            imagesConfiguration.backdropURL(for: selectedPath, idealWidth: 1_280)
+                == imagesConfiguration.backdropURL(for: noLanguageBackdrop, idealWidth: 1_280)
         )
-        let actualURL = try await fetcher.detailInfo(
-            entryType: .series,
-            tmdbID: seriesID,
-            language: language
-        ).heroImageURL
-        #expect(actualURL == expectedURL)
     }
 
     @Test func testPosterSelectionAllowsOnlyOriginalNoLanguageAndMetadataLanguage() throws {
