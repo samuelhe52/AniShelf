@@ -44,10 +44,9 @@ struct LibraryEntrySyncTests {
         source.notes = "Remote notes"
         source.libraryUpdatedAt = referenceDate(year: 2026, month: 5, day: 12)
         source.trackingUpdatedAt = referenceDate(year: 2026, month: 5, day: 12)
-        source.setEpisodeProgress(
+        source.applyEpisodeProgressSnapshot(
             seasonNumber: 1,
-            watchedThroughEpisode: 7,
-            now: referenceDate(year: 2026, month: 5, day: 12)
+            watchedThroughEpisode: 7, updatedAt: referenceDate(year: 2026, month: 5, day: 12)
         )
 
         let snapshot = LibraryEntrySyncSnapshot(entry: source)
@@ -328,10 +327,9 @@ struct LibraryEntrySyncTests {
             tmdbID: 601,
             dateSaved: referenceDate(year: 2026, month: 5, day: 10)
         )
-        local.setEpisodeProgress(
+        local.applyEpisodeProgressSnapshot(
             seasonNumber: 1,
-            watchedThroughEpisode: 4,
-            now: referenceDate(year: 2026, month: 5, day: 11)
+            watchedThroughEpisode: 4, updatedAt: referenceDate(year: 2026, month: 5, day: 11)
         )
         local.libraryUpdatedAt = referenceDate(year: 2026, month: 5, day: 10)
 

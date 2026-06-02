@@ -514,10 +514,10 @@ extension AnimeEntry {
                     continue
                 }
             }
-            setEpisodeProgress(
+            applyEpisodeProgressSnapshot(
                 seasonNumber: progress.seasonNumber,
                 watchedThroughEpisode: progress.watchedThroughEpisode,
-                now: progress.updatedAt
+                updatedAt: progress.updatedAt
             )
         }
     }

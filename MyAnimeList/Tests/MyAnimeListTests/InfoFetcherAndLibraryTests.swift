@@ -432,10 +432,9 @@ struct InfoFetcherAndLibraryTests {
         )
         restoredEntry.favorite = true
         restoredEntry.notes = "Restored notes"
-        restoredEntry.setEpisodeProgress(
+        restoredEntry.applyEpisodeProgressSnapshot(
             seasonNumber: 1,
-            watchedThroughEpisode: 7,
-            now: referenceDate(year: 2026, month: 5, day: 29)
+            watchedThroughEpisode: 7, updatedAt: referenceDate(year: 2026, month: 5, day: 29)
         )
         try sourceProvider.dataHandler.newEntry(restoredEntry)
         let backupURL = try BackupManager(dataProvider: sourceProvider).createBackup()

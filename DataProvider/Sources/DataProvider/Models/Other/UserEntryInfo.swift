@@ -243,23 +243,31 @@ extension UserEntryInfo: CustomStringConvertible {
 extension AnimeEntry {
     public static let validScoreRange = 1...5
 
+    /// Advances the library-domain sync clock without touching tracking state.
     public func markLibraryModified(at date: Date = .now) {
         libraryUpdatedAt = date
     }
 
+    /// Advances the tracking-domain sync clock without mutating user fields.
     public func markTrackingModified(at date: Date = .now) {
         trackingUpdatedAt = date
     }
 
+    /// Seeds the library-domain sync clock for a newly saved entry.
     public func markCreatedForLibrary(at date: Date = .now) {
         libraryUpdatedAt = date
     }
 
+    /// User-facing display toggle that also advances `libraryUpdatedAt`.
     public func updateDisplayState(_ isOnDisplay: Bool, at date: Date = .now) {
         onDisplay = isOnDisplay
         markLibraryModified(at: date)
     }
 
+    /// Low-level setter that does not advance `trackingUpdatedAt`.
+    ///
+    /// Use `updateDateTrackingEnabled(_:at:)` for user actions that should
+    /// participate in sync conflict resolution.
     public func setDateTrackingEnabled(_ isEnabled: Bool) {
         isDateTrackingEnabled = isEnabled
     }
@@ -272,6 +280,10 @@ extension AnimeEntry {
         return true
     }
 
+    /// Low-level setter that does not advance `trackingUpdatedAt`.
+    ///
+    /// Use `updateWatchStatus(_:at:)` for user actions that should participate
+    /// in sync conflict resolution.
     public func setWatchStatus(_ status: WatchStatus) {
         watchStatus = status
     }
@@ -284,6 +296,10 @@ extension AnimeEntry {
         return true
     }
 
+    /// Low-level setter that does not advance `trackingUpdatedAt`.
+    ///
+    /// Use `updateScore(_:at:)` for user actions that should participate in
+    /// sync conflict resolution.
     public func setScore(_ score: Int?) {
         self.score = normalizedEntryScore(score)
     }
@@ -342,6 +358,12 @@ extension AnimeEntry {
         return true
     }
 
+    /// Rebuilds the full user-owned payload without advancing top-level clocks.
+    ///
+    /// This is for replay-style flows such as restoring previous edits,
+    /// importing a `UserEntryInfo` snapshot, or other callers that already own
+    /// their clock semantics. For user actions, prefer
+    /// `updateUserInfoFromUserAction(_:at:)`.
     public func updateUserInfo(from userInfo: UserEntryInfo) {
         watchStatus = userInfo.watchStatus
         dateStarted = userInfo.dateStarted
@@ -354,14 +376,15 @@ extension AnimeEntry {
         episodeProgresses.forEach { modelContext?.delete($0) }
         episodeProgresses.removeAll()
         for progress in filteredEpisodeProgresses(from: userInfo) {
-            setEpisodeProgress(
+            applyEpisodeProgressSnapshot(
                 seasonNumber: progress.seasonNumber,
                 watchedThroughEpisode: progress.watchedThroughEpisode,
-                now: progress.updatedAt
+                updatedAt: progress.updatedAt
             )
         }
     }
 
+    /// Rebuilds the full user-owned payload and advances `trackingUpdatedAt`.
     public func updateUserInfoFromUserAction(_ userInfo: UserEntryInfo, at date: Date = .now) {
         updateUserInfo(from: userInfo)
         markTrackingModified(at: date)

@@ -117,10 +117,18 @@ extension AnimeEntry {
         }
     }
 
-    public func setEpisodeProgress(
+    /// Applies one persisted or remote progress value without changing the
+    /// entry's top-level tracking clock.
+    ///
+    /// Use this for replay-style flows such as sync import, restore, or
+    /// rebuilding an entry from a `UserEntryInfo` snapshot that already carries
+    /// its own clock semantics. For user actions, prefer
+    /// `updateEpisodeProgress(seasonNumber:watchedThroughEpisode:at:)` so
+    /// `trackingUpdatedAt` advances with the change.
+    public func applyEpisodeProgressSnapshot(
         seasonNumber requestedSeasonNumber: Int,
         watchedThroughEpisode requestedEpisode: Int,
-        now: Date = .now
+        updatedAt: Date = .now
     ) {
         guard let seasonNumber = progressWritableSeasonNumber(requestedSeasonNumber) else { return }
         let episode = clampedEpisodeProgress(requestedEpisode, seasonNumber: seasonNumber)
@@ -135,12 +143,12 @@ extension AnimeEntry {
 
         if let progress = episodeProgress(forSeason: seasonNumber) {
             progress.watchedThroughEpisode = episode
-            progress.updatedAt = now
+            progress.updatedAt = updatedAt
         } else {
             let progress = AnimeEntryEpisodeProgress(
                 seasonNumber: seasonNumber,
                 watchedThroughEpisode: episode,
-                updatedAt: now
+                updatedAt: updatedAt
             )
             progress.entry = self
             episodeProgresses.append(progress)
@@ -158,26 +166,34 @@ extension AnimeEntry {
         let currentEpisode = episodeProgress(forSeason: seasonNumber)?.watchedThroughEpisode ?? 0
         guard currentEpisode != episode else { return false }
 
-        setEpisodeProgress(
+        applyEpisodeProgressSnapshot(
             seasonNumber: seasonNumber,
             watchedThroughEpisode: episode,
-            now: date
+            updatedAt: date
         )
         markTrackingModified(at: date)
         return true
     }
 
+    /// Low-level convenience for replay-style progress mutation.
+    ///
+    /// This does not advance `trackingUpdatedAt`. User-facing changes should go
+    /// through `updateEpisodeProgress(seasonNumber:watchedThroughEpisode:at:)`.
     public func incrementEpisodeProgress(seasonNumber: Int, by amount: Int = 1, now: Date = .now) {
         let current = episodeProgress(forSeason: seasonNumber)?.watchedThroughEpisode ?? 0
-        setEpisodeProgress(
+        applyEpisodeProgressSnapshot(
             seasonNumber: seasonNumber,
             watchedThroughEpisode: current + amount,
-            now: now
+            updatedAt: now
         )
     }
 
+    /// Low-level convenience for replay-style progress mutation.
+    ///
+    /// This does not advance `trackingUpdatedAt`. User-facing changes should go
+    /// through `updateEpisodeProgress(seasonNumber:watchedThroughEpisode:at:)`.
     public func clearEpisodeProgress(seasonNumber: Int) {
-        setEpisodeProgress(seasonNumber: seasonNumber, watchedThroughEpisode: 0)
+        applyEpisodeProgressSnapshot(seasonNumber: seasonNumber, watchedThroughEpisode: 0)
     }
 
     public func episodeProgressCompletionPrompt(

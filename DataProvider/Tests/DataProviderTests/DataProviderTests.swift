@@ -243,10 +243,9 @@ import Testing
         detail: AnimeEntryDetail(language: "en-US", title: "Season", episodeCount: 12)
     )
 
-    entry.setEpisodeProgress(
+    entry.applyEpisodeProgressSnapshot(
         seasonNumber: 1,
-        watchedThroughEpisode: 5,
-        now: referenceDate(day: 1)
+        watchedThroughEpisode: 5, updatedAt: referenceDate(day: 1)
     )
     #expect(entry.episodeProgressSummary(forSeason: 1).watchedThroughEpisode == 5)
 
@@ -262,8 +261,8 @@ import Testing
 
 @Test func userEntryInfoRoundTripPreservesEpisodeProgress() async throws {
     let series = AnimeEntry(name: "Series", type: .series, tmdbID: 31)
-    series.setEpisodeProgress(seasonNumber: 0, watchedThroughEpisode: 1, now: referenceDate(day: 1))
-    series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 5, now: referenceDate(day: 2))
+    series.applyEpisodeProgressSnapshot(seasonNumber: 0, watchedThroughEpisode: 1, updatedAt: referenceDate(day: 1))
+    series.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 5, updatedAt: referenceDate(day: 2))
 
     let userInfo = UserEntryInfo(from: series)
     #expect(userInfo.episodeProgresses.map(\.seasonNumber) == [2])
@@ -274,7 +273,7 @@ import Testing
     #expect(decoded == userInfo)
 
     let restoredSeries = AnimeEntry(name: "Restored", type: .series, tmdbID: 32)
-    restoredSeries.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 9, now: referenceDate(day: 3))
+    restoredSeries.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 9, updatedAt: referenceDate(day: 3))
     restoredSeries.updateUserInfo(from: decoded)
 
     #expect(restoredSeries.orderedEpisodeProgresses.map(\.seasonNumber) == [2])
@@ -286,16 +285,16 @@ import Testing
 
 @Test func userEntryInfoRestoreFiltersEpisodeProgressForSeasonEntries() async throws {
     let sourceSeries = AnimeEntry(name: "Series", type: .series, tmdbID: 41)
-    sourceSeries.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 3, now: referenceDate(day: 1))
-    sourceSeries.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 7, now: referenceDate(day: 2))
-    sourceSeries.setEpisodeProgress(seasonNumber: 0, watchedThroughEpisode: 1, now: referenceDate(day: 3))
+    sourceSeries.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 3, updatedAt: referenceDate(day: 1))
+    sourceSeries.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 7, updatedAt: referenceDate(day: 2))
+    sourceSeries.applyEpisodeProgressSnapshot(seasonNumber: 0, watchedThroughEpisode: 1, updatedAt: referenceDate(day: 3))
 
     let seasonEntry = AnimeEntry(
         name: "Season 2",
         type: .season(seasonNumber: 2, parentSeriesID: 41),
         tmdbID: 42
     )
-    seasonEntry.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 1, now: referenceDate(day: 4))
+    seasonEntry.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 1, updatedAt: referenceDate(day: 4))
 
     seasonEntry.updateUserInfo(from: UserEntryInfo(from: sourceSeries))
 
@@ -324,9 +323,9 @@ import Testing
 @Test func episodeProgressIgnoresSpecials() async throws {
     let entry = AnimeEntry(name: "Series", type: .series, tmdbID: 21)
 
-    entry.setEpisodeProgress(seasonNumber: 0, watchedThroughEpisode: 1)
-    entry.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 4)
-    entry.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 3)
+    entry.applyEpisodeProgressSnapshot(seasonNumber: 0, watchedThroughEpisode: 1)
+    entry.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 4)
+    entry.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 3)
 
     #expect(entry.orderedEpisodeProgresses.map(\.seasonNumber) == [1, 2])
     #expect(entry.episodeProgressSeasonOptions == [1, 2])
@@ -336,7 +335,7 @@ import Testing
 @Test func movieEpisodeProgressIsIgnored() async throws {
     let movie = AnimeEntry.template()
 
-    movie.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 3)
+    movie.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 3)
 
     #expect(movie.episodeProgresses.isEmpty)
     #expect(movie.episodeProgressSeasonOptions.isEmpty)
@@ -350,7 +349,7 @@ import Testing
         tmdbID: 100
     )
 
-    specials.setEpisodeProgress(seasonNumber: 0, watchedThroughEpisode: 3)
+    specials.applyEpisodeProgressSnapshot(seasonNumber: 0, watchedThroughEpisode: 3)
 
     #expect(specials.episodeProgresses.isEmpty)
     #expect(specials.episodeProgressSeasonOptions.isEmpty)
@@ -366,7 +365,7 @@ import Testing
     )
 
     entry.setWatchStatus(.planToWatch)
-    entry.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 3)
+    entry.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 3)
     #expect(entry.watchStatus == .planToWatch)
 
     entry.setWatchStatus(.watched)
@@ -382,7 +381,7 @@ import Testing
     )
 
     season.setWatchStatus(.watching)
-    season.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 3)
+    season.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 3)
     #expect(
         season.episodeProgressCompletionPrompt(forSeason: 1, previousWatchedThroughEpisode: 2)
             == .seasonWatched
@@ -396,7 +395,7 @@ import Testing
 
     let unknownCountSeries = AnimeEntry(name: "Series", type: .series, tmdbID: 63)
     unknownCountSeries.setWatchStatus(.watching)
-    unknownCountSeries.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 5)
+    unknownCountSeries.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 5)
     #expect(
         unknownCountSeries.episodeProgressCompletionPrompt(
             forSeason: 1,
@@ -431,15 +430,15 @@ import Testing
     )
     series.setWatchStatus(.watching)
 
-    series.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 12)
-    series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 9)
+    series.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 12)
+    series.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 9)
     #expect(!series.areAllNumberedEpisodeProgressSeasonsComplete)
     #expect(
         series.episodeProgressCompletionPrompt(forSeason: 1, previousWatchedThroughEpisode: 11)
             == nil
     )
 
-    series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 10)
+    series.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 10)
     #expect(series.areAllNumberedEpisodeProgressSeasonsComplete)
     #expect(
         series.episodeProgressCompletionPrompt(forSeason: 2, previousWatchedThroughEpisode: 9)
@@ -472,7 +471,7 @@ import Testing
         )
     )
 
-    series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 50)
+    series.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 50)
 
     #expect(series.episodeProgressSummary(forSeason: 2).watchedThroughEpisode == 12)
     #expect(series.episodeProgressSummary(forSeason: 2).episodeCount == 12)
@@ -492,7 +491,7 @@ import Testing
         )
     )
 
-    series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 50)
+    series.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 50)
 
     #expect(series.episodeProgressSummary(forSeason: 2).watchedThroughEpisode == 12)
     #expect(series.episodeProgressSummary(forSeason: 2).episodeCount == 12)
@@ -500,7 +499,7 @@ import Testing
 
 @Test func episodeProgressUsesChildSeasonLimitsWhenParentSeriesCountsAreMissing() async throws {
     let series = AnimeEntry(name: "Series", type: .series, tmdbID: 41)
-    series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 50)
+    series.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 50)
     #expect(series.episodeProgressSummary(forSeason: 2).watchedThroughEpisode == 50)
     #expect(series.episodeProgressSummary(forSeason: 2).episodeCount == nil)
 
@@ -513,7 +512,7 @@ import Testing
     childSeason.parentSeriesEntry = series
     series.childSeasonEntries = [childSeason]
 
-    series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 50)
+    series.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 50)
     #expect(series.episodeProgressSummary(forSeason: 2).watchedThroughEpisode == 12)
     #expect(series.episodeProgressSummary(forSeason: 2).episodeCount == 12)
 
@@ -522,7 +521,7 @@ import Testing
         title: "Series",
         seasons: [AnimeEntrySeasonSummary(id: 43, seasonNumber: 2, title: "Season 2", episodeCount: 12)]
     )
-    series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 50)
+    series.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 50)
     #expect(series.episodeProgressSummary(forSeason: 2).watchedThroughEpisode == 12)
     #expect(series.episodeProgressSummary(forSeason: 2).episodeCount == 12)
 }
@@ -541,7 +540,7 @@ import Testing
         )
     )
 
-    entry.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 12)
+    entry.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 12)
 
     #expect(entry.episodeProgressSummary(forSeason: 1).watchedThroughEpisode == 5)
     #expect(entry.episodeProgressSummary(forSeason: 1).episodeCount == 5)

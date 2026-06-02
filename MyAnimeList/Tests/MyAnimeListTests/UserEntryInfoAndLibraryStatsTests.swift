@@ -124,10 +124,9 @@ struct UserEntryInfoAndLibraryStatsTests {
         let entry = AnimeEntry(name: "Series", type: .series, tmdbID: 113)
         let originalUserInfo = entry.userInfo
 
-        entry.setEpisodeProgress(
+        entry.applyEpisodeProgressSnapshot(
             seasonNumber: 2,
-            watchedThroughEpisode: 5,
-            now: referenceDate(year: 2026, month: 5, day: 11)
+            watchedThroughEpisode: 5, updatedAt: referenceDate(year: 2026, month: 5, day: 11)
         )
 
         #expect(entry.userInfoHasChanges(comparedTo: originalUserInfo))
@@ -138,10 +137,9 @@ struct UserEntryInfoAndLibraryStatsTests {
         #expect(decoded.episodeProgresses.map(\.seasonNumber) == [2])
 
         let restored = AnimeEntry(name: "Restored", type: .series, tmdbID: 114)
-        restored.setEpisodeProgress(
+        restored.applyEpisodeProgressSnapshot(
             seasonNumber: 1,
-            watchedThroughEpisode: 9,
-            now: referenceDate(year: 2026, month: 5, day: 10)
+            watchedThroughEpisode: 9, updatedAt: referenceDate(year: 2026, month: 5, day: 10)
         )
         restored.updateUserInfo(from: decoded)
 
@@ -155,24 +153,21 @@ struct UserEntryInfoAndLibraryStatsTests {
 
     @Test func testEpisodeProgressDirtyStateIgnoresTimestampOnlyChanges() {
         let entry = AnimeEntry(name: "Series", type: .series, tmdbID: 115)
-        entry.setEpisodeProgress(
+        entry.applyEpisodeProgressSnapshot(
             seasonNumber: 2,
-            watchedThroughEpisode: 5,
-            now: referenceDate(year: 2026, month: 5, day: 11)
+            watchedThroughEpisode: 5, updatedAt: referenceDate(year: 2026, month: 5, day: 11)
         )
         let originalUserInfo = entry.userInfo
 
-        entry.setEpisodeProgress(
+        entry.applyEpisodeProgressSnapshot(
             seasonNumber: 2,
-            watchedThroughEpisode: 4,
-            now: referenceDate(year: 2026, month: 5, day: 12)
+            watchedThroughEpisode: 4, updatedAt: referenceDate(year: 2026, month: 5, day: 12)
         )
         #expect(entry.userInfoHasChanges(comparedTo: originalUserInfo))
 
-        entry.setEpisodeProgress(
+        entry.applyEpisodeProgressSnapshot(
             seasonNumber: 2,
-            watchedThroughEpisode: 5,
-            now: referenceDate(year: 2026, month: 5, day: 13)
+            watchedThroughEpisode: 5, updatedAt: referenceDate(year: 2026, month: 5, day: 13)
         )
         #expect(entry.userInfo != originalUserInfo)
         #expect(entry.userInfo.isSemanticallyEquivalent(to: originalUserInfo))
@@ -387,14 +382,14 @@ struct UserEntryInfoAndLibraryStatsTests {
             )
         )
         series.setWatchStatus(.watching)
-        series.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 12)
-        series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 5)
+        series.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 12)
+        series.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 5)
 
         let seriesSnapshot = LibraryEntrySnapshot(entry: series)
         #expect(seriesSnapshot.episodeProgressLabel == "S2E5")
         #expect(seriesSnapshot.episodeProgressFraction == 17.0 / 24.0)
 
-        series.setEpisodeProgress(seasonNumber: 0, watchedThroughEpisode: 1)
+        series.applyEpisodeProgressSnapshot(seasonNumber: 0, watchedThroughEpisode: 1)
         let seriesSnapshotAfterSpecialsAttempt = LibraryEntrySnapshot(entry: series)
         #expect(seriesSnapshotAfterSpecialsAttempt.episodeProgressLabel == "S2E5")
         #expect(seriesSnapshotAfterSpecialsAttempt.episodeProgressFraction == 17.0 / 24.0)
@@ -406,13 +401,13 @@ struct UserEntryInfoAndLibraryStatsTests {
             detail: AnimeEntryDetail(language: "en-US", title: "Season 2", episodeCount: 12)
         )
         season.setWatchStatus(.watching)
-        season.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 3)
+        season.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 3)
         let seasonSnapshot = LibraryEntrySnapshot(entry: season)
         #expect(seasonSnapshot.episodeProgressLabel == "EP3")
         #expect(seasonSnapshot.episodeProgressFraction == 0.25)
 
         let movie = AnimeEntry.template(id: 503)
-        movie.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 2)
+        movie.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 2)
         #expect(LibraryEntrySnapshot(entry: movie).episodeProgressLabel == nil)
         #expect(LibraryEntrySnapshot(entry: movie).episodeProgressFraction == nil)
     }
@@ -433,8 +428,8 @@ struct UserEntryInfoAndLibraryStatsTests {
         )
 
         series.setWatchStatus(.watching)
-        series.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 12)
-        series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 5)
+        series.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 12)
+        series.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 5)
 
         let staleSnapshot = LibraryEntrySnapshot(entry: series)
         #expect(staleSnapshot.episodeProgressLabel == "S2E5")
@@ -485,7 +480,7 @@ struct UserEntryInfoAndLibraryStatsTests {
         )
 
         series.setWatchStatus(.watching)
-        series.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 6)
+        series.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 6)
 
         let snapshot = LibraryEntrySnapshot(entry: series)
         #expect(snapshot.episodeProgressLabel == "S1E6")
@@ -524,8 +519,8 @@ struct UserEntryInfoAndLibraryStatsTests {
         )
 
         series.setWatchStatus(.watching)
-        series.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 12)
-        series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 5)
+        series.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 12)
+        series.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 5)
         let specialsProgress = AnimeEntryEpisodeProgress(
             seasonNumber: 0,
             watchedThroughEpisode: 2,
@@ -559,8 +554,8 @@ struct UserEntryInfoAndLibraryStatsTests {
         )
 
         series.setWatchStatus(.planToWatch)
-        series.setEpisodeProgress(seasonNumber: 0, watchedThroughEpisode: 1)
-        series.setEpisodeProgress(seasonNumber: 2, watchedThroughEpisode: 50)
+        series.applyEpisodeProgressSnapshot(seasonNumber: 0, watchedThroughEpisode: 1)
+        series.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 50)
 
         #expect(series.watchStatus == .planToWatch)
         #expect(series.orderedEpisodeProgresses.map(\.seasonNumber) == [2])
@@ -582,7 +577,7 @@ struct UserEntryInfoAndLibraryStatsTests {
                 }
             )
         )
-        listedOnlySeason.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 9)
+        listedOnlySeason.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 9)
         #expect(listedOnlySeason.episodeProgressSummary(forSeason: 1).watchedThroughEpisode == 5)
         listedOnlySeason.setWatchStatus(.watching)
         let listedOnlySeasonSnapshot = LibraryEntrySnapshot(entry: listedOnlySeason)
@@ -600,7 +595,7 @@ struct UserEntryInfoAndLibraryStatsTests {
                 seasons: [AnimeEntrySeasonSummary(id: 607, seasonNumber: 1, title: "Season 1")]
             )
         )
-        singleSeasonSeries.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 9)
+        singleSeasonSeries.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 9)
         #expect(singleSeasonSeries.episodeProgressSummary(forSeason: 1).watchedThroughEpisode == 5)
         singleSeasonSeries.setWatchStatus(.watching)
         let singleSeasonSeriesSnapshot = LibraryEntrySnapshot(entry: singleSeasonSeries)
@@ -608,7 +603,7 @@ struct UserEntryInfoAndLibraryStatsTests {
         #expect(singleSeasonSeriesSnapshot.episodeProgressFraction == 1)
 
         let specialsOnlySeries = AnimeEntry(name: "Specials", type: .series, tmdbID: 607)
-        specialsOnlySeries.setEpisodeProgress(seasonNumber: 0, watchedThroughEpisode: 1)
+        specialsOnlySeries.applyEpisodeProgressSnapshot(seasonNumber: 0, watchedThroughEpisode: 1)
         let specialsSnapshot = LibraryEntrySnapshot(entry: specialsOnlySeries)
         #expect(specialsOnlySeries.episodeProgresses.isEmpty)
         #expect(specialsSnapshot.episodeProgressLabel == nil)
@@ -619,12 +614,12 @@ struct UserEntryInfoAndLibraryStatsTests {
             type: .season(seasonNumber: 0, parentSeriesID: 608),
             tmdbID: 609
         )
-        specialsSeason.setEpisodeProgress(seasonNumber: 0, watchedThroughEpisode: 2)
+        specialsSeason.applyEpisodeProgressSnapshot(seasonNumber: 0, watchedThroughEpisode: 2)
         #expect(LibraryEntrySnapshot(entry: specialsSeason).episodeProgressLabel == nil)
         #expect(LibraryEntrySnapshot(entry: specialsSeason).episodeProgressFraction == nil)
 
         let movie = AnimeEntry.template(id: 603)
-        movie.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 4)
+        movie.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 4)
         #expect(movie.episodeProgresses.isEmpty)
     }
 
@@ -636,7 +631,7 @@ struct UserEntryInfoAndLibraryStatsTests {
             detail: AnimeEntryDetail(language: "en-US", title: "Season 1", episodeCount: 12)
         )
 
-        season.setEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 4)
+        season.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 4)
         #expect(season.episodeProgressSummary(forSeason: 1).watchedThroughEpisode == 4)
         #expect(LibraryEntrySnapshot(entry: season).episodeProgressLabel == nil)
         #expect(LibraryEntrySnapshot(entry: season).episodeProgressFraction == nil)
