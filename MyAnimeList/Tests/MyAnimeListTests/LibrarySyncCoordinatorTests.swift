@@ -78,6 +78,31 @@ struct LibrarySyncCoordinatorTests {
         #expect(syncCount == 2)
     }
 
+    @Test @MainActor func dirtyQueueSchedulerStopsAfterFinalIntervalRetryLimit() async throws {
+        var syncCount = 0
+        let scheduler = LibrarySyncScheduler(
+            localDebounceInterval: 0.001,
+            failureRetryIntervals: [0.01, 0.02],
+            maximumRetryAttemptsAtFinalInterval: 3,
+            hasPendingDirtyWork: {
+                true
+            },
+            sync: { _ in
+                syncCount += 1
+                return .retryableFailure
+            }
+        )
+
+        scheduler.scheduleLocalDirtyQueueSync()
+        try await Task.sleep(nanoseconds: 110_000_000)
+
+        #expect(syncCount == 5)
+
+        try await Task.sleep(nanoseconds: 50_000_000)
+
+        #expect(syncCount == 5)
+    }
+
     @Test @MainActor func dirtyQueueSchedulerDoesNotRetryPermanentFailure() async throws {
         var syncCount = 0
         let scheduler = LibrarySyncScheduler(

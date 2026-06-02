@@ -18,6 +18,7 @@ fileprivate let librarySyncSchedulerLogger = Logger(
 final class LibrarySyncScheduler {
     private let localDebounceInterval: TimeInterval
     private let failureRetryIntervals: [TimeInterval]
+    private let maximumRetryAttemptsAtFinalInterval: Int
     private let hasPendingDirtyWork: @MainActor () -> Bool
     private let sync: @MainActor (LibrarySyncCoordinator.Trigger) async -> LibrarySyncCoordinator.SyncResult
 
@@ -28,11 +29,13 @@ final class LibrarySyncScheduler {
     init(
         localDebounceInterval: TimeInterval = 1.5,
         failureRetryIntervals: [TimeInterval] = [30, 60, 120, 300],
+        maximumRetryAttemptsAtFinalInterval: Int = 3,
         hasPendingDirtyWork: @escaping @MainActor () -> Bool,
         sync: @escaping @MainActor (LibrarySyncCoordinator.Trigger) async -> LibrarySyncCoordinator.SyncResult
     ) {
         self.localDebounceInterval = localDebounceInterval
         self.failureRetryIntervals = failureRetryIntervals
+        self.maximumRetryAttemptsAtFinalInterval = maximumRetryAttemptsAtFinalInterval
         self.hasPendingDirtyWork = hasPendingDirtyWork
         self.sync = sync
     }
@@ -75,6 +78,17 @@ final class LibrarySyncScheduler {
 
     private func scheduleFailureRetryIfNeeded() {
         guard hasPendingDirtyWork(), !failureRetryIntervals.isEmpty else { return }
+        let maximumRetryAttempts = max(
+            0,
+            failureRetryIntervals.count - 1 + maximumRetryAttemptsAtFinalInterval
+        )
+        guard failureRetryAttempt < maximumRetryAttempts else {
+            nextRetryAllowedAt = nil
+            librarySyncSchedulerLogger.warning(
+                "Stopped automatic iCloud library sync retries after exhausting the local-change failure retry policy."
+            )
+            return
+        }
         let retryDelay = failureRetryIntervals[min(failureRetryAttempt, failureRetryIntervals.count - 1)]
         failureRetryAttempt += 1
         nextRetryAllowedAt = Date().addingTimeInterval(retryDelay)

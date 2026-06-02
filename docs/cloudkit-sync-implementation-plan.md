@@ -131,6 +131,8 @@ Add the user-facing sync surface only after the coordinator exists:
 - import/export/degraded status
 - last successful sync date
 - manual retry / reset actions if needed
+- Make the degraded sync state explicit for users when automatic retries stop
+  or sync remains unable to make progress.
 
 Initial rollout direction:
 

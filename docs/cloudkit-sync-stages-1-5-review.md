@@ -16,28 +16,6 @@ No `CKAccountChanged` observer exists. That is a real account-transition policy 
 
 **Fix:** Define account-change policy during rollout work, then observe `NSNotification.Name.CKAccountChanged` and apply that policy.
 
-### WARN-8: Partial Failure Details Discarded on Save
-
-**File:** `DataProvider/Sources/LibrarySync/CloudLibrarySyncDatabase.swift:143-153`  
-**Status:** Valid limitation; out of Stage 1–5 scope
-
-```swift
-catch {
-    guard let ckError = error as? CKError,
-          ckError.code == .partialFailure,
-          let partialErrors = ckError.partialErrorsByItemID
-    else { throw error }
-    let failedIDs = Set(partialErrors.keys.compactMap { $0 as? CKRecord.ID })
-    return records.map(\.recordID).filter { !failedIDs.contains($0) }
-}
-```
-
-Per-record failure reasons (`limitExceeded`, `quotaExceeded`, `notAuthenticated`, etc.) are discarded. The exporter cannot make intelligent retry decisions. This is not a Stage 1–5 correctness bug because the implemented plan only requires accepted records to be dequeued and partial failures to remain queued for retry.
-
-**Fix:** Surface per-record error details through the `CloudLibrarySyncDatabase` protocol.
-
----
-
 ### WARN-9: No Handling of `zoneNotFound` / `userDeletedZone` During Fetch
 
 **File:** `DataProvider/Sources/LibrarySync/CloudLibrarySyncImporter.swift`  
@@ -83,70 +61,13 @@ When `container` is nil (tests), this falls back to the app's bundle identifier.
 
 **Fix:** Consider returning `nil` when `container` is nil and keeping test namespaces explicit.
 
----
-
-## 🟡 Additional Valid Stage 1–5 Warning Issues
-
-### WARN-12: Combine Publisher for `didSave` Not `@MainActor`-Isolated
-
-**File:** `MyAnimeList/Sources/ViewModels/Library/LibrarySyncChangeRecorder.swift:287-294`  
-**Status:** Valid under strict concurrency
-
-```swift
-private func observeSaves() {
-    notificationCenter
-        .publisher(for: ModelContext.didSave)
-        .sink { [weak self] notification in
-            self?.processSaveNotification(notification)  // ← no @MainActor dispatch
-        }
-        .store(in: &cancellables)
-}
-```
-
-Under **Swift 6 strict concurrency checking**, calling a `@MainActor` method from a non-isolated closure is a compile error. Under current relaxed mode, SwiftData's `mainContext` posts on the main thread, so this works in practice. However, it is a latent migration risk.
-
-**Fix:** Wrap the sink body in `Task { @MainActor [weak self] in ... }`.
-
----
-
-### WARN-13: Brittle Timing in Scheduler Tests
-
-**File:** `MyAnimeList/Tests/MyAnimeListTests/LibrarySyncCoordinatorTests.swift`  
-**Status:** Confirmed valid
-
-`dirtyQueueSchedulerDebouncesLocalChanges` and `dirtyQueueSchedulerBacksOffAfterFailure` use hardcoded nanosecond sleeps (`20_000_000`, `30_000_000`, etc.). These are inherently flaky on slow CI runners.
-
-**Fix:** Inject a controllable clock or use `Clock` protocol conformance.
-
----
-
-### WARN-14: No Test for Partial Export Failure in Coordinator
-
-**File:** `MyAnimeList/Tests/MyAnimeListTests/LibrarySyncCoordinatorTests.swift`  
-**Status:** Confirmed valid, with lower-level coverage caveat
-
-No test simulates a scenario where the exporter saves 2 of 3 records and verifies that:
-
-- The 2 successful identities are removed from the dirty queue
-- The 1 failed identity remains queued
-
-`CloudLibrarySyncExporter` has lower-level partial-success coverage, but the coordinator's dirty-queue removal behavior after a partial export is not directly tested.
-
-**Fix:** Add a test with a fake database that reports partial success.
-
 ## Top Priorities to Fix
-
-### Before Stage 6 (Settings & Rollout)
-
-1. **WARN-12:** Add `@MainActor` dispatch in Combine sink for future Swift 6 compatibility
-2. **Hydration cleanup:** Add coverage or cleanup for staged hydrated inserts if later apply/save fails; this is a downgraded partial finding, not a confirmed critical orphan bug
 
 ### Before Stage 8 (Manual Validation)
 
 4. **WARN-4:** Define account-change policy, then add `CKAccountChanged` observer behavior
-5. **WARN-8:** Surface per-record CloudKit error details if rollout needs smarter retry/status
-6. **WARN-9 / WARN-10:** Add specific handling for `zoneNotFound`, `userDeletedZone`, rate limits, and quota exceeded as part of restore/status policy
-7. **All remaining must-add tests** (see Test Coverage section above)
+5. **WARN-9 / WARN-10:** Add specific handling for `zoneNotFound`, `userDeletedZone`, rate limits, and quota exceeded as part of restore/status policy
+6. **All remaining must-add tests** (see Test Coverage section above)
 
 ---
 
