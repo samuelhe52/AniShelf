@@ -26,7 +26,7 @@ final class LibrarySyncScheduler {
     private var failureRetryAttempt = 0
 
     init(
-        localDebounceInterval: TimeInterval = 3,
+        localDebounceInterval: TimeInterval = 1.5,
         failureRetryIntervals: [TimeInterval] = [30, 60, 120, 300],
         hasPendingDirtyWork: @escaping @MainActor () -> Bool,
         sync: @escaping @MainActor (LibrarySyncCoordinator.Trigger) async -> LibrarySyncCoordinator.SyncResult
