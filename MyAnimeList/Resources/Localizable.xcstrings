@@ -73,6 +73,18 @@
             "state" : "new",
             "value" : "%1$lld entries need a choice. Library: %2$lld, tracking: %3$lld, episodes: %4$lld."
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld 件の項目で選択が必要です。ライブラリ: %2$lld、トラッキング: %3$lld、エピソード: %4$lld。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld 个条目需要选择。资料库：%2$lld，追踪：%3$lld，集数：%4$lld。"
+          }
         }
       }
     },
@@ -1272,7 +1284,20 @@
       }
     },
     "Choose which library data to keep." : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保持するライブラリデータを選択してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择要保留的资料库数据。"
+          }
+        }
+      }
     },
     "Clear" : {
       "localizations" : {
@@ -2258,7 +2283,20 @@
       }
     },
     "Exporting changes" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "変更を書き出し中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在导出更改"
+          }
+        }
+      }
     },
     "Failed to load posters." : {
       "localizations" : {
@@ -2723,10 +2761,37 @@
       }
     },
     "iCloud Library Sync" : {
-
+      "extractionState" : "stale",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloudライブラリ同期"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud 资料库同步"
+          }
+        }
+      }
     },
     "iCloud Sync" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud同期"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud 同步"
+          }
+        }
+      }
     },
     "If you use a VPN or another network proxy, turning off Use TMDb Proxy in Settings may help." : {
       "localizations" : {
@@ -2842,7 +2907,20 @@
       }
     },
     "Keep your library available across devices." : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリを複数のデバイスで利用できるようにします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "让你的资料库可在多台设备上使用。"
+          }
+        }
+      }
     },
     "Key" : {
       "extractionState" : "manual",
@@ -2912,10 +2990,36 @@
       }
     },
     "Last attempt: %@" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前回の試行: %1$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上次尝试：%1$@"
+          }
+        }
+      }
     },
     "Last sync: %@" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前回の同期: %1$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上次同步：%1$@"
+          }
+        }
+      }
     },
     "Later" : {
       "localizations" : {
@@ -3175,6 +3279,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更改状态"
+          }
+        }
+      }
+    },
+    "Master Switch" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メインスイッチ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "总开关"
           }
         }
       }
@@ -3468,7 +3588,36 @@
       }
     },
     "No sync yet." : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだ同期されていません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未同步。"
+          }
+        }
+      }
+    },
+    "Needs Choice" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択が必要です"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要选择"
+          }
+        }
+      }
     },
     "No TMDb result found for this prompt." : {
       "localizations" : {
@@ -4066,7 +4215,20 @@
       }
     },
     "Preparing iCloud" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloudを準備中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在准备 iCloud"
+          }
+        }
+      }
     },
     "Preview" : {
       "localizations" : {
@@ -4149,7 +4311,20 @@
       }
     },
     "Ready to Sync" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同期の準備ができました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已准备好同步"
+          }
+        }
+      }
     },
     "Refresh" : {
       "localizations" : {
@@ -4466,6 +4641,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "替换AniShelf用于搜索和元数据的TMDb密钥。"
+          }
+        }
+      }
+    },
+    "Resolve iCloud Sync Conflict" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud同期の競合を解決"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "解决 iCloud 同步冲突"
           }
         }
       }
@@ -5226,19 +5417,133 @@
       }
     },
     "Sync Enabled" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同期が有効です"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同步已启用"
+          }
+        }
+      }
+    },
+    "Sync Failed" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同期に失敗しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同步失败"
+          }
+        }
+      }
+    },
+    "Sync Skipped" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同期をスキップしました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已跳过同步"
+          }
+        }
+      }
     },
     "Sync is enabled for this library." : {
-
+      "extractionState" : "stale",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このライブラリでは同期が有効です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此资料库已启用同步。"
+          }
+        }
+      }
     },
     "Sync Now" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今すぐ同期"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即同步"
+          }
+        }
+      }
     },
     "Syncing" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同期中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同步中"
+          }
+        }
+      }
+    },
+    "Synced" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同期済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已同步"
+          }
+        }
+      }
     },
     "Syncing library" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリを同期中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在同步资料库"
+          }
+        }
+      }
     },
     "Tab-Separated Values (.tsv)" : {
       "localizations" : {
@@ -5786,7 +6091,21 @@
       }
     },
     "Turn on to bootstrap iCloud sync." : {
-
+      "extractionState" : "stale",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud同期を初期設定するにはオンにしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开启以初始化 iCloud 同步。"
+          }
+        }
+      }
     },
     "Turn this off if you use a VPN or another proxy." : {
       "localizations" : {
@@ -5848,6 +6167,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "关闭后会隐藏分集进度，但不会删除已保存的进度。"
+          }
+        }
+      }
+    },
+    "Existing iCloud data stays untouched." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既存のiCloudデータはそのまま残ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "现有 iCloud 数据保持不变。"
           }
         }
       }
@@ -6035,7 +6370,20 @@
       }
     },
     "Use iCloud" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloudを使用"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用 iCloud"
+          }
+        }
+      }
     },
     "Use Poster" : {
       "localizations" : {
@@ -6054,7 +6402,20 @@
       }
     },
     "Use This Device" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイスを使用"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用这台设备"
+          }
+        }
+      }
     },
     "Use this poster" : {
       "localizations" : {

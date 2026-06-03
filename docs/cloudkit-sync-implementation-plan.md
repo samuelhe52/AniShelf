@@ -1,7 +1,7 @@
 # AniShelf CloudKit Sync Plan
 
 Created: 2026-05-30
-Updated: 2026-05-31
+Updated: 2026-06-03
 
 This document tracks the accepted library sync direction and the remaining work.
 It replaces the abandoned idea of mirroring AniShelf's full SwiftData graph
@@ -40,7 +40,12 @@ For failure patterns from the earlier full-store mirroring attempt, see
   - remote-import-before-export sequencing
   - recorder suppression around remote applies
   - token advancement only after local save succeeds
-- Stages 6-8 are still pending.
+- Stage 6 is complete:
+  - persisted opt-in sync setting, defaulting off
+  - first-enable bootstrap with CloudKit preparation and conflict choice handling
+  - sync policy gating for enabled state, bootstrap completion, and TMDb API key
+  - settings UI for enable/disable, bootstrap state, last sync time, and manual retry
+- Stages 7-8 are still pending.
 
 ## Plan Maintenance
 
@@ -114,36 +119,14 @@ including all-or-nothing handling for batch delete rollback.
   queued for retry
 
 The app requests sync on launch, foreground activation, and CloudKit remote
-notifications when the TMDb API key is available. This is functional plumbing,
-not a full product rollout; user-facing controls and restore policy remain
-pending.
+notifications only when the user has enabled sync, first-enable bootstrap has
+completed, and the TMDb API key is available. Settings now expose opt-in,
+bootstrap, status, conflict choice, and manual retry controls. Restore policy
+remains pending.
 
 ## Remaining Work
 
 DO NOT follow the stages below as strict implementation requirements. You can be flexible about the specific implementation details depending on the current project status and context.
-
-### Stage 6. Settings And Rollout
-
-Add the user-facing sync surface only after the coordinator exists:
-
-- opt-in toggle
-- iCloud availability and setup state
-- import/export/degraded status
-- last successful sync date
-- manual retry / reset actions if needed
-- Make the degraded sync state explicit for users when automatic retries stop
-  or sync remains unable to make progress.
-
-Initial rollout direction:
-
-- Keep the sync policy simple: sync is allowed only when the user has enabled
-  iCloud sync and a TMDb API key is available.
-- Default the user setting to off. Do not include in-memory store checks in the
-  product policy; keep test/store guards local to the implementation.
-- Add an explicit first-enable bootstrap helper. It should prepare CloudKit,
-  resolve the account namespace, seed dirty work from the current local library,
-  then run the normal import-before-export sync pass.
-- Do not hide first-enable bootstrapping inside launch or foreground sync.
 
 ### Stage 7. Backup And Restore Policy
 
