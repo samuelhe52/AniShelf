@@ -8,6 +8,7 @@
 import Combine
 import DataProvider
 import Foundation
+import LibrarySync
 import SwiftData
 import SwiftUI
 import os
@@ -24,6 +25,7 @@ class LibraryStore {
     @ObservationIgnored private(set) var syncCoordinator: LibrarySyncCoordinator?
     @ObservationIgnored private var syncScheduler: LibrarySyncScheduler?
     @ObservationIgnored let preferences: LibraryPreferences
+    @ObservationIgnored private let cloudSyncStateController: LibraryCloudSyncStateController
     @ObservationIgnored private var cancellables = Set<AnyCancellable>()
 
     // MARK: - State
@@ -31,6 +33,7 @@ class LibraryStore {
     private(set) var library: [AnimeEntry]
     @ObservationIgnored var infoFetcher: InfoFetcher
     var language: Language = .resolvedAnimeInfoLanguage()
+    private(set) var libraryCloudSyncStatus: LibraryCloudSyncStatus
 
     // MARK: - Filtering & Sorting State
 
@@ -90,7 +93,14 @@ class LibraryStore {
         libraryOnDisplay.map(LibraryEntryDisplayItem.init)
     }
 
-    init(dataProvider: DataProvider) {
+    init(
+        dataProvider: DataProvider,
+        preferences: LibraryPreferences = .init(),
+        hasTMDbAPIKey: @escaping @MainActor () -> Bool = {
+            guard let key = TMDbAPIKeyStorage().retrieveKey() else { return false }
+            return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    ) {
         self.dataProvider = dataProvider
         let syncChangeRecorder = LibrarySyncChangeRecorder(dataProvider: dataProvider)
         let repository = LibraryRepository(
@@ -99,9 +109,14 @@ class LibraryStore {
         )
         self.syncChangeRecorder = syncChangeRecorder
         self.repository = repository
-        self.preferences = LibraryPreferences()
+        self.preferences = preferences
+        self.cloudSyncStateController = .init(
+            preferences: preferences,
+            hasTMDbAPIKey: hasTMDbAPIKey
+        )
         self.infoFetcher = .init()
         self.library = []
+        self.libraryCloudSyncStatus = preferences.load().cloudSyncStatus
         reloadPersistedPreferences()
         setupUpdateLibrary()
         setupTMDbAPIConfigurationChangeMonitor()
@@ -132,6 +147,9 @@ class LibraryStore {
         }
         if autoPrefetchImagesOnAddAndRestore != snapshot.autoPrefetchImagesOnAddAndRestore {
             autoPrefetchImagesOnAddAndRestore = snapshot.autoPrefetchImagesOnAddAndRestore
+        }
+        if libraryCloudSyncStatus != snapshot.cloudSyncStatus {
+            libraryCloudSyncStatus = snapshot.cloudSyncStatus
         }
 
         applyDefaultFilters()
@@ -166,7 +184,7 @@ class LibraryStore {
 
     func syncLibrary(trigger: LibrarySyncCoordinator.Trigger) {
         Task {
-            await performLibrarySync(trigger: trigger)
+            await performLibrarySyncResult(trigger: trigger)
         }
     }
 
@@ -176,8 +194,219 @@ class LibraryStore {
 
     @discardableResult
     func performLibrarySync(trigger: LibrarySyncCoordinator.Trigger) async -> Bool {
+        await performLibrarySyncResult(trigger: trigger).succeeded
+    }
+
+    func performLibrarySyncResult(trigger: LibrarySyncCoordinator.Trigger) async
+        -> LibrarySyncCoordinator.SyncResult
+    {
+        guard let syncCoordinator else { return .permanentFailure }
+        return await syncCoordinator.syncResult(trigger: trigger)
+    }
+
+    @discardableResult
+    func enableLibraryCloudSync() async -> Bool {
+        updateLibraryCloudSyncStatus { status in
+            status.isEnabled = true
+            status.bootstrapState = .running
+            status.pendingConflictSummary = nil
+            status.lastFailureReason = nil
+            status.degradedReason = nil
+            status.lastResult = nil
+        }
+        guard cloudSyncStateController.hasRequiredBootstrapInputs() else {
+            recordLibraryCloudSyncFailure(
+                trigger: .firstEnableBootstrap,
+                phase: nil,
+                result: .permanentFailure,
+                reason: "A TMDb API key is required before iCloud library sync can be enabled.",
+                degradedReason: "iCloud library sync enablement is blocked until a TMDb API key is configured."
+            )
+            updateLibraryCloudSyncStatus { status in
+                status.bootstrapState = .failed
+            }
+            return false
+        }
+        guard let syncCoordinator else {
+            recordLibraryCloudSyncFailure(
+                trigger: .firstEnableBootstrap,
+                phase: nil,
+                result: .permanentFailure,
+                reason: "The iCloud library sync coordinator was unavailable.",
+                degradedReason: "iCloud library sync enablement is blocked because the sync coordinator is unavailable."
+            )
+            updateLibraryCloudSyncStatus { status in
+                status.bootstrapState = .failed
+            }
+            return false
+        }
+        return await syncCoordinator.bootstrapFirstEnablement(preference: nil).succeeded
+    }
+
+    @discardableResult
+    func resolveLibraryCloudSyncConflicts(preference: LibraryCloudSyncConflictPreference) async -> Bool {
+        guard cloudSyncStateController.canResolveFirstEnablementConflict(libraryCloudSyncStatus) else {
+            return false
+        }
         guard let syncCoordinator else { return false }
-        return await syncCoordinator.sync(trigger: trigger)
+        return await syncCoordinator.bootstrapFirstEnablement(preference: preference).succeeded
+    }
+
+    func cancelLibraryCloudSyncEnablement() {
+        guard cloudSyncStateController.canCancelFirstEnablement(libraryCloudSyncStatus) else {
+            return
+        }
+        syncCoordinator?.cancelFirstEnableBootstrap()
+        updateLibraryCloudSyncStatus { status in
+            status.isEnabled = false
+            status.bootstrapState = .notStarted
+            status.pendingConflictSummary = nil
+            status.currentPhase = nil
+            status.lastResult = .skipped
+            status.lastFailureReason = nil
+            status.degradedReason = nil
+        }
+    }
+
+    @discardableResult
+    func retryLibraryCloudSync() async -> Bool {
+        if libraryCloudSyncStatus.isEnabled,
+            libraryCloudSyncStatus.bootstrapState == .failed
+                || libraryCloudSyncStatus.bootstrapState == .notStarted
+        {
+            return await enableLibraryCloudSync()
+        }
+        return await performLibrarySync(trigger: .manualRetry)
+    }
+
+    func libraryCloudSyncPolicyBlockReason() -> LibraryCloudSyncPolicyBlockReason? {
+        cloudSyncStateController.policyBlockReason(for: libraryCloudSyncStatus)
+    }
+
+    func updateLibraryCloudSyncStatus(_ update: (inout LibraryCloudSyncStatus) -> Void) {
+        libraryCloudSyncStatus = cloudSyncStateController.persist(
+            libraryCloudSyncStatus,
+            updating: update
+        )
+    }
+
+    func recordLibraryCloudSyncPhase(
+        trigger: LibrarySyncCoordinator.Trigger,
+        phase: LibraryCloudSyncPhase,
+        at date: Date = .now
+    ) {
+        updateLibraryCloudSyncStatus { status in
+            status.currentPhase = phase
+            status.lastTrigger = trigger.rawValue
+            status.lastAttemptDate = date
+        }
+    }
+
+    func recordLibraryCloudSyncSkipped(
+        trigger: LibrarySyncCoordinator.Trigger,
+        reason: LibraryCloudSyncPolicyBlockReason,
+        at date: Date = .now
+    ) {
+        updateLibraryCloudSyncStatus { status in
+            status.currentPhase = nil
+            status.lastResult = .skipped
+            status.lastTrigger = trigger.rawValue
+            status.lastAttemptDate = date
+            status.lastFailureReason = reason.rawValue
+        }
+    }
+
+    func recordLibraryCloudSyncSuccess(
+        trigger: LibrarySyncCoordinator.Trigger,
+        completedBootstrap: Bool,
+        at date: Date = .now
+    ) {
+        updateLibraryCloudSyncStatus { status in
+            if completedBootstrap {
+                status.bootstrapState = .completed
+            }
+            status.currentPhase = nil
+            status.lastResult = .success
+            status.lastTrigger = trigger.rawValue
+            status.lastAttemptDate = date
+            status.lastSuccessfulSyncDate = date
+            status.lastFailureReason = nil
+            status.degradedReason = nil
+            status.pendingConflictSummary = nil
+        }
+    }
+
+    func recordLibraryCloudSyncFailure(
+        trigger: LibrarySyncCoordinator.Trigger,
+        phase: LibraryCloudSyncPhase?,
+        result: LibraryCloudSyncResultClass,
+        reason: String,
+        degradedReason: String? = nil,
+        at date: Date = .now
+    ) {
+        updateLibraryCloudSyncStatus { status in
+            status.currentPhase = phase
+            status.lastResult = result
+            status.lastTrigger = trigger.rawValue
+            status.lastAttemptDate = date
+            status.lastFailureReason = reason
+            if let degradedReason {
+                status.degradedReason = degradedReason
+            }
+        }
+    }
+
+    func recordLibraryCloudSyncConflictNeeded(
+        summary: LibraryCloudSyncConflictSummary,
+        at date: Date = .now
+    ) {
+        updateLibraryCloudSyncStatus { status in
+            status.bootstrapState = .needsConflictChoice
+            status.pendingConflictSummary = summary
+            status.currentPhase = nil
+            status.lastResult = .conflictChoiceRequired
+            status.lastTrigger = LibrarySyncCoordinator.Trigger.firstEnableBootstrap.rawValue
+            status.lastAttemptDate = date
+            status.lastFailureReason = nil
+        }
+    }
+
+    func updateLibraryCloudKitAvailability(_ availability: LibraryCloudKitAvailability) {
+        updateLibraryCloudSyncStatus { status in
+            status.cloudKitAvailability = availability
+        }
+    }
+
+    func updateLibraryCloudSyncRetryState(_ retryState: LibraryCloudSyncRetryState) {
+        updateLibraryCloudSyncStatus { status in
+            status.retryState = retryState
+        }
+    }
+
+    func markLibraryCloudSyncDegraded(_ reason: String) {
+        updateLibraryCloudSyncStatus { status in
+            status.degradedReason = reason
+        }
+    }
+
+    func configureLibrarySyncCoordinator(
+        client: CloudLibrarySyncClient? = nil,
+        database: CloudLibrarySyncDatabase? = nil,
+        changeTokenStore: CloudLibrarySyncChangeTokenStore = .init(),
+        namespaceProvider: (@MainActor () async throws -> CloudLibrarySyncChangeTokenStore.Namespace?)? = nil,
+        hydrateMissingEntry: @escaping @MainActor (LibraryEntrySyncSnapshot, LibraryStore) async throws -> AnimeEntry =
+            LibrarySyncCoordinator.hydrateMissingEntry,
+        dateProvider: @escaping @MainActor @Sendable () -> Date = { .now }
+    ) {
+        syncCoordinator = LibrarySyncCoordinator(
+            store: self,
+            client: client,
+            database: database,
+            changeTokenStore: changeTokenStore,
+            namespaceProvider: namespaceProvider,
+            hydrateMissingEntry: hydrateMissingEntry,
+            dateProvider: dateProvider
+        )
     }
 
     private func setupLibrarySyncScheduling() {
@@ -191,6 +420,12 @@ class LibraryStore {
                 guard let self else { return .permanentFailure }
                 guard let syncCoordinator else { return .permanentFailure }
                 return await syncCoordinator.syncResult(trigger: trigger)
+            },
+            retryStateDidChange: { [weak self] retryState in
+                self?.updateLibraryCloudSyncRetryState(retryState)
+            },
+            degradedStateDidChange: { [weak self] reason in
+                self?.markLibraryCloudSyncDegraded(reason)
             }
         )
         syncScheduler = scheduler

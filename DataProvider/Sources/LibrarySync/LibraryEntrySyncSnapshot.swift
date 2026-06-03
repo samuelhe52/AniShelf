@@ -113,10 +113,16 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     public var episodeProgresses: [EpisodeProgress]
     public var libraryUpdatedAt: Date?
     public var trackingUpdatedAt: Date?
-    /// Newest top-level clock used when deciding whether remote state can clear
-    /// a local dirty-queue entry.
+    /// Newest sync clock used when deciding whether remote state can clear a
+    /// local dirty-queue entry.
     public var latestSyncClock: Date? {
-        [libraryUpdatedAt, trackingUpdatedAt].compactMap(\.self).max()
+        [
+            libraryUpdatedAt,
+            trackingUpdatedAt,
+            episodeProgresses.map(\.updatedAt).max()
+        ]
+        .compactMap(\.self)
+        .max()
     }
 
     /// Newest user-state clock used when comparing a snapshot against a tombstone.

@@ -89,6 +89,25 @@ final class LibraryProfileSettingsActions {
         )
     }
 
+    @discardableResult
+    func enableLibraryCloudSync() async -> Bool {
+        await store.enableLibraryCloudSync()
+    }
+
+    @discardableResult
+    func resolveLibraryCloudSyncConflicts(preference: LibraryCloudSyncConflictPreference) async -> Bool {
+        await store.resolveLibraryCloudSyncConflicts(preference: preference)
+    }
+
+    func cancelLibraryCloudSyncEnablement() {
+        store.cancelLibraryCloudSyncEnablement()
+    }
+
+    @discardableResult
+    func retryLibraryCloudSync() async -> Bool {
+        await store.retryLibraryCloudSync()
+    }
+
     /// Default production implementation for `refreshInfos(options:)`.
     ///
     /// Refreshes all persisted entries and prefetches any updated images.

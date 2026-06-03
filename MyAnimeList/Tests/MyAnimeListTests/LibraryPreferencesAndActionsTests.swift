@@ -14,6 +14,39 @@ import Testing
 @testable import MyAnimeList
 
 struct LibraryPreferencesAndActionsTests {
+    @Test @MainActor func testLibraryCloudSyncPreferenceDefaultsOffAndIsNotBackedUpYet() {
+        let suiteName = "MyAnimeListTests.LibraryCloudSyncPreference"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let preferences = LibraryPreferences(defaults: defaults)
+        let status = preferences.load().cloudSyncStatus
+
+        #expect(!status.isEnabled)
+        #expect(status.bootstrapState == .notStarted)
+        #expect(!String.allPreferenceKeys.contains(.libraryCloudSyncEnabled))
+    }
+
+    @Test @MainActor func testLibraryCloudSyncPhasePersistsCoarseStatus() {
+        let suiteName = "MyAnimeListTests.LibraryCloudSyncPhase"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let preferences = LibraryPreferences(defaults: defaults)
+        var status = LibraryCloudSyncStatus.defaultValue
+        status.currentPhase = .remoteFetch
+
+        preferences.saveCloudSyncStatus(status)
+
+        #expect(defaults.string(forKey: .libraryCloudSyncCurrentPhase) == "syncing")
+        #expect(preferences.load().cloudSyncStatus.currentPhase == .syncing)
+
+        defaults.set("prepareZoneSubscription", forKey: .libraryCloudSyncCurrentPhase)
+        #expect(preferences.load().cloudSyncStatus.currentPhase == .preparing)
+    }
+
     @Test func testSingleTapDetailPreferenceDefaultsAndBackupInclusion() {
         let suiteName = "MyAnimeListTests.SingleTapDetailPreference"
         let defaults = UserDefaults(suiteName: suiteName)!

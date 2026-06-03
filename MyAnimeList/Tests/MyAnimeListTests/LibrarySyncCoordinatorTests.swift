@@ -80,6 +80,8 @@ struct LibrarySyncCoordinatorTests {
 
     @Test @MainActor func dirtyQueueSchedulerStopsAfterFinalIntervalRetryLimit() async throws {
         var syncCount = 0
+        var retryStates: [LibraryCloudSyncRetryState] = []
+        var degradedReason: String?
         let scheduler = LibrarySyncScheduler(
             localDebounceInterval: 0.001,
             failureRetryIntervals: [0.01, 0.02],
@@ -90,13 +92,17 @@ struct LibrarySyncCoordinatorTests {
             sync: { _ in
                 syncCount += 1
                 return .retryableFailure
-            }
+            },
+            retryStateDidChange: { retryStates.append($0) },
+            degradedStateDidChange: { degradedReason = $0 }
         )
 
         scheduler.scheduleLocalDirtyQueueSync()
         try await Task.sleep(nanoseconds: 110_000_000)
 
         #expect(syncCount == 5)
+        #expect(retryStates.last?.automaticRetriesExhausted == true)
+        #expect(degradedReason != nil)
 
         try await Task.sleep(nanoseconds: 50_000_000)
 
@@ -105,6 +111,7 @@ struct LibrarySyncCoordinatorTests {
 
     @Test @MainActor func dirtyQueueSchedulerDoesNotRetryPermanentFailure() async throws {
         var syncCount = 0
+        var degradedReason: String?
         let scheduler = LibrarySyncScheduler(
             localDebounceInterval: 0.01,
             failureRetryIntervals: [0.02],
@@ -114,17 +121,99 @@ struct LibrarySyncCoordinatorTests {
             sync: { _ in
                 syncCount += 1
                 return .permanentFailure
-            }
+            },
+            degradedStateDidChange: { degradedReason = $0 }
         )
 
         scheduler.scheduleLocalDirtyQueueSync()
         try await Task.sleep(nanoseconds: 40_000_000)
 
         #expect(syncCount == 1)
+        #expect(degradedReason != nil)
+    }
+
+    @Test @MainActor func ordinarySyncSkipsWhenCloudSyncDisabled() async throws {
+        let store = makeStore(
+            enabled: false,
+            bootstrapState: .completed,
+            hasTMDbAPIKey: true
+        )
+        let database = FakeCloudLibrarySyncDatabase(changes: [makeEmptyChangeBatch()])
+        let coordinator = LibrarySyncCoordinator(
+            store: store,
+            client: CloudLibrarySyncClient(),
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        let result = await coordinator.syncResult(trigger: .manualRetry)
+
+        #expect(result == .skipped(.disabled))
+        #expect(database.ensureZoneCallCount == 0)
+        #expect(store.libraryCloudSyncStatus.lastResult == .skipped)
+    }
+
+    @Test @MainActor func ordinarySyncSkipsWhenTMDbAPIKeyIsMissing() async throws {
+        let store = makeStore(
+            enabled: true,
+            bootstrapState: .completed,
+            hasTMDbAPIKey: false
+        )
+        let database = FakeCloudLibrarySyncDatabase(changes: [])
+        let coordinator = LibrarySyncCoordinator(
+            store: store,
+            client: CloudLibrarySyncClient(),
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        let result = await coordinator.syncResult(trigger: .manualRetry)
+
+        #expect(result == .skipped(.missingTMDbAPIKey))
+        #expect(database.ensureZoneCallCount == 0)
+    }
+
+    @Test @MainActor func ordinarySyncSkipsWhenBootstrapIsIncomplete() async throws {
+        let store = makeStore(
+            enabled: true,
+            bootstrapState: .needsConflictChoice,
+            hasTMDbAPIKey: true
+        )
+        let database = FakeCloudLibrarySyncDatabase(changes: [])
+        let coordinator = LibrarySyncCoordinator(
+            store: store,
+            client: CloudLibrarySyncClient(),
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        let result = await coordinator.syncResult(trigger: .manualRetry)
+
+        #expect(result == .skipped(.bootstrapIncomplete))
+        #expect(database.ensureZoneCallCount == 0)
+    }
+
+    @Test @MainActor func manualRetryClearsDegradedStateAfterSuccessfulSync() async throws {
+        let store = makeSyncReadyStore()
+        store.updateLibraryCloudSyncStatus { status in
+            status.degradedReason = "Automatic retries were exhausted."
+        }
+        let database = FakeCloudLibrarySyncDatabase(changes: [makeEmptyChangeBatch()])
+        store.configureLibrarySyncCoordinator(
+            client: CloudLibrarySyncClient(),
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        let succeeded = await store.retryLibraryCloudSync()
+
+        #expect(succeeded)
+        #expect(store.libraryCloudSyncStatus.degradedReason == nil)
+        #expect(store.libraryCloudSyncStatus.lastResult == .success)
     }
 
     @Test @MainActor func remoteUpdateDoesNotEnqueueDirtyUpsert() async throws {
-        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let store = makeSyncReadyStore()
         let entry = AnimeEntry(name: "Remote Update", type: .series, tmdbID: 701)
         entry.markCreatedForLibrary(at: referenceDate(year: 2026, month: 5, day: 1))
         try store.repository.newEntry(entry)
@@ -166,7 +255,7 @@ struct LibrarySyncCoordinatorTests {
     }
 
     @Test @MainActor func missingRowHydratesInsertsAndAppliesSnapshot() async throws {
-        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let store = makeSyncReadyStore()
         let namespace = makeNamespace()
         let identity = LibraryEntrySyncIdentity(entryType: .movie, tmdbID: 702)
         let client = CloudLibrarySyncClient()
@@ -209,7 +298,7 @@ struct LibrarySyncCoordinatorTests {
     }
 
     @Test @MainActor func missingRowWithNilClocksAppliesRemoteState() async throws {
-        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let store = makeSyncReadyStore()
         let namespace = makeNamespace()
         let identity = LibraryEntrySyncIdentity(entryType: .series, tmdbID: 706)
         let client = CloudLibrarySyncClient()
@@ -259,7 +348,7 @@ struct LibrarySyncCoordinatorTests {
     }
 
     @Test @MainActor func staleTombstonePreservesNewerLocalState() async throws {
-        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let store = makeSyncReadyStore()
         let entry = AnimeEntry(
             name: "Stale Tombstone",
             type: .series,
@@ -313,7 +402,7 @@ struct LibrarySyncCoordinatorTests {
     }
 
     @Test @MainActor func newerTombstoneSuppressesStaleLocalDirtyExport() async throws {
-        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let store = makeSyncReadyStore()
         let entry = AnimeEntry(
             name: "Fresh Tombstone",
             type: .series,
@@ -366,7 +455,7 @@ struct LibrarySyncCoordinatorTests {
     }
 
     @Test @MainActor func partialExportOnlyDequeuesAcceptedDirtyEntries() async throws {
-        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let store = makeSyncReadyStore()
         let first = AnimeEntry(name: "First Export", type: .movie, tmdbID: 707)
         let second = AnimeEntry(name: "Second Export", type: .series, tmdbID: 708)
         first.markCreatedForLibrary(at: referenceDate(year: 2026, month: 5, day: 1))
@@ -416,7 +505,7 @@ struct LibrarySyncCoordinatorTests {
     }
 
     @Test @MainActor func failedHydrationLeavesTokenUncommitted() async throws {
-        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let store = makeSyncReadyStore()
         let client = CloudLibrarySyncClient()
         let namespace = makeNamespace()
         let identity = LibraryEntrySyncIdentity(entryType: .movie, tmdbID: 705)
@@ -452,16 +541,349 @@ struct LibrarySyncCoordinatorTests {
         #expect(tokenStore.token(for: CloudLibrarySyncClient.recordZoneID, namespace: namespace) == nil)
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
     }
+
+    @Test @MainActor func firstEnableBootstrapWithoutRemoteOverlapSeedsAndExportsLocalLibrary() async throws {
+        let store = makeStore(
+            enabled: false,
+            bootstrapState: .notStarted,
+            hasTMDbAPIKey: true
+        )
+        let entry = AnimeEntry(
+            name: "Local Only",
+            type: .movie,
+            tmdbID: 801,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 1)
+        )
+        try store.repository.newEntry(entry)
+        try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([])
+        store.rebuildSyncChangeTracking()
+
+        let client = CloudLibrarySyncClient()
+        let database = FakeCloudLibrarySyncDatabase(changes: [makeEmptyChangeBatch()])
+        store.configureLibrarySyncCoordinator(
+            client: client,
+            database: database,
+            namespaceProvider: { makeNamespace() },
+            dateProvider: { referenceDate(year: 2026, month: 6, day: 1) }
+        )
+
+        let succeeded = await store.enableLibraryCloudSync()
+
+        #expect(succeeded)
+        #expect(store.libraryCloudSyncStatus.bootstrapState == .completed)
+        #expect(store.libraryCloudSyncStatus.lastSuccessfulSyncDate != nil)
+        #expect(store.preferences.load().cloudSyncStatus.lastSuccessfulSyncDate != nil)
+        #expect(database.savedRecords.count == 1)
+        let savedSnapshot = try savedSnapshot(from: database.savedRecords[0], client: client)
+        #expect(savedSnapshot.identity == entry.syncIdentity)
+        #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
+    }
+
+    @Test @MainActor func firstEnableBootstrapClockedOverlapUsesNormalResolutionWithoutPrompting()
+        async throws
+    {
+        let store = makeStore(
+            enabled: false,
+            bootstrapState: .notStarted,
+            hasTMDbAPIKey: true
+        )
+        let entry = AnimeEntry(
+            name: "Clocked Local",
+            type: .series,
+            tmdbID: 802,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 1)
+        )
+        entry.notes = "Local notes"
+        entry.libraryUpdatedAt = referenceDate(year: 2026, month: 5, day: 10)
+        entry.trackingUpdatedAt = referenceDate(year: 2026, month: 5, day: 10)
+        try store.repository.newEntry(entry)
+        try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([])
+        store.rebuildSyncChangeTracking()
+
+        let client = CloudLibrarySyncClient()
+        let remoteSnapshot = makeSnapshot(
+            identity: entry.syncIdentity,
+            tmdbID: entry.tmdbID,
+            notes: "Remote notes",
+            trackingUpdatedAt: referenceDate(year: 2026, month: 5, day: 2)
+        )
+        let database = FakeCloudLibrarySyncDatabase(changes: [
+            try makeChangeBatch(client: client, snapshots: [remoteSnapshot])
+        ])
+        store.configureLibrarySyncCoordinator(
+            client: client,
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        let succeeded = await store.enableLibraryCloudSync()
+
+        #expect(succeeded)
+        #expect(store.libraryCloudSyncStatus.pendingConflictSummary == nil)
+        let savedSnapshot = try savedSnapshot(from: try #require(database.savedRecords.first), client: client)
+        #expect(savedSnapshot.notes == "Local notes")
+        #expect(savedSnapshot.trackingUpdatedAt == referenceDate(year: 2026, month: 5, day: 10))
+    }
+
+    @Test @MainActor func firstEnableBootstrapClocklessDifferingOverlapPausesForConflictChoice()
+        async throws
+    {
+        let fixture = try makeClocklessTrackingConflictFixture()
+
+        let succeeded = await fixture.store.enableLibraryCloudSync()
+
+        #expect(!succeeded)
+        #expect(fixture.store.libraryCloudSyncStatus.bootstrapState == .needsConflictChoice)
+        #expect(fixture.store.libraryCloudSyncStatus.pendingConflictSummary?.entryCount == 1)
+        #expect(fixture.store.libraryCloudSyncStatus.pendingConflictSummary?.trackingDomainCount == 1)
+        #expect(fixture.database.savedRecords.isEmpty)
+        let local = try #require(fixture.store.repository.existingEntry(identity: fixture.identity))
+        #expect(local.notes == "Local notes")
+    }
+
+    @Test @MainActor func resolvingFirstEnableConflictPreferCloudAppliesRemoteAmbiguousDomain()
+        async throws
+    {
+        let fixture = try makeClocklessTrackingConflictFixture(repeatedRemoteFetches: 2)
+
+        _ = await fixture.store.enableLibraryCloudSync()
+        let succeeded = await fixture.store.resolveLibraryCloudSyncConflicts(preference: .preferCloud)
+
+        #expect(succeeded)
+        #expect(fixture.store.libraryCloudSyncStatus.bootstrapState == .completed)
+        let local = try #require(fixture.store.repository.existingEntry(identity: fixture.identity))
+        #expect(local.notes == "Remote notes")
+        #expect(local.trackingUpdatedAt == nil)
+        #expect(fixture.database.savedRecords.isEmpty)
+        #expect(fixture.store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
+    }
+
+    @Test @MainActor func resolvingFirstEnableConflictStillWorksAfterSkippedOrdinarySync()
+        async throws
+    {
+        let fixture = try makeClocklessTrackingConflictFixture(repeatedRemoteFetches: 2)
+
+        _ = await fixture.store.enableLibraryCloudSync()
+        let skippedResult = await fixture.store.performLibrarySyncResult(trigger: .foreground)
+        let succeeded = await fixture.store.resolveLibraryCloudSyncConflicts(preference: .preferCloud)
+
+        #expect(skippedResult == .skipped(.bootstrapIncomplete))
+        #expect(succeeded)
+        #expect(fixture.store.libraryCloudSyncStatus.bootstrapState == .completed)
+    }
+
+    @Test @MainActor func queuedOrdinarySyncDuringConflictBootstrapWaitsForConflictResolution()
+        async throws
+    {
+        let fixture = try makeClocklessTrackingConflictFixture(repeatedRemoteFetches: 3)
+        fixture.database.suspendedFetchCount = 1
+
+        let bootstrapTask = Task { await fixture.store.enableLibraryCloudSync() }
+        while !fixture.database.isFetchSuspended {
+            try await Task.sleep(nanoseconds: 1_000_000)
+        }
+
+        let queuedSyncTask = Task {
+            await fixture.store.performLibrarySyncResult(trigger: .foreground)
+        }
+        try await Task.sleep(nanoseconds: 5_000_000)
+        #expect(fixture.store.libraryCloudSyncStatus.bootstrapState == .running)
+
+        fixture.database.resumeSuspendedFetch()
+        let bootstrapSucceeded = await bootstrapTask.value
+        #expect(!bootstrapSucceeded)
+        #expect(fixture.store.libraryCloudSyncStatus.bootstrapState == .needsConflictChoice)
+
+        let resolutionSucceeded = await fixture.store.resolveLibraryCloudSyncConflicts(
+            preference: .preferCloud
+        )
+        let queuedSyncResult = await queuedSyncTask.value
+
+        #expect(resolutionSucceeded)
+        #expect(queuedSyncResult == .success)
+        #expect(fixture.store.libraryCloudSyncStatus.bootstrapState == .completed)
+        #expect(fixture.database.ensureZoneCallCount == 3)
+    }
+
+    @Test @MainActor func resolvingFirstEnableConflictPreferLocalStampsAndExportsAmbiguousDomain()
+        async throws
+    {
+        let decisionDate = referenceDate(year: 2026, month: 6, day: 2)
+        let fixture = try makeClocklessTrackingConflictFixture(
+            repeatedRemoteFetches: 2,
+            dateProvider: { decisionDate }
+        )
+
+        _ = await fixture.store.enableLibraryCloudSync()
+        let succeeded = await fixture.store.resolveLibraryCloudSyncConflicts(preference: .preferLocal)
+
+        #expect(succeeded)
+        let local = try #require(fixture.store.repository.existingEntry(identity: fixture.identity))
+        #expect(local.notes == "Local notes")
+        #expect(local.trackingUpdatedAt == decisionDate)
+        #expect(local.libraryUpdatedAt == nil)
+        let savedSnapshot = try savedSnapshot(
+            from: try #require(fixture.database.savedRecords.first),
+            client: fixture.client
+        )
+        #expect(savedSnapshot.notes == "Local notes")
+        #expect(savedSnapshot.trackingUpdatedAt == decisionDate)
+    }
+
+    @Test @MainActor func cancelingFirstEnableConflictLeavesSyncDisabledAndAvoidsMutation() async throws {
+        let fixture = try makeClocklessTrackingConflictFixture()
+
+        _ = await fixture.store.enableLibraryCloudSync()
+        fixture.store.cancelLibraryCloudSyncEnablement()
+
+        #expect(!fixture.store.libraryCloudSyncStatus.isEnabled)
+        #expect(fixture.store.libraryCloudSyncStatus.bootstrapState == .notStarted)
+        let local = try #require(fixture.store.repository.existingEntry(identity: fixture.identity))
+        #expect(local.notes == "Local notes")
+        #expect(fixture.database.savedRecords.isEmpty)
+    }
+
+    @Test @MainActor func cancelingInFlightFirstEnableBootstrapStopsBeforeExport() async throws {
+        let store = makeStore(
+            enabled: false,
+            bootstrapState: .notStarted,
+            hasTMDbAPIKey: true
+        )
+        let entry = AnimeEntry(
+            name: "Cancelable Local",
+            type: .movie,
+            tmdbID: 804,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 1)
+        )
+        try store.repository.newEntry(entry)
+        try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([])
+        store.rebuildSyncChangeTracking()
+
+        let database = FakeCloudLibrarySyncDatabase(changes: [makeEmptyChangeBatch()])
+        database.suspendNextFetch = true
+        store.configureLibrarySyncCoordinator(
+            client: CloudLibrarySyncClient(),
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        let bootstrapTask = Task { await store.enableLibraryCloudSync() }
+        while !database.isFetchSuspended {
+            try await Task.sleep(nanoseconds: 1_000_000)
+        }
+
+        store.cancelLibraryCloudSyncEnablement()
+        database.resumeSuspendedFetch()
+        let succeeded = await bootstrapTask.value
+
+        #expect(!succeeded)
+        #expect(!store.libraryCloudSyncStatus.isEnabled)
+        #expect(store.libraryCloudSyncStatus.bootstrapState == .notStarted)
+        #expect(database.savedRecords.isEmpty)
+    }
 }
 
 fileprivate enum HydrationFailure: Error {
     case unavailable
 }
 
+@MainActor
+fileprivate func makeSyncReadyStore() -> LibraryStore {
+    makeStore(
+        enabled: true,
+        bootstrapState: .completed,
+        hasTMDbAPIKey: true
+    )
+}
+
+@MainActor
+fileprivate func makeStore(
+    enabled: Bool,
+    bootstrapState: LibraryCloudSyncBootstrapState,
+    hasTMDbAPIKey: Bool
+) -> LibraryStore {
+    let suiteName = "LibrarySyncCoordinatorTests.\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defaults.removePersistentDomain(forName: suiteName)
+    let preferences = LibraryPreferences(defaults: defaults)
+    var status = LibraryCloudSyncStatus.defaultValue
+    status.isEnabled = enabled
+    status.bootstrapState = bootstrapState
+    preferences.saveCloudSyncStatus(status)
+    return LibraryStore(
+        dataProvider: DataProvider(inMemory: true),
+        preferences: preferences,
+        hasTMDbAPIKey: { hasTMDbAPIKey }
+    )
+}
+
+fileprivate struct ClocklessTrackingConflictFixture {
+    let store: LibraryStore
+    let client: CloudLibrarySyncClient
+    let database: FakeCloudLibrarySyncDatabase
+    let identity: LibraryEntrySyncIdentity
+}
+
+@MainActor
+fileprivate func makeClocklessTrackingConflictFixture(
+    repeatedRemoteFetches: Int = 1,
+    dateProvider: @escaping @MainActor @Sendable () -> Date = {
+        referenceDate(year: 2026, month: 6, day: 1)
+    }
+) throws -> ClocklessTrackingConflictFixture {
+    let store = makeStore(
+        enabled: false,
+        bootstrapState: .notStarted,
+        hasTMDbAPIKey: true
+    )
+    let entry = AnimeEntry(
+        name: "Clockless Local",
+        type: .series,
+        tmdbID: 803,
+        dateSaved: referenceDate(year: 2026, month: 5, day: 1)
+    )
+    entry.notes = "Local notes"
+    entry.libraryUpdatedAt = nil
+    entry.trackingUpdatedAt = nil
+    try store.repository.newEntry(entry)
+    try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([])
+    store.rebuildSyncChangeTracking()
+
+    let client = CloudLibrarySyncClient()
+    var remoteSnapshot = makeSnapshot(
+        identity: entry.syncIdentity,
+        tmdbID: entry.tmdbID,
+        notes: "Remote notes",
+        trackingUpdatedAt: nil
+    )
+    remoteSnapshot.libraryUpdatedAt = nil
+    let batch = try makeChangeBatch(client: client, snapshots: [remoteSnapshot])
+    let database = FakeCloudLibrarySyncDatabase(
+        changes: Array(repeating: batch, count: repeatedRemoteFetches)
+    )
+    store.configureLibrarySyncCoordinator(
+        client: client,
+        database: database,
+        namespaceProvider: { makeNamespace() },
+        dateProvider: dateProvider
+    )
+    return .init(
+        store: store,
+        client: client,
+        database: database,
+        identity: entry.syncIdentity
+    )
+}
+
 fileprivate final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, @unchecked Sendable {
     private var changes: [CloudLibrarySyncZoneChangeBatch]
     private let successfulSaveRecordIDs: [CKRecord.ID]?
+    private var fetchContinuation: CheckedContinuation<Void, Never>?
     var savedRecords: [CKRecord] = []
+    var ensureZoneCallCount = 0
+    var suspendNextFetch = false
+    var suspendedFetchCount = 0
+    var isFetchSuspended = false
 
     init(
         changes: [CloudLibrarySyncZoneChangeBatch],
@@ -474,18 +896,38 @@ fileprivate final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, 
     func ensureZoneAndSubscription(
         zoneID: CKRecordZone.ID,
         subscriptionID: CKSubscription.ID
-    ) async throws {}
+    ) async throws {
+        ensureZoneCallCount += 1
+    }
 
     func fetchRecordZoneChanges(
         in zoneID: CKRecordZone.ID,
         since changeToken: CKServerChangeToken?
     ) async throws -> CloudLibrarySyncZoneChangeBatch {
-        changes.removeFirst()
+        if suspendNextFetch || suspendedFetchCount > 0 {
+            if suspendNextFetch {
+                suspendNextFetch = false
+            }
+            if suspendedFetchCount > 0 {
+                suspendedFetchCount -= 1
+            }
+            isFetchSuspended = true
+            await withCheckedContinuation { continuation in
+                fetchContinuation = continuation
+            }
+            isFetchSuspended = false
+        }
+        return changes.removeFirst()
     }
 
     func save(records: [CKRecord]) async throws -> [CKRecord.ID] {
         savedRecords.append(contentsOf: records)
         return successfulSaveRecordIDs ?? records.map(\.recordID)
+    }
+
+    func resumeSuspendedFetch() {
+        fetchContinuation?.resume()
+        fetchContinuation = nil
     }
 }
 
@@ -498,6 +940,41 @@ fileprivate func makeNamespace() -> CloudLibrarySyncChangeTokenStore.Namespace {
 
 fileprivate func makeToken() -> CKServerChangeToken {
     class_createInstance(CKServerChangeToken.self, 0) as! CKServerChangeToken
+}
+
+fileprivate func makeEmptyChangeBatch() -> CloudLibrarySyncZoneChangeBatch {
+    .init(
+        modifiedRecordsByID: [:],
+        deletedRecordIDs: [],
+        changeToken: makeToken(),
+        moreComing: false
+    )
+}
+
+fileprivate func makeChangeBatch(
+    client: CloudLibrarySyncClient,
+    snapshots: [LibraryEntrySyncSnapshot]
+) throws -> CloudLibrarySyncZoneChangeBatch {
+    .init(
+        modifiedRecordsByID: Dictionary(
+            uniqueKeysWithValues: try snapshots.map { snapshot in
+                (client.recordID(for: snapshot.identity), try client.record(from: snapshot))
+            }
+        ),
+        deletedRecordIDs: [],
+        changeToken: makeToken(),
+        moreComing: false
+    )
+}
+
+fileprivate func savedSnapshot(
+    from record: CKRecord,
+    client: CloudLibrarySyncClient
+) throws -> LibraryEntrySyncSnapshot {
+    guard case .snapshot(let snapshot) = try client.remoteChange(from: record) else {
+        throw SavedRecordError.expectedSnapshot
+    }
+    return snapshot
 }
 
 fileprivate func makeSnapshot(
@@ -528,4 +1005,8 @@ fileprivate func makeSnapshot(
         libraryUpdatedAt: referenceDate(year: 2026, month: 5, day: 1),
         trackingUpdatedAt: trackingUpdatedAt
     )
+}
+
+fileprivate enum SavedRecordError: Error {
+    case expectedSnapshot
 }

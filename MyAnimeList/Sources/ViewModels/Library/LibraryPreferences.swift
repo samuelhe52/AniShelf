@@ -11,6 +11,7 @@ struct LibraryPreferences {
         let defaultWatchStatus: AnimeEntry.WatchStatus
         let defaultFilters: Set<LibraryStore.AnimeFilter>
         let autoPrefetchImagesOnAddAndRestore: Bool
+        let cloudSyncStatus: LibraryCloudSyncStatus
     }
 
     private let defaults: UserDefaults
@@ -30,7 +31,8 @@ struct LibraryPreferences {
             autoPrefetchImagesOnAddAndRestore: loadBool(
                 forKey: .libraryAutoPrefetchImagesOnAddAndRestore,
                 defaultValue: false
-            )
+            ),
+            cloudSyncStatus: loadCloudSyncStatus()
         )
     }
 
@@ -60,6 +62,21 @@ struct LibraryPreferences {
 
     func saveSortReversed(_ value: Bool) {
         defaults.setValue(value, forKey: .librarySortReversed)
+    }
+
+    func saveCloudSyncStatus(_ status: LibraryCloudSyncStatus) {
+        defaults.setValue(status.isEnabled, forKey: .libraryCloudSyncEnabled)
+        defaults.setValue(status.bootstrapState.rawValue, forKey: .libraryCloudSyncBootstrapState)
+        defaults.setValue(status.cloudKitAvailability.rawValue, forKey: .libraryCloudSyncCloudKitAvailability)
+        saveOptional(status.currentPhase?.rawValue, forKey: .libraryCloudSyncCurrentPhase)
+        saveOptional(status.lastResult?.rawValue, forKey: .libraryCloudSyncLastResult)
+        saveOptional(status.lastTrigger, forKey: .libraryCloudSyncLastTrigger)
+        saveOptional(status.lastAttemptDate, forKey: .libraryCloudSyncLastAttemptDate)
+        saveOptional(status.lastSuccessfulSyncDate, forKey: .libraryCloudSyncLastSuccessfulSyncDate)
+        saveOptional(status.lastFailureReason, forKey: .libraryCloudSyncLastFailureReason)
+        saveOptional(status.degradedReason, forKey: .libraryCloudSyncDegradedReason)
+        saveCodable(status.pendingConflictSummary, forKey: .libraryCloudSyncConflictSummary)
+        saveCodable(status.retryState, forKey: .libraryCloudSyncRetryState)
     }
 
     private func loadGroupStrategy() -> LibraryStore.LibraryGroupStrategy {
@@ -98,8 +115,66 @@ struct LibraryPreferences {
         return []
     }
 
+    private func loadCloudSyncStatus() -> LibraryCloudSyncStatus {
+        var status = LibraryCloudSyncStatus.defaultValue
+        status.isEnabled = loadBool(forKey: .libraryCloudSyncEnabled, defaultValue: false)
+        status.bootstrapState =
+            defaults
+            .string(forKey: .libraryCloudSyncBootstrapState)
+            .flatMap(LibraryCloudSyncBootstrapState.init(rawValue:))
+            ?? .notStarted
+        status.cloudKitAvailability =
+            defaults
+            .string(forKey: .libraryCloudSyncCloudKitAvailability)
+            .flatMap(LibraryCloudKitAvailability.init(rawValue:))
+            ?? .unknown
+        status.pendingConflictSummary = loadCodable(
+            LibraryCloudSyncConflictSummary.self,
+            forKey: .libraryCloudSyncConflictSummary
+        )
+        status.retryState =
+            loadCodable(LibraryCloudSyncRetryState.self, forKey: .libraryCloudSyncRetryState)
+            ?? .idle
+        status.currentPhase =
+            defaults
+            .string(forKey: .libraryCloudSyncCurrentPhase)
+            .flatMap(LibraryCloudSyncPhase.init(rawValue:))
+        status.lastResult =
+            defaults
+            .string(forKey: .libraryCloudSyncLastResult)
+            .flatMap(LibraryCloudSyncResultClass.init(rawValue:))
+        status.lastTrigger = defaults.string(forKey: .libraryCloudSyncLastTrigger)
+        status.lastAttemptDate = defaults.object(forKey: .libraryCloudSyncLastAttemptDate) as? Date
+        status.lastSuccessfulSyncDate =
+            defaults.object(forKey: .libraryCloudSyncLastSuccessfulSyncDate) as? Date
+        status.lastFailureReason = defaults.string(forKey: .libraryCloudSyncLastFailureReason)
+        status.degradedReason = defaults.string(forKey: .libraryCloudSyncDegradedReason)
+        return status
+    }
+
     private func loadBool(forKey key: String, defaultValue: Bool) -> Bool {
         defaults.bool(forKey: key, defaultValue: defaultValue)
+    }
+
+    private func saveCodable<T: Encodable>(_ value: T?, forKey key: String) {
+        guard let value else {
+            defaults.removeObject(forKey: key)
+            return
+        }
+        defaults.set(try? JSONEncoder().encode(value), forKey: key)
+    }
+
+    private func saveOptional(_ value: Any?, forKey key: String) {
+        if let value {
+            defaults.set(value, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
+    }
+
+    private func loadCodable<T: Decodable>(_ type: T.Type, forKey key: String) -> T? {
+        guard let data = defaults.data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(type, from: data)
     }
 
     private func legacyDefaultFilters(for preset: String) -> Set<LibraryStore.AnimeFilter> {

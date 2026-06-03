@@ -21,23 +21,38 @@ final class LibrarySyncScheduler {
     private let maximumRetryAttemptsAtFinalInterval: Int
     private let hasPendingDirtyWork: @MainActor () -> Bool
     private let sync: @MainActor (LibrarySyncCoordinator.Trigger) async -> LibrarySyncCoordinator.SyncResult
+    private let retryStateDidChange: @MainActor (LibraryCloudSyncRetryState) -> Void
+    private let degradedStateDidChange: @MainActor (String) -> Void
 
     private var scheduledTask: Task<Void, Never>?
     private var nextRetryAllowedAt: Date?
     private var failureRetryAttempt = 0
+    private var automaticRetriesExhausted = false
+
+    var retryState: LibraryCloudSyncRetryState {
+        .init(
+            failureRetryAttempt: failureRetryAttempt,
+            nextRetryAllowedAt: nextRetryAllowedAt,
+            automaticRetriesExhausted: automaticRetriesExhausted
+        )
+    }
 
     init(
         localDebounceInterval: TimeInterval = 1.5,
         failureRetryIntervals: [TimeInterval] = [30, 60, 120, 300],
         maximumRetryAttemptsAtFinalInterval: Int = 3,
         hasPendingDirtyWork: @escaping @MainActor () -> Bool,
-        sync: @escaping @MainActor (LibrarySyncCoordinator.Trigger) async -> LibrarySyncCoordinator.SyncResult
+        sync: @escaping @MainActor (LibrarySyncCoordinator.Trigger) async -> LibrarySyncCoordinator.SyncResult,
+        retryStateDidChange: @escaping @MainActor (LibraryCloudSyncRetryState) -> Void = { _ in },
+        degradedStateDidChange: @escaping @MainActor (String) -> Void = { _ in }
     ) {
         self.localDebounceInterval = localDebounceInterval
         self.failureRetryIntervals = failureRetryIntervals
         self.maximumRetryAttemptsAtFinalInterval = maximumRetryAttemptsAtFinalInterval
         self.hasPendingDirtyWork = hasPendingDirtyWork
         self.sync = sync
+        self.retryStateDidChange = retryStateDidChange
+        self.degradedStateDidChange = degradedStateDidChange
     }
 
     deinit {
@@ -66,10 +81,17 @@ final class LibrarySyncScheduler {
         switch result {
         case .success:
             resetFailureBackoff()
+        case .skipped(_):
+            resetFailureBackoff()
+        case .conflictChoiceRequired:
+            resetFailureBackoff()
         case .retryableFailure:
             scheduleFailureRetryIfNeeded()
         case .permanentFailure:
             resetFailureBackoff()
+            degradedStateDidChange(
+                "Automatic iCloud library sync stopped because a permanent failure blocked local dirty work."
+            )
             librarySyncSchedulerLogger.warning(
                 "Skipped automatic iCloud library sync retry after a non-retryable local-change sync failure."
             )
@@ -84,6 +106,11 @@ final class LibrarySyncScheduler {
         )
         guard failureRetryAttempt < maximumRetryAttempts else {
             nextRetryAllowedAt = nil
+            automaticRetriesExhausted = true
+            retryStateDidChange(retryState)
+            degradedStateDidChange(
+                "Automatic iCloud library sync retries stopped after the local dirty queue retry policy was exhausted."
+            )
             librarySyncSchedulerLogger.warning(
                 "Stopped automatic iCloud library sync retries after exhausting the local-change failure retry policy."
             )
@@ -92,6 +119,8 @@ final class LibrarySyncScheduler {
         let retryDelay = failureRetryIntervals[min(failureRetryAttempt, failureRetryIntervals.count - 1)]
         failureRetryAttempt += 1
         nextRetryAllowedAt = Date().addingTimeInterval(retryDelay)
+        automaticRetriesExhausted = false
+        retryStateDidChange(retryState)
         librarySyncSchedulerLogger.warning(
             "Scheduled iCloud library sync retry in \(retryDelay, privacy: .public) seconds after a local-change sync failure."
         )
@@ -101,6 +130,8 @@ final class LibrarySyncScheduler {
     private func resetFailureBackoff() {
         failureRetryAttempt = 0
         nextRetryAllowedAt = nil
+        automaticRetriesExhausted = false
+        retryStateDidChange(retryState)
     }
 
     private func delayRespectingFailureBackoff(_ preferredDelay: TimeInterval) -> TimeInterval {

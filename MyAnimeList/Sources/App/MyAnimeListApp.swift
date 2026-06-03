@@ -23,8 +23,14 @@ struct MyAnimeListApp: App {
         Language.followsSystemPreference()
 
     init() {
-        let libraryStore = LibraryStore(dataProvider: .default)
         let keyStorage = TMDbAPIKeyStorage()
+        let libraryStore = LibraryStore(
+            dataProvider: .default,
+            hasTMDbAPIKey: {
+                guard let key = keyStorage.key else { return false }
+                return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
+        )
         let whatsNew = WhatsNewController()
         let supportStore = SupportStore()
 
@@ -33,13 +39,16 @@ struct MyAnimeListApp: App {
         _whatsNew = State(initialValue: whatsNew)
         _supportStore = State(initialValue: supportStore)
 
-        LibrarySyncNotificationBridge.configureSyncHandler { [libraryStore, keyStorage] in
-            guard let key = keyStorage.key,
-                !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            else {
+        LibrarySyncNotificationBridge.configureSyncHandler { [libraryStore] in
+            let result = await libraryStore.performLibrarySyncResult(trigger: .cloudNotification)
+            switch result {
+            case .success:
+                return .newData
+            case .skipped(_):
                 return .noData
+            case .conflictChoiceRequired, .retryableFailure, .permanentFailure:
+                return .failed
             }
-            return await libraryStore.performLibrarySync(trigger: .cloudNotification) ? .newData : .failed
         }
     }
 
@@ -108,12 +117,10 @@ struct MyAnimeListApp: App {
     }
 
     private func requestSync(trigger: LibrarySyncCoordinator.Trigger) {
-        guard hasTMDbAPIKey else { return }
         libraryStore.syncLibrary(trigger: trigger)
     }
 
     private func flushPendingLocalSync() {
-        guard hasTMDbAPIKey else { return }
         libraryStore.flushPendingLocalLibrarySync()
     }
 
