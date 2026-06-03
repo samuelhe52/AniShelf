@@ -780,6 +780,45 @@ struct LibrarySyncCoordinatorTests {
         #expect(store.preferences.load().cloudSyncStatus == store.libraryCloudSyncStatus)
     }
 
+    @Test @MainActor func recordingLibraryCloudSyncFailureClearsActivePhase() {
+        let store = makeSyncReadyStore()
+        let lastSuccessDate = referenceDate(year: 2026, month: 6, day: 1)
+        let retryDate = referenceDate(year: 2026, month: 6, day: 2)
+        let failureDate = referenceDate(year: 2026, month: 6, day: 3)
+        store.updateLibraryCloudSyncStatus { status in
+            status.lastResult = .retryableFailure
+            status.lastFailureReason = "Network unavailable."
+            status.degradedReason = "Automatic retries are exhausted."
+            status.lastSuccessfulSyncDate = lastSuccessDate
+        }
+
+        store.recordLibraryCloudSyncPhase(
+            trigger: .manualRetry,
+            phase: .exporting,
+            at: retryDate
+        )
+
+        #expect(store.libraryCloudSyncStatus.currentPhase == .exporting)
+        #expect(store.libraryCloudSyncStatus.lastResult == nil)
+        #expect(store.libraryCloudSyncStatus.lastFailureReason == nil)
+        #expect(store.libraryCloudSyncStatus.degradedReason == nil)
+
+        store.recordLibraryCloudSyncFailure(
+            trigger: .manualRetry,
+            phase: .exporting,
+            result: .retryableFailure,
+            reason: "Network unavailable.",
+            at: failureDate
+        )
+
+        #expect(store.libraryCloudSyncStatus.currentPhase == nil)
+        #expect(store.libraryCloudSyncStatus.lastResult == .retryableFailure)
+        #expect(store.libraryCloudSyncStatus.lastAttemptDate == failureDate)
+        #expect(store.libraryCloudSyncStatus.lastSuccessfulSyncDate == lastSuccessDate)
+        #expect(store.libraryCloudSyncStatus.lastFailureReason == "Network unavailable.")
+        #expect(store.preferences.load().cloudSyncStatus == store.libraryCloudSyncStatus)
+    }
+
     @Test @MainActor func cancelingInFlightFirstEnableBootstrapStopsBeforeExport() async throws {
         let store = makeStore(
             enabled: false,

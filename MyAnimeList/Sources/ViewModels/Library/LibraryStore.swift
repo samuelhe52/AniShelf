@@ -210,6 +210,7 @@ class LibraryStore {
             status.isEnabled = true
             status.bootstrapState = .running
             status.pendingConflictSummary = nil
+            status.currentPhase = nil
             status.lastFailureReason = nil
             status.degradedReason = nil
             status.lastResult = nil
@@ -309,8 +310,11 @@ class LibraryStore {
     ) {
         updateLibraryCloudSyncStatus { status in
             status.currentPhase = phase
+            status.lastResult = nil
             status.lastTrigger = trigger.rawValue
             status.lastAttemptDate = date
+            status.lastFailureReason = nil
+            status.degradedReason = nil
         }
     }
 
@@ -350,14 +354,14 @@ class LibraryStore {
 
     func recordLibraryCloudSyncFailure(
         trigger: LibrarySyncCoordinator.Trigger,
-        phase: LibraryCloudSyncPhase?,
+        phase _: LibraryCloudSyncPhase?,
         result: LibraryCloudSyncResultClass,
         reason: String,
         degradedReason: String? = nil,
         at date: Date = .now
     ) {
         updateLibraryCloudSyncStatus { status in
-            status.currentPhase = phase
+            status.currentPhase = nil
             status.lastResult = result
             status.lastTrigger = trigger.rawValue
             status.lastAttemptDate = date

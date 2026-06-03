@@ -406,6 +406,8 @@ final class LibrarySyncCoordinator {
             if preference != nil {
                 status.pendingConflictSummary = nil
             }
+            status.currentPhase = nil
+            status.lastResult = nil
             status.lastFailureReason = nil
         }
 
