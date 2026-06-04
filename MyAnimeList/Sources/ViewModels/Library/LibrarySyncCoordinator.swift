@@ -303,12 +303,11 @@ final class LibrarySyncCoordinator {
                 entries: dirtyEntries,
                 localSnapshotsByIdentity: postImportSnapshots
             )
-            for identity in exportResult.exportedIdentities {
-                try store.syncChangeRecorder.dirtyQueueStore.removeEntry(for: identity)
-                librarySyncCoordinatorLogger.info(
-                    "Removed \(identity.rawID, privacy: .private) from the iCloud sync dirty queue after export."
-                )
-            }
+            try removeExportedDirtyEntries(
+                exportResult.exportedIdentities,
+                from: dirtyEntries,
+                in: store
+            )
             librarySyncCoordinatorLogger.info(
                 "Finished iCloud library sync triggered by \(trigger.rawValue, privacy: .public)."
             )
@@ -584,9 +583,11 @@ final class LibrarySyncCoordinator {
                 entries: dirtyEntries,
                 localSnapshotsByIdentity: postImportSnapshots
             )
-            for identity in exportResult.exportedIdentities {
-                try store.syncChangeRecorder.dirtyQueueStore.removeEntry(for: identity)
-            }
+            try removeExportedDirtyEntries(
+                exportResult.exportedIdentities,
+                from: dirtyEntries,
+                in: store
+            )
 
             store.recordLibraryCloudSyncSuccess(
                 trigger: trigger,
@@ -851,34 +852,53 @@ final class LibrarySyncCoordinator {
     ) async throws -> (appliedChangesCount: Int, hydratedEntriesCount: Int) {
         var appliedChangesCount = 0
         var hydratedEntriesCount = 0
-        try await store.syncChangeRecorder.withSuppressedRecordingAsync {
-            for change in batch.changes {
-                switch change {
-                case .snapshot(let snapshot):
-                    let applicationTarget = try await entryForApplying(snapshot, store: store)
-                    guard let applicationTarget else { continue }
-                    appliedChangesCount += 1
-                    try withAnimation {
-                        if applicationTarget.isInitialMaterialization {
-                            hydratedEntriesCount += 1
-                            try applicationTarget.entry.applyInitialSyncSnapshot(snapshot)
+        var applicationPlans: [ApplicationPlan] = []
+        for change in batch.changes {
+            switch change {
+            case .snapshot(let snapshot):
+                let applicationTarget = try await entryForApplying(snapshot, store: store)
+                guard let applicationTarget else { continue }
+                appliedChangesCount += 1
+                if applicationTarget.isInitialMaterialization {
+                    hydratedEntriesCount += 1
+                }
+                applicationPlans.append(
+                    .init(
+                        change: .snapshot(snapshot),
+                        target: applicationTarget,
+                        forcedDomains: forcedDomainsByIdentity[snapshot.identity] ?? []
+                    ))
+            case .tombstone(let tombstone):
+                guard let entry = store.repository.existingEntry(identity: tombstone.identity) else {
+                    continue
+                }
+                appliedChangesCount += 1
+                applicationPlans.append(
+                    .init(
+                        change: .tombstone(tombstone),
+                        target: .init(entry: entry, isInitialMaterialization: false),
+                        forcedDomains: []
+                    ))
+            }
+        }
+        try store.syncChangeRecorder.withSuppressedRecording {
+            for plan in applicationPlans {
+                try withAnimation {
+                    switch plan.change {
+                    case .snapshot(let snapshot):
+                        if plan.target.isInitialMaterialization {
+                            try plan.target.entry.applyInitialSyncSnapshot(snapshot)
                         } else {
-                            try applicationTarget.entry.applySyncSnapshot(snapshot)
-                            if let forcedDomains = forcedDomainsByIdentity[snapshot.identity] {
-                                applicationTarget.entry.applyForcedSyncDomains(
-                                    forcedDomains,
+                            try plan.target.entry.applySyncSnapshot(snapshot)
+                            if !plan.forcedDomains.isEmpty {
+                                plan.target.entry.applyForcedSyncDomains(
+                                    plan.forcedDomains,
                                     from: snapshot
                                 )
                             }
                         }
-                    }
-                case .tombstone(let tombstone):
-                    guard let entry = store.repository.existingEntry(identity: tombstone.identity) else {
-                        continue
-                    }
-                    appliedChangesCount += 1
-                    try withAnimation {
-                        try entry.applySyncTombstone(tombstone)
+                    case .tombstone(let tombstone):
+                        try plan.target.entry.applySyncTombstone(tombstone)
                     }
                 }
             }
@@ -886,6 +906,32 @@ final class LibrarySyncCoordinator {
         }
         store.rebuildSyncChangeTracking()
         return (appliedChangesCount, hydratedEntriesCount)
+    }
+
+    private func removeExportedDirtyEntries(
+        _ exportedIdentities: Set<LibraryEntrySyncIdentity>,
+        from dirtyEntries: [LibraryEntrySyncDirtyQueueEntry],
+        in store: LibraryStore
+    ) throws {
+        let dirtyEntriesByIdentity = Dictionary(
+            uniqueKeysWithValues: dirtyEntries.map { ($0.identity, $0) }
+        )
+        for identity in exportedIdentities {
+            guard let exportedEntry = dirtyEntriesByIdentity[identity] else { continue }
+            let removed = try store.syncChangeRecorder.dirtyQueueStore.removeEntry(
+                for: identity,
+                ifCurrentEntryMatches: exportedEntry
+            )
+            if removed {
+                librarySyncCoordinatorLogger.info(
+                    "Removed \(identity.rawID, privacy: .private) from the iCloud sync dirty queue after export."
+                )
+            } else {
+                librarySyncCoordinatorLogger.info(
+                    "Kept \(identity.rawID, privacy: .private) in the iCloud sync dirty queue because newer local work was queued during export."
+                )
+            }
+        }
     }
 
     /// Refreshes derived library view state after imported changes are persisted.
@@ -1020,6 +1066,12 @@ extension LibrarySyncCoordinator.SyncResult {
 fileprivate struct ApplicationTarget {
     let entry: AnimeEntry
     let isInitialMaterialization: Bool
+}
+
+fileprivate struct ApplicationPlan {
+    let change: LibraryEntrySyncRemoteChange
+    let target: ApplicationTarget
+    let forcedDomains: Set<LibraryCloudSyncConflictDomain>
 }
 
 fileprivate struct AmbiguousConflict {

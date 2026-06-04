@@ -349,6 +349,35 @@ public final class LibraryEntrySyncDirtyQueueStore: @unchecked Sendable {
         _ = try replaceEntry(nil, for: identity)
     }
 
+    /// Removes queued work only if it still matches the entry observed by the caller.
+    ///
+    /// Export confirmation uses this to avoid deleting newer local work that was
+    /// queued while the CloudKit save request was in flight.
+    @discardableResult
+    public func removeEntry(
+        for identity: LibraryEntrySyncIdentity,
+        ifCurrentEntryMatches expectedEntry: LibraryEntrySyncDirtyQueueEntry
+    ) throws -> Bool {
+        try withLock {
+            let queue = loadUnlocked()
+            guard queue.entry(for: identity) == expectedEntry else {
+                dirtyQueueLogger.debug(
+                    "Kept the dirty-queue entry for \(identity.rawID, privacy: .private) because it changed before export confirmation."
+                )
+                return false
+            }
+            let rewrittenQueue = LibraryEntrySyncDirtyQueue(
+                entries: queue.entries.filter { $0.identity != identity }
+            )
+            guard queue != rewrittenQueue else { return true }
+            dirtyQueueLogger.debug(
+                "Removed the dirty-queue entry for \(identity.rawID, privacy: .private) after matching export confirmation."
+            )
+            try writeQueueUnlocked(rewrittenQueue)
+            return true
+        }
+    }
+
     /// Replaces the persisted dirty queue in one atomic file write.
     ///
     /// Callers that need all-or-nothing multi-entry mutations should stage the

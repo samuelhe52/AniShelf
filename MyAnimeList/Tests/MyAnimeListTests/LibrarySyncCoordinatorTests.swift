@@ -379,6 +379,80 @@ struct LibrarySyncCoordinatorTests {
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
     }
 
+    @Test @MainActor func userEditDuringHydrationStillExports() async throws {
+        let store = makeSyncReadyStore()
+        let unrelated = AnimeEntry(name: "Unrelated Local", type: .movie, tmdbID: 709)
+        unrelated.markCreatedForLibrary(at: referenceDate(year: 2026, month: 5, day: 1))
+        try store.repository.newEntry(unrelated)
+        try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([])
+        store.rebuildSyncChangeTracking()
+
+        let namespace = makeNamespace()
+        let remoteIdentity = LibraryEntrySyncIdentity(entryType: .movie, tmdbID: 710)
+        let client = CloudLibrarySyncClient()
+        let remoteSnapshot = makeSnapshot(
+            identity: remoteIdentity,
+            tmdbID: 710,
+            entryType: .movie,
+            notes: "Hydrated remote"
+        )
+        let database = FakeCloudLibrarySyncDatabase(changes: [
+            .init(
+                modifiedRecordsByID: [client.recordID(for: remoteIdentity): try client.record(from: remoteSnapshot)],
+                deletedRecordIDs: [],
+                changeToken: makeToken(),
+                moreComing: false
+            )
+        ])
+        var hydrationContinuation: CheckedContinuation<Void, Never>?
+        var isHydrationSuspended = false
+        let coordinator = LibrarySyncCoordinator(
+            store: store,
+            client: client,
+            database: database,
+            namespaceProvider: { namespace },
+            hydrateMissingEntry: { snapshot, store in
+                isHydrationSuspended = true
+                await withCheckedContinuation { continuation in
+                    hydrationContinuation = continuation
+                }
+                let entry = AnimeEntry(
+                    name: "Hydrated Placeholder",
+                    type: snapshot.entryType,
+                    tmdbID: snapshot.tmdbID
+                )
+                store.repository.insert(entry)
+                return entry
+            }
+        )
+
+        let syncTask = Task {
+            await coordinator.sync(trigger: .manualRetry)
+        }
+        while !isHydrationSuspended {
+            await Task.yield()
+        }
+
+        unrelated.updateNotes(
+            "User edit during hydration",
+            at: referenceDate(year: 2026, month: 5, day: 12)
+        )
+        try store.repository.save()
+        hydrationContinuation?.resume()
+
+        _ = await syncTask.value
+
+        let savedSnapshots = try database.savedRecords.map {
+            try savedSnapshot(from: $0, client: client)
+        }
+        #expect(
+            savedSnapshots.contains { snapshot in
+                snapshot.identity == unrelated.syncIdentity
+                    && snapshot.notes == "User edit during hydration"
+            })
+        #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
+    }
+
     @Test @MainActor func staleTombstonePreservesNewerLocalState() async throws {
         let store = makeSyncReadyStore()
         let entry = AnimeEntry(
@@ -534,6 +608,52 @@ struct LibrarySyncCoordinatorTests {
         #expect(remainingEntries.count == 1)
         #expect(remainingEntries.first?.identity == second.syncIdentity)
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entry(for: first.syncIdentity) == nil)
+    }
+
+    @Test @MainActor func exportConfirmationKeepsNewerSameIdentityDirtyEntry() async throws {
+        let store = makeSyncReadyStore()
+        let entry = AnimeEntry(name: "Export Race", type: .movie, tmdbID: 711)
+        let initialDirtyAt = referenceDate(year: 2026, month: 5, day: 8)
+        let newerDirtyAt = referenceDate(year: 2026, month: 5, day: 9)
+        entry.markCreatedForLibrary(at: referenceDate(year: 2026, month: 5, day: 1))
+        entry.updateNotes("Before export", at: initialDirtyAt)
+        try store.repository.newEntry(entry)
+        try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([
+            .upsert(.init(identity: entry.syncIdentity, dirtyAt: initialDirtyAt))
+        ])
+        store.rebuildSyncChangeTracking()
+
+        let client = CloudLibrarySyncClient()
+        let database = FakeCloudLibrarySyncDatabase(changes: [makeEmptyChangeBatch()])
+        database.suspendNextSave = true
+        let coordinator = LibrarySyncCoordinator(
+            store: store,
+            client: client,
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        let syncTask = Task {
+            await coordinator.sync(trigger: .manualRetry)
+        }
+        while !database.isSaveSuspended {
+            await Task.yield()
+        }
+
+        entry.updateNotes("After export started", at: newerDirtyAt)
+        try store.repository.save()
+        database.resumeSuspendedSave()
+
+        _ = await syncTask.value
+
+        let remainingEntry = try #require(
+            store.syncChangeRecorder.dirtyQueueStore.load().entry(for: entry.syncIdentity))
+        guard case .upsert(let pendingUpsert) = remainingEntry else {
+            Issue.record("Expected the newer same-identity upsert to remain queued.")
+            return
+        }
+        #expect(pendingUpsert.dirtyAt == newerDirtyAt)
+        #expect(database.savedRecords.count == 1)
     }
 
     @Test @MainActor func failedHydrationLeavesTokenUncommitted() async throws {
@@ -987,11 +1107,14 @@ fileprivate final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, 
     private var changes: [CloudLibrarySyncZoneChangeBatch]
     private let successfulSaveRecordIDs: [CKRecord.ID]?
     private var fetchContinuation: CheckedContinuation<Void, Never>?
+    private var saveContinuation: CheckedContinuation<Void, Never>?
     var savedRecords: [CKRecord] = []
     var ensureZoneCallCount = 0
     var suspendNextFetch = false
+    var suspendNextSave = false
     var suspendedFetchCount = 0
     var isFetchSuspended = false
+    var isSaveSuspended = false
 
     init(
         changes: [CloudLibrarySyncZoneChangeBatch],
@@ -1030,12 +1153,25 @@ fileprivate final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, 
 
     func save(records: [CKRecord]) async throws -> [CKRecord.ID] {
         savedRecords.append(contentsOf: records)
+        if suspendNextSave {
+            suspendNextSave = false
+            isSaveSuspended = true
+            await withCheckedContinuation { continuation in
+                saveContinuation = continuation
+            }
+            isSaveSuspended = false
+        }
         return successfulSaveRecordIDs ?? records.map(\.recordID)
     }
 
     func resumeSuspendedFetch() {
         fetchContinuation?.resume()
         fetchContinuation = nil
+    }
+
+    func resumeSuspendedSave() {
+        saveContinuation?.resume()
+        saveContinuation = nil
     }
 }
 
