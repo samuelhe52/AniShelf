@@ -63,9 +63,10 @@ struct EntryScoreCard: View {
             setScore(value)
         } label: {
             Image(systemName: isFilled ? "star.fill" : "star")
-                .font(.title3.weight(.semibold))
+                .font(.title3.weight(isFilled ? .semibold : .regular))
                 .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(isFilled ? .yellow : .secondary)
+                .foregroundStyle(isFilled ? .yellow : Color.secondary)
+                .opacity(isFilled ? 1 : 0.8)
                 .scaleEffect(isBouncing ? 1.34 : 1)
                 .frame(width: 36, height: 36)
                 .contentShape(Rectangle())
