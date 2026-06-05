@@ -78,6 +78,11 @@ final class LibrarySyncCoordinator {
 
     private typealias SyncPhase = LibraryCloudSyncPhase
 
+    private struct LocalSettingsSnapshotState {
+        var updatedAt: Date?
+        var snapshot: LibrarySettingsSyncSnapshot
+    }
+
     /// Creates the coordinator and wires the sync pipeline dependencies.
     ///
     /// - Parameters:
@@ -281,6 +286,7 @@ final class LibrarySyncCoordinator {
                 at: dateProvider()
             )
             _ = try await applyImportedChanges(importBatch, to: store)
+            applyImportedSettingsIfNeeded(importBatch.settingsSnapshot, to: store)
             try checkOrdinarySyncCancellation(cancellationGeneration, store: store)
 
             currentPhase = .tokenCommit
@@ -311,6 +317,11 @@ final class LibrarySyncCoordinator {
 
             let postImportSnapshots = try localSnapshotsByIdentity(for: store)
             let dirtyEntries = store.syncChangeRecorder.dirtyQueueStore.load().entries
+            let settingsSnapshotForExport = settingsSnapshotForExport(
+                localState: localSettingsSnapshotState(for: store),
+                remoteSnapshot: importBatch.settingsSnapshot,
+                store: store
+            )
             currentPhase = .export
             store.recordLibraryCloudSyncPhase(
                 trigger: trigger,
@@ -319,7 +330,8 @@ final class LibrarySyncCoordinator {
             )
             let exportResult = try await exporter.export(
                 entries: dirtyEntries,
-                localSnapshotsByIdentity: postImportSnapshots
+                localSnapshotsByIdentity: postImportSnapshots,
+                settingsSnapshot: settingsSnapshotForExport
             )
             try checkOrdinarySyncCancellation(cancellationGeneration, store: store)
             try removeExportedDirtyEntries(
@@ -593,6 +605,7 @@ final class LibrarySyncCoordinator {
                     ? ambiguousConflicts.domainsByIdentity
                     : [:]
             )
+            applyImportedSettingsIfNeeded(importBatch.settingsSnapshot, to: store)
             try checkFirstEnableBootstrapCancellation(bootstrapID)
 
             currentPhase = .tokenCommit
@@ -624,6 +637,11 @@ final class LibrarySyncCoordinator {
 
             let postImportSnapshots = try localSnapshotsByIdentity(for: store)
             let dirtyEntries = store.syncChangeRecorder.dirtyQueueStore.load().entries
+            let settingsSnapshotForExport = settingsSnapshotForExport(
+                localState: localSettingsSnapshotState(for: store),
+                remoteSnapshot: importBatch.settingsSnapshot,
+                store: store
+            )
             currentPhase = .export
             store.recordLibraryCloudSyncPhase(
                 trigger: trigger,
@@ -633,7 +651,8 @@ final class LibrarySyncCoordinator {
             try checkFirstEnableBootstrapCancellation(bootstrapID)
             let exportResult = try await exporter.export(
                 entries: dirtyEntries,
-                localSnapshotsByIdentity: postImportSnapshots
+                localSnapshotsByIdentity: postImportSnapshots,
+                settingsSnapshot: settingsSnapshotForExport
             )
             try removeExportedDirtyEntries(
                 exportResult.exportedIdentities,
@@ -750,6 +769,7 @@ final class LibrarySyncCoordinator {
         return .init(
             changes: changes,
             remoteChanges: batch.remoteChanges,
+            settingsSnapshot: batch.settingsSnapshot,
             ignoredDeletedRecordIDs: batch.ignoredDeletedRecordIDs,
             changeToken: batch.changeToken,
             namespace: batch.namespace,
@@ -1021,6 +1041,42 @@ final class LibrarySyncCoordinator {
     /// Refreshes derived library view state after imported changes are persisted.
     private func refreshLibraryAfterImport(in store: LibraryStore) throws {
         try store.refreshLibrary()
+    }
+
+    private func applyImportedSettingsIfNeeded(
+        _ remoteSnapshot: LibrarySettingsSyncSnapshot?,
+        to store: LibraryStore
+    ) {
+        guard let remoteSnapshot else { return }
+        let localUpdatedAt = store.preferences.cloudSyncedDefaultsUpdatedAt() ?? .distantPast
+        guard remoteSnapshot.updatedAt > localUpdatedAt else { return }
+        store.applyRemoteCloudSyncedPreferences(remoteSnapshot)
+    }
+
+    private func localSettingsSnapshotState(for store: LibraryStore) -> LocalSettingsSnapshotState {
+        let updatedAt = store.preferences.cloudSyncedDefaultsUpdatedAt()
+        return .init(
+            updatedAt: updatedAt,
+            snapshot: store.preferences.loadCloudSyncedSettingsSnapshot(
+                fallbackUpdatedAt: updatedAt ?? .distantPast
+            )
+        )
+    }
+
+    private func settingsSnapshotForExport(
+        localState: LocalSettingsSnapshotState,
+        remoteSnapshot: LibrarySettingsSyncSnapshot?,
+        store: LibraryStore
+    ) -> LibrarySettingsSyncSnapshot? {
+        guard let localUpdatedAt = localState.updatedAt else {
+            guard remoteSnapshot == nil, !localState.snapshot.payload.isEmpty else { return nil }
+            let updatedAt = dateProvider()
+            store.preferences.saveCloudSyncedDefaultsUpdatedAt(updatedAt)
+            return store.preferences.loadCloudSyncedSettingsSnapshot(fallbackUpdatedAt: updatedAt)
+        }
+        guard let remoteSnapshot else { return localState.snapshot }
+        guard localUpdatedAt > remoteSnapshot.updatedAt else { return nil }
+        return localState.snapshot
     }
 
     /// Returns the local entry to update, hydrating a new one when needed.

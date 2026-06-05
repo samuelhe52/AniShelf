@@ -348,6 +348,156 @@ struct LibrarySyncCoordinatorTests {
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
     }
 
+    @Test @MainActor func newerRemoteSettingsApplyLocally() async throws {
+        let store = makeSyncReadyStore()
+        store.preferences.saveCloudSyncedDefaultsUpdatedAt(referenceDate(year: 2026, month: 6, day: 1))
+        store.preferences.applyCloudSyncedSettingsSnapshot(
+            .init(
+                updatedAt: referenceDate(year: 2026, month: 6, day: 1),
+                payload: [.useTMDbRelayServer: .bool(false)]
+            )
+        )
+        store.reloadPersistedPreferences()
+
+        let client = CloudLibrarySyncClient()
+        let remoteSettings = LibrarySettingsSyncSnapshot(
+            updatedAt: referenceDate(year: 2026, month: 6, day: 5),
+            payload: [
+                .useTMDbRelayServer: .bool(true),
+                .preferredAnimeInfoLanguage: .string("ja"),
+                .useCurrentLocaleForAnimeInfoLanguage: .bool(false)
+            ]
+        )
+        let database = FakeCloudLibrarySyncDatabase(changes: [
+            .init(
+                modifiedRecordsByID: [client.librarySettingsRecordID: try client.record(from: remoteSettings)],
+                deletedRecordIDs: [],
+                changeToken: makeToken(),
+                moreComing: false
+            )
+        ])
+        let coordinator = LibrarySyncCoordinator(
+            store: store,
+            client: client,
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        let result = await coordinator.syncResult(trigger: .manualRetry)
+
+        #expect(result == .success)
+        #expect(store.preferences.cloudSyncedDefaultsUpdatedAt() == remoteSettings.updatedAt)
+        #expect(store.preferences.loadCloudSyncedSettingsSnapshot().payload[.useTMDbRelayServer] == .bool(true))
+        #expect(store.language == .japanese)
+    }
+
+    @Test @MainActor func olderRemoteSettingsAreIgnored() async throws {
+        let store = makeSyncReadyStore()
+        let localSettings = LibrarySettingsSyncSnapshot(
+            updatedAt: referenceDate(year: 2026, month: 6, day: 5),
+            payload: [.useTMDbRelayServer: .bool(true)]
+        )
+        store.preferences.applyCloudSyncedSettingsSnapshot(localSettings)
+        store.preferences.saveCloudSyncedDefaultsUpdatedAt(localSettings.updatedAt)
+        store.reloadPersistedPreferences()
+
+        let client = CloudLibrarySyncClient()
+        let remoteSettings = LibrarySettingsSyncSnapshot(
+            updatedAt: referenceDate(year: 2026, month: 6, day: 1),
+            payload: [.useTMDbRelayServer: .bool(false)]
+        )
+        let database = FakeCloudLibrarySyncDatabase(changes: [
+            .init(
+                modifiedRecordsByID: [client.librarySettingsRecordID: try client.record(from: remoteSettings)],
+                deletedRecordIDs: [],
+                changeToken: makeToken(),
+                moreComing: false
+            )
+        ])
+        let coordinator = LibrarySyncCoordinator(
+            store: store,
+            client: client,
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        let result = await coordinator.syncResult(trigger: .manualRetry)
+
+        #expect(result == .success)
+        #expect(store.preferences.cloudSyncedDefaultsUpdatedAt() == localSettings.updatedAt)
+        #expect(store.preferences.loadCloudSyncedSettingsSnapshot().payload[.useTMDbRelayServer] == .bool(true))
+    }
+
+    @Test @MainActor func newerLocalSettingsExport() async throws {
+        let store = makeSyncReadyStore()
+        let localSettings = LibrarySettingsSyncSnapshot(
+            updatedAt: referenceDate(year: 2026, month: 6, day: 5),
+            payload: [.useTMDbRelayServer: .bool(true)]
+        )
+        store.preferences.applyCloudSyncedSettingsSnapshot(localSettings)
+        store.preferences.saveCloudSyncedDefaultsUpdatedAt(localSettings.updatedAt)
+        store.reloadPersistedPreferences()
+
+        let client = CloudLibrarySyncClient()
+        let remoteSettings = LibrarySettingsSyncSnapshot(
+            updatedAt: referenceDate(year: 2026, month: 6, day: 1),
+            payload: [.useTMDbRelayServer: .bool(false)]
+        )
+        let database = FakeCloudLibrarySyncDatabase(changes: [
+            .init(
+                modifiedRecordsByID: [client.librarySettingsRecordID: try client.record(from: remoteSettings)],
+                deletedRecordIDs: [],
+                changeToken: makeToken(),
+                moreComing: false
+            )
+        ])
+        let coordinator = LibrarySyncCoordinator(
+            store: store,
+            client: client,
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        let result = await coordinator.syncResult(trigger: .manualRetry)
+
+        #expect(result == .success)
+        let savedSettingsRecord = try #require(
+            database.savedRecords.first { $0.recordID == client.librarySettingsRecordID }
+        )
+        #expect(try client.settingsSnapshot(from: savedSettingsRecord) == localSettings)
+    }
+
+    @Test @MainActor func remoteSettingsApplyDoesNotRestampLocalClockAsFreshEdit() async throws {
+        let store = makeSyncReadyStore()
+        store.preferences.saveCloudSyncedDefaultsUpdatedAt(referenceDate(year: 2026, month: 6, day: 1))
+        let client = CloudLibrarySyncClient()
+        let remoteSettings = LibrarySettingsSyncSnapshot(
+            updatedAt: referenceDate(year: 2026, month: 6, day: 5),
+            payload: [.useTMDbRelayServer: .bool(true)]
+        )
+        let database = FakeCloudLibrarySyncDatabase(changes: [
+            .init(
+                modifiedRecordsByID: [client.librarySettingsRecordID: try client.record(from: remoteSettings)],
+                deletedRecordIDs: [],
+                changeToken: makeToken(),
+                moreComing: false
+            )
+        ])
+        let coordinator = LibrarySyncCoordinator(
+            store: store,
+            client: client,
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        let result = await coordinator.syncResult(trigger: .manualRetry)
+
+        #expect(result == .success)
+        #expect(store.preferences.cloudSyncedDefaultsUpdatedAt() == remoteSettings.updatedAt)
+        let savedSettingsRecords = database.savedRecords.filter { $0.recordID == client.librarySettingsRecordID }
+        #expect(savedSettingsRecords.isEmpty)
+    }
+
     @Test @MainActor func missingRowHydratesInsertsAndAppliesSnapshot() async throws {
         let store = makeSyncReadyStore()
         let namespace = makeNamespace()
@@ -878,15 +1028,17 @@ struct LibrarySyncCoordinatorTests {
         )
         try store.repository.newEntry(entry)
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([])
+        store.preferences.saveSortReversed(false)
         store.rebuildSyncChangeTracking()
 
         let client = CloudLibrarySyncClient()
+        let exportDate = referenceDate(year: 2026, month: 6, day: 1)
         let database = FakeCloudLibrarySyncDatabase(changes: [makeEmptyChangeBatch()])
         store.configureLibrarySyncCoordinator(
             client: client,
             database: database,
             namespaceProvider: { makeNamespace() },
-            dateProvider: { referenceDate(year: 2026, month: 6, day: 1) }
+            dateProvider: { exportDate }
         )
 
         let succeeded = await store.enableLibraryCloudSync()
@@ -895,9 +1047,19 @@ struct LibrarySyncCoordinatorTests {
         #expect(store.libraryCloudSyncStatus.bootstrapState == .completed)
         #expect(store.libraryCloudSyncStatus.lastSuccessfulSyncDate != nil)
         #expect(store.preferences.load().cloudSyncStatus.lastSuccessfulSyncDate != nil)
-        #expect(database.savedRecords.count == 1)
-        let savedSnapshot = try savedSnapshot(from: database.savedRecords[0], client: client)
+        #expect(database.savedRecords.count == 2)
+        let savedEntryRecord = try #require(
+            database.savedRecords.first { $0.recordID == client.recordID(for: entry.syncIdentity) }
+        )
+        let savedSnapshot = try savedSnapshot(from: savedEntryRecord, client: client)
         #expect(savedSnapshot.identity == entry.syncIdentity)
+        let savedSettingsRecord = try #require(
+            database.savedRecords.first { $0.recordID == client.librarySettingsRecordID }
+        )
+        let savedSettings = try client.settingsSnapshot(from: savedSettingsRecord)
+        #expect(savedSettings.updatedAt == exportDate)
+        #expect(savedSettings.payload[.librarySortReversed] == .bool(false))
+        #expect(store.preferences.cloudSyncedDefaultsUpdatedAt() == exportDate)
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
     }
 

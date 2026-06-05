@@ -18,6 +18,7 @@ fileprivate let cloudLibrarySyncImportLogger = Logger(
 public struct CloudLibrarySyncImportBatch {
     public var changes: [LibraryEntrySyncRemoteChange]
     public var remoteChanges: [LibraryEntrySyncRemoteChange]
+    public var settingsSnapshot: LibrarySettingsSyncSnapshot?
     public var ignoredDeletedRecordIDs: [CKRecord.ID]
     public var changeToken: CKServerChangeToken
     public var namespace: CloudLibrarySyncChangeTokenStore.Namespace
@@ -40,6 +41,7 @@ public struct CloudLibrarySyncImportBatch {
     public init(
         changes: [LibraryEntrySyncRemoteChange],
         remoteChanges: [LibraryEntrySyncRemoteChange],
+        settingsSnapshot: LibrarySettingsSyncSnapshot?,
         ignoredDeletedRecordIDs: [CKRecord.ID],
         changeToken: CKServerChangeToken,
         namespace: CloudLibrarySyncChangeTokenStore.Namespace,
@@ -47,6 +49,7 @@ public struct CloudLibrarySyncImportBatch {
     ) {
         self.changes = changes
         self.remoteChanges = remoteChanges
+        self.settingsSnapshot = settingsSnapshot
         self.ignoredDeletedRecordIDs = ignoredDeletedRecordIDs
         self.changeToken = changeToken
         self.namespace = namespace
@@ -144,6 +147,7 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
         var currentToken = startingToken
         var finalToken: CKServerChangeToken?
         var remoteChangesByID: [LibraryEntrySyncIdentity: LibraryEntrySyncRemoteChange] = [:]
+        var settingsSnapshot: LibrarySettingsSyncSnapshot?
         var ignoredDeletedRecordIDs: [CKRecord.ID] = []
         repeat {
             let batch = try await database.fetchRecordZoneChanges(
@@ -151,11 +155,20 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
                 since: currentToken
             )
             for record in batch.modifiedRecordsByID.values {
-                let change = try client.remoteChange(from: record)
-                if let existing = remoteChangesByID[change.identity] {
-                    remoteChangesByID[change.identity] = try existing.merged(with: change)
-                } else {
-                    remoteChangesByID[change.identity] = change
+                let decodedChange = try client.zoneRecordChange(from: record)
+                switch decodedChange {
+                case .entry(let change):
+                    if let existing = remoteChangesByID[change.identity] {
+                        remoteChangesByID[change.identity] = try existing.merged(with: change)
+                    } else {
+                        remoteChangesByID[change.identity] = change
+                    }
+                case .settings(let snapshot):
+                    if let existing = settingsSnapshot {
+                        settingsSnapshot = existing.updatedAt >= snapshot.updatedAt ? existing : snapshot
+                    } else {
+                        settingsSnapshot = snapshot
+                    }
                 }
             }
             ignoredDeletedRecordIDs.append(contentsOf: batch.deletedRecordIDs)
@@ -184,6 +197,7 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
         return .init(
             changes: resolvedChanges,
             remoteChanges: remoteChanges,
+            settingsSnapshot: settingsSnapshot,
             ignoredDeletedRecordIDs: ignoredDeletedRecordIDs,
             changeToken: finalToken,
             namespace: namespace,

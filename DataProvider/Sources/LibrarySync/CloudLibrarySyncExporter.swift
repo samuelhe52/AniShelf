@@ -17,10 +17,12 @@ fileprivate let cloudLibrarySyncExportLogger = Logger(
 /// Result of pushing queued local changes to CloudKit.
 public struct CloudLibrarySyncExportResult {
     public var exportedIdentities: Set<LibraryEntrySyncIdentity>
+    public var settingsExported: Bool
 
     /// Creates the export result from the identities CloudKit accepted.
-    public init(exportedIdentities: Set<LibraryEntrySyncIdentity>) {
+    public init(exportedIdentities: Set<LibraryEntrySyncIdentity>, settingsExported: Bool = false) {
         self.exportedIdentities = exportedIdentities
+        self.settingsExported = settingsExported
     }
 }
 
@@ -48,35 +50,47 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
     /// - Throws: Encoding or CloudKit errors that prevent the export attempt.
     public func export(
         entries: [LibraryEntrySyncDirtyQueueEntry],
-        localSnapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot]
+        localSnapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot],
+        settingsSnapshot: LibrarySettingsSyncSnapshot? = nil
     ) async throws -> CloudLibrarySyncExportResult {
         let preparedRecords = try prepareRecords(
             for: entries,
-            localSnapshotsByIdentity: localSnapshotsByIdentity
+            localSnapshotsByIdentity: localSnapshotsByIdentity,
+            settingsSnapshot: settingsSnapshot
         )
-        let savedRecordIDs = try await database.save(records: Array(preparedRecords.recordsByIdentity.values))
+        let recordsToSave = Array(preparedRecords.recordsByIdentity.values)
+            + (preparedRecords.settingsRecord.map { [$0] } ?? [])
+        let savedRecordIDs = try await database.save(records: recordsToSave)
         let exportedIdentities = Set(
             savedRecordIDs.compactMap { recordID in
                 preparedRecords.recordsByIdentity.first { $0.value.recordID == recordID }?.key
             })
-        let partialFailureCount = max(0, preparedRecords.recordsByIdentity.count - savedRecordIDs.count)
+        let preparedRecordCount = preparedRecords.recordsByIdentity.count + (preparedRecords.settingsRecord == nil ? 0 : 1)
+        let partialFailureCount = max(0, preparedRecordCount - savedRecordIDs.count)
         if partialFailureCount > 0 {
             cloudLibrarySyncExportLogger.warning(
-                "Only \(savedRecordIDs.count, privacy: .public) of \(preparedRecords.recordsByIdentity.count, privacy: .public) iCloud sync records were accepted by CloudKit."
+                "Only \(savedRecordIDs.count, privacy: .public) of \(preparedRecordCount, privacy: .public) iCloud sync records were accepted by CloudKit."
             )
         }
-        return .init(exportedIdentities: exportedIdentities)
+        return .init(
+            exportedIdentities: exportedIdentities,
+            settingsExported: settingsSnapshot != nil
+                ? savedRecordIDs.contains(client.librarySettingsRecordID)
+                : false
+        )
     }
 
     private struct PreparedRecords {
         var recordsByIdentity: [LibraryEntrySyncIdentity: CKRecord]
+        var settingsRecord: CKRecord?
     }
 
     /// Converts dirty entries into CloudKit records, skipping upserts whose
     /// local snapshots no longer exist.
     private func prepareRecords(
         for entries: [LibraryEntrySyncDirtyQueueEntry],
-        localSnapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot]
+        localSnapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot],
+        settingsSnapshot: LibrarySettingsSyncSnapshot?
     ) throws -> PreparedRecords {
         var recordsByIdentity: [LibraryEntrySyncIdentity: CKRecord] = [:]
 
@@ -93,7 +107,8 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
         }
 
         return .init(
-            recordsByIdentity: recordsByIdentity
+            recordsByIdentity: recordsByIdentity,
+            settingsRecord: try settingsSnapshot.map(client.record(from:))
         )
     }
 }

@@ -29,6 +29,8 @@ class LibraryStore {
     @ObservationIgnored private var shouldResumeInterruptedCloudSyncBootstrap = false
     @ObservationIgnored let preferences: LibraryPreferences
     @ObservationIgnored private let cloudSyncStateController: LibraryCloudSyncStateController
+    @ObservationIgnored private var isApplyingRemoteCloudSyncedPreferences = false
+    @ObservationIgnored private var lastObservedCloudSyncedPreferencesHash = ""
     @ObservationIgnored private var cancellables = Set<AnyCancellable>()
 
     // MARK: - State
@@ -124,8 +126,12 @@ class LibraryStore {
         self.shouldResumeInterruptedCloudSyncBootstrap =
             snapshot.cloudSyncStatus.isEnabled && snapshot.cloudSyncStatus.bootstrapState == .running
         reloadPersistedPreferences()
+        lastObservedCloudSyncedPreferencesHash = preferences.cloudSyncedSettingsPayloadHash()
         setupUpdateLibrary()
         setupTMDbAPIConfigurationChangeMonitor()
+        if !dataProvider.inMemory {
+            setupCloudSyncedPreferencesMonitor()
+        }
         try? refreshLibrary()
         self.syncCoordinator = LibrarySyncCoordinator(store: self)
         setupLibrarySyncScheduling()
@@ -133,6 +139,7 @@ class LibraryStore {
 
     func reloadPersistedPreferences() {
         let snapshot = preferences.load()
+        language = snapshot.resolvedAnimeInfoLanguage
         if groupStrategy != snapshot.groupStrategy {
             groupStrategy = snapshot.groupStrategy
         }
@@ -159,6 +166,16 @@ class LibraryStore {
         }
 
         applyDefaultFilters()
+    }
+
+    func applyRemoteCloudSyncedPreferences(_ snapshot: LibrarySettingsSyncSnapshot) {
+        isApplyingRemoteCloudSyncedPreferences = true
+        preferences.applyCloudSyncedSettingsSnapshot(snapshot)
+        preferences.saveCloudSyncedDefaultsUpdatedAt(snapshot.updatedAt)
+        lastObservedCloudSyncedPreferencesHash = preferences.cloudSyncedSettingsPayloadHash()
+        reloadPersistedPreferences()
+        infoFetcher = .init()
+        isApplyingRemoteCloudSyncedPreferences = false
     }
 
     // MARK: - Library Loading & Observers
@@ -518,6 +535,31 @@ class LibraryStore {
                 self?.infoFetcher = .init()
             }
             .store(in: &cancellables)
+    }
+
+    private func setupCloudSyncedPreferencesMonitor() {
+        NotificationCenter.default
+            .publisher(for: UserDefaults.didChangeNotification, object: preferences.notificationObject)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.handleCloudSyncedPreferenceChange()
+            }
+            .store(in: &cancellables)
+    }
+
+    private func handleCloudSyncedPreferenceChange() {
+        let currentHash = preferences.cloudSyncedSettingsPayloadHash()
+        guard currentHash != lastObservedCloudSyncedPreferencesHash else { return }
+        lastObservedCloudSyncedPreferencesHash = currentHash
+        if isApplyingRemoteCloudSyncedPreferences {
+            reloadPersistedPreferences()
+            return
+        }
+
+        preferences.saveCloudSyncedDefaultsUpdatedAt(.now)
+        reloadPersistedPreferences()
+        guard libraryCloudSyncStatus.isEnabled else { return }
+        syncLibrary(trigger: .localDirtyQueueChange)
     }
 
     // MARK: - Shared Helpers

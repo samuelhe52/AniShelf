@@ -42,6 +42,7 @@ extension String {
     static let libraryCloudSyncLastSuccessfulSyncDate = "LibraryCloudSyncLastSuccessfulSyncDate"
     static let libraryCloudSyncLastFailureReason = "LibraryCloudSyncLastFailureReason"
     static let libraryCloudSyncDegradedReason = "LibraryCloudSyncDegradedReason"
+    static let libraryCloudSyncedDefaultsUpdatedAt = "LibraryCloudSyncedDefaultsUpdatedAt"
     static let useTMDbRelayServer = "UseTMDbRelayServer"
     static let lastSeenWhatsNewVersion = "LastSeenWhatsNewVersion"
 
@@ -67,6 +68,27 @@ extension String {
         .libraryAutoPrefetchImagesOnAddAndRestore,
         .useTMDbRelayServer,
         .lastSeenWhatsNewVersion
+    ]
+
+    static let cloudSyncedPreferenceKeys: [String] = [
+        .preferredAnimeInfoLanguage,
+        .useCurrentLocaleForAnimeInfoLanguage,
+        .searchTMDbLanguage,
+        .libraryGroupStrategy,
+        .librarySortStrategy,
+        .librarySortReversed,
+        .libraryViewStyle,
+        .libraryOpenDetailWithSingleTap,
+        .entryDetailCharactersExpandedByDefault,
+        .entryDetailStaffExpandedByDefault,
+        .libraryScoringEnabled,
+        .episodeProgressTrackingEnabled,
+        .libraryPosterProgressBarOverlayEnabled,
+        .libraryHideDroppedByDefault,
+        .libraryDefaultWatchStatus,
+        .libraryDefaultFilters,
+        .libraryAutoPrefetchImagesOnAddAndRestore,
+        .useTMDbRelayServer
     ]
 }
 

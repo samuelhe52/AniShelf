@@ -23,7 +23,10 @@ fileprivate let cloudLibrarySyncLogger = Logger(
 public struct CloudLibrarySyncClient: @unchecked Sendable {
     public static let defaultContainerIdentifier = "iCloud.com.samuelhe.MyAnimeList"
     public static let zoneName = "AniShelfLibrary"
-    public static let recordType = "LibraryEntry"
+    public static let libraryEntryRecordType = "LibraryEntry"
+    public static let recordType = libraryEntryRecordType
+    public static let librarySettingsRecordType = "LibrarySettings"
+    public static let librarySettingsRecordName = "userDefaults"
     public static let subscriptionID = "AniShelfLibrary.zone"
     public static let recordZoneID = CKRecordZone.ID(
         zoneName: zoneName,
@@ -53,6 +56,10 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
     /// Returns the CloudKit record ID for a sync identity in AniShelf's library zone.
     public func recordID(for identity: LibraryEntrySyncIdentity) -> CKRecord.ID {
         CKRecord.ID(recordName: identity.rawID, zoneID: Self.recordZoneID)
+    }
+
+    public var librarySettingsRecordID: CKRecord.ID {
+        CKRecord.ID(recordName: Self.librarySettingsRecordName, zoneID: Self.recordZoneID)
     }
 
     /// Builds the change-token namespace for the active container/account pair.
@@ -100,7 +107,7 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
             seasonNumber: snapshot.seasonNumber
         )
 
-        let record = CKRecord(recordType: Self.recordType, recordID: recordID(for: identity))
+        let record = CKRecord(recordType: Self.libraryEntryRecordType, recordID: recordID(for: identity))
         record[Field.schemaVersion] = LibraryEntrySyncSnapshot.currentSchemaVersion
         record[Field.tmdbID] = snapshot.tmdbID
         record[Field.entryType] = snapshot.entryType.cloudKitValue
@@ -140,7 +147,7 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
             seasonNumber: tombstone.seasonNumber
         )
 
-        let record = CKRecord(recordType: Self.recordType, recordID: recordID(for: identity))
+        let record = CKRecord(recordType: Self.libraryEntryRecordType, recordID: recordID(for: identity))
         record[Field.schemaVersion] = LibraryEntrySyncTombstone.currentSchemaVersion
         record[Field.tmdbID] = tombstone.tmdbID
         record[Field.entryType] = tombstone.entryType.cloudKitValue
@@ -208,9 +215,42 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
         }
     }
 
+    public func record(from settings: LibrarySettingsSyncSnapshot) throws -> CKRecord {
+        let record = CKRecord(
+            recordType: Self.librarySettingsRecordType,
+            recordID: librarySettingsRecordID
+        )
+        record[Field.schemaVersion] = settings.schemaVersion
+        record[Field.updatedAt] = settings.updatedAt
+        record[Field.payload] = try Self.encodeSettingsPayload(settings.payload)
+        return record
+    }
+
+    public func settingsSnapshot(from record: CKRecord) throws -> LibrarySettingsSyncSnapshot {
+        do {
+            return try decodedSettingsSnapshot(from: record)
+        } catch let error as CloudLibrarySyncDecodeError {
+            Self.logDecodeFailure(error, record: record)
+            throw error
+        }
+    }
+
+    public func zoneRecordChange(from record: CKRecord) throws -> CloudLibrarySyncZoneRecordChange {
+        switch record.recordType {
+        case Self.libraryEntryRecordType:
+            return .entry(try remoteChange(from: record))
+        case Self.librarySettingsRecordType:
+            return .settings(try settingsSnapshot(from: record))
+        default:
+            let error = CloudLibrarySyncDecodeError.wrongRecordType(actual: record.recordType)
+            Self.logDecodeFailure(error, record: record)
+            throw error
+        }
+    }
+
     /// Performs the record-to-change decode without logging side effects.
     private func decodedRemoteChange(from record: CKRecord) throws -> LibraryEntrySyncRemoteChange {
-        guard record.recordType == Self.recordType else {
+        guard record.recordType == Self.libraryEntryRecordType else {
             throw CloudLibrarySyncDecodeError.wrongRecordType(actual: record.recordType)
         }
 
@@ -240,7 +280,7 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
     /// Keeping the decode pure lets the public wrapper centralize diagnostic
     /// logging while tests can still exercise each validation failure.
     private func decodedSnapshot(from record: CKRecord) throws -> LibraryEntrySyncSnapshot {
-        guard record.recordType == Self.recordType else {
+        guard record.recordType == Self.libraryEntryRecordType else {
             throw CloudLibrarySyncDecodeError.wrongRecordType(actual: record.recordType)
         }
 
@@ -353,7 +393,7 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
         switch error {
         case .wrongRecordType(let actual):
             cloudLibrarySyncLogger.error(
-                "Failed to decode an iCloud sync record because the record type was \(actual, privacy: .public) instead of \(Self.recordType, privacy: .public)."
+                "Failed to decode an iCloud sync record because the record type was \(actual, privacy: .public)."
             )
         case .unsupportedSchemaVersion(let schemaVersion):
             cloudLibrarySyncLogger.error(
@@ -379,7 +419,30 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
             cloudLibrarySyncLogger.error(
                 "Failed to decode iCloud sync record \(record.recordType, privacy: .public) because the \(Field.episodeProgresses, privacy: .public) payload was corrupt."
             )
+        case .corruptSettingsPayload:
+            cloudLibrarySyncLogger.error(
+                "Failed to decode iCloud sync record \(record.recordType, privacy: .public) because the \(Field.payload, privacy: .public) payload was corrupt."
+            )
         }
+    }
+
+    private func decodedSettingsSnapshot(from record: CKRecord) throws -> LibrarySettingsSyncSnapshot {
+        guard record.recordType == Self.librarySettingsRecordType else {
+            throw CloudLibrarySyncDecodeError.wrongRecordType(actual: record.recordType)
+        }
+
+        let schemaVersion: Int = try Self.requiredValue(for: Field.schemaVersion, in: record)
+        guard schemaVersion <= LibrarySettingsSyncSnapshot.currentSchemaVersion else {
+            throw CloudLibrarySyncDecodeError.unsupportedSchemaVersion(schemaVersion)
+        }
+
+        let updatedAt: Date = try Self.requiredValue(for: Field.updatedAt, in: record)
+        let payloadData: Data = try Self.requiredValue(for: Field.payload, in: record)
+        return try .init(
+            schemaVersion: schemaVersion,
+            updatedAt: updatedAt,
+            payload: Self.decodeSettingsPayload(payloadData)
+        )
     }
 }
 
@@ -405,6 +468,8 @@ extension CloudLibrarySyncClient {
         fileprivate static let libraryUpdatedAt = "libraryUpdatedAt"
         fileprivate static let trackingUpdatedAt = "trackingUpdatedAt"
         fileprivate static let deletedAt = "deletedAt"
+        fileprivate static let updatedAt = "updatedAt"
+        fileprivate static let payload = "payload"
     }
 
     /// Reads a required CloudKit field and distinguishes missing from mistyped values.
@@ -511,6 +576,24 @@ extension CloudLibrarySyncClient {
             return try decoder.decode([LibraryEntrySyncSnapshot.EpisodeProgress].self, from: data)
         } catch {
             throw CloudLibrarySyncDecodeError.corruptEpisodeProgressPayload
+        }
+    }
+
+    fileprivate static func encodeSettingsPayload(
+        _ payload: [String: LibrarySettingsSyncSnapshot.Value]
+    ) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return try encoder.encode(payload)
+    }
+
+    fileprivate static func decodeSettingsPayload(
+        _ data: Data
+    ) throws -> [String: LibrarySettingsSyncSnapshot.Value] {
+        do {
+            return try JSONDecoder().decode([String: LibrarySettingsSyncSnapshot.Value].self, from: data)
+        } catch {
+            throw CloudLibrarySyncDecodeError.corruptSettingsPayload
         }
     }
 

@@ -167,6 +167,65 @@ struct CloudLibrarySyncImporterExporterTests {
         #expect(batch.ignoredDeletedRecordIDs == [rawDeleteID])
     }
 
+    @Test func librarySettingsRecordRoundTripsAndRejectsUnsupportedSchema() throws {
+        let snapshot = LibrarySettingsSyncSnapshot(
+            updatedAt: referenceDate(year: 2026, month: 6, day: 5),
+            payload: [
+                "UseTMDbRelayServer": .bool(true),
+                "LibraryDefaultFilters": .stringArray(["favorited", "watched"]),
+                "PreferredAnimeInfoLanguage": .string("ja")
+            ]
+        )
+
+        let record = try client.record(from: snapshot)
+        let decoded = try client.settingsSnapshot(from: record)
+
+        #expect(decoded == snapshot)
+
+        record["schemaVersion"] = LibrarySettingsSyncSnapshot.currentSchemaVersion + 1
+        #expect(throws: CloudLibrarySyncDecodeError.unsupportedSchemaVersion(LibrarySettingsSyncSnapshot.currentSchemaVersion + 1)) {
+            try client.settingsSnapshot(from: record)
+        }
+    }
+
+    @Test func importerDecodesMixedEntryAndSettingsBatch() async throws {
+        let namespace = makeNamespace()
+        let suiteName = "CloudLibrarySyncImporterExporterTests.\(UUID().uuidString)"
+        let userDefaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { userDefaults.removePersistentDomain(forName: suiteName) }
+        let tokenStore = CloudLibrarySyncChangeTokenStore(userDefaults: userDefaults)
+        let entryIdentity = LibraryEntrySyncIdentity(entryType: .movie, tmdbID: 904)
+        let entrySnapshot = makeSnapshot(identity: entryIdentity, tmdbID: 904, entryType: .movie)
+        let settingsSnapshot = LibrarySettingsSyncSnapshot(
+            updatedAt: referenceDate(year: 2026, month: 6, day: 5),
+            payload: ["UseTMDbRelayServer": .bool(true)]
+        )
+        let database = FakeCloudLibrarySyncDatabase(changes: [
+            .init(
+                modifiedRecordsByID: [
+                    client.recordID(for: entryIdentity): try client.record(from: entrySnapshot),
+                    client.librarySettingsRecordID: try client.record(from: settingsSnapshot)
+                ],
+                deletedRecordIDs: [],
+                changeToken: try makeToken(),
+                moreComing: false
+            )
+        ])
+        let importer = CloudLibrarySyncImporter(
+            client: client,
+            database: database,
+            changeTokenStore: tokenStore
+        )
+
+        let batch = try await importer.fetchChanges(
+            namespace: namespace,
+            localSnapshotsByIdentity: [:]
+        )
+
+        #expect(batch.changes == [.snapshot(entrySnapshot)])
+        #expect(batch.settingsSnapshot == settingsSnapshot)
+    }
+
     @Test func exporterSavesDeleteTombstonesAsRecordUpsertsAndReportsPartialSuccess() async throws {
         let first = AnimeEntry(name: "First", type: .movie, tmdbID: 905)
         let second = AnimeEntry(name: "Second", type: .series, tmdbID: 906)
@@ -199,6 +258,30 @@ struct CloudLibrarySyncImporterExporterTests {
         #expect(!savedTombstoneRecord.allKeys().contains("notes"))
         #expect(!savedTombstoneRecord.allKeys().contains("episodeProgresses"))
         #expect(!savedTombstoneRecord.allKeys().contains("watchStatus"))
+    }
+
+    @Test func exporterIncludesOptionalSettingsSnapshot() async throws {
+        let identity = LibraryEntrySyncIdentity(entryType: .series, tmdbID: 907)
+        let snapshot = makeSnapshot(identity: identity, tmdbID: 907)
+        let settingsSnapshot = LibrarySettingsSyncSnapshot(
+            updatedAt: referenceDate(year: 2026, month: 6, day: 5),
+            payload: ["UseTMDbRelayServer": .bool(true)]
+        )
+        let database = FakeCloudLibrarySyncDatabase(changes: [])
+        let exporter = CloudLibrarySyncExporter(client: client, database: database)
+
+        let result = try await exporter.export(
+            entries: [.upsert(.init(identity: identity, dirtyAt: referenceDate(year: 2026, month: 6, day: 4)))],
+            localSnapshotsByIdentity: [identity: snapshot],
+            settingsSnapshot: settingsSnapshot
+        )
+
+        #expect(result.exportedIdentities == [identity])
+        #expect(result.settingsExported)
+        let savedSettingsRecord = try #require(
+            database.savedRecords.first { $0.recordID == client.librarySettingsRecordID }
+        )
+        #expect(try client.settingsSnapshot(from: savedSettingsRecord) == settingsSnapshot)
     }
 }
 

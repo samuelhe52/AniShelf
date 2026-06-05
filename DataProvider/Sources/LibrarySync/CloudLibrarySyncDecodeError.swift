@@ -16,4 +16,5 @@ public enum CloudLibrarySyncDecodeError: Error, Equatable, Sendable {
     case invalidEnumValue(field: String)
     case invalidIdentityCombination(recordName: String)
     case corruptEpisodeProgressPayload
+    case corruptSettingsPayload
 }

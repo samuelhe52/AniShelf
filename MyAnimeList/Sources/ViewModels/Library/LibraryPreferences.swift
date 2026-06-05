@@ -1,9 +1,11 @@
 import DataProvider
 import Foundation
+import LibrarySync
 
 @MainActor
 struct LibraryPreferences {
     struct Snapshot {
+        let resolvedAnimeInfoLanguage: Language
         let groupStrategy: LibraryStore.LibraryGroupStrategy
         let sortStrategy: LibraryStore.AnimeSortStrategy
         let sortReversed: Bool
@@ -20,8 +22,13 @@ struct LibraryPreferences {
         self.defaults = defaults
     }
 
+    var notificationObject: UserDefaults {
+        defaults
+    }
+
     func load() -> Snapshot {
         Snapshot(
+            resolvedAnimeInfoLanguage: .resolvedAnimeInfoLanguage(defaults: defaults),
             groupStrategy: loadGroupStrategy(),
             sortStrategy: loadSortStrategy(),
             sortReversed: loadBool(forKey: .librarySortReversed, defaultValue: true),
@@ -77,6 +84,48 @@ struct LibraryPreferences {
         saveOptional(status.degradedReason, forKey: .libraryCloudSyncDegradedReason)
         saveCodable(status.pendingConflictSummary, forKey: .libraryCloudSyncConflictSummary)
         saveCodable(status.retryState, forKey: .libraryCloudSyncRetryState)
+    }
+
+    func loadCloudSyncedSettingsSnapshot(
+        fallbackUpdatedAt: Date = .distantPast
+    ) -> LibrarySettingsSyncSnapshot {
+        .init(
+            updatedAt: cloudSyncedDefaultsUpdatedAt() ?? fallbackUpdatedAt,
+            payload: cloudSyncedSettingsPayload()
+        )
+    }
+
+    func cloudSyncedSettingsPayloadHash() -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = (try? encoder.encode(cloudSyncedSettingsPayload())) ?? Data()
+        return data.base64EncodedString()
+    }
+
+    func cloudSyncedDefaultsUpdatedAt() -> Date? {
+        defaults.object(forKey: .libraryCloudSyncedDefaultsUpdatedAt) as? Date
+    }
+
+    func saveCloudSyncedDefaultsUpdatedAt(_ date: Date?) {
+        saveOptional(date, forKey: .libraryCloudSyncedDefaultsUpdatedAt)
+    }
+
+    func applyCloudSyncedSettingsSnapshot(_ snapshot: LibrarySettingsSyncSnapshot) {
+        let payload = snapshot.payload
+        for key in String.cloudSyncedPreferenceKeys {
+            guard let value = payload[key] else {
+                defaults.removeObject(forKey: key)
+                continue
+            }
+            switch value {
+            case .bool(let boolValue):
+                defaults.set(boolValue, forKey: key)
+            case .string(let stringValue):
+                defaults.set(stringValue, forKey: key)
+            case .stringArray(let stringArrayValue):
+                defaults.set(stringArrayValue, forKey: key)
+            }
+        }
     }
 
     private func loadGroupStrategy() -> LibraryStore.LibraryGroupStrategy {
@@ -154,6 +203,37 @@ struct LibraryPreferences {
 
     private func loadBool(forKey key: String, defaultValue: Bool) -> Bool {
         defaults.bool(forKey: key, defaultValue: defaultValue)
+    }
+
+    private func cloudSyncedSettingsPayload() -> [String: LibrarySettingsSyncSnapshot.Value] {
+        var payload: [String: LibrarySettingsSyncSnapshot.Value] = [:]
+        for key in String.cloudSyncedPreferenceKeys {
+            switch key {
+            case .libraryDefaultFilters:
+                if let value = defaults.array(forKey: key) as? [String] {
+                    payload[key] = .stringArray(value)
+                }
+            case .useCurrentLocaleForAnimeInfoLanguage,
+                .librarySortReversed,
+                .libraryOpenDetailWithSingleTap,
+                .entryDetailCharactersExpandedByDefault,
+                .entryDetailStaffExpandedByDefault,
+                .libraryScoringEnabled,
+                .episodeProgressTrackingEnabled,
+                .libraryPosterProgressBarOverlayEnabled,
+                .libraryHideDroppedByDefault,
+                .libraryAutoPrefetchImagesOnAddAndRestore,
+                .useTMDbRelayServer:
+                if defaults.object(forKey: key) != nil {
+                    payload[key] = .bool(defaults.bool(forKey: key))
+                }
+            default:
+                if let value = defaults.string(forKey: key) {
+                    payload[key] = .string(value)
+                }
+            }
+        }
+        return payload
     }
 
     private func saveCodable<T: Encodable>(_ value: T?, forKey key: String) {

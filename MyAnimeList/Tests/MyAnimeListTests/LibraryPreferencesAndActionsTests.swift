@@ -289,6 +289,45 @@ struct LibraryPreferencesAndActionsTests {
         #expect(entry.watchStatus == .watching)
     }
 
+    @Test @MainActor func testCloudSyncedPreferenceAllowlistMatchesApprovedKeys() {
+        #expect(String.cloudSyncedPreferenceKeys.contains(.useTMDbRelayServer))
+        #expect(!String.cloudSyncedPreferenceKeys.contains(.searchPageQuery))
+        #expect(!String.cloudSyncedPreferenceKeys.contains(.searchMode))
+        #expect(!String.cloudSyncedPreferenceKeys.contains(.persistedScrolledID))
+        #expect(!String.cloudSyncedPreferenceKeys.contains(.lastSeenWhatsNewVersion))
+        #expect(!String.cloudSyncedPreferenceKeys.contains(.libraryCloudSyncEnabled))
+        #expect(!String.cloudSyncedPreferenceKeys.contains(.libraryCloudSyncBootstrapState))
+    }
+
+    @Test @MainActor func testCloudSyncedSettingsSnapshotExportsOnlyAllowlistedKeys() {
+        let suiteName = "MyAnimeListTests.CloudSyncedSettingsSnapshot.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set("ja", forKey: .preferredAnimeInfoLanguage)
+        defaults.set(false, forKey: .useCurrentLocaleForAnimeInfoLanguage)
+        defaults.set("query", forKey: .searchPageQuery)
+        defaults.set("grid", forKey: .libraryViewStyle)
+        defaults.set("entry-1", forKey: .persistedScrolledID)
+        defaults.set("version-1", forKey: .lastSeenWhatsNewVersion)
+        defaults.set(true, forKey: .libraryCloudSyncEnabled)
+        defaults.set(Data([0x01]), forKey: "CloudLibrarySyncToken.test")
+        defaults.set(true, forKey: .useTMDbRelayServer)
+
+        let preferences = LibraryPreferences(defaults: defaults)
+        let snapshot = preferences.loadCloudSyncedSettingsSnapshot()
+
+        #expect(snapshot.payload[.preferredAnimeInfoLanguage] == .string("ja"))
+        #expect(snapshot.payload[.libraryViewStyle] == .string("grid"))
+        #expect(snapshot.payload[.useTMDbRelayServer] == .bool(true))
+        #expect(snapshot.payload[.searchPageQuery] == nil)
+        #expect(snapshot.payload[.persistedScrolledID] == nil)
+        #expect(snapshot.payload[.lastSeenWhatsNewVersion] == nil)
+        #expect(snapshot.payload[.libraryCloudSyncEnabled] == nil)
+        #expect(snapshot.payload["CloudLibrarySyncToken.test"] == nil)
+    }
+
     @Test @MainActor func testApplyNewEntryDefaultsDoesNotStampTrackingClockForUntouchedTrackingState() {
         let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
         let entry = AnimeEntry.template(id: 777)
