@@ -141,7 +141,7 @@ extension TMDbClient {
     func posterURLs(forMovie id: Movie.ID, idealWidth: Int = .max) async throws
         -> [ImageURLWithMetadata]
     {
-        let collection = try await movies.images(forMovie: id)
+        let collection = try await movies.images(forMovie: id, filter: TMDbImageFilters.movie)
         return await posters(from: collection, idealWidth: idealWidth)
     }
 
@@ -155,7 +155,7 @@ extension TMDbClient {
     func backdropURLs(forMovie id: Movie.ID, idealWidth: Int = .max) async throws
         -> [ImageURLWithMetadata]
     {
-        let collection = try await movies.images(forMovie: id)
+        let collection = try await movies.images(forMovie: id, filter: TMDbImageFilters.movie)
         return await backdrops(from: collection, idealWidth: idealWidth)
     }
 
@@ -169,7 +169,7 @@ extension TMDbClient {
     func logoURLs(forMovie id: Movie.ID, idealWidth: Int = .max) async throws
         -> [ImageURLWithMetadata]
     {
-        let collection = try await movies.images(forMovie: id)
+        let collection = try await movies.images(forMovie: id, filter: TMDbImageFilters.movie)
         return await logos(from: collection, idealWidth: idealWidth)
     }
 }
@@ -186,7 +186,10 @@ extension TMDbClient {
     func posterURLs(forTVSeries id: TVSeries.ID, idealWidth: Int = .max) async throws
         -> [ImageURLWithMetadata]
     {
-        let collection = try await tvSeries.images(forTVSeries: id)
+        let collection = try await tvSeries.images(
+            forTVSeries: id,
+            filter: TMDbImageFilters.tvSeries
+        )
         return await posters(from: collection, idealWidth: idealWidth)
     }
 
@@ -200,7 +203,10 @@ extension TMDbClient {
     func backdropURLs(forTVSeries id: TVSeries.ID, idealWidth: Int = .max) async throws
         -> [ImageURLWithMetadata]
     {
-        let collection = try await tvSeries.images(forTVSeries: id)
+        let collection = try await tvSeries.images(
+            forTVSeries: id,
+            filter: TMDbImageFilters.tvSeries
+        )
         return await backdrops(from: collection, idealWidth: idealWidth)
     }
 
@@ -214,7 +220,10 @@ extension TMDbClient {
     func logoURLs(forTVSeries id: TVSeries.ID, idealWidth: Int = .max) async throws
         -> [ImageURLWithMetadata]
     {
-        let collection = try await tvSeries.images(forTVSeries: id)
+        let collection = try await tvSeries.images(
+            forTVSeries: id,
+            filter: TMDbImageFilters.tvSeries
+        )
         return await logos(from: collection, idealWidth: idealWidth)
     }
 }
@@ -234,7 +243,8 @@ extension TMDbClient {
     ) async throws -> [ImageURLWithMetadata] {
         let collection = try await tvSeasons.images(
             forSeason: seasonNumber,
-            inTVSeries: parentSeriesID)
+            inTVSeries: parentSeriesID,
+            filter: TMDbImageFilters.tvSeason)
         let urls = await urlsFromImageMetadata(
             resources: collection.posters, imageType: .poster, idealWidth: idealWidth)
         return urls

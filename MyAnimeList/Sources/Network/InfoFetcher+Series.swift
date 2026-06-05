@@ -51,7 +51,10 @@ extension InfoFetcher {
     func postersForSeries(seriesID tmdbID: Int, idealWidth: Int = .max) async throws
         -> [ImageURLWithMetadata]
     {
-        async let collection = tmdbClient.tvSeries.images(forTVSeries: tmdbID)
+        async let collection = tmdbClient.tvSeries.images(
+            forTVSeries: tmdbID,
+            filter: TMDbImageFilters.tvSeries
+        )
         async let imagesConfiguration = imagesConfiguration()
         let resolvedCollection = try await collection
         return makePosterURLs(
@@ -127,7 +130,10 @@ extension InfoFetcher {
         includeCredits: Bool = false
     ) async throws -> TVSeriesPayload {
         async let resolvedSeries = tvSeries(tmdbID, language: language)
-        async let resolvedImageResources = tmdbClient.tvSeries.images(forTVSeries: tmdbID)
+        async let resolvedImageResources = tmdbClient.tvSeries.images(
+            forTVSeries: tmdbID,
+            filter: TMDbImageFilters.tvSeries
+        )
         async let resolvedImagesConfiguration = imagesConfiguration()
 
         let translationsTask =

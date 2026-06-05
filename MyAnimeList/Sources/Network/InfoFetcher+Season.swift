@@ -63,7 +63,8 @@ extension InfoFetcher {
     ) async throws -> [ImageURLWithMetadata] {
         async let collection = tmdbClient.tvSeasons.images(
             forSeason: seasonNumber,
-            inTVSeries: parentSeriesID
+            inTVSeries: parentSeriesID,
+            filter: TMDbImageFilters.tvSeason
         )
         async let imagesConfiguration = imagesConfiguration()
         let resolvedCollection = try await collection
@@ -81,7 +82,10 @@ extension InfoFetcher {
         let series = try await tvSeries(tmdbID, language: language)
         guard let seasons = series.seasons else { return [] }
 
-        async let parentSeriesImages = tmdbClient.tvSeries.images(forTVSeries: tmdbID)
+        async let parentSeriesImages = tmdbClient.tvSeries.images(
+            forTVSeries: tmdbID,
+            filter: TMDbImageFilters.tvSeries
+        )
         async let imagesConfiguration = imagesConfiguration()
         let resolvedParentSeriesImages = try await parentSeriesImages
         let resolvedImagesConfiguration = try await imagesConfiguration
@@ -199,7 +203,10 @@ extension InfoFetcher {
     ) async throws -> TVSeasonPayload {
         async let resolvedParentSeries = tvSeries(parentSeriesID, language: language)
         async let resolvedSeason = tvSeason(parentSeriesID, seasonNumber: seasonNumber, language: language)
-        async let resolvedParentSeriesImages = tmdbClient.tvSeries.images(forTVSeries: parentSeriesID)
+        async let resolvedParentSeriesImages = tmdbClient.tvSeries.images(
+            forTVSeries: parentSeriesID,
+            filter: TMDbImageFilters.tvSeries
+        )
         async let resolvedImagesConfiguration = imagesConfiguration()
 
         let translationsTask =
@@ -358,7 +365,8 @@ extension InfoFetcher {
     ) async -> [ImageMetadata]? {
         try? await tmdbClient.tvSeasons.images(
             forSeason: seasonNumber,
-            inTVSeries: parentSeriesID
+            inTVSeries: parentSeriesID,
+            filter: TMDbImageFilters.tvSeason
         ).posters
     }
 }

@@ -12,6 +12,9 @@ import ZIPFoundation
 
 import struct TMDb.AggregateCrewMember
 import struct TMDb.CrewJob
+import protocol TMDb.HTTPClient
+import struct TMDb.HTTPRequest
+import struct TMDb.HTTPResponse
 import struct TMDb.ImageMetadata
 
 @testable import DataProvider
@@ -35,9 +38,106 @@ struct InfoFetcherAndLibraryTests {
     @Test func testImageFetch() async throws {
         let result = try await fetcher.searchTVSeries(name: "CLANNAD", language: language).first
         try #require(result != nil, "No search results for 'CLANNAD'")
-        let images = try await fetcher.tmdbClient.tvSeries.images(forTVSeries: result!.id)
+        let images = try await fetcher.tmdbClient.tvSeries.images(
+            forTVSeries: result!.id,
+            filter: TMDbImageFilters.tvSeries
+        )
         let jaPosters = images.posters.filter { $0.languageCode == "ja" }
         #expect(!jaPosters.isEmpty, "Expected at least one Japanese poster")
+    }
+
+    @Test func testTMDbImageFiltersUseSupportedLanguagesOnly() {
+        #expect(TMDbImageFilters.supportedImageLanguageCodes == ["ja", "en", "zh"])
+        #expect(TMDbImageFilters.movie.languages == ["ja", "en", "zh"])
+        #expect(TMDbImageFilters.tvSeries.languages == ["ja", "en", "zh"])
+        #expect(TMDbImageFilters.tvSeason.languages == ["ja", "en", "zh"])
+    }
+
+    @Test func testTMDbImageRequestsIncludeSupportedLanguagesAndNull() async throws {
+        let httpClient = RecordingTMDbHTTPClient()
+        let client = TMDbClient(
+            apiKey: "test-key",
+            httpClient: httpClient,
+            configuration: .default
+        )
+
+        _ = try await client.movies.images(forMovie: 11, filter: TMDbImageFilters.movie)
+        _ = try await client.tvSeries.images(forTVSeries: 22, filter: TMDbImageFilters.tvSeries)
+        _ = try await client.tvSeasons.images(
+            forSeason: 1,
+            inTVSeries: 33,
+            filter: TMDbImageFilters.tvSeason
+        )
+
+        let requests = await httpClient.requests
+        #expect(
+            requests.map(\.url.path)
+                == ["/3/movie/11/images", "/3/tv/22/images", "/3/tv/33/season/1/images"]
+        )
+        #expect(
+            requests.map { $0.url.queryValue(named: "include_image_language") }
+                == ["ja,en,zh,null", "ja,en,zh,null", "ja,en,zh,null"]
+        )
+    }
+
+    @Test func testPosterSelectionHandlesFilteredMixedLanguages() throws {
+        let japanesePoster = URL(string: "/poster-ja.jpg")!
+        let englishPoster = URL(string: "/poster-en.jpg")!
+        let chinesePoster = URL(string: "/poster-zh.jpg")!
+        let noLanguagePoster = URL(string: "/poster-none.jpg")!
+
+        let selectedOriginalLanguagePoster = TMDbImageSelection.preferredPosterPath(
+            from: [
+                .init(languageCode: "en", filePath: englishPoster),
+                .init(languageCode: nil, filePath: noLanguagePoster),
+                .init(languageCode: "zh", filePath: chinesePoster),
+                .init(languageCode: "ja", filePath: japanesePoster)
+            ],
+            originalLanguageCode: "ja",
+            metadataLanguageCode: "zh"
+        )
+        let selectedMetadataLanguagePoster = TMDbImageSelection.preferredPosterPath(
+            from: [
+                .init(languageCode: "en", filePath: englishPoster),
+                .init(languageCode: nil, filePath: noLanguagePoster),
+                .init(languageCode: "zh", filePath: chinesePoster)
+            ],
+            originalLanguageCode: "ja",
+            metadataLanguageCode: "zh"
+        )
+        let selectedNoLanguagePoster = TMDbImageSelection.preferredPosterPath(
+            from: [
+                .init(languageCode: "en", filePath: englishPoster),
+                .init(languageCode: nil, filePath: noLanguagePoster)
+            ],
+            originalLanguageCode: "ja",
+            metadataLanguageCode: "zh"
+        )
+
+        #expect(selectedOriginalLanguagePoster == japanesePoster)
+        #expect(selectedMetadataLanguagePoster == chinesePoster)
+        #expect(selectedNoLanguagePoster == noLanguagePoster)
+    }
+
+    @Test func testFilteredResponseRestoresJapaneseOrNoLanguagePosterCandidates() throws {
+        let englishPoster = makeImageMetadata(filePath: "/poster-en.jpg", width: 500, languageCode: "en")
+        let japanesePoster = makeImageMetadata(filePath: "/poster-ja.jpg", width: 600, languageCode: "ja")
+        let noLanguagePoster = makeImageMetadata(filePath: "/poster-none.jpg", width: 700, languageCode: nil)
+
+        let unfilteredEquivalentPoster = TMDbImageSelection.preferredPosterPath(
+            from: [englishPoster],
+            originalLanguageCode: "ja",
+            metadataLanguageCode: "zh"
+        )
+        let filteredPoster = TMDbImageSelection.preferredPosterPath(
+            from: [englishPoster, japanesePoster, noLanguagePoster],
+            originalLanguageCode: "ja",
+            metadataLanguageCode: "zh"
+        )
+
+        #expect(unfilteredEquivalentPoster == nil)
+        #expect(filteredPoster == japanesePoster.filePath)
+        #expect(filteredPoster != nil)
     }
 
     @Test func testBackdropPrefersNoLanguageForSeries() throws {
@@ -680,4 +780,56 @@ struct InfoFetcherAndLibraryTests {
         let name: String?
         let overview: String?
     }
+
+    private final class RecordingTMDbHTTPClient: HTTPClient {
+        private let recorder = TMDbHTTPRequestRecorder()
+
+        var requests: [HTTPRequest] {
+            get async {
+                await recorder.requests
+            }
+        }
+
+        func perform(request: HTTPRequest) async throws -> HTTPResponse {
+            await recorder.record(request)
+            return HTTPResponse(data: Data(#"{"id":1,"posters":[],"logos":[],"backdrops":[]}"#.utf8))
+        }
+    }
+
+    private actor TMDbHTTPRequestRecorder {
+        private var capturedRequests: [HTTPRequest] = []
+
+        var requests: [HTTPRequest] {
+            capturedRequests
+        }
+
+        func record(_ request: HTTPRequest) {
+            capturedRequests.append(request)
+        }
+    }
+}
+
+extension URL {
+    fileprivate func queryValue(named name: String) -> String? {
+        URLComponents(url: self, resolvingAgainstBaseURL: false)?
+            .queryItems?
+            .first(where: { $0.name == name })?
+            .value
+    }
+}
+
+fileprivate func makeImageMetadata(
+    filePath: String,
+    width: Int,
+    languageCode: String?
+) -> ImageMetadata {
+    ImageMetadata(
+        filePath: URL(string: filePath)!,
+        width: width,
+        height: Int(Float(width) * 1.5),
+        aspectRatio: 2.0 / 3.0,
+        voteAverage: nil,
+        voteCount: nil,
+        languageCode: languageCode
+    )
 }
