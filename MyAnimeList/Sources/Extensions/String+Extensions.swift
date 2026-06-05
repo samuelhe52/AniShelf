@@ -79,7 +79,6 @@ extension String {
         .libraryGroupStrategy,
         .librarySortStrategy,
         .librarySortReversed,
-        .libraryViewStyle,
         .libraryOpenDetailWithSingleTap,
         .entryDetailCharactersExpandedByDefault,
         .entryDetailStaffExpandedByDefault,

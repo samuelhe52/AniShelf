@@ -358,7 +358,7 @@ struct LibraryPreferencesAndActionsTests {
         let snapshot = preferences.loadCloudSyncedSettingsSnapshot()
 
         #expect(snapshot.payload[.preferredAnimeInfoLanguage] == .string("ja"))
-        #expect(snapshot.payload[.libraryViewStyle] == .string("grid"))
+        #expect(snapshot.payload[.libraryViewStyle] == nil)
         #expect(snapshot.payload[.useTMDbRelayServer] == .bool(true))
         #expect(snapshot.payload[.searchPageQuery] == nil)
         #expect(snapshot.payload[.persistedScrolledID] == nil)
