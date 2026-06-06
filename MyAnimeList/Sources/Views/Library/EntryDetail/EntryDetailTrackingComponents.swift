@@ -243,6 +243,17 @@ fileprivate struct EntryDetailTrackingEditor: View {
 }
 
 fileprivate struct EntryEpisodeProgressControl: View {
+    private struct EpisodeProgressFeedbackTrigger: Equatable {
+        enum Style: Equatable {
+            case selection
+            case success
+        }
+
+        let seasonNumber: Int
+        let episode: Int
+        let style: Style
+    }
+
     // The displayed episode count cannot be derived from persisted progress alone.
     // During a drag we need to show the in-flight slider value, and after release we
     // need to keep showing the committed value until `entry` catches up asynchronously.
@@ -258,6 +269,7 @@ fileprivate struct EntryEpisodeProgressControl: View {
     let onCompletionPromptRequested: (AnimeEntryEpisodeProgressCompletionPrompt) -> Void
     @State private var selectedSeasonNumber: Int?
     @State private var progressInteractionState: EpisodeProgressInteractionState = .idle
+    @State private var progressFeedbackTrigger: EpisodeProgressFeedbackTrigger?
 
     init(
         entry: AnimeEntry,
@@ -394,7 +406,10 @@ fileprivate struct EntryEpisodeProgressControl: View {
 
                     if let episodeCount = summary.episodeCount, episodeCount > 0 {
                         EntryEpisodeProgressSlider(
-                            episode: sliderEpisodeBinding(for: summary),
+                            episode: sliderEpisodeBinding(
+                                for: selectedSeason,
+                                summary: summary
+                            ),
                             episodeCount: episodeCount,
                             tint: accentColor,
                             onInteractionBegan: {
@@ -421,6 +436,16 @@ fileprivate struct EntryEpisodeProgressControl: View {
             }
             .onChange(of: preferredSelectedSeason) { _, _ in
                 synchronizeSelectedSeasonWithLatestProgress()
+            }
+            .sensoryFeedback(trigger: progressFeedbackTrigger) { _, newValue in
+                switch newValue?.style {
+                case .selection:
+                    .selection
+                case .success:
+                    .success
+                case nil:
+                    nil
+                }
             }
         }
     }
@@ -472,11 +497,23 @@ fileprivate struct EntryEpisodeProgressControl: View {
         }
     }
 
-    private func sliderEpisodeBinding(for summary: AnimeEntryEpisodeProgressSummary) -> Binding<Double> {
+    private func sliderEpisodeBinding(
+        for seasonNumber: Int,
+        summary: AnimeEntryEpisodeProgressSummary
+    ) -> Binding<Double> {
         Binding(
             get: { Double(displayedWatchedThroughEpisode(for: summary)) },
             set: { newValue in
                 let snappedValue = min(max(Int(newValue.rounded()), 0), summary.episodeCount ?? .max)
+                let currentDisplayedEpisode = displayedWatchedThroughEpisode(for: summary)
+                guard snappedValue != currentDisplayedEpisode else { return }
+
+                triggerProgressFeedback(
+                    for: seasonNumber,
+                    episode: snappedValue,
+                    summary: summary
+                )
+
                 withAnimation(progressAnimation) {
                     progressInteractionState = .editing(snappedValue)
                 }
@@ -534,6 +571,13 @@ fileprivate struct EntryEpisodeProgressControl: View {
 
     private func setProgress(for seasonNumber: Int, to requestedEpisode: Int) {
         let currentSummary = entry.episodeProgressSummary(forSeason: seasonNumber)
+        let sliderPreviewEpisode: Int?
+        switch progressInteractionState {
+        case .editing(let episode):
+            sliderPreviewEpisode = episode
+        case .idle, .committing:
+            sliderPreviewEpisode = nil
+        }
         let clampedEpisode: Int
         if let episodeCount = currentSummary.episodeCount {
             clampedEpisode = min(max(requestedEpisode, 0), episodeCount)
@@ -550,6 +594,16 @@ fileprivate struct EntryEpisodeProgressControl: View {
 
         withAnimation(progressAnimation) {
             progressInteractionState = .committing(clampedEpisode)
+        }
+
+        if sliderPreviewEpisode == clampedEpisode {
+            // Slider drags already emitted feedback when the snapped value changed.
+        } else {
+            triggerProgressFeedback(
+                for: seasonNumber,
+                episode: clampedEpisode,
+                summary: currentSummary
+            )
         }
 
         withAnimation(progressAnimation) {
@@ -584,6 +638,28 @@ fileprivate struct EntryEpisodeProgressControl: View {
             selectedSeasonNumber = preferredSelectedSeason
             progressInteractionState = .idle
         }
+    }
+
+    private func progressFeedbackStyle(
+        for episode: Int,
+        summary: AnimeEntryEpisodeProgressSummary
+    ) -> EpisodeProgressFeedbackTrigger.Style {
+        guard let episodeCount = summary.episodeCount, episodeCount > 0 else {
+            return .selection
+        }
+        return episode >= episodeCount ? .success : .selection
+    }
+
+    private func triggerProgressFeedback(
+        for seasonNumber: Int,
+        episode: Int,
+        summary: AnimeEntryEpisodeProgressSummary
+    ) {
+        progressFeedbackTrigger = EpisodeProgressFeedbackTrigger(
+            seasonNumber: seasonNumber,
+            episode: episode,
+            style: progressFeedbackStyle(for: episode, summary: summary)
+        )
     }
 }
 
