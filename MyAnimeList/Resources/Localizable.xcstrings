@@ -2672,6 +2672,22 @@
         }
       }
     },
+    "Fixed an issue where adding certain anime could fail and occasionally crash the app." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一部のアニメを追加すると失敗し、まれにアプリがクラッシュする問題を修正しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修复了添加某些动画时可能失败并偶发导致应用闪退的问题。"
+          }
+        }
+      }
+    },
     "Fixed bugs related to default poster selection." : {
       "localizations" : {
         "ja" : {
@@ -5037,6 +5053,22 @@
         }
       }
     },
+    "Batch search now supports adding by TMDb ID." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一括検索で、TMDb IDを使った追加に対応しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批量搜索现已支持按 TMDb ID 添加。"
+          }
+        }
+      }
+    },
     "Search in your library..." : {
       "localizations" : {
         "ja" : {
@@ -5950,6 +5982,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此版本添加了 iCloud 同步功能，并包含 UI 改进。"
+          }
+        }
+      }
+    },
+    "This version includes bug fixes and search improvements." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このバージョンには、不具合修正と検索機能の改善が含まれています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个版本包含问题修复和搜索改进。"
           }
         }
       }

@@ -233,6 +233,24 @@ enum WhatsNewRegistry {
                     kind: .openURL(projectURL)
                 )
             ]
+        ),
+        "1.93": .init(
+            version: "1.93",
+            summary:
+                "This version includes bug fixes and search improvements.",
+            highlights: [
+                "Fixed an issue where adding certain anime could fail and occasionally crash the app.",
+                "Batch search now supports adding by TMDb ID."
+            ],
+            primaryAction: nil,
+            secondaryActions: [
+                .init(
+                    id: "project-github",
+                    title: "AniShelf on GitHub",
+                    systemImage: "arrow.up.right.square",
+                    kind: .openURL(projectURL)
+                )
+            ]
         )
     ]
 
