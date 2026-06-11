@@ -13,12 +13,12 @@ struct TranslationDictionaries {
     var overview: [String: String] = [:]
 }
 
-private struct LenientTranslationCollection<DataType: Decodable>: Decodable {
+fileprivate struct LenientTranslationCollection<DataType: Decodable>: Decodable {
     let id: Int
     let translations: [LenientTranslation<DataType>]
 }
 
-private struct LenientTranslation<DataType: Decodable>: Decodable {
+fileprivate struct LenientTranslation<DataType: Decodable>: Decodable {
     let countryCode: String
     let languageCode: String
     let data: DataType
@@ -30,17 +30,17 @@ private struct LenientTranslation<DataType: Decodable>: Decodable {
     }
 }
 
-private struct LenientMovieTranslationData: Decodable {
+fileprivate struct LenientMovieTranslationData: Decodable {
     let title: String?
     let overview: String?
 }
 
-private struct LenientTVSeriesTranslationData: Decodable {
+fileprivate struct LenientTVSeriesTranslationData: Decodable {
     let name: String?
     let overview: String?
 }
 
-private struct LenientTVSeasonTranslationData: Decodable {
+fileprivate struct LenientTVSeasonTranslationData: Decodable {
     let name: String?
     let overview: String?
 }

@@ -46,6 +46,8 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
     ///   - entries: Coalesced dirty-queue entries to attempt to save.
     ///   - localSnapshotsByIdentity: Current local snapshots used to materialize
     ///     upsert records. Delete entries use lean tombstone records.
+    ///   - settingsSnapshot: Optional settings snapshot to export alongside the
+    ///     library entry records.
     /// - Returns: The subset of identities CloudKit reported as saved.
     /// - Throws: Encoding or CloudKit errors that prevent the export attempt.
     public func export(

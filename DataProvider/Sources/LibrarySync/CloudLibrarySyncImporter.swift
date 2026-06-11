@@ -31,6 +31,8 @@ public struct CloudLibrarySyncImportBatch {
     ///     for the same identity.
     ///   - remoteChanges: Decoded remote changes before local conflict merging.
     ///     Kept for diagnostics and review comparisons.
+    ///   - settingsSnapshot: Latest remote settings record included in the
+    ///     fetched change set, when one exists.
     ///   - ignoredDeletedRecordIDs: Raw CloudKit record deletions. AniShelf
     ///     applies tombstone records instead of raw deletes, so these are kept
     ///     for logging and diagnostics.
