@@ -15,6 +15,12 @@ enum AnimeEntryMigrationWatchStatus: Sendable {
     case dropped
 }
 
+struct AnimeEntryEpisodeProgressMigrationDTO: Sendable {
+    var seasonNumber: Int
+    var watchedThroughEpisode: Int
+    var updatedAt: Date
+}
+
 struct AnimeEntryMigrationDTO: Sendable {
     var originalIndex: Int
     var oldID: PersistentIdentifier
@@ -29,16 +35,21 @@ struct AnimeEntryMigrationDTO: Sendable {
     var posterURL: URL?
     var backdropURL: URL?
     var tmdbID: Int
+    var originalLanguageCode: String? = nil
     var detail: AnimeEntryDetailDTO?
+    var episodeProgresses: [AnimeEntryEpisodeProgressMigrationDTO] = []
     var onDisplay: Bool
     var watchStatus: AnimeEntryMigrationWatchStatus
     var dateSaved: Date
     var dateStarted: Date?
     var dateFinished: Date?
+    var isDateTrackingEnabled: Bool = true
     var score: Int?
     var favorite: Bool
     var notes: String
     var usingCustomPoster: Bool
+    var libraryUpdatedAt: Date?
+    var trackingUpdatedAt: Date?
 
     var isRootSeriesEntry: Bool {
         parentSeriesOldID == nil && type == .series

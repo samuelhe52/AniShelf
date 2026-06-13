@@ -16,9 +16,9 @@ struct EntryMetadata: Equatable, Identifiable, Hashable, Sendable {
     var nameTranslations: [String: String]
     var overview: String?
     var overviewTranslations: [String: String]
-    var posterURL: URL?
-    var backdropURL: URL?
-    var logoURL: URL?
+    var posterPath: String?
+    var backdropPath: String?
+    var logoPath: String?
     var originalLanguageCode: String? = nil
     /// The TMDb (The Movie Database) identifier.
     var tmdbID: Int
@@ -30,4 +30,53 @@ struct EntryMetadata: Equatable, Identifiable, Hashable, Sendable {
     var type: AnimeType
 
     var id: Int { tmdbID }
+
+    var posterURL: URL? {
+        TMDbImageURLResolver.current.url(for: posterPath, role: .poster)
+    }
+
+    var backdropURL: URL? {
+        TMDbImageURLResolver.current.url(for: backdropPath, role: .backdrop)
+    }
+
+    var logoURL: URL? {
+        TMDbImageURLResolver.current.url(for: logoPath, role: .logo, idealWidth: 500)
+    }
+
+    init(
+        name: String,
+        nameTranslations: [String: String],
+        overview: String? = nil,
+        overviewTranslations: [String: String],
+        posterPath: String? = nil,
+        backdropPath: String? = nil,
+        logoPath: String? = nil,
+        posterURL: URL? = nil,
+        backdropURL: URL? = nil,
+        logoURL: URL? = nil,
+        originalLanguageCode: String? = nil,
+        tmdbID: Int,
+        onAirDate: Date? = nil,
+        linkToDetails: URL? = nil,
+        type: AnimeType
+    ) {
+        self.name = name
+        self.nameTranslations = nameTranslations
+        self.overview = overview
+        self.overviewTranslations = overviewTranslations
+        self.posterPath =
+            TMDbImagePath.storagePath(from: posterPath)
+            ?? TMDbImagePath.storagePath(from: posterURL)
+        self.backdropPath =
+            TMDbImagePath.storagePath(from: backdropPath)
+            ?? TMDbImagePath.storagePath(from: backdropURL)
+        self.logoPath =
+            TMDbImagePath.storagePath(from: logoPath)
+            ?? TMDbImagePath.storagePath(from: logoURL)
+        self.originalLanguageCode = originalLanguageCode
+        self.tmdbID = tmdbID
+        self.onAirDate = onAirDate
+        self.linkToDetails = linkToDetails
+        self.type = type
+    }
 }

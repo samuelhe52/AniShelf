@@ -179,7 +179,7 @@ extension LibrarySyncCoordinator {
             target.favorite = source.favorite
             target.notes = source.notes
             target.usingCustomPoster = source.usingCustomPoster
-            target.customPosterURL = source.usingCustomPoster ? source.customPosterURL : nil
+            target.customPosterPath = source.usingCustomPoster ? source.customPosterPath : nil
             target.trackingUpdatedAt = source.trackingUpdatedAt
         }
         if domains.contains(.episodeProgress) {
@@ -238,7 +238,7 @@ fileprivate func trackingValuesDiffer(
         || lhs.favorite != rhs.favorite
         || lhs.notes != rhs.notes
         || lhs.usingCustomPoster != rhs.usingCustomPoster
-        || lhs.customPosterURL != rhs.customPosterURL
+        || lhs.customPosterPath != rhs.customPosterPath
 }
 
 fileprivate func hasAuthoritativeLocalWork(

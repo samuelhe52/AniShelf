@@ -21,8 +21,8 @@ extension AnimeEntry {
             onAirDate: info.onAirDate,
             type: info.type,
             linkToDetails: info.linkToDetails,
-            posterURL: info.posterURL,
-            backdropURL: info.backdropURL,
+            posterPath: info.posterPath,
+            backdropPath: info.backdropPath,
             tmdbID: info.tmdbID,
             originalLanguageCode: info.originalLanguageCode,
             dateSaved: .now)
@@ -41,8 +41,8 @@ extension AnimeEntry {
             info.overviewTranslations.isEmpty
             ? self.overviewTranslations : info.overviewTranslations
         linkToDetails = info.linkToDetails ?? self.linkToDetails
-        posterURL = info.posterURL ?? self.posterURL
-        backdropURL = info.backdropURL ?? self.backdropURL
+        posterPath = info.posterPath ?? self.posterPath
+        backdropPath = info.backdropPath ?? self.backdropPath
         onAirDate = info.onAirDate ?? self.onAirDate
         type = info.type
         tmdbID = info.tmdbID
@@ -54,15 +54,17 @@ extension AnimeEntry {
     /// Unlike `update(from:)`, this method intentionally clears fields that TMDb no longer returns.
     /// User-owned state is not touched; callers can preserve custom poster choices by passing `true`.
     func replaceMetadata(from info: EntryMetadata, preservingCustomPoster: Bool) {
-        let resolvedPosterURL = preservingCustomPoster ? posterURL : info.posterURL
-
         name = info.name
         nameTranslations = info.nameTranslations
         overview = info.overview
         overviewTranslations = info.overviewTranslations
         linkToDetails = info.linkToDetails
-        posterURL = resolvedPosterURL
-        backdropURL = info.backdropURL
+        posterPath = info.posterPath
+        if !preservingCustomPoster {
+            customPosterPath = nil
+            usingCustomPoster = false
+        }
+        backdropPath = info.backdropPath
         onAirDate = info.onAirDate
         type = info.type
         tmdbID = info.tmdbID
@@ -76,8 +78,8 @@ extension AnimeEntry {
             nameTranslations: nameTranslations,
             overview: overview,
             overviewTranslations: overviewTranslations,
-            posterURL: posterURL,
-            backdropURL: backdropURL,
+            posterPath: posterPath,
+            backdropPath: backdropPath,
             originalLanguageCode: originalLanguageCode,
             tmdbID: tmdbID,
             onAirDate: onAirDate,
@@ -126,8 +128,8 @@ extension AnimeEntry {
         _ = parentSeriesEntry?.overview
         _ = onAirDate
         _ = type
-        _ = posterURL
-        _ = backdropURL
+        _ = posterPath
+        _ = backdropPath
         _ = tmdbID
         _ = watchStatus
         _ = favorite
@@ -140,8 +142,7 @@ extension AnimeEntry {
         if let detail {
             _ = detail.runtimeMinutes
             _ = detail.episodeCount
-            _ = detail.heroImageURL
-            _ = detail.logoImageURL
+            _ = detail.logoImagePath
             _ = detail.characters
             _ = detail.staff
             _ = detail.seasons

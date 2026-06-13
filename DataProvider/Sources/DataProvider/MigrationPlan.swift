@@ -34,7 +34,8 @@ enum MigrationPlan: SchemaMigrationPlan {
             SchemaV2_7_6.self,
             SchemaV2_7_7.self,
             SchemaV2_7_8.self,
-            SchemaV2_7_9.self
+            SchemaV2_7_9.self,
+            SchemaV2_8_0.self
         ]
     }
 
@@ -62,7 +63,8 @@ enum MigrationPlan: SchemaMigrationPlan {
             .lightweight(fromVersion: SchemaV2_7_5.self, toVersion: SchemaV2_7_6.self),
             .lightweight(fromVersion: SchemaV2_7_6.self, toVersion: SchemaV2_7_7.self),
             .lightweight(fromVersion: SchemaV2_7_7.self, toVersion: SchemaV2_7_8.self),
-            .lightweight(fromVersion: SchemaV2_7_8.self, toVersion: SchemaV2_7_9.self)
+            .lightweight(fromVersion: SchemaV2_7_8.self, toVersion: SchemaV2_7_9.self),
+            .migrateV279ToV280()
         ]
     }
 }
@@ -269,6 +271,38 @@ extension MigrationStage {
                     },
                     resolveParentOldID: { snapshot in
                         Self.resolvedParentOldID(for: snapshot, cleanupPlan: cleanupPlan)
+                    }
+                )
+            }
+        )
+    }
+
+    static func migrateV279ToV280() -> MigrationStage {
+        let snapshots = MigrationState<[AnimeEntryMigrationDTO]>([])
+
+        return MigrationStage.custom(
+            fromVersion: SchemaV2_7_9.self,
+            toVersion: SchemaV2_8_0.self,
+            willMigrate: { context in
+                snapshots.set(
+                    try Self.captureAndDeleteEntries(in: context) {
+                        (index: Int, entry: SchemaV2_7_9.AnimeEntry) in
+                        entry.migrationDTO(index: index)
+                    })
+            },
+            didMigrate: { context in
+                try Self.rebuildEntries(
+                    from: snapshots.get(),
+                    in: context,
+                    makeEntry: { snapshot in
+                        SchemaV2_8_0.AnimeEntry(
+                            migrationDTO: snapshot,
+                            detail: snapshot.detail.map(SchemaV2_8_0.AnimeEntryDetail.init(from:)),
+                            watchStatus: .init(snapshot.watchStatus)
+                        )
+                    },
+                    setParent: { entry, parentEntry in
+                        entry.parentSeriesEntry = parentEntry
                     }
                 )
             }

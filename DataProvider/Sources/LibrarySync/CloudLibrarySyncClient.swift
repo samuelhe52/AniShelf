@@ -123,7 +123,8 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
         record[Field.favorite] = snapshot.favorite
         record[Field.notes] = snapshot.notes
         record[Field.usingCustomPoster] = snapshot.usingCustomPoster
-        record[Field.customPosterURL] = snapshot.usingCustomPoster ? snapshot.customPosterURL?.absoluteString : nil
+        let customPosterPath = snapshot.usingCustomPoster ? snapshot.customPosterPath : nil
+        record[Field.customPosterPath] = customPosterPath
         record[Field.episodeProgresses] = try Self.encodeEpisodeProgresses(snapshot.episodeProgresses)
         record[Field.libraryUpdatedAt] = snapshot.libraryUpdatedAt
         record[Field.trackingUpdatedAt] = snapshot.trackingUpdatedAt
@@ -164,6 +165,7 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
         record[Field.favorite] = nil
         record[Field.notes] = nil
         record[Field.usingCustomPoster] = nil
+        record[Field.customPosterPath] = nil
         record[Field.customPosterURL] = nil
         record[Field.episodeProgresses] = nil
         record[Field.libraryUpdatedAt] = nil
@@ -324,7 +326,7 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
         let favorite: Bool = try Self.requiredValue(for: Field.favorite, in: record)
         let notes: String = try Self.requiredValue(for: Field.notes, in: record)
         let usingCustomPoster: Bool = try Self.requiredValue(for: Field.usingCustomPoster, in: record)
-        let customPosterURL = try Self.customPosterURL(from: record)
+        let customPosterPath = try Self.customPosterPath(from: record)
         let episodeProgressData: Data = try Self.requiredValue(for: Field.episodeProgresses, in: record)
         let libraryUpdatedAt: Date? = try Self.optionalValue(for: Field.libraryUpdatedAt, in: record)
         let trackingUpdatedAt: Date? = try Self.optionalValue(for: Field.trackingUpdatedAt, in: record)
@@ -346,7 +348,7 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
             favorite: favorite,
             notes: notes,
             usingCustomPoster: usingCustomPoster,
-            customPosterURL: customPosterURL,
+            customPosterPath: customPosterPath,
             episodeProgresses: Self.decodeEpisodeProgresses(episodeProgressData),
             libraryUpdatedAt: libraryUpdatedAt,
             trackingUpdatedAt: trackingUpdatedAt
@@ -463,6 +465,7 @@ extension CloudLibrarySyncClient {
         fileprivate static let favorite = "favorite"
         fileprivate static let notes = "notes"
         fileprivate static let usingCustomPoster = "usingCustomPoster"
+        fileprivate static let customPosterPath = "customPosterPath"
         fileprivate static let customPosterURL = "customPosterURL"
         fileprivate static let episodeProgresses = "episodeProgresses"
         fileprivate static let libraryUpdatedAt = "libraryUpdatedAt"
@@ -549,13 +552,20 @@ extension CloudLibrarySyncClient {
         return identity
     }
 
-    /// Decodes the optional custom poster string into a URL.
-    fileprivate static func customPosterURL(from record: CKRecord) throws -> URL? {
+    /// Decodes the optional custom poster string into a TMDb file path.
+    fileprivate static func customPosterPath(from record: CKRecord) throws -> String? {
+        if let value = record[Field.customPosterPath] {
+            guard let path = value as? String else {
+                throw CloudLibrarySyncDecodeError.invalidScalarValue(field: Field.customPosterPath)
+            }
+            return TMDbImagePath.storagePath(from: path)
+        }
+
         guard let value = record[Field.customPosterURL] else { return nil }
         guard let rawURL = value as? String, let url = URL(string: rawURL) else {
             throw CloudLibrarySyncDecodeError.invalidScalarValue(field: Field.customPosterURL)
         }
-        return url
+        return TMDbImagePath.storagePath(from: url)
     }
 
     /// Encodes episode progress as deterministic JSON inside one CloudKit field.

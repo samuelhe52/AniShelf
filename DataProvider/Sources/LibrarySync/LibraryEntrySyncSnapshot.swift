@@ -66,6 +66,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         case favorite
         case notes
         case usingCustomPoster
+        case customPosterPath
         case customPosterURL
         case episodeProgresses
         case libraryUpdatedAt
@@ -109,7 +110,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     public var favorite: Bool
     public var notes: String
     public var usingCustomPoster: Bool
-    public var customPosterURL: URL?
+    public var customPosterPath: String?
     public var episodeProgresses: [EpisodeProgress]
     public var libraryUpdatedAt: Date?
     public var trackingUpdatedAt: Date?
@@ -160,8 +161,8 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     ///     range are dropped.
     ///   - favorite: Favorite flag.
     ///   - notes: User notes.
-    ///   - usingCustomPoster: Whether `customPosterURL` should be applied.
-    ///   - customPosterURL: User-selected poster URL. Ignored unless
+    ///   - usingCustomPoster: Whether `customPosterPath` should be applied.
+    ///   - customPosterPath: User-selected TMDb poster path. Ignored unless
     ///     `usingCustomPoster` is true.
     ///   - episodeProgresses: Per-season episode progress. Entries are
     ///     normalized to one positive progress value per positive season.
@@ -185,7 +186,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         favorite: Bool,
         notes: String,
         usingCustomPoster: Bool,
-        customPosterURL: URL?,
+        customPosterPath: String?,
         episodeProgresses: [EpisodeProgress],
         libraryUpdatedAt: Date?,
         trackingUpdatedAt: Date?
@@ -206,10 +207,56 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         self.favorite = favorite
         self.notes = notes
         self.usingCustomPoster = usingCustomPoster
-        self.customPosterURL = usingCustomPoster ? customPosterURL : nil
+        self.customPosterPath = usingCustomPoster ? TMDbImagePath.storagePath(from: customPosterPath) : nil
         self.episodeProgresses = Self.normalizedEpisodeProgresses(episodeProgresses)
         self.libraryUpdatedAt = libraryUpdatedAt
         self.trackingUpdatedAt = trackingUpdatedAt
+    }
+
+    public init(
+        schemaVersion: Int = Self.currentSchemaVersion,
+        identity: LibraryEntrySyncIdentity,
+        tmdbID: Int,
+        parentSeriesID: Int?,
+        seasonNumber: Int?,
+        entryType: AnimeType,
+        onDisplay: Bool,
+        dateSaved: Date,
+        watchStatus: AnimeEntry.WatchStatus,
+        dateStarted: Date?,
+        dateFinished: Date?,
+        isDateTrackingEnabled: Bool,
+        score: Int?,
+        favorite: Bool,
+        notes: String,
+        usingCustomPoster: Bool,
+        customPosterURL: URL?,
+        episodeProgresses: [EpisodeProgress],
+        libraryUpdatedAt: Date?,
+        trackingUpdatedAt: Date?
+    ) {
+        self.init(
+            schemaVersion: schemaVersion,
+            identity: identity,
+            tmdbID: tmdbID,
+            parentSeriesID: parentSeriesID,
+            seasonNumber: seasonNumber,
+            entryType: entryType,
+            onDisplay: onDisplay,
+            dateSaved: dateSaved,
+            watchStatus: watchStatus,
+            dateStarted: dateStarted,
+            dateFinished: dateFinished,
+            isDateTrackingEnabled: isDateTrackingEnabled,
+            score: score,
+            favorite: favorite,
+            notes: notes,
+            usingCustomPoster: usingCustomPoster,
+            customPosterPath: TMDbImagePath.storagePath(from: customPosterURL),
+            episodeProgresses: episodeProgresses,
+            libraryUpdatedAt: libraryUpdatedAt,
+            trackingUpdatedAt: trackingUpdatedAt
+        )
     }
 
     /// Projects a local `AnimeEntry` into the lean sync model.
@@ -230,7 +277,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             favorite: entry.favorite,
             notes: entry.notes,
             usingCustomPoster: entry.usingCustomPoster,
-            customPosterURL: entry.usingCustomPoster ? entry.posterURL : nil,
+            customPosterPath: entry.usingCustomPoster ? entry.customPosterPath : nil,
             episodeProgresses: entry.orderedEpisodeProgresses.map {
                 EpisodeProgress(
                     seasonNumber: $0.seasonNumber,
@@ -264,12 +311,39 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             favorite: try container.decode(Bool.self, forKey: .favorite),
             notes: try container.decode(String.self, forKey: .notes),
             usingCustomPoster: try container.decode(Bool.self, forKey: .usingCustomPoster),
-            customPosterURL: try container.decodeIfPresent(URL.self, forKey: .customPosterURL),
+            customPosterPath: try container.decodeIfPresent(String.self, forKey: .customPosterPath)
+                ?? TMDbImagePath.storagePath(
+                    from: try container.decodeIfPresent(URL.self, forKey: .customPosterURL)
+                ),
             episodeProgresses: try container.decodeIfPresent([EpisodeProgress].self, forKey: .episodeProgresses)
                 ?? [],
             libraryUpdatedAt: try container.decodeIfPresent(Date.self, forKey: .libraryUpdatedAt),
             trackingUpdatedAt: try container.decodeIfPresent(Date.self, forKey: .trackingUpdatedAt)
         )
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(schemaVersion, forKey: .schemaVersion)
+        try container.encode(identity, forKey: .identity)
+        try container.encode(tmdbID, forKey: .tmdbID)
+        try container.encodeIfPresent(parentSeriesID, forKey: .parentSeriesID)
+        try container.encodeIfPresent(seasonNumber, forKey: .seasonNumber)
+        try container.encode(entryType, forKey: .entryType)
+        try container.encode(onDisplay, forKey: .onDisplay)
+        try container.encode(dateSaved, forKey: .dateSaved)
+        try container.encode(watchStatus, forKey: .watchStatus)
+        try container.encodeIfPresent(dateStarted, forKey: .dateStarted)
+        try container.encodeIfPresent(dateFinished, forKey: .dateFinished)
+        try container.encode(isDateTrackingEnabled, forKey: .isDateTrackingEnabled)
+        try container.encodeIfPresent(score, forKey: .score)
+        try container.encode(favorite, forKey: .favorite)
+        try container.encode(notes, forKey: .notes)
+        try container.encode(usingCustomPoster, forKey: .usingCustomPoster)
+        try container.encodeIfPresent(customPosterPath, forKey: .customPosterPath)
+        try container.encode(episodeProgresses, forKey: .episodeProgresses)
+        try container.encodeIfPresent(libraryUpdatedAt, forKey: .libraryUpdatedAt)
+        try container.encodeIfPresent(trackingUpdatedAt, forKey: .trackingUpdatedAt)
     }
 
     /// Returns the last-writer-wins merge of two snapshots with the same identity.
@@ -298,7 +372,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             merged.favorite = other.favorite
             merged.notes = other.notes
             merged.usingCustomPoster = other.usingCustomPoster
-            merged.customPosterURL = other.usingCustomPoster ? other.customPosterURL : nil
+            merged.customPosterPath = other.usingCustomPoster ? other.customPosterPath : nil
             merged.trackingUpdatedAt = other.trackingUpdatedAt
         }
 
@@ -423,9 +497,9 @@ extension AnimeEntry {
             let wasUsingCustomPoster = usingCustomPoster
             usingCustomPoster = snapshot.usingCustomPoster
             if snapshot.usingCustomPoster {
-                posterURL = snapshot.customPosterURL
+                customPosterPath = snapshot.customPosterPath
             } else if wasUsingCustomPoster {
-                posterURL = nil
+                customPosterPath = nil
             }
             trackingUpdatedAt = snapshot.trackingUpdatedAt
         }
@@ -466,7 +540,7 @@ extension AnimeEntry {
         notes = snapshot.notes
         usingCustomPoster = snapshot.usingCustomPoster
         if snapshot.usingCustomPoster {
-            posterURL = snapshot.customPosterURL
+            customPosterPath = snapshot.customPosterPath
         }
         trackingUpdatedAt = snapshot.trackingUpdatedAt
 

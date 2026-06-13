@@ -50,7 +50,7 @@ struct CloudLibrarySyncClientTests {
             favorite: true,
             notes: "Round trip",
             usingCustomPoster: true,
-            customPosterURL: URL(string: "https://example.com/custom.jpg"),
+            customPosterURL: URL(string: "https://image.tmdb.org/t/p/w500/custom.jpg"),
             episodeProgresses: [
                 .init(
                     seasonNumber: 2,
@@ -67,7 +67,22 @@ struct CloudLibrarySyncClientTests {
 
         #expect(record.recordType == CloudLibrarySyncClient.recordType)
         #expect(record.recordID == client.recordID(for: snapshot.identity))
+        #expect(record["customPosterPath"] as? String == "/custom.jpg")
+        #expect(!record.allKeys().contains("customPosterURL"))
         #expect(decoded == snapshot)
+    }
+
+    @Test func legacyCustomPosterURLDecodesToPathWhenPathFieldIsAbsent() throws {
+        let snapshot = makeSnapshot()
+        let record = try client.record(from: snapshot)
+        record["usingCustomPoster"] = true
+        record["customPosterPath"] = nil
+        record["customPosterURL"] = "https://image.tmdb.org/t/p/w342/legacy/custom.jpg"
+
+        let decoded = try client.snapshot(from: record)
+
+        #expect(decoded.usingCustomPoster)
+        #expect(decoded.customPosterPath == "/legacy/custom.jpg")
     }
 
     @Test func leanTombstoneRoundTripsThroughRemoteChangeRecord() throws {

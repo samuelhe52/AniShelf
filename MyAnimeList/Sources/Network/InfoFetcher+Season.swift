@@ -268,24 +268,22 @@ extension InfoFetcher {
             nameTranslations: translations.name,
             overview: season.overview,
             overviewTranslations: translations.overview,
-            posterURL: imagesConfiguration.posterURL(
-                for: TMDbImageSelection.preferredPosterPath(
+            posterPath: TMDbImagePath.storagePath(
+                from: TMDbImageSelection.preferredPosterPath(
                     from: seasonPosters ?? [],
                     originalLanguageCode: parentSeries.originalLanguage,
                     metadataLanguageCode: language.rawValue
                 ) ?? season.posterPath
             ),
-            backdropURL: imagesConfiguration.backdropURL(
-                for: TMDbImageSelection.preferredBackdropPath(from: parentSeriesImages.backdrops),
-                idealWidth: .max
+            backdropPath: TMDbImagePath.storagePath(
+                from: TMDbImageSelection.preferredBackdropPath(from: parentSeriesImages.backdrops)
             ),
-            logoURL: imagesConfiguration.logoURL(
-                for: TMDbImageSelection.preferredLogoPath(
+            logoPath: TMDbImagePath.storagePath(
+                from: TMDbImageSelection.preferredLogoPath(
                     from: parentSeriesImages.logos,
                     originalLanguageCode: parentSeries.originalLanguage,
                     metadataLanguageCode: language.rawValue
-                ),
-                idealWidth: .max
+                )
             ),
             originalLanguageCode: parentSeries.originalLanguage,
             tmdbID: season.id,
@@ -311,17 +309,15 @@ extension InfoFetcher {
             status: parentSeries.status,
             airDate: season.airDate,
             primaryLinkURL: parentSeries.homepageURL,
-            heroImageURL: imagesConfiguration.backdropURL(
-                for: TMDbImageSelection.preferredBackdropPath(from: parentSeriesImages.backdrops),
-                idealWidth: 1_280
+            heroImagePath: TMDbImagePath.storagePath(
+                from: TMDbImageSelection.preferredBackdropPath(from: parentSeriesImages.backdrops)
             ),
-            logoImageURL: imagesConfiguration.logoURL(
-                for: TMDbImageSelection.preferredLogoPath(
+            logoImagePath: TMDbImagePath.storagePath(
+                from: TMDbImageSelection.preferredLogoPath(
                     from: parentSeriesImages.logos,
                     originalLanguageCode: parentSeries.originalLanguage,
                     metadataLanguageCode: language.rawValue
-                ),
-                idealWidth: 500
+                )
             ),
             genreIDs: parentSeries.genres?.map(\.id) ?? [],
             voteAverage: parentSeries.voteAverage,
@@ -354,7 +350,7 @@ extension InfoFetcher {
                 episodeNumber: $0.episodeNumber,
                 title: $0.name,
                 airDate: $0.airDate,
-                imageURL: imagesConfiguration.stillURL(for: $0.stillPath, idealWidth: 500)
+                imagePath: TMDbImagePath.storagePath(from: $0.stillPath)
             )
         }
     }

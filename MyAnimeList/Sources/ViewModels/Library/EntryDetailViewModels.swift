@@ -194,10 +194,8 @@ final class EntryDetailViewModel {
         loadError = nil
         if let detail = entry.detail, detail.language == language.rawValue {
             apply(detail: detail, entry: entry, language: language)
-            if detail.logoImageURL != nil || detail.heroImageURL != nil {
-                isLoading = false
-                return
-            }
+            isLoading = false
+            return
         }
 
         isLoading = true

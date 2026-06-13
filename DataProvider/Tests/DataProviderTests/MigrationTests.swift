@@ -70,8 +70,8 @@ struct MigrationTests {
             status: "Ended",
             airDate: referenceDate(year: 2023, month: 9, day: 29),
             primaryLinkURL: URL(string: "https://example.com/frieren")!,
-            heroImageURL: URL(string: "https://example.com/frieren-hero.jpg")!,
-            logoImageURL: URL(string: "https://example.com/frieren-logo.png")!,
+            heroImageURL: URL(string: "https://image.tmdb.org/t/p/w1280/frieren-hero.jpg")!,
+            logoImageURL: URL(string: "https://image.tmdb.org/t/p/w500/frieren-logo.png")!,
             genreIDs: [16, 18],
             voteAverage: 8.9,
             runtimeMinutes: 24,
@@ -82,7 +82,7 @@ struct MigrationTests {
                     id: 101,
                     characterName: "Frieren",
                     actorName: "Atsumi Tanezaki",
-                    profileURL: URL(string: "https://example.com/characters/frieren")
+                    profileURL: URL(string: "https://image.tmdb.org/t/p/w185/characters/frieren.jpg")
                 )
             ],
             seasons: [
@@ -90,7 +90,7 @@ struct MigrationTests {
                     id: 201,
                     seasonNumber: 1,
                     title: "Season 1",
-                    posterURL: URL(string: "https://example.com/seasons/1.jpg")
+                    posterURL: URL(string: "https://image.tmdb.org/t/p/w342/seasons/1.jpg")
                 )
             ],
             episodes: [
@@ -99,14 +99,14 @@ struct MigrationTests {
                     episodeNumber: 1,
                     title: "The Journey's End",
                     airDate: referenceDate(year: 2023, month: 9, day: 29),
-                    imageURL: URL(string: "https://example.com/episodes/1.jpg")
+                    imageURL: URL(string: "https://image.tmdb.org/t/p/original/episodes/1.jpg")
                 ),
                 LegacyAnimeEntryEpisodeSummaryPayload(
                     id: 302,
                     episodeNumber: 2,
                     title: "A New Adventure",
                     airDate: referenceDate(year: 2023, month: 10, day: 6),
-                    imageURL: URL(string: "https://example.com/episodes/2.jpg")
+                    imageURL: URL(string: "https://image.tmdb.org/t/p/original/episodes/2.jpg")
                 )
             ]
         )
@@ -119,8 +119,8 @@ struct MigrationTests {
             onAirDate: referenceDate(year: 2023, month: 9, day: 29),
             type: .series,
             linkToDetails: URL(string: "https://example.com/series")!,
-            posterURL: URL(string: "https://example.com/posters/series.jpg")!,
-            backdropURL: URL(string: "https://example.com/backdrops/series.jpg")!,
+            posterURL: URL(string: "https://image.tmdb.org/t/p/original/posters/series.jpg")!,
+            backdropURL: URL(string: "https://image.tmdb.org/t/p/original/backdrops/series.jpg")!,
             tmdbID: 209867,
             detail: parentDetail,
             dateSaved: referenceDate(year: 2026, month: 5, day: 1),
@@ -184,7 +184,9 @@ struct MigrationTests {
         #expect(migratedDetail.subtitle == "Beyond Journey's End")
         #expect(migratedDetail.status == "Ended")
         #expect(migratedDetail.primaryLinkURL == URL(string: "https://example.com/frieren")!)
-        #expect(migratedDetail.logoImageURL == URL(string: "https://example.com/frieren-logo.png")!)
+        #expect(migratedSeries.customPosterPath == "/posters/series.jpg")
+        #expect(migratedSeries.backdropPath == "/backdrops/series.jpg")
+        #expect(migratedDetail.logoImagePath == "/frieren-logo.png")
         #expect(migratedDetail.genreIDs == [16, 18])
         #expect(migratedDetail.voteAverage == 8.9)
         #expect(migratedDetail.runtimeMinutes == 24)
@@ -544,6 +546,79 @@ struct MigrationTests {
         #expect(migratedEntry.notes == "Migrated")
         #expect(migratedEntry.libraryUpdatedAt == nil)
         #expect(migratedEntry.trackingUpdatedAt == nil)
+    }
+
+    @Test @MainActor func imagePathMigrationFromV279PreservesUserState() throws {
+        let storeURL = temporaryStoreURL(name: "image-path-migration-v279-user-state")
+
+        let legacySchema = Schema(versionedSchema: SchemaV2_7_9.self)
+        let legacyConfiguration = ModelConfiguration(schema: legacySchema, url: storeURL)
+        let legacyContainer = try ModelContainer(for: legacySchema, configurations: legacyConfiguration)
+
+        let legacyEntry = SchemaV2_7_9.AnimeEntry(
+            name: "Legacy 2.7.9 Entry",
+            nameTranslations: ["ja-JP": "旧エントリー"],
+            overview: "Legacy overview",
+            overviewTranslations: [:],
+            onAirDate: referenceDate(year: 2025, month: 4, day: 1),
+            type: .series,
+            linkToDetails: URL(string: "https://example.com/legacy")!,
+            posterURL: URL(string: "https://image.tmdb.org/t/p/original/posters/legacy.jpg")!,
+            backdropURL: URL(string: "https://image.tmdb.org/t/p/w1280/backdrops/legacy.jpg")!,
+            tmdbID: 920001,
+            originalLanguageCode: "ja",
+            detail: nil,
+            parentSeriesEntry: nil,
+            episodeProgresses: [
+                SchemaV2_7_9.AnimeEntryEpisodeProgress(
+                    seasonNumber: 1,
+                    watchedThroughEpisode: 7,
+                    updatedAt: referenceDate(year: 2026, month: 5, day: 13)
+                ),
+                SchemaV2_7_9.AnimeEntryEpisodeProgress(
+                    seasonNumber: 2,
+                    watchedThroughEpisode: 3,
+                    updatedAt: referenceDate(year: 2026, month: 5, day: 14)
+                )
+            ],
+            onDisplay: true,
+            watchStatus: .watching,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 12),
+            dateStarted: referenceDate(year: 2026, month: 5, day: 11),
+            dateFinished: nil,
+            isDateTrackingEnabled: false,
+            score: 4,
+            favorite: true,
+            notes: "Preserve state",
+            usingCustomPoster: false,
+            libraryUpdatedAt: referenceDate(year: 2026, month: 5, day: 15),
+            trackingUpdatedAt: referenceDate(year: 2026, month: 5, day: 16)
+        )
+        legacyContainer.mainContext.insert(legacyEntry)
+        try legacyContainer.mainContext.save()
+
+        let migratedProvider = DataProvider(url: storeURL)
+        let migratedEntries = try migratedProvider.getAllModels(ofType: AnimeEntry.self)
+        let migratedEntry = try #require(migratedEntries.first(where: { $0.tmdbID == 920001 }))
+
+        #expect(migratedEntry.originalLanguageCode == "ja")
+        #expect(migratedEntry.posterPath == "/posters/legacy.jpg")
+        #expect(migratedEntry.backdropPath == "/backdrops/legacy.jpg")
+        #expect(migratedEntry.watchStatus == .watching)
+        #expect(migratedEntry.isDateTrackingEnabled == false)
+        #expect(migratedEntry.score == 4)
+        #expect(migratedEntry.favorite)
+        #expect(migratedEntry.notes == "Preserve state")
+        #expect(migratedEntry.libraryUpdatedAt == referenceDate(year: 2026, month: 5, day: 15))
+        #expect(migratedEntry.trackingUpdatedAt == referenceDate(year: 2026, month: 5, day: 16))
+        #expect(migratedEntry.orderedEpisodeProgresses.map(\.seasonNumber) == [1, 2])
+        #expect(migratedEntry.orderedEpisodeProgresses.map(\.watchedThroughEpisode) == [7, 3])
+        #expect(
+            migratedEntry.orderedEpisodeProgresses.map(\.updatedAt) == [
+                referenceDate(year: 2026, month: 5, day: 13),
+                referenceDate(year: 2026, month: 5, day: 14)
+            ]
+        )
     }
 }
 

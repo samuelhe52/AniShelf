@@ -180,9 +180,9 @@ extension AnimeEntry {
             let wasUsingCustomPoster = usingCustomPoster
             usingCustomPoster = snapshot.usingCustomPoster
             if snapshot.usingCustomPoster {
-                posterURL = snapshot.customPosterURL
+                customPosterPath = snapshot.customPosterPath
             } else if wasUsingCustomPoster {
-                posterURL = nil
+                customPosterPath = nil
             }
             trackingUpdatedAt = snapshot.trackingUpdatedAt
         }

@@ -83,14 +83,13 @@ struct LibraryMetadataRefreshTests {
     }
 
     @Test @MainActor func testLibraryImageCacheCollectsRelatedDetailURLs() throws {
-        let posterURL = try #require(URL(string: "https://example.com/poster.jpg"))
-        let backdropURL = try #require(URL(string: "https://example.com/backdrop.jpg"))
-        let heroURL = try #require(URL(string: "https://example.com/hero.jpg"))
-        let logoURL = try #require(URL(string: "https://example.com/logo.png"))
-        let characterURL = try #require(URL(string: "https://example.com/character.jpg"))
-        let staffURL = try #require(URL(string: "https://example.com/staff.jpg"))
-        let seasonURL = try #require(URL(string: "https://example.com/season.jpg"))
-        let episodeURL = try #require(URL(string: "https://example.com/episode.jpg"))
+        let posterURL = try #require(URL(string: "https://image.tmdb.org/t/p/original/poster.jpg"))
+        let backdropURL = try #require(URL(string: "https://image.tmdb.org/t/p/original/backdrop.jpg"))
+        let logoURL = try #require(URL(string: "https://image.tmdb.org/t/p/w500/logo.png"))
+        let characterURL = try #require(URL(string: "https://image.tmdb.org/t/p/w185/character.jpg"))
+        let staffURL = try #require(URL(string: "https://image.tmdb.org/t/p/w185/staff.jpg"))
+        let seasonURL = try #require(URL(string: "https://image.tmdb.org/t/p/w342/season.jpg"))
+        let episodeURL = try #require(URL(string: "https://image.tmdb.org/t/p/original/episode.jpg"))
 
         let entry = AnimeEntry(
             name: "Cache Test",
@@ -102,7 +101,6 @@ struct LibraryMetadataRefreshTests {
         entry.detail = AnimeEntryDetail(
             language: "en",
             title: "Cache Test",
-            heroImageURL: heroURL,
             logoImageURL: logoURL,
             characters: [
                 AnimeEntryCharacter(
@@ -145,7 +143,6 @@ struct LibraryMetadataRefreshTests {
                 == Set([
                     posterURL,
                     backdropURL,
-                    heroURL,
                     logoURL,
                     characterURL,
                     staffURL,

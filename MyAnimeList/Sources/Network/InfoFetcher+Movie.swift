@@ -193,25 +193,22 @@ extension InfoFetcher {
             nameTranslations: translations.name,
             overview: movie.overview,
             overviewTranslations: translations.overview,
-            posterURL: imagesConfiguration.posterURL(
-                for: TMDbImageSelection.preferredPosterPath(
+            posterPath: TMDbImagePath.storagePath(
+                from: TMDbImageSelection.preferredPosterPath(
                     from: imageResources.posters,
                     originalLanguageCode: movie.originalLanguage,
                     metadataLanguageCode: language.rawValue
-                ),
-                idealWidth: .max
+                )
             ),
-            backdropURL: imagesConfiguration.backdropURL(
-                for: TMDbImageSelection.preferredBackdropPath(from: imageResources.backdrops),
-                idealWidth: .max
+            backdropPath: TMDbImagePath.storagePath(
+                from: TMDbImageSelection.preferredBackdropPath(from: imageResources.backdrops)
             ),
-            logoURL: imagesConfiguration.logoURL(
-                for: TMDbImageSelection.preferredLogoPath(
+            logoPath: TMDbImagePath.storagePath(
+                from: TMDbImageSelection.preferredLogoPath(
                     from: imageResources.logos,
                     originalLanguageCode: movie.originalLanguage,
                     metadataLanguageCode: language.rawValue
-                ),
-                idealWidth: .max
+                )
             ),
             originalLanguageCode: movie.originalLanguage,
             tmdbID: movie.id,
@@ -236,17 +233,15 @@ extension InfoFetcher {
             status: movie.status?.rawValue,
             airDate: movie.releaseDate,
             primaryLinkURL: movie.homepageURL,
-            heroImageURL: imagesConfiguration.backdropURL(
-                for: TMDbImageSelection.preferredBackdropPath(from: imageResources.backdrops),
-                idealWidth: 1_280
+            heroImagePath: TMDbImagePath.storagePath(
+                from: TMDbImageSelection.preferredBackdropPath(from: imageResources.backdrops)
             ),
-            logoImageURL: imagesConfiguration.logoURL(
-                for: TMDbImageSelection.preferredLogoPath(
+            logoImagePath: TMDbImagePath.storagePath(
+                from: TMDbImageSelection.preferredLogoPath(
                     from: imageResources.logos,
                     originalLanguageCode: movie.originalLanguage,
                     metadataLanguageCode: language.rawValue
-                ),
-                idealWidth: 500
+                )
             ),
             genreIDs: movie.genres?.map(\.id) ?? [],
             voteAverage: movie.voteAverage,
@@ -260,7 +255,7 @@ extension InfoFetcher {
                         originalName: nil,
                         language: language
                     ),
-                    profileURL: imagesConfiguration.profileURL(for: $0.profilePath, idealWidth: 185)
+                    profilePath: TMDbImagePath.storagePath(from: $0.profilePath)
                 )
             },
             staff: makeStaff(

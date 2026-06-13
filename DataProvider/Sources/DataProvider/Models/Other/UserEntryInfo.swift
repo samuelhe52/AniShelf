@@ -356,9 +356,10 @@ extension AnimeEntry {
 
     @discardableResult
     public func updateCustomPosterURL(_ posterURL: URL?, at date: Date = .now) -> Bool {
-        guard usingCustomPoster != true || self.posterURL != posterURL else { return false }
+        let posterPath = TMDbImagePath.storagePath(from: posterURL)
+        guard usingCustomPoster != true || customPosterPath != posterPath else { return false }
         usingCustomPoster = true
-        self.posterURL = posterURL
+        customPosterPath = posterPath
         markTrackingModified(at: date)
         return true
     }

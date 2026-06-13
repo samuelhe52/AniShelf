@@ -320,16 +320,12 @@ final class LibraryMetadataRefresher {
                 let tmdbID = entry.tmdbID
                 let name = entry.name
                 let type = entry.type
-                let originalPosterURL = entry.posterURL
-                let usingCustomPoster = entry.usingCustomPoster
                 group.addTask {
                     do {
                         let latestInfo = try await self.fetchLatestInfo(
                             entryID: entryID,
                             tmdbID: tmdbID,
                             entryType: type,
-                            originalPosterURL: originalPosterURL,
-                            usingCustomPoster: usingCustomPoster,
                             fetcher: fetcher,
                             language: language)
                         return .success(latestInfo.0, latestInfo.1, latestInfo.2)
@@ -364,8 +360,6 @@ final class LibraryMetadataRefresher {
         entryID: PersistentIdentifier,
         tmdbID: Int,
         entryType: AnimeType,
-        originalPosterURL: URL?,
-        usingCustomPoster: Bool,
         fetcher: InfoFetcher,
         language: Language
     ) async throws -> (PersistentIdentifier, EntryMetadata, AnimeEntryDetailDTO) {
@@ -373,11 +367,7 @@ final class LibraryMetadataRefresher {
             entryType: entryType,
             tmdbID: tmdbID,
             language: language)
-        var resolvedInfo = latestInfo.0
-        if usingCustomPoster {
-            resolvedInfo.posterURL = originalPosterURL
-        }
-        return (entryID, resolvedInfo, latestInfo.1)
+        return (entryID, latestInfo.0, latestInfo.1)
     }
 
     private func parentSeriesUpdate(

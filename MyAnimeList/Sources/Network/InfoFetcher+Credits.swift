@@ -33,7 +33,7 @@ extension InfoFetcher {
                     originalName: nil,
                     language: language
                 ),
-                profileURL: imagesConfiguration.profileURL(for: $0.profilePath, idealWidth: 185)
+                profilePath: TMDbImagePath.storagePath(from: $0.profilePath)
             )
         }
     }
@@ -58,7 +58,7 @@ extension InfoFetcher {
                     originalName: $0.originalName,
                     language: language
                 ),
-                profileURL: imagesConfiguration.profileURL(for: $0.profilePath, idealWidth: 185)
+                profilePath: TMDbImagePath.storagePath(from: $0.profilePath)
             )
         }
     }
@@ -78,7 +78,7 @@ extension InfoFetcher {
                 ),
                 role: $0.job.nilIfEmpty ?? $0.department.nilIfEmpty ?? "Staff",
                 department: $0.department.nilIfEmpty,
-                profileURL: imagesConfiguration.profileURL(for: $0.profilePath, idealWidth: 185)
+                profilePath: TMDbImagePath.storagePath(from: $0.profilePath)
             )
         }
     }
@@ -112,10 +112,7 @@ extension InfoFetcher {
                 ),
                 role: department ?? "Staff",
                 department: department,
-                profileURL: imagesConfiguration.profileURL(
-                    for: member.profilePath,
-                    idealWidth: 185
-                ),
+                profilePath: TMDbImagePath.storagePath(from: member.profilePath),
                 jobs: member.jobs.map {
                     AnimeEntryStaffJobDTO(
                         creditID: $0.creditID,

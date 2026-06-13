@@ -16,7 +16,9 @@ public struct LegacyAnimeEntryDetailPayload: Codable, Equatable, Sendable {
     public var airDate: Date?
     public var primaryLinkURL: URL?
     public var heroImageURL: URL?
+    public var heroImagePath: String?
     public var logoImageURL: URL?
+    public var logoImagePath: String?
     public var genreIDs: [Int]
     public var voteAverage: Double?
     public var runtimeMinutes: Int?
@@ -35,7 +37,9 @@ public struct LegacyAnimeEntryDetailPayload: Codable, Equatable, Sendable {
         airDate: Date? = nil,
         primaryLinkURL: URL? = nil,
         heroImageURL: URL? = nil,
+        heroImagePath: String? = nil,
         logoImageURL: URL? = nil,
+        logoImagePath: String? = nil,
         genreIDs: [Int] = [],
         voteAverage: Double? = nil,
         runtimeMinutes: Int? = nil,
@@ -53,7 +57,13 @@ public struct LegacyAnimeEntryDetailPayload: Codable, Equatable, Sendable {
         self.airDate = airDate
         self.primaryLinkURL = primaryLinkURL
         self.heroImageURL = heroImageURL
+        self.heroImagePath =
+            TMDbImagePath.storagePath(from: heroImagePath)
+            ?? TMDbImagePath.storagePath(from: heroImageURL)
         self.logoImageURL = logoImageURL
+        self.logoImagePath =
+            TMDbImagePath.storagePath(from: logoImagePath)
+            ?? TMDbImagePath.storagePath(from: logoImageURL)
         self.genreIDs = genreIDs
         self.voteAverage = voteAverage
         self.runtimeMinutes = runtimeMinutes
@@ -70,12 +80,22 @@ public struct LegacyAnimeEntryCharacterPayload: Codable, Equatable, Sendable, Id
     public var characterName: String
     public var actorName: String
     public var profileURL: URL?
+    public var profilePath: String?
 
-    public init(id: Int, characterName: String, actorName: String, profileURL: URL? = nil) {
+    public init(
+        id: Int,
+        characterName: String,
+        actorName: String,
+        profileURL: URL? = nil,
+        profilePath: String? = nil
+    ) {
         self.id = id
         self.characterName = characterName
         self.actorName = actorName
         self.profileURL = profileURL
+        self.profilePath =
+            TMDbImagePath.storagePath(from: profilePath)
+            ?? TMDbImagePath.storagePath(from: profileURL)
     }
 }
 
@@ -133,7 +153,9 @@ public struct AnimeEntryDetailDTO: Equatable, Sendable {
     public var airDate: Date?
     public var primaryLinkURL: URL?
     public var heroImageURL: URL?
+    public var heroImagePath: String?
     public var logoImageURL: URL?
+    public var logoImagePath: String?
     public var genreIDs: [Int]
     public var voteAverage: Double?
     public var runtimeMinutes: Int?
@@ -153,7 +175,9 @@ public struct AnimeEntryDetailDTO: Equatable, Sendable {
         airDate: Date? = nil,
         primaryLinkURL: URL? = nil,
         heroImageURL: URL? = nil,
+        heroImagePath: String? = nil,
         logoImageURL: URL? = nil,
+        logoImagePath: String? = nil,
         genreIDs: [Int] = [],
         voteAverage: Double? = nil,
         runtimeMinutes: Int? = nil,
@@ -172,7 +196,13 @@ public struct AnimeEntryDetailDTO: Equatable, Sendable {
         self.airDate = airDate
         self.primaryLinkURL = primaryLinkURL
         self.heroImageURL = heroImageURL
+        self.heroImagePath =
+            TMDbImagePath.storagePath(from: heroImagePath)
+            ?? TMDbImagePath.storagePath(from: heroImageURL)
         self.logoImageURL = logoImageURL
+        self.logoImagePath =
+            TMDbImagePath.storagePath(from: logoImagePath)
+            ?? TMDbImagePath.storagePath(from: logoImageURL)
         self.genreIDs = genreIDs
         self.voteAverage = voteAverage
         self.runtimeMinutes = runtimeMinutes
@@ -236,12 +266,22 @@ public struct AnimeEntryCharacterDTO: Equatable, Sendable, Identifiable {
     public var characterName: String
     public var actorName: String
     public var profileURL: URL?
+    public var profilePath: String?
 
-    public init(id: Int, characterName: String, actorName: String, profileURL: URL? = nil) {
+    public init(
+        id: Int,
+        characterName: String,
+        actorName: String,
+        profileURL: URL? = nil,
+        profilePath: String? = nil
+    ) {
         self.id = id
         self.characterName = characterName
         self.actorName = actorName
         self.profileURL = profileURL
+        self.profilePath =
+            TMDbImagePath.storagePath(from: profilePath)
+            ?? TMDbImagePath.storagePath(from: profileURL)
     }
 }
 
@@ -251,6 +291,7 @@ public struct AnimeEntryStaffDTO: Equatable, Sendable, Identifiable {
     public var role: String
     public var department: String?
     public var profileURL: URL?
+    public var profilePath: String?
     public var jobs: [AnimeEntryStaffJobDTO]
 
     public init(
@@ -259,6 +300,7 @@ public struct AnimeEntryStaffDTO: Equatable, Sendable, Identifiable {
         role: String,
         department: String? = nil,
         profileURL: URL? = nil,
+        profilePath: String? = nil,
         jobs: [AnimeEntryStaffJobDTO] = []
     ) {
         self.id = id
@@ -266,6 +308,9 @@ public struct AnimeEntryStaffDTO: Equatable, Sendable, Identifiable {
         self.role = role
         self.department = department
         self.profileURL = profileURL
+        self.profilePath =
+            TMDbImagePath.storagePath(from: profilePath)
+            ?? TMDbImagePath.storagePath(from: profileURL)
         self.jobs = jobs
     }
 }
@@ -292,6 +337,7 @@ public struct AnimeEntrySeasonSummaryDTO: Equatable, Sendable, Identifiable {
     public var seasonNumber: Int
     public var title: String
     public var posterURL: URL?
+    public var posterPath: String?
     public var episodeCount: Int?
 
     public init(
@@ -299,12 +345,16 @@ public struct AnimeEntrySeasonSummaryDTO: Equatable, Sendable, Identifiable {
         seasonNumber: Int,
         title: String,
         posterURL: URL? = nil,
+        posterPath: String? = nil,
         episodeCount: Int? = nil
     ) {
         self.id = id
         self.seasonNumber = seasonNumber
         self.title = title
         self.posterURL = posterURL
+        self.posterPath =
+            TMDbImagePath.storagePath(from: posterPath)
+            ?? TMDbImagePath.storagePath(from: posterURL)
         self.episodeCount = episodeCount
     }
 }
@@ -315,18 +365,23 @@ public struct AnimeEntryEpisodeSummaryDTO: Equatable, Sendable, Identifiable {
     public var title: String
     public var airDate: Date?
     public var imageURL: URL?
+    public var imagePath: String?
 
     public init(
         id: Int,
         episodeNumber: Int,
         title: String,
         airDate: Date? = nil,
-        imageURL: URL? = nil
+        imageURL: URL? = nil,
+        imagePath: String? = nil
     ) {
         self.id = id
         self.episodeNumber = episodeNumber
         self.title = title
         self.airDate = airDate
         self.imageURL = imageURL
+        self.imagePath =
+            TMDbImagePath.storagePath(from: imagePath)
+            ?? TMDbImagePath.storagePath(from: imageURL)
     }
 }

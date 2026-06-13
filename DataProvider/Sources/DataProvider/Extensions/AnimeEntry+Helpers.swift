@@ -33,8 +33,9 @@ extension AnimeEntry {
         onAirDate = other.onAirDate
         type = other.type
         linkToDetails = other.linkToDetails
-        posterURL = other.posterURL
-        backdropURL = other.backdropURL
+        posterPath = other.posterPath
+        backdropPath = other.backdropPath
+        customPosterPath = other.customPosterPath
         // Date saved and id is not updated.
         dateStarted = other.dateStarted
         dateFinished = other.dateFinished
@@ -55,10 +56,8 @@ extension AnimeEntry {
             onAirDate: .now,
             type: .series,
             linkToDetails: URL(string: "https://frieren-anime.jp/"),
-            posterURL: URL(
-                string: "https://image.tmdb.org/t/p/original/dDRiOkCBCkd7w6ysMFr39G16opQ.jpg"),
-            backdropURL: URL(
-                string: "https://image.tmdb.org/t/p/original/96RT2A47UdzWlUfvIERFyBsLhL2.jpg"),
+            posterPath: "/dDRiOkCBCkd7w6ysMFr39G16opQ.jpg",
+            backdropPath: "/96RT2A47UdzWlUfvIERFyBsLhL2.jpg",
             tmdbID: 209867,
             dateSaved: .now,
             dateStarted: nil,
