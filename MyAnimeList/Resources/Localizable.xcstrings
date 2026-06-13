@@ -951,6 +951,22 @@
         }
       }
     },
+    "Batch input formats" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一括入力の形式"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批量输入格式"
+          }
+        }
+      }
+    },
     "Batch Results" : {
       "localizations" : {
         "ja" : {
@@ -983,22 +999,6 @@
         }
       }
     },
-    "Batch input formats" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一括入力の形式"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "批量输入格式"
-          }
-        }
-      }
-    },
     "Batch search failed" : {
       "localizations" : {
         "ja" : {
@@ -1011,6 +1011,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "批量搜索失败"
+          }
+        }
+      }
+    },
+    "Batch search now supports adding by TMDb ID." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一括検索で、TMDb IDを使った追加に対応しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批量搜索现已支持按 TMDb ID 添加。"
           }
         }
       }
@@ -1075,6 +1091,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在不刷新元数据的情况下缓存海报和图片。"
+          }
+        }
+      }
+    },
+    "Caching Images: %lld / %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Caching Images: %1$lld / %2$lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像をキャッシュ中: %1$lld / %2$lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在缓存图片：%1$lld / %2$lld"
+          }
+        }
+      }
+    },
+    "Caching Images: 0 / %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Caching Images: 0 / %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像をキャッシュ中: 0 / %lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在缓存图片：0 / %lld"
           }
         }
       }
@@ -2505,6 +2565,7 @@
       }
     },
     "Fetching Images: %lld / %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2527,6 +2588,7 @@
       }
     },
     "Fetching Images: 0 / %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2624,6 +2686,54 @@
         }
       }
     },
+    "Fixed a problem where info refresh could hang the app." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "情報更新中にアプリが固まることがある問題を修正しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修复了刷新信息时应用可能卡住的问题。"
+          }
+        }
+      }
+    },
+    "Fixed an issue where adding certain anime could fail and occasionally crash the app." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一部のアニメを追加すると失敗し、まれにアプリがクラッシュする問題を修正しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修复了添加某些动画时可能失败并偶发导致应用闪退的问题。"
+          }
+        }
+      }
+    },
+    "Fixed an issue where deleted entries could sometimes reappear after sync." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除した項目が同期後に再び表示されることがある問題を修正しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修复了已删除条目在同步后有时会重新出现的问题。"
+          }
+        }
+      }
+    },
     "Fixed an issue where some entries could not be updated after changing metadata language and refreshing metadata." : {
       "localizations" : {
         "ja" : {
@@ -2668,54 +2778,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "修复了海报选择页面偶发滑动抖动的问题。"
-          }
-        }
-      }
-    },
-    "Fixed an issue where adding certain anime could fail and occasionally crash the app." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一部のアニメを追加すると失敗し、まれにアプリがクラッシュする問題を修正しました。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "修复了添加某些动画时可能失败并偶发导致应用闪退的问题。"
-          }
-        }
-      }
-    },
-    "Fixed an issue where deleted entries could sometimes reappear after sync." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "削除した項目が同期後に再び表示されることがある問題を修正しました。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "修复了已删除条目在同步后有时会重新出现的问题。"
-          }
-        }
-      }
-    },
-    "Fixed a problem where info refresh could hang the app." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "情報更新中にアプリが固まることがある問題を修正しました。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "修复了刷新信息时应用可能卡住的问题。"
           }
         }
       }
@@ -2961,22 +3023,6 @@
         }
       }
     },
-    "Improved watch status switching and date selection UX." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "視聴ステータスの切り替えと日付選択のUXを改善しました。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "优化了观看状态切换与日期选择体验。"
-          }
-        }
-      }
-    },
     "Improved the rating UI." : {
       "localizations" : {
         "ja" : {
@@ -2989,6 +3035,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "改善了评分 UI。"
+          }
+        }
+      }
+    },
+    "Improved watch status switching and date selection UX." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "視聴ステータスの切り替えと日付選択のUXを改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "优化了观看状态切换与日期选择体验。"
           }
         }
       }
@@ -4829,22 +4891,6 @@
         }
       }
     },
-    "Restore Unavailable" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "復元できません"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法恢复"
-          }
-        }
-      }
-    },
     "Restore a library backup." : {
       "localizations" : {
         "ja" : {
@@ -4873,6 +4919,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "恢复完成！"
+          }
+        }
+      }
+    },
+    "Restore Unavailable" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "復元できません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法恢复"
           }
         }
       }
@@ -5081,22 +5143,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "搜索"
-          }
-        }
-      }
-    },
-    "Batch search now supports adding by TMDb ID." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一括検索で、TMDb IDを使った追加に対応しました。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "批量搜索现已支持按 TMDb ID 添加。"
           }
         }
       }
@@ -5616,22 +5662,6 @@
         }
       }
     },
-    "Switch Poster" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ポスターを変更"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "更换海报"
-          }
-        }
-      }
-    },
     "Supported formats:\nTitle, for example Frieren\nmovie:<tmdb_id>, for example movie:4935\nseries:<tmdb_id>, for example series:24835\nseason:<series_tmdb_id>:<season_number>, for example season:24835:1\n\nUnmatched formats automatically use normal title search." : {
       "localizations" : {
         "ja" : {
@@ -5660,6 +5690,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "支持的格式：\n标题，例如 Frieren\nmovie:<tmdb_id>，例如 movie:4935\nseries:<tmdb_id>，例如 series:24835\nseason:<series_tmdb_id>:<season_number>，例如 season:24835:1\n\n不匹配的格式会自动按普通标题搜索处理。\n点按此提示可复制这些支持的格式。"
+          }
+        }
+      }
+    },
+    "Switch Poster" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ポスターを変更"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更换海报"
           }
         }
       }
@@ -5986,22 +6032,6 @@
         }
       }
     },
-    "This version includes feature updates and visual improvements." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このバージョンには機能アップデートとビジュアル改善が含まれています。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此版本包含功能更新和视觉改进。"
-          }
-        }
-      }
-    },
     "This version adds iCloud sync and includes UI improvements." : {
       "localizations" : {
         "ja" : {
@@ -6030,6 +6060,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "这个版本包含问题修复和搜索改进。"
+          }
+        }
+      }
+    },
+    "This version includes feature updates and visual improvements." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このバージョンには機能アップデートとビジュアル改善が含まれています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此版本包含功能更新和视觉改进。"
           }
         }
       }

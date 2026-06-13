@@ -20,18 +20,21 @@ struct KFImageView: View {
 
     let url: URL?
     let diskCacheExpiration: StorageExpiration
-    let targetWidth: CGFloat?
+    let targetSize: CGSize?
+    let cacheOriginalImage: Bool
     let animation: Animation?
     @Binding var imageLoaded: Bool
     @State private var loadState: LoadState = .loading
 
     private var requestID: String {
-        "\(url?.absoluteString ?? "nil")|\(targetWidth?.description ?? "nil")"
+        "\(url?.absoluteString ?? "nil")|\(targetSize?.debugDescription ?? "nil")|\(cacheOriginalImage)"
     }
 
     init(
         url: URL?,
         targetWidth: CGFloat? = nil,
+        targetSize: CGSize? = nil,
+        cacheOriginalImage: Bool = false,
         animation: Animation? = .default,
         diskCacheExpiration: StorageExpiration,
         imageLoaded: Binding<Bool> = .constant(false)
@@ -39,7 +42,8 @@ struct KFImageView: View {
         self.url = url
         self.animation = animation
         self.diskCacheExpiration = diskCacheExpiration
-        self.targetWidth = targetWidth
+        self.targetSize = targetSize ?? targetWidth.map(Self.posterTargetSize(width:))
+        self.cacheOriginalImage = cacheOriginalImage
         self._imageLoaded = imageLoaded
     }
 
@@ -67,7 +71,7 @@ struct KFImageView: View {
             Image(systemName: "photo.badge.exclamationmark")
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.secondary)
-                .font(.system(size: targetWidth == nil ? 28 : 48, weight: .regular))
+                .font(.system(size: targetSize == nil ? 28 : 48, weight: .regular))
         }
     }
 
@@ -83,13 +87,15 @@ struct KFImageView: View {
         imageLoaded = false
 
         var kfRetrieveOptions: KingfisherOptionsInfo = [
-            .cacheOriginalImage,
             .diskCacheExpiration(diskCacheExpiration)
         ]
 
-        if let targetWidth {
-            let size = CGSize(width: targetWidth, height: targetWidth * 1.5)
-            let processor = DownsamplingImageProcessor(size: size)
+        if cacheOriginalImage {
+            kfRetrieveOptions.append(.cacheOriginalImage)
+        }
+
+        if let targetSize {
+            let processor = DownsamplingImageProcessor(size: targetSize)
             kfRetrieveOptions.append(.processor(processor))
         }
 
@@ -111,5 +117,9 @@ struct KFImageView: View {
                 imageLoaded = false
             }
         }
+    }
+
+    private static func posterTargetSize(width: CGFloat) -> CGSize {
+        CGSize(width: width, height: width * 1.5)
     }
 }

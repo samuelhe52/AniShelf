@@ -20,7 +20,7 @@ struct EntryContextMenuPreview: View {
     }
 
     var body: some View {
-        KFImageView(url: snapshot.posterURL, diskCacheExpiration: .longTerm)
+        KFImageView(url: snapshot.posterURL, targetWidth: 1_000, diskCacheExpiration: .longTerm)
             .scaledToFit()
     }
 }

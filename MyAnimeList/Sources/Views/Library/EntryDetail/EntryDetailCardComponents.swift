@@ -16,7 +16,7 @@ struct PersonCardView: View {
         VStack(alignment: .leading, spacing: 10) {
             Group {
                 if let profileURL = card.profileURL {
-                    KFImageView(url: profileURL, targetWidth: 240, diskCacheExpiration: .longTerm)
+                    KFImageView(url: profileURL, targetWidth: 240, diskCacheExpiration: .shortTerm)
                         .scaledToFill()
                         .frame(width: 122, height: 156)
                         .clipped()

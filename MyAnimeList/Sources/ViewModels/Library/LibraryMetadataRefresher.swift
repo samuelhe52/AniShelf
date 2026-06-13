@@ -134,8 +134,8 @@ final class LibraryMetadataRefresher {
                 libraryMetadataRefreshLogger.info(
                     "Starting image prefetch for refreshed library content."
                 )
-                let imagePrefetchCompletion = await LibraryImageCacheService.prefetchImageURLsForRefreshPhaseNow(
-                    imageURLsForRefreshPhase(from: updates),
+                let imagePrefetchCompletion = await LibraryImageCacheService.prefetchImageTargetsForRefreshPhaseNow(
+                    imagePrefetchTargetsForRefreshPhase(from: updates),
                     reporter: options.reporter
                 )
                 libraryMetadataRefreshLogger.info(
@@ -175,24 +175,25 @@ final class LibraryMetadataRefresher {
         }
     }
 
-    /// Returns the image URLs that should be prefetched from refreshed metadata updates.
+    /// Returns the image targets that should be prefetched from refreshed metadata updates.
     ///
     /// The refresh writer applies updates on a background model context, so the main-context
     /// `AnimeEntry` instances passed into the refresh can still contain stale image URLs. Building
-    /// the prefetch set from update payloads ensures posters, backdrops, hero images, and logos use
-    /// the freshly fetched metadata.
+    /// the prefetch set from update payloads ensures posters, backdrops, and logos use the freshly
+    /// fetched metadata.
     ///
     /// Parent-series artwork is intentionally excluded here. Refresh can discover or insert parent
     /// series transitively, and prefetching every parent image would let cache growth scale beyond
     /// the entries the user explicitly refreshed.
-    private func imageURLsForRefreshPhase(from updates: [LibraryMetadataRefreshUpdate]) -> [URL] {
+    private func imagePrefetchTargetsForRefreshPhase(
+        from updates: [LibraryMetadataRefreshUpdate]
+    ) -> [LibraryImageCacheService.ImagePrefetchTarget] {
         updates.flatMap { update in
-            [
-                update.info.posterURL,
-                update.info.backdropURL,
-                update.detail.heroImageURL,
-                update.detail.logoImageURL
-            ].compactMap(\.self)
+            LibraryImageCacheService.imagePrefetchTargets(
+                posterURL: update.info.posterURL,
+                backdropURL: update.info.backdropURL,
+                logoImageURL: update.detail.logoImageURL
+            )
         }
     }
 

@@ -231,11 +231,15 @@ struct EntryDetailView: View {
 
                 VStack(alignment: .center, spacing: 6) {
                     if let logoImageURL = model.logoImageURL {
-                        KFImageView(url: logoImageURL, targetWidth: 800, diskCacheExpiration: .longTerm)
-                            .scaledToFit()
-                            .frame(maxWidth: 280)
-                            .frame(height: 78)
-                            .shadow(color: .black.opacity(0.28), radius: 10, y: 6)
+                        KFImageView(
+                            url: logoImageURL,
+                            targetSize: CGSize(width: 800, height: 320),
+                            diskCacheExpiration: .longTerm
+                        )
+                        .scaledToFit()
+                        .frame(maxWidth: 280)
+                        .frame(height: 78)
+                        .shadow(color: .black.opacity(0.28), radius: 10, y: 6)
                     } else {
                         Text(model.displayTitle)
                             .font(.largeTitle.weight(.bold))
@@ -283,9 +287,13 @@ struct EntryDetailView: View {
     private var heroArtwork: some View {
         let url = model.heroImageURL ?? entry.backdropURL ?? entry.posterURL
         if let url {
-            KFImageView(url: url, targetWidth: 1_200, diskCacheExpiration: .longTerm)
-                .scaledToFill()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            KFImageView(
+                url: url,
+                targetSize: CGSize(width: 1_200, height: 675),
+                diskCacheExpiration: .longTerm
+            )
+            .scaledToFill()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             LinearGradient(
                 colors: [accentColor.opacity(0.45), Color.blue.opacity(0.25)],

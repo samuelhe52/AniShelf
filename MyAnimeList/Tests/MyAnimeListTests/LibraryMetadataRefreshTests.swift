@@ -13,6 +13,75 @@ import Testing
 @testable import MyAnimeList
 
 struct LibraryMetadataRefreshTests {
+    @Test @MainActor func testLibraryImageCacheBuildsCorePrefetchTargets() throws {
+        let posterURL = try #require(URL(string: "https://example.com/poster.jpg"))
+        let backdropURL = try #require(URL(string: "https://example.com/backdrop.jpg"))
+        let logoURL = try #require(URL(string: "https://example.com/logo.png"))
+
+        let targets = Set(
+            LibraryImageCacheService.imagePrefetchTargets(
+                posterURL: posterURL,
+                backdropURL: backdropURL,
+                logoImageURL: logoURL
+            )
+        )
+
+        #expect(
+            targets
+                == Set([
+                    .init(url: posterURL, targetSize: CGSize(width: 240, height: 360)),
+                    .init(url: posterURL, targetSize: CGSize(width: 360, height: 540)),
+                    .init(url: posterURL, targetSize: CGSize(width: 1_000, height: 1_500)),
+                    .init(url: backdropURL, targetSize: CGSize(width: 1_200, height: 675)),
+                    .init(url: logoURL, targetSize: CGSize(width: 800, height: 320))
+                ])
+        )
+    }
+
+    @Test @MainActor func testLibraryImageCacheBuildsURLLevelPrefetchWorkItems() throws {
+        let posterURL = try #require(URL(string: "https://example.com/poster.jpg"))
+        let heroURL = try #require(URL(string: "https://example.com/hero.jpg"))
+
+        let targets = [
+            LibraryImageCacheService.ImagePrefetchTarget(
+                url: posterURL,
+                targetSize: CGSize(width: 240, height: 360)
+            ),
+            LibraryImageCacheService.ImagePrefetchTarget(
+                url: posterURL,
+                targetSize: CGSize(width: 360, height: 540)
+            ),
+            LibraryImageCacheService.ImagePrefetchTarget(
+                url: posterURL,
+                targetSize: CGSize(width: 240, height: 360)
+            ),
+            LibraryImageCacheService.ImagePrefetchTarget(
+                url: heroURL,
+                targetSize: CGSize(width: 1_200, height: 675)
+            )
+        ]
+
+        let workItems = LibraryImageCacheService.imagePrefetchWorkItems(from: targets)
+
+        #expect(workItems.count == 2)
+        #expect(
+            workItems
+                == [
+                    .init(
+                        url: heroURL,
+                        targetSizes: [CGSize(width: 1_200, height: 675)]
+                    ),
+                    .init(
+                        url: posterURL,
+                        targetSizes: [
+                            CGSize(width: 240, height: 360),
+                            CGSize(width: 360, height: 540)
+                        ]
+                    )
+                ]
+        )
+    }
+
     @Test @MainActor func testLibraryImageCacheCollectsRelatedDetailURLs() throws {
         let posterURL = try #require(URL(string: "https://example.com/poster.jpg"))
         let backdropURL = try #require(URL(string: "https://example.com/backdrop.jpg"))
