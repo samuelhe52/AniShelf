@@ -33,7 +33,7 @@ struct LibraryMetadataRefreshTests {
                     .init(url: posterURL, targetSize: CGSize(width: 360, height: 540)),
                     .init(url: posterURL, targetSize: CGSize(width: 1_000, height: 1_500)),
                     .init(url: backdropURL, targetSize: CGSize(width: 1_200, height: 675)),
-                    .init(url: logoURL, targetSize: CGSize(width: 800, height: 320))
+                    .init(url: logoURL, targetSize: CGSize(width: 500, height: 500))
                 ])
         )
     }

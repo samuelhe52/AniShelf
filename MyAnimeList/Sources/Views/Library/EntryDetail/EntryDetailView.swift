@@ -233,7 +233,7 @@ struct EntryDetailView: View {
                     if let logoImageURL = model.logoImageURL {
                         KFImageView(
                             url: logoImageURL,
-                            targetSize: CGSize(width: 800, height: 320),
+                            targetSize: CGSize(width: 500, height: 500),
                             diskCacheExpiration: .longTerm
                         )
                         .scaledToFit()

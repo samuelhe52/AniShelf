@@ -7,7 +7,7 @@ import SwiftUI
 enum LibraryImageCacheService {
     private static let posterPrefetchTargetWidths: [CGFloat] = [240, 360, 1_000]
     private static let backdropPrefetchTargetSize = CGSize(width: 1_200, height: 675)
-    private static let logoPrefetchTargetSize = CGSize(width: 800, height: 320)
+    private static let logoPrefetchTargetSize = CGSize(width: 500, height: 500)
     private static let posterHeightRatio: CGFloat = 1.5
     private static let prefetchDiskCacheExpiration: StorageExpiration = .longTerm
 
