@@ -75,6 +75,8 @@ After downloading a single image, each downsampled size variant is stored with `
 
 ### F6 — `posterTargetSize(width:)` duplicated in `KFImageView` and `LibraryImageCacheService` with no shared constant
 
+**Status:** Resolved
+
 **File:** `MyAnimeList/Sources/Views/Gadgets/KFImageView.swift` line ~122 and `MyAnimeList/Sources/ViewModels/Library/LibraryImageCacheService.swift` line ~261  
 **Severity:** Low
 
@@ -85,6 +87,8 @@ Both types define an identical `posterTargetSize(width:) -> CGSize` that returns
 ---
 
 ### F7 — `TMDbImagePath.storagePath(from: path) ?? TMDbImagePath.storagePath(from: url)` copy-pasted across 6+ DTO initialisers
+
+**Status:** Resolved
 
 **File:** `DataProvider/Sources/DataProvider/Models/Other/AnimeEntryDetailDTO.swift` lines ~60, ~96, ~199, ~235, ~311, ~355 and others  
 **Severity:** Low
@@ -103,6 +107,8 @@ appears in at least 6 DTO inits. Any change to the fallback logic (scheme normal
 
 ### F8 — `imagePrefetchWorkItems(from:)` sorts by URL string on every production call to satisfy test-determinism
 
+**Status:** Resolved
+
 **File:** `MyAnimeList/Sources/ViewModels/Library/LibraryImageCacheService.swift` line ~254  
 **Severity:** Low
 
@@ -114,9 +120,4 @@ The work-item array is sorted by `url.absoluteString` in the production implemen
 
 ### F9 — `LibraryEntrySyncSnapshot` `URL`-overload init is easy to misuse: a relative path string wrapped in `URL(string:)` silently becomes `nil`
 
-**File:** `DataProvider/Sources/LibrarySync/LibraryEntrySyncSnapshot.swift` line ~216  
-**Severity:** Low
-
-The `customPosterURL: URL?` overload calls `TMDbImagePath.storagePath(from: url)`, which returns `nil` for relative URLs and non-TMDb hosts. A caller who holds a raw path string like `/posters/abc.jpg`, wraps it in `URL(string: "/posters/abc.jpg")` (a relative URL with no host), and passes it to the URL overload will silently store `customPosterPath = nil`. The `String` overload with the same input succeeds. Neither overload's parameter label signals the distinction.
-
-**Fix:** Either remove the URL overload (force callers to call `TMDbImagePath.storagePath` themselves) or rename the parameter to make the conversion explicit, e.g. `customPosterFromURL url: URL?`.
+**Status:** Invalid

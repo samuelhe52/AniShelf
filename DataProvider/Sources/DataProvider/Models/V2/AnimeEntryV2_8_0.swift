@@ -86,13 +86,11 @@ extension SchemaV2_8_0 {
             self.type = type
             self.linkToDetails = linkToDetails
             let resolvedPosterPath =
-                TMDbImagePath.storagePath(from: posterPath)
-                ?? TMDbImagePath.storagePath(from: posterURL)
+                TMDbImagePath.storagePath(from: posterPath, fallback: posterURL)
             let resolvedCustomPosterPath = TMDbImagePath.storagePath(from: customPosterPath)
             self.posterPath = usingCustomPoster ? nil : resolvedPosterPath
             self.backdropPath =
-                TMDbImagePath.storagePath(from: backdropPath)
-                ?? TMDbImagePath.storagePath(from: backdropURL)
+                TMDbImagePath.storagePath(from: backdropPath, fallback: backdropURL)
             self.customPosterPath =
                 usingCustomPoster
                 ? resolvedCustomPosterPath ?? resolvedPosterPath

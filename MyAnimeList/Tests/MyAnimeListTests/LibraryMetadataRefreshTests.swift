@@ -62,6 +62,7 @@ struct LibraryMetadataRefreshTests {
         ]
 
         let workItems = LibraryImageCacheService.imagePrefetchWorkItems(from: targets)
+            .sorted { $0.url.absoluteString < $1.url.absoluteString }
 
         #expect(workItems.count == 2)
         #expect(

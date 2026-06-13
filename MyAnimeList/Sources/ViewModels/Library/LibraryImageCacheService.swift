@@ -8,7 +8,6 @@ enum LibraryImageCacheService {
     private static let posterPrefetchTargetWidths: [CGFloat] = [240, 360, 1_000]
     private static let backdropPrefetchTargetSize = CGSize(width: 1_200, height: 675)
     private static let logoPrefetchTargetSize = CGSize(width: 500, height: 500)
-    private static let posterHeightRatio: CGFloat = 1.5
     private static let prefetchDiskCacheExpiration: StorageExpiration = .longTerm
 
     static func prefetchImages<C: Collection>(
@@ -253,13 +252,10 @@ enum LibraryImageCacheService {
                     targetSizes: Set(targets.map(\.targetSize))
                 )
             }
-            .sorted {
-                $0.url.absoluteString < $1.url.absoluteString
-            }
     }
 
     private static func posterTargetSize(width: CGFloat) -> CGSize {
-        CGSize(width: width, height: width * posterHeightRatio)
+        PosterImageSize.targetSize(width: width)
     }
 
     struct ImagePrefetchTarget: Hashable {
@@ -371,7 +367,8 @@ fileprivate struct KingfisherVariantImagePrefetcher: Sendable {
 
     private func prefetch(
         _ workItem: LibraryImageCacheService.ImagePrefetchWorkItem
-    ) async -> ImagePrefetchURLResult {        do {
+    ) async -> ImagePrefetchURLResult {
+        do {
             let missingProcessors = await missingProcessors(for: workItem)
             guard !missingProcessors.isEmpty else {
                 return .success(workItem.url)
@@ -442,7 +439,8 @@ fileprivate struct KingfisherVariantImagePrefetcher: Sendable {
             }
         }
 
-        return missingProcessors
+        return
+            missingProcessors
             .sorted {
                 if $0.0.width == $1.0.width {
                     return $0.0.height < $1.0.height

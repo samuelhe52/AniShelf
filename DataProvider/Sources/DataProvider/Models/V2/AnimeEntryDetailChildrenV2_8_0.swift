@@ -30,8 +30,7 @@ extension SchemaV2_8_0 {
             self.characterName = characterName
             self.actorName = actorName
             self.profilePath =
-                TMDbImagePath.storagePath(from: profilePath)
-                ?? TMDbImagePath.storagePath(from: profileURL)
+                TMDbImagePath.storagePath(from: profilePath, fallback: profileURL)
             self.displayOrder = displayOrder
         }
 
@@ -87,8 +86,7 @@ extension SchemaV2_8_0 {
             self.role = role
             self.department = department
             self.profilePath =
-                TMDbImagePath.storagePath(from: profilePath)
-                ?? TMDbImagePath.storagePath(from: profileURL)
+                TMDbImagePath.storagePath(from: profilePath, fallback: profileURL)
             self.jobs = jobs
             self.displayOrder = displayOrder
         }
@@ -160,8 +158,7 @@ extension SchemaV2_8_0 {
             self.seasonNumber = seasonNumber
             self.title = title
             self.posterPath =
-                TMDbImagePath.storagePath(from: posterPath)
-                ?? TMDbImagePath.storagePath(from: posterURL)
+                TMDbImagePath.storagePath(from: posterPath, fallback: posterURL)
             self.episodeCount = episodeCount
         }
 
@@ -211,8 +208,7 @@ extension SchemaV2_8_0 {
             self.title = title
             self.airDate = airDate
             self.imagePath =
-                TMDbImagePath.storagePath(from: imagePath)
-                ?? TMDbImagePath.storagePath(from: imageURL)
+                TMDbImagePath.storagePath(from: imagePath, fallback: imageURL)
             self.displayOrder = displayOrder
         }
 

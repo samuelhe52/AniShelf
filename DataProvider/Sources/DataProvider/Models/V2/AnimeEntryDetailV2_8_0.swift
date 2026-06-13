@@ -66,8 +66,7 @@ extension SchemaV2_8_0 {
             self.airDate = airDate
             self.primaryLinkURL = primaryLinkURL
             self.logoImagePath =
-                TMDbImagePath.storagePath(from: logoImagePath)
-                ?? TMDbImagePath.storagePath(from: logoImageURL)
+                TMDbImagePath.storagePath(from: logoImagePath, fallback: logoImageURL)
             self.genreIDs = genreIDs
             self.voteAverage = voteAverage
             self.runtimeMinutes = runtimeMinutes

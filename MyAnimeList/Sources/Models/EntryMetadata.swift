@@ -65,14 +65,11 @@ struct EntryMetadata: Equatable, Identifiable, Hashable, Sendable {
         self.overview = overview
         self.overviewTranslations = overviewTranslations
         self.posterPath =
-            TMDbImagePath.storagePath(from: posterPath)
-            ?? TMDbImagePath.storagePath(from: posterURL)
+            TMDbImagePath.storagePath(from: posterPath, fallback: posterURL)
         self.backdropPath =
-            TMDbImagePath.storagePath(from: backdropPath)
-            ?? TMDbImagePath.storagePath(from: backdropURL)
+            TMDbImagePath.storagePath(from: backdropPath, fallback: backdropURL)
         self.logoPath =
-            TMDbImagePath.storagePath(from: logoPath)
-            ?? TMDbImagePath.storagePath(from: logoURL)
+            TMDbImagePath.storagePath(from: logoPath, fallback: logoURL)
         self.originalLanguageCode = originalLanguageCode
         self.tmdbID = tmdbID
         self.onAirDate = onAirDate

@@ -40,6 +40,13 @@ public enum TMDbImagePath {
         return nil
     }
 
+    /// Resolves a storage path from an explicit path string, falling back to a URL
+    /// when the path is absent. Centralizes the path-then-URL precedence used by the
+    /// fetch-layer DTOs during the V2.8.0 image-path migration.
+    public static func storagePath(from path: String?, fallback url: URL?) -> String? {
+        storagePath(from: path) ?? storagePath(from: url)
+    }
+
     private static func storagePathFromTMDbImageURL(_ url: URL) -> String? {
         guard
             url.host?.caseInsensitiveCompare(imageHost) == .orderedSame

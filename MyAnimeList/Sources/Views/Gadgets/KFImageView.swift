@@ -42,7 +42,7 @@ struct KFImageView: View {
         self.url = url
         self.animation = animation
         self.diskCacheExpiration = diskCacheExpiration
-        self.targetSize = targetSize ?? targetWidth.map(Self.posterTargetSize(width:))
+        self.targetSize = targetSize ?? targetWidth.map(PosterImageSize.targetSize(width:))
         self.cacheOriginalImage = cacheOriginalImage
         self._imageLoaded = imageLoaded
     }
@@ -117,9 +117,5 @@ struct KFImageView: View {
                 imageLoaded = false
             }
         }
-    }
-
-    private static func posterTargetSize(width: CGFloat) -> CGSize {
-        CGSize(width: width, height: width * 1.5)
     }
 }

@@ -58,12 +58,10 @@ public struct LegacyAnimeEntryDetailPayload: Codable, Equatable, Sendable {
         self.primaryLinkURL = primaryLinkURL
         self.heroImageURL = heroImageURL
         self.heroImagePath =
-            TMDbImagePath.storagePath(from: heroImagePath)
-            ?? TMDbImagePath.storagePath(from: heroImageURL)
+            TMDbImagePath.storagePath(from: heroImagePath, fallback: heroImageURL)
         self.logoImageURL = logoImageURL
         self.logoImagePath =
-            TMDbImagePath.storagePath(from: logoImagePath)
-            ?? TMDbImagePath.storagePath(from: logoImageURL)
+            TMDbImagePath.storagePath(from: logoImagePath, fallback: logoImageURL)
         self.genreIDs = genreIDs
         self.voteAverage = voteAverage
         self.runtimeMinutes = runtimeMinutes
@@ -94,8 +92,7 @@ public struct LegacyAnimeEntryCharacterPayload: Codable, Equatable, Sendable, Id
         self.actorName = actorName
         self.profileURL = profileURL
         self.profilePath =
-            TMDbImagePath.storagePath(from: profilePath)
-            ?? TMDbImagePath.storagePath(from: profileURL)
+            TMDbImagePath.storagePath(from: profilePath, fallback: profileURL)
     }
 }
 
@@ -197,12 +194,10 @@ public struct AnimeEntryDetailDTO: Equatable, Sendable {
         self.primaryLinkURL = primaryLinkURL
         self.heroImageURL = heroImageURL
         self.heroImagePath =
-            TMDbImagePath.storagePath(from: heroImagePath)
-            ?? TMDbImagePath.storagePath(from: heroImageURL)
+            TMDbImagePath.storagePath(from: heroImagePath, fallback: heroImageURL)
         self.logoImageURL = logoImageURL
         self.logoImagePath =
-            TMDbImagePath.storagePath(from: logoImagePath)
-            ?? TMDbImagePath.storagePath(from: logoImageURL)
+            TMDbImagePath.storagePath(from: logoImagePath, fallback: logoImageURL)
         self.genreIDs = genreIDs
         self.voteAverage = voteAverage
         self.runtimeMinutes = runtimeMinutes
@@ -280,8 +275,7 @@ public struct AnimeEntryCharacterDTO: Equatable, Sendable, Identifiable {
         self.actorName = actorName
         self.profileURL = profileURL
         self.profilePath =
-            TMDbImagePath.storagePath(from: profilePath)
-            ?? TMDbImagePath.storagePath(from: profileURL)
+            TMDbImagePath.storagePath(from: profilePath, fallback: profileURL)
     }
 }
 
@@ -309,8 +303,7 @@ public struct AnimeEntryStaffDTO: Equatable, Sendable, Identifiable {
         self.department = department
         self.profileURL = profileURL
         self.profilePath =
-            TMDbImagePath.storagePath(from: profilePath)
-            ?? TMDbImagePath.storagePath(from: profileURL)
+            TMDbImagePath.storagePath(from: profilePath, fallback: profileURL)
         self.jobs = jobs
     }
 }
@@ -353,8 +346,7 @@ public struct AnimeEntrySeasonSummaryDTO: Equatable, Sendable, Identifiable {
         self.title = title
         self.posterURL = posterURL
         self.posterPath =
-            TMDbImagePath.storagePath(from: posterPath)
-            ?? TMDbImagePath.storagePath(from: posterURL)
+            TMDbImagePath.storagePath(from: posterPath, fallback: posterURL)
         self.episodeCount = episodeCount
     }
 }
@@ -381,7 +373,6 @@ public struct AnimeEntryEpisodeSummaryDTO: Equatable, Sendable, Identifiable {
         self.airDate = airDate
         self.imageURL = imageURL
         self.imagePath =
-            TMDbImagePath.storagePath(from: imagePath)
-            ?? TMDbImagePath.storagePath(from: imageURL)
+            TMDbImagePath.storagePath(from: imagePath, fallback: imageURL)
     }
 }
