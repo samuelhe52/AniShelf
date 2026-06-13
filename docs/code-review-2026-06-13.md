@@ -47,6 +47,8 @@ The new hand-written `encode(to:)` writes `customPosterPath` but never `customPo
 
 ### F4 — `missingProcessors(for:)` calls synchronous `imageCachedType(forKey:processorIdentifier:)` on a cooperative thread pool thread
 
+**Status:** Resolved
+
 **File:** `MyAnimeList/Sources/ViewModels/Library/LibraryImageCacheService.swift` line ~403  
 **Severity:** Low–Medium
 
@@ -57,6 +59,8 @@ The new hand-written `encode(to:)` writes `customPosterPath` but never `customPo
 ---
 
 ### F5 — Per-image variant `cache.store(...)` calls are serialized; they are independent and could overlap
+
+**Status:** Resolved
 
 **File:** `MyAnimeList/Sources/ViewModels/Library/LibraryImageCacheService.swift` line ~371  
 **Severity:** Low

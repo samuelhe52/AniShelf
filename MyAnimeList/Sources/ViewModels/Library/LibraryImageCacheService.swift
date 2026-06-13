@@ -274,6 +274,27 @@ enum LibraryImageCacheService {
 }
 
 fileprivate struct KingfisherVariantImagePrefetcher: Sendable {
+    /// Serial-friendly concurrent queue for the synchronous, CPU-heavy downsampling work, kept
+    /// off Swift's cooperative executor so it doesn't starve other structured-concurrency tasks.
+    private static let processingQueue = DispatchQueue(
+        label: "com.anishelf.image-prefetch.processing",
+        qos: .utility,
+        attributes: .concurrent
+    )
+
+    static func downsample(
+        _ data: Data,
+        using processor: DownsamplingImageProcessor
+    ) async -> KFCrossPlatformImage? {
+        await withCheckedContinuation { continuation in
+            processingQueue.async {
+                let options = KingfisherParsedOptionsInfo([.processor(processor)])
+                let image = processor.process(item: .data(data), options: options)
+                continuation.resume(returning: image)
+            }
+        }
+    }
+
     private let maxConcurrentDownloads: Int
     private let diskCacheExpiration: StorageExpiration
     private let downloader: ImageDownloader
@@ -350,9 +371,8 @@ fileprivate struct KingfisherVariantImagePrefetcher: Sendable {
 
     private func prefetch(
         _ workItem: LibraryImageCacheService.ImagePrefetchWorkItem
-    ) async -> ImagePrefetchURLResult {
-        do {
-            let missingProcessors = missingProcessors(for: workItem)
+    ) async -> ImagePrefetchURLResult {        do {
+            let missingProcessors = await missingProcessors(for: workItem)
             guard !missingProcessors.isEmpty else {
                 return .success(workItem.url)
             }
@@ -362,28 +382,36 @@ fileprivate struct KingfisherVariantImagePrefetcher: Sendable {
                 with: workItem.url,
                 options: downloadOptions
             )
+            let originalData = loadingResult.originalData
+            let cacheKey = workItem.url.cacheKey
 
-            for (targetSize, processor) in missingProcessors {
-                let options = KingfisherParsedOptionsInfo([
-                    .processor(processor),
-                    .diskCacheExpiration(diskCacheExpiration)
-                ])
-                guard
-                    let image = processor.process(
-                        item: .data(loadingResult.originalData),
-                        options: options
-                    )
-                else {
-                    throw ImagePrefetchError.processingFailed(url: workItem.url, targetSize: targetSize)
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                for (targetSize, processor) in missingProcessors {
+                    group.addTask {
+                        let options = KingfisherParsedOptionsInfo([
+                            .processor(processor),
+                            .diskCacheExpiration(diskCacheExpiration)
+                        ])
+                        // Downsampling decodes the full-size original synchronously. Run it on a
+                        // dedicated queue so it doesn't block Swift's cooperative executor, which
+                        // other concurrent prefetch work (and the rest of the app) shares.
+                        guard
+                            let image = await Self.downsample(originalData, using: processor)
+                        else {
+                            throw ImagePrefetchError.processingFailed(url: workItem.url, targetSize: targetSize)
+                        }
+
+                        try await cache.store(
+                            image,
+                            original: originalData,
+                            forKey: cacheKey,
+                            options: options,
+                            toDisk: true
+                        )
+                    }
                 }
 
-                try await cache.store(
-                    image,
-                    original: loadingResult.originalData,
-                    forKey: workItem.url.cacheKey,
-                    options: options,
-                    toDisk: true
-                )
+                try await group.waitForAll()
             }
 
             return .success(workItem.url)
@@ -394,19 +422,27 @@ fileprivate struct KingfisherVariantImagePrefetcher: Sendable {
 
     private func missingProcessors(
         for workItem: LibraryImageCacheService.ImagePrefetchWorkItem
-    ) -> [(CGSize, DownsamplingImageProcessor)] {
-        workItem.targetSizes
+    ) async -> [(CGSize, DownsamplingImageProcessor)] {
+        var missingProcessors: [(CGSize, DownsamplingImageProcessor)] = []
+        let processors = workItem.targetSizes
             .map { targetSize in
                 (targetSize, DownsamplingImageProcessor(size: targetSize))
             }
-            .filter { _, processor in
-                !cache
-                    .imageCachedType(
-                        forKey: workItem.url.cacheKey,
-                        processorIdentifier: processor.identifier
-                    )
-                    .cached
+
+        for (targetSize, processor) in processors {
+            // Kingfisher's synchronous cache probe can hit disk on memory misses. Use its
+            // async variant so disk metadata checks run on Kingfisher's I/O queue instead
+            // of blocking Swift's cooperative executor.
+            let cacheType = await cache.imageCachedTypeAsync(
+                forKey: workItem.url.cacheKey,
+                processorIdentifier: processor.identifier
+            )
+            if !cacheType.cached {
+                missingProcessors.append((targetSize, processor))
             }
+        }
+
+        return missingProcessors
             .sorted {
                 if $0.0.width == $1.0.width {
                     return $0.0.height < $1.0.height
