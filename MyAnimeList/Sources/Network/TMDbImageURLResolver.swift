@@ -29,6 +29,11 @@ struct TMDbImageURLResolver {
     /// view code can synchronously derive display URLs without coupling persistence reads to a live
     /// `/configuration` request. Metadata fetch flows may still use TMDb's live image configuration
     /// while selecting and returning paths.
+    ///
+    /// Future improvement: replace this compile-time fallback with a persisted last-known-good TMDb
+    /// `/configuration` snapshot that is refreshed opportunistically from live fetches. That would
+    /// keep these synchronous call sites while reducing the risk of stale base URLs or size catalogs
+    /// if TMDb changes its image configuration again.
     static let current = TMDbImageURLResolver(imagesConfiguration: .tmdbStandardFallback)
 
     func url(for path: String?, role: TMDbImageRole, idealWidth: Int = .max) -> URL? {
@@ -54,6 +59,9 @@ extension ImagesConfiguration {
     /// The TMDb Swift package does not expose a runtime default `ImagesConfiguration`. These values
     /// mirror TMDb's standard image configuration as represented by the pinned package's API fixture,
     /// and they should be updated intentionally if TMDb changes its public image size catalog.
+    ///
+    /// Future improvement: use this only as a cold-start bootstrap default, then prefer a persisted
+    /// last-known-good live `/configuration` snapshot for subsequent synchronous image resolution.
     static let tmdbStandardFallback = ImagesConfiguration(
         baseURL: URL(string: "http://image.tmdb.org/t/p/")!,
         secureBaseURL: URL(string: "https://image.tmdb.org/t/p/")!,
