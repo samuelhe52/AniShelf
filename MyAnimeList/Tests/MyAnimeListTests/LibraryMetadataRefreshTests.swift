@@ -237,7 +237,7 @@ struct LibraryMetadataRefreshTests {
         #expect(capturedEntries.filter { !$0.onDisplay && $0.tmdbID == 209_867 }.count == 1)
     }
 
-    @Test @MainActor func testMetadataRefreshSaveDoesNotEnqueueDirtyWork() throws {
+    @Test @MainActor func testMetadataRefreshSaveDoesNotEnqueueDirtyWork() async throws {
         let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
         let hiddenParent = AnimeEntry(
             name: "Frieren",
@@ -247,12 +247,16 @@ struct LibraryMetadataRefreshTests {
         hiddenParent.updateDisplayState(false, at: referenceDate(year: 2026, month: 6, day: 5))
         store.repository.insert(hiddenParent)
 
-        try store.saveMetadataRefreshWithoutSyncRecording()
+        try await store.performMetadataRefreshWithoutSyncRecording {
+            try store.repository.save()
+        }
 
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
 
         hiddenParent.name = "Frieren: Beyond Journey's End"
-        try store.saveMetadataRefreshWithoutSyncRecording()
+        try await store.performMetadataRefreshWithoutSyncRecording {
+            try store.repository.save()
+        }
 
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
     }
@@ -280,58 +284,59 @@ struct LibraryMetadataRefreshTests {
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([])
 
         let modelContainer = store.dataProvider.sharedModelContainer
-        let writer = await Task.detached(priority: .utility) {
-            LibraryMetadataRefreshWriter(modelContainer: modelContainer)
-        }.value
-        try await writer.apply(
-            updates: [
-                .init(
-                    entryID: child.id,
-                    info: EntryMetadata(
-                        name: "Season 1 Refreshed",
-                        nameTranslations: [:],
-                        overview: nil,
-                        overviewTranslations: [:],
-                        posterURL: nil,
-                        backdropURL: nil,
-                        logoURL: nil,
-                        tmdbID: 200,
-                        onAirDate: nil,
-                        linkToDetails: nil,
-                        type: .season(seasonNumber: 1, parentSeriesID: 300)
-                    ),
-                    detail: AnimeEntryDetailDTO(
-                        language: "en-US",
-                        title: "Season 1 Refreshed"
-                    ),
-                    preservingCustomPoster: false
-                )
-            ],
-            parentUpdates: [
-                .init(
-                    childEntryID: child.id,
-                    parentSeriesID: 300,
-                    parentInfo: EntryMetadata(
-                        name: "New Parent",
-                        nameTranslations: [:],
-                        overview: nil,
-                        overviewTranslations: [:],
-                        posterURL: nil,
-                        backdropURL: nil,
-                        logoURL: nil,
-                        tmdbID: 300,
-                        onAirDate: nil,
-                        linkToDetails: nil,
-                        type: .series
-                    ),
-                    parentDetail: AnimeEntryDetailDTO(
-                        language: "en-US",
-                        title: "New Parent"
+        try await store.performMetadataRefreshWithoutSyncRecording {
+            let writer = await Task.detached(priority: .utility) {
+                LibraryMetadataRefreshWriter(modelContainer: modelContainer)
+            }.value
+            try await writer.apply(
+                updates: [
+                    .init(
+                        entryID: child.id,
+                        info: EntryMetadata(
+                            name: "Season 1 Refreshed",
+                            nameTranslations: [:],
+                            overview: nil,
+                            overviewTranslations: [:],
+                            posterURL: nil,
+                            backdropURL: nil,
+                            logoURL: nil,
+                            tmdbID: 200,
+                            onAirDate: nil,
+                            linkToDetails: nil,
+                            type: .season(seasonNumber: 1, parentSeriesID: 300)
+                        ),
+                        detail: AnimeEntryDetailDTO(
+                            language: "en-US",
+                            title: "Season 1 Refreshed"
+                        ),
+                        preservingCustomPoster: false
                     )
-                )
-            ]
-        )
-        store.rebuildSyncChangeTracking()
+                ],
+                parentUpdates: [
+                    .init(
+                        childEntryID: child.id,
+                        parentSeriesID: 300,
+                        parentInfo: EntryMetadata(
+                            name: "New Parent",
+                            nameTranslations: [:],
+                            overview: nil,
+                            overviewTranslations: [:],
+                            posterURL: nil,
+                            backdropURL: nil,
+                            logoURL: nil,
+                            tmdbID: 300,
+                            onAirDate: nil,
+                            linkToDetails: nil,
+                            type: .series
+                        ),
+                        parentDetail: AnimeEntryDetailDTO(
+                            language: "en-US",
+                            title: "New Parent"
+                        )
+                    )
+                ]
+            )
+        }
         try store.refreshLibrary()
 
         let refreshedChild = try #require(

@@ -124,6 +124,60 @@ struct LibrarySyncRecorderBehaviorTests {
         #expect(dirtyQueueChangeCount == 1)
     }
 
+    @Test @MainActor func testLibrarySyncRecorderSkipsDetailIdentifiersThatResolveToEntry() throws {
+        let queueURL = makeTemporaryQueueURL(name: "detail-identifier-skip")
+        defer { try? FileManager.default.removeItem(at: queueURL.deletingLastPathComponent()) }
+
+        let dataProvider = DataProvider(inMemory: true)
+        var writeCount = 0
+        let dirtyQueueStore = LibraryEntrySyncDirtyQueueStore(url: queueURL) { queue in
+            writeCount += 1
+            try persistQueue(queue, to: queueURL)
+        }
+        let recorder = LibrarySyncChangeRecorder(
+            dataProvider: dataProvider,
+            dirtyQueueStore: dirtyQueueStore,
+            notificationCenter: .init()
+        )
+        var dirtyQueueChangeCount = 0
+        recorder.onDirtyQueueChanged = {
+            dirtyQueueChangeCount += 1
+        }
+
+        let entry = AnimeEntry(
+            name: "Detail Identifier",
+            type: .series,
+            tmdbID: 200_004
+        )
+        entry.markCreatedForLibrary(at: referenceDate(year: 2026, month: 6, day: 12))
+        entry.replaceDetail(
+            from: AnimeEntryDetailDTO(
+                language: "en-US",
+                title: "Detail Identifier"
+            ))
+        try dataProvider.dataHandler.newEntry(entry)
+        let detailID = try #require(entry.detail?.id)
+
+        try recorder.dirtyQueueStore.replaceEntries([])
+        recorder.rebuildBaseline()
+        writeCount = 0
+        dirtyQueueChangeCount = 0
+
+        let notification = Notification(
+            name: ModelContext.didSave,
+            object: nil,
+            userInfo: [
+                ModelContext.NotificationKey.updatedIdentifiers.rawValue: Set([detailID])
+            ]
+        )
+
+        recorder.processSaveNotification(notification)
+
+        #expect(recorder.dirtyQueueStore.load().entries.isEmpty)
+        #expect(writeCount == 0)
+        #expect(dirtyQueueChangeCount == 0)
+    }
+
     @Test @MainActor func testLibrarySyncRecorderHandlesSaveNotificationsPostedOffMainActor()
         async throws
     {

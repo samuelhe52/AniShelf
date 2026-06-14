@@ -159,15 +159,17 @@ final class LibraryProfileSettingsActions {
         let metadataRefresher = LibraryMetadataRefresher(
             repository: store.repository,
             applyMetadataRefresh: { updates, parentUpdates in
-                try await Task.detached(priority: .medium) {
-                    let metadataRefreshWriter = LibraryMetadataRefreshWriter(
-                        modelContainer: modelContainer
-                    )
-                    try await metadataRefreshWriter.apply(
-                        updates: updates,
-                        parentUpdates: parentUpdates
-                    )
-                }.value
+                try await store.performMetadataRefreshWithoutSyncRecording {
+                    try await Task.detached(priority: .medium) {
+                        let metadataRefreshWriter = LibraryMetadataRefreshWriter(
+                            modelContainer: modelContainer
+                        )
+                        try await metadataRefreshWriter.apply(
+                            updates: updates,
+                            parentUpdates: parentUpdates
+                        )
+                    }.value
+                }
             }
         )
         Task {

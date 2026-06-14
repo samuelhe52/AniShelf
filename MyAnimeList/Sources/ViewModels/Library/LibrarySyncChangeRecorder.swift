@@ -89,6 +89,9 @@ final class LibrarySyncChangeRecorder {
     /// Rebuilds the in-memory clock baseline from the current store contents.
     func rebuildBaseline() {
         lastSeenClocksByIdentifier = Self.makeBaseline(from: dataProvider)
+        syncRecorderLogger.debug(
+            "Rebuilt iCloud sync change recorder baseline with \(self.lastSeenClocksByIdentifier.count, privacy: .public) entries."
+        )
     }
 
     /// Executes a synchronous operation without recording queue mutations.
@@ -96,6 +99,13 @@ final class LibrarySyncChangeRecorder {
         suppressionDepth += 1
         defer { suppressionDepth -= 1 }
         return try operation()
+    }
+
+    /// Executes an asynchronous operation without recording queue mutations.
+    func withSuppressedRecording<T>(_ operation: () async throws -> T) async rethrows -> T {
+        suppressionDepth += 1
+        defer { suppressionDepth -= 1 }
+        return try await operation()
     }
 
     /// Queues a tombstone for a single deleted entry.
@@ -245,6 +255,14 @@ final class LibrarySyncChangeRecorder {
 
             let currentBaseline = ClockBaseline(entry: entry)
             let previousBaseline = lastSeenClocksByIdentifier[identifier]
+
+            guard entry.id == identifier else {
+                syncRecorderLogger.debug(
+                    "Skipped iCloud sync change recording for save id \(String(describing: identifier), privacy: .public) because it resolved to entry id \(String(describing: entry.id), privacy: .public)."
+                )
+                lastSeenClocksByIdentifier.removeValue(forKey: identifier)
+                continue
+            }
 
             guard currentBaseline.hasAdvanced(since: previousBaseline) else {
                 lastSeenClocksByIdentifier[identifier] = currentBaseline
