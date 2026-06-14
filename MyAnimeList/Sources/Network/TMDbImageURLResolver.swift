@@ -18,6 +18,8 @@ enum TMDbImageRole {
 }
 
 struct TMDbImageURLResolver {
+    static let backdropIdealWidth = 1_280
+
     var imagesConfiguration: ImagesConfiguration
 
     /// Shared resolver for persisted TMDb image paths.
@@ -71,7 +73,11 @@ extension AnimeEntry {
     }
 
     var backdropURL: URL? {
-        TMDbImageURLResolver.current.url(for: backdropPath, role: .backdrop)
+        TMDbImageURLResolver.current.url(
+            for: backdropPath,
+            role: .backdrop,
+            idealWidth: TMDbImageURLResolver.backdropIdealWidth
+        )
     }
 }
 

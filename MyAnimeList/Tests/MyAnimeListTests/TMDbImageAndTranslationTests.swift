@@ -9,6 +9,7 @@ import Foundation
 import TMDb
 import Testing
 
+@testable import DataProvider
 @testable import MyAnimeList
 
 struct TMDbImageAndTranslationTests {
@@ -128,6 +129,28 @@ struct TMDbImageAndTranslationTests {
             imagesConfiguration.backdropURL(for: selectedPath, idealWidth: 1_280)
                 == imagesConfiguration.backdropURL(for: noLanguageBackdrop, idealWidth: 1_280)
         )
+    }
+
+    @Test func persistedEntryImageURLsUseExpectedRenditions() throws {
+        let detail = AnimeEntryDetail(
+            language: "en-US",
+            title: "Image URL Entry",
+            logoImagePath: "/logo.png"
+        )
+        let entry = AnimeEntry(
+            name: "Image URL Entry",
+            type: .series,
+            posterPath: "/poster.jpg",
+            backdropPath: "/backdrop.jpg",
+            tmdbID: 12_800,
+            detail: detail
+        )
+        detail.entry = entry
+
+        #expect(entry.posterURL?.absoluteString == "https://image.tmdb.org/t/p/original/poster.jpg")
+        #expect(entry.backdropURL?.absoluteString == "https://image.tmdb.org/t/p/w1280/backdrop.jpg")
+        #expect(detail.heroImageURL?.absoluteString == "https://image.tmdb.org/t/p/w1280/backdrop.jpg")
+        #expect(detail.logoImageURL?.absoluteString == "https://image.tmdb.org/t/p/w500/logo.png")
     }
 
     @Test func testPosterSelectionAllowsOnlyOriginalNoLanguageAndMetadataLanguage() throws {

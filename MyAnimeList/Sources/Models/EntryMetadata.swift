@@ -36,7 +36,11 @@ struct EntryMetadata: Equatable, Identifiable, Hashable, Sendable {
     }
 
     var backdropURL: URL? {
-        TMDbImageURLResolver.current.url(for: backdropPath, role: .backdrop)
+        TMDbImageURLResolver.current.url(
+            for: backdropPath,
+            role: .backdrop,
+            idealWidth: TMDbImageURLResolver.backdropIdealWidth
+        )
     }
 
     var logoURL: URL? {

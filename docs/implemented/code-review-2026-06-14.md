@@ -49,7 +49,7 @@ during the compat window.
 
 ### F2 — `AnimeEntryDetail.heroImageURL` silently jumps from `w1280` to `original`
 
-**Status:** Open
+**Status:** Resolved
 **File:** `MyAnimeList/Sources/Network/TMDbImageURLResolver.swift` line ~79
 **Severity:** Medium–High
 
