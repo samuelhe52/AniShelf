@@ -238,9 +238,6 @@ extension InfoFetcher {
             status: series.status,
             airDate: series.firstAirDate,
             primaryLinkURL: series.homepageURL,
-            heroImagePath: TMDbImagePath.storagePath(
-                from: TMDbImageSelection.preferredBackdropPath(from: imageResources.backdrops)
-            ),
             logoImagePath: TMDbImagePath.storagePath(
                 from: TMDbImageSelection.preferredLogoPath(
                     from: imageResources.logos,

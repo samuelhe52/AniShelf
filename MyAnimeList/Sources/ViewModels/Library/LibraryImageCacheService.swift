@@ -173,7 +173,7 @@ enum LibraryImageCacheService {
             targets += posterPrefetchTargetWidths.map { targetWidth in
                 ImagePrefetchTarget(
                     url: posterURL,
-                    targetSize: posterTargetSize(width: targetWidth)
+                    targetSize: PosterImageSize.targetSize(width: targetWidth)
                 )
             }
         }
@@ -233,11 +233,11 @@ enum LibraryImageCacheService {
 
     private static let cachedImageProcessorIdentifiers: [String] = {
         let sizes = [
-            posterTargetSize(width: 240),
-            posterTargetSize(width: 300),
-            posterTargetSize(width: 360),
-            posterTargetSize(width: 500),
-            posterTargetSize(width: 1_000),
+            PosterImageSize.targetSize(width: 240),
+            PosterImageSize.targetSize(width: 300),
+            PosterImageSize.targetSize(width: 360),
+            PosterImageSize.targetSize(width: 500),
+            PosterImageSize.targetSize(width: 1_000),
             backdropPrefetchTargetSize,
             logoPrefetchTargetSize
         ]
@@ -255,10 +255,6 @@ enum LibraryImageCacheService {
                     targetSizes: Set(targets.map(\.targetSize))
                 )
             }
-    }
-
-    private static func posterTargetSize(width: CGFloat) -> CGSize {
-        PosterImageSize.targetSize(width: width)
     }
 
     struct ImagePrefetchTarget: Hashable {

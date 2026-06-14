@@ -70,7 +70,6 @@ struct MigrationTests {
             status: "Ended",
             airDate: referenceDate(year: 2023, month: 9, day: 29),
             primaryLinkURL: URL(string: "https://example.com/frieren")!,
-            heroImageURL: URL(string: "https://image.tmdb.org/t/p/w1280/frieren-hero.jpg")!,
             logoImageURL: URL(string: "https://image.tmdb.org/t/p/w500/frieren-logo.png")!,
             genreIDs: [16, 18],
             voteAverage: 8.9,
@@ -560,7 +559,6 @@ struct MigrationTests {
             language: "en-US",
             title: "Legacy 2.7.9 Entry",
             primaryLinkURL: URL(string: "https://example.com/legacy-detail")!,
-            heroImageURL: URL(string: "https://image.tmdb.org/t/p/w1280/detail-hero.jpg")!,
             logoImageURL: URL(string: "https://image.tmdb.org/t/p/w500/detail-logo.png")!,
             characters: [
                 SchemaV2_7_9.AnimeEntryCharacter(

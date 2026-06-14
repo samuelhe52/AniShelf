@@ -309,9 +309,6 @@ extension InfoFetcher {
             status: parentSeries.status,
             airDate: season.airDate,
             primaryLinkURL: parentSeries.homepageURL,
-            heroImagePath: TMDbImagePath.storagePath(
-                from: TMDbImageSelection.preferredBackdropPath(from: parentSeriesImages.backdrops)
-            ),
             logoImagePath: TMDbImagePath.storagePath(
                 from: TMDbImageSelection.preferredLogoPath(
                     from: parentSeriesImages.logos,

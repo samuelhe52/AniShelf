@@ -17,7 +17,6 @@ extension SchemaV2_7_0.AnimeEntryDetail {
             status: status,
             airDate: airDate,
             primaryLinkURL: primaryLinkURL,
-            heroImageURL: heroImageURL,
             logoImageURL: logoImageURL,
             genreIDs: genreIDs,
             voteAverage: voteAverage,

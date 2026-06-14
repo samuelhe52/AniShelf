@@ -18,7 +18,6 @@ extension SchemaV2_7_4.AnimeEntryDetail {
             status: dto.status,
             airDate: dto.airDate,
             primaryLinkURL: dto.primaryLinkURL,
-            heroImageURL: dto.heroImageURL,
             logoImageURL: dto.logoImageURL,
             genreIDs: dto.genreIDs,
             voteAverage: dto.voteAverage,
@@ -41,7 +40,6 @@ extension SchemaV2_7_4.AnimeEntryDetail {
             status: payload.status,
             airDate: payload.airDate,
             primaryLinkURL: payload.primaryLinkURL,
-            heroImageURL: payload.heroImageURL,
             logoImageURL: payload.logoImageURL,
             genreIDs: payload.genreIDs,
             voteAverage: payload.voteAverage,
@@ -63,7 +61,6 @@ extension SchemaV2_7_4.AnimeEntryDetail {
         status = dto.status
         airDate = dto.airDate
         primaryLinkURL = dto.primaryLinkURL
-        heroImageURL = dto.heroImageURL
         logoImageURL = dto.logoImageURL
         genreIDs = dto.genreIDs
         voteAverage = dto.voteAverage

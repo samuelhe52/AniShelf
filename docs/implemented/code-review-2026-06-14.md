@@ -213,7 +213,7 @@ caught; ideally seed it from a cached live configuration when one is available.
 
 ### F9 — `apply(dto:)` hand-rolls path-precedence instead of the new helper
 
-**Status:** Open
+**Status:** Resolved
 **File:** `DataProvider/Sources/DataProvider/Models/V2/AnimeEntryDetailBridgeV2_8_0.swift` line ~66
 **Severity:** Low
 
@@ -230,7 +230,7 @@ or just `dto.logoImagePath` since the DTO already resolved it.
 
 ### F10 — `heroImagePath` is dead across the DTO layer
 
-**Status:** Open
+**Status:** Resolved
 **File:** `DataProvider/Sources/DataProvider/Models/Other/AnimeEntryDetailDTO.swift` line ~19
 **Severity:** Low
 
@@ -249,7 +249,7 @@ entry backdrop.
 
 ### F11 — Residual `posterTargetSize` wrapper after `PosterImageSize` extraction
 
-**Status:** Open
+**Status:** Resolved
 **File:** `MyAnimeList/Sources/ViewModels/Library/LibraryImageCacheService.swift` line ~257
 **Severity:** Low
 

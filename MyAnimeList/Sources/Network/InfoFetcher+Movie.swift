@@ -233,9 +233,6 @@ extension InfoFetcher {
             status: movie.status?.rawValue,
             airDate: movie.releaseDate,
             primaryLinkURL: movie.homepageURL,
-            heroImagePath: TMDbImagePath.storagePath(
-                from: TMDbImageSelection.preferredBackdropPath(from: imageResources.backdrops)
-            ),
             logoImagePath: TMDbImagePath.storagePath(
                 from: TMDbImageSelection.preferredLogoPath(
                     from: imageResources.logos,

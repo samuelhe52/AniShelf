@@ -15,8 +15,6 @@ public struct LegacyAnimeEntryDetailPayload: Codable, Equatable, Sendable {
     public var status: String?
     public var airDate: Date?
     public var primaryLinkURL: URL?
-    public var heroImageURL: URL?
-    public var heroImagePath: String?
     public var logoImageURL: URL?
     public var logoImagePath: String?
     public var genreIDs: [Int]
@@ -36,8 +34,6 @@ public struct LegacyAnimeEntryDetailPayload: Codable, Equatable, Sendable {
         status: String? = nil,
         airDate: Date? = nil,
         primaryLinkURL: URL? = nil,
-        heroImageURL: URL? = nil,
-        heroImagePath: String? = nil,
         logoImageURL: URL? = nil,
         logoImagePath: String? = nil,
         genreIDs: [Int] = [],
@@ -56,9 +52,6 @@ public struct LegacyAnimeEntryDetailPayload: Codable, Equatable, Sendable {
         self.status = status
         self.airDate = airDate
         self.primaryLinkURL = primaryLinkURL
-        self.heroImageURL = heroImageURL
-        self.heroImagePath =
-            TMDbImagePath.storagePath(from: heroImagePath, fallback: heroImageURL)
         self.logoImageURL = logoImageURL
         self.logoImagePath =
             TMDbImagePath.storagePath(from: logoImagePath, fallback: logoImageURL)
@@ -149,8 +142,6 @@ public struct AnimeEntryDetailDTO: Equatable, Sendable {
     public var status: String?
     public var airDate: Date?
     public var primaryLinkURL: URL?
-    public var heroImageURL: URL?
-    public var heroImagePath: String?
     public var logoImageURL: URL?
     public var logoImagePath: String?
     public var genreIDs: [Int]
@@ -171,8 +162,6 @@ public struct AnimeEntryDetailDTO: Equatable, Sendable {
         status: String? = nil,
         airDate: Date? = nil,
         primaryLinkURL: URL? = nil,
-        heroImageURL: URL? = nil,
-        heroImagePath: String? = nil,
         logoImageURL: URL? = nil,
         logoImagePath: String? = nil,
         genreIDs: [Int] = [],
@@ -192,9 +181,6 @@ public struct AnimeEntryDetailDTO: Equatable, Sendable {
         self.status = status
         self.airDate = airDate
         self.primaryLinkURL = primaryLinkURL
-        self.heroImageURL = heroImageURL
-        self.heroImagePath =
-            TMDbImagePath.storagePath(from: heroImagePath, fallback: heroImageURL)
         self.logoImageURL = logoImageURL
         self.logoImagePath =
             TMDbImagePath.storagePath(from: logoImagePath, fallback: logoImageURL)
@@ -218,7 +204,6 @@ public struct AnimeEntryDetailDTO: Equatable, Sendable {
             status: payload.status,
             airDate: payload.airDate,
             primaryLinkURL: payload.primaryLinkURL,
-            heroImageURL: payload.heroImageURL,
             logoImageURL: payload.logoImageURL,
             genreIDs: payload.genreIDs,
             voteAverage: payload.voteAverage,

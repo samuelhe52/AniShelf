@@ -63,7 +63,7 @@ extension SchemaV2_8_0.AnimeEntryDetail {
         status = dto.status
         airDate = dto.airDate
         primaryLinkURL = dto.primaryLinkURL
-        logoImagePath = dto.logoImagePath ?? TMDbImagePath.storagePath(from: dto.logoImageURL)
+        logoImagePath = TMDbImagePath.storagePath(from: dto.logoImagePath, fallback: dto.logoImageURL)
         genreIDs = dto.genreIDs
         voteAverage = dto.voteAverage
         runtimeMinutes = dto.runtimeMinutes

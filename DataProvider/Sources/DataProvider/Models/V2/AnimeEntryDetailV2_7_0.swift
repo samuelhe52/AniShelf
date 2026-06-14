@@ -89,7 +89,6 @@ extension SchemaV2_7_0 {
                 status: dto.status,
                 airDate: dto.airDate,
                 primaryLinkURL: dto.primaryLinkURL,
-                heroImageURL: dto.heroImageURL,
                 logoImageURL: dto.logoImageURL,
                 genreIDs: dto.genreIDs,
                 voteAverage: dto.voteAverage,
@@ -112,7 +111,6 @@ extension SchemaV2_7_0 {
                 status: payload.status,
                 airDate: payload.airDate,
                 primaryLinkURL: payload.primaryLinkURL,
-                heroImageURL: payload.heroImageURL,
                 logoImageURL: payload.logoImageURL,
                 genreIDs: payload.genreIDs,
                 voteAverage: payload.voteAverage,
@@ -134,7 +132,6 @@ extension SchemaV2_7_0 {
             status = dto.status
             airDate = dto.airDate
             primaryLinkURL = dto.primaryLinkURL
-            heroImageURL = dto.heroImageURL
             logoImageURL = dto.logoImageURL
             genreIDs = dto.genreIDs
             voteAverage = dto.voteAverage
