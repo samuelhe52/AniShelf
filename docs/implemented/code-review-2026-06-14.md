@@ -148,7 +148,7 @@ custom poster off restores the original without a network round-trip.
 
 ### F6 — Inner prefetch task group fans out unbounded full-size decodes
 
-**Status:** Open
+**Status:** Resolved
 **File:** `MyAnimeList/Sources/ViewModels/Library/LibraryImageCacheService.swift` line ~385
 **Severity:** Medium
 
@@ -172,7 +172,7 @@ smaller variants from it rather than re-decoding the original per size.
 
 ### F7 — Per-size cache probes serialized in `missingProcessors`
 
-**Status:** Open
+**Status:** Resolved
 **File:** `MyAnimeList/Sources/ViewModels/Library/LibraryImageCacheService.swift` line ~429
 **Severity:** Low
 
