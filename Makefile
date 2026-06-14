@@ -24,7 +24,7 @@ test-app:
 	@[ -n "$(CONNECTED_IOS_DEVICE_ID)" ] || { echo "No connected iPhone found."; exit 1; }
 	@echo "Using device $(CONNECTED_IOS_DEVICE_ID)"
 	@echo "Running MyAnimeList tests..."
-	@xcodebuild -quiet -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "id=$(CONNECTED_IOS_DEVICE_ID)" test $(APP_ONLY_TESTING_ARG) -collect-test-diagnostics never && echo "** TEST SUCCEEDED **"
+	@set -o pipefail; NSUnbufferedIO=YES xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "id=$(CONNECTED_IOS_DEVICE_ID)" test $(APP_ONLY_TESTING_ARG) -collect-test-diagnostics never 2>&1 | xcbeautify --disable-logging && echo "** TEST SUCCEEDED **"
 	@echo "MyAnimeList tests completed."
 
 .PHONY: test-dataprovider
@@ -38,7 +38,7 @@ test-app-sim:
 	@[ -n "$(BOOTED_SIMULATOR_ID)" ] || { echo "No booted simulator found."; exit 1; }
 	@echo "Using simulator $(BOOTED_SIMULATOR_ID)"
 	@echo "Running MyAnimeList tests..."
-	@xcodebuild -quiet -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "id=$(BOOTED_SIMULATOR_ID)" test $(APP_ONLY_TESTING_ARG) -collect-test-diagnostics never && echo "** TEST SUCCEEDED **"
+	@set -o pipefail; NSUnbufferedIO=YES xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "id=$(BOOTED_SIMULATOR_ID)" test $(APP_ONLY_TESTING_ARG) -collect-test-diagnostics never 2>&1 | xcbeautify --disable-logging && echo "** TEST SUCCEEDED **"
 	@echo "MyAnimeList tests completed."
 
 .PHONY: test
