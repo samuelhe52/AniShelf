@@ -73,7 +73,7 @@ existing cache and avoids fetching originals.
 
 ### F3 — Detail refetch fallback removed; cached details lacking imagery never refresh
 
-**Status:** Open
+**Status:** Resolved
 **File:** `MyAnimeList/Sources/ViewModels/Library/EntryDetailViewModels.swift` line ~197
 **Severity:** Medium
 
@@ -105,7 +105,7 @@ absent.
 
 ### F4 — `resolveLibraryDisplayFaultsBeforeDeletion` does not fault `customPosterPath` / `usingCustomPoster`
 
-**Status:** Open
+**Status:** Resolved
 **File:** `MyAnimeList/Sources/Extensions/AnimeEntry+Extensions.swift` line ~124
 **Severity:** Medium
 
@@ -123,7 +123,7 @@ custom poster, so the path split introduced this gap.
 
 ### F5 — Migration nils the base `posterPath` for custom-poster entries
 
-**Status:** Open
+**Status:** Resolved
 **File:** `DataProvider/Sources/DataProvider/Models/V2/AnimeEntryV2_8_0.swift` line ~91
 (mirrored in `AnimeEntryMigrationBridgeV2_8_0.swift` line ~40)
 **Severity:** Medium

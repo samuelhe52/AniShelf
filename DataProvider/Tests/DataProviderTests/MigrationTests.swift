@@ -184,6 +184,7 @@ struct MigrationTests {
         #expect(migratedDetail.subtitle == "Beyond Journey's End")
         #expect(migratedDetail.status == "Ended")
         #expect(migratedDetail.primaryLinkURL == URL(string: "https://example.com/frieren")!)
+        #expect(migratedSeries.posterPath == "/posters/series.jpg")
         #expect(migratedSeries.customPosterPath == "/posters/series.jpg")
         #expect(migratedSeries.backdropPath == "/backdrops/series.jpg")
         #expect(migratedDetail.logoImagePath == "/frieren-logo.png")

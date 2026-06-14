@@ -416,6 +416,69 @@ struct EntryDetailViewModelTests {
         #expect(viewModel.staffCards[0].secondaryText == "Director / Storyboard Artist")
     }
 
+    @Test @MainActor func testEntryDetailUsesCachedSameLanguageDetailWhenLogoIsPresent() async {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let httpClient = RecordingTMDbHTTPClient { _ in
+            HTTPResponse(statusCode: 500, data: Data())
+        }
+        let fetcher = InfoFetcher(
+            client: TMDbClient(
+                apiKey: "test-key",
+                httpClient: httpClient,
+                configuration: .default
+            ),
+            fetchTranslationResponseData: { _ in Data() }
+        )
+        let viewModel = EntryDetailViewModel(repository: repository, infoFetcher: fetcher)
+        let entry = AnimeEntry(
+            name: "Series",
+            type: .series,
+            tmdbID: 37,
+            detail: AnimeEntryDetail(
+                language: Language.english.rawValue,
+                title: "Cached Detail",
+                logoImagePath: "/logo.png"
+            )
+        )
+
+        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+
+        #expect(viewModel.displayTitle == "Cached Detail")
+        #expect(viewModel.loadError == nil)
+        #expect(await httpClient.requests.isEmpty)
+    }
+
+    @Test @MainActor func testEntryDetailRefetchesCachedSameLanguageDetailWhenLogoIsMissing() async {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let httpClient = RecordingTMDbHTTPClient { _ in
+            HTTPResponse(statusCode: 500, data: Data())
+        }
+        let fetcher = InfoFetcher(
+            client: TMDbClient(
+                apiKey: "test-key",
+                httpClient: httpClient,
+                configuration: .default
+            ),
+            fetchTranslationResponseData: { _ in Data() }
+        )
+        let viewModel = EntryDetailViewModel(repository: repository, infoFetcher: fetcher)
+        let entry = AnimeEntry(
+            name: "Series",
+            type: .series,
+            tmdbID: 38,
+            detail: AnimeEntryDetail(
+                language: Language.english.rawValue,
+                title: "Cached Detail"
+            )
+        )
+
+        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+
+        #expect(viewModel.displayTitle == "Cached Detail")
+        #expect(viewModel.loadError != nil)
+        #expect(!(await httpClient.requests).isEmpty)
+    }
+
     @Test func testReplaceDetailRewritesFlattenedAggregateStaffIntoPersistedJobs() throws {
         let entry = AnimeEntry.template()
         entry.detail = AnimeEntryDetail(

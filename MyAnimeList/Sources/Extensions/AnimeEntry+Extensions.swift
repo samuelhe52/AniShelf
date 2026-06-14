@@ -129,6 +129,8 @@ extension AnimeEntry {
         _ = onAirDate
         _ = type
         _ = posterPath
+        _ = customPosterPath
+        _ = usingCustomPoster
         _ = backdropPath
         _ = tmdbID
         _ = watchStatus

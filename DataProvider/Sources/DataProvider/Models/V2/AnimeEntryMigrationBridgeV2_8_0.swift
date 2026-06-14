@@ -37,7 +37,7 @@ extension SchemaV2_8_0.AnimeEntry {
             onAirDate: dto.onAirDate,
             type: dto.type,
             linkToDetails: dto.linkToDetails,
-            posterPath: dto.usingCustomPoster ? nil : migratedPosterPath,
+            posterPath: migratedPosterPath,
             backdropPath: TMDbImagePath.storagePath(from: dto.backdropURL),
             customPosterPath: dto.usingCustomPoster ? migratedPosterPath : nil,
             tmdbID: dto.tmdbID,

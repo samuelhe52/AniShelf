@@ -35,6 +35,7 @@ extension AnimeEntry {
         linkToDetails = other.linkToDetails
         posterPath = other.posterPath
         backdropPath = other.backdropPath
+        usingCustomPoster = other.usingCustomPoster
         customPosterPath = other.customPosterPath
         // Date saved and id is not updated.
         dateStarted = other.dateStarted

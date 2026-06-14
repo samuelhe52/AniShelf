@@ -53,6 +53,46 @@ struct TMDbImagePathTests {
         )
     }
 
+    @Test func animeEntryInitPreservesBasePosterPathWhenCustomPosterIsEnabled() {
+        let entry = AnimeEntry(
+            name: "Custom Poster Entry",
+            type: .movie,
+            posterPath: "/posters/base.jpg",
+            customPosterPath: "/posters/custom.jpg",
+            tmdbID: 77,
+            usingCustomPoster: true
+        )
+
+        #expect(entry.posterPath == "/posters/base.jpg")
+        #expect(entry.customPosterPath == "/posters/custom.jpg")
+        #expect(entry.selectedPosterPath == "/posters/custom.jpg")
+    }
+
+    @Test func animeEntryUpdateCopiesCustomPosterSelectionState() {
+        let source = AnimeEntry(
+            name: "Source",
+            type: .movie,
+            posterPath: "/posters/base.jpg",
+            customPosterPath: "/posters/custom.jpg",
+            tmdbID: 78,
+            usingCustomPoster: true
+        )
+        let destination = AnimeEntry(
+            name: "Destination",
+            type: .movie,
+            posterPath: "/posters/old.jpg",
+            tmdbID: 79,
+            usingCustomPoster: false
+        )
+
+        destination.update(from: source)
+
+        #expect(destination.posterPath == "/posters/base.jpg")
+        #expect(destination.customPosterPath == "/posters/custom.jpg")
+        #expect(destination.usingCustomPoster)
+        #expect(destination.selectedPosterPath == "/posters/custom.jpg")
+    }
+
     private func url(_ value: String) -> URL {
         URL(string: value)!
     }
