@@ -107,7 +107,8 @@ struct LibraryRelationshipAndConversionTests {
         try await converter.convertSeasonToSeries(
             seasonEntry,
             language: .english,
-            fetcher: fetcher
+            fetcher: fetcher,
+            latestInfoFetcher: makeLatestInfoFetcher()
         )
 
         let migratedEntries = try dataProvider.getAllModels(ofType: AnimeEntry.self)
@@ -142,7 +143,8 @@ struct LibraryRelationshipAndConversionTests {
             seriesEntry,
             seasonNumber: 1,
             language: .english,
-            fetcher: fetcher
+            fetcher: fetcher,
+            latestInfoFetcher: makeLatestInfoFetcher()
         )
 
         let migratedEntries = try dataProvider.getAllModels(ofType: AnimeEntry.self)
@@ -164,5 +166,48 @@ struct LibraryRelationshipAndConversionTests {
         #expect(seasonEntry.dateStarted == referenceDate(year: 2026, month: 5, day: 3))
         #expect(seasonEntry.dateFinished == referenceDate(year: 2026, month: 5, day: 4))
         #expect(hiddenSeriesEntry.tmdbID == 209867)
+    }
+}
+
+private func makeLatestInfoFetcher() -> LibraryEntryLatestInfoFetcher {
+    { entryType, tmdbID, _ in
+        switch entryType {
+        case .series:
+            return (
+                EntryMetadata(
+                    name: "Frieren",
+                    nameTranslations: [:],
+                    overview: nil,
+                    overviewTranslations: [:],
+                    posterURL: nil,
+                    backdropURL: nil,
+                    logoURL: nil,
+                    tmdbID: tmdbID,
+                    onAirDate: nil,
+                    linkToDetails: nil,
+                    type: .series
+                ),
+                AnimeEntryDetailDTO(language: "en-US", title: "Frieren")
+            )
+        case .season(let seasonNumber, let parentSeriesID):
+            return (
+                EntryMetadata(
+                    name: "Frieren Season \(seasonNumber)",
+                    nameTranslations: [:],
+                    overview: nil,
+                    overviewTranslations: [:],
+                    posterURL: nil,
+                    backdropURL: nil,
+                    logoURL: nil,
+                    tmdbID: tmdbID,
+                    onAirDate: nil,
+                    linkToDetails: nil,
+                    type: .season(seasonNumber: seasonNumber, parentSeriesID: parentSeriesID)
+                ),
+                AnimeEntryDetailDTO(language: "en-US", title: "Frieren Season \(seasonNumber)")
+            )
+        case .movie:
+            fatalError("Unexpected movie conversion fetch in LibraryRelationshipAndConversionTests")
+        }
     }
 }

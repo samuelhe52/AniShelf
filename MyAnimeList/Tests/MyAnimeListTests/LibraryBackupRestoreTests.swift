@@ -14,8 +14,6 @@ import ZIPFoundation
 @testable import MyAnimeList
 
 struct LibraryBackupRestoreTests {
-    @MainActor let backupManager = BackupManager(dataProvider: .forPreview)
-
     @Test @MainActor func testRestoreBackupIsBlockedWhileLibraryCloudSyncIsEnabled() throws {
         let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
         store.updateLibraryCloudSyncStatus { status in
@@ -127,7 +125,14 @@ struct LibraryBackupRestoreTests {
     }
 
     @Test @MainActor func testLibraryProfileSettingsActionsCreateBackupReturnsArchive() throws {
-        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let fileManager = FileManager.default
+        let storeDirectory = fileManager.temporaryDirectory
+            .appendingPathComponent("AniShelfTests-create-backup-\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(at: storeDirectory, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: storeDirectory) }
+
+        let dataProvider = DataProvider(url: storeDirectory.appendingPathComponent("create-backup.store"))
+        let store = LibraryStore(dataProvider: dataProvider)
         let actions = LibraryProfileSettingsActions(store: store)
 
         let backupURL = try actions.createBackup()
@@ -163,8 +168,15 @@ struct LibraryBackupRestoreTests {
         #expect(store.library.isEmpty)
     }
     @Test @MainActor func testBackup() throws {
-        let backupURL = try backupManager.createBackup()
         let fileManager = FileManager.default
+        let storeDirectory = fileManager.temporaryDirectory
+            .appendingPathComponent("AniShelfTests-backup-\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(at: storeDirectory, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: storeDirectory) }
+
+        let dataProvider = DataProvider(url: storeDirectory.appendingPathComponent("backup.store"))
+        let backupManager = BackupManager(dataProvider: dataProvider)
+        let backupURL = try backupManager.createBackup()
         #expect(fileManager.fileExists(atPath: backupURL.path()))
         let attributes = try fileManager.attributesOfItem(atPath: backupURL.path())
         let size = attributes[.size] as? NSNumber

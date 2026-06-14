@@ -1,6 +1,9 @@
 import DataProvider
 import Foundation
 
+typealias LibraryEntryLatestInfoFetcher =
+    @Sendable (AnimeType, Int, Language) async throws -> (EntryMetadata, AnimeEntryDetailDTO)
+
 @MainActor
 final class LibraryEntryConverter {
     private let repository: LibraryRepository
@@ -9,7 +12,12 @@ final class LibraryEntryConverter {
         self.repository = repository
     }
 
-    func convertSeasonToSeries(_ entry: AnimeEntry, language: Language, fetcher: InfoFetcher) async throws {
+    func convertSeasonToSeries(
+        _ entry: AnimeEntry,
+        language: Language,
+        fetcher: InfoFetcher,
+        latestInfoFetcher: LibraryEntryLatestInfoFetcher? = nil
+    ) async throws {
         guard case .season(_, let parentSeriesID) = entry.type else { return }
         let seasonTMDbID = entry.tmdbID
         libraryStoreLogger.info(
@@ -23,11 +31,14 @@ final class LibraryEntryConverter {
             parentEntry = existingParent
             parentEntry.updateDisplayState(true)
         } else {
-            let parentLatestInfo = try await fetcher.latestInfo(
-                entryType: .series,
-                tmdbID: parentSeriesID,
-                language: language
-            )
+            let resolveLatestInfo = latestInfoFetcher ?? { entryType, tmdbID, language in
+                try await fetcher.latestInfo(
+                    entryType: entryType,
+                    tmdbID: tmdbID,
+                    language: language
+                )
+            }
+            let parentLatestInfo = try await resolveLatestInfo(.series, parentSeriesID, language)
             parentEntry = AnimeEntry(fromInfo: parentLatestInfo.0)
             parentEntry.replaceDetail(from: parentLatestInfo.1)
             parentEntry.updateDisplayState(true)
@@ -49,7 +60,8 @@ final class LibraryEntryConverter {
         _ entry: AnimeEntry,
         seasonNumber: Int,
         language: Language,
-        fetcher: InfoFetcher
+        fetcher: InfoFetcher,
+        latestInfoFetcher: LibraryEntryLatestInfoFetcher? = nil
     ) async throws {
         let parentSeriesID = entry.tmdbID
         libraryStoreLogger.info(
@@ -58,16 +70,19 @@ final class LibraryEntryConverter {
         let userInfo = entry.userInfo
         let originalPosterURL = entry.posterURL
         let seasonTMDbID = entry.tmdbID
+        let resolveLatestInfo = latestInfoFetcher ?? { entryType, tmdbID, language in
+            try await fetcher.latestInfo(
+                entryType: entryType,
+                tmdbID: tmdbID,
+                language: language
+            )
+        }
 
-        async let parentLatestInfo = fetcher.latestInfo(
-            entryType: .series,
-            tmdbID: parentSeriesID,
-            language: language
-        )
-        async let seasonLatestInfo = fetcher.latestInfo(
-            entryType: .season(seasonNumber: seasonNumber, parentSeriesID: parentSeriesID),
-            tmdbID: seasonTMDbID,
-            language: language
+        async let parentLatestInfo = resolveLatestInfo(.series, parentSeriesID, language)
+        async let seasonLatestInfo = resolveLatestInfo(
+            .season(seasonNumber: seasonNumber, parentSeriesID: parentSeriesID),
+            seasonTMDbID,
+            language
         )
         let resolvedParentLatestInfo = try await parentLatestInfo
         let resolvedSeasonLatestInfo = try await seasonLatestInfo
