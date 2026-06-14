@@ -179,24 +179,6 @@ final class LibraryMetadataRefresher {
         }
     }
 
-    /// Returns the image targets that should be prefetched from refreshed metadata updates.
-    ///
-    /// The refresh writer applies updates on a background model context, so the main-context
-    /// `AnimeEntry` instances passed into the refresh can still contain stale image URLs. Building
-    /// the prefetch set from update payloads ensures posters, backdrops, and logos use the freshly
-    /// fetched metadata.
-    ///
-    /// Parent-series artwork is intentionally excluded here. Refresh can discover or insert parent
-    /// series transitively, and prefetching every parent image would let cache growth scale beyond
-    /// the entries the user explicitly refreshed.
-    private func imagePrefetchTargetsForRefreshPhase(
-        from updates: [LibraryMetadataRefreshUpdate]
-    ) -> [LibraryImageCacheService.ImagePrefetchTarget] {
-        updates.flatMap { update in
-            imagePrefetchTargetsForRefreshPhase(from: update)
-        }
-    }
-
     private func imagePrefetchTargetsForRefreshPhase(
         from update: LibraryMetadataRefreshUpdate
     ) -> [LibraryImageCacheService.ImagePrefetchTarget] {
