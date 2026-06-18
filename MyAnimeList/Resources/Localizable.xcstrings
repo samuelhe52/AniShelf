@@ -373,6 +373,22 @@
         }
       }
     },
+    "Added a Settings option to cache large Gallery posters (off by default)." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大きなギャラリーポスターをキャッシュする設定を追加しました（デフォルトではオフ）。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增缓存大尺寸图库海报的设置选项（默认关闭）。"
+          }
+        }
+      }
+    },
     "Added a rating feature: you can now rate anime in your library from 1 to 5." : {
       "localizations" : {
         "ja" : {
