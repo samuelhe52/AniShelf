@@ -19,6 +19,108 @@ import Testing
     #expect(FileManager.default.fileExists(atPath: storeURL.deletingLastPathComponent().path()))
 }
 
+@Test @MainActor func startupRecoveryQuarantinesStoreFamilyAndWritesManifest() throws {
+    let fileManager = FileManager.default
+    let rootDirectory = fileManager.temporaryDirectory
+        .appendingPathComponent("DataProviderRecoveryTests-\(UUID().uuidString)", isDirectory: true)
+    let storeURL = rootDirectory.appendingPathComponent("mal.store")
+    try fileManager.createDirectory(at: rootDirectory, withIntermediateDirectories: true)
+    defer { try? fileManager.removeItem(at: rootDirectory) }
+
+    try Data("store".utf8).write(to: storeURL)
+    try Data("wal".utf8).write(to: rootDirectory.appendingPathComponent("mal.store-wal"))
+    try Data("unrelated".utf8).write(to: rootDirectory.appendingPathComponent("other.store"))
+    let recoveredAt = Date(timeIntervalSince1970: 1_750_000_000)
+
+    let recovery = try DataProvider.quarantinePersistentStore(
+        at: storeURL,
+        error: TestStartupError.openFailed,
+        now: recoveredAt,
+        fileManager: fileManager
+    )
+
+    #expect(!fileManager.fileExists(atPath: storeURL.path()))
+    #expect(
+        fileManager.fileExists(
+            atPath: recovery.recoveryDirectoryURL.appendingPathComponent("mal.store").path()
+        )
+    )
+    #expect(
+        fileManager.fileExists(
+            atPath: recovery.recoveryDirectoryURL.appendingPathComponent("mal.store-wal").path()
+        )
+    )
+    #expect(fileManager.fileExists(atPath: rootDirectory.appendingPathComponent("other.store").path()))
+
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    let manifest = try decoder.decode(
+        PersistentStoreRecoveryManifest.self,
+        from: Data(contentsOf: recovery.manifestURL)
+    )
+    #expect(manifest.recoveredAt == recoveredAt)
+    #expect(manifest.errorDescription.contains("openFailed"))
+    #expect(manifest.files.map(\.name) == ["mal.store", "mal.store-wal"])
+    let pendingRecovery = try #require(
+        DataProvider.pendingPersistentStoreRecovery(
+            at: storeURL,
+            fileManager: fileManager
+        )
+    )
+    #expect(pendingRecovery.recoveredAt == recovery.recoveredAt)
+    #expect(
+        pendingRecovery.recoveryDirectoryURL.lastPathComponent
+            == recovery.recoveryDirectoryURL.lastPathComponent
+    )
+    #expect(pendingRecovery.files == recovery.files)
+
+    DataProvider.acknowledgePersistentStoreRecovery(recovery)
+
+    #expect(
+        DataProvider.pendingPersistentStoreRecovery(
+            at: storeURL,
+            fileManager: fileManager
+        ) == nil
+    )
+}
+
+@Test @MainActor func startupRecoveryRecreatesCleanStoreAfterSimulatedOpenFailure() throws {
+    let fileManager = FileManager.default
+    let rootDirectory = fileManager.temporaryDirectory
+        .appendingPathComponent("DataProviderBootstrapTests-\(UUID().uuidString)", isDirectory: true)
+    let storeURL = rootDirectory.appendingPathComponent("mal.store")
+    try fileManager.createDirectory(at: rootDirectory, withIntermediateDirectories: true)
+    defer { try? fileManager.removeItem(at: rootDirectory) }
+    try Data("corrupted".utf8).write(to: storeURL)
+
+    var attemptCount = 0
+    let result = DataProvider.bootstrap(
+        url: storeURL,
+        fileManager: fileManager,
+        now: Date(timeIntervalSince1970: 1_750_000_000)
+    ) { inMemory, url in
+        attemptCount += 1
+        if attemptCount == 1 {
+            throw TestStartupError.openFailed
+        }
+        return try DataProvider.createModelContainer(inMemory: inMemory, url: url)
+    }
+
+    #expect(attemptCount == 2)
+    let recovery = try #require(result.recovery)
+    #expect(result.provider.url == storeURL)
+    #expect(fileManager.fileExists(atPath: storeURL.path()))
+    #expect(
+        fileManager.fileExists(
+            atPath: recovery.recoveryDirectoryURL.appendingPathComponent("mal.store").path()
+        )
+    )
+}
+
+fileprivate enum TestStartupError: Error {
+    case openFailed
+}
+
 @Test func watchedStatusDoesNotBackfillMissingDates() async throws {
     let entry = AnimeEntry.template()
 

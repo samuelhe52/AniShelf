@@ -406,6 +406,47 @@ class LibraryStore {
         syncCoordinator.removeAllChangeTokens()
     }
 
+    /// Resets persisted sync metadata that belonged to a replaced local store.
+    ///
+    /// Store replacement invalidates any queued local CloudKit mutations and any
+    /// previously committed server tokens because both refer to rows that no
+    /// longer exist in the fresh store. If sync was enabled, the next sync must
+    /// resume through first-enable bootstrap so CloudKit can repopulate the
+    /// replacement store from scratch.
+    func prepareLibraryCloudSyncAfterPersistentStoreRecovery() {
+        cancelOrdinaryLibrarySyncTasks()
+        syncCoordinator?.cancelOrdinarySync()
+        syncCoordinator?.cancelFirstEnableBootstrap()
+        syncScheduler?.resetRetryBackoff()
+
+        do {
+            try syncChangeRecorder.dirtyQueueStore.replaceEntries([])
+        } catch {
+            libraryStoreLogger.error(
+                "Failed to clear persisted iCloud sync dirty work after startup store recovery: \(error.localizedDescription, privacy: .private)"
+            )
+        }
+        resetLibraryCloudSyncChangeTokens()
+        rebuildSyncChangeTracking()
+
+        guard libraryCloudSyncStatus.isEnabled else {
+            shouldResumeInterruptedCloudSyncBootstrap = false
+            return
+        }
+
+        shouldResumeInterruptedCloudSyncBootstrap = true
+        updateLibraryCloudSyncStatus { status in
+            status.isEnabled = true
+            status.bootstrapState = .running
+            status.pendingConflictSummary = nil
+            status.retryState = .idle
+            status.currentPhase = nil
+            status.lastResult = nil
+            status.lastFailureReason = nil
+            status.degradedReason = nil
+        }
+    }
+
     private func resetLibraryCloudSyncDisabledState(resetRetryState: Bool) {
         if resetRetryState {
             syncScheduler?.resetRetryBackoff()

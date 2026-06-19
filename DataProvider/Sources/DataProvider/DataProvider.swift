@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 import os
 
-fileprivate let dataProviderLogger = Logger(
+let dataProviderLogger = Logger(
     subsystem: .moduleIdentifier,
     category: "DataProvider"
 )
@@ -34,8 +34,13 @@ let persistenStoreURL = URL.applicationSupportDirectory
 
 /// A data provider for SwiftData model containers and data operations, stored in MainActor.
 @MainActor public final class DataProvider {
+    /// The result of opening the app's shared persistent store during startup.
+    public static let startupBootstrap = bootstrap()
+
     /// The default shared instance of the data provider.
-    public static let `default` = DataProvider()
+    public static var `default`: DataProvider {
+        startupBootstrap.provider
+    }
 
     /// A preview instance of the data provider that uses in-memory storage.
     public static let forPreview = DataProvider(inMemory: true)
@@ -73,6 +78,13 @@ let persistenStoreURL = URL.applicationSupportDirectory
         self.url = url
     }
 
+    init(container: ModelContainer, inMemory: Bool, url: URL) {
+        self.inMemory = inMemory
+        self.sharedModelContainer = container
+        self.dataHandler = .init(modelContainer: container)
+        self.url = url
+    }
+
     /// Tears down the existing model container and re-initializes it from the persistent store.
     ///
     /// This is crucial for applying changes after a restore operation.
@@ -94,7 +106,7 @@ let persistenStoreURL = URL.applicationSupportDirectory
         dataHandler = .init(modelContainer: sharedModelContainer)
     }
 
-    private static func createModelContainer(
+    static func createModelContainer(
         inMemory: Bool = false,
         url: URL
     ) throws -> ModelContainer {
@@ -129,7 +141,7 @@ let persistenStoreURL = URL.applicationSupportDirectory
         )
     }
 
-    private static func logContainerCreationFailure(
+    static func logContainerCreationFailure(
         _ error: Error,
         url: URL,
         operation: String

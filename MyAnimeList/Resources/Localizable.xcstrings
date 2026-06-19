@@ -1,6 +1,246 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "A clean library was created" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい空のライブラリを作成しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已创建新的空资料库"
+          }
+        }
+      }
+    },
+    "AniShelf could not prepare this export. Please try again." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfはこのエクスポートを準備できませんでした。もう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf 无法准备此导出，请重试。"
+          }
+        }
+      }
+    },
+    "AniShelf quarantined the unreadable database files instead of deleting them." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfは読み取れないデータベースファイルを削除せず隔離しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf 已隔离无法读取的数据库文件，而没有将其删除。"
+          }
+        }
+      }
+    },
+    "AniShelf was unable to open your database because it is corrupted or unreadable." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "データベースが破損しているか読み取れないため、AniShelfは開くことができませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "由于数据库已损坏或无法读取，AniShelf 无法打开它。"
+          }
+        }
+      }
+    },
+    "Contact samuelhe52@outlook.com and attach an export below if you want the developer to investigate." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開発者による調査を希望する場合は、以下のエクスポートを添付して samuelhe52@outlook.com までご連絡ください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如需开发者协助调查，请联系 samuelhe52@outlook.com 并附上下方的导出文件。"
+          }
+        }
+      }
+    },
+    "Continue with Empty Library" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "空のライブラリで続ける"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用空资料库继续"
+          }
+        }
+      }
+    },
+    "Developer assistance" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開発者によるサポート"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开发者协助"
+          }
+        }
+      }
+    },
+    "Export Diagnostic" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "診断情報をエクスポート"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出诊断信息"
+          }
+        }
+      }
+    },
+    "Export Recovery Bundle" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "復旧バンドルをエクスポート"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出恢复包"
+          }
+        }
+      }
+    },
+    "Library Recovery Required" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリの復旧が必要です"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要恢复资料库"
+          }
+        }
+      }
+    },
+    "Nothing is uploaded automatically. An export is prepared only when you choose an action." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動的にアップロードされることはありません。操作を選択した場合にのみエクスポートが準備されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不会自动上传任何内容。只有在您选择操作后才会准备导出文件。"
+          }
+        }
+      }
+    },
+    "Optional Exports" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "任意のエクスポート"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可选导出"
+          }
+        }
+      }
+    },
+    "The replacement library is empty. A backup from an earlier build or iCloud Sync may help recover your data." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいライブラリは空です。以前のビルドのバックアップまたはiCloud同期からデータを復旧できる場合があります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "替代资料库为空。您可以尝试通过早期版本的备份或 iCloud 同步恢复数据。"
+          }
+        }
+      }
+    },
+    "Unable to Prepare Export" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エクスポートを準備できません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法准备导出"
+          }
+        }
+      }
+    },
+    "Your original files were preserved" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "元のファイルは保護されています"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原始文件已保留"
+          }
+        }
+      }
+    },
     "" : {
       "localizations" : {
         "ja" : {

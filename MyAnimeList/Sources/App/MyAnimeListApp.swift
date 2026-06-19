@@ -17,15 +17,21 @@ struct MyAnimeListApp: App {
     @State var keyStorage: TMDbAPIKeyStorage
     @State var whatsNew: WhatsNewController
     @State var supportStore: SupportStore
+    @State private var startupRecovery: PersistentStoreRecovery?
+    private let recoveryActivityGate: StartupRecoveryActivityGate
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(.preferredAnimeInfoLanguage) var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
 
     init() {
+        let startupBootstrap = DataProvider.startupBootstrap
+        let startupRecovery = Self.startupRecovery(
+            bootstrapRecovery: startupBootstrap.recovery
+        )
         let keyStorage = TMDbAPIKeyStorage()
         let libraryStore = LibraryStore(
-            dataProvider: .default,
+            dataProvider: startupBootstrap.provider,
             hasTMDbAPIKey: {
                 guard let key = keyStorage.key else { return false }
                 return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -33,13 +39,20 @@ struct MyAnimeListApp: App {
         )
         let whatsNew = WhatsNewController()
         let supportStore = SupportStore()
+        let recoveryActivityGate = StartupRecoveryActivityGate(
+            isBlocked: startupRecovery != nil
+        )
 
         _libraryStore = State(initialValue: libraryStore)
         _keyStorage = State(initialValue: keyStorage)
         _whatsNew = State(initialValue: whatsNew)
         _supportStore = State(initialValue: supportStore)
+        _startupRecovery = State(initialValue: startupRecovery)
+        self.recoveryActivityGate = recoveryActivityGate
+        RecoveryExportManager.cleanupAllTemporaryExports()
 
-        LibrarySyncNotificationBridge.configureSyncHandler { [libraryStore] in
+        LibrarySyncNotificationBridge.configureSyncHandler { [libraryStore, recoveryActivityGate] in
+            guard recoveryActivityGate.allowsLibraryActivity else { return .noData }
             let result = await libraryStore.performLibrarySyncResult(trigger: .cloudNotification)
             switch result {
             case .success:
@@ -52,10 +65,21 @@ struct MyAnimeListApp: App {
         }
     }
 
+    private static func startupRecovery(
+        bootstrapRecovery: PersistentStoreRecovery?
+    ) -> PersistentStoreRecovery? {
+        bootstrapRecovery
+    }
+
     var body: some Scene {
         WindowGroup {
             ZStack {
-                if let key = keyStorage.key, !key.isEmpty {
+                if let startupRecovery {
+                    StartupRecoveryView(
+                        recovery: startupRecovery,
+                        onContinue: continueAfterStartupRecovery
+                    )
+                } else if let key = keyStorage.key, !key.isEmpty {
                     LibraryView()
                         .onAppear {
                             libraryStore.language = followsSystemLanguage ? .current : preferredLanguage
@@ -72,7 +96,9 @@ struct MyAnimeListApp: App {
             .environment(supportStore)
             .environment(\.dataHandler, DataProvider.default.dataHandler)
             .onAppear {
-                requestSync(trigger: .appLaunch)
+                if startupRecovery == nil {
+                    requestSync(trigger: .appLaunch)
+                }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
@@ -113,20 +139,47 @@ struct MyAnimeListApp: App {
     }
 
     private func updateWhatsNewPresentation() {
+        guard startupRecovery == nil else { return }
         whatsNew.presentIfNeeded(allowsAutoPresentation: hasTMDbAPIKey)
     }
 
+    private func continueAfterStartupRecovery() {
+        libraryStore.prepareLibraryCloudSyncAfterPersistentStoreRecovery()
+        if let startupRecovery {
+            DataProvider.acknowledgePersistentStoreRecovery(startupRecovery)
+        }
+        recoveryActivityGate.isBlocked = false
+        startupRecovery = nil
+        requestSync(trigger: .appLaunch)
+        updateWhatsNewPresentation()
+    }
+
     private func requestSync(trigger: LibrarySyncCoordinator.Trigger) {
+        guard startupRecovery == nil else { return }
         libraryStore.syncLibrary(trigger: trigger)
     }
 
     private func flushPendingLocalSync() {
+        guard recoveryActivityGate.allowsLibraryActivity else { return }
         libraryStore.flushPendingLocalLibrarySync()
     }
 
     private var hasTMDbAPIKey: Bool {
         guard let key = keyStorage.key else { return false }
         return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+}
+
+@MainActor
+final class StartupRecoveryActivityGate {
+    var isBlocked: Bool
+
+    var allowsLibraryActivity: Bool {
+        !isBlocked
+    }
+
+    init(isBlocked: Bool) {
+        self.isBlocked = isBlocked
     }
 }
 

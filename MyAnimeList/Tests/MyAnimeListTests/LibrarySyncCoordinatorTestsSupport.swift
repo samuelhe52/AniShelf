@@ -111,6 +111,7 @@ final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, @unchecked S
     private var fetchContinuation: CheckedContinuation<Void, Never>?
     private var saveContinuation: CheckedContinuation<Void, Never>?
     private var saveCallCount = 0
+    var fetchedChangeTokens: [CKServerChangeToken?] = []
     var savedRecords: [CKRecord] = []
     var saveBatchSizes: [Int] = []
     var ensureZoneCallCount = 0
@@ -141,6 +142,7 @@ final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, @unchecked S
         in zoneID: CKRecordZone.ID,
         since changeToken: CKServerChangeToken?
     ) async throws -> CloudLibrarySyncZoneChangeBatch {
+        fetchedChangeTokens.append(changeToken)
         if suspendNextFetch || suspendedFetchCount > 0 {
             if suspendNextFetch {
                 suspendNextFetch = false

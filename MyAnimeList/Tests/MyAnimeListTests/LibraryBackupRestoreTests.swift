@@ -14,6 +14,57 @@ import ZIPFoundation
 @testable import MyAnimeList
 
 struct LibraryBackupRestoreTests {
+    @Test func testStartupRecoveryPresentationOffersBothExplicitExports() {
+        #expect(StartupRecoveryPresentation.availableExports == [.diagnostic, .recoveryBundle])
+    }
+
+    @Test @MainActor func testStartupRecoveryActivityGateBlocksLibraryWorkUntilAcknowledged() {
+        let gate = StartupRecoveryActivityGate(isBlocked: true)
+
+        #expect(!gate.allowsLibraryActivity)
+
+        gate.isBlocked = false
+
+        #expect(gate.allowsLibraryActivity)
+    }
+
+    @Test func testRecoveryExportsUseQuarantineDirectoryAndCleanupOnlyTemporaryFiles() throws {
+        let fileManager = FileManager.default
+        let rootDirectory = fileManager.temporaryDirectory
+            .appendingPathComponent("AniShelfTests-recovery-export-\(UUID().uuidString)", isDirectory: true)
+        let recoveryDirectory = rootDirectory.appendingPathComponent("Recovery/20260619-120000-000")
+        let manifestURL = recoveryDirectory.appendingPathComponent("manifest.json")
+        try fileManager.createDirectory(at: recoveryDirectory, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: rootDirectory) }
+        try Data("diagnostic".utf8).write(to: manifestURL)
+        try Data("store".utf8).write(to: recoveryDirectory.appendingPathComponent("mal.store"))
+
+        let recovery = PersistentStoreRecovery(
+            recoveredAt: Date(timeIntervalSince1970: 1_750_000_000),
+            recoveryDirectoryURL: recoveryDirectory,
+            manifestURL: manifestURL,
+            files: [PersistentStoreRecoveryFile(name: "mal.store", size: 5)]
+        )
+        let diagnosticURL = try RecoveryExportManager.prepareExport(.diagnostic, for: recovery)
+        let bundleURL = try RecoveryExportManager.prepareExport(.recoveryBundle, for: recovery)
+
+        #expect(try Data(contentsOf: diagnosticURL) == Data("diagnostic".utf8))
+        let archive = try Archive(url: bundleURL, accessMode: .read)
+        #expect(archive.contains { $0.path.hasSuffix("/mal.store") })
+
+        RecoveryExportManager.cleanupTemporaryExports(for: recovery)
+
+        #expect(!fileManager.fileExists(atPath: diagnosticURL.deletingLastPathComponent().path()))
+        #expect(fileManager.fileExists(atPath: recoveryDirectory.path()))
+        #expect(fileManager.fileExists(atPath: manifestURL.path()))
+
+        _ = try RecoveryExportManager.prepareExport(.recoveryBundle, for: recovery)
+        RecoveryExportManager.cleanupAllTemporaryExports()
+
+        #expect(!fileManager.fileExists(atPath: diagnosticURL.deletingLastPathComponent().path()))
+        #expect(fileManager.fileExists(atPath: recoveryDirectory.path()))
+    }
+
     @Test @MainActor func testRestoreBackupIsBlockedWhileLibraryCloudSyncIsEnabled() throws {
         let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
         store.updateLibraryCloudSyncStatus { status in
@@ -122,6 +173,83 @@ struct LibraryBackupRestoreTests {
         #expect(tokenDefaults.object(forKey: tokenKey) == nil)
         #expect(store.libraryCloudSyncStatus == .defaultValue)
         #expect(store.preferences.load().cloudSyncStatus == .defaultValue)
+    }
+
+    @Test @MainActor func testStartupRecoveryRebootsEnabledCloudSyncWithFreshMetadata() async throws {
+        let store = makeSyncReadyStore()
+        let staleDeleteIdentity = LibraryEntrySyncIdentity(entryType: .movie, tmdbID: 910_001)
+        try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([
+            .delete(
+                .init(
+                    tombstone: .init(
+                        identity: staleDeleteIdentity,
+                        tmdbID: 910_001,
+                        parentSeriesID: nil,
+                        seasonNumber: nil,
+                        entryType: .movie,
+                        deletedAt: referenceDate(year: 2026, month: 6, day: 10)
+                    )
+                )
+            )
+        ])
+
+        let tokenDefaultsSuiteName = "MyAnimeListTests.StartupRecoveryTokenStore.\(UUID().uuidString)"
+        let tokenDefaults = UserDefaults(suiteName: tokenDefaultsSuiteName)!
+        tokenDefaults.removePersistentDomain(forName: tokenDefaultsSuiteName)
+        defer { tokenDefaults.removePersistentDomain(forName: tokenDefaultsSuiteName) }
+        let tokenStore = CloudLibrarySyncChangeTokenStore(
+            userDefaults: tokenDefaults,
+            keyPrefix: "MyAnimeListTests.StartupRecoveryChangeTokenStore"
+        )
+        let namespace = makeNamespace()
+        let tokenKey = tokenStore.tokenKey(
+            for: CloudLibrarySyncClient.recordZoneID,
+            namespace: namespace
+        )
+        tokenDefaults.set(Data([0x01, 0x02, 0x03]), forKey: tokenKey)
+
+        let client = CloudLibrarySyncClient()
+        let remoteIdentity = LibraryEntrySyncIdentity(entryType: .movie, tmdbID: 910_002)
+        let remoteSnapshot = makeSnapshot(
+            identity: remoteIdentity,
+            tmdbID: 910_002,
+            entryType: .movie
+        )
+        let database = FakeCloudLibrarySyncDatabase(
+            changes: [try makeChangeBatch(client: client, snapshots: [remoteSnapshot])]
+        )
+        store.configureLibrarySyncCoordinator(
+            client: client,
+            database: database,
+            changeTokenStore: tokenStore,
+            namespaceProvider: { namespace },
+            hydrateMissingEntry: { snapshot, store in
+                let entry = AnimeEntry(
+                    name: "Recovered Placeholder",
+                    type: snapshot.entryType,
+                    tmdbID: snapshot.tmdbID
+                )
+                store.repository.insert(entry)
+                return entry
+            }
+        )
+
+        store.prepareLibraryCloudSyncAfterPersistentStoreRecovery()
+
+        #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
+        #expect(tokenDefaults.object(forKey: tokenKey) == nil)
+        #expect(store.libraryCloudSyncStatus.isEnabled)
+        #expect(store.libraryCloudSyncStatus.bootstrapState == .running)
+
+        let result = await store.performLibrarySyncResult(trigger: .appLaunch)
+
+        #expect(result == .success)
+        #expect(database.fetchedChangeTokens.count == 1)
+        #expect(database.fetchedChangeTokens[0] == nil)
+        #expect(store.libraryCloudSyncStatus.bootstrapState == .completed)
+        #expect(store.library.map(\.tmdbID) == [910_002])
+        #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
+        #expect(!database.savedRecords.contains { $0.recordID == client.recordID(for: staleDeleteIdentity) })
     }
 
     @Test @MainActor func testLibraryProfileSettingsActionsCreateBackupReturnsArchive() throws {
