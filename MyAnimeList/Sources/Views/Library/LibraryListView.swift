@@ -13,29 +13,22 @@ struct LibraryListView: View {
     @Environment(LibraryEntryInteractionState.self) var interaction
     @Environment(\.toggleFavorite) var toggleFavorite
 
-    @Environment(\.editMode) private var editMode
-
+    let displayItems: [LibraryEntryDisplayItem]
     @Binding var scrolledID: Int?
     @Binding var highlightedEntryID: Int?
 
     var body: some View {
         ScrollViewReader { proxy in
-            List(store.libraryDisplayItems, selection: selectionBinding) { item in
+            List(displayItems) { item in
                 rowContent(for: item)
             }
             .listStyle(.plain)
-            .environment(\.editMode, editMode)
             .animation(.default, value: store.groupStrategy)
             .animation(.default, value: store.sortReversed)
             .animation(.default, value: store.sortStrategy)
             .animation(.default, value: store.filters)
             .onAppear {
                 if let scrolledID { proxy.scrollTo(scrolledID) }
-            }
-            .onChange(of: interaction.isMultiSelecting, initial: true) { _, isMultiSelecting in
-                withAnimation {
-                    editMode?.wrappedValue = isMultiSelecting ? .active : .inactive
-                }
             }
             .onChange(of: scrolledID) {
                 if let scrolledID {
@@ -59,11 +52,27 @@ struct LibraryListView: View {
         AnimeEntryListRow(
             entry: item.entry,
             snapshot: item.snapshot,
-            onTap: { scrolledID = item.id },
+            onTap: {
+                scrolledID = item.id
+                if interaction.isMultiSelecting {
+                    interaction.toggleSelection(for: item.id)
+                }
+            },
             onOpenDetails: {
+                guard !interaction.isMultiSelecting else { return }
                 scrolledID = item.id
                 interaction.detailingEntry = item.entry
             }
+        )
+        .opacity(
+            !interaction.isMultiSelecting || interaction.isSelected(item.id) ? 1 : 0.48
+        )
+        .scaleEffect(
+            !interaction.isMultiSelecting || interaction.isSelected(item.id) ? 1 : 0.985
+        )
+        .animation(
+            .smooth(duration: 0.18),
+            value: interaction.isSelected(item.id)
         )
         .highlightEffect(
             showHighlight: interaction.highlightBinding(
@@ -100,10 +109,4 @@ struct LibraryListView: View {
         }
     }
 
-    private var selectionBinding: Binding<Set<Int>> {
-        Binding(
-            get: { interaction.selectedEntryIDs },
-            set: { interaction.selectedEntryIDs = $0 }
-        )
-    }
 }

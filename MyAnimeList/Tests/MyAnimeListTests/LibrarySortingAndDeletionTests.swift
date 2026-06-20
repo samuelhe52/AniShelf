@@ -205,4 +205,50 @@ struct LibrarySortingAndDeletionTests {
             #expect(store.filterAndSort(entries).map(\.tmdbID) == [103, 104, 102, 101])
         }
     }
+
+    @Test @MainActor func testLibraryOnDisplayRespectsFiltersAndHiddenDroppedState() throws {
+        let hideDroppedKey = String.libraryHideDroppedByDefault
+        let defaults = UserDefaults.standard
+        let originalHideDropped = defaults.object(forKey: hideDroppedKey)
+
+        defer {
+            if let originalHideDropped {
+                defaults.set(originalHideDropped, forKey: hideDroppedKey)
+            } else {
+                defaults.removeObject(forKey: hideDroppedKey)
+            }
+        }
+
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let favorite = makeLibraryEntry(
+            name: "Favorite",
+            tmdbID: 201,
+            daySaved: 1,
+            favorite: true
+        )
+        let plain = makeLibraryEntry(name: "Plain", tmdbID: 202, daySaved: 2)
+        let dropped = makeLibraryEntry(
+            name: "Dropped",
+            tmdbID: 203,
+            watchStatus: .dropped,
+            daySaved: 3
+        )
+
+        try store.repository.newEntry(favorite)
+        try store.repository.newEntry(plain)
+        try store.repository.newEntry(dropped)
+        try store.refreshLibrary()
+
+        store.filters = [.favorited]
+        #expect(store.libraryOnDisplay.contains { $0.tmdbID == favorite.tmdbID })
+        #expect(!store.libraryOnDisplay.contains { $0.tmdbID == plain.tmdbID })
+        #expect(!store.libraryOnDisplay.contains { $0.tmdbID == dropped.tmdbID })
+
+        store.filters = []
+        store.hideDroppedByDefault = true
+        #expect(!store.libraryOnDisplay.contains { $0.tmdbID == dropped.tmdbID })
+
+        store.hideDroppedByDefault = false
+        #expect(store.libraryOnDisplay.contains { $0.tmdbID == dropped.tmdbID })
+    }
 }

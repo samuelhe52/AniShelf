@@ -14,6 +14,7 @@ struct LibraryGridView: View {
     @Environment(LibraryStore.self) private var store
     @Environment(\.toggleFavorite) var toggleFavorite
     @Environment(LibraryEntryInteractionState.self) var interaction
+    let displayItems: [LibraryEntryDisplayItem]
     @Binding var scrolledID: Int?
     @Binding var highlightedEntryID: Int?
     private let columns = [GridItem(.adaptive(minimum: 104, maximum: 132), spacing: 10)]
@@ -22,7 +23,7 @@ struct LibraryGridView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(store.libraryDisplayItems) { item in
+                    ForEach(displayItems) { item in
                         configuredGridItem(for: item)
                     }
                 }
@@ -254,6 +255,7 @@ fileprivate struct LibraryGridItem: View {
     @Previewable let store = LibraryStore(dataProvider: .forPreview)
 
     LibraryGridView(
+        displayItems: store.libraryDisplayItems,
         scrolledID: .constant(nil),
         highlightedEntryID: .constant(nil)
     )

@@ -31,6 +31,8 @@ struct LibraryView: View {
     @State private var newEntriesAddedToggle = false
     @State private var highlightedEntryID: Int?
     @State private var isShowingBatchDeleteConfirmation = false
+    @State private var selectionDisplayItems: [LibraryEntryDisplayItem]?
+    @State private var selectionEntriesByID: [Int: AnimeEntry] = [:]
 
     // Persistent UI preference
     @AppStorage(.libraryViewStyle) var libraryViewStyle: LibraryViewStyle = .gallery
@@ -72,7 +74,7 @@ struct LibraryView: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .animation(libraryViewStyleAnimation, value: libraryViewStyle)
-            .animation(.default, value: selectedEntries.isEmpty)
+            .animation(.default, value: interaction.selectedEntryIDs.isEmpty)
             .sensoryFeedback(.success, trigger: newEntriesAddedToggle)
             .allowsHitTesting(!showProfileSettings)
             .accessibilityHidden(showProfileSettings)
@@ -88,12 +90,32 @@ struct LibraryView: View {
                 Text(batchDeleteConfirmationMessage)
             }
         }
+        .onChange(of: store.libraryRevision) {
+            refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(of: store.filters) {
+            refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(of: store.groupStrategy) {
+            refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(of: store.sortStrategy) {
+            refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(of: store.sortReversed) {
+            refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(of: store.hideDroppedByDefault) {
+            refreshSelectionDisplayItemsIfNeeded()
+        }
     }
 
     // MARK: - Content
 
     @ViewBuilder
     private var libraryView: some View {
+        let displayItems = selectionDisplayItems ?? store.libraryDisplayItems
+
         switch libraryViewStyle {
         case .gallery:
             libraryViewPage(id: .gallery) {
@@ -106,6 +128,7 @@ struct LibraryView: View {
         case .list:
             libraryViewPage(id: .list) {
                 LibraryListView(
+                    displayItems: displayItems,
                     scrolledID: $scrollState.scrolledID,
                     highlightedEntryID: $highlightedEntryID
                 )
@@ -114,6 +137,7 @@ struct LibraryView: View {
         case .grid:
             libraryViewPage(id: .grid) {
                 LibraryGridView(
+                    displayItems: displayItems,
                     scrolledID: $scrollState.scrolledID,
                     highlightedEntryID: $highlightedEntryID
                 )
@@ -131,7 +155,7 @@ struct LibraryView: View {
                 Button("Delete", systemImage: "trash", role: .destructive) {
                     isShowingBatchDeleteConfirmation = true
                 }
-                .disabled(selectedEntries.isEmpty)
+                .disabled(interaction.selectedEntryIDs.isEmpty)
                 .tint(.red)
             }
             ToolbarItemGroup(placement: .status) {
@@ -144,7 +168,7 @@ struct LibraryView: View {
                         }
                     }
                 }
-                .disabled(selectedEntries.isEmpty)
+                .disabled(interaction.selectedEntryIDs.isEmpty)
 
                 Button(
                     allFavorite ? "Unfavorite" : "Favorite",
@@ -152,7 +176,7 @@ struct LibraryView: View {
                 ) {
                     applyBatchAction(.favorite(allFavorite ? false : true))
                 }
-                .disabled(selectedEntries.isEmpty)
+                .disabled(interaction.selectedEntryIDs.isEmpty)
                 .animation(.snappy(duration: 0.3), value: allFavorite)
             }
             ToolbarItem(placement: .bottomBar) {
@@ -181,7 +205,8 @@ struct LibraryView: View {
         ToolbarItem(placement: .principal) {
             LibraryNavigationTitleCapsule(
                 count:
-                    interaction.isMultiSelecting ? selectedEntries.count : store.libraryOnDisplay.count
+                    interaction.isMultiSelecting
+                    ? interaction.selectedEntryCount : store.libraryOnDisplay.count
             )
         }
         if supportsMultiSelection && !interaction.isMultiSelecting {
@@ -242,7 +267,7 @@ struct LibraryView: View {
         } label: {
             Label("Actions", systemImage: "ellipsis")
         }
-        .disabled(selectedEntries.isEmpty)
+        .disabled(interaction.selectedEntryIDs.isEmpty)
     }
 
     @ViewBuilder
@@ -324,10 +349,12 @@ struct LibraryView: View {
     }
 
     private var selectedEntries: [AnimeEntry] {
-        interaction.selectedEntries(from: store.libraryOnDisplay)
+        interaction.selectedEntryIDs.compactMap { selectionEntriesByID[$0] }
     }
 
-    var allFavorite: Bool { selectedEntries.allSatisfy(\.favorite) }
+    private var allFavorite: Bool {
+        !interaction.selectedEntryIDs.isEmpty && selectedEntries.allSatisfy(\.favorite)
+    }
 
     private var batchDeleteConfirmationTitle: LocalizedStringResource {
         "Delete Selected Anime?"
@@ -574,6 +601,7 @@ struct LibraryView: View {
     }
 
     private func enterMultiSelection() {
+        updateSelectionDisplayItems()
         withAnimation(selectionModeAnimation) {
             interaction.enterMultiSelection()
         }
@@ -583,6 +611,23 @@ struct LibraryView: View {
         withAnimation(selectionModeAnimation) {
             interaction.exitMultiSelection()
         }
+        selectionDisplayItems = nil
+        selectionEntriesByID.removeAll(keepingCapacity: true)
+    }
+
+    private func refreshSelectionDisplayItemsIfNeeded() {
+        guard interaction.isMultiSelecting else { return }
+        updateSelectionDisplayItems()
+    }
+
+    private func updateSelectionDisplayItems() {
+        let items = store.libraryDisplayItems
+        let displayedIDs = Set(items.map(\.id))
+        interaction.selectedEntryIDs.formIntersection(displayedIDs)
+        selectionDisplayItems = items
+        selectionEntriesByID = Dictionary(
+            uniqueKeysWithValues: items.map { ($0.id, $0.entry) }
+        )
     }
 
     // MARK: - Helpers

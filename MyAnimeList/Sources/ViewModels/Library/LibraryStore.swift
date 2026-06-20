@@ -35,6 +35,7 @@ class LibraryStore {
     @ObservationIgnored private var saveObserver: ModelContextSaveObserver?
     @ObservationIgnored private var deferredLibraryRefreshDepth = 0
     @ObservationIgnored private var needsDeferredLibraryRefresh = false
+    private(set) var libraryRevision = 0
 
     // MARK: - State
 
@@ -200,6 +201,7 @@ class LibraryStore {
         let entries = try repository.visibleLibraryEntries()
         withAnimation {
             library = entries
+            libraryRevision &+= 1
         }
     }
 
