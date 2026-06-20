@@ -13,22 +13,30 @@ struct LibraryListView: View {
     @Environment(LibraryEntryInteractionState.self) var interaction
     @Environment(\.toggleFavorite) var toggleFavorite
 
+    @State private var listEditMode: EditMode = .inactive
+
     let displayItems: [LibraryEntryDisplayItem]
     @Binding var scrolledID: Int?
     @Binding var highlightedEntryID: Int?
 
     var body: some View {
         ScrollViewReader { proxy in
-            List(displayItems) { item in
+            List(displayItems, selection: listSelection) { item in
                 rowContent(for: item)
             }
             .listStyle(.plain)
+            .environment(\.editMode, $listEditMode)
             .animation(.default, value: store.groupStrategy)
             .animation(.default, value: store.sortReversed)
             .animation(.default, value: store.sortStrategy)
             .animation(.default, value: store.filters)
             .onAppear {
                 if let scrolledID { proxy.scrollTo(scrolledID) }
+            }
+            .onChange(of: interaction.isMultiSelecting, initial: true) { _, isMultiSelecting in
+                withAnimation {
+                    listEditMode = isMultiSelecting ? .active : .inactive
+                }
             }
             .onChange(of: scrolledID) {
                 if let scrolledID {
@@ -54,9 +62,6 @@ struct LibraryListView: View {
             snapshot: item.snapshot,
             onTap: {
                 scrolledID = item.id
-                if interaction.isMultiSelecting {
-                    interaction.toggleSelection(for: item.id)
-                }
             },
             onOpenDetails: {
                 guard !interaction.isMultiSelecting else { return }
@@ -112,6 +117,15 @@ struct LibraryListView: View {
                 .tint(.blue)
             }
         }
+    }
+
+    private var listSelection: Binding<Set<Int>>? {
+        guard interaction.isMultiSelecting else { return nil }
+
+        return Binding(
+            get: { interaction.selectedEntryIDs },
+            set: { interaction.selectedEntryIDs = $0 }
+        )
     }
 
 }
