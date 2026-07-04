@@ -85,6 +85,9 @@ struct MyAnimeListApp: App {
                             libraryStore.language = followsSystemLanguage ? .current : preferredLanguage
                         }
                         .transition(.opacity.animation(.easeInOut(duration: 1)))
+                } else if keyStorage.lookupState == .checking {
+                    ProgressView(checkingTMDbAPIKeyResource)
+                        .transition(.opacity.animation(.easeInOut(duration: 0.2)))
                 } else {
                     TMDbAPIOnboardingView()
                         .transition(.opacity.animation(.easeInOut(duration: 1)))
@@ -96,12 +99,14 @@ struct MyAnimeListApp: App {
             .environment(supportStore)
             .environment(\.dataHandler, DataProvider.default.dataHandler)
             .onAppear {
+                keyStorage.retryInitialLookupIfNeeded()
                 if startupRecovery == nil {
                     requestSync(trigger: .appLaunch)
                 }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
+                    keyStorage.retryInitialLookupIfNeeded()
                     requestSync(trigger: .foreground)
                 } else if newPhase == .background {
                     flushPendingLocalSync()
@@ -167,6 +172,10 @@ struct MyAnimeListApp: App {
     private var hasTMDbAPIKey: Bool {
         guard let key = keyStorage.key else { return false }
         return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var checkingTMDbAPIKeyResource: LocalizedStringResource {
+        "Checking TMDb API key..."
     }
 }
 
