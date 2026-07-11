@@ -7532,6 +7532,70 @@
           }
         }
       }
+    },
+    "This release adds thoughtful review prompts and improves the reliability of TMDb artwork and setup." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このリリースでは、配慮したレビューのお願いを追加し、TMDbアートワークと設定の信頼性を改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此版本新增了更周到的评价提示，并提升了 TMDb 图片与设置的可靠性。"
+          }
+        }
+      }
+    },
+    "AniShelf can now ask for an App Store review after sustained, meaningful use, without interrupting what you are doing." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfは、十分に継続してご利用いただいた後、操作を妨げないタイミングでApp Storeのレビューをお願いするようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf 现在会在您持续、有意义地使用后，于不打断操作的时机邀请您在 App Store 留下评价。"
+          }
+        }
+      }
+    },
+    "TMDb logos now support SVG artwork for sharper images." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDbのロゴでSVGアートワークをサポートし、より鮮明な画像を表示できるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb 标志现已支持 SVG 图像，可显示更清晰的图片。"
+          }
+        }
+      }
+    },
+    "Improved TMDb API key handling at launch to avoid unnecessary setup prompts." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "起動時のTMDb APIキーの処理を改善し、不必要な設定画面が表示されないようにしました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "改进了启动时的 TMDb API 密钥处理，避免出现不必要的设置提示。"
+          }
+        }
+      }
     }
   },
   "version" : "1.2"

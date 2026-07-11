@@ -277,6 +277,25 @@ enum WhatsNewRegistry {
                     kind: .openURL(projectURL)
                 )
             ]
+        ),
+        "1.95": .init(
+            version: "1.95",
+            summary:
+                "This release adds thoughtful review prompts and improves the reliability of TMDb artwork and setup.",
+            highlights: [
+                "AniShelf can now ask for an App Store review after sustained, meaningful use, without interrupting what you are doing.",
+                "TMDb logos now support SVG artwork for sharper images.",
+                "Improved TMDb API key handling at launch to avoid unnecessary setup prompts."
+            ],
+            primaryAction: nil,
+            secondaryActions: [
+                .init(
+                    id: "project-github",
+                    title: "AniShelf on GitHub",
+                    systemImage: "arrow.up.right.square",
+                    kind: .openURL(projectURL)
+                )
+            ]
         )
     ]
 
