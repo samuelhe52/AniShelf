@@ -32,6 +32,8 @@ struct WhatsNewView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 20)
+                .frame(maxWidth: 680)
+                .frame(maxWidth: .infinity)
             }
             .scrollBounceBehavior(.basedOnSize)
         }
@@ -42,6 +44,7 @@ struct WhatsNewView: View {
                 Button(doneTitleResource, action: onDismiss)
             }
         }
+        .presentationSizing(.page)
     }
 
     private var heroCard: some View {

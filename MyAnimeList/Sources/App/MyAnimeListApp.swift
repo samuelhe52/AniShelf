@@ -129,6 +129,7 @@ struct MyAnimeListApp: App {
                     )
                 }
                 .presentationDetents([.large])
+                .presentationSizing(.page)
             }
             .onAppear(perform: updateWhatsNewPresentation)
             .onChange(of: keyStorage.key) { _, _ in

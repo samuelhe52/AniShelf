@@ -46,13 +46,6 @@ struct LibraryListView: View {
                 }
             }
         }
-        .libraryEntryInteractionOverlays(
-            state: interaction,
-            deleteEntry: { entry in
-                store.deleteEntry(entry) { scrolledID = $0 }
-            },
-            detailRepository: store.repository
-        )
     }
 
     @ViewBuilder
@@ -62,11 +55,12 @@ struct LibraryListView: View {
             snapshot: item.snapshot,
             onTap: {
                 scrolledID = item.id
+                interaction.focus(item.entry)
             },
             onOpenDetails: {
                 guard !interaction.isMultiSelecting else { return }
                 scrolledID = item.id
-                interaction.detailingEntry = item.entry
+                interaction.openDetails(for: item.entry)
             }
         )
         .opacity(

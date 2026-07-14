@@ -11,6 +11,7 @@ import SwiftUI
 
 struct AnimeEntryListRow: View {
     @AppStorage(.libraryOpenDetailWithSingleTap) private var openDetailWithSingleTap = false
+    @Environment(\.libraryEntryDetailActivation) private var detailActivation
 
     var entry: AnimeEntry
     var snapshot: LibraryEntrySnapshot
@@ -62,7 +63,7 @@ struct AnimeEntryListRow: View {
     @ViewBuilder
     private var rowTapTarget: some View {
         if let onOpenDetails {
-            if openDetailWithSingleTap {
+            if detailActivation.usesSingleTap(userPreference: openDetailWithSingleTap) {
                 Color.clear
                     .contentShape(.rect)
                     .onTapGesture {

@@ -10,6 +10,7 @@ import SwiftUI
 
 struct LibraryGridView: View {
     @AppStorage(.libraryOpenDetailWithSingleTap) private var openDetailWithSingleTap = false
+    @Environment(\.libraryEntryDetailActivation) private var detailActivation
 
     @Environment(LibraryStore.self) private var store
     @Environment(\.toggleFavorite) var toggleFavorite
@@ -38,13 +39,6 @@ struct LibraryGridView: View {
             .animation(.spring, value: store.sortStrategy)
             .animation(.spring, value: store.filters)
         }
-        .libraryEntryInteractionOverlays(
-            state: interaction,
-            deleteEntry: { entry in
-                store.deleteEntry(entry) { scrolledID = $0 }
-            },
-            detailRepository: store.repository
-        )
     }
 
     private func onChangeOfScrolledID(proxy: ScrollViewProxy) {
@@ -75,7 +69,7 @@ struct LibraryGridView: View {
             delay: 0.2
         )
 
-        if openDetailWithSingleTap {
+        if detailActivation.usesSingleTap(userPreference: openDetailWithSingleTap) {
             baseItem
                 .contextMenu {
                     interaction.contextMenu(
@@ -89,10 +83,11 @@ struct LibraryGridView: View {
                 }
                 .onTapGesture {
                     scrolledID = item.id
+                    interaction.focus(item.entry)
                     if interaction.isMultiSelecting {
                         toggleSelection(for: item.id)
                     } else {
-                        interaction.detailingEntry = item.entry
+                        interaction.openDetails(for: item.entry)
                     }
 
                 }
@@ -121,12 +116,13 @@ struct LibraryGridView: View {
                     isMultiSelecting: interaction.isMultiSelecting,
                     onSingleTap: {
                         scrolledID = item.id
+                        interaction.focus(item.entry)
                         if interaction.isMultiSelecting {
                             toggleSelection(for: item.id)
                         }
                     },
                     onDoubleTap: {
-                        interaction.detailingEntry = item.entry
+                        interaction.openDetails(for: item.entry)
                         scrolledID = item.id
                     }
                 )

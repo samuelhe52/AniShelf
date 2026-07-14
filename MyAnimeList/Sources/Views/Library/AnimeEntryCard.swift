@@ -4,6 +4,7 @@ import SwiftUI
 
 struct AnimeEntryCard: View {
     @AppStorage(.libraryOpenDetailWithSingleTap) private var openDetailWithSingleTap = false
+    @Environment(\.libraryEntryDetailActivation) private var detailActivation
     @AppStorage(.libraryLongTermGalleryPosterCachingEnabled)
     private var longTermGalleryPosterCachingEnabled = false
 
@@ -68,7 +69,7 @@ struct AnimeEntryCard: View {
             HStack(spacing: 0) {
                 Color.clear
                     .contentShape(.rect)
-                    .onTapGesture(count: openDetailWithSingleTap ? 1 : 2) { onOpenDetails?() }
+                    .onTapGesture(count: detailTapCount) { onOpenDetails?() }
 
                 Color.clear
                     .frame(width: favoriteButtonTapClearance, height: favoriteButtonTapClearance)
@@ -78,9 +79,13 @@ struct AnimeEntryCard: View {
 
             Color.clear
                 .contentShape(.rect)
-                .onTapGesture(count: openDetailWithSingleTap ? 1 : 2) { onOpenDetails?() }
+                .onTapGesture(count: detailTapCount) { onOpenDetails?() }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var detailTapCount: Int {
+        detailActivation.usesSingleTap(userPreference: openDetailWithSingleTap) ? 1 : 2
     }
 
     private var statusIndicator: some View {

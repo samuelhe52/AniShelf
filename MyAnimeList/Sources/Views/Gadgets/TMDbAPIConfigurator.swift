@@ -32,6 +32,8 @@ struct TMDbAPIConfigurator: View {
             .padding(.horizontal, 20)
             .padding(.top, 24)
             .padding(.bottom, 24)
+            .frame(maxWidth: 560)
+            .frame(maxWidth: .infinity)
         }
         .safeAreaInset(edge: .top) {
             Color.clear.frame(height: 14)
@@ -60,6 +62,7 @@ struct TMDbAPIConfigurator: View {
             default: nil
             }
         }
+        .presentationSizing(.form)
     }
 
     private var confirmButtonTitleResource: LocalizedStringResource {

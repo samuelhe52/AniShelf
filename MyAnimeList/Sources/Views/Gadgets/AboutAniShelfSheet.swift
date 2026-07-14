@@ -17,6 +17,8 @@ struct AboutAniShelfSheet: View {
             .padding(.horizontal, 20)
             .padding(.top, 16)
             .padding(.bottom, 16)
+            .frame(maxWidth: 620)
+            .frame(maxWidth: .infinity)
         }
         .scrollBounceBehavior(.basedOnSize)
         .navigationTitle(aboutTitleResource)
@@ -26,6 +28,7 @@ struct AboutAniShelfSheet: View {
                 Button(doneTitleResource) { dismiss() }
             }
         }
+        .presentationSizing(.form)
     }
 
     private var heroCard: some View {

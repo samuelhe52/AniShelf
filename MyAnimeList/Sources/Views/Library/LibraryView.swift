@@ -21,8 +21,10 @@ struct LibraryView: View {
 
     @Environment(LibraryStore.self) private var store
     @State private var interaction = LibraryEntryInteractionState()
+    @State private var detailSessionStore = EntryDetailSessionStore()
     @Environment(\.dataHandler) var dataHandler
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(AppReviewPromptController.self) private var appReview
 
     // UI state
@@ -61,12 +63,126 @@ struct LibraryView: View {
             guard !newValue, store.groupStrategy == .score else { return }
             store.groupStrategy = .none
         }
+        #if DEBUG
+            .onAppear {
+                openDebugDetailIfRequested()
+            }
+        #endif
     }
 
     private var libraryNavigation: some View {
+        GeometryReader { geometry in
+            let policy = LibraryPresentationPolicy()
+            let presentation = policy.evaluate(
+                .init(
+                    availableSize: geometry.size,
+                    libraryMode: libraryViewStyle.presentationMode,
+                    dynamicTypeSize: dynamicTypeSize
+                )
+            )
+            let inspectorSession = detailSessionStore.session(
+                for: interaction.presentedDetailEntryID
+            )
+            let showsInspector =
+                presentation.detailPresentation == .inspector && inspectorSession != nil
+            let inspectorWidth = detailInspectorWidth(for: geometry.size)
+            let librarySize = CGSize(
+                width: geometry.size.width - (showsInspector ? inspectorWidth : 0),
+                height: geometry.size.height
+            )
+            let libraryPresentation = policy.evaluate(
+                .init(
+                    availableSize: librarySize,
+                    libraryMode: libraryViewStyle.presentationMode,
+                    dynamicTypeSize: dynamicTypeSize
+                )
+            )
+
+            libraryNavigationStack(presentation: libraryPresentation)
+                .environment(
+                    \.libraryEntryDetailActivation,
+                    LibraryEntryDetailActivation(presentation.detailPresentation)
+                )
+                .inspector(
+                    isPresented: Binding(
+                        get: { showsInspector },
+                        set: { isPresented in
+                            if !isPresented {
+                                interaction.detailHostDidDismiss(.inspector)
+                            }
+                        }
+                    )
+                ) {
+                    if let identity = interaction.presentedDetailEntryID,
+                        let inspectorSession
+                    {
+                        NavigationStack {
+                            EntryDetailView(
+                                entry: inspectorSession.entry,
+                                repository: store.repository,
+                                presentationStyle: .inspector,
+                                onClose: interaction.dismissDetails,
+                                session: inspectorSession
+                            )
+                        }
+                        .id(identity.rawID)
+                        .inspectorColumnWidth(
+                            min: 400,
+                            ideal: inspectorWidth,
+                            max: 520
+                        )
+                        .onAppear {
+                            interaction.detailHostDidPresent(.inspector)
+                        }
+                    }
+                }
+                .onChange(of: presentation.detailPresentation, initial: true) { _, newValue in
+                    interaction.transitionDetailHost(to: LibraryEntryDetailHost(newValue))
+                }
+                .libraryEntryInteractionOverlays(
+                    state: interaction,
+                    deleteEntry: { entry in
+                        store.deleteEntry(entry) { scrollState.scrolledID = $0 }
+                    },
+                    detailRepository: store.repository,
+                    resolveEntry: { store.repository.existingEntry(identity: $0) },
+                    detailPresentation: presentation.detailPresentation,
+                    detailSession: detailSessionStore.presentedSession
+                )
+        }
+        .onChange(of: interaction.presentedDetailEntryID, initial: true) { _, identity in
+            detailSessionStore.synchronizePresentedDetail(
+                identity: identity,
+                repository: store.repository,
+                resolveEntry: { store.repository.existingEntry(identity: $0) }
+            )
+        }
+        .onChange(of: store.libraryRevision) {
+            refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(of: store.filters) {
+            refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(of: store.groupStrategy) {
+            refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(of: store.sortStrategy) {
+            refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(of: store.sortReversed) {
+            refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(of: store.hideDroppedByDefault) {
+            refreshSelectionDisplayItemsIfNeeded()
+        }
+    }
+
+    private func libraryNavigationStack(
+        presentation: LibraryPresentationPolicy.Result
+    ) -> some View {
         NavigationStack {
             ZStack {
-                libraryView
+                libraryView(presentation: presentation)
             }
             .toolbar { topBarContent }
             .toolbar { bottomBarContent }
@@ -91,37 +207,26 @@ struct LibraryView: View {
                 Text(batchDeleteConfirmationMessage)
             }
         }
-        .onChange(of: store.libraryRevision) {
-            refreshSelectionDisplayItemsIfNeeded()
-        }
-        .onChange(of: store.filters) {
-            refreshSelectionDisplayItemsIfNeeded()
-        }
-        .onChange(of: store.groupStrategy) {
-            refreshSelectionDisplayItemsIfNeeded()
-        }
-        .onChange(of: store.sortStrategy) {
-            refreshSelectionDisplayItemsIfNeeded()
-        }
-        .onChange(of: store.sortReversed) {
-            refreshSelectionDisplayItemsIfNeeded()
-        }
-        .onChange(of: store.hideDroppedByDefault) {
-            refreshSelectionDisplayItemsIfNeeded()
-        }
+    }
+
+    private func detailInspectorWidth(for availableSize: CGSize) -> CGFloat {
+        min(max(availableSize.width * 0.38, 400), 480)
     }
 
     // MARK: - Content
 
     @ViewBuilder
-    private var libraryView: some View {
+    private func libraryView(
+        presentation: LibraryPresentationPolicy.Result
+    ) -> some View {
         let displayItems = selectionDisplayItems ?? store.libraryDisplayItems
 
         switch libraryViewStyle {
         case .gallery:
             libraryViewPage(id: .gallery) {
                 LibraryGalleryView(
-                    scrolledID: $scrollState.scrolledID
+                    scrolledID: $scrollState.scrolledID,
+                    arrangement: presentation.galleryArrangement
                 )
                 .scenePadding(.vertical)
                 .ignoresSafeArea(.keyboard, edges: .bottom)
@@ -538,6 +643,18 @@ struct LibraryView: View {
         dataHandler?.toggleFavorite(entry: entry)
     }
 
+    #if DEBUG
+        private func openDebugDetailIfRequested() {
+            guard ProcessInfo.processInfo.arguments.contains("-OpenFirstLibraryDetail"),
+                interaction.presentedDetailEntryID == nil,
+                let entry = store.libraryOnDisplay.first
+            else { return }
+
+            scrollState.scrolledID = entry.tmdbID
+            interaction.openDetails(for: entry)
+        }
+    #endif
+
     private func jumpToEntryInLibrary(withID id: Int) {
         scrollState.scrolledID = id
         highlightedEntryID = id
@@ -690,6 +807,14 @@ struct LibraryView: View {
             case .gallery: "photo.on.rectangle.angled"
             case .list: "list.bullet.rectangle.portrait"
             case .grid: "rectangle.grid.3x2.fill"
+            }
+        }
+
+        var presentationMode: LibraryPresentationPolicy.LibraryMode {
+            switch self {
+            case .gallery: .gallery
+            case .list: .list
+            case .grid: .grid
             }
         }
     }

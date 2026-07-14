@@ -108,6 +108,9 @@ struct SearchPage: View {
         }
         .animation(.default, value: mode)
         .animation(.default, value: tmdbContentMode)
+        .frame(maxWidth: 1_000)
+        .frame(maxWidth: .infinity)
+        .presentationSizing(.page)
     }
 
     private var regularSearchContent: some View {

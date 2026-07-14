@@ -35,6 +35,8 @@ struct SupportAniShelfSheet: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 32)
+                .frame(maxWidth: 680)
+                .frame(maxWidth: .infinity)
                 .animation(reduceMotion ? nil : contentTransitionAnimation, value: supportStore.loadState)
                 .animation(reduceMotion ? nil : thankYouTransitionAnimation, value: purchaseSucceeded)
             }
@@ -51,6 +53,7 @@ struct SupportAniShelfSheet: View {
         .task {
             await supportStore.loadProducts()
         }
+        .presentationSizing(.page)
     }
 
     private var heroCard: some View {

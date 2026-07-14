@@ -6,26 +6,101 @@
 //
 
 import DataProvider
+import LibrarySync
 import Observation
 import SwiftUI
 import UIKit
 
+enum LibraryEntryWorkflow: Identifiable, Equatable, Sendable {
+    case editing(LibraryEntrySyncIdentity)
+    case posterSelection(LibraryEntrySyncIdentity)
+    case sharing(LibraryEntrySyncIdentity)
+
+    var id: String {
+        switch self {
+        case .editing(let identity):
+            "editing:\(identity.rawID)"
+        case .posterSelection(let identity):
+            "poster:\(identity.rawID)"
+        case .sharing(let identity):
+            "sharing:\(identity.rawID)"
+        }
+    }
+
+    var entryIdentity: LibraryEntrySyncIdentity {
+        switch self {
+        case .editing(let identity),
+            .posterSelection(let identity),
+            .sharing(let identity):
+            identity
+        }
+    }
+}
+
 @Observable
 @MainActor
 final class LibraryEntryInteractionState {
-    var detailingEntry: AnimeEntry?
-    var deletingEntry: AnimeEntry?
-    var isDeletingEntry: Bool = false
-    var editingEntry: AnimeEntry?
-    var switchingPosterForEntry: AnimeEntry?
-    var sharingAnimeEntry: AnimeEntry?
+    var focusedEntryID: LibraryEntrySyncIdentity?
+    var presentedDetailEntryID: LibraryEntrySyncIdentity?
+    var activeWorkflow: LibraryEntryWorkflow?
+    var deletingEntryID: LibraryEntrySyncIdentity?
     var showPasteAlert: Bool = false
     var pasteAction: (() -> Void)?
     var isMultiSelecting: Bool = false
     var selectedEntryIDs: Set<Int> = []
+    private(set) var desiredDetailHost: LibraryEntryDetailHost = .sheet
+    private var presentedDetailHosts: Set<LibraryEntryDetailHost> = []
+    private var pendingHostMigrationDismissals: Set<LibraryEntryDetailHost> = []
 
     var selectedEntryCount: Int {
         selectedEntryIDs.count
+    }
+
+    var isDeletingEntry: Bool {
+        deletingEntryID != nil
+    }
+
+    func focus(_ entry: AnimeEntry) {
+        focusedEntryID = entry.syncIdentity
+    }
+
+    func focus(entryID: LibraryEntrySyncIdentity?) {
+        focusedEntryID = entryID
+    }
+
+    func openDetails(for entry: AnimeEntry) {
+        focus(entry)
+        presentedDetailEntryID = entry.syncIdentity
+    }
+
+    func dismissDetails() {
+        presentedDetailEntryID = nil
+    }
+
+    func transitionDetailHost(to host: LibraryEntryDetailHost) {
+        guard desiredDetailHost != host else { return }
+
+        if presentedDetailEntryID != nil,
+            presentedDetailHosts.contains(desiredDetailHost)
+        {
+            pendingHostMigrationDismissals.insert(desiredDetailHost)
+        }
+        desiredDetailHost = host
+    }
+
+    func detailHostDidPresent(_ host: LibraryEntryDetailHost) {
+        presentedDetailHosts.insert(host)
+    }
+
+    func detailHostDidDismiss(_ host: LibraryEntryDetailHost) {
+        presentedDetailHosts.remove(host)
+
+        if pendingHostMigrationDismissals.remove(host) != nil {
+            return
+        }
+
+        guard desiredDetailHost == host else { return }
+        dismissDetails()
     }
 
     func enterMultiSelection() {
@@ -54,24 +129,27 @@ final class LibraryEntryInteractionState {
     }
 
     func prepareDeletion(for entry: AnimeEntry) {
-        deletingEntry = entry
-        isDeletingEntry = true
+        deletingEntryID = entry.syncIdentity
     }
 
-    func confirmDeletion(deleteEntry: (AnimeEntry) -> Void) {
-        guard let entry = deletingEntry else { return }
+    func confirmDeletion(
+        resolveEntry: (LibraryEntrySyncIdentity) -> AnimeEntry?,
+        deleteEntry: (AnimeEntry) -> Void
+    ) {
+        guard let identity = deletingEntryID,
+            let entry = resolveEntry(identity)
+        else { return }
 
         clearDeletionRequest()
         deleteEntry(entry)
     }
 
     func clearDeletionRequest() {
-        deletingEntry = nil
-        isDeletingEntry = false
+        deletingEntryID = nil
     }
 
     func setEditingEntry(_ entry: AnimeEntry) {
-        editingEntry = entry
+        activeWorkflow = .editing(entry.syncIdentity)
     }
 
     func pasteInfo(for entry: AnimeEntry) {
@@ -106,6 +184,49 @@ final class LibraryEntryInteractionState {
     }
 }
 
+enum LibraryEntryDetailHost: Hashable, Sendable {
+    case sheet
+    case inspector
+
+    init(_ presentation: LibraryPresentationPolicy.DetailPresentation) {
+        switch presentation {
+        case .sheet:
+            self = .sheet
+        case .inspector:
+            self = .inspector
+        }
+    }
+}
+
+enum LibraryEntryDetailActivation: Equatable, Sendable {
+    case userPreference
+    case singleTap
+
+    init(_ presentation: LibraryPresentationPolicy.DetailPresentation) {
+        switch presentation {
+        case .sheet:
+            self = .userPreference
+        case .inspector:
+            self = .singleTap
+        }
+    }
+
+    func usesSingleTap(userPreference: Bool) -> Bool {
+        self == .singleTap || userPreference
+    }
+}
+
+fileprivate struct LibraryEntryDetailActivationKey: EnvironmentKey {
+    static let defaultValue = LibraryEntryDetailActivation.userPreference
+}
+
+extension EnvironmentValues {
+    var libraryEntryDetailActivation: LibraryEntryDetailActivation {
+        get { self[LibraryEntryDetailActivationKey.self] }
+        set { self[LibraryEntryDetailActivationKey.self] = newValue }
+    }
+}
+
 extension LibraryEntryInteractionState {
     func favoriteButton(for entry: AnimeEntry, toggleFavorite: @escaping (AnimeEntry) -> Void) -> some View {
         EntryFavoriteButton(favorited: entry.favorite) {
@@ -120,19 +241,19 @@ extension LibraryEntryInteractionState {
 
     func shareButton(for entry: AnimeEntry) -> some View {
         Button("Share", systemImage: "square.and.arrow.up") {
-            self.sharingAnimeEntry = entry
+            self.activeWorkflow = .sharing(entry.syncIdentity)
         }
     }
 
     func editButton(for entry: AnimeEntry) -> some View {
         Button("Edit", systemImage: "pencil") {
-            self.editingEntry = entry
+            self.activeWorkflow = .editing(entry.syncIdentity)
         }
     }
 
     func switchPosterButton(for entry: AnimeEntry) -> some View {
         Button("Switch Poster", systemImage: "photo.badge.magnifyingglass") {
-            self.switchingPosterForEntry = entry
+            self.activeWorkflow = .posterSelection(entry.syncIdentity)
         }
     }
 
@@ -190,25 +311,61 @@ extension View {
     func libraryEntryInteractionOverlays(
         state: LibraryEntryInteractionState,
         deleteEntry: @escaping (AnimeEntry) -> Void,
-        detailRepository: LibraryRepository
+        detailRepository: LibraryRepository,
+        resolveEntry: @escaping (LibraryEntrySyncIdentity) -> AnimeEntry?,
+        detailPresentation: LibraryPresentationPolicy.DetailPresentation,
+        detailSession: EntryDetailSession?
     ) -> some View {
-        self
+        let activeSheet = Binding<ResolvedLibraryEntrySheet?>(
+            get: {
+                if let workflow = state.activeWorkflow,
+                    let entry = resolveEntry(workflow.entryIdentity)
+                {
+                    return .workflow(workflow, entry)
+                }
+
+                guard detailPresentation == .sheet,
+                    let identity = state.presentedDetailEntryID,
+                    detailSession?.entryIdentity == identity,
+                    let entry = resolveEntry(identity)
+                else { return nil }
+                return .detail(entry)
+            },
+            set: { destination in
+                switch destination {
+                case .detail(let entry):
+                    state.presentedDetailEntryID = entry.syncIdentity
+                case .workflow(let workflow, _):
+                    state.activeWorkflow = workflow
+                case nil:
+                    if state.activeWorkflow != nil {
+                        state.activeWorkflow = nil
+                    } else {
+                        state.detailHostDidDismiss(.sheet)
+                    }
+                }
+            }
+        )
+
+        return
+            self
             .alert(
                 "Delete Anime?",
                 isPresented: Binding(
                     get: { state.isDeletingEntry },
                     set: {
-                        if $0 {
-                            state.isDeletingEntry = true
-                        } else {
+                        if !$0 {
                             state.clearDeletionRequest()
                         }
                     }
                 ),
-                presenting: state.deletingEntry
+                presenting: state.deletingEntryID.flatMap(resolveEntry)
             ) { _ in
                 Button("Delete", role: .destructive) {
-                    state.confirmDeletion(deleteEntry: deleteEntry)
+                    state.confirmDeletion(
+                        resolveEntry: resolveEntry,
+                        deleteEntry: deleteEntry
+                    )
                 }
                 Button("Cancel", role: .cancel) {}
             }
@@ -226,59 +383,66 @@ extension View {
                 Text("This anime already has edits. Pasting will overwrite current info.")
             }
             .sheet(
-                item: Binding(
-                    get: { state.detailingEntry },
-                    set: { state.detailingEntry = $0 }
-                )
-            ) { entry in
-                NavigationStack {
-                    EntryDetailView(
-                        entry: entry,
-                        repository: detailRepository
-                    )
-                }
-            }
-            .sheet(
-                item: Binding(
-                    get: { state.switchingPosterForEntry },
-                    set: { state.switchingPosterForEntry = $0 }
-                )
-            ) { entry in
-                NavigationStack {
-                    PosterSelectionView(
-                        tmdbID: entry.tmdbID,
-                        type: entry.type,
-                        originalPosterLanguageCode: entry.originalLanguageCode
-                            ?? entry.parentSeriesEntry?.originalLanguageCode
-                    ) { url in
-                        if url != entry.posterURL || !entry.usingCustomPoster {
-                            entry.updateCustomPosterURL(url)
+                item: activeSheet
+            ) { destination in
+                switch destination {
+                case .detail(let entry):
+                    NavigationStack {
+                        if let detailSession,
+                            detailSession.entryIdentity == entry.syncIdentity
+                        {
+                            EntryDetailView(
+                                entry: entry,
+                                repository: detailRepository,
+                                onClose: state.dismissDetails,
+                                session: detailSession
+                            )
                         }
                     }
-                    .navigationTitle("Pick a poster")
+                    .onAppear {
+                        state.detailHostDidPresent(.sheet)
+                    }
+                case .workflow(.editing(_), let entry):
+                    NavigationStack {
+                        EntryDetailView(
+                            entry: entry,
+                            repository: detailRepository,
+                            startInEditingMode: true
+                        )
+                    }
+                case .workflow(.posterSelection(_), let entry):
+                    NavigationStack {
+                        PosterSelectionView(
+                            tmdbID: entry.tmdbID,
+                            type: entry.type,
+                            originalPosterLanguageCode: entry.originalLanguageCode
+                                ?? entry.parentSeriesEntry?.originalLanguageCode
+                        ) { url in
+                            if url != entry.posterURL
+                                || !entry.usingCustomPoster
+                            {
+                                entry.updateCustomPosterURL(url)
+                            }
+                        }
+                        .navigationTitle("Pick a poster")
+                    }
+                case .workflow(.sharing(_), let entry):
+                    AnimeSharingSheet(entry: entry)
                 }
             }
-            .sheet(
-                item: Binding(
-                    get: { state.sharingAnimeEntry },
-                    set: { state.sharingAnimeEntry = $0 }
-                )
-            ) { entry in
-                AnimeSharingSheet(entry: entry)
-            }
-            .sheet(
-                item: Binding(
-                    get: { state.editingEntry },
-                    set: { state.editingEntry = $0 }
-                )
-            ) { entry in
-                NavigationStack {
-                    EntryDetailView(
-                        entry: entry,
-                        repository: detailRepository,
-                        startInEditingMode: true
-                    )
-                }
-            }
+    }
+}
+
+fileprivate enum ResolvedLibraryEntrySheet: Identifiable {
+    case detail(AnimeEntry)
+    case workflow(LibraryEntryWorkflow, AnimeEntry)
+
+    var id: String {
+        switch self {
+        case .detail(let entry):
+            "detail:\(entry.syncIdentity.rawID)"
+        case .workflow(let workflow, _):
+            workflow.id
+        }
     }
 }

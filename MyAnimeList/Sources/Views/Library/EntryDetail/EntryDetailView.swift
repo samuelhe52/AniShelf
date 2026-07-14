@@ -21,119 +21,120 @@ struct EntryDetailView: View {
     @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
     @AppStorage(.episodeProgressTrackingEnabled) private var episodeProgressTrackingEnabled = false
 
-    let entry: AnimeEntry
-    private let startInEditingMode: Bool
+    private let presentationStyle: EntryDetailPresentationStyle
+    private let onClose: (() -> Void)?
 
-    @State private var model: EntryDetailViewModel
-    @State private var presentation = EntryDetailPresentationState()
-    @State private var isEditingDetails: Bool
-    @State private var originalUserInfo: UserEntryInfo
-    @State private var originalTrackingUpdatedAt: Date?
-    @State private var conversion = EntryDetailConversionState()
-    @State private var didAutoScrollToEditingSection = false
-    @State private var hasPendingWatchedReviewOpportunity = false
-    @State private var isCharacterExpanded = true
-    @State private var isStaffExpanded = false
+    @State private var session: EntryDetailSession
 
-    private var accentColor: Color { entry.favorite ? .orange : .blue }
+    private var accentColor: Color { session.entry.favorite ? .orange : .blue }
     private var currentLanguage: Language { followsSystemLanguage ? .current : preferredLanguage }
-    private let heroHeight: CGFloat = 420
     private let scrollCoordinateSpaceName = "EntryDetailScroll"
 
     init(
         entry: AnimeEntry,
         repository: LibraryRepository,
-        startInEditingMode: Bool = false
+        startInEditingMode: Bool = false,
+        presentationStyle: EntryDetailPresentationStyle = .sheet,
+        onClose: (() -> Void)? = nil,
+        session: EntryDetailSession? = nil
     ) {
-        self.entry = entry
-        self.startInEditingMode = startInEditingMode
-        self._model = State(initialValue: EntryDetailViewModel(repository: repository))
-        self._isEditingDetails = State(initialValue: startInEditingMode)
-        self._originalUserInfo = State(initialValue: entry.userInfo)
-        self._originalTrackingUpdatedAt = State(initialValue: entry.trackingUpdatedAt)
-        self._isCharacterExpanded = State(
-            initialValue: Self.defaultExpansionState(
-                forKey: .entryDetailCharactersExpandedByDefault,
-                defaultValue: true
-            )
-        )
-        self._isStaffExpanded = State(
-            initialValue: Self.defaultExpansionState(
-                forKey: .entryDetailStaffExpandedByDefault,
-                defaultValue: false
-            )
+        self.presentationStyle = presentationStyle
+        self.onClose = onClose
+        self._session = State(
+            initialValue: session
+                ?? EntryDetailSession(
+                    entry: entry,
+                    repository: repository,
+                    startsInEditingMode: startInEditingMode
+                )
         )
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    stretchyHeroSection
+        @Bindable var session = session
 
-                    VStack(alignment: .leading, spacing: 20) {
-                        quickActionsRow
-                            .padding(.top, -20)
-                            .padding(.bottom, 4)
-                        detailsContent(proxy)
+        GeometryReader { geometry in
+            ScrollViewReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        stretchyHeroSection(
+                            heroHeight: heroHeight(for: geometry.size.width)
+                        )
+
+                        VStack(alignment: .leading, spacing: 20) {
+                            quickActionsRow
+                                .padding(.top, -20)
+                                .padding(.bottom, 4)
+                            detailsContent(proxy, availableWidth: geometry.size.width)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 4)
+                        .padding(.bottom, 40)
+                        .frame(maxWidth: 760)
+                        .frame(maxWidth: .infinity)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 4)
-                    .padding(.bottom, 40)
                 }
-            }
-            .coordinateSpace(name: scrollCoordinateSpaceName)
-            .onAppear {
-                guard startInEditingMode, !didAutoScrollToEditingSection else { return }
-                didAutoScrollToEditingSection = true
-                isEditingDetails = true
-                Task {
-                    try? await Task.sleep(for: .milliseconds(150))
-                    await MainActor.run {
-                        withAnimation(.spring(response: 0.6, dampingFraction: 0.86)) {
-                            proxy.scrollTo(EntryDetailScrollTarget.editingSection, anchor: .center)
+                .scrollPosition($session.scrollPosition)
+                .coordinateSpace(name: scrollCoordinateSpaceName)
+                .onAppear {
+                    guard session.startsInEditingMode,
+                        !session.didAutoScrollToEditingSection
+                    else { return }
+                    session.didAutoScrollToEditingSection = true
+                    session.isEditingDetails = true
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(150))
+                        await MainActor.run {
+                            withAnimation(.spring(response: 0.6, dampingFraction: 0.86)) {
+                                proxy.scrollTo(
+                                    EntryDetailScrollTarget.editingSection,
+                                    anchor: .center
+                                )
+                            }
                         }
                     }
                 }
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color(.systemGroupedBackground))
+        .background(pageBackground)
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar { toolbarContent }
-        .presentationDragIndicator(.visible)
-        .interactiveDismissDisabled(entry.userInfoHasChanges(comparedTo: originalUserInfo))
-        .sheet(item: $presentation.activeSheet) { activeSheet in
+        .presentationDragIndicator(presentationStyle == .sheet ? .visible : .hidden)
+        .interactiveDismissDisabled(
+            session.entry.userInfoHasChanges(comparedTo: session.originalUserInfo)
+        )
+        .sheet(item: $session.presentation.activeSheet) { activeSheet in
             switch activeSheet {
             case .changePoster:
                 NavigationStack {
                     PosterSelectionView(
-                        tmdbID: entry.tmdbID,
-                        type: entry.type,
-                        originalPosterLanguageCode: entry.originalLanguageCode
-                            ?? entry.parentSeriesEntry?.originalLanguageCode
+                        tmdbID: session.entry.tmdbID,
+                        type: session.entry.type,
+                        originalPosterLanguageCode: session.entry.originalLanguageCode
+                            ?? session.entry.parentSeriesEntry?.originalLanguageCode
                     ) { url in
-                        if url != entry.posterURL || !entry.usingCustomPoster {
-                            entry.updateCustomPosterURL(url)
+                        if url != session.entry.posterURL || !session.entry.usingCustomPoster {
+                            session.entry.updateCustomPosterURL(url)
                         }
                     }
                     .navigationTitle(EntryDetailL10n.changePoster)
                 }
             case .sharing:
-                AnimeSharingSheet(entry: entry)
+                AnimeSharingSheet(entry: session.entry)
             }
         }
         .confirmationDialog(
             EntryDetailL10n.convertToWhichSeason,
-            isPresented: $presentation.showSeasonPicker,
+            isPresented: $session.presentation.showSeasonPicker,
             titleVisibility: .visible
         ) {
-            if conversion.isFetchingSeasons {
+            if session.conversion.isFetchingSeasons {
                 ProgressView()
-            } else if conversion.seasonNumberOptions.isEmpty {
+            } else if session.conversion.seasonNumberOptions.isEmpty {
                 Button(EntryDetailL10n.noSeasonsAvailable, role: .cancel) {}
             } else {
-                ForEach(conversion.seasonNumberOptions, id: \.self) { seasonNumber in
+                ForEach(session.conversion.seasonNumberOptions, id: \.self) { seasonNumber in
                     Button("Season \(seasonNumber)") {
                         Task { await convertSeriesToSeason(seasonNumber: seasonNumber) }
                     }
@@ -141,7 +142,10 @@ struct EntryDetailView: View {
             }
             Button(EntryDetailL10n.cancel, role: .cancel) {}
         }
-        .alert(EntryDetailL10n.siblingSeasonExists, isPresented: $presentation.showSiblingSeasonWarning) {
+        .alert(
+            EntryDetailL10n.siblingSeasonExists,
+            isPresented: $session.presentation.showSiblingSeasonWarning
+        ) {
             Button(EntryDetailL10n.convertAnyway, role: .destructive) {
                 Task { await convertSeasonToSeries() }
             }
@@ -152,14 +156,14 @@ struct EntryDetailView: View {
         .alert(
             EntryDetailL10n.markAsWatchedPromptTitle,
             isPresented: isEpisodeProgressCompletionPromptPresented,
-            presenting: presentation.episodeProgressCompletionPrompt
+            presenting: session.presentation.episodeProgressCompletionPrompt
         ) { _ in
             Button(EntryDetailL10n.markAsWatched) {
-                presentation.episodeProgressCompletionPrompt = nil
+                session.presentation.episodeProgressCompletionPrompt = nil
                 requestWatchStatusChange(.watched)
             }
             Button(EntryDetailL10n.notNow, role: .cancel) {
-                presentation.episodeProgressCompletionPrompt = nil
+                session.presentation.episodeProgressCompletionPrompt = nil
             }
         } message: { prompt in
             Text(episodeProgressCompletionPromptMessage(for: prompt))
@@ -167,30 +171,52 @@ struct EntryDetailView: View {
         .alert(
             EntryDetailL10n.updateDatesPromptTitle,
             isPresented: isDateUpdateSuggestionPresented,
-            presenting: presentation.dateUpdateSuggestion
+            presenting: session.presentation.dateUpdateSuggestion
         ) { suggestion in
             Button(EntryDetailL10n.dateSuggestionActionTitle(for: suggestion)) {
-                presentation.dateUpdateSuggestion = nil
+                session.presentation.dateUpdateSuggestion = nil
                 withAnimation(.default) {
-                    entry.applyDateUpdateSuggestion(suggestion)
+                    session.entry.applyDateUpdateSuggestion(suggestion)
                 }
                 schedulePendingWatchedReviewOpportunity()
             }
             Button(EntryDetailL10n.later, role: .cancel) {
-                presentation.dateUpdateSuggestion = nil
+                session.presentation.dateUpdateSuggestion = nil
                 schedulePendingWatchedReviewOpportunity()
             }
         } message: { suggestion in
             Text(EntryDetailL10n.dateSuggestionMessage(for: suggestion))
         }
-        .task(id: "\(entry.tmdbID)-\(currentLanguage.rawValue)") {
-            await model.load(for: entry, language: currentLanguage, dataHandler: dataHandler)
+        .task(id: "\(session.entry.tmdbID)-\(currentLanguage.rawValue)") {
+            await session.model.load(
+                for: session.entry,
+                language: currentLanguage,
+                dataHandler: dataHandler
+            )
         }
     }
 
     // MARK: - Hero
 
-    private var stretchyHeroSection: some View {
+    private var pageBackground: Color {
+        switch presentationStyle {
+        case .sheet:
+            Color(.systemGroupedBackground)
+        case .inspector:
+            Color(.systemBackground)
+        }
+    }
+
+    private func heroHeight(for availableWidth: CGFloat) -> CGFloat {
+        switch presentationStyle {
+        case .sheet:
+            420
+        case .inspector:
+            min(max(availableWidth * 0.88, 340), 420)
+        }
+    }
+
+    private func stretchyHeroSection(heroHeight: CGFloat) -> some View {
         GeometryReader { proxy in
             let overscroll = max(proxy.frame(in: .named(scrollCoordinateSpaceName)).minY, 0)
             let stretchedHeight = heroHeight + overscroll
@@ -223,18 +249,18 @@ struct EntryDetailView: View {
             VStack(spacing: 0) {
                 Spacer()
                 LinearGradient(
-                    colors: [.clear, Color(.systemGroupedBackground)],
+                    colors: [.clear, pageBackground],
                     startPoint: .top,
                     endPoint: .bottom
                 )
-                .frame(height: 120)
+                .frame(height: min(120, height * 0.3))
             }
 
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
 
                 VStack(alignment: .center, spacing: 6) {
-                    if let logoImageURL = model.logoImageURL {
+                    if let logoImageURL = session.model.logoImageURL {
                         KFImageView(
                             url: logoImageURL,
                             targetSize: CGSize(width: 500, height: 500),
@@ -245,7 +271,7 @@ struct EntryDetailView: View {
                         .frame(height: 78)
                         .shadow(color: .black.opacity(0.28), radius: 10, y: 6)
                     } else {
-                        Text(model.displayTitle)
+                        Text(session.model.displayTitle)
                             .font(.largeTitle.weight(.bold))
                             .foregroundStyle(.white)
                             .lineLimit(3)
@@ -253,7 +279,7 @@ struct EntryDetailView: View {
                             .multilineTextAlignment(.center)
                     }
 
-                    if let subtitle = model.subtitleText {
+                    if let subtitle = session.model.subtitleText {
                         Text(subtitle)
                             .font(.subheadline.weight(.regular))
                             .foregroundStyle(.white.opacity(0.82))
@@ -261,16 +287,16 @@ struct EntryDetailView: View {
                             .multilineTextAlignment(.center)
                     }
 
-                    if !model.metadataLineItems.isEmpty {
-                        Text(model.metadataLineItems.joined(separator: "  ·  "))
+                    if !session.model.metadataLineItems.isEmpty {
+                        Text(session.model.metadataLineItems.joined(separator: "  ·  "))
                             .font(.footnote)
                             .foregroundStyle(.white.opacity(0.68))
                             .lineLimit(2)
                             .multilineTextAlignment(.center)
                     }
 
-                    if !model.genreNames.isEmpty {
-                        Text(model.genreNames.joined(separator: ", "))
+                    if !session.model.genreNames.isEmpty {
+                        Text(session.model.genreNames.joined(separator: ", "))
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.56))
                             .lineLimit(1)
@@ -289,7 +315,7 @@ struct EntryDetailView: View {
 
     @ViewBuilder
     private var heroArtwork: some View {
-        let url = model.heroImageURL ?? entry.backdropURL ?? entry.posterURL
+        let url = session.model.heroImageURL ?? session.entry.backdropURL ?? session.entry.posterURL
         if let url {
             KFImageView(
                 url: url,
@@ -317,17 +343,17 @@ struct EntryDetailView: View {
 
     private var quickActionsRow: some View {
         EntryDetailQuickActionsRow(
-            detailURL: model.primaryLinkURL ?? entry.linkToDetails,
-            isFavorite: entry.favorite,
-            showsConvertAction: entry.type != .movie,
-            conversionInProgress: conversion.inProgress,
+            detailURL: session.model.primaryLinkURL ?? session.entry.linkToDetails,
+            isFavorite: session.entry.favorite,
+            showsConvertAction: session.entry.type != .movie,
+            conversionInProgress: session.conversion.inProgress,
             convertMenuTitle: { convertMenuTitle },
             dropActionTitle: dropActionTitle,
             dropActionSystemImage: dropActionSystemImage,
-            dropActionIsDestructive: entry.watchStatus != .dropped,
-            onShare: { presentation.activeSheet = .sharing },
+            dropActionIsDestructive: session.entry.watchStatus != .dropped,
+            onShare: { session.presentation.activeSheet = .sharing },
             onToggleFavorite: toggleFavorite,
-            onChangePoster: { presentation.activeSheet = .changePoster },
+            onChangePoster: { session.presentation.activeSheet = .changePoster },
             onConvert: handleConvertTap,
             onToggleDroppedStatus: toggleDroppedStatus
         )
@@ -336,10 +362,13 @@ struct EntryDetailView: View {
     // MARK: - Details Content
 
     @ViewBuilder
-    private func detailsContent(_ proxy: ScrollViewProxy) -> some View {
-        if !model.statCards.isEmpty {
-            LazyVGrid(columns: statColumns, spacing: 12) {
-                ForEach(model.statCards) { card in
+    private func detailsContent(
+        _ proxy: ScrollViewProxy,
+        availableWidth: CGFloat
+    ) -> some View {
+        if !session.model.statCards.isEmpty {
+            LazyVGrid(columns: statColumns(for: availableWidth), spacing: 12) {
+                ForEach(session.model.statCards) { card in
                     DetailStatCard(card: card)
                         .onTapGesture {
                             if card.id == "episodes" {
@@ -358,81 +387,82 @@ struct EntryDetailView: View {
         editingSection
 
         sectionCard(EntryDetailL10n.overview, systemImage: "text.alignleft") {
-            Text(model.overviewText)
+            Text(session.model.overviewText)
                 .font(.body)
                 .foregroundStyle(.primary)
                 .lineSpacing(4)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
 
-        if !model.characterCards.isEmpty {
+        if !session.model.characterCards.isEmpty {
             PopupDisclosureCard(
-                model.characterSectionTitle,
+                session.model.characterSectionTitle,
                 systemImage: "person.2.fill",
-                isExpanded: $isCharacterExpanded
+                isExpanded: characterExpandedBinding
             ) {
-                horizontalCards(model.characterCards) { card in
+                horizontalCards(session.model.characterCards) { card in
                     PersonCardView(card: card)
                 }
             }
         }
 
-        if !model.staffCards.isEmpty {
+        if !session.model.staffCards.isEmpty {
             PopupDisclosureCard(
                 EntryDetailL10n.staff,
                 systemImage: "person.2.fill",
-                isExpanded: $isStaffExpanded
+                isExpanded: staffExpandedBinding
             ) {
-                horizontalCards(model.staffCards) { card in
+                horizontalCards(session.model.staffCards) { card in
                     PersonCardView(card: card)
                 }
             }
         }
 
-        switch entry.type {
+        switch session.entry.type {
         case .series:
-            if !model.seasonCards.isEmpty {
+            if !session.model.seasonCards.isEmpty {
                 LazyVStack(spacing: 18) {
-                    ForEach(model.seasonCards) { season in
+                    ForEach(session.model.seasonCards) { season in
                         SeriesSeasonEpisodeGroupView(
                             season: season,
-                            seriesTMDbID: entry.tmdbID,
+                            seriesTMDbID: session.entry.tmdbID,
                             language: currentLanguage,
-                            watchStatus: entry.watchStatus,
-                            episodeProgressSummary: entry.episodeProgressSummary(
+                            watchStatus: session.entry.watchStatus,
+                            episodeProgressSummary: session.entry.episodeProgressSummary(
                                 forSeason: season.seasonNumber
                             ),
-                            collapseByDefault: model.collapseSeriesSeasonsByDefault,
-                            sectionTitle: season.id == model.seasonCards.first?.id
+                            collapseByDefault: session.model.collapseSeriesSeasonsByDefault,
+                            sectionTitle: season.id == session.model.seasonCards.first?.id
                                 ? EntryDetailL10n.episodes
                                 : nil,
-                            sectionSystemImage: season.id == model.seasonCards.first?.id
+                            sectionSystemImage: season.id == session.model.seasonCards.first?.id
                                 ? "play.rectangle.on.rectangle.fill"
                                 : nil
                         )
-                        .id("\(season.id)-\(model.collapseSeriesSeasonsByDefault)")
+                        .id("\(season.id)-\(session.model.collapseSeriesSeasonsByDefault)")
                     }
                 }
                 .id(EntryDetailScrollTarget.episodesSection)
             }
         case .season:
-            if !model.episodeCards.isEmpty {
+            if !session.model.episodeCards.isEmpty {
                 sectionCard(EntryDetailL10n.episodes, systemImage: "play.rectangle.on.rectangle.fill") {
                     LazyVStack(spacing: 10) {
-                        ForEach(model.episodeCards) { episode in
+                        ForEach(session.model.episodeCards) { episode in
                             EpisodeRowView(
                                 card: episode,
                                 previewContext: .init(
-                                    seriesTMDbID: entry.type.parentSeriesID ?? entry.tmdbID,
-                                    seasonNumber: entry.type.seasonNumber ?? 0,
+                                    seriesTMDbID: session.entry.type.parentSeriesID
+                                        ?? session.entry.tmdbID,
+                                    seasonNumber: session.entry.type.seasonNumber ?? 0,
                                     language: currentLanguage
                                 ),
                                 isWatched: EntryDetailEpisodePresentation.isEpisodeWatched(
                                     episode.episodeNumber,
-                                    inSeason: entry.type.seasonNumber ?? 0,
-                                    watchStatus: entry.watchStatus,
-                                    summary: entry.episodeProgressSummary(
-                                        forSeason: entry.type.seasonNumber ?? 0
+                                    inSeason: session.entry.type.seasonNumber ?? 0,
+                                    watchStatus: session.entry.watchStatus,
+                                    summary: session.entry.episodeProgressSummary(
+                                        forSeason: session.entry.type.seasonNumber ?? 0
                                     )
                                 )
                             )
@@ -445,7 +475,7 @@ struct EntryDetailView: View {
             EmptyView()
         }
 
-        if let errorMessage = model.loadError {
+        if let errorMessage = session.model.loadError {
             sectionCard(EntryDetailL10n.tmdb) {
                 ContentUnavailableView(
                     String(localized: EntryDetailL10n.couldNotLoadDetails),
@@ -460,21 +490,33 @@ struct EntryDetailView: View {
     @ViewBuilder
     private var editingSection: some View {
         EntryDetailTrackingSection(
-            entry: entry,
+            entry: session.entry,
             scoringEnabled: scoringEnabled,
             episodeProgressTrackingEnabled: episodeProgressTrackingEnabled,
             onWatchStatusSelected: requestWatchStatusChange,
             onEpisodeProgressCompletionSuggested: handleEpisodeProgressCompletionSuggestion,
-            isEditingDetails: $isEditingDetails
+            isEditingDetails: editingDetailsBinding
         )
         .id(EntryDetailScrollTarget.editingSection)
     }
 
-    private var statColumns: [GridItem] {
+    private func statColumns(for availableWidth: CGFloat) -> [GridItem] {
         Array(
             repeating: GridItem(.flexible(), spacing: 12, alignment: .top),
-            count: min(max(model.statCards.count, 1), 3)
+            count: min(
+                max(session.model.statCards.count, 1),
+                maximumStatColumnCount(for: availableWidth)
+            )
         )
+    }
+
+    private func maximumStatColumnCount(for availableWidth: CGFloat) -> Int {
+        switch presentationStyle {
+        case .sheet:
+            3
+        case .inspector:
+            availableWidth >= 460 ? 3 : 2
+        }
     }
 
     @ViewBuilder
@@ -515,26 +557,27 @@ struct EntryDetailView: View {
     // MARK: - Actions
 
     private func toggleFavorite() {
-        dataHandler?.toggleFavorite(entry: entry)
+        dataHandler?.toggleFavorite(entry: session.entry)
     }
 
     private func toggleDroppedStatus() {
-        requestWatchStatusChange(entry.watchStatus == .dropped ? .watching : .dropped)
+        requestWatchStatusChange(session.entry.watchStatus == .dropped ? .watching : .dropped)
     }
 
     private var dropActionTitle: LocalizedStringResource {
-        entry.watchStatus == .dropped ? EntryDetailL10n.undrop : EntryDetailL10n.markAsDropped
+        session.entry.watchStatus == .dropped
+            ? EntryDetailL10n.undrop : EntryDetailL10n.markAsDropped
     }
 
     private var dropActionSystemImage: String {
-        entry.watchStatus == .dropped ? "arrow.uturn.backward.circle" : "xmark.circle"
+        session.entry.watchStatus == .dropped ? "arrow.uturn.backward.circle" : "xmark.circle"
     }
 
     @ViewBuilder
     private var doneToolbarControl: some View {
         if !shouldConfirmBeforeSaving {
             Button(String(localized: EntryDetailL10n.done)) {
-                dismiss()
+                closePresentation()
             }
             .font(.headline.weight(.semibold))
             .foregroundStyle(.primary)
@@ -545,7 +588,7 @@ struct EntryDetailView: View {
                 }
                 Button(EntryDetailL10n.discardChanges, role: .destructive) {
                     discardUserEdits()
-                    dismiss()
+                    closePresentation()
                 }
             } label: {
                 Text(String(localized: EntryDetailL10n.done))
@@ -556,15 +599,15 @@ struct EntryDetailView: View {
     }
 
     private var hasUnsavedUserInfoChanges: Bool {
-        entry.userInfoHasChanges(comparedTo: originalUserInfo)
+        session.entry.userInfoHasChanges(comparedTo: session.originalUserInfo)
     }
 
     private var isEpisodeProgressCompletionPromptPresented: Binding<Bool> {
         Binding(
-            get: { presentation.episodeProgressCompletionPrompt != nil },
+            get: { session.presentation.episodeProgressCompletionPrompt != nil },
             set: { isPresented in
                 if !isPresented {
-                    presentation.episodeProgressCompletionPrompt = nil
+                    session.presentation.episodeProgressCompletionPrompt = nil
                 }
             }
         )
@@ -572,55 +615,80 @@ struct EntryDetailView: View {
 
     private var isDateUpdateSuggestionPresented: Binding<Bool> {
         Binding(
-            get: { presentation.dateUpdateSuggestion != nil },
+            get: { session.presentation.dateUpdateSuggestion != nil },
             set: { isPresented in
                 if !isPresented {
-                    presentation.dateUpdateSuggestion = nil
+                    session.presentation.dateUpdateSuggestion = nil
                 }
             }
         )
     }
 
+    private var editingDetailsBinding: Binding<Bool> {
+        Binding(
+            get: { session.isEditingDetails },
+            set: { session.isEditingDetails = $0 }
+        )
+    }
+
+    private var characterExpandedBinding: Binding<Bool> {
+        Binding(
+            get: { session.isCharacterExpanded },
+            set: { session.isCharacterExpanded = $0 }
+        )
+    }
+
+    private var staffExpandedBinding: Binding<Bool> {
+        Binding(
+            get: { session.isStaffExpanded },
+            set: { session.isStaffExpanded = $0 }
+        )
+    }
+
     private var shouldConfirmBeforeSaving: Bool {
         // Only non-incremental note changes require confirmation.
-        !entry.notes.hasPrefix(originalUserInfo.notes)
+        !session.entry.notes.hasPrefix(session.originalUserInfo.notes)
     }
 
     private func saveAndDismissIfNeeded() {
         if hasUnsavedUserInfoChanges {
             saveUserEdits()
         }
-        dismiss()
+        closePresentation()
     }
 
     private func requestWatchStatusChange(_ status: AnimeEntry.WatchStatus) {
-        guard entry.watchStatus != status else { return }
+        guard session.entry.watchStatus != status else { return }
 
-        let creditsCompletion = status == .watched && (entry.type == .series || entry.type == .movie)
+        let creditsCompletion =
+            status == .watched
+            && (session.entry.type == .series || session.entry.type == .movie)
 
         withAnimation(.default) {
-            _ = entry.updateWatchStatus(status)
+            _ = session.entry.updateWatchStatus(status)
         }
-        presentation.dateUpdateSuggestion = entry.dateUpdateSuggestion(forTargetStatus: status)
+        session.presentation.dateUpdateSuggestion = session.entry.dateUpdateSuggestion(
+            forTargetStatus: status
+        )
         if creditsCompletion {
-            appReview.record(.entryWatched(entryID: entry.tmdbID), scheduleRequest: false)
-            hasPendingWatchedReviewOpportunity = true
-            if presentation.dateUpdateSuggestion == nil {
+            appReview.record(.entryWatched(entryID: session.entry.tmdbID), scheduleRequest: false)
+            session.hasPendingWatchedReviewOpportunity = true
+            if session.presentation.dateUpdateSuggestion == nil {
                 schedulePendingWatchedReviewOpportunity()
             }
         }
     }
 
     private func schedulePendingWatchedReviewOpportunity() {
-        guard hasPendingWatchedReviewOpportunity else { return }
-        hasPendingWatchedReviewOpportunity = false
+        guard session.hasPendingWatchedReviewOpportunity else { return }
+        session.hasPendingWatchedReviewOpportunity = false
         appReview.scheduleRequestIfEligible()
     }
 
     private func handleEpisodeProgressCompletionSuggestion(
         _ prompt: AnimeEntryEpisodeProgressCompletionPrompt
     ) {
-        presentation.episodeProgressCompletionPrompt = prompt
+        session.presentation.episodeProgressCompletionPrompt = prompt
     }
 
     private func episodeProgressCompletionPromptMessage(
@@ -635,7 +703,7 @@ struct EntryDetailView: View {
     }
 
     private var convertMenuTitle: LocalizedStringResource {
-        switch entry.type {
+        switch session.entry.type {
         case .series:
             EntryDetailL10n.convertToSeason
         case .season:
@@ -648,34 +716,34 @@ struct EntryDetailView: View {
     private func saveUserEdits() {
         do {
             try modelContext.save()
-            originalUserInfo = entry.userInfo
-            originalTrackingUpdatedAt = entry.trackingUpdatedAt
+            session.originalUserInfo = session.entry.userInfo
+            session.originalTrackingUpdatedAt = session.entry.trackingUpdatedAt
         } catch {
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
     }
 
     private func discardUserEdits() {
-        entry.updateUserInfo(from: originalUserInfo)
-        entry.trackingUpdatedAt = originalTrackingUpdatedAt
+        session.entry.updateUserInfo(from: session.originalUserInfo)
+        session.entry.trackingUpdatedAt = session.originalTrackingUpdatedAt
         do {
             try modelContext.save()
         } catch {
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
         withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
-            isEditingDetails = startInEditingMode
+            session.isEditingDetails = session.startsInEditingMode
         }
     }
 
     private func handleConvertTap() async {
-        guard !conversion.inProgress else { return }
-        switch entry.type {
+        guard !session.conversion.inProgress else { return }
+        switch session.entry.type {
         case .series:
             await presentSeasonPicker()
         case .season:
             if hasSiblingSeasonEntry {
-                presentation.showSiblingSeasonWarning = true
+                session.presentation.showSiblingSeasonWarning = true
             } else {
                 await convertSeasonToSeries()
             }
@@ -685,56 +753,69 @@ struct EntryDetailView: View {
     }
 
     private var hasSiblingSeasonEntry: Bool {
-        model.hasSiblingSeasonEntry(for: entry)
+        session.model.hasSiblingSeasonEntry(for: session.entry)
     }
 
     private func presentSeasonPicker() async {
-        conversion.isFetchingSeasons = true
-        conversion.inProgress = true
+        session.conversion.isFetchingSeasons = true
+        session.conversion.inProgress = true
         do {
-            conversion.seasonNumberOptions = try await model.seasonNumberOptions(
-                for: entry,
+            session.conversion.seasonNumberOptions = try await session.model.seasonNumberOptions(
+                for: session.entry,
                 language: currentLanguage
             )
-            presentation.showSeasonPicker = true
+            session.presentation.showSeasonPicker = true
         } catch {
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
-        conversion.isFetchingSeasons = false
-        conversion.inProgress = false
+        session.conversion.isFetchingSeasons = false
+        session.conversion.inProgress = false
     }
 
     private func convertSeasonToSeries() async {
-        guard case .season(_, _) = entry.type else { return }
-        conversion.inProgress = true
+        guard case .season(_, _) = session.entry.type else { return }
+        session.conversion.inProgress = true
         do {
-            try await model.convertSeasonToSeries(
-                entry,
+            try await session.model.convertSeasonToSeries(
+                session.entry,
                 language: currentLanguage
             )
             ToastCenter.global.completionState = .completed(EntryDetailL10n.convertedToSeries)
-            dismiss()
+            closePresentation()
         } catch {
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
-        conversion.inProgress = false
+        session.conversion.inProgress = false
     }
 
     private func convertSeriesToSeason(seasonNumber: Int) async {
-        conversion.inProgress = true
+        session.conversion.inProgress = true
         do {
-            try await model.convertSeriesToSeason(
-                entry,
+            try await session.model.convertSeriesToSeason(
+                session.entry,
                 seasonNumber: seasonNumber,
                 language: currentLanguage
             )
             ToastCenter.global.completionState = .completed(EntryDetailL10n.convertedToSeason)
-            dismiss()
+            closePresentation()
         } catch {
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
-        conversion.inProgress = false
+        session.conversion.inProgress = false
     }
+
+    private func closePresentation() {
+        if let onClose {
+            onClose()
+        } else {
+            dismiss()
+        }
+    }
+}
+
+enum EntryDetailPresentationStyle: Sendable {
+    case sheet
+    case inspector
 }
 
 fileprivate struct EntryDetailPreviewHost: View {
@@ -761,12 +842,6 @@ fileprivate struct EntryDetailPreviewHost: View {
                 showDetail = true
             }
         }
-    }
-}
-
-extension EntryDetailView {
-    private static func defaultExpansionState(forKey key: String, defaultValue: Bool) -> Bool {
-        UserDefaults.standard.bool(forKey: key, defaultValue: defaultValue)
     }
 }
 

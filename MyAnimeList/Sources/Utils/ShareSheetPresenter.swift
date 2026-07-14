@@ -5,37 +5,66 @@
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/5/9.
 //
 
-import SwiftUI
 import UIKit
 
 @MainActor
 enum ShareSheetPresenter {
     static func present(items: [Any]) {
+        guard let presenter = activePresentationViewController() else { return }
+
         let activityViewController = UIActivityViewController(
             activityItems: items,
             applicationActivities: nil
         )
 
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            let hostingController = UIHostingController(rootView: EmptyView())
-            activityViewController.popoverPresentationController?.sourceView = hostingController.view
-        }
-
-        let rootViewController = UIApplication.shared.connectedScenes
-            .flatMap { ($0 as? UIWindowScene)?.windows ?? [] }
-            .first { $0.isKeyWindow }?
-            .rootViewController
-        guard let rootViewController else { return }
-
-        if let presentedViewController = rootViewController.presentedViewController {
-            presentedViewController.dismiss(
-                animated: true,
-                completion: {
-                    rootViewController.present(activityViewController, animated: true)
-                }
+        if let popover = activityViewController.popoverPresentationController {
+            popover.sourceView = presenter.view
+            popover.sourceRect = CGRect(
+                x: presenter.view.bounds.midX,
+                y: presenter.view.bounds.midY,
+                width: 0,
+                height: 0
             )
-        } else {
-            rootViewController.present(activityViewController, animated: true)
+            popover.permittedArrowDirections = []
         }
+
+        presenter.present(activityViewController, animated: true)
+    }
+
+    private static func activePresentationViewController() -> UIViewController? {
+        let activeScenes = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .filter { $0.activationState == .foregroundActive }
+
+        let window =
+            activeScenes
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow)
+            ?? activeScenes.flatMap(\.windows).first(where: { !$0.isHidden })
+
+        guard let rootViewController = window?.rootViewController else { return nil }
+        return topViewController(from: rootViewController)
+    }
+
+    private static func topViewController(from viewController: UIViewController) -> UIViewController {
+        if let presentedViewController = viewController.presentedViewController,
+            !presentedViewController.isBeingDismissed
+        {
+            return topViewController(from: presentedViewController)
+        }
+
+        if let navigationController = viewController as? UINavigationController,
+            let visibleViewController = navigationController.visibleViewController
+        {
+            return topViewController(from: visibleViewController)
+        }
+
+        if let tabBarController = viewController as? UITabBarController,
+            let selectedViewController = tabBarController.selectedViewController
+        {
+            return topViewController(from: selectedViewController)
+        }
+
+        return viewController
     }
 }

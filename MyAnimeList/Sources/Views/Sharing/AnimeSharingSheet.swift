@@ -12,6 +12,7 @@ struct AnimeSharingSheet: View {
     @State private var viewModel: AnimeSharingViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(AppReviewPromptController.self) private var appReview
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage(.preferredAnimeInfoLanguage) private var defaultLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
@@ -26,26 +27,12 @@ struct AnimeSharingSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
-                    AnimeSharingPreviewSection(
-                        title: viewModel.currentTitle,
-                        subtitle: viewModel.previewSubtitle,
-                        detail: viewModel.previewDetailLine,
-                        aspectRatio: viewModel.previewAspectRatio,
-                        image: viewModel.loadedImage,
-                        animationTrigger: viewModel.selectedLanguage
-                    )
-
-                    AnimeSharingControlsSection(
-                        availableLanguages: viewModel.availableLanguages,
-                        selectedLanguage: $viewModel.selectedLanguage,
-                        canSelectLanguage: viewModel.canSelectLanguage,
-                        onChangePoster: { showPosterSelection = true }
-                    )
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.bottom, 32)
+                sharingContent
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .padding(.bottom, 32)
+                    .frame(maxWidth: 1_040)
+                    .frame(maxWidth: .infinity)
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Share")
@@ -79,19 +66,17 @@ struct AnimeSharingSheet: View {
                     }
                 }
             }
-            .fullScreenCover(isPresented: $showPosterSelection) {
-                NavigationStack {
-                    PosterSelectionView(
-                        tmdbID: viewModel.entry.tmdbID,
-                        type: viewModel.entry.type,
-                        originalPosterLanguageCode: viewModel.entry.originalLanguageCode
-                            ?? viewModel.entry.parentSeriesEntry?.originalLanguageCode,
-                        onPosterSelected: { url in
-                            viewModel.updateSelectedPosterURL(url)
-                        }
-                    )
-                    .navigationTitle("Change Poster")
-                }
+            .navigationDestination(isPresented: $showPosterSelection) {
+                PosterSelectionView(
+                    tmdbID: viewModel.entry.tmdbID,
+                    type: viewModel.entry.type,
+                    originalPosterLanguageCode: viewModel.entry.originalLanguageCode
+                        ?? viewModel.entry.parentSeriesEntry?.originalLanguageCode,
+                    onPosterSelected: { url in
+                        viewModel.updateSelectedPosterURL(url)
+                    }
+                )
+                .navigationTitle("Change Poster")
             }
             .task(id: viewModel.renderTrigger) {
                 let trigger = viewModel.renderTrigger
@@ -120,6 +105,52 @@ struct AnimeSharingSheet: View {
                 )
             }
         }
+        .presentationSizing(.page)
+    }
+
+    @ViewBuilder
+    private var sharingContent: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            stackedSharingContent
+        } else {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 24) {
+                    sharingPreview
+                        .frame(width: 420)
+                    sharingControls
+                        .frame(width: 320)
+                }
+
+                stackedSharingContent
+            }
+        }
+    }
+
+    private var stackedSharingContent: some View {
+        VStack(spacing: 24) {
+            sharingPreview
+            sharingControls
+        }
+    }
+
+    private var sharingPreview: some View {
+        AnimeSharingPreviewSection(
+            title: viewModel.currentTitle,
+            subtitle: viewModel.previewSubtitle,
+            detail: viewModel.previewDetailLine,
+            aspectRatio: viewModel.previewAspectRatio,
+            image: viewModel.loadedImage,
+            animationTrigger: viewModel.selectedLanguage
+        )
+    }
+
+    private var sharingControls: some View {
+        AnimeSharingControlsSection(
+            availableLanguages: viewModel.availableLanguages,
+            selectedLanguage: $viewModel.selectedLanguage,
+            canSelectLanguage: viewModel.canSelectLanguage,
+            onChangePoster: { showPosterSelection = true }
+        )
     }
 }
 

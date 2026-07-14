@@ -458,16 +458,19 @@ struct LibraryProfileSettingsView: View {
         case .changeAPIKey:
             TMDbAPIConfigurator()
                 .presentationDetents([.fraction(0.65), .large])
+                .presentationSizing(.form)
         case .support:
             NavigationStack {
                 SupportAniShelfSheet()
             }
             .presentationDetents([.fraction(0.72), .large])
+            .presentationSizing(.page)
         case .about:
             NavigationStack {
                 AboutAniShelfSheet()
             }
             .presentationDetents([.fraction(0.85), .large])
+            .presentationSizing(.form)
         }
     }
 }

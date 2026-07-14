@@ -14,10 +14,15 @@ struct LibraryGalleryView: View {
     @Environment(LibraryEntryInteractionState.self) var interaction
     @Binding var scrolledID: Int?
     @State private var localScrolledID: Int?
+    let arrangement: LibraryPresentationPolicy.GalleryArrangement
 
-    init(scrolledID: Binding<Int?>) {
+    init(
+        scrolledID: Binding<Int?>,
+        arrangement: LibraryPresentationPolicy.GalleryArrangement = .singlePage
+    ) {
         self._scrolledID = scrolledID
         self._localScrolledID = State(initialValue: scrolledID.wrappedValue)
+        self.arrangement = arrangement
     }
 
     var body: some View {
@@ -31,49 +36,74 @@ struct LibraryGalleryView: View {
                     }
             }
         }
-        .libraryEntryInteractionOverlays(
-            state: interaction,
-            deleteEntry: { entry in
-                store.deleteEntry(entry) { scrolledID = $0 }
-            },
-            detailRepository: store.repository
-        )
     }
 
     private var libraryContent: some View {
         GeometryReader { geometry in
-            ScrollView(.horizontal) {
-                LazyHStack(spacing: 0) {
-                    ForEach(store.libraryDisplayItems) { item in
-                        AnimeEntryCardWrapper(
-                            entry: item.entry,
-                            snapshot: item.snapshot,
-                            scrolledID: $scrolledID
-                        )
-                        .frame(width: geometry.size.width, height: geometry.size.height)
-                    }
+            switch arrangement {
+            case .singlePage:
+                galleryScroll(
+                    itemWidth: geometry.size.width,
+                    itemSpacing: 0,
+                    horizontalContentMargin: 0,
+                    height: geometry.size.height
+                )
+            case .shelf(let cardWidth):
+                let itemWidth = min(cardWidth + 52, geometry.size.width)
+                galleryScroll(
+                    itemWidth: itemWidth,
+                    itemSpacing: 12,
+                    horizontalContentMargin: max((geometry.size.width - itemWidth) / 2, 20),
+                    height: geometry.size.height
+                )
+            }
+        }
+    }
+
+    private func galleryScroll(
+        itemWidth: CGFloat,
+        itemSpacing: CGFloat,
+        horizontalContentMargin: CGFloat,
+        height: CGFloat
+    ) -> some View {
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: itemSpacing) {
+                ForEach(store.libraryDisplayItems) { item in
+                    AnimeEntryCardWrapper(
+                        entry: item.entry,
+                        snapshot: item.snapshot,
+                        scrolledID: $scrolledID
+                    )
+                    .frame(width: itemWidth, height: height)
                 }
-                .scrollTargetLayout()
             }
-            .animation(.default, value: store.groupStrategy)
-            .animation(.default, value: store.sortReversed)
-            .animation(.default, value: store.sortStrategy)
-            .animation(.default, value: store.filters)
-            .scrollClipDisabled()
-            .scrollPosition(id: $localScrolledID)
-            .scrollTargetBehavior(.viewAligned)
-            .onChange(of: scrolledID) {
-                guard localScrolledID != scrolledID else { return }
-                localScrolledID = scrolledID
-            }
-            .onScrollPhaseChange { _, newPhase in
-                if !newPhase.isScrolling {
-                    commitLocalScrollPosition()
-                }
-            }
-            .onDisappear {
+            .scrollTargetLayout()
+        }
+        .contentMargins(.horizontal, horizontalContentMargin, for: .scrollContent)
+        .animation(.default, value: store.groupStrategy)
+        .animation(.default, value: store.sortReversed)
+        .animation(.default, value: store.sortStrategy)
+        .animation(.default, value: store.filters)
+        .scrollClipDisabled()
+        .scrollPosition(id: $localScrolledID)
+        .scrollTargetBehavior(.viewAligned)
+        .onChange(of: localScrolledID, initial: true) { _, entryID in
+            guard let entryID,
+                let entry = store.libraryDisplayItems.first(where: { $0.id == entryID })?.entry
+            else { return }
+            interaction.focus(entry)
+        }
+        .onChange(of: scrolledID) {
+            guard localScrolledID != scrolledID else { return }
+            localScrolledID = scrolledID
+        }
+        .onScrollPhaseChange { _, newPhase in
+            if !newPhase.isScrolling {
                 commitLocalScrollPosition()
             }
+        }
+        .onDisappear {
+            commitLocalScrollPosition()
         }
     }
 
@@ -105,7 +135,7 @@ fileprivate struct AnimeEntryCardWrapper: View {
                 entry: entry,
                 snapshot: snapshot,
                 onOpenDetails: {
-                    interaction.detailingEntry = entry
+                    interaction.openDetails(for: entry)
                     scrolledID = snapshot.id
                 },
                 imageLoaded: $imageLoaded

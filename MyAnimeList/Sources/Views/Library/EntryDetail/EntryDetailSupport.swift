@@ -82,27 +82,6 @@ enum EntryDetailScrollTarget: Hashable {
     case episodesSection
 }
 
-enum EntryDetailSheet: Identifiable {
-    case changePoster
-    case sharing
-
-    var id: Self { self }
-}
-
-struct EntryDetailPresentationState {
-    var activeSheet: EntryDetailSheet?
-    var showSeasonPicker = false
-    var showSiblingSeasonWarning = false
-    var episodeProgressCompletionPrompt: AnimeEntryEpisodeProgressCompletionPrompt?
-    var dateUpdateSuggestion: AnimeEntryDateUpdateSuggestion?
-}
-
-struct EntryDetailConversionState {
-    var inProgress = false
-    var isFetchingSeasons = false
-    var seasonNumberOptions: [Int] = []
-}
-
 extension EntryDetailL10n {
     static func dateSuggestionMessage(
         for suggestion: AnimeEntryDateUpdateSuggestion

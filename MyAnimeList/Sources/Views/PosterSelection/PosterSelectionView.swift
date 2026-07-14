@@ -100,6 +100,8 @@ struct PosterSelectionView: View {
                 }
             }
             .padding(.horizontal, 16)
+            .frame(maxWidth: 1_100)
+            .frame(maxWidth: .infinity)
         }
         .background(Color(.systemGroupedBackground))
         .navigationBarTitleDisplayMode(.inline)
@@ -137,6 +139,7 @@ struct PosterSelectionView: View {
             }
         }
         .task { await fetchPrimaryPosters() }
+        .presentationSizing(.page)
     }
 
     // MARK: - Data Fetching
