@@ -67,7 +67,7 @@ struct LibraryEntryInteractionStateTests {
         let state = LibraryEntryInteractionState()
         let entry = AnimeEntry.template(id: 42)
         state.openDetails(for: entry)
-        state.activeWorkflow = .sharing(entry.syncIdentity)
+        state.presentWorkflow(.sharing(entry.syncIdentity))
 
         let policy = LibraryPresentationPolicy()
         _ = policy.evaluate(
@@ -166,17 +166,20 @@ struct LibraryEntryInteractionStateTests {
         let state = LibraryEntryInteractionState()
         let entry = AnimeEntry.template(id: 42)
         state.openDetails(for: entry)
-        state.detailHostDidPresent(.sheet)
+        let firstSheet = try! #require(state.detailHostPresentation)
 
         state.transitionDetailHost(to: .inspector)
-        state.detailHostDidPresent(.inspector)
+        let inspector = try! #require(state.detailHostPresentation)
         state.transitionDetailHost(to: .sheet)
+        let secondSheet = try! #require(state.detailHostPresentation)
 
-        state.detailHostDidDismiss(.sheet)
-        state.detailHostDidDismiss(.inspector)
+        state.detailHostDidDismiss(firstSheet)
+        state.detailHostDidDismiss(inspector)
 
         #expect(state.presentedDetailEntryID == entry.syncIdentity)
         #expect(state.desiredDetailHost == .sheet)
+        #expect(secondSheet.id != firstSheet.id)
+        #expect(secondSheet.detailPresentationID == firstSheet.detailPresentationID)
     }
 
     @Test @MainActor func genuineInspectorDismissalFromTheStableHostClosesDetail() {
@@ -184,29 +187,32 @@ struct LibraryEntryInteractionStateTests {
         let entry = AnimeEntry.template(id: 42)
         state.transitionDetailHost(to: .inspector)
         state.openDetails(for: entry)
-        state.detailHostDidPresent(.inspector)
+        let inspector = try! #require(state.inspectorPresentation)
 
-        state.detailHostDidDismiss(.inspector)
+        state.detailHostDidDismiss(inspector)
 
         #expect(state.presentedDetailEntryID == nil)
     }
 
-    @Test @MainActor func rapidHostPolicyReversalIgnoresAStaleInspectorDismissal() {
+    @Test @MainActor func omittedHostCallbackLeavesNoDismissalDebtAfterRapidReversal() {
         let state = LibraryEntryInteractionState()
         let entry = AnimeEntry.template(id: 42)
         state.transitionDetailHost(to: .inspector)
         state.openDetails(for: entry)
-        state.detailHostDidPresent(.inspector)
+        let firstInspector = try! #require(state.inspectorPresentation)
 
         state.transitionDetailHost(to: .sheet)
+        let sheet = try! #require(state.detailHostPresentation)
         state.transitionDetailHost(to: .inspector)
-        state.detailHostDidDismiss(.inspector)
+        let secondInspector = try! #require(state.inspectorPresentation)
+
+        state.detailHostDidDismiss(sheet)
 
         #expect(state.presentedDetailEntryID == entry.syncIdentity)
         #expect(state.desiredDetailHost == .inspector)
+        #expect(secondInspector.id != firstInspector.id)
 
-        state.detailHostDidPresent(.inspector)
-        state.detailHostDidDismiss(.inspector)
+        state.detailHostDidDismiss(secondInspector)
 
         #expect(state.presentedDetailEntryID == nil)
     }
@@ -215,11 +221,109 @@ struct LibraryEntryInteractionStateTests {
         let state = LibraryEntryInteractionState()
         let entry = AnimeEntry.template(id: 42)
         state.openDetails(for: entry)
-        state.detailHostDidPresent(.sheet)
+        let sheet = try! #require(state.detailHostPresentation)
 
-        state.detailHostDidDismiss(.sheet)
+        state.detailHostDidDismiss(sheet)
 
         #expect(state.presentedDetailEntryID == nil)
+    }
+
+    @Test @MainActor func staleHostDismissalCannotCloseAReopenedDetail() {
+        let state = LibraryEntryInteractionState()
+        let entry = AnimeEntry.template(id: 42)
+        state.openDetails(for: entry)
+        let firstSheet = try! #require(state.detailHostPresentation)
+
+        state.dismissDetails()
+        state.openDetails(for: entry)
+        let secondSheet = try! #require(state.detailHostPresentation)
+        state.detailHostDidDismiss(firstSheet)
+
+        #expect(firstSheet.id != secondSheet.id)
+        #expect(firstSheet.detailPresentationID != secondSheet.detailPresentationID)
+        #expect(state.presentedDetailEntryID == entry.syncIdentity)
+    }
+
+    @Test @MainActor func replacingInspectorEntryRejectsOldHostAndDetailCallbacks() {
+        let state = LibraryEntryInteractionState()
+        let first = AnimeEntry.template(id: 42)
+        let second = AnimeEntry.template(id: 43)
+        state.transitionDetailHost(to: .inspector)
+        state.openDetails(for: first)
+        let firstInspector = try! #require(state.inspectorPresentation)
+
+        state.openDetails(for: second)
+        let secondInspector = try! #require(state.inspectorPresentation)
+        state.detailHostDidDismiss(firstInspector)
+        state.dismissDetails(ifPresentationID: firstInspector.detailPresentationID)
+
+        #expect(firstInspector.id != secondInspector.id)
+        #expect(firstInspector.detailPresentationID != secondInspector.detailPresentationID)
+        #expect(state.presentedDetailEntryID == second.syncIdentity)
+    }
+
+    @Test @MainActor func workflowPreemptionRetiresAndRenewsThePassiveSheetHost() {
+        let state = LibraryEntryInteractionState()
+        let entry = AnimeEntry.template(id: 42)
+        state.openDetails(for: entry)
+        let firstDetailRoute = try! #require(state.activeSheetRoute)
+
+        state.presentWorkflow(.sharing(entry.syncIdentity))
+        let workflowRoute = try! #require(state.activeSheetRoute)
+        state.sheetDidDismiss(firstDetailRoute)
+
+        #expect(state.activeSheetRoute?.id == workflowRoute.id)
+        #expect(state.presentedDetailEntryID == entry.syncIdentity)
+
+        state.sheetDidDismiss(workflowRoute)
+        let resumedDetailRoute = try! #require(state.activeSheetRoute)
+        state.sheetDidDismiss(firstDetailRoute)
+
+        #expect(resumedDetailRoute.id != firstDetailRoute.id)
+        #expect(state.activeSheetRoute?.id == resumedDetailRoute.id)
+        #expect(state.presentedDetailEntryID == entry.syncIdentity)
+    }
+
+    @Test @MainActor func staleWorkflowDismissalCannotCloseAReopenedWorkflow() {
+        let state = LibraryEntryInteractionState()
+        let entry = AnimeEntry.template(id: 42)
+        let workflow = LibraryEntryWorkflow.sharing(entry.syncIdentity)
+        state.presentWorkflow(workflow)
+        let firstRoute = try! #require(state.activeSheetRoute)
+        state.sheetDidDismiss(firstRoute)
+
+        state.presentWorkflow(workflow)
+        let secondRoute = try! #require(state.activeSheetRoute)
+        state.sheetDidDismiss(firstRoute)
+
+        #expect(firstRoute.id != secondRoute.id)
+        #expect(state.activeSheetRoute?.id == secondRoute.id)
+        #expect(state.activeWorkflow == workflow)
+    }
+
+    @Test @MainActor func workflowRouteRemainsCanonicalWithoutEntryResolution() {
+        let state = LibraryEntryInteractionState()
+        let detailEntry = AnimeEntry.template(id: 42)
+        let unavailableEntry = AnimeEntry.template(id: 43)
+        state.openDetails(for: detailEntry)
+        state.presentWorkflow(.sharing(unavailableEntry.syncIdentity))
+
+        let route = try! #require(state.activeSheetRoute)
+        #expect(route.entryIdentity == unavailableEntry.syncIdentity)
+        #expect(state.presentedDetailEntryID == detailEntry.syncIdentity)
+    }
+
+    @Test @MainActor func workflowDoesNotRetireAnInspectorBehindItsSheet() {
+        let state = LibraryEntryInteractionState()
+        let entry = AnimeEntry.template(id: 42)
+        state.transitionDetailHost(to: .inspector)
+        state.openDetails(for: entry)
+        let inspector = try! #require(state.inspectorPresentation)
+
+        state.presentWorkflow(.sharing(entry.syncIdentity))
+
+        #expect(state.inspectorPresentation?.id == inspector.id)
+        #expect(state.activeSheetRoute?.entryIdentity == entry.syncIdentity)
     }
 
     @Test func inspectorActivationUsesSingleTapWithoutChangingSheetPreference() {

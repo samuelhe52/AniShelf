@@ -7,6 +7,7 @@
 
 import DataProvider
 import Foundation
+import LibrarySync
 import SwiftData
 import SwiftUI
 
@@ -23,11 +24,13 @@ struct EntryDetailView: View {
     @AppStorage(.episodeProgressTrackingEnabled) private var episodeProgressTrackingEnabled = false
 
     private let presentationStyle: EntryDetailPresentationStyle
-    private let onClose: (() -> Void)?
+    private let onClose: ((LibraryEntrySyncIdentity) -> Void)?
     private let editingRequestID: UUID?
     private let onEditingRequestHandled: ((UUID) -> Void)?
 
     @State private var session: EntryDetailSession
+    @State private var conversionTask: Task<Void, Never>?
+    @State private var conversionTaskID: UUID?
 
     private var accentColor: Color { session.entry.favorite ? .orange : .blue }
     private var currentLanguage: Language { followsSystemLanguage ? .current : preferredLanguage }
@@ -38,7 +41,7 @@ struct EntryDetailView: View {
         repository: LibraryRepository,
         startInEditingMode: Bool = false,
         presentationStyle: EntryDetailPresentationStyle = .sheet,
-        onClose: (() -> Void)? = nil,
+        onClose: ((LibraryEntrySyncIdentity) -> Void)? = nil,
         session: EntryDetailSession? = nil,
         editingRequestID: UUID? = nil,
         onEditingRequestHandled: ((UUID) -> Void)? = nil
@@ -138,7 +141,9 @@ struct EntryDetailView: View {
             } else {
                 ForEach(session.conversion.seasonNumberOptions, id: \.self) { seasonNumber in
                     Button("Season \(seasonNumber)") {
-                        Task { await convertSeriesToSeason(seasonNumber: seasonNumber) }
+                        startConversionTask {
+                            await convertSeriesToSeason(seasonNumber: seasonNumber)
+                        }
                     }
                 }
             }
@@ -149,7 +154,9 @@ struct EntryDetailView: View {
             isPresented: $session.presentation.showSiblingSeasonWarning
         ) {
             Button(EntryDetailL10n.convertAnyway, role: .destructive) {
-                Task { await convertSeasonToSeries() }
+                startConversionTask {
+                    await convertSeasonToSeries()
+                }
             }
             Button(EntryDetailL10n.cancel, role: .cancel) {}
         } message: {
@@ -383,7 +390,11 @@ struct EntryDetailView: View {
             onShare: { session.presentation.activeSheet = .sharing },
             onToggleFavorite: toggleFavorite,
             onChangePoster: { session.presentation.activeSheet = .changePoster },
-            onConvert: handleConvertTap,
+            onConvert: {
+                startConversionTask {
+                    await handleConvertTap()
+                }
+            },
             onToggleDroppedStatus: toggleDroppedStatus
         )
     }
@@ -783,57 +794,84 @@ struct EntryDetailView: View {
     private func presentSeasonPicker() async {
         session.conversion.isFetchingSeasons = true
         session.conversion.inProgress = true
+        defer {
+            session.conversion.isFetchingSeasons = false
+            session.conversion.inProgress = false
+        }
         do {
             session.conversion.seasonNumberOptions = try await session.model.seasonNumberOptions(
                 for: session.entry,
                 language: currentLanguage
             )
+            guard !Task.isCancelled else { return }
             session.presentation.showSeasonPicker = true
         } catch {
+            guard !Task.isCancelled, !Self.isCancellation(error) else { return }
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
-        session.conversion.isFetchingSeasons = false
-        session.conversion.inProgress = false
     }
 
     private func convertSeasonToSeries() async {
         guard case .season(_, _) = session.entry.type else { return }
         session.conversion.inProgress = true
+        defer { session.conversion.inProgress = false }
         do {
             try await session.model.convertSeasonToSeries(
                 session.entry,
                 language: currentLanguage
             )
+            guard !Task.isCancelled else { return }
             ToastCenter.global.completionState = .completed(EntryDetailL10n.convertedToSeries)
             closePresentation()
         } catch {
+            guard !Task.isCancelled, !Self.isCancellation(error) else { return }
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
-        session.conversion.inProgress = false
     }
 
     private func convertSeriesToSeason(seasonNumber: Int) async {
         session.conversion.inProgress = true
+        defer { session.conversion.inProgress = false }
         do {
             try await session.model.convertSeriesToSeason(
                 session.entry,
                 seasonNumber: seasonNumber,
                 language: currentLanguage
             )
+            guard !Task.isCancelled else { return }
             ToastCenter.global.completionState = .completed(EntryDetailL10n.convertedToSeason)
             closePresentation()
         } catch {
+            guard !Task.isCancelled, !Self.isCancellation(error) else { return }
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
-        session.conversion.inProgress = false
+    }
+
+    private func startConversionTask(
+        _ operation: @escaping @MainActor () async -> Void
+    ) {
+        guard conversionTask == nil else { return }
+
+        let taskID = UUID()
+        conversionTaskID = taskID
+        conversionTask = Task { @MainActor in
+            await operation()
+            guard conversionTaskID == taskID else { return }
+            conversionTask = nil
+            conversionTaskID = nil
+        }
     }
 
     private func closePresentation() {
         if let onClose {
-            onClose()
+            onClose(session.entryIdentity)
         } else {
             dismiss()
         }
+    }
+
+    private static func isCancellation(_ error: Error) -> Bool {
+        error is CancellationError || (error as? URLError)?.code == .cancelled
     }
 }
 

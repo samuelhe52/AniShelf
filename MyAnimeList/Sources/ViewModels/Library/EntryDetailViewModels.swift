@@ -11,6 +11,9 @@ import Observation
 import SwiftUI
 import TMDb
 
+typealias EntryDetailInfoLoader =
+    @Sendable (AnimeType, Int, Language) async throws -> AnimeEntryDetailDTO
+
 @MainActor
 @Observable
 final class EntryDetailViewModel {
@@ -144,6 +147,7 @@ final class EntryDetailViewModel {
 
     private let repository: LibraryRepository
     private let infoFetcher: InfoFetcher
+    private let detailInfoLoader: EntryDetailInfoLoader
 
     private(set) var isLoading = false
     private(set) var loadError: String?
@@ -164,17 +168,34 @@ final class EntryDetailViewModel {
     private(set) var characterSectionTitle: LocalizedStringResource =
         EntryDetailL10n.characters
 
-    private var lastRequestKey: String?
+    private var loadedRequestKey: String?
+    private var loadGeneration = 0
 
-    init(repository: LibraryRepository, infoFetcher: InfoFetcher = .init()) {
+    init(
+        repository: LibraryRepository,
+        infoFetcher: InfoFetcher = .init(),
+        detailInfoLoader: EntryDetailInfoLoader? = nil
+    ) {
         self.repository = repository
         self.infoFetcher = infoFetcher
+        self.detailInfoLoader =
+            detailInfoLoader
+            ?? { entryType, tmdbID, language in
+                try await infoFetcher.detailInfo(
+                    entryType: entryType,
+                    tmdbID: tmdbID,
+                    language: language
+                )
+            }
     }
 
     func load(for entry: AnimeEntry, language: Language, dataHandler: DataHandler?) async {
         let requestKey = "\(entry.tmdbID)-\(language.rawValue)"
-        guard lastRequestKey != requestKey else { return }
-        lastRequestKey = requestKey
+        guard loadedRequestKey != requestKey else { return }
+
+        loadGeneration += 1
+        let generation = loadGeneration
+        loadedRequestKey = nil
 
         displayTitle = entry.displayName
         subtitleText = nil
@@ -195,6 +216,7 @@ final class EntryDetailViewModel {
         if let detail = entry.detail, detail.language == language.rawValue {
             apply(detail: detail, entry: entry, language: language)
             if detail.logoImageURL != nil {
+                loadedRequestKey = requestKey
                 isLoading = false
                 return
             }
@@ -202,18 +224,29 @@ final class EntryDetailViewModel {
 
         isLoading = true
         do {
-            let detailDTO = try await infoFetcher.detailInfo(
-                entryType: entry.type,
-                tmdbID: entry.tmdbID,
-                language: language
-            )
+            let detailDTO = try await detailInfoLoader(entry.type, entry.tmdbID, language)
+            guard loadGeneration == generation else { return }
+            guard !Task.isCancelled else {
+                isLoading = false
+                return
+            }
+
             let detail = entry.replaceDetail(from: detailDTO)
             try? dataHandler?.modelContext.save()
             apply(detail: detail, entry: entry, language: language)
+            loadedRequestKey = requestKey
         } catch {
+            guard loadGeneration == generation else { return }
+            if Task.isCancelled || Self.isCancellation(error) {
+                loadError = nil
+                isLoading = false
+                return
+            }
             loadError = error.localizedDescription
         }
-        isLoading = false
+        if loadGeneration == generation {
+            isLoading = false
+        }
     }
 
     func hasSiblingSeasonEntry(for entry: AnimeEntry) -> Bool {
@@ -391,6 +424,10 @@ final class EntryDetailViewModel {
                 imageURL: $0.imageURL
             )
         }
+    }
+
+    private static func isCancellation(_ error: Error) -> Bool {
+        error is CancellationError || (error as? URLError)?.code == .cancelled
     }
 
     private static func displayedStaffCards(

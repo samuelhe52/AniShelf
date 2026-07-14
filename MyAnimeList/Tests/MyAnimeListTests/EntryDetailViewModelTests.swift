@@ -479,6 +479,83 @@ struct EntryDetailViewModelTests {
         #expect(!(await httpClient.requests).isEmpty)
     }
 
+    @Test @MainActor func testEntryDetailRetriesSameRequestAfterFailure() async {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let loader = FailingEntryDetailLoader()
+        let viewModel = EntryDetailViewModel(
+            repository: repository,
+            detailInfoLoader: { entryType, tmdbID, language in
+                try await loader.load(entryType: entryType, tmdbID: tmdbID, language: language)
+            }
+        )
+        let entry = AnimeEntry.template(id: 39)
+
+        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+
+        #expect(await loader.requestCount == 2)
+        #expect(viewModel.loadError != nil)
+        #expect(!viewModel.isLoading)
+    }
+
+    @Test @MainActor func testEntryDetailCancellationDoesNotSurfaceErrorAndAllowsRetry() async {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let loader = CancellableEntryDetailLoader()
+        let viewModel = EntryDetailViewModel(
+            repository: repository,
+            detailInfoLoader: { entryType, tmdbID, language in
+                try await loader.load(entryType: entryType, tmdbID: tmdbID, language: language)
+            }
+        )
+        let entry = AnimeEntry.template(id: 40)
+
+        let cancelledLoad = Task {
+            await viewModel.load(for: entry, language: .english, dataHandler: nil)
+        }
+        while await loader.requestCount == 0 {
+            await Task.yield()
+        }
+        cancelledLoad.cancel()
+        await cancelledLoad.value
+
+        #expect(viewModel.loadError == nil)
+        #expect(!viewModel.isLoading)
+        #expect(viewModel.displayTitle != "Cancelled Detail")
+
+        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+
+        #expect(await loader.requestCount == 2)
+        #expect(viewModel.displayTitle == "Retried Detail")
+        #expect(viewModel.loadError == nil)
+        #expect(!viewModel.isLoading)
+    }
+
+    @Test @MainActor func testOlderLanguageRequestCannotOverwriteNewerDetail() async {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let loader = DelayedLanguageEntryDetailLoader()
+        let viewModel = EntryDetailViewModel(
+            repository: repository,
+            detailInfoLoader: { entryType, tmdbID, language in
+                try await loader.load(entryType: entryType, tmdbID: tmdbID, language: language)
+            }
+        )
+        let entry = AnimeEntry.template(id: 41)
+
+        let olderLoad = Task {
+            await viewModel.load(for: entry, language: .japanese, dataHandler: nil)
+        }
+        while await loader.requestCount == 0 {
+            await Task.yield()
+        }
+        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+        await olderLoad.value
+
+        #expect(viewModel.displayTitle == "English Detail")
+        #expect(entry.detail?.language == Language.english.rawValue)
+        #expect(viewModel.loadError == nil)
+        #expect(!viewModel.isLoading)
+    }
+
     @Test func testReplaceDetailRewritesFlattenedAggregateStaffIntoPersistedJobs() throws {
         let entry = AnimeEntry.template()
         entry.detail = AnimeEntryDetail(
@@ -782,6 +859,60 @@ struct EntryDetailViewModelTests {
                 watchStatus: .watched,
                 summary: summary
             )
+        )
+    }
+}
+
+fileprivate struct EntryDetailLoaderError: Error {}
+
+private actor FailingEntryDetailLoader {
+    private(set) var requestCount = 0
+
+    func load(entryType: AnimeType, tmdbID: Int, language: MyAnimeList.Language) async throws
+        -> AnimeEntryDetailDTO
+    {
+        requestCount += 1
+        throw EntryDetailLoaderError()
+    }
+}
+
+private actor CancellableEntryDetailLoader {
+    private(set) var requestCount = 0
+
+    func load(entryType: AnimeType, tmdbID: Int, language: MyAnimeList.Language) async throws
+        -> AnimeEntryDetailDTO
+    {
+        requestCount += 1
+        if requestCount == 1 {
+            try? await Task.sleep(for: .seconds(30))
+            return AnimeEntryDetailDTO(
+                language: language.rawValue,
+                title: "Cancelled Detail",
+                logoImagePath: "/cancelled-logo.png"
+            )
+        }
+        return AnimeEntryDetailDTO(
+            language: language.rawValue,
+            title: "Retried Detail",
+            logoImagePath: "/retried-logo.png"
+        )
+    }
+}
+
+private actor DelayedLanguageEntryDetailLoader {
+    private(set) var requestCount = 0
+
+    func load(entryType: AnimeType, tmdbID: Int, language: MyAnimeList.Language) async throws
+        -> AnimeEntryDetailDTO
+    {
+        requestCount += 1
+        if language == .japanese {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        return AnimeEntryDetailDTO(
+            language: language.rawValue,
+            title: language == .japanese ? "Japanese Detail" : "English Detail",
+            logoImagePath: "/\(language.rawValue)-logo.png"
         )
     }
 }

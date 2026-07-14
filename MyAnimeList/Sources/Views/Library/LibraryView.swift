@@ -84,8 +84,8 @@ struct LibraryView: View {
             let inspectorSession = detailSessionStore.session(
                 for: interaction.presentedDetailEntryID
             )
-            let showsInspector =
-                interaction.desiredDetailHost == .inspector && interaction.isPresentingDetail
+            let inspectorPresentation = interaction.inspectorPresentation
+            let showsInspector = inspectorPresentation != nil
             let inspectorSizing = presentation.detailInspectorSizing
             let inspectorWidth = inspectorSizing.idealWidth
             let librarySize = CGSize(
@@ -112,22 +112,28 @@ struct LibraryView: View {
                     isPresented: Binding(
                         get: { showsInspector },
                         set: { isPresented in
-                            if !isPresented {
-                                interaction.detailHostDidDismiss(.inspector)
+                            if !isPresented, let inspectorPresentation {
+                                interaction.detailHostDidDismiss(inspectorPresentation)
                             }
                         }
                     )
                 ) {
                     ZStack {
                         if let identity = interaction.presentedDetailEntryID,
-                            let inspectorSession
+                            let inspectorSession,
+                            let inspectorPresentation
                         {
                             NavigationStack {
                                 EntryDetailView(
                                     entry: inspectorSession.entry,
                                     repository: store.repository,
                                     presentationStyle: .inspector,
-                                    onClose: dismissDetails,
+                                    onClose: { _ in
+                                        interaction.dismissDetails(
+                                            ifPresentationID: inspectorPresentation
+                                                .detailPresentationID
+                                        )
+                                    },
                                     session: inspectorSession,
                                     editingRequestID: inspectorEditingRequestID(for: identity),
                                     onEditingRequestHandled: interaction.consumeInspectorEditRequest
@@ -148,9 +154,6 @@ struct LibraryView: View {
                         ideal: inspectorWidth,
                         max: inspectorSizing.maximumWidth
                     )
-                    .onAppear {
-                        interaction.detailHostDidPresent(.inspector)
-                    }
                 }
                 .onChange(of: presentation.detailPresentation, initial: true) { _, newValue in
                     interaction.transitionDetailHost(to: LibraryEntryDetailHost(newValue))
@@ -162,7 +165,6 @@ struct LibraryView: View {
                     },
                     detailRepository: store.repository,
                     resolveEntry: { store.repository.existingEntry(identity: $0) },
-                    detailHost: interaction.desiredDetailHost,
                     detailSession: detailSessionStore.presentedSession
                 )
         }
@@ -686,12 +688,6 @@ struct LibraryView: View {
         }
         withAnimation(detailAnimation) {
             interaction.setEditingEntry(entry)
-        }
-    }
-
-    private func dismissDetails() {
-        withAnimation(detailAnimation) {
-            interaction.dismissDetails()
         }
     }
 
