@@ -96,10 +96,14 @@ final class LibraryEntryInteractionState {
     private(set) var pendingPasteRequest: LibraryEntryPasteRequest?
     var isMultiSelecting: Bool = false
     var selectedEntryIDs: Set<Int> = []
-    private(set) var desiredDetailHost: LibraryEntryDetailHost = .sheet
+    private(set) var desiredDetailHost: LibraryEntryDetailHost
     private(set) var detailPresentation: LibraryEntryDetailPresentation?
     private(set) var detailHostPresentation: LibraryEntryDetailHostPresentation?
     private(set) var workflowPresentation: LibraryEntryWorkflowPresentation?
+
+    init(initialDetailHost: LibraryEntryDetailHost = .sheet) {
+        desiredDetailHost = initialDetailHost
+    }
 
     var presentedDetailEntryID: LibraryEntrySyncIdentity? {
         detailPresentation?.entryIdentity

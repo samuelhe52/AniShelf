@@ -12,17 +12,13 @@ import SwiftUI
 struct LibraryGalleryView: View {
     @Environment(LibraryStore.self) private var store
     @Environment(LibraryEntryInteractionState.self) var interaction
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Binding var scrolledID: Int?
     @State private var localScrolledID: Int?
-    let arrangement: LibraryPresentationPolicy.GalleryArrangement
 
-    init(
-        scrolledID: Binding<Int?>,
-        arrangement: LibraryPresentationPolicy.GalleryArrangement = .singlePage
-    ) {
+    init(scrolledID: Binding<Int?>) {
         self._scrolledID = scrolledID
         self._localScrolledID = State(initialValue: scrolledID.wrappedValue)
-        self.arrangement = arrangement
     }
 
     var body: some View {
@@ -40,6 +36,14 @@ struct LibraryGalleryView: View {
 
     private var libraryContent: some View {
         GeometryReader { geometry in
+            let arrangement = LibraryPresentationPolicy().evaluate(
+                .init(
+                    availableSize: geometry.size,
+                    libraryMode: .gallery,
+                    dynamicTypeSize: dynamicTypeSize
+                )
+            ).galleryArrangement
+
             switch arrangement {
             case .singlePage:
                 galleryScroll(

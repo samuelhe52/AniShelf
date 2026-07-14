@@ -37,6 +37,29 @@ struct LibraryEntryInteractionStateTests {
         #expect(state.presentedDetailEntryID == nil)
     }
 
+    @Test @MainActor func inspectorConfiguredStatePresentsPassiveDetailThroughInspector() throws {
+        let state = LibraryEntryInteractionState(initialDetailHost: .inspector)
+        let entry = AnimeEntry.template(id: 42)
+
+        state.openDetails(for: entry)
+
+        let presentation = try #require(state.inspectorPresentation)
+        #expect(presentation.host == .inspector)
+        #expect(state.activeSheetRoute == nil)
+    }
+
+    @Test @MainActor func inspectorConfiguredStateRoutesEditingIntoPresentedDetail() throws {
+        let state = LibraryEntryInteractionState(initialDetailHost: .inspector)
+        let entry = AnimeEntry.template(id: 42)
+
+        state.setEditingEntry(entry)
+
+        let request = try #require(state.detailEditRequest)
+        #expect(state.presentedDetailEntryID == entry.syncIdentity)
+        #expect(request.entryIdentity == entry.syncIdentity)
+        #expect(state.activeWorkflow == nil)
+    }
+
     @Test @MainActor func multiSelectionDoesNotReplaceFocusedEntry() {
         let state = LibraryEntryInteractionState()
         let entry = AnimeEntry.template(id: 42)
