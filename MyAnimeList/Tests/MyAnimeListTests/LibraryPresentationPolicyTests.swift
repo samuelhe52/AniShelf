@@ -62,6 +62,56 @@ struct LibraryPresentationPolicyTests {
         #expect(result.galleryArrangement == .singlePage)
     }
 
+    @Test func surplusWidthCompensatesForShortListDetail() {
+        let belowThreshold = policy.evaluate(
+            .init(
+                availableSize: CGSize(width: 1_000, height: 430),
+                libraryMode: .list
+            )
+        )
+        let atThreshold = policy.evaluate(
+            .init(
+                availableSize: CGSize(width: 1_001, height: 430),
+                libraryMode: .list
+            )
+        )
+
+        #expect(belowThreshold.detailPresentation == .sheet)
+        #expect(atThreshold.detailPresentation == .inspector)
+    }
+
+    @Test func wideShortDetailStillRequiresTheActiveModesMinimumHeight() {
+        let shortList = policy.evaluate(
+            .init(
+                availableSize: CGSize(width: 1_100, height: 359),
+                libraryMode: .list
+            )
+        )
+        let viableList = policy.evaluate(
+            .init(
+                availableSize: CGSize(width: 1_100, height: 360),
+                libraryMode: .list
+            )
+        )
+        let shortGallery = policy.evaluate(
+            .init(
+                availableSize: CGSize(width: 1_100, height: 479),
+                libraryMode: .gallery
+            )
+        )
+        let viableGallery = policy.evaluate(
+            .init(
+                availableSize: CGSize(width: 1_100, height: 480),
+                libraryMode: .gallery
+            )
+        )
+
+        #expect(shortList.detailPresentation == .sheet)
+        #expect(viableList.detailPresentation == .inspector)
+        #expect(shortGallery.detailPresentation == .sheet)
+        #expect(viableGallery.detailPresentation == .inspector)
+    }
+
     @Test func currentLargePhoneLandscapeUsesSheetForListAndGrid() {
         let list = policy.evaluate(
             .init(
@@ -103,6 +153,27 @@ struct LibraryPresentationPolicyTests {
 
     @Test func accessibilityDynamicTypeCanReduceSimultaneousSurfaceCapacity() {
         let availableSize = CGSize(width: 820, height: 560)
+        let standard = policy.evaluate(
+            .init(
+                availableSize: availableSize,
+                libraryMode: .list,
+                dynamicTypeSize: .large
+            )
+        )
+        let accessibility = policy.evaluate(
+            .init(
+                availableSize: availableSize,
+                libraryMode: .list,
+                dynamicTypeSize: .accessibility2
+            )
+        )
+
+        #expect(standard.detailPresentation == .inspector)
+        #expect(accessibility.detailPresentation == .sheet)
+    }
+
+    @Test func accessibilityDynamicTypeScalesWideShortCompensation() {
+        let availableSize = CGSize(width: 1_050, height: 430)
         let standard = policy.evaluate(
             .init(
                 availableSize: availableSize,

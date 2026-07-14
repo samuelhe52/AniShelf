@@ -24,6 +24,9 @@ struct LibraryPresentationPolicy {
         var minimumGridHeightWithDetail: CGFloat = 360
         var minimumDetailHeight: CGFloat = 520
 
+        /// Extra width that lets a short scene retain both vertically scrolling surfaces.
+        var additionalWidthForShortDetail: CGFloat = 200
+
         /// Space occupied by the separator between the library and its inspector.
         var detailColumnSpacing: CGFloat = 1
 
@@ -139,10 +142,15 @@ struct LibraryPresentationPolicy {
             minimumLibrarySize.height,
             tokens.minimumDetailHeight * scale
         )
+        let fitsPreferredGeometry =
+            availableSize.width >= requiredWidth
+            && availableSize.height >= requiredHeight
+        let fitsWideShortGeometry =
+            availableSize.width
+            >= requiredWidth + tokens.additionalWidthForShortDetail * scale
+            && availableSize.height >= minimumLibrarySize.height
 
-        guard availableSize.width >= requiredWidth,
-            availableSize.height >= requiredHeight
-        else {
+        guard fitsPreferredGeometry || fitsWideShortGeometry else {
             return .sheet
         }
 
