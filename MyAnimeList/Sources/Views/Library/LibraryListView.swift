@@ -12,6 +12,8 @@ struct LibraryListView: View {
     @Environment(LibraryStore.self) private var store
     @Environment(LibraryEntryInteractionState.self) var interaction
     @Environment(\.toggleFavorite) var toggleFavorite
+    @Environment(\.libraryEntryOpenDetailAction) private var openDetailAction
+    @Environment(\.libraryEntryEditAction) private var editAction
 
     @State private var listEditMode: EditMode = .inactive
 
@@ -60,7 +62,7 @@ struct LibraryListView: View {
             onOpenDetails: {
                 guard !interaction.isMultiSelecting else { return }
                 scrolledID = item.id
-                interaction.openDetails(for: item.entry)
+                openDetails(for: item.entry)
             }
         )
         .opacity(
@@ -88,7 +90,8 @@ struct LibraryListView: View {
         .contextMenu {
             interaction.contextMenu(
                 for: item.entry,
-                toggleFavorite: toggleFavorite
+                toggleFavorite: toggleFavorite,
+                editEntry: editEntry
             )
         } preview: {
             EntryContextMenuPreview(snapshot: item.snapshot)
@@ -106,7 +109,7 @@ struct LibraryListView: View {
         .swipeActions(edge: .leading) {
             if !interaction.isMultiSelecting {
                 Button("Edit", systemImage: "pencil") {
-                    interaction.setEditingEntry(item.entry)
+                    editEntry(item.entry)
                 }
                 .tint(.blue)
             }
@@ -120,6 +123,22 @@ struct LibraryListView: View {
             get: { interaction.selectedEntryIDs },
             set: { interaction.selectedEntryIDs = $0 }
         )
+    }
+
+    private func openDetails(for entry: AnimeEntry) {
+        if let openDetailAction {
+            openDetailAction(entry)
+        } else {
+            interaction.openDetails(for: entry)
+        }
+    }
+
+    private func editEntry(_ entry: AnimeEntry) {
+        if let editAction {
+            editAction(entry)
+        } else {
+            interaction.setEditingEntry(entry)
+        }
     }
 
 }

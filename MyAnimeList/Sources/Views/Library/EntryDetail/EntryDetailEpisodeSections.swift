@@ -9,6 +9,74 @@ import DataProvider
 import Kingfisher
 import SwiftUI
 
+@MainActor
+@Observable
+final class SeriesSeasonEpisodeLoader {
+    typealias FetchEpisodes = @Sendable (Int, Int, Language) async throws -> [AnimeEntryEpisodeSummaryDTO]
+
+    private(set) var episodes: [EntryDetailEpisodeCard] = []
+    private(set) var isLoading = false
+    private(set) var loadFailed = false
+    private(set) var loadedRequestKey: String?
+
+    private let fetchEpisodes: FetchEpisodes
+    private var loadGeneration = 0
+
+    init(
+        fetchEpisodes: @escaping FetchEpisodes = { seriesTMDbID, seasonNumber, language in
+            try await InfoFetcher().seasonEpisodeSummaries(
+                parentSeriesID: seriesTMDbID,
+                seasonNumber: seasonNumber,
+                language: language
+            )
+        }
+    ) {
+        self.fetchEpisodes = fetchEpisodes
+    }
+
+    func load(
+        requestKey: String,
+        seriesTMDbID: Int,
+        seasonNumber: Int,
+        language: Language
+    ) async {
+        guard !Task.isCancelled, loadedRequestKey != requestKey else { return }
+
+        loadGeneration += 1
+        let generation = loadGeneration
+        loadedRequestKey = nil
+        episodes = []
+        loadFailed = false
+        isLoading = true
+
+        do {
+            let episodeDTOs = try await fetchEpisodes(seriesTMDbID, seasonNumber, language)
+            guard loadGeneration == generation else { return }
+            guard !Task.isCancelled else {
+                isLoading = false
+                return
+            }
+
+            episodes = episodeDTOs.map(SeriesSeasonEpisodeGroupView.episodeCard(from:))
+            loadedRequestKey = requestKey
+            loadFailed = false
+            isLoading = false
+        } catch {
+            guard loadGeneration == generation else { return }
+            if Task.isCancelled || Self.isCancellation(error) {
+                isLoading = false
+                return
+            }
+            loadFailed = true
+            isLoading = false
+        }
+    }
+
+    private static func isCancellation(_ error: Error) -> Bool {
+        error is CancellationError || (error as? URLError)?.code == .cancelled
+    }
+}
+
 struct SeriesSeasonEpisodeGroupView: View {
     let season: EntryDetailSeasonCard
     let seriesTMDbID: Int
@@ -23,11 +91,8 @@ struct SeriesSeasonEpisodeGroupView: View {
     private let renderedEpisodeBatchSize = 24
 
     @State private var isExpanded: Bool
-    @State private var episodes: [EntryDetailEpisodeCard] = []
+    @State private var episodeLoader = SeriesSeasonEpisodeLoader()
     @State private var renderedEpisodeCount = 24
-    @State private var isLoading = false
-    @State private var loadFailed = false
-    @State private var loadedEpisodesKey: String?
 
     init(
         season: EntryDetailSeasonCard,
@@ -100,26 +165,28 @@ struct SeriesSeasonEpisodeGroupView: View {
         }
         .padding(18)
         .popupGlassPanel(cornerRadius: 24)
-        .animation(loadingAnimation, value: isLoading)
-        .animation(loadingAnimation, value: loadFailed)
+        .animation(loadingAnimation, value: episodeLoader.isLoading)
+        .animation(loadingAnimation, value: episodeLoader.loadFailed)
         .animation(loadingAnimation, value: isExpanded)
     }
 
     @ViewBuilder
     private var episodeListContent: some View {
-        if episodes.isEmpty, isLoading {
+        if episodeLoader.episodes.isEmpty, episodeLoader.isLoading {
             ProgressView()
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, 8)
                 .transition(.opacity)
-        } else if episodes.isEmpty, loadFailed {
+        } else if episodeLoader.episodes.isEmpty, episodeLoader.loadFailed {
             ContentUnavailableView(
                 String(localized: EntryDetailL10n.couldNotLoadDetails),
                 systemImage: "wifi.exclamationmark"
             )
             .frame(maxWidth: .infinity)
             .transition(.opacity)
-        } else if episodes.isEmpty, loadedEpisodesKey == episodesRequestKey {
+        } else if episodeLoader.episodes.isEmpty,
+            episodeLoader.loadedRequestKey == episodesRequestKey
+        {
             ContentUnavailableView(
                 String(localized: EntryDetailL10n.noEpisodesAvailable),
                 systemImage: "list.bullet.rectangle"
@@ -145,7 +212,7 @@ struct SeriesSeasonEpisodeGroupView: View {
                     )
                 }
 
-                if renderedEpisodeCount < episodes.count {
+                if renderedEpisodeCount < episodeLoader.episodes.count {
                     ProgressView()
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
@@ -159,7 +226,7 @@ struct SeriesSeasonEpisodeGroupView: View {
     }
 
     private var renderedEpisodes: ArraySlice<EntryDetailEpisodeCard> {
-        episodes.prefix(renderedEpisodeCount)
+        episodeLoader.episodes.prefix(renderedEpisodeCount)
     }
 
     private var episodesRequestKey: String {
@@ -167,35 +234,16 @@ struct SeriesSeasonEpisodeGroupView: View {
     }
 
     private func loadEpisodesIfNeeded() async {
-        guard loadedEpisodesKey != episodesRequestKey, !isLoading else { return }
-        withAnimation(loadingAnimation) {
-            episodes = []
-            renderedEpisodeCount = initialRenderedEpisodeCount
-            loadFailed = false
-            isLoading = true
-        }
-
-        do {
-            let loadedEpisodes = try await InfoFetcher()
-                .seasonEpisodeSummaries(
-                    parentSeriesID: seriesTMDbID,
-                    seasonNumber: season.seasonNumber,
-                    language: language
-                )
-                .map { Self.episodeCard(from: $0) }
-            withAnimation(loadingAnimation) {
-                episodes = loadedEpisodes
-                renderedEpisodeCount = min(initialRenderedEpisodeCount, loadedEpisodes.count)
-                loadedEpisodesKey = episodesRequestKey
-                loadFailed = false
-                isLoading = false
-            }
-        } catch {
-            withAnimation(loadingAnimation) {
-                loadFailed = true
-                isLoading = false
-            }
-        }
+        let requestKey = episodesRequestKey
+        renderedEpisodeCount = initialRenderedEpisodeCount
+        await episodeLoader.load(
+            requestKey: requestKey,
+            seriesTMDbID: seriesTMDbID,
+            seasonNumber: season.seasonNumber,
+            language: language
+        )
+        guard episodeLoader.loadedRequestKey == requestKey else { return }
+        renderedEpisodeCount = min(initialRenderedEpisodeCount, episodeLoader.episodes.count)
     }
 
     static func episodeCard(from dto: AnimeEntryEpisodeSummaryDTO) -> EntryDetailEpisodeCard {
@@ -210,8 +258,11 @@ struct SeriesSeasonEpisodeGroupView: View {
     }
 
     private func renderMoreEpisodes() {
-        guard renderedEpisodeCount < episodes.count else { return }
-        renderedEpisodeCount = min(renderedEpisodeCount + renderedEpisodeBatchSize, episodes.count)
+        guard renderedEpisodeCount < episodeLoader.episodes.count else { return }
+        renderedEpisodeCount = min(
+            renderedEpisodeCount + renderedEpisodeBatchSize,
+            episodeLoader.episodes.count
+        )
     }
 }
 

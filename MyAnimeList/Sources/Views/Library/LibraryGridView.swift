@@ -15,6 +15,8 @@ struct LibraryGridView: View {
     @Environment(LibraryStore.self) private var store
     @Environment(\.toggleFavorite) var toggleFavorite
     @Environment(LibraryEntryInteractionState.self) var interaction
+    @Environment(\.libraryEntryOpenDetailAction) private var openDetailAction
+    @Environment(\.libraryEntryEditAction) private var editAction
     let displayItems: [LibraryEntryDisplayItem]
     @Binding var scrolledID: Int?
     @Binding var highlightedEntryID: Int?
@@ -74,7 +76,8 @@ struct LibraryGridView: View {
                 .contextMenu {
                     interaction.contextMenu(
                         for: item.entry,
-                        toggleFavorite: toggleFavorite
+                        toggleFavorite: toggleFavorite,
+                        editEntry: editEntry
                     )
                     .onAppear { scrolledID = item.id }
                 } preview: {
@@ -83,11 +86,10 @@ struct LibraryGridView: View {
                 }
                 .onTapGesture {
                     scrolledID = item.id
-                    interaction.focus(item.entry)
                     if interaction.isMultiSelecting {
                         toggleSelection(for: item.id)
                     } else {
-                        interaction.openDetails(for: item.entry)
+                        openDetails(for: item.entry)
                     }
 
                 }
@@ -104,7 +106,8 @@ struct LibraryGridView: View {
             .contextMenu {
                 interaction.contextMenu(
                     for: item.entry,
-                    toggleFavorite: toggleFavorite
+                    toggleFavorite: toggleFavorite,
+                    editEntry: editEntry
                 )
                 .onAppear { scrolledID = item.id }
             } preview: {
@@ -122,7 +125,7 @@ struct LibraryGridView: View {
                         }
                     },
                     onDoubleTap: {
-                        interaction.openDetails(for: item.entry)
+                        openDetails(for: item.entry)
                         scrolledID = item.id
                     }
                 )
@@ -131,6 +134,22 @@ struct LibraryGridView: View {
 
     private func toggleSelection(for id: Int) {
         interaction.toggleSelection(for: id)
+    }
+
+    private func openDetails(for entry: AnimeEntry) {
+        if let openDetailAction {
+            openDetailAction(entry)
+        } else {
+            interaction.openDetails(for: entry)
+        }
+    }
+
+    private func editEntry(_ entry: AnimeEntry) {
+        if let editAction {
+            editAction(entry)
+        } else {
+            interaction.setEditingEntry(entry)
+        }
     }
 }
 
@@ -143,9 +162,14 @@ fileprivate struct LibraryGridDoubleTapOpenModifier: ViewModifier {
         if isMultiSelecting {
             content.onTapGesture(perform: onSingleTap)
         } else {
+            // Recognize focus immediately while reserving detail opening for two taps.
             content
-                .onTapGesture(perform: onSingleTap)
-                .onTapGesture(count: 2, perform: onDoubleTap)
+                .simultaneousGesture(
+                    TapGesture().onEnded { onSingleTap() }
+                )
+                .simultaneousGesture(
+                    TapGesture(count: 2).onEnded { onDoubleTap() }
+                )
         }
     }
 }

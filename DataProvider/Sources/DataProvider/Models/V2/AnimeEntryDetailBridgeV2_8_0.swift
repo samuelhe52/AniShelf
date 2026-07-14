@@ -9,6 +9,69 @@ import Foundation
 import SwiftData
 
 extension SchemaV2_8_0.AnimeEntryDetail {
+    public func snapshotDTO() -> AnimeEntryDetailDTO {
+        AnimeEntryDetailDTO(
+            language: language,
+            title: title,
+            subtitle: subtitle,
+            overview: overview,
+            status: status,
+            airDate: airDate,
+            primaryLinkURL: primaryLinkURL,
+            logoImagePath: logoImagePath,
+            genreIDs: genreIDs,
+            voteAverage: voteAverage,
+            runtimeMinutes: runtimeMinutes,
+            episodeCount: episodeCount,
+            seasonCount: seasonCount,
+            characters: orderedCharacters.map {
+                AnimeEntryCharacterDTO(
+                    id: $0.id,
+                    characterName: $0.characterName,
+                    actorName: $0.actorName,
+                    profilePath: $0.profilePath
+                )
+            },
+            staff: orderedStaff.map {
+                AnimeEntryStaffDTO(
+                    id: $0.id,
+                    name: $0.name,
+                    role: $0.role,
+                    department: $0.department,
+                    profilePath: $0.profilePath,
+                    jobs: $0.orderedJobs.map {
+                        AnimeEntryStaffJobDTO(
+                            creditID: $0.creditID,
+                            job: $0.job,
+                            episodeCount: $0.episodeCount
+                        )
+                    }
+                )
+            },
+            seasons: seasons.sorted {
+                if $0.seasonNumber == $1.seasonNumber { return $0.id < $1.id }
+                return $0.seasonNumber < $1.seasonNumber
+            }.map {
+                AnimeEntrySeasonSummaryDTO(
+                    id: $0.id,
+                    seasonNumber: $0.seasonNumber,
+                    title: $0.title,
+                    posterPath: $0.posterPath,
+                    episodeCount: $0.episodeCount
+                )
+            },
+            episodes: orderedEpisodes.map {
+                AnimeEntryEpisodeSummaryDTO(
+                    id: $0.id,
+                    episodeNumber: $0.episodeNumber,
+                    title: $0.title,
+                    airDate: $0.airDate,
+                    imagePath: $0.imagePath
+                )
+            }
+        )
+    }
+
     public convenience init(from dto: AnimeEntryDetailDTO) {
         self.init(
             language: dto.language,

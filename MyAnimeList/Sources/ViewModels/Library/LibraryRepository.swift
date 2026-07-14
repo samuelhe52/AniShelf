@@ -7,13 +7,16 @@ import SwiftData
 final class LibraryRepository {
     private let dataProvider: DataProvider
     private let syncChangeRecorder: LibrarySyncChangeRecorder?
+    private let transactionSaver: @MainActor (ModelContext) throws -> Void
 
     init(
         dataProvider: DataProvider,
-        syncChangeRecorder: LibrarySyncChangeRecorder? = nil
+        syncChangeRecorder: LibrarySyncChangeRecorder? = nil,
+        transactionSaver: (@MainActor (ModelContext) throws -> Void)? = nil
     ) {
         self.dataProvider = dataProvider
         self.syncChangeRecorder = syncChangeRecorder
+        self.transactionSaver = transactionSaver ?? { try $0.save() }
     }
 
     func visibleLibraryEntries() throws -> [AnimeEntry] {
@@ -30,6 +33,25 @@ final class LibraryRepository {
         do {
             try dataProvider.dataHandler.deleteEntry(entry)
         } catch {
+            if let deleteToken {
+                try? syncChangeRecorder?.restoreDeleteRecord(deleteToken)
+            }
+            throw error
+        }
+    }
+
+    func replaceEntry(_ entry: AnimeEntry, inserting replacements: [AnimeEntry]) throws {
+        entry.resolveLibraryDisplayFaultsBeforeDeletion()
+        var deleteToken: LibrarySyncChangeRecorder.PendingDeleteRestoreToken?
+        do {
+            deleteToken = try syncChangeRecorder?.recordDeletion(for: entry)
+            for replacement in replacements {
+                dataProvider.dataHandler.modelContext.insert(replacement)
+            }
+            dataProvider.dataHandler.modelContext.delete(entry)
+            try transactionSaver(dataProvider.dataHandler.modelContext)
+        } catch {
+            dataProvider.dataHandler.modelContext.rollback()
             if let deleteToken {
                 try? syncChangeRecorder?.restoreDeleteRecord(deleteToken)
             }
@@ -86,6 +108,27 @@ final class LibraryRepository {
         } catch {
             libraryStoreLogger.warning(
                 "Failed to fetch sync entry \(identity.rawID, privacy: .public): \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    func existingEntry(identityRawID: String) -> AnimeEntry? {
+        guard let suffix = identityRawID.split(separator: ":").last,
+            let tmdbID = Int(suffix)
+        else {
+            libraryStoreLogger.warning(
+                "Failed to parse TMDb ID from local entry identity \(identityRawID, privacy: .private).")
+            return nil
+        }
+        do {
+            return try matchingEntries(tmdbID: tmdbID)
+                .filter { $0.syncIdentity.rawID == identityRawID }
+                .sorted(by: compareExistingEntries)
+                .first
+        } catch {
+            libraryStoreLogger.warning(
+                "Failed to fetch local entry identity \(identityRawID, privacy: .private): \(error.localizedDescription)"
+            )
             return nil
         }
     }

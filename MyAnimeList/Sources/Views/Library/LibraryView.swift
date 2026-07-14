@@ -37,10 +37,13 @@ struct LibraryView: View {
     @State private var isShowingBatchDeleteConfirmation = false
     @State private var selectionDisplayItems: [LibraryEntryDisplayItem]?
     @State private var selectionEntriesByID: [Int: AnimeEntry] = [:]
+    @State private var didRestorePresentedDetail = false
 
     // Persistent UI preference
     @AppStorage(.libraryViewStyle) var libraryViewStyle: LibraryViewStyle = .gallery
     @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
+    @AppStorage(.libraryPresentedDetailEntryIdentity)
+    private var persistedPresentedDetailEntryIdentity: String?
 
     // MARK: - Body
 
@@ -64,6 +67,12 @@ struct LibraryView: View {
             guard !newValue, store.groupStrategy == .score else { return }
             store.groupStrategy = .none
         }
+        .onAppear {
+            restorePresentedDetailIfNeeded()
+        }
+        .onChange(of: interaction.presentedDetailEntryID) { _, identity in
+            persistedPresentedDetailEntryIdentity = identity?.rawID
+        }
         #if DEBUG
             .onAppear {
                 openDebugDetailIfRequested()
@@ -84,8 +93,8 @@ struct LibraryView: View {
             let inspectorSession = detailSessionStore.session(
                 for: interaction.presentedDetailEntryID
             )
-            let showsInspector =
-                presentation.detailPresentation == .inspector && interaction.isPresentingDetail
+            let inspectorPresentation = interaction.inspectorPresentation
+            let showsInspector = inspectorPresentation != nil
             let inspectorSizing = presentation.detailInspectorSizing
             let inspectorWidth = inspectorSizing.idealWidth
             let librarySize = CGSize(
@@ -103,40 +112,66 @@ struct LibraryView: View {
             libraryNavigationStack(presentation: libraryPresentation)
                 .environment(
                     \.libraryEntryDetailActivation,
-                    LibraryEntryDetailActivation(presentation.detailPresentation)
+                    LibraryEntryDetailActivation(interaction.desiredDetailHost)
                 )
+                .environment(\.libraryEntryOpenDetailAction, openDetails)
+                .environment(\.libraryEntryEditAction, editDetails)
+                .animation(detailAnimation, value: showsInspector)
                 .inspector(
                     isPresented: Binding(
                         get: { showsInspector },
                         set: { isPresented in
-                            if !isPresented {
-                                interaction.detailHostDidDismiss(.inspector)
+                            if !isPresented, let inspectorPresentation {
+                                interaction.detailHostDidDismiss(inspectorPresentation)
                             }
                         }
                     )
                 ) {
-                    if let identity = interaction.presentedDetailEntryID,
-                        let inspectorSession
-                    {
-                        NavigationStack {
-                            EntryDetailView(
-                                entry: inspectorSession.entry,
-                                repository: store.repository,
-                                presentationStyle: .inspector,
-                                onClose: interaction.dismissDetails,
-                                session: inspectorSession
-                            )
-                        }
-                        .id(identity.rawID)
-                        .inspectorColumnWidth(
-                            min: inspectorSizing.minimumWidth,
-                            ideal: inspectorWidth,
-                            max: inspectorSizing.maximumWidth
-                        )
-                        .onAppear {
-                            interaction.detailHostDidPresent(.inspector)
+                    ZStack {
+                        if let identity = interaction.presentedDetailEntryID,
+                            let inspectorSession,
+                            let inspectorPresentation
+                        {
+                            NavigationStack {
+                                EntryDetailView(
+                                    entry: inspectorSession.entry,
+                                    repository: store.repository,
+                                    presentationStyle: .inspector,
+                                    onClose: { _ in
+                                        interaction.dismissDetails(
+                                            ifPresentationID: inspectorPresentation
+                                                .detailPresentationID
+                                        )
+                                    },
+                                    session: inspectorSession,
+                                    editingRequestID: detailEditingRequestID(for: identity),
+                                    onEditingRequestHandled: { requestID in
+                                        interaction.consumeDetailEditRequest(
+                                            requestID,
+                                            from: .inspector
+                                        )
+                                    },
+                                    hostPresentationID: inspectorPresentation.id,
+                                    isCurrentHostPresentation: {
+                                        interaction.isCurrentDetailHostPresentation($0)
+                                    }
+                                )
+                                .containerBackground(
+                                    Color(.systemBackground),
+                                    for: .navigation
+                                )
+                            }
+                            .id(identity.rawID)
+                            .transition(detailReplacementTransition)
                         }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .animation(detailAnimation, value: interaction.presentedDetailEntryID)
+                    .inspectorColumnWidth(
+                        min: inspectorSizing.minimumWidth,
+                        ideal: inspectorWidth,
+                        max: inspectorSizing.maximumWidth
+                    )
                 }
                 .onChange(of: presentation.detailPresentation, initial: true) { _, newValue in
                     interaction.transitionDetailHost(to: LibraryEntryDetailHost(newValue))
@@ -148,7 +183,6 @@ struct LibraryView: View {
                     },
                     detailRepository: store.repository,
                     resolveEntry: { store.repository.existingEntry(identity: $0) },
-                    detailPresentation: presentation.detailPresentation,
                     detailSession: detailSessionStore.presentedSession
                 )
         }
@@ -634,6 +668,48 @@ struct LibraryView: View {
 
     // MARK: - Entry Actions
 
+    private var detailAnimation: Animation? {
+        libraryViewStyleAnimation
+    }
+
+    private var detailReplacementTransition: AnyTransition {
+        libraryViewTransition
+    }
+
+    private func prepareDetailSession(for entry: AnimeEntry) {
+        detailSessionStore.synchronizePresentedDetail(
+            identity: entry.syncIdentity,
+            repository: store.repository,
+            resolveEntry: { identity in
+                identity == entry.syncIdentity
+                    ? entry : store.repository.existingEntry(identity: identity)
+            }
+        )
+    }
+
+    private func openDetails(_ entry: AnimeEntry) {
+        prepareDetailSession(for: entry)
+        withAnimation(detailAnimation) {
+            interaction.openDetails(for: entry)
+        }
+    }
+
+    private func editDetails(_ entry: AnimeEntry) {
+        if interaction.desiredDetailHost == .inspector {
+            prepareDetailSession(for: entry)
+        }
+        withAnimation(detailAnimation) {
+            interaction.setEditingEntry(entry)
+        }
+    }
+
+    private func detailEditingRequestID(
+        for identity: LibraryEntrySyncIdentity
+    ) -> UUID? {
+        guard interaction.detailEditRequest?.entryIdentity == identity else { return nil }
+        return interaction.detailEditRequest?.id
+    }
+
     private func toggleFavorite(_ entry: AnimeEntry) {
         dataHandler?.toggleFavorite(entry: entry)
     }
@@ -649,6 +725,27 @@ struct LibraryView: View {
         }
     }
 
+    private func restorePresentedDetailIfNeeded() {
+        guard !didRestorePresentedDetail else { return }
+        didRestorePresentedDetail = true
+
+        guard interaction.presentedDetailEntryID == nil,
+            let identityRawID = persistedPresentedDetailEntryIdentity,
+            !identityRawID.isEmpty
+        else { return }
+
+        guard let entry = store.repository.existingEntry(identityRawID: identityRawID),
+            entry.onDisplay
+        else {
+            persistedPresentedDetailEntryIdentity = nil
+            interaction.dismissDetails()
+            return
+        }
+
+        prepareDetailSession(for: entry)
+        interaction.openDetails(for: entry)
+    }
+
     #if DEBUG
         private func openDebugDetailIfRequested() {
             guard ProcessInfo.processInfo.arguments.contains("-OpenFirstLibraryDetail"),
@@ -657,7 +754,7 @@ struct LibraryView: View {
             else { return }
 
             scrollState.scrolledID = entry.tmdbID
-            interaction.openDetails(for: entry)
+            openDetails(entry)
         }
     #endif
 

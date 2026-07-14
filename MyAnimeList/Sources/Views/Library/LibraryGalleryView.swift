@@ -124,6 +124,8 @@ fileprivate struct AnimeEntryCardWrapper: View {
     @Binding var scrolledID: Int?
 
     @Environment(LibraryEntryInteractionState.self) private var interaction
+    @Environment(\.libraryEntryOpenDetailAction) private var openDetailAction
+    @Environment(\.libraryEntryEditAction) private var editAction
     @State private var imageLoaded: Bool = false
 
     var body: some View {
@@ -135,7 +137,7 @@ fileprivate struct AnimeEntryCardWrapper: View {
                 entry: entry,
                 snapshot: snapshot,
                 onOpenDetails: {
-                    interaction.openDetails(for: entry)
+                    openDetails()
                     scrolledID = snapshot.id
                 },
                 imageLoaded: $imageLoaded
@@ -157,11 +159,27 @@ fileprivate struct AnimeEntryCardWrapper: View {
     @ViewBuilder
     func contextMenu(for entry: AnimeEntry) -> some View {
         ControlGroup {
-            interaction.editButton(for: entry)
+            interaction.editButton(for: entry, editEntry: editEntry)
             interaction.shareButton(for: entry)
         }
         interaction.switchPosterButton(for: entry)
         interaction.savePosterButton(for: entry)
         interaction.deleteButton(for: entry)
+    }
+
+    private func openDetails() {
+        if let openDetailAction {
+            openDetailAction(entry)
+        } else {
+            interaction.openDetails(for: entry)
+        }
+    }
+
+    private func editEntry(_ entry: AnimeEntry) {
+        if let editAction {
+            editAction(entry)
+        } else {
+            interaction.setEditingEntry(entry)
+        }
     }
 }

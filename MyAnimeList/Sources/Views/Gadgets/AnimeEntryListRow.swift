@@ -67,14 +67,18 @@ struct AnimeEntryListRow: View {
                 Color.clear
                     .contentShape(.rect)
                     .onTapGesture {
-                        onTap?()
                         onOpenDetails()
                     }
             } else {
+                // Keep focus immediate without allowing one tap to open double-tap detail.
                 Color.clear
                     .contentShape(.rect)
-                    .onTapGesture { onTap?() }
-                    .onTapGesture(count: 2) { onOpenDetails() }
+                    .simultaneousGesture(
+                        TapGesture().onEnded { onTap?() }
+                    )
+                    .simultaneousGesture(
+                        TapGesture(count: 2).onEnded { onOpenDetails() }
+                    )
             }
         } else {
             Color.clear

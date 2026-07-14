@@ -69,6 +69,54 @@ struct EntryDetailSessionTests {
         #expect(inspectorSession.scrollPosition.y == 196)
     }
 
+    @Test @MainActor func outgoingHostCannotClearNestedPresentationsAfterMigration() throws {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let entry = AnimeEntry.template(id: 42)
+        let state = LibraryEntryInteractionState()
+        let session = EntryDetailSession(entry: entry, repository: repository)
+        state.openDetails(for: entry)
+        let sheet = try #require(state.detailHostPresentation)
+        session.presentation = populatedPresentationState()
+
+        state.transitionDetailHost(to: .inspector)
+        let inspector = try #require(state.detailHostPresentation)
+        session.updatePresentation(
+            from: sheet.id,
+            ifCurrent: { state.isCurrentDetailHostPresentation($0) },
+            { presentation in
+                presentation = EntryDetailPresentationState()
+            }
+        )
+
+        assertPresentationIsPopulated(session.presentation)
+
+        state.transitionDetailHost(to: .sheet)
+        let replacementSheet = try #require(state.detailHostPresentation)
+        session.updatePresentation(
+            from: inspector.id,
+            ifCurrent: { state.isCurrentDetailHostPresentation($0) },
+            { presentation in
+                presentation = EntryDetailPresentationState()
+            }
+        )
+
+        assertPresentationIsPopulated(session.presentation)
+
+        session.updatePresentation(
+            from: replacementSheet.id,
+            ifCurrent: { state.isCurrentDetailHostPresentation($0) },
+            { presentation in
+                presentation = EntryDetailPresentationState()
+            }
+        )
+
+        #expect(session.presentation.activeSheet == nil)
+        #expect(!session.presentation.showSeasonPicker)
+        #expect(!session.presentation.showSiblingSeasonWarning)
+        #expect(session.presentation.episodeProgressCompletionPrompt == nil)
+        #expect(session.presentation.dateUpdateSuggestion == nil)
+    }
+
     @Test @MainActor func changingOrClearingPresentedEntryReplacesTheSession() throws {
         let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
         let firstEntry = AnimeEntry.template(id: 1)
@@ -141,5 +189,23 @@ struct EntryDetailSessionTests {
 
         #expect(!didResolve)
         #expect(store.presentedSession == nil)
+    }
+
+    private func populatedPresentationState() -> EntryDetailPresentationState {
+        EntryDetailPresentationState(
+            activeSheet: .sharing,
+            showSeasonPicker: true,
+            showSiblingSeasonWarning: true,
+            episodeProgressCompletionPrompt: .seriesWatched,
+            dateUpdateSuggestion: .setFinishDateToNow
+        )
+    }
+
+    private func assertPresentationIsPopulated(_ presentation: EntryDetailPresentationState) {
+        #expect(presentation.activeSheet == .sharing)
+        #expect(presentation.showSeasonPicker)
+        #expect(presentation.showSiblingSeasonWarning)
+        #expect(presentation.episodeProgressCompletionPrompt == .seriesWatched)
+        #expect(presentation.dateUpdateSuggestion == .setFinishDateToNow)
     }
 }

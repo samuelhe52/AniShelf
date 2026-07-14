@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftData
 import Testing
 
 @testable import DataProvider
@@ -88,9 +89,59 @@ struct LibraryRelationshipAndConversionTests {
         #expect(resolvedEntry.id == seriesEntry.id)
     }
 
-    @Test @MainActor func testConvertSeasonToSeriesPreservesScoreAndDateTrackingSetting() async throws {
+    @Test @MainActor func testExistingEntryByRawIdentityRestoresTheExactLocalEntry() throws {
         let dataProvider = DataProvider(inMemory: true)
         let repository = LibraryRepository(dataProvider: dataProvider)
+
+        let seriesEntry = AnimeEntry(
+            name: "Series Duplicate",
+            type: .series,
+            tmdbID: 209867
+        )
+        try repository.newEntry(seriesEntry)
+
+        let movieEntry = AnimeEntry(
+            name: "Movie Duplicate",
+            type: .movie,
+            tmdbID: 209867
+        )
+        try repository.newEntry(movieEntry)
+
+        let resolvedEntry = try #require(
+            repository.existingEntry(identityRawID: seriesEntry.syncIdentity.rawID)
+        )
+        #expect(resolvedEntry.id == seriesEntry.id)
+        #expect(repository.existingEntry(identityRawID: "invalid") == nil)
+    }
+
+    @Test @MainActor func testExistingEntryByRawIdentityResolvesHiddenLocalEntry() throws {
+        let dataProvider = DataProvider(inMemory: true)
+        let repository = LibraryRepository(dataProvider: dataProvider)
+
+        let hiddenEntry = AnimeEntry(
+            name: "Hidden Parent",
+            type: .series,
+            tmdbID: 209868
+        )
+        hiddenEntry.setDisplayState(false)
+        try repository.newEntry(hiddenEntry)
+
+        let resolvedEntry = try #require(
+            repository.existingEntry(identityRawID: hiddenEntry.syncIdentity.rawID)
+        )
+        #expect(resolvedEntry.id == hiddenEntry.id)
+    }
+
+    @Test @MainActor func testConvertSeasonToSeriesPreservesScoreAndDateTrackingSetting() async throws {
+        let dataProvider = DataProvider(inMemory: true)
+        var transactionSaveCount = 0
+        let repository = LibraryRepository(
+            dataProvider: dataProvider,
+            transactionSaver: { context in
+                transactionSaveCount += 1
+                try context.save()
+            }
+        )
         let converter = LibraryEntryConverter(repository: repository)
         let seasonEntry = AnimeEntry(
             name: "Frieren Season 1",
@@ -121,11 +172,19 @@ struct LibraryRelationshipAndConversionTests {
         #expect(!seriesEntry.isDateTrackingEnabled)
         #expect(seriesEntry.dateStarted == referenceDate(year: 2026, month: 5, day: 1))
         #expect(seriesEntry.dateFinished == referenceDate(year: 2026, month: 5, day: 2))
+        #expect(transactionSaveCount == 1)
     }
 
     @Test @MainActor func testConvertSeriesToSeasonPreservesScoreAndDateTrackingSetting() async throws {
         let dataProvider = DataProvider(inMemory: true)
-        let repository = LibraryRepository(dataProvider: dataProvider)
+        var transactionSaveCount = 0
+        let repository = LibraryRepository(
+            dataProvider: dataProvider,
+            transactionSaver: { context in
+                transactionSaveCount += 1
+                try context.save()
+            }
+        )
         let converter = LibraryEntryConverter(repository: repository)
         let seriesEntry = AnimeEntry(
             name: "Frieren",
@@ -166,7 +225,101 @@ struct LibraryRelationshipAndConversionTests {
         #expect(seasonEntry.dateStarted == referenceDate(year: 2026, month: 5, day: 3))
         #expect(seasonEntry.dateFinished == referenceDate(year: 2026, month: 5, day: 4))
         #expect(hiddenSeriesEntry.tmdbID == 209867)
+        #expect(transactionSaveCount == 1)
     }
+
+    @Test @MainActor func testConvertSeasonToSeriesRollsBackTheWholeReplacementWhenSaveFails() async throws {
+        let dataProvider = DataProvider(inMemory: true)
+        var transactionSaveAttempts = 0
+        let repository = LibraryRepository(
+            dataProvider: dataProvider,
+            transactionSaver: { _ in
+                transactionSaveAttempts += 1
+                throw ConversionTransactionTestError.saveFailed
+            }
+        )
+        let converter = LibraryEntryConverter(repository: repository)
+        let parentEntry = AnimeEntry(name: "Frieren", type: .series, tmdbID: 209867)
+        parentEntry.updateDisplayState(false)
+        parentEntry.notes = "Original parent note"
+        try repository.newEntry(parentEntry)
+
+        let seasonEntry = AnimeEntry(
+            name: "Frieren Season 1",
+            type: .season(seasonNumber: 1, parentSeriesID: 209867),
+            tmdbID: 400_234
+        )
+        seasonEntry.parentSeriesEntry = parentEntry
+        seasonEntry.setScore(4)
+        seasonEntry.notes = "Season note"
+        try repository.newEntry(seasonEntry)
+
+        do {
+            try await converter.convertSeasonToSeries(
+                seasonEntry,
+                language: .english,
+                fetcher: fetcher,
+                latestInfoFetcher: makeLatestInfoFetcher()
+            )
+            Issue.record("Expected the atomic conversion save to fail")
+        } catch is ConversionTransactionTestError {
+            // Expected failure.
+        }
+
+        let persistedEntries = try dataProvider.getAllModels(ofType: AnimeEntry.self)
+        let persistedParent = try #require(persistedEntries.first { $0.id == parentEntry.id })
+        let persistedSeason = try #require(persistedEntries.first { $0.id == seasonEntry.id })
+        #expect(persistedEntries.count == 2)
+        #expect(!persistedParent.onDisplay)
+        #expect(persistedParent.notes == "Original parent note")
+        #expect(persistedSeason.onDisplay)
+        #expect(persistedSeason.score == 4)
+        #expect(persistedSeason.notes == "Season note")
+        #expect(transactionSaveAttempts == 1)
+    }
+
+    @Test @MainActor func testConvertSeriesToSeasonRollsBackTheWholeReplacementWhenSaveFails() async throws {
+        let dataProvider = DataProvider(inMemory: true)
+        var transactionSaveAttempts = 0
+        let repository = LibraryRepository(
+            dataProvider: dataProvider,
+            transactionSaver: { _ in
+                transactionSaveAttempts += 1
+                throw ConversionTransactionTestError.saveFailed
+            }
+        )
+        let converter = LibraryEntryConverter(repository: repository)
+        let seriesEntry = AnimeEntry(name: "Frieren", type: .series, tmdbID: 209867)
+        seriesEntry.setScore(3)
+        seriesEntry.notes = "Original series note"
+        try repository.newEntry(seriesEntry)
+
+        do {
+            try await converter.convertSeriesToSeason(
+                seriesEntry,
+                seasonNumber: 1,
+                language: .english,
+                fetcher: fetcher,
+                latestInfoFetcher: makeLatestInfoFetcher()
+            )
+            Issue.record("Expected the atomic conversion save to fail")
+        } catch is ConversionTransactionTestError {
+            // Expected failure.
+        }
+
+        let persistedEntries = try dataProvider.getAllModels(ofType: AnimeEntry.self)
+        let persistedSeries = try #require(persistedEntries.first { $0.id == seriesEntry.id })
+        #expect(persistedEntries.count == 1)
+        #expect(persistedSeries.type == .series)
+        #expect(persistedSeries.onDisplay)
+        #expect(persistedSeries.score == 3)
+        #expect(persistedSeries.notes == "Original series note")
+        #expect(transactionSaveAttempts == 1)
+    }
+}
+
+fileprivate enum ConversionTransactionTestError: Error {
+    case saveFailed
 }
 
 fileprivate func makeLatestInfoFetcher() -> LibraryEntryLatestInfoFetcher {

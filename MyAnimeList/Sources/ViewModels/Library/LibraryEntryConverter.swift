@@ -27,9 +27,11 @@ final class LibraryEntryConverter {
         let originalPosterURL = entry.posterURL
 
         let parentEntry: AnimeEntry
+        let entriesToInsert: [AnimeEntry]
         if let existingParent = entry.parentSeriesEntry {
             parentEntry = existingParent
             parentEntry.updateDisplayState(true)
+            entriesToInsert = []
         } else {
             let resolveLatestInfo =
                 latestInfoFetcher ?? { entryType, tmdbID, language in
@@ -43,7 +45,7 @@ final class LibraryEntryConverter {
             parentEntry = AnimeEntry(fromInfo: parentLatestInfo.0)
             parentEntry.replaceDetail(from: parentLatestInfo.1)
             parentEntry.updateDisplayState(true)
-            try repository.newEntry(parentEntry)
+            entriesToInsert = [parentEntry]
         }
 
         parentEntry.updateUserInfoFromUserAction(userInfo)
@@ -51,7 +53,7 @@ final class LibraryEntryConverter {
             parentEntry.updateCustomPosterURL(originalPosterURL)
         }
 
-        try repository.deleteEntry(entry)
+        try repository.replaceEntry(entry, inserting: entriesToInsert)
 
         libraryStoreLogger.info(
             "Converted season \(seasonTMDbID, privacy: .public) to series \(parentSeriesID, privacy: .public)")
@@ -89,8 +91,6 @@ final class LibraryEntryConverter {
         let resolvedParentLatestInfo = try await parentLatestInfo
         let resolvedSeasonLatestInfo = try await seasonLatestInfo
 
-        try repository.deleteEntry(entry)
-
         let parentEntry = AnimeEntry(fromInfo: resolvedParentLatestInfo.0)
         parentEntry.replaceDetail(from: resolvedParentLatestInfo.1)
         parentEntry.updateDisplayState(false)
@@ -104,8 +104,7 @@ final class LibraryEntryConverter {
             seasonEntry.updateCustomPosterURL(originalPosterURL)
         }
 
-        try repository.newEntry(parentEntry)
-        try repository.newEntry(seasonEntry)
+        try repository.replaceEntry(entry, inserting: [parentEntry, seasonEntry])
 
         libraryStoreLogger.info(
             "Converted series \(parentSeriesID, privacy: .public) to season \(seasonNumber, privacy: .public)")

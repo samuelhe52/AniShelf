@@ -11,6 +11,10 @@ import Observation
 import SwiftUI
 import TMDb
 
+typealias EntryDetailInfoLoader =
+    @Sendable (AnimeType, Int, Language) async throws -> AnimeEntryDetailDTO
+typealias EntryDetailPersistenceSaver = @MainActor (DataHandler?) throws -> Void
+
 @MainActor
 @Observable
 final class EntryDetailViewModel {
@@ -144,6 +148,8 @@ final class EntryDetailViewModel {
 
     private let repository: LibraryRepository
     private let infoFetcher: InfoFetcher
+    private let detailInfoLoader: EntryDetailInfoLoader
+    private let detailPersistenceSaver: EntryDetailPersistenceSaver
 
     private(set) var isLoading = false
     private(set) var loadError: String?
@@ -164,17 +170,42 @@ final class EntryDetailViewModel {
     private(set) var characterSectionTitle: LocalizedStringResource =
         EntryDetailL10n.characters
 
-    private var lastRequestKey: String?
+    private var loadedRequestKey: String?
+    private var loadGeneration = 0
 
-    init(repository: LibraryRepository, infoFetcher: InfoFetcher = .init()) {
+    init(
+        repository: LibraryRepository,
+        infoFetcher: InfoFetcher = .init(),
+        detailInfoLoader: EntryDetailInfoLoader? = nil,
+        detailPersistenceSaver: EntryDetailPersistenceSaver? = nil
+    ) {
         self.repository = repository
         self.infoFetcher = infoFetcher
+        self.detailInfoLoader =
+            detailInfoLoader
+            ?? { entryType, tmdbID, language in
+                try await infoFetcher.detailInfo(
+                    entryType: entryType,
+                    tmdbID: tmdbID,
+                    language: language
+                )
+            }
+        self.detailPersistenceSaver =
+            detailPersistenceSaver
+            ?? { dataHandler in
+                try dataHandler?.modelContext.save()
+            }
     }
 
     func load(for entry: AnimeEntry, language: Language, dataHandler: DataHandler?) async {
+        guard !Task.isCancelled else { return }
+
         let requestKey = "\(entry.tmdbID)-\(language.rawValue)"
-        guard lastRequestKey != requestKey else { return }
-        lastRequestKey = requestKey
+        guard loadedRequestKey != requestKey else { return }
+
+        loadGeneration += 1
+        let generation = loadGeneration
+        loadedRequestKey = nil
 
         displayTitle = entry.displayName
         subtitleText = nil
@@ -195,6 +226,7 @@ final class EntryDetailViewModel {
         if let detail = entry.detail, detail.language == language.rawValue {
             apply(detail: detail, entry: entry, language: language)
             if detail.logoImageURL != nil {
+                loadedRequestKey = requestKey
                 isLoading = false
                 return
             }
@@ -202,18 +234,54 @@ final class EntryDetailViewModel {
 
         isLoading = true
         do {
-            let detailDTO = try await infoFetcher.detailInfo(
-                entryType: entry.type,
-                tmdbID: entry.tmdbID,
-                language: language
+            let detailDTO = try await detailInfoLoader(entry.type, entry.tmdbID, language)
+            guard loadGeneration == generation else { return }
+            guard !Task.isCancelled else {
+                isLoading = false
+                return
+            }
+
+            let detail = try replaceAndPersistDetail(
+                for: entry,
+                with: detailDTO,
+                dataHandler: dataHandler
             )
-            let detail = entry.replaceDetail(from: detailDTO)
-            try? dataHandler?.modelContext.save()
             apply(detail: detail, entry: entry, language: language)
+            loadedRequestKey = requestKey
         } catch {
+            guard loadGeneration == generation else { return }
+            if Task.isCancelled || Self.isCancellation(error) {
+                loadError = nil
+                isLoading = false
+                return
+            }
             loadError = error.localizedDescription
         }
-        isLoading = false
+        if loadGeneration == generation {
+            isLoading = false
+        }
+    }
+
+    private func replaceAndPersistDetail(
+        for entry: AnimeEntry,
+        with detailDTO: AnimeEntryDetailDTO,
+        dataHandler: DataHandler?
+    ) throws -> AnimeEntryDetail {
+        let previousDetailSnapshot = entry.detail?.snapshotDTO()
+        let detail = entry.replaceDetail(from: detailDTO)
+
+        do {
+            try detailPersistenceSaver(dataHandler)
+            return detail
+        } catch {
+            if let previousDetailSnapshot {
+                detail.apply(dto: previousDetailSnapshot)
+            } else {
+                entry.detail = nil
+                detail.modelContext?.delete(detail)
+            }
+            throw error
+        }
     }
 
     func hasSiblingSeasonEntry(for entry: AnimeEntry) -> Bool {
@@ -393,6 +461,10 @@ final class EntryDetailViewModel {
         }
     }
 
+    private static func isCancellation(_ error: Error) -> Bool {
+        error is CancellationError || (error as? URLError)?.code == .cancelled
+    }
+
     private static func displayedStaffCards(
         from staff: [AnimeEntryStaff],
         language: Language
@@ -568,7 +640,8 @@ final class EpisodePreviewViewModel {
     private(set) var staffRows: [EpisodePreviewStaffRow] = []
     private(set) var isLoading = false
 
-    private var lastRequestKey: String?
+    private var completedRequestKey: String?
+    private var loadGeneration = 0
 
     init(
         fetchEpisodeDetail: @escaping @Sendable (EpisodePreviewContext, Int) async throws -> TVEpisode = {
@@ -586,17 +659,27 @@ final class EpisodePreviewViewModel {
     }
 
     func load(card: EntryDetailEpisodeCard, context: EpisodePreviewContext) async {
+        guard !Task.isCancelled else { return }
+
         let requestKey =
             "\(context.seriesTMDbID)-\(context.seasonNumber)-\(card.episodeNumber)-\(context.language.rawValue)"
-        guard lastRequestKey != requestKey else { return }
-        lastRequestKey = requestKey
+        guard completedRequestKey != requestKey else { return }
+
+        loadGeneration += 1
+        let generation = loadGeneration
+        completedRequestKey = nil
         overviewText = String(localized: EntryDetailL10n.loading)
         staffRows = []
         isLoading = true
-        defer { isLoading = false }
 
         do {
             let detail = try await fetchEpisodeDetail(context, card.episodeNumber)
+            guard loadGeneration == generation else { return }
+            guard !Task.isCancelled else {
+                isLoading = false
+                return
+            }
+
             let resolvedOverviewText =
                 detail.overview?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
                 ? detail.overview!
@@ -609,12 +692,24 @@ final class EpisodePreviewViewModel {
                 overviewText = resolvedOverviewText
                 staffRows = resolvedStaffRows
             }
+            completedRequestKey = requestKey
+            isLoading = false
         } catch {
+            guard loadGeneration == generation else { return }
+            if Task.isCancelled || Self.isCancellation(error) {
+                isLoading = false
+                return
+            }
             withAnimation(detailLoadAnimation) {
                 overviewText = String(localized: EntryDetailL10n.noOverviewAvailable)
                 staffRows = []
             }
+            isLoading = false
         }
+    }
+
+    private static func isCancellation(_ error: Error) -> Bool {
+        error is CancellationError || (error as? URLError)?.code == .cancelled
     }
 
     private static func makeEpisodePreviewStaffRows(

@@ -12,6 +12,10 @@ import Testing
 @testable import MyAnimeList
 
 struct LibraryPreferenceDefaultsTests {
+    @Test func testPresentedDetailIdentityIsExcludedFromPortableBackups() {
+        #expect(!String.allPreferenceKeys.contains(.libraryPresentedDetailEntryIdentity))
+    }
+
     @Test func testSingleTapDetailPreferenceDefaultsAndBackupInclusion() {
         let suiteName = "MyAnimeListTests.SingleTapDetailPreference"
         let defaults = UserDefaults(suiteName: suiteName)!

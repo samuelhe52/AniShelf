@@ -7,6 +7,7 @@
 
 import DataProvider
 import Foundation
+import LibrarySync
 import SwiftData
 import SwiftUI
 
@@ -14,6 +15,7 @@ struct EntryDetailView: View {
     @Environment(\.dataHandler) private var dataHandler
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppReviewPromptController.self) private var appReview
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
@@ -22,9 +24,15 @@ struct EntryDetailView: View {
     @AppStorage(.episodeProgressTrackingEnabled) private var episodeProgressTrackingEnabled = false
 
     private let presentationStyle: EntryDetailPresentationStyle
-    private let onClose: (() -> Void)?
+    private let onClose: ((LibraryEntrySyncIdentity) -> Void)?
+    private let editingRequestID: UUID?
+    private let onEditingRequestHandled: ((UUID) -> Void)?
+    private let hostPresentationID: UUID?
+    private let isCurrentHostPresentation: ((UUID) -> Bool)?
 
     @State private var session: EntryDetailSession
+    @State private var conversionTask: Task<Void, Never>?
+    @State private var conversionTaskID: UUID?
 
     private var accentColor: Color { session.entry.favorite ? .orange : .blue }
     private var currentLanguage: Language { followsSystemLanguage ? .current : preferredLanguage }
@@ -35,11 +43,19 @@ struct EntryDetailView: View {
         repository: LibraryRepository,
         startInEditingMode: Bool = false,
         presentationStyle: EntryDetailPresentationStyle = .sheet,
-        onClose: (() -> Void)? = nil,
-        session: EntryDetailSession? = nil
+        onClose: ((LibraryEntrySyncIdentity) -> Void)? = nil,
+        session: EntryDetailSession? = nil,
+        editingRequestID: UUID? = nil,
+        onEditingRequestHandled: ((UUID) -> Void)? = nil,
+        hostPresentationID: UUID? = nil,
+        isCurrentHostPresentation: ((UUID) -> Bool)? = nil
     ) {
         self.presentationStyle = presentationStyle
         self.onClose = onClose
+        self.editingRequestID = editingRequestID
+        self.onEditingRequestHandled = onEditingRequestHandled
+        self.hostPresentationID = hostPresentationID
+        self.isCurrentHostPresentation = isCurrentHostPresentation
         self._session = State(
             initialValue: session
                 ?? EntryDetailSession(
@@ -76,23 +92,18 @@ struct EntryDetailView: View {
                 }
                 .scrollPosition($session.scrollPosition)
                 .coordinateSpace(name: scrollCoordinateSpaceName)
-                .onAppear {
+                .task {
                     guard session.startsInEditingMode,
                         !session.didAutoScrollToEditingSection
                     else { return }
                     session.didAutoScrollToEditingSection = true
-                    session.isEditingDetails = true
-                    Task {
-                        try? await Task.sleep(for: .milliseconds(150))
-                        await MainActor.run {
-                            withAnimation(.spring(response: 0.6, dampingFraction: 0.86)) {
-                                proxy.scrollTo(
-                                    EntryDetailScrollTarget.editingSection,
-                                    anchor: .center
-                                )
-                            }
-                        }
-                    }
+                    await revealEditingSection(using: proxy)
+                }
+                .task(id: editingRequestID) {
+                    let requestID = editingRequestID
+                    guard let requestID else { return }
+                    guard await revealEditingSection(using: proxy) else { return }
+                    onEditingRequestHandled?(requestID)
                 }
             }
         }
@@ -104,7 +115,7 @@ struct EntryDetailView: View {
         .interactiveDismissDisabled(
             session.entry.userInfoHasChanges(comparedTo: session.originalUserInfo)
         )
-        .sheet(item: $session.presentation.activeSheet) { activeSheet in
+        .sheet(item: activeSheetBinding) { activeSheet in
             switch activeSheet {
             case .changePoster:
                 NavigationStack {
@@ -126,7 +137,7 @@ struct EntryDetailView: View {
         }
         .confirmationDialog(
             EntryDetailL10n.convertToWhichSeason,
-            isPresented: $session.presentation.showSeasonPicker,
+            isPresented: showSeasonPickerBinding,
             titleVisibility: .visible
         ) {
             if session.conversion.isFetchingSeasons {
@@ -136,7 +147,9 @@ struct EntryDetailView: View {
             } else {
                 ForEach(session.conversion.seasonNumberOptions, id: \.self) { seasonNumber in
                     Button("Season \(seasonNumber)") {
-                        Task { await convertSeriesToSeason(seasonNumber: seasonNumber) }
+                        startConversionTask {
+                            await convertSeriesToSeason(seasonNumber: seasonNumber)
+                        }
                     }
                 }
             }
@@ -144,10 +157,12 @@ struct EntryDetailView: View {
         }
         .alert(
             EntryDetailL10n.siblingSeasonExists,
-            isPresented: $session.presentation.showSiblingSeasonWarning
+            isPresented: showSiblingSeasonWarningBinding
         ) {
             Button(EntryDetailL10n.convertAnyway, role: .destructive) {
-                Task { await convertSeasonToSeries() }
+                startConversionTask {
+                    await convertSeasonToSeries()
+                }
             }
             Button(EntryDetailL10n.cancel, role: .cancel) {}
         } message: {
@@ -205,6 +220,33 @@ struct EntryDetailView: View {
         case .inspector:
             Color(.systemBackground)
         }
+    }
+
+    @discardableResult
+    @MainActor
+    private func revealEditingSection(using proxy: ScrollViewProxy) async -> Bool {
+        session.isEditingDetails = true
+        do {
+            try await Task.sleep(for: .milliseconds(150))
+        } catch {
+            return false
+        }
+        guard !Task.isCancelled else { return false }
+
+        if reduceMotion {
+            proxy.scrollTo(
+                EntryDetailScrollTarget.editingSection,
+                anchor: .center
+            )
+        } else {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.86)) {
+                proxy.scrollTo(
+                    EntryDetailScrollTarget.editingSection,
+                    anchor: .center
+                )
+            }
+        }
+        return true
     }
 
     private func heroHeight(for availableWidth: CGFloat) -> CGFloat {
@@ -354,7 +396,11 @@ struct EntryDetailView: View {
             onShare: { session.presentation.activeSheet = .sharing },
             onToggleFavorite: toggleFavorite,
             onChangePoster: { session.presentation.activeSheet = .changePoster },
-            onConvert: handleConvertTap,
+            onConvert: {
+                startConversionTask {
+                    await handleConvertTap()
+                }
+            },
             onToggleDroppedStatus: toggleDroppedStatus
         )
     }
@@ -602,7 +648,9 @@ struct EntryDetailView: View {
             get: { session.presentation.episodeProgressCompletionPrompt != nil },
             set: { isPresented in
                 if !isPresented {
-                    session.presentation.episodeProgressCompletionPrompt = nil
+                    updatePresentation { presentation in
+                        presentation.episodeProgressCompletionPrompt = nil
+                    }
                 }
             }
         )
@@ -613,9 +661,54 @@ struct EntryDetailView: View {
             get: { session.presentation.dateUpdateSuggestion != nil },
             set: { isPresented in
                 if !isPresented {
-                    session.presentation.dateUpdateSuggestion = nil
+                    updatePresentation { presentation in
+                        presentation.dateUpdateSuggestion = nil
+                    }
                 }
             }
+        )
+    }
+
+    private var activeSheetBinding: Binding<EntryDetailSheet?> {
+        Binding(
+            get: { session.presentation.activeSheet },
+            set: { activeSheet in
+                updatePresentation { presentation in
+                    presentation.activeSheet = activeSheet
+                }
+            }
+        )
+    }
+
+    private var showSeasonPickerBinding: Binding<Bool> {
+        Binding(
+            get: { session.presentation.showSeasonPicker },
+            set: { isPresented in
+                updatePresentation { presentation in
+                    presentation.showSeasonPicker = isPresented
+                }
+            }
+        )
+    }
+
+    private var showSiblingSeasonWarningBinding: Binding<Bool> {
+        Binding(
+            get: { session.presentation.showSiblingSeasonWarning },
+            set: { isPresented in
+                updatePresentation { presentation in
+                    presentation.showSiblingSeasonWarning = isPresented
+                }
+            }
+        )
+    }
+
+    private func updatePresentation(
+        _ update: (inout EntryDetailPresentationState) -> Void
+    ) {
+        session.updatePresentation(
+            from: hostPresentationID,
+            ifCurrent: isCurrentHostPresentation,
+            update
         )
     }
 
@@ -754,57 +847,84 @@ struct EntryDetailView: View {
     private func presentSeasonPicker() async {
         session.conversion.isFetchingSeasons = true
         session.conversion.inProgress = true
+        defer {
+            session.conversion.isFetchingSeasons = false
+            session.conversion.inProgress = false
+        }
         do {
             session.conversion.seasonNumberOptions = try await session.model.seasonNumberOptions(
                 for: session.entry,
                 language: currentLanguage
             )
+            guard !Task.isCancelled else { return }
             session.presentation.showSeasonPicker = true
         } catch {
+            guard !Task.isCancelled, !Self.isCancellation(error) else { return }
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
-        session.conversion.isFetchingSeasons = false
-        session.conversion.inProgress = false
     }
 
     private func convertSeasonToSeries() async {
         guard case .season(_, _) = session.entry.type else { return }
         session.conversion.inProgress = true
+        defer { session.conversion.inProgress = false }
         do {
             try await session.model.convertSeasonToSeries(
                 session.entry,
                 language: currentLanguage
             )
+            guard !Task.isCancelled else { return }
             ToastCenter.global.completionState = .completed(EntryDetailL10n.convertedToSeries)
             closePresentation()
         } catch {
+            guard !Task.isCancelled, !Self.isCancellation(error) else { return }
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
-        session.conversion.inProgress = false
     }
 
     private func convertSeriesToSeason(seasonNumber: Int) async {
         session.conversion.inProgress = true
+        defer { session.conversion.inProgress = false }
         do {
             try await session.model.convertSeriesToSeason(
                 session.entry,
                 seasonNumber: seasonNumber,
                 language: currentLanguage
             )
+            guard !Task.isCancelled else { return }
             ToastCenter.global.completionState = .completed(EntryDetailL10n.convertedToSeason)
             closePresentation()
         } catch {
+            guard !Task.isCancelled, !Self.isCancellation(error) else { return }
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
-        session.conversion.inProgress = false
+    }
+
+    private func startConversionTask(
+        _ operation: @escaping @MainActor () async -> Void
+    ) {
+        guard conversionTask == nil else { return }
+
+        let taskID = UUID()
+        conversionTaskID = taskID
+        conversionTask = Task { @MainActor in
+            await operation()
+            guard conversionTaskID == taskID else { return }
+            conversionTask = nil
+            conversionTaskID = nil
+        }
     }
 
     private func closePresentation() {
         if let onClose {
-            onClose()
+            onClose(session.entryIdentity)
         } else {
             dismiss()
         }
+    }
+
+    private static func isCancellation(_ error: Error) -> Bool {
+        error is CancellationError || (error as? URLError)?.code == .cancelled
     }
 }
 
