@@ -77,6 +77,17 @@ final class EntryDetailSession {
                 defaultValue: false
             )
     }
+
+    func updatePresentation(
+        from hostPresentationID: UUID?,
+        ifCurrent isCurrentHostPresentation: ((UUID) -> Bool)?,
+        _ update: (inout EntryDetailPresentationState) -> Void
+    ) {
+        if let hostPresentationID {
+            guard isCurrentHostPresentation?(hostPresentationID) == true else { return }
+        }
+        update(&presentation)
+    }
 }
 
 @Observable

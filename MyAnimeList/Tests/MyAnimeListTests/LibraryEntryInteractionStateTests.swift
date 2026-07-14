@@ -400,6 +400,23 @@ struct LibraryEntryInteractionStateTests {
         #expect(state.presentedDetailEntryID == entry.syncIdentity)
     }
 
+    @Test @MainActor func reopeningSameDetailBeforeDelayedDismissalRenewsItsGeneration() throws {
+        let state = LibraryEntryInteractionState()
+        let entry = AnimeEntry.template(id: 42)
+        state.openDetails(for: entry)
+        let firstSheet = try #require(state.detailHostPresentation)
+
+        state.openDetails(for: entry)
+        let secondSheet = try #require(state.detailHostPresentation)
+        state.detailHostDidDismiss(firstSheet)
+        state.dismissDetails(ifPresentationID: firstSheet.detailPresentationID)
+
+        #expect(firstSheet.id != secondSheet.id)
+        #expect(firstSheet.detailPresentationID != secondSheet.detailPresentationID)
+        #expect(state.detailHostPresentation?.id == secondSheet.id)
+        #expect(state.presentedDetailEntryID == entry.syncIdentity)
+    }
+
     @Test @MainActor func replacingInspectorEntryRejectsOldHostAndDetailCallbacks() {
         let state = LibraryEntryInteractionState()
         let first = AnimeEntry.template(id: 42)
@@ -450,6 +467,22 @@ struct LibraryEntryInteractionStateTests {
 
         state.presentWorkflow(workflow)
         let secondRoute = try! #require(state.activeSheetRoute)
+        state.sheetDidDismiss(firstRoute)
+
+        #expect(firstRoute.id != secondRoute.id)
+        #expect(state.activeSheetRoute?.id == secondRoute.id)
+        #expect(state.activeWorkflow == workflow)
+    }
+
+    @Test @MainActor func reopeningSameWorkflowBeforeDelayedDismissalRenewsItsGeneration() throws {
+        let state = LibraryEntryInteractionState()
+        let entry = AnimeEntry.template(id: 42)
+        let workflow = LibraryEntryWorkflow.sharing(entry.syncIdentity)
+        state.presentWorkflow(workflow)
+        let firstRoute = try #require(state.activeSheetRoute)
+
+        state.presentWorkflow(workflow)
+        let secondRoute = try #require(state.activeSheetRoute)
         state.sheetDidDismiss(firstRoute)
 
         #expect(firstRoute.id != secondRoute.id)

@@ -152,9 +152,7 @@ final class LibraryEntryInteractionState {
             detailEditRequest = nil
         }
         focus(entry)
-        if detailPresentation?.entryIdentity != entry.syncIdentity {
-            detailPresentation = LibraryEntryDetailPresentation(entryIdentity: entry.syncIdentity)
-        }
+        detailPresentation = LibraryEntryDetailPresentation(entryIdentity: entry.syncIdentity)
         reconcileDetailHostPresentation()
     }
 
@@ -182,7 +180,7 @@ final class LibraryEntryInteractionState {
 
     func presentWorkflow(_ workflow: LibraryEntryWorkflow) {
         detailEditRequest = nil
-        setWorkflow(workflow)
+        workflowPresentation = LibraryEntryWorkflowPresentation(workflow: workflow)
         reconcileDetailHostPresentation()
     }
 
@@ -199,9 +197,8 @@ final class LibraryEntryInteractionState {
         }
     }
 
-    private func setWorkflow(_ workflow: LibraryEntryWorkflow?) {
-        guard activeWorkflow != workflow else { return }
-        workflowPresentation = workflow.map(LibraryEntryWorkflowPresentation.init(workflow:))
+    func isCurrentDetailHostPresentation(_ presentationID: UUID) -> Bool {
+        detailHostPresentation?.id == presentationID
     }
 
     private func reconcileDetailHostPresentation() {
@@ -573,6 +570,10 @@ extension View {
                                         requestID,
                                         from: .sheet
                                     )
+                                },
+                                hostPresentationID: presentation.id,
+                                isCurrentHostPresentation: {
+                                    state.isCurrentDetailHostPresentation($0)
                                 }
                             )
                         }

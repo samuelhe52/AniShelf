@@ -141,6 +141,10 @@ struct LibraryView: View {
                                             requestID,
                                             from: .inspector
                                         )
+                                    },
+                                    hostPresentationID: inspectorPresentation.id,
+                                    isCurrentHostPresentation: {
+                                        interaction.isCurrentDetailHostPresentation($0)
                                     }
                                 )
                                 .containerBackground(

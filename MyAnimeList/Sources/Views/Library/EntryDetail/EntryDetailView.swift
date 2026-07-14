@@ -27,6 +27,8 @@ struct EntryDetailView: View {
     private let onClose: ((LibraryEntrySyncIdentity) -> Void)?
     private let editingRequestID: UUID?
     private let onEditingRequestHandled: ((UUID) -> Void)?
+    private let hostPresentationID: UUID?
+    private let isCurrentHostPresentation: ((UUID) -> Bool)?
 
     @State private var session: EntryDetailSession
     @State private var conversionTask: Task<Void, Never>?
@@ -44,12 +46,16 @@ struct EntryDetailView: View {
         onClose: ((LibraryEntrySyncIdentity) -> Void)? = nil,
         session: EntryDetailSession? = nil,
         editingRequestID: UUID? = nil,
-        onEditingRequestHandled: ((UUID) -> Void)? = nil
+        onEditingRequestHandled: ((UUID) -> Void)? = nil,
+        hostPresentationID: UUID? = nil,
+        isCurrentHostPresentation: ((UUID) -> Bool)? = nil
     ) {
         self.presentationStyle = presentationStyle
         self.onClose = onClose
         self.editingRequestID = editingRequestID
         self.onEditingRequestHandled = onEditingRequestHandled
+        self.hostPresentationID = hostPresentationID
+        self.isCurrentHostPresentation = isCurrentHostPresentation
         self._session = State(
             initialValue: session
                 ?? EntryDetailSession(
@@ -109,7 +115,7 @@ struct EntryDetailView: View {
         .interactiveDismissDisabled(
             session.entry.userInfoHasChanges(comparedTo: session.originalUserInfo)
         )
-        .sheet(item: $session.presentation.activeSheet) { activeSheet in
+        .sheet(item: activeSheetBinding) { activeSheet in
             switch activeSheet {
             case .changePoster:
                 NavigationStack {
@@ -131,7 +137,7 @@ struct EntryDetailView: View {
         }
         .confirmationDialog(
             EntryDetailL10n.convertToWhichSeason,
-            isPresented: $session.presentation.showSeasonPicker,
+            isPresented: showSeasonPickerBinding,
             titleVisibility: .visible
         ) {
             if session.conversion.isFetchingSeasons {
@@ -151,7 +157,7 @@ struct EntryDetailView: View {
         }
         .alert(
             EntryDetailL10n.siblingSeasonExists,
-            isPresented: $session.presentation.showSiblingSeasonWarning
+            isPresented: showSiblingSeasonWarningBinding
         ) {
             Button(EntryDetailL10n.convertAnyway, role: .destructive) {
                 startConversionTask {
@@ -642,7 +648,9 @@ struct EntryDetailView: View {
             get: { session.presentation.episodeProgressCompletionPrompt != nil },
             set: { isPresented in
                 if !isPresented {
-                    session.presentation.episodeProgressCompletionPrompt = nil
+                    updatePresentation { presentation in
+                        presentation.episodeProgressCompletionPrompt = nil
+                    }
                 }
             }
         )
@@ -653,9 +661,54 @@ struct EntryDetailView: View {
             get: { session.presentation.dateUpdateSuggestion != nil },
             set: { isPresented in
                 if !isPresented {
-                    session.presentation.dateUpdateSuggestion = nil
+                    updatePresentation { presentation in
+                        presentation.dateUpdateSuggestion = nil
+                    }
                 }
             }
+        )
+    }
+
+    private var activeSheetBinding: Binding<EntryDetailSheet?> {
+        Binding(
+            get: { session.presentation.activeSheet },
+            set: { activeSheet in
+                updatePresentation { presentation in
+                    presentation.activeSheet = activeSheet
+                }
+            }
+        )
+    }
+
+    private var showSeasonPickerBinding: Binding<Bool> {
+        Binding(
+            get: { session.presentation.showSeasonPicker },
+            set: { isPresented in
+                updatePresentation { presentation in
+                    presentation.showSeasonPicker = isPresented
+                }
+            }
+        )
+    }
+
+    private var showSiblingSeasonWarningBinding: Binding<Bool> {
+        Binding(
+            get: { session.presentation.showSiblingSeasonWarning },
+            set: { isPresented in
+                updatePresentation { presentation in
+                    presentation.showSiblingSeasonWarning = isPresented
+                }
+            }
+        )
+    }
+
+    private func updatePresentation(
+        _ update: (inout EntryDetailPresentationState) -> Void
+    ) {
+        session.updatePresentation(
+            from: hostPresentationID,
+            ifCurrent: isCurrentHostPresentation,
+            update
         )
     }
 
