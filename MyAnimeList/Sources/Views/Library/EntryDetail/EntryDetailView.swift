@@ -65,7 +65,7 @@ struct EntryDetailView: View {
                             quickActionsRow
                                 .padding(.top, -20)
                                 .padding(.bottom, 4)
-                            detailsContent(proxy, availableWidth: geometry.size.width)
+                            detailsContent(proxy)
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 4)
@@ -362,12 +362,9 @@ struct EntryDetailView: View {
     // MARK: - Details Content
 
     @ViewBuilder
-    private func detailsContent(
-        _ proxy: ScrollViewProxy,
-        availableWidth: CGFloat
-    ) -> some View {
+    private func detailsContent(_ proxy: ScrollViewProxy) -> some View {
         if !session.model.statCards.isEmpty {
-            LazyVGrid(columns: statColumns(for: availableWidth), spacing: 12) {
+            LazyVGrid(columns: statColumns, spacing: 12) {
                 ForEach(session.model.statCards) { card in
                     DetailStatCard(card: card)
                         .onTapGesture {
@@ -500,23 +497,11 @@ struct EntryDetailView: View {
         .id(EntryDetailScrollTarget.editingSection)
     }
 
-    private func statColumns(for availableWidth: CGFloat) -> [GridItem] {
+    private var statColumns: [GridItem] {
         Array(
             repeating: GridItem(.flexible(), spacing: 12, alignment: .top),
-            count: min(
-                max(session.model.statCards.count, 1),
-                maximumStatColumnCount(for: availableWidth)
-            )
+            count: min(max(session.model.statCards.count, 1), 3)
         )
-    }
-
-    private func maximumStatColumnCount(for availableWidth: CGFloat) -> Int {
-        switch presentationStyle {
-        case .sheet:
-            3
-        case .inspector:
-            availableWidth >= 460 ? 3 : 2
-        }
     }
 
     @ViewBuilder
