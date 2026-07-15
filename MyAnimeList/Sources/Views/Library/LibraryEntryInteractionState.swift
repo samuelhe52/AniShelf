@@ -447,6 +447,7 @@ extension EnvironmentValues {
         set { self[LibraryEntryDetailActivationKey.self] = newValue }
     }
 
+    @Entry var libraryEntryDetailHost: LibraryEntryDetailHost?
     @Entry var libraryEntryOpenDetailAction: ((AnimeEntry) -> Void)?
     @Entry var libraryEntryEditAction: ((AnimeEntry) -> Void)?
 }

@@ -222,6 +222,7 @@ struct LibraryView: View {
                 }
             )
         }
+        .environment(\.libraryEntryDetailHost, presentation.host)
         .id(presentation.entryIdentity.rawID)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .transition(detailReplacementTransition)

@@ -17,6 +17,7 @@ struct EntryDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppReviewPromptController.self) private var appReview
+    @Environment(\.libraryEntryDetailHost) private var detailHost
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
@@ -36,6 +37,7 @@ struct EntryDetailView: View {
     private var accentColor: Color { session.entry.favorite ? .orange : .blue }
     private var currentLanguage: Language { followsSystemLanguage ? .current : preferredLanguage }
     private let scrollCoordinateSpaceName = "EntryDetailScroll"
+    private let heroHeight: CGFloat = 420
 
     init(
         entry: AnimeEntry,
@@ -66,48 +68,44 @@ struct EntryDetailView: View {
     var body: some View {
         @Bindable var session = session
 
-        GeometryReader { geometry in
-            ScrollViewReader { proxy in
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 0) {
-                        stretchyHeroSection(
-                            heroHeight: heroHeight(for: geometry.size.width)
-                        )
+        ScrollViewReader { proxy in
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    stretchyHeroSection(heroHeight: heroHeight)
 
-                        VStack(alignment: .leading, spacing: 20) {
-                            quickActionsRow
-                                .padding(.top, -20)
-                                .padding(.bottom, 4)
-                            detailsContent(proxy)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 4)
-                        .padding(.bottom, 40)
-                        .frame(maxWidth: 760)
-                        .frame(maxWidth: .infinity)
+                    VStack(alignment: .leading, spacing: 20) {
+                        quickActionsRow
+                            .padding(.top, -20)
+                            .padding(.bottom, 4)
+                        detailsContent(proxy)
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+                    .padding(.bottom, 40)
+                    .frame(maxWidth: 760)
+                    .frame(maxWidth: .infinity)
                 }
-                .scrollPosition($session.scrollPosition)
-                .coordinateSpace(name: scrollCoordinateSpaceName)
-                .task {
-                    guard session.startsInEditingMode,
-                        !session.didAutoScrollToEditingSection
-                    else { return }
-                    session.didAutoScrollToEditingSection = true
-                    await revealEditingSection(using: proxy)
-                }
-                .task(id: editingRequestID) {
-                    let requestID = editingRequestID
-                    guard let requestID else { return }
-                    guard await revealEditingSection(using: proxy) else { return }
-                    onEditingRequestHandled?(requestID)
-                }
+            }
+            .scrollPosition($session.scrollPosition)
+            .coordinateSpace(name: scrollCoordinateSpaceName)
+            .task {
+                guard session.startsInEditingMode,
+                    !session.didAutoScrollToEditingSection
+                else { return }
+                session.didAutoScrollToEditingSection = true
+                await revealEditingSection(using: proxy)
+            }
+            .task(id: editingRequestID) {
+                let requestID = editingRequestID
+                guard let requestID else { return }
+                guard await revealEditingSection(using: proxy) else { return }
+                onEditingRequestHandled?(requestID)
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(pageBackground)
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar { toolbarContent }
+        .presentationBackground(pageBackground)
         .presentationDragIndicator(.visible)
         .interactiveDismissDisabled(
             session.entry.userInfoHasChanges(comparedTo: session.originalUserInfo)
@@ -211,7 +209,11 @@ struct EntryDetailView: View {
     // MARK: - Hero
 
     private var pageBackground: Color {
-        Color(.systemGroupedBackground)
+        detailHost == .sheet ? Color(.systemGroupedBackground) : Color(.systemBackground)
+    }
+
+    private var editingSectionRevealDelay: Duration {
+        detailHost == .inspector ? .milliseconds(500) : .milliseconds(150)
     }
 
     @discardableResult
@@ -219,7 +221,7 @@ struct EntryDetailView: View {
     private func revealEditingSection(using proxy: ScrollViewProxy) async -> Bool {
         session.isEditingDetails = true
         do {
-            try await Task.sleep(for: .milliseconds(150))
+            try await Task.sleep(for: editingSectionRevealDelay)
         } catch {
             return false
         }
@@ -239,10 +241,6 @@ struct EntryDetailView: View {
             }
         }
         return true
-    }
-
-    private func heroHeight(for availableWidth: CGFloat) -> CGFloat {
-        min(max(availableWidth * 0.88, 340), 420)
     }
 
     private func stretchyHeroSection(heroHeight: CGFloat) -> some View {
