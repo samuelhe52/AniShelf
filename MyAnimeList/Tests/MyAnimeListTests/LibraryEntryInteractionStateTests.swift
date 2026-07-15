@@ -6,6 +6,7 @@
 //
 
 import DataProvider
+import SwiftUI
 import Testing
 
 @testable import MyAnimeList
@@ -38,6 +39,76 @@ struct LibraryEntryInteractionStateTests {
         #expect(state.presentedDetailEntryID == nil)
     }
 
+    @Test @MainActor func replacingAnInspectorDetailKeepsTheInspectorHostPresented() throws {
+        let state = LibraryEntryInteractionState(initialDetailHost: .inspector)
+        let first = AnimeEntry.template(id: 42)
+        let second = AnimeEntry.template(id: 43)
+
+        state.openDetails(for: first)
+        let firstDetailPresentation = try #require(state.detailPresentation)
+        let inspectorPresentation = try #require(state.inspectorPresentation)
+
+        state.openDetails(for: second)
+
+        #expect(state.focusedEntryID == second.syncIdentity)
+        #expect(state.presentedDetailEntryID == second.syncIdentity)
+        #expect(state.detailPresentation?.id != firstDetailPresentation.id)
+        #expect(state.inspectorPresentation?.id == inspectorPresentation.id)
+        #expect(state.inspectorPresentation?.entryIdentity == second.syncIdentity)
+        #expect(
+            state.inspectorPresentation?.detailPresentationID
+                == state.detailPresentation?.id
+        )
+    }
+
+    @Test func galleryAlwaysUsesSheetForEveryHorizontalSizeClass() {
+        let sizeClasses: [UserInterfaceSizeClass?] = [.compact, .regular, nil]
+
+        for sizeClass in sizeClasses {
+            let policy = LibraryEntryDetailHostPolicy(
+                mode: .gallery,
+                horizontalSizeClass: sizeClass
+            )
+
+            #expect(policy.host == .sheet)
+            #expect(policy.activation == .userPreference)
+        }
+    }
+
+    @Test func listAndGridUseInspectorOnlyInRegularWidth() {
+        for mode in [LibraryEntryDetailMode.list, .grid] {
+            let regularPolicy = LibraryEntryDetailHostPolicy(
+                mode: mode,
+                horizontalSizeClass: .regular
+            )
+            let compactPolicy = LibraryEntryDetailHostPolicy(
+                mode: mode,
+                horizontalSizeClass: .compact
+            )
+            let unspecifiedPolicy = LibraryEntryDetailHostPolicy(
+                mode: mode,
+                horizontalSizeClass: nil
+            )
+
+            #expect(regularPolicy.host == .inspector)
+            #expect(regularPolicy.activation == .singleTap)
+            #expect(compactPolicy.host == .sheet)
+            #expect(compactPolicy.activation == .userPreference)
+            #expect(unspecifiedPolicy.host == .sheet)
+            #expect(unspecifiedPolicy.activation == .userPreference)
+        }
+    }
+
+    @Test func geometricallyWidePhoneHostedCompactContextStillUsesSheet() {
+        let policy = LibraryEntryDetailHostPolicy(
+            mode: .grid,
+            horizontalSizeClass: .compact
+        )
+
+        #expect(policy.host == .sheet)
+        #expect(policy.activation == .userPreference)
+    }
+
     @Test @MainActor func editingPresentsDetailAndRequestsTheEditingSection() throws {
         let state = LibraryEntryInteractionState()
         let entry = AnimeEntry.template(id: 42)
@@ -50,7 +121,13 @@ struct LibraryEntryInteractionStateTests {
         #expect(request.entryIdentity == entry.syncIdentity)
         #expect(state.activeWorkflow == nil)
 
-        state.consumeDetailEditRequest(request.id)
+        let hostPresentation = try #require(state.detailHostPresentation)
+        #expect(request.hostPresentationID == hostPresentation.id)
+
+        state.consumeDetailEditRequest(
+            request.id,
+            fromHostPresentationID: hostPresentation.id
+        )
 
         #expect(state.detailEditRequest == nil)
         #expect(state.presentedDetailEntryID == entry.syncIdentity)
@@ -189,49 +266,197 @@ struct LibraryEntryInteractionStateTests {
         #expect(state.pendingPasteRequest == nil)
     }
 
-    @Test @MainActor func currentDetailDismissalClosesDetail() throws {
-        let state = LibraryEntryInteractionState()
+    @Test @MainActor func interactiveResizeDefersMigrationUntilResizeEnds() throws {
+        let state = LibraryEntryInteractionState(initialDetailHost: .inspector)
         let entry = AnimeEntry.template(id: 42)
         state.openDetails(for: entry)
-        let presentation = try #require(state.detailPresentation)
+        let canonicalPresentation = try #require(state.detailPresentation)
+        let inspectorPresentation = try #require(state.inspectorPresentation)
 
-        state.detailPresentationDidDismiss(presentation)
+        state.interactiveResizeDidChange(true, migrationBlocked: false)
+        state.requestDetailHost(
+            .sheet,
+            source: .horizontalSizeClass,
+            migrationBlocked: false
+        )
 
-        #expect(state.presentedDetailEntryID == nil)
+        #expect(state.isInteractivelyResizing)
+        #expect(state.desiredDetailHost == .sheet)
+        #expect(state.detailHostPresentation?.id == inspectorPresentation.id)
+        #expect(state.inspectorPresentation?.id == inspectorPresentation.id)
+        #expect(state.hasPendingDetailHostMigration)
+        #expect(state.focusedEntryID == entry.syncIdentity)
+        #expect(state.presentedDetailEntryID == entry.syncIdentity)
+        #expect(state.detailPresentation?.id == canonicalPresentation.id)
+
+        state.interactiveResizeDidChange(false, migrationBlocked: false)
+
+        let sheetPresentation = try #require(state.detailSheetPresentation)
+        #expect(!state.isInteractivelyResizing)
+        #expect(sheetPresentation.id != inspectorPresentation.id)
+        #expect(sheetPresentation.detailPresentationID == canonicalPresentation.id)
+        #expect(!state.hasPendingDetailHostMigration)
+        #expect(state.presentedDetailEntryID == entry.syncIdentity)
+        #expect(state.detailPresentation?.id == canonicalPresentation.id)
     }
 
-    @Test @MainActor func staleDetailDismissalCannotCloseAReopenedDetail() throws {
-        let state = LibraryEntryInteractionState()
+    @Test @MainActor func safeDisplayModeChangeMigratesImmediatelyDuringInteractiveResize() throws {
+        let state = LibraryEntryInteractionState(initialDetailHost: .inspector)
         let entry = AnimeEntry.template(id: 42)
         state.openDetails(for: entry)
-        let firstPresentation = try #require(state.detailPresentation)
+        let canonicalPresentation = try #require(state.detailPresentation)
+        let inspectorPresentation = try #require(state.inspectorPresentation)
 
-        state.dismissDetails()
-        state.openDetails(for: entry)
-        let secondPresentation = try #require(state.detailPresentation)
-        state.detailPresentationDidDismiss(firstPresentation)
-        state.dismissDetails(ifPresentationID: firstPresentation.id)
+        state.interactiveResizeDidChange(true, migrationBlocked: false)
+        state.requestDetailHost(
+            .sheet,
+            source: .displayMode,
+            migrationBlocked: false
+        )
 
-        #expect(firstPresentation.id != secondPresentation.id)
-        #expect(state.detailPresentation?.id == secondPresentation.id)
+        let sheetPresentation = try #require(state.detailSheetPresentation)
+        #expect(state.isInteractivelyResizing)
+        #expect(sheetPresentation.id != inspectorPresentation.id)
+        #expect(sheetPresentation.detailPresentationID == canonicalPresentation.id)
+        #expect(state.detailPresentation?.id == canonicalPresentation.id)
+        #expect(state.focusedEntryID == entry.syncIdentity)
         #expect(state.presentedDetailEntryID == entry.syncIdentity)
     }
 
-    @Test @MainActor func replacingDetailRejectsOldPresentationCallbacks() throws {
+    @Test @MainActor func blockedMigrationWaitsUntilNestedPresentationEnds() throws {
+        let state = LibraryEntryInteractionState(initialDetailHost: .inspector)
+        let entry = AnimeEntry.template(id: 42)
+        state.openDetails(for: entry)
+        let canonicalPresentation = try #require(state.detailPresentation)
+        let inspectorPresentation = try #require(state.inspectorPresentation)
+
+        state.requestDetailHost(
+            .sheet,
+            source: .displayMode,
+            migrationBlocked: true
+        )
+
+        #expect(state.desiredDetailHost == .sheet)
+        #expect(state.inspectorPresentation?.id == inspectorPresentation.id)
+        #expect(state.hasPendingDetailHostMigration)
+        #expect(state.detailPresentation?.id == canonicalPresentation.id)
+
+        state.reconcileDetailHostIfPossible(migrationBlocked: true)
+        #expect(state.inspectorPresentation?.id == inspectorPresentation.id)
+
+        state.reconcileDetailHostIfPossible(migrationBlocked: false)
+
+        let sheetPresentation = try #require(state.detailSheetPresentation)
+        #expect(sheetPresentation.id != inspectorPresentation.id)
+        #expect(sheetPresentation.detailPresentationID == canonicalPresentation.id)
+        #expect(!state.hasPendingDetailHostMigration)
+    }
+
+    @Test @MainActor func sheetAndInspectorMigrationsPreserveCanonicalDetailRoute() throws {
         let state = LibraryEntryInteractionState()
-        let first = AnimeEntry.template(id: 42)
-        let second = AnimeEntry.template(id: 43)
-        state.openDetails(for: first)
-        let firstPresentation = try #require(state.detailPresentation)
+        let entry = AnimeEntry.template(id: 42)
+        state.openDetails(for: entry)
+        let canonicalPresentation = try #require(state.detailPresentation)
+        let firstSheet = try #require(state.detailSheetPresentation)
 
-        state.openDetails(for: second)
-        let secondPresentation = try #require(state.detailPresentation)
-        state.detailPresentationDidDismiss(firstPresentation)
-        state.dismissDetails(ifPresentationID: firstPresentation.id)
+        state.requestDetailHost(
+            .inspector,
+            source: .displayMode,
+            migrationBlocked: false
+        )
+        let inspector = try #require(state.inspectorPresentation)
+        state.requestDetailHost(
+            .sheet,
+            source: .displayMode,
+            migrationBlocked: false
+        )
+        let secondSheet = try #require(state.detailSheetPresentation)
 
-        #expect(firstPresentation.id != secondPresentation.id)
-        #expect(state.detailPresentation?.id == secondPresentation.id)
-        #expect(state.presentedDetailEntryID == second.syncIdentity)
+        #expect(firstSheet.id != inspector.id)
+        #expect(inspector.id != secondSheet.id)
+        #expect(firstSheet.id != secondSheet.id)
+        #expect(firstSheet.detailPresentationID == canonicalPresentation.id)
+        #expect(inspector.detailPresentationID == canonicalPresentation.id)
+        #expect(secondSheet.detailPresentationID == canonicalPresentation.id)
+        #expect(state.detailPresentation?.id == canonicalPresentation.id)
+        #expect(state.presentedDetailEntryID == entry.syncIdentity)
+        #expect(state.focusedEntryID == entry.syncIdentity)
+    }
+
+    @Test @MainActor func staleHostDismissalAndEditCallbacksCannotAffectMigratedHost() throws {
+        let state = LibraryEntryInteractionState()
+        let entry = AnimeEntry.template(id: 42)
+        state.setEditingEntry(entry)
+        let canonicalPresentation = try #require(state.detailPresentation)
+        let sheetPresentation = try #require(state.detailSheetPresentation)
+        let editRequest = try #require(state.detailEditRequest)
+
+        state.requestDetailHost(
+            .inspector,
+            source: .displayMode,
+            migrationBlocked: false
+        )
+        let inspectorPresentation = try #require(state.inspectorPresentation)
+        let migratedEditRequest = try #require(state.detailEditRequest)
+
+        state.detailHostDidDismiss(sheetPresentation)
+        state.consumeDetailEditRequest(
+            editRequest.id,
+            fromHostPresentationID: sheetPresentation.id
+        )
+
+        #expect(state.detailPresentation?.id == canonicalPresentation.id)
+        #expect(state.inspectorPresentation?.id == inspectorPresentation.id)
+        #expect(migratedEditRequest.id == editRequest.id)
+        #expect(state.detailEditRequest?.hostPresentationID == inspectorPresentation.id)
+
+        state.consumeDetailEditRequest(
+            editRequest.id,
+            fromHostPresentationID: inspectorPresentation.id
+        )
+
+        #expect(state.detailEditRequest == nil)
+        #expect(state.presentedDetailEntryID == entry.syncIdentity)
+    }
+
+    @Test @MainActor func currentHostDismissalClearsCanonicalDetailAndPreservesFocus() throws {
+        let state = LibraryEntryInteractionState(initialDetailHost: .inspector)
+        let entry = AnimeEntry.template(id: 42)
+        state.openDetails(for: entry)
+        let inspectorPresentation = try #require(state.inspectorPresentation)
+
+        state.detailHostDidDismiss(inspectorPresentation)
+
+        #expect(state.focusedEntryID == entry.syncIdentity)
+        #expect(state.presentedDetailEntryID == nil)
+        #expect(state.detailPresentation == nil)
+        #expect(state.detailHostPresentation == nil)
+    }
+
+    @Test @MainActor func interactiveHostSuppressionPreservesAndRepresentsCanonicalDetail() throws {
+        let state = LibraryEntryInteractionState(initialDetailHost: .inspector)
+        let entry = AnimeEntry.template(id: 42)
+        state.openDetails(for: entry)
+        let canonicalPresentation = try #require(state.detailPresentation)
+        let firstInspector = try #require(state.inspectorPresentation)
+
+        state.interactiveResizeDidChange(true, migrationBlocked: false)
+        state.detailHostDidDismiss(firstInspector)
+
+        #expect(state.detailPresentation?.id == canonicalPresentation.id)
+        #expect(state.presentedDetailEntryID == entry.syncIdentity)
+        #expect(state.inspectorPresentation == nil)
+        #expect(state.detailHostPresentation?.isHostPresented == false)
+        #expect(state.hasPendingDetailHostMigration)
+
+        state.interactiveResizeDidChange(false, migrationBlocked: false)
+
+        let representedInspector = try #require(state.inspectorPresentation)
+        #expect(representedInspector.id != firstInspector.id)
+        #expect(representedInspector.detailPresentationID == canonicalPresentation.id)
+        #expect(state.detailPresentation?.id == canonicalPresentation.id)
+        #expect(state.presentedDetailEntryID == entry.syncIdentity)
+        #expect(!state.hasPendingDetailHostMigration)
     }
 
     @Test @MainActor func staleWorkflowDismissalCannotCloseAReopenedWorkflow() throws {
@@ -272,13 +497,14 @@ struct LibraryEntryInteractionStateTests {
 
     @Test @MainActor func switchingDetailEntriesKeepsPresentationWhileSessionCatchesUp() {
         let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
-        let state = LibraryEntryInteractionState()
+        let state = LibraryEntryInteractionState(initialDetailHost: .inspector)
         let sessionStore = EntryDetailSessionStore()
         let first = AnimeEntry.template(id: 42)
         let second = AnimeEntry.template(id: 43)
         let entries = [first.syncIdentity: first, second.syncIdentity: second]
 
         state.openDetails(for: first)
+        let inspectorPresentation = state.inspectorPresentation
         sessionStore.synchronizePresentedDetail(
             identity: first.syncIdentity,
             repository: repository,
@@ -288,6 +514,7 @@ struct LibraryEntryInteractionStateTests {
         state.openDetails(for: second)
 
         #expect(state.isPresentingDetail)
+        #expect(state.inspectorPresentation?.id == inspectorPresentation?.id)
         #expect(sessionStore.session(for: second.syncIdentity) == nil)
 
         sessionStore.synchronizePresentedDetail(

@@ -23,6 +23,14 @@ struct EntryDetailPresentationState {
     var showSiblingSeasonWarning = false
     var episodeProgressCompletionPrompt: AnimeEntryEpisodeProgressCompletionPrompt?
     var dateUpdateSuggestion: AnimeEntryDateUpdateSuggestion?
+
+    var blocksHostMigration: Bool {
+        activeSheet != nil
+            || showSeasonPicker
+            || showSiblingSeasonWarning
+            || episodeProgressCompletionPrompt != nil
+            || dateUpdateSuggestion != nil
+    }
 }
 
 struct EntryDetailConversionState {
@@ -49,6 +57,10 @@ final class EntryDetailSession {
     var isCharacterExpanded: Bool
     var isStaffExpanded: Bool
     var scrollPosition = ScrollPosition()
+
+    var blocksHostMigration: Bool {
+        presentation.blocksHostMigration || conversion.inProgress
+    }
 
     init(
         entry: AnimeEntry,
@@ -79,12 +91,12 @@ final class EntryDetailSession {
     }
 
     func updatePresentation(
-        from detailPresentationID: UUID?,
-        ifCurrent isCurrentDetailPresentation: ((UUID) -> Bool)?,
+        from hostPresentationID: UUID?,
+        ifCurrent isCurrentHostPresentation: ((UUID) -> Bool)?,
         _ update: (inout EntryDetailPresentationState) -> Void
     ) {
-        if let detailPresentationID {
-            guard isCurrentDetailPresentation?(detailPresentationID) == true else { return }
+        if let hostPresentationID {
+            guard isCurrentHostPresentation?(hostPresentationID) == true else { return }
         }
         update(&presentation)
     }

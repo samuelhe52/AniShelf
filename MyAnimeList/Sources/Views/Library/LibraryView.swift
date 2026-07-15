@@ -68,7 +68,24 @@ struct LibraryView: View {
             store.groupStrategy = .none
         }
         .onAppear {
+            updateDetailHost(source: .initial)
             restorePresentedDetailIfNeeded()
+        }
+        .onChange(of: horizontalSizeClass) {
+            updateDetailHost(source: .horizontalSizeClass)
+        }
+        .onChange(of: libraryViewStyle) {
+            updateDetailHost(source: .displayMode)
+        }
+        .onChange(of: detailHostMigrationBlocked) { _, isBlocked in
+            guard !isBlocked else { return }
+            interaction.reconcileDetailHostIfPossible(migrationBlocked: false)
+        }
+        .onInteractiveResizeChange { isResizing in
+            interaction.interactiveResizeDidChange(
+                isResizing,
+                migrationBlocked: detailHostMigrationBlocked
+            )
         }
         .onChange(of: interaction.presentedDetailEntryID) { _, identity in
             persistedPresentedDetailEntryIdentity = identity?.rawID
@@ -81,67 +98,50 @@ struct LibraryView: View {
     }
 
     private var libraryNavigation: some View {
-        let inspectorSession = detailSessionStore.session(
+        let detailSession = detailSessionStore.session(
             for: interaction.presentedDetailEntryID
         )
-        let inspectorPresentation = interaction.detailPresentation
-        let showsInspector = inspectorPresentation != nil
-        let detailActivation: LibraryEntryDetailActivation =
-            horizontalSizeClass == .regular ? .singleTap : .userPreference
+        let inspectorPresentation = interaction.inspectorPresentation
+        let presentedSheetRoute = interaction.activeSheetRoute
+        let detailActivation = currentDetailActivation
+        let activeSheetRoute = Binding<LibraryEntrySheetRoute?>(
+            get: { interaction.activeSheetRoute },
+            set: { route in
+                guard route == nil, let presentedSheetRoute else { return }
+                interaction.sheetRouteDidDismiss(presentedSheetRoute)
+            }
+        )
 
         return
             libraryNavigationStack
             .environment(\.libraryEntryDetailActivation, detailActivation)
             .environment(\.libraryEntryOpenDetailAction, openDetails)
             .environment(\.libraryEntryEditAction, editDetails)
-            .animation(detailAnimation, value: showsInspector)
+            .animation(detailAnimation, value: inspectorPresentation?.id)
             .inspector(
                 isPresented: Binding(
-                    get: { showsInspector },
+                    get: {
+                        guard let inspectorPresentation else { return false }
+                        return interaction.inspectorPresentation?.id == inspectorPresentation.id
+                    },
                     set: { isPresented in
-                        if !isPresented, let inspectorPresentation {
-                            interaction.detailPresentationDidDismiss(inspectorPresentation)
-                        }
+                        guard !isPresented, let inspectorPresentation else { return }
+                        interaction.detailHostDidDismiss(inspectorPresentation)
                     }
                 )
             ) {
-                ZStack {
-                    if let identity = interaction.presentedDetailEntryID,
-                        let inspectorSession,
-                        let inspectorPresentation
-                    {
-                        NavigationStack {
-                            EntryDetailView(
-                                entry: inspectorSession.entry,
-                                repository: store.repository,
-                                presentationStyle: .inspector,
-                                onClose: { _ in
-                                    interaction.dismissDetails(
-                                        ifPresentationID: inspectorPresentation.id
-                                    )
-                                },
-                                session: inspectorSession,
-                                editingRequestID: detailEditingRequestID(for: identity),
-                                onEditingRequestHandled: { requestID in
-                                    interaction.consumeDetailEditRequest(requestID)
-                                },
-                                detailPresentationID: inspectorPresentation.id,
-                                isCurrentDetailPresentation: {
-                                    interaction.isCurrentDetailPresentation($0)
-                                }
-                            )
-                            .containerBackground(
-                                Color(.systemBackground),
-                                for: .navigation
-                            )
-                        }
-                        .id(identity.rawID)
-                        .transition(detailReplacementTransition)
-                    }
+                if let inspectorPresentation,
+                    let detailSession
+                {
+                    detailHostContent(
+                        presentation: inspectorPresentation,
+                        session: detailSession
+                    )
+                    .inspectorColumnWidth(min: 400, ideal: 480, max: 520)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .animation(detailAnimation, value: interaction.presentedDetailEntryID)
-                .inspectorColumnWidth(min: 400, ideal: 480, max: 520)
+            }
+            .sheet(item: activeSheetRoute) { route in
+                sheetContent(for: route, detailSession: detailSession)
             }
             .libraryEntryInteractionOverlays(
                 state: interaction,
@@ -172,6 +172,86 @@ struct LibraryView: View {
             .onChange(of: store.hideDroppedByDefault) {
                 refreshSelectionDisplayItemsIfNeeded()
             }
+    }
+
+    @ViewBuilder
+    private func sheetContent(
+        for route: LibraryEntrySheetRoute,
+        detailSession: EntryDetailSession?
+    ) -> some View {
+        switch route {
+        case .detail(let presentation):
+            if let detailSession {
+                detailHostContent(
+                    presentation: presentation,
+                    session: detailSession
+                )
+            }
+        case .workflow(let presentation):
+            workflowContent(for: presentation)
+        }
+    }
+
+    private func detailHostContent(
+        presentation: LibraryEntryDetailHostPresentation,
+        session: EntryDetailSession
+    ) -> some View {
+        NavigationStack {
+            EntryDetailView(
+                entry: session.entry,
+                repository: store.repository,
+                onClose: { _ in
+                    interaction.dismissDetails(
+                        ifHostPresentationID: presentation.id
+                    )
+                },
+                session: session,
+                editingRequestID: detailEditingRequestID(
+                    for: presentation.entryIdentity,
+                    hostPresentationID: presentation.id
+                ),
+                onEditingRequestHandled: { requestID in
+                    interaction.consumeDetailEditRequest(
+                        requestID,
+                        fromHostPresentationID: presentation.id
+                    )
+                },
+                hostPresentationID: presentation.id,
+                isCurrentHostPresentation: {
+                    interaction.isCurrentDetailHostPresentation($0)
+                }
+            )
+        }
+        .id(presentation.entryIdentity.rawID)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .transition(detailReplacementTransition)
+        .animation(detailAnimation, value: interaction.presentedDetailEntryID)
+    }
+
+    @ViewBuilder
+    private func workflowContent(for presentation: LibraryEntryWorkflowPresentation) -> some View {
+        if let entry = store.repository.existingEntry(
+            identity: presentation.workflow.entryIdentity
+        ) {
+            switch presentation.workflow {
+            case .posterSelection:
+                NavigationStack {
+                    PosterSelectionView(
+                        tmdbID: entry.tmdbID,
+                        type: entry.type,
+                        originalPosterLanguageCode: entry.originalLanguageCode
+                            ?? entry.parentSeriesEntry?.originalLanguageCode
+                    ) { url in
+                        if url != entry.posterURL || !entry.usingCustomPoster {
+                            entry.updateCustomPosterURL(url)
+                        }
+                    }
+                    .navigationTitle("Pick a poster")
+                }
+            case .sharing:
+                AnimeSharingSheet(entry: entry)
+            }
+        }
     }
 
     private var libraryNavigationStack: some View {
@@ -635,6 +715,35 @@ struct LibraryView: View {
         libraryViewTransition
     }
 
+    private var detailHostPolicy: LibraryEntryDetailHostPolicy {
+        LibraryEntryDetailHostPolicy(
+            mode: libraryViewStyle.detailMode,
+            horizontalSizeClass: horizontalSizeClass
+        )
+    }
+
+    private var currentDetailActivation: LibraryEntryDetailActivation {
+        guard let committedHost = interaction.detailHostPresentation?.host else {
+            return detailHostPolicy.activation
+        }
+        return committedHost == .inspector ? .singleTap : .userPreference
+    }
+
+    private var detailHostMigrationBlocked: Bool {
+        interaction.workflowPresentation != nil
+            || detailSessionStore.session(
+                for: interaction.presentedDetailEntryID
+            )?.blocksHostMigration == true
+    }
+
+    private func updateDetailHost(source: LibraryEntryDetailHostChangeSource) {
+        interaction.requestDetailHost(
+            detailHostPolicy.host,
+            source: source,
+            migrationBlocked: detailHostMigrationBlocked
+        )
+    }
+
     private func prepareDetailSession(for entry: AnimeEntry) {
         detailSessionStore.synchronizePresentedDetail(
             identity: entry.syncIdentity,
@@ -648,6 +757,7 @@ struct LibraryView: View {
 
     private func openDetails(_ entry: AnimeEntry) {
         prepareDetailSession(for: entry)
+        updateDetailHost(source: .initial)
         withAnimation(detailAnimation) {
             interaction.openDetails(for: entry)
         }
@@ -655,15 +765,19 @@ struct LibraryView: View {
 
     private func editDetails(_ entry: AnimeEntry) {
         prepareDetailSession(for: entry)
+        updateDetailHost(source: .initial)
         withAnimation(detailAnimation) {
             interaction.setEditingEntry(entry)
         }
     }
 
     private func detailEditingRequestID(
-        for identity: LibraryEntrySyncIdentity
+        for identity: LibraryEntrySyncIdentity,
+        hostPresentationID: UUID
     ) -> UUID? {
-        guard interaction.detailEditRequest?.entryIdentity == identity else { return nil }
+        guard interaction.detailEditRequest?.entryIdentity == identity,
+            interaction.detailEditRequest?.hostPresentationID == hostPresentationID
+        else { return nil }
         return interaction.detailEditRequest?.id
     }
 
@@ -867,6 +981,14 @@ struct LibraryView: View {
             case .gallery: "photo.on.rectangle.angled"
             case .list: "list.bullet.rectangle.portrait"
             case .grid: "rectangle.grid.3x2.fill"
+            }
+        }
+
+        var detailMode: LibraryEntryDetailMode {
+            switch self {
+            case .gallery: .gallery
+            case .list: .list
+            case .grid: .grid
             }
         }
 

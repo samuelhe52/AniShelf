@@ -23,12 +23,11 @@ struct EntryDetailView: View {
     @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
     @AppStorage(.episodeProgressTrackingEnabled) private var episodeProgressTrackingEnabled = false
 
-    private let presentationStyle: EntryDetailPresentationStyle
     private let onClose: ((LibraryEntrySyncIdentity) -> Void)?
     private let editingRequestID: UUID?
     private let onEditingRequestHandled: ((UUID) -> Void)?
-    private let detailPresentationID: UUID?
-    private let isCurrentDetailPresentation: ((UUID) -> Bool)?
+    private let hostPresentationID: UUID?
+    private let isCurrentHostPresentation: ((UUID) -> Bool)?
 
     @State private var session: EntryDetailSession
     @State private var conversionTask: Task<Void, Never>?
@@ -42,20 +41,18 @@ struct EntryDetailView: View {
         entry: AnimeEntry,
         repository: LibraryRepository,
         startInEditingMode: Bool = false,
-        presentationStyle: EntryDetailPresentationStyle = .sheet,
         onClose: ((LibraryEntrySyncIdentity) -> Void)? = nil,
         session: EntryDetailSession? = nil,
         editingRequestID: UUID? = nil,
         onEditingRequestHandled: ((UUID) -> Void)? = nil,
-        detailPresentationID: UUID? = nil,
-        isCurrentDetailPresentation: ((UUID) -> Bool)? = nil
+        hostPresentationID: UUID? = nil,
+        isCurrentHostPresentation: ((UUID) -> Bool)? = nil
     ) {
-        self.presentationStyle = presentationStyle
         self.onClose = onClose
         self.editingRequestID = editingRequestID
         self.onEditingRequestHandled = onEditingRequestHandled
-        self.detailPresentationID = detailPresentationID
-        self.isCurrentDetailPresentation = isCurrentDetailPresentation
+        self.hostPresentationID = hostPresentationID
+        self.isCurrentHostPresentation = isCurrentHostPresentation
         self._session = State(
             initialValue: session
                 ?? EntryDetailSession(
@@ -111,7 +108,7 @@ struct EntryDetailView: View {
         .background(pageBackground)
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar { toolbarContent }
-        .presentationDragIndicator(presentationStyle == .sheet ? .visible : .hidden)
+        .presentationDragIndicator(.visible)
         .interactiveDismissDisabled(
             session.entry.userInfoHasChanges(comparedTo: session.originalUserInfo)
         )
@@ -174,11 +171,11 @@ struct EntryDetailView: View {
             presenting: session.presentation.episodeProgressCompletionPrompt
         ) { _ in
             Button(EntryDetailL10n.markAsWatched) {
-                session.presentation.episodeProgressCompletionPrompt = nil
+                updatePresentation { $0.episodeProgressCompletionPrompt = nil }
                 requestWatchStatusChange(.watched)
             }
             Button(EntryDetailL10n.notNow, role: .cancel) {
-                session.presentation.episodeProgressCompletionPrompt = nil
+                updatePresentation { $0.episodeProgressCompletionPrompt = nil }
             }
         } message: { prompt in
             Text(episodeProgressCompletionPromptMessage(for: prompt))
@@ -189,14 +186,14 @@ struct EntryDetailView: View {
             presenting: session.presentation.dateUpdateSuggestion
         ) { suggestion in
             Button(EntryDetailL10n.dateSuggestionActionTitle(for: suggestion)) {
-                session.presentation.dateUpdateSuggestion = nil
+                updatePresentation { $0.dateUpdateSuggestion = nil }
                 withAnimation(.default) {
                     session.entry.applyDateUpdateSuggestion(suggestion)
                 }
                 schedulePendingWatchedReviewOpportunity()
             }
             Button(EntryDetailL10n.later, role: .cancel) {
-                session.presentation.dateUpdateSuggestion = nil
+                updatePresentation { $0.dateUpdateSuggestion = nil }
                 schedulePendingWatchedReviewOpportunity()
             }
         } message: { suggestion in
@@ -214,12 +211,7 @@ struct EntryDetailView: View {
     // MARK: - Hero
 
     private var pageBackground: Color {
-        switch presentationStyle {
-        case .sheet:
-            Color(.systemGroupedBackground)
-        case .inspector:
-            Color(.systemBackground)
-        }
+        Color(.systemGroupedBackground)
     }
 
     @discardableResult
@@ -250,12 +242,7 @@ struct EntryDetailView: View {
     }
 
     private func heroHeight(for availableWidth: CGFloat) -> CGFloat {
-        switch presentationStyle {
-        case .sheet:
-            420
-        case .inspector:
-            min(max(availableWidth * 0.88, 340), 420)
-        }
+        min(max(availableWidth * 0.88, 340), 420)
     }
 
     private func stretchyHeroSection(heroHeight: CGFloat) -> some View {
@@ -295,7 +282,7 @@ struct EntryDetailView: View {
                     startPoint: .top,
                     endPoint: .bottom
                 )
-                .frame(height: min(120, height * 0.3))
+                .frame(height: 120)
             }
 
             VStack(spacing: 0) {
@@ -393,9 +380,9 @@ struct EntryDetailView: View {
             dropActionTitle: dropActionTitle,
             dropActionSystemImage: dropActionSystemImage,
             dropActionIsDestructive: session.entry.watchStatus != .dropped,
-            onShare: { session.presentation.activeSheet = .sharing },
+            onShare: { updatePresentation { $0.activeSheet = .sharing } },
             onToggleFavorite: toggleFavorite,
-            onChangePoster: { session.presentation.activeSheet = .changePoster },
+            onChangePoster: { updatePresentation { $0.activeSheet = .changePoster } },
             onConvert: {
                 startConversionTask {
                     await handleConvertTap()
@@ -706,8 +693,8 @@ struct EntryDetailView: View {
         _ update: (inout EntryDetailPresentationState) -> Void
     ) {
         session.updatePresentation(
-            from: detailPresentationID,
-            ifCurrent: isCurrentDetailPresentation,
+            from: hostPresentationID,
+            ifCurrent: isCurrentHostPresentation,
             update
         )
     }
@@ -755,9 +742,9 @@ struct EntryDetailView: View {
         withAnimation(.default) {
             _ = session.entry.updateWatchStatus(status)
         }
-        session.presentation.dateUpdateSuggestion = session.entry.dateUpdateSuggestion(
-            forTargetStatus: status
-        )
+        updatePresentation {
+            $0.dateUpdateSuggestion = session.entry.dateUpdateSuggestion(forTargetStatus: status)
+        }
         if creditsCompletion {
             appReview.record(.entryWatched(entryID: session.entry.tmdbID), scheduleRequest: false)
             session.hasPendingWatchedReviewOpportunity = true
@@ -776,7 +763,7 @@ struct EntryDetailView: View {
     private func handleEpisodeProgressCompletionSuggestion(
         _ prompt: AnimeEntryEpisodeProgressCompletionPrompt
     ) {
-        session.presentation.episodeProgressCompletionPrompt = prompt
+        updatePresentation { $0.episodeProgressCompletionPrompt = prompt }
     }
 
     private func episodeProgressCompletionPromptMessage(
@@ -831,7 +818,7 @@ struct EntryDetailView: View {
             await presentSeasonPicker()
         case .season:
             if hasSiblingSeasonEntry {
-                session.presentation.showSiblingSeasonWarning = true
+                updatePresentation { $0.showSiblingSeasonWarning = true }
             } else {
                 await convertSeasonToSeries()
             }
@@ -857,7 +844,7 @@ struct EntryDetailView: View {
                 language: currentLanguage
             )
             guard !Task.isCancelled else { return }
-            session.presentation.showSeasonPicker = true
+            updatePresentation { $0.showSeasonPicker = true }
         } catch {
             guard !Task.isCancelled, !Self.isCancellation(error) else { return }
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
@@ -926,11 +913,6 @@ struct EntryDetailView: View {
     private static func isCancellation(_ error: Error) -> Bool {
         error is CancellationError || (error as? URLError)?.code == .cancelled
     }
-}
-
-enum EntryDetailPresentationStyle: Sendable {
-    case sheet
-    case inspector
 }
 
 fileprivate struct EntryDetailPreviewHost: View {

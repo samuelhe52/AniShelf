@@ -33,9 +33,45 @@ enum LibraryEntryWorkflow: Identifiable, Equatable, Sendable {
     }
 }
 
+enum LibraryEntryDetailMode: Equatable, Sendable {
+    case gallery
+    case list
+    case grid
+}
+
+enum LibraryEntryDetailHost: Equatable, Sendable {
+    case sheet
+    case inspector
+}
+
+enum LibraryEntryDetailHostChangeSource: Equatable, Sendable {
+    case initial
+    case horizontalSizeClass
+    case displayMode
+}
+
+struct LibraryEntryDetailHostPolicy: Equatable, Sendable {
+    let host: LibraryEntryDetailHost
+    let activation: LibraryEntryDetailActivation
+
+    init(
+        mode: LibraryEntryDetailMode,
+        horizontalSizeClass: UserInterfaceSizeClass?
+    ) {
+        if mode != .gallery, horizontalSizeClass == .regular {
+            host = .inspector
+            activation = .singleTap
+        } else {
+            host = .sheet
+            activation = .userPreference
+        }
+    }
+}
+
 struct LibraryEntryDetailEditRequest: Equatable, Sendable {
     let id = UUID()
     let entryIdentity: LibraryEntrySyncIdentity
+    var hostPresentationID: UUID?
 }
 
 struct LibraryEntryPasteRequest: Identifiable, Equatable {
@@ -49,9 +85,29 @@ struct LibraryEntryDetailPresentation: Identifiable, Equatable, Sendable {
     let entryIdentity: LibraryEntrySyncIdentity
 }
 
+struct LibraryEntryDetailHostPresentation: Identifiable, Equatable, Sendable {
+    let id = UUID()
+    var detailPresentationID: UUID
+    var entryIdentity: LibraryEntrySyncIdentity
+    let host: LibraryEntryDetailHost
+    var isHostPresented = true
+}
+
 struct LibraryEntryWorkflowPresentation: Identifiable, Equatable, Sendable {
     let id = UUID()
     let workflow: LibraryEntryWorkflow
+}
+
+enum LibraryEntrySheetRoute: Identifiable, Equatable, Sendable {
+    case detail(LibraryEntryDetailHostPresentation)
+    case workflow(LibraryEntryWorkflowPresentation)
+
+    var id: UUID {
+        switch self {
+        case .detail(let presentation): presentation.id
+        case .workflow(let presentation): presentation.id
+        }
+    }
 }
 
 @Observable
@@ -63,8 +119,15 @@ final class LibraryEntryInteractionState {
     private(set) var pendingPasteRequest: LibraryEntryPasteRequest?
     var isMultiSelecting: Bool = false
     var selectedEntryIDs: Set<Int> = []
+    private(set) var desiredDetailHost: LibraryEntryDetailHost
     private(set) var detailPresentation: LibraryEntryDetailPresentation?
+    private(set) var detailHostPresentation: LibraryEntryDetailHostPresentation?
     private(set) var workflowPresentation: LibraryEntryWorkflowPresentation?
+    private(set) var isInteractivelyResizing = false
+
+    init(initialDetailHost: LibraryEntryDetailHost = .sheet) {
+        desiredDetailHost = initialDetailHost
+    }
 
     var presentedDetailEntryID: LibraryEntrySyncIdentity? {
         detailPresentation?.entryIdentity
@@ -72,6 +135,36 @@ final class LibraryEntryInteractionState {
 
     var activeWorkflow: LibraryEntryWorkflow? {
         workflowPresentation?.workflow
+    }
+
+    var detailSheetPresentation: LibraryEntryDetailHostPresentation? {
+        guard detailHostPresentation?.host == .sheet,
+            detailHostPresentation?.isHostPresented == true
+        else { return nil }
+        return detailHostPresentation
+    }
+
+    var inspectorPresentation: LibraryEntryDetailHostPresentation? {
+        guard detailHostPresentation?.host == .inspector,
+            detailHostPresentation?.isHostPresented == true
+        else { return nil }
+        return detailHostPresentation
+    }
+
+    var activeSheetRoute: LibraryEntrySheetRoute? {
+        if let workflowPresentation {
+            return .workflow(workflowPresentation)
+        }
+        if let detailSheetPresentation {
+            return .detail(detailSheetPresentation)
+        }
+        return nil
+    }
+
+    var hasPendingDetailHostMigration: Bool {
+        detailPresentation != nil
+            && (detailHostPresentation?.host != desiredDetailHost
+                || detailHostPresentation?.isHostPresented != true)
     }
 
     var selectedEntryCount: Int {
@@ -99,11 +192,25 @@ final class LibraryEntryInteractionState {
             detailEditRequest = nil
         }
         focus(entry)
-        detailPresentation = LibraryEntryDetailPresentation(entryIdentity: entry.syncIdentity)
+        let presentation = LibraryEntryDetailPresentation(entryIdentity: entry.syncIdentity)
+        detailPresentation = presentation
+
+        if detailHostPresentation?.isHostPresented == true {
+            detailHostPresentation?.detailPresentationID = presentation.id
+            detailHostPresentation?.entryIdentity = entry.syncIdentity
+        } else {
+            detailHostPresentation = LibraryEntryDetailHostPresentation(
+                detailPresentationID: presentation.id,
+                entryIdentity: entry.syncIdentity,
+                host: desiredDetailHost
+            )
+        }
+        retargetDetailEditRequest()
     }
 
     func dismissDetails() {
         detailPresentation = nil
+        detailHostPresentation = nil
         detailEditRequest = nil
     }
 
@@ -112,9 +219,54 @@ final class LibraryEntryInteractionState {
         dismissDetails()
     }
 
-    func detailPresentationDidDismiss(_ presentation: LibraryEntryDetailPresentation) {
-        guard detailPresentation?.id == presentation.id else { return }
+    func dismissDetails(ifHostPresentationID hostPresentationID: UUID) {
+        guard detailHostPresentation?.id == hostPresentationID else { return }
         dismissDetails()
+    }
+
+    func requestDetailHost(
+        _ host: LibraryEntryDetailHost,
+        source: LibraryEntryDetailHostChangeSource,
+        migrationBlocked: Bool
+    ) {
+        desiredDetailHost = host
+        guard !migrationBlocked else { return }
+        guard source != .horizontalSizeClass || !isInteractivelyResizing else { return }
+        reconcileDetailHostPresentation()
+    }
+
+    func interactiveResizeDidChange(
+        _ isResizing: Bool,
+        migrationBlocked: Bool
+    ) {
+        isInteractivelyResizing = isResizing
+        if !isResizing {
+            reconcileDetailHostIfPossible(migrationBlocked: migrationBlocked)
+        }
+    }
+
+    func reconcileDetailHostIfPossible(migrationBlocked: Bool) {
+        guard !isInteractivelyResizing, !migrationBlocked else { return }
+        reconcileDetailHostPresentation()
+    }
+
+    func detailHostDidDismiss(_ presentation: LibraryEntryDetailHostPresentation) {
+        guard detailHostPresentation?.id == presentation.id else { return }
+        if isInteractivelyResizing {
+            detailHostPresentation?.isHostPresented = false
+        } else {
+            dismissDetails()
+        }
+    }
+
+    func sheetRouteDidDismiss(_ route: LibraryEntrySheetRoute) {
+        switch route {
+        case .detail(let presentation):
+            guard workflowPresentation == nil else { return }
+            detailHostDidDismiss(presentation)
+        case .workflow(let presentation):
+            workflowPresentationDidDismiss(presentation)
+        }
     }
 
     func presentWorkflow(_ workflow: LibraryEntryWorkflow) {
@@ -129,6 +281,36 @@ final class LibraryEntryInteractionState {
 
     func isCurrentDetailPresentation(_ presentationID: UUID) -> Bool {
         detailPresentation?.id == presentationID
+    }
+
+    func isCurrentDetailHostPresentation(_ presentationID: UUID) -> Bool {
+        detailHostPresentation?.id == presentationID
+    }
+
+    private func reconcileDetailHostPresentation() {
+        guard let detailPresentation else {
+            detailHostPresentation = nil
+            return
+        }
+
+        if detailHostPresentation?.detailPresentationID == detailPresentation.id,
+            detailHostPresentation?.host == desiredDetailHost,
+            detailHostPresentation?.isHostPresented == true
+        {
+            return
+        }
+
+        detailHostPresentation = LibraryEntryDetailHostPresentation(
+            detailPresentationID: detailPresentation.id,
+            entryIdentity: detailPresentation.entryIdentity,
+            host: desiredDetailHost
+        )
+        retargetDetailEditRequest()
+    }
+
+    private func retargetDetailEditRequest() {
+        guard detailEditRequest?.entryIdentity == detailPresentation?.entryIdentity else { return }
+        detailEditRequest?.hostPresentationID = detailHostPresentation?.id
     }
 
     func enterMultiSelection() {
@@ -177,14 +359,18 @@ final class LibraryEntryInteractionState {
     }
 
     func setEditingEntry(_ entry: AnimeEntry) {
-        detailEditRequest = LibraryEntryDetailEditRequest(
-            entryIdentity: entry.syncIdentity
-        )
         openDetails(for: entry)
+        detailEditRequest = LibraryEntryDetailEditRequest(
+            entryIdentity: entry.syncIdentity,
+            hostPresentationID: detailHostPresentation?.id
+        )
     }
 
-    func consumeDetailEditRequest(_ requestID: UUID) {
-        guard detailEditRequest?.id == requestID else { return }
+    func consumeDetailEditRequest(_ requestID: UUID, fromHostPresentationID: UUID) {
+        guard detailEditRequest?.id == requestID,
+            detailEditRequest?.hostPresentationID == fromHostPresentationID,
+            detailHostPresentation?.id == fromHostPresentationID
+        else { return }
         detailEditRequest = nil
     }
 
@@ -359,15 +545,7 @@ extension View {
         deleteEntry: @escaping (AnimeEntry) -> Void,
         resolveEntry: @escaping (LibraryEntrySyncIdentity) -> AnimeEntry?
     ) -> some View {
-        let presentedWorkflow = state.workflowPresentation
         let presentedPasteRequest = state.pendingPasteRequest
-        let activeWorkflow = Binding<LibraryEntryWorkflowPresentation?>(
-            get: { state.workflowPresentation },
-            set: { destination in
-                guard destination == nil, let presentedWorkflow else { return }
-                state.workflowPresentationDidDismiss(presentedWorkflow)
-            }
-        )
 
         return
             self
@@ -416,32 +594,6 @@ extension View {
                 Button("Cancel", role: .cancel) {}
             } message: { _ in
                 Text("This anime already has edits. Pasting will overwrite current info.")
-            }
-            .sheet(
-                item: activeWorkflow
-            ) { presentation in
-                if let entry = resolveEntry(presentation.workflow.entryIdentity) {
-                    switch presentation.workflow {
-                    case .posterSelection:
-                        NavigationStack {
-                            PosterSelectionView(
-                                tmdbID: entry.tmdbID,
-                                type: entry.type,
-                                originalPosterLanguageCode: entry.originalLanguageCode
-                                    ?? entry.parentSeriesEntry?.originalLanguageCode
-                            ) { url in
-                                if url != entry.posterURL
-                                    || !entry.usingCustomPoster
-                                {
-                                    entry.updateCustomPosterURL(url)
-                                }
-                            }
-                            .navigationTitle("Pick a poster")
-                        }
-                    case .sharing:
-                        AnimeSharingSheet(entry: entry)
-                    }
-                }
             }
     }
 }

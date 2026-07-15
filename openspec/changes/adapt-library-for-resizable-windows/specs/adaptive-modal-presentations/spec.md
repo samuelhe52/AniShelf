@@ -16,15 +16,19 @@ The system SHALL classify content-heavy presentations by task purpose and apply 
 - **THEN** its existing phone sheet behavior, controls, and dismissal semantics are preserved
 
 ### Requirement: Responsive entry detail composition
-Entry-detail content SHALL render within one context-dependent system inspector without duplicating its data-loading or editing behavior. Its hero and readable content region SHALL adapt to the inspector's proposed size.
+Entry-detail content SHALL render within either a genuine system sheet or a system inspector without duplicating its data-loading or editing behavior. Both hosts SHALL use one canonical detail session. The hero and readable content region SHALL adapt to the active host's proposed size.
 
 #### Scenario: Entry detail appears in an inspector
 - **WHEN** entry detail is hosted in the trailing inspector
 - **THEN** all required entry actions and information remain reachable without horizontal clipping, the inspector uses a coherent surface with the library, and its hero proportions respond to the inspector width
 
-#### Scenario: Inspector adapts to a compact sheet
-- **WHEN** the system inspector uses its compact sheet presentation
-- **THEN** the same detail session, navigation state, and unsaved-change protection remain active
+#### Scenario: Entry detail appears in a genuine sheet
+- **WHEN** entry detail is hosted in Gallery or in compact-width List/Grid
+- **THEN** the sheet uses the v1.95 system presentation surface and the same detail session, navigation state, and unsaved-change protection as the inspector host
+
+#### Scenario: Entry detail migrates between hosts
+- **WHEN** the committed mode- and size-class policy changes the active detail host
+- **THEN** the reusable detail content resumes from the same scroll position, editing state, loaded data, and unsaved changes in the incoming host
 
 ### Requirement: Responsive sharing composition
 The sharing workflow SHALL arrange preview and controls side by side when both regions fit and SHALL use the current vertical composition otherwise.
