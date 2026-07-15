@@ -26,9 +26,10 @@ A beautiful, native iOS app for tracking and managing your anime library.
 - **📚 Library Management** - Keep track of all your anime in one place
 - **🔍 Smart Search** - Find anime using The Movie Database (TMDb) with multi-language support
 - **🎨 Beautiful UI** - Native SwiftUI interface, polished and consistent design language
-- **📊 Track Progress** - Monitor your viewing progress and status; Record scores for animes
+- **📊 Track Progress** - Track watch status, scores, and episode-level progress
 - **👤 Library Profile** - Overview your library with a dedicated profile page
 - **💾 Backup & Restore** - Export and import your library data
+- **☁️ iCloud Sync** - Keep your library, settings, and episode progress in sync across your devices
 - **🌍 Multi-language** - Support for anime titles and descriptions in multiple languages
 
 ## 📱 Availability
@@ -41,7 +42,7 @@ Note that new features will first be released on TestFlight before being pushed 
 
 ## 🛠 Tech Stack
 
-- **Swift 6.1+** with strict concurrency
+- **Swift 6.0+** with strict concurrency
 - **SwiftUI** for modern, declarative UI
 - **SwiftData** for data persistence
 - **TMDb API** integration for anime metadata
@@ -49,14 +50,13 @@ Note that new features will first be released on TestFlight before being pushed 
 
 ## 🗺 Plans
 
-- More granular watch progress tracking, such as episode-level progress
 - Watch-data sync with platforms such as TMDb, Bangumi, and AniList; this is a large feature and may take time
 
 ## 📋 Build/Run Requirements
 
 - iOS 26.0+
 - Xcode 26.0+
-- Swift 6.1+
+- Swift 6.0+
 - TMDb API key (free from [The Movie Database](https://www.themoviedb.org/settings/api))
 
 ## 🚀 Getting Started
@@ -95,6 +95,15 @@ make format
 
 # Lint code
 make lint
+
+# Build the app for iOS
+make build
+
+# Run the app on a booted simulator
+make run-sim
+
+# Run the app and DataProvider test suites on a booted simulator
+make test-sim
 
 # Build, install, and launch on a connected iPhone
 make run-device
@@ -137,21 +146,21 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ### Commit Message Guidelines
 
-This project follows conventional commit message format:
+This project follows the Conventional Commits format:
 
-- Use imperative mood ("Add feature" not "Added feature")
-- Capitalize the first letter
-- Keep subject line under 50 characters
-- Add detailed body if needed (wrap at 72 characters)
+- Start with a type such as `feat`, `fix`, `docs`, `test`, `refactor`, or `style`
+- Use an imperative, capitalized, concise subject
+- Do not end the subject with a period
+- Add a short body only when it clarifies the change
 
 Examples:
 
 ```git
-Add Library search functionality to SearchPage
+feat: Add library search
 
-Fix bug in backup & restore function
+fix: Restore library backups correctly
 
-Refactor Library views to reduce duplicate code
+refactor: Simplify library views
 ```
 
 ## 📝 License

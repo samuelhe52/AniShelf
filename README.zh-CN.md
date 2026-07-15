@@ -27,9 +27,11 @@
 - 用户可以添加番剧/动画电影到资料库，记录观看状态
   - 未看、在看、已看、搁置
   - 起止日期
+- 记录每集观看进度
 - 记录感想
 - 获取每集的摘要、声优等信息
 - 查看番剧/动画电影在 TMDb 上的评分
+- 通过 iCloud 在设备之间同步资料库、设置和每集观看进度
 - 精美的 UI 设计、流畅的交互体验
 
 ## 📱 获取方式
@@ -42,7 +44,7 @@ AniShelf 现已上架 iOS App Store，你可以在这里下载：[App Store Link
 
 ## 🛠 技术栈
 
-- **Swift 6.1+**
+- **Swift 6.0+**
 - **SwiftUI**
 - **SwiftData**
 - **TMDb API**
@@ -50,14 +52,13 @@ AniShelf 现已上架 iOS App Store，你可以在这里下载：[App Store Link
 
 ## 🗺 计划
 
-- 更细的观看进度记录，例如精确到集
 - 与 TMDb、Bangumi、AniList 等平台的观看数据同步功能；这个比较复杂，可能会比较晚再做
 
 ## 📋 Build/Run Requirements
 
 - iOS 26.0+
 - Xcode 26.0+
-- Swift 6.1+
+- Swift 6.0+
 - TMDb API key (free from [The Movie Database](https://www.themoviedb.org/settings/api))
 
 ## 🚀 Getting Started
@@ -97,6 +98,15 @@ make format
 # Lint code
 make lint
 
+# 构建 iOS App
+make build
+
+# 在已启动的模拟器上运行 App
+make run-sim
+
+# 在已启动的模拟器上运行 App 和 DataProvider 测试套件
+make test-sim
+
 # Build, install, and launch on a connected iPhone
 make run-device
 
@@ -113,27 +123,46 @@ make run-device-reset-tmdb-api-key
 
 For detailed architecture and development guidelines, see [AGENTS.md](AGENTS.md).
 
+### CLI 与 Agent 访问
+
+AniShelf 的命令行伴侣位于
+[samuelhe52/anishelf-cli](https://github.com/samuelhe52/anishelf-cli)。它提供
+`ani` 命令，用于只读访问用户已授权的 AniShelf CloudKit 资料库（用户需要先在
+App 中启用 iCloud 同步）。
+
+Agent 可参阅 [SKILL.md](https://github.com/samuelhe52/anishelf-cli/blob/main/skills/anishelf-cli/SKILL.md)，了解如何安装和使用 `ani` 命令。
+
+对于普通用户，安装和初始化需要 Python 3.13+ 与 `uv`：
+
+```bash
+uv tool install --python 3.13 git+https://github.com/samuelhe52/anishelf-cli.git@v0.1.0
+ani auth login
+ani config set-tmdb-api-key
+ani lib init
+ani lib list
+```
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ### Commit Message Guidelines
 
-This project follows conventional commit message format:
+本项目遵循 Conventional Commits 提交格式：
 
-- Use imperative mood ("Add feature" not "Added feature")
-- Capitalize the first letter
-- Keep subject line under 50 characters
-- Add detailed body if needed (wrap at 72 characters)
+- 使用 `feat`、`fix`、`docs`、`test`、`refactor` 或 `style` 等类型作为前缀
+- 使用祈使语气、首字母大写且简洁的主题
+- 主题末尾不要使用句号
+- 仅在有助于说明改动时添加简短正文
 
 Examples:
 
 ```git
-Add Library search functionality to SearchPage
+feat: Add library search
 
-Fix bug in backup & restore function
+fix: Restore library backups correctly
 
-Refactor Library views to reduce duplicate code
+refactor: Simplify library views
 ```
 
 ## 📝 License
