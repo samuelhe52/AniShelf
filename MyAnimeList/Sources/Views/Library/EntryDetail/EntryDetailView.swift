@@ -8,13 +8,10 @@
 import DataProvider
 import Foundation
 import LibrarySync
-import SwiftData
 import SwiftUI
 
 struct EntryDetailView: View {
-    @Environment(\.dataHandler) private var dataHandler
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppReviewPromptController.self) private var appReview
     @Environment(\.libraryEntryDetailHost) private var detailHost
@@ -188,8 +185,7 @@ struct EntryDetailView: View {
         .task(id: "\(session.instanceID)-\(currentLanguage.rawValue)") {
             await session.model.load(
                 for: session.entry,
-                language: currentLanguage,
-                dataHandler: dataHandler
+                language: currentLanguage
             )
         }
         .onChange(of: session.instanceID) {
@@ -581,7 +577,7 @@ struct EntryDetailView: View {
     // MARK: - Actions
 
     private func toggleFavorite() {
-        dataHandler?.toggleFavorite(entry: session.entry)
+        session.toggleFavorite()
     }
 
     private func toggleDroppedStatus() {
@@ -786,7 +782,7 @@ struct EntryDetailView: View {
 
     private func saveUserEdits() {
         do {
-            try modelContext.save()
+            try session.save()
             session.originalUserInfo = session.entry.userInfo
             session.originalTrackingUpdatedAt = session.entry.trackingUpdatedAt
         } catch {
@@ -798,7 +794,7 @@ struct EntryDetailView: View {
         session.entry.updateUserInfo(from: session.originalUserInfo)
         session.entry.trackingUpdatedAt = session.originalTrackingUpdatedAt
         do {
-            try modelContext.save()
+            try session.save()
         } catch {
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
@@ -922,11 +918,11 @@ fileprivate struct EntryDetailPreviewHost: View {
     @State private var session: EntryDetailSession
 
     init() {
-        let store = LibraryStore(dataProvider: .forPreview)
+        let dataProvider = DataProvider.forPreview
         _session = State(
             initialValue: EntryDetailSession(
                 entry: .yourName,
-                repository: store.repository
+                repository: LibraryRepository(dataProvider: dataProvider)
             )
         )
     }
@@ -943,7 +939,6 @@ fileprivate struct EntryDetailPreviewHost: View {
                     EntryDetailView(
                         session: session
                     )
-                    .environment(\.dataHandler, DataProvider.forPreview.dataHandler)
                 }
             }
             .onAppear {

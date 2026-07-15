@@ -78,6 +78,10 @@ final class LibraryRepository {
         try dataProvider.dataHandler.modelContext.save()
     }
 
+    func toggleFavorite(_ entry: AnimeEntry) {
+        dataProvider.dataHandler.toggleFavorite(entry: entry)
+    }
+
     func insert(_ entry: AnimeEntry) {
         dataProvider.dataHandler.modelContext.insert(entry)
     }

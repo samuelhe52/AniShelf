@@ -23,7 +23,6 @@ struct LibraryView: View {
     @Environment(LibraryStore.self) private var store
     @State private var interaction = LibraryEntryInteractionState()
     @State private var detailSessionStore = EntryDetailSessionStore()
-    @Environment(\.dataHandler) var dataHandler
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(AppReviewPromptController.self) private var appReview
@@ -766,7 +765,7 @@ struct LibraryView: View {
     }
 
     private func toggleFavorite(_ entry: AnimeEntry) {
-        dataHandler?.toggleFavorite(entry: entry)
+        store.repository.toggleFavorite(entry)
     }
 
     private func synchronizePresentedDetail(_ identity: LibraryEntrySyncIdentity?) {
@@ -1049,5 +1048,4 @@ fileprivate struct LibraryViewTransitionModifier: ViewModifier {
             DataProvider.forPreview.generateEntriesForPreview()
         }
         .environment(store)
-        .environment(\.dataHandler, DataProvider.forPreview.dataHandler)
 }

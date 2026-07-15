@@ -46,6 +46,7 @@ final class EntryDetailSession {
     let entry: AnimeEntry
     let entryIdentity: LibraryEntrySyncIdentity
     let model: EntryDetailViewModel
+    private let repository: LibraryRepository
 
     var presentation = EntryDetailPresentationState()
     var isEditingDetails = false
@@ -69,6 +70,7 @@ final class EntryDetailSession {
     ) {
         self.entry = entry
         self.entryIdentity = entry.syncIdentity
+        self.repository = repository
         self.model = EntryDetailViewModel(repository: repository)
         self.originalUserInfo = entry.userInfo
         self.originalTrackingUpdatedAt = entry.trackingUpdatedAt
@@ -84,6 +86,14 @@ final class EntryDetailSession {
                 forKey: .entryDetailStaffExpandedByDefault,
                 defaultValue: false
             )
+    }
+
+    func save() throws {
+        try repository.save()
+    }
+
+    func toggleFavorite() {
+        repository.toggleFavorite(entry)
     }
 
     func updatePresentation(

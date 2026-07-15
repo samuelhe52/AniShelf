@@ -284,5 +284,4 @@ fileprivate struct LibraryGridItem: View {
         DataProvider.forPreview.generateEntriesForPreview()
     }
     .environment(store)
-    .environment(\.dataHandler, DataProvider.forPreview.dataHandler)
 }

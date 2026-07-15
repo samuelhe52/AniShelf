@@ -76,7 +76,7 @@ struct EntryDetailViewModelTests {
             )
         )
 
-        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+        await viewModel.load(for: entry, language: .english)
 
         #expect(viewModel.seasonCards.map(\.seasonNumber) == [1, 2, 0])
     }
@@ -113,7 +113,7 @@ struct EntryDetailViewModelTests {
             )
         )
 
-        await japaneseViewModel.load(for: japaneseEntry, language: .japanese, dataHandler: nil)
+        await japaneseViewModel.load(for: japaneseEntry, language: .japanese)
 
         #expect(
             japaneseViewModel.staffCards.map(\.secondaryText)
@@ -149,7 +149,7 @@ struct EntryDetailViewModelTests {
             )
         )
 
-        await chineseViewModel.load(for: chineseEntry, language: .chinese, dataHandler: nil)
+        await chineseViewModel.load(for: chineseEntry, language: .chinese)
 
         #expect(
             chineseViewModel.staffCards.map(\.secondaryText)
@@ -237,7 +237,7 @@ struct EntryDetailViewModelTests {
             )
         )
 
-        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+        await viewModel.load(for: entry, language: .english)
 
         #expect(viewModel.staffCards.count == 36)
         #expect(viewModel.staffCards.prefix(9).map(\.id) == [101, 105, 102, 103, 104, 106, 107, 100, 108])
@@ -288,7 +288,7 @@ struct EntryDetailViewModelTests {
             )
         )
 
-        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+        await viewModel.load(for: entry, language: .english)
 
         #expect(viewModel.staffCards.count == 3)
         #expect(Set(viewModel.staffCards.map(\.id)).count == 3)
@@ -338,7 +338,7 @@ struct EntryDetailViewModelTests {
             )
         )
 
-        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+        await viewModel.load(for: entry, language: .english)
 
         #expect(viewModel.staffCards.count == 1)
         #expect(viewModel.staffCards[0].secondaryText == "Sound Director / Music")
@@ -381,7 +381,7 @@ struct EntryDetailViewModelTests {
             )
         )
 
-        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+        await viewModel.load(for: entry, language: .english)
 
         #expect(viewModel.staffCards.count == 26)
         #expect(viewModel.staffCards.prefix(13).allSatisfy { $0.secondaryText == "Director" })
@@ -410,7 +410,7 @@ struct EntryDetailViewModelTests {
             )
         )
 
-        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+        await viewModel.load(for: entry, language: .english)
 
         #expect(viewModel.staffCards.count == 1)
         #expect(viewModel.staffCards[0].id == 20)
@@ -442,7 +442,7 @@ struct EntryDetailViewModelTests {
             )
         )
 
-        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+        await viewModel.load(for: entry, language: .english)
 
         #expect(viewModel.displayTitle == "Cached Detail")
         #expect(viewModel.loadError == nil)
@@ -473,7 +473,7 @@ struct EntryDetailViewModelTests {
             )
         )
 
-        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+        await viewModel.load(for: entry, language: .english)
 
         #expect(viewModel.displayTitle == "Cached Detail")
         #expect(viewModel.loadError != nil)
@@ -491,8 +491,8 @@ struct EntryDetailViewModelTests {
         )
         let entry = AnimeEntry.template(id: 39)
 
-        await viewModel.load(for: entry, language: .english, dataHandler: nil)
-        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+        await viewModel.load(for: entry, language: .english)
+        await viewModel.load(for: entry, language: .english)
 
         #expect(await loader.requestCount == 2)
         #expect(viewModel.loadError != nil)
@@ -559,16 +559,16 @@ struct EntryDetailViewModelTests {
             detailInfoLoader: { entryType, tmdbID, language in
                 try await loader.load(entryType: entryType, tmdbID: tmdbID, language: language)
             },
-            detailPersistenceSaver: { dataHandler in
+            detailPersistenceSaver: {
                 saveAttemptCount += 1
                 if saveAttemptCount == 1 {
                     throw EntryDetailPersistenceError()
                 }
-                try dataHandler?.modelContext.save()
+                try dataProvider.dataHandler.modelContext.save()
             }
         )
 
-        await viewModel.load(for: entry, language: .english, dataHandler: dataProvider.dataHandler)
+        await viewModel.load(for: entry, language: .english)
 
         #expect(await loader.requestCount == 1)
         #expect(saveAttemptCount == 1)
@@ -605,7 +605,7 @@ struct EntryDetailViewModelTests {
         #expect(persistedEntry.detail?.seasons.map(\.title) == ["Persisted Season"])
         #expect(persistedEntry.detail?.orderedEpisodes.map(\.title) == ["Persisted Episode"])
 
-        await viewModel.load(for: entry, language: .english, dataHandler: dataProvider.dataHandler)
+        await viewModel.load(for: entry, language: .english)
 
         #expect(await loader.requestCount == 2)
         #expect(saveAttemptCount == 2)
@@ -631,16 +631,16 @@ struct EntryDetailViewModelTests {
             detailInfoLoader: { entryType, tmdbID, language in
                 try await loader.load(entryType: entryType, tmdbID: tmdbID, language: language)
             },
-            detailPersistenceSaver: { dataHandler in
+            detailPersistenceSaver: {
                 saveAttemptCount += 1
                 if saveAttemptCount == 1 {
                     throw EntryDetailPersistenceError()
                 }
-                try dataHandler?.modelContext.save()
+                try dataProvider.dataHandler.modelContext.save()
             }
         )
 
-        await viewModel.load(for: entry, language: .english, dataHandler: dataProvider.dataHandler)
+        await viewModel.load(for: entry, language: .english)
 
         #expect(await loader.requestCount == 1)
         #expect(viewModel.loadError == "The detail could not be saved.")
@@ -655,7 +655,7 @@ struct EntryDetailViewModelTests {
         )
         #expect(try #require(persistedEntries.first).detail == nil)
 
-        await viewModel.load(for: entry, language: .english, dataHandler: dataProvider.dataHandler)
+        await viewModel.load(for: entry, language: .english)
 
         #expect(await loader.requestCount == 2)
         #expect(saveAttemptCount == 2)
@@ -677,7 +677,7 @@ struct EntryDetailViewModelTests {
         let entry = AnimeEntry.template(id: 40)
 
         let cancelledLoad = Task {
-            await viewModel.load(for: entry, language: .english, dataHandler: nil)
+            await viewModel.load(for: entry, language: .english)
         }
         while await loader.requestCount == 0 {
             await Task.yield()
@@ -689,7 +689,7 @@ struct EntryDetailViewModelTests {
         #expect(!viewModel.isLoading)
         #expect(viewModel.displayTitle != "Cancelled Detail")
 
-        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+        await viewModel.load(for: entry, language: .english)
 
         #expect(await loader.requestCount == 2)
         #expect(viewModel.displayTitle == "Retried Detail")
@@ -709,12 +709,12 @@ struct EntryDetailViewModelTests {
         let entry = AnimeEntry.template(id: 41)
 
         let olderLoad = Task {
-            await viewModel.load(for: entry, language: .japanese, dataHandler: nil)
+            await viewModel.load(for: entry, language: .japanese)
         }
         while await loader.requestCount == 0 {
             await Task.yield()
         }
-        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+        await viewModel.load(for: entry, language: .english)
         await olderLoad.value
 
         #expect(viewModel.displayTitle == "English Detail")
@@ -734,10 +734,10 @@ struct EntryDetailViewModelTests {
         )
         let entry = AnimeEntry.template(id: 42)
 
-        await viewModel.load(for: entry, language: .english, dataHandler: nil)
+        await viewModel.load(for: entry, language: .english)
 
         let cancelledLoad = Task { @MainActor in
-            await viewModel.load(for: entry, language: .japanese, dataHandler: nil)
+            await viewModel.load(for: entry, language: .japanese)
         }
         cancelledLoad.cancel()
         await cancelledLoad.value

@@ -103,7 +103,6 @@ struct MyAnimeListApp: App {
             .environment(whatsNew)
             .environment(supportStore)
             .environment(appReview)
-            .environment(\.dataHandler, DataProvider.default.dataHandler)
             .onAppear {
                 keyStorage.retryInitialLookupIfNeeded()
                 if startupRecovery == nil {

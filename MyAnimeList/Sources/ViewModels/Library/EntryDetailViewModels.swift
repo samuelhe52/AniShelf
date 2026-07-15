@@ -13,7 +13,7 @@ import TMDb
 
 typealias EntryDetailInfoLoader =
     @Sendable (AnimeType, Int, Language) async throws -> AnimeEntryDetailDTO
-typealias EntryDetailPersistenceSaver = @MainActor (DataHandler?) throws -> Void
+typealias EntryDetailPersistenceSaver = @MainActor () throws -> Void
 
 @MainActor
 @Observable
@@ -192,12 +192,10 @@ final class EntryDetailViewModel {
             }
         self.detailPersistenceSaver =
             detailPersistenceSaver
-            ?? { dataHandler in
-                try dataHandler?.modelContext.save()
-            }
+            ?? repository.save
     }
 
-    func load(for entry: AnimeEntry, language: Language, dataHandler: DataHandler?) async {
+    func load(for entry: AnimeEntry, language: Language) async {
         guard !Task.isCancelled else { return }
 
         let requestKey = "\(entry.tmdbID)-\(language.rawValue)"
@@ -243,8 +241,7 @@ final class EntryDetailViewModel {
 
             let detail = try replaceAndPersistDetail(
                 for: entry,
-                with: detailDTO,
-                dataHandler: dataHandler
+                with: detailDTO
             )
             apply(detail: detail, entry: entry, language: language)
             loadedRequestKey = requestKey
@@ -264,14 +261,13 @@ final class EntryDetailViewModel {
 
     private func replaceAndPersistDetail(
         for entry: AnimeEntry,
-        with detailDTO: AnimeEntryDetailDTO,
-        dataHandler: DataHandler?
+        with detailDTO: AnimeEntryDetailDTO
     ) throws -> AnimeEntryDetail {
         let previousDetailSnapshot = entry.detail?.snapshotDTO()
         let detail = entry.replaceDetail(from: detailDTO)
 
         do {
-            try detailPersistenceSaver(dataHandler)
+            try detailPersistenceSaver()
             return detail
         } catch {
             if let previousDetailSnapshot {
