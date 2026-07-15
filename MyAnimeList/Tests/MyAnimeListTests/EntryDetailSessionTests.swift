@@ -257,6 +257,31 @@ struct EntryDetailSessionTests {
         #expect(store.presentedSession == nil)
     }
 
+    @Test @MainActor func replacingResolvedEntryInstanceChangesTheSessionToken() throws {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let originalEntry = AnimeEntry.template(id: 42)
+        let replacementEntry = AnimeEntry.template(id: 42)
+        let store = EntryDetailSessionStore()
+
+        store.synchronizePresentedDetail(
+            identity: originalEntry.syncIdentity,
+            repository: repository,
+            resolveEntry: { $0 == originalEntry.syncIdentity ? originalEntry : nil }
+        )
+        let originalSession = try #require(store.presentedSession)
+
+        store.synchronizePresentedDetail(
+            identity: replacementEntry.syncIdentity,
+            repository: repository,
+            resolveEntry: { $0 == replacementEntry.syncIdentity ? replacementEntry : nil }
+        )
+        let replacementSession = try #require(store.presentedSession)
+
+        #expect(replacementSession !== originalSession)
+        #expect(replacementSession.entryIdentity == originalSession.entryIdentity)
+        #expect(replacementSession.instanceID != originalSession.instanceID)
+    }
+
     @Test @MainActor func unresolvablePresentedEntryClearsSessionAndReportsFailure() {
         let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
         let entry = AnimeEntry.template(id: 42)

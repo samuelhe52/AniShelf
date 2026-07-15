@@ -24,13 +24,13 @@ struct EntryDetailView: View {
     @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
     @AppStorage(.episodeProgressTrackingEnabled) private var episodeProgressTrackingEnabled = false
 
+    private let session: EntryDetailSession
     private let onClose: ((LibraryEntrySyncIdentity) -> Void)?
     private let editingRequestID: UUID?
     private let onEditingRequestHandled: ((UUID) -> Void)?
     private let hostPresentationID: UUID?
     private let isCurrentHostPresentation: ((UUID) -> Bool)?
 
-    @State private var session: EntryDetailSession
     @State private var conversionTask: Task<Void, Never>?
     @State private var conversionTaskID: UUID?
 
@@ -40,29 +40,19 @@ struct EntryDetailView: View {
     private let heroHeight: CGFloat = 420
 
     init(
-        entry: AnimeEntry,
-        repository: LibraryRepository,
-        startInEditingMode: Bool = false,
+        session: EntryDetailSession,
         onClose: ((LibraryEntrySyncIdentity) -> Void)? = nil,
-        session: EntryDetailSession? = nil,
         editingRequestID: UUID? = nil,
         onEditingRequestHandled: ((UUID) -> Void)? = nil,
         hostPresentationID: UUID? = nil,
         isCurrentHostPresentation: ((UUID) -> Bool)? = nil
     ) {
+        self.session = session
         self.onClose = onClose
         self.editingRequestID = editingRequestID
         self.onEditingRequestHandled = onEditingRequestHandled
         self.hostPresentationID = hostPresentationID
         self.isCurrentHostPresentation = isCurrentHostPresentation
-        self._session = State(
-            initialValue: session
-                ?? EntryDetailSession(
-                    entry: entry,
-                    repository: repository,
-                    startsInEditingMode: startInEditingMode
-                )
-        )
     }
 
     var body: some View {
@@ -82,19 +72,12 @@ struct EntryDetailView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
                     .padding(.bottom, 40)
-                    .frame(maxWidth: 760)
+                    .frame(maxWidth: 1_000)
                     .frame(maxWidth: .infinity)
                 }
             }
             .scrollPosition($session.scrollPosition)
             .coordinateSpace(name: scrollCoordinateSpaceName)
-            .task {
-                guard session.startsInEditingMode,
-                    !session.didAutoScrollToEditingSection
-                else { return }
-                session.didAutoScrollToEditingSection = true
-                await revealEditingSection(using: proxy)
-            }
             .task(id: editingRequestID) {
                 let requestID = editingRequestID
                 guard let requestID else { return }
@@ -197,12 +180,18 @@ struct EntryDetailView: View {
         } message: { suggestion in
             Text(EntryDetailL10n.dateSuggestionMessage(for: suggestion))
         }
-        .task(id: "\(session.entry.tmdbID)-\(currentLanguage.rawValue)") {
+        .task(id: "\(session.instanceID)-\(currentLanguage.rawValue)") {
             await session.model.load(
                 for: session.entry,
                 language: currentLanguage,
                 dataHandler: dataHandler
             )
+        }
+        .onChange(of: session.instanceID) {
+            cancelConversionTask()
+        }
+        .onDisappear {
+            cancelConversionTask()
         }
     }
 
@@ -805,7 +794,7 @@ struct EntryDetailView: View {
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
         withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
-            session.isEditingDetails = session.startsInEditingMode
+            session.isEditingDetails = false
         }
     }
 
@@ -900,6 +889,12 @@ struct EntryDetailView: View {
         }
     }
 
+    private func cancelConversionTask() {
+        conversionTask?.cancel()
+        conversionTask = nil
+        conversionTaskID = nil
+    }
+
     private func closePresentation() {
         if let onClose {
             onClose(session.entryIdentity)
@@ -915,7 +910,17 @@ struct EntryDetailView: View {
 
 fileprivate struct EntryDetailPreviewHost: View {
     @State private var showDetail = false
-    @State private var previewStore = LibraryStore(dataProvider: .forPreview)
+    @State private var session: EntryDetailSession
+
+    init() {
+        let store = LibraryStore(dataProvider: .forPreview)
+        _session = State(
+            initialValue: EntryDetailSession(
+                entry: .yourName,
+                repository: store.repository
+            )
+        )
+    }
 
     var body: some View {
         NavigationStack {
@@ -927,8 +932,7 @@ fileprivate struct EntryDetailPreviewHost: View {
             .sheet(isPresented: $showDetail) {
                 NavigationStack {
                     EntryDetailView(
-                        entry: .yourName,
-                        repository: previewStore.repository
+                        session: session
                     )
                     .environment(\.dataHandler, DataProvider.forPreview.dataHandler)
                 }

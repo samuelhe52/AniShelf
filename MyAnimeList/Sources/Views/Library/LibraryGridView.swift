@@ -28,6 +28,7 @@ struct LibraryGridView: View {
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(displayItems) { item in
                         configuredGridItem(for: item)
+                            .geometryGroup()
                     }
                 }
                 .onChange(of: scrolledID) { onChangeOfScrolledID(proxy: proxy) }

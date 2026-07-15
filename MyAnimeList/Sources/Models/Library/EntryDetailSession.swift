@@ -42,17 +42,16 @@ struct EntryDetailConversionState {
 @Observable
 @MainActor
 final class EntryDetailSession {
+    let instanceID = UUID()
     let entry: AnimeEntry
     let entryIdentity: LibraryEntrySyncIdentity
     let model: EntryDetailViewModel
-    let startsInEditingMode: Bool
 
     var presentation = EntryDetailPresentationState()
-    var isEditingDetails: Bool
+    var isEditingDetails = false
     var originalUserInfo: UserEntryInfo
     var originalTrackingUpdatedAt: Date?
     var conversion = EntryDetailConversionState()
-    var didAutoScrollToEditingSection = false
     var hasPendingWatchedReviewOpportunity = false
     var isCharacterExpanded: Bool
     var isStaffExpanded: Bool
@@ -65,15 +64,12 @@ final class EntryDetailSession {
     init(
         entry: AnimeEntry,
         repository: LibraryRepository,
-        startsInEditingMode: Bool = false,
         isCharacterExpanded: Bool? = nil,
         isStaffExpanded: Bool? = nil
     ) {
         self.entry = entry
         self.entryIdentity = entry.syncIdentity
         self.model = EntryDetailViewModel(repository: repository)
-        self.startsInEditingMode = startsInEditingMode
-        self.isEditingDetails = startsInEditingMode
         self.originalUserInfo = entry.userInfo
         self.originalTrackingUpdatedAt = entry.trackingUpdatedAt
         self.isCharacterExpanded =

@@ -117,7 +117,6 @@ struct LibraryView: View {
             .environment(\.libraryEntryDetailActivation, detailActivation)
             .environment(\.libraryEntryOpenDetailAction, openDetails)
             .environment(\.libraryEntryEditAction, editDetails)
-            .animation(detailAnimation, value: inspectorPresentation?.id)
             .inspector(
                 isPresented: Binding(
                     get: {
@@ -198,14 +197,12 @@ struct LibraryView: View {
     ) -> some View {
         NavigationStack {
             EntryDetailView(
-                entry: session.entry,
-                repository: store.repository,
+                session: session,
                 onClose: { _ in
                     interaction.dismissDetails(
                         ifHostPresentationID: presentation.id
                     )
                 },
-                session: session,
                 editingRequestID: detailEditingRequestID(
                     for: presentation.entryIdentity,
                     hostPresentationID: presentation.id
@@ -223,10 +220,7 @@ struct LibraryView: View {
             )
         }
         .environment(\.libraryEntryDetailHost, presentation.host)
-        .id(presentation.entryIdentity.rawID)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .transition(detailReplacementTransition)
-        .animation(detailAnimation, value: interaction.presentedDetailEntryID)
     }
 
     @ViewBuilder
@@ -709,14 +703,6 @@ struct LibraryView: View {
 
     // MARK: - Entry Actions
 
-    private var detailAnimation: Animation? {
-        libraryViewStyleAnimation
-    }
-
-    private var detailReplacementTransition: AnyTransition {
-        libraryViewTransition
-    }
-
     private var detailHostPolicy: LibraryEntryDetailHostPolicy {
         LibraryEntryDetailHostPolicy(
             mode: libraryViewStyle.detailMode,
@@ -760,17 +746,13 @@ struct LibraryView: View {
     private func openDetails(_ entry: AnimeEntry) {
         prepareDetailSession(for: entry)
         updateDetailHost(source: .initial)
-        withAnimation(detailAnimation) {
-            interaction.openDetails(for: entry)
-        }
+        interaction.openDetails(for: entry)
     }
 
     private func editDetails(_ entry: AnimeEntry) {
         prepareDetailSession(for: entry)
         updateDetailHost(source: .initial)
-        withAnimation(detailAnimation) {
-            interaction.setEditingEntry(entry)
-        }
+        interaction.setEditingEntry(entry)
     }
 
     private func detailEditingRequestID(
