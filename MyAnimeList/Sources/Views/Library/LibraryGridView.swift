@@ -68,7 +68,6 @@ struct LibraryGridView: View {
         }
     }
 
-    @ViewBuilder
     private func configuredGridItem(for item: LibraryEntryDisplayItem) -> some View {
         let baseItem = LibraryGridItem(
             snapshot: item.snapshot,
@@ -82,38 +81,8 @@ struct LibraryGridView: View {
             delay: 0.2
         )
 
-        if detailActivation.usesSingleTap(userPreference: openDetailWithSingleTap) {
+        return
             baseItem
-                .contextMenu {
-                    interaction.contextMenu(
-                        for: item.entry,
-                        toggleFavorite: toggleFavorite,
-                        editEntry: editEntry
-                    )
-                    .onAppear { scrolledID = item.id }
-                } preview: {
-                    EntryContextMenuPreview(snapshot: item.snapshot)
-                        .onAppear { scrolledID = item.id }
-                }
-                .onTapGesture {
-                    scrolledID = item.id
-                    if interaction.isMultiSelecting {
-                        toggleSelection(for: item.id)
-                    } else {
-                        openDetails(for: item.entry)
-                    }
-
-                }
-        } else {
-            gridItemWithDoubleTapDetail(baseItem: baseItem, item: item)
-        }
-    }
-
-    private func gridItemWithDoubleTapDetail(
-        baseItem: some View,
-        item: LibraryEntryDisplayItem
-    ) -> some View {
-        baseItem
             .contextMenu {
                 interaction.contextMenu(
                     for: item.entry,
@@ -126,9 +95,20 @@ struct LibraryGridView: View {
                     .onAppear { scrolledID = item.id }
             }
             .modifier(
-                LibraryGridDoubleTapOpenModifier(
+                LibraryGridDetailGestureModifier(
                     isMultiSelecting: interaction.isMultiSelecting,
-                    onSingleTap: {
+                    opensDetailOnSingleTap: detailActivation.usesSingleTap(
+                        userPreference: openDetailWithSingleTap
+                    ),
+                    onPrimaryTap: {
+                        scrolledID = item.id
+                        if interaction.isMultiSelecting {
+                            toggleSelection(for: item.id)
+                        } else {
+                            openDetails(for: item.entry)
+                        }
+                    },
+                    onFocusTap: {
                         scrolledID = item.id
                         interaction.focus(item.entry)
                         if interaction.isMultiSelecting {
@@ -164,24 +144,32 @@ struct LibraryGridView: View {
     }
 }
 
-fileprivate struct LibraryGridDoubleTapOpenModifier: ViewModifier {
+fileprivate struct LibraryGridDetailGestureModifier: ViewModifier {
     let isMultiSelecting: Bool
-    let onSingleTap: () -> Void
+    let opensDetailOnSingleTap: Bool
+    let onPrimaryTap: () -> Void
+    let onFocusTap: () -> Void
     let onDoubleTap: () -> Void
 
     func body(content: Content) -> some View {
-        if isMultiSelecting {
-            content.onTapGesture(perform: onSingleTap)
-        } else {
-            // Recognize focus immediately while reserving detail opening for two taps.
-            content
-                .simultaneousGesture(
-                    TapGesture().onEnded { onSingleTap() }
-                )
-                .simultaneousGesture(
-                    TapGesture(count: 2).onEnded { onDoubleTap() }
-                )
-        }
+        // Keep the card's recognizer tree stable when its detail host changes.
+        // Swapping tap wrappers here recreates card-local image loading state.
+        content
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    if isMultiSelecting || opensDetailOnSingleTap {
+                        onPrimaryTap()
+                    } else {
+                        onFocusTap()
+                    }
+                }
+            )
+            .simultaneousGesture(
+                TapGesture(count: 2).onEnded {
+                    guard !isMultiSelecting, !opensDetailOnSingleTap else { return }
+                    onDoubleTap()
+                }
+            )
     }
 }
 
