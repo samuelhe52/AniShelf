@@ -89,6 +89,18 @@ struct LibraryGalleryView: View {
         .animation(.default, value: store.sortStrategy)
         .animation(.default, value: store.filters)
         .scrollClipDisabled()
+        .overlay(alignment: .trailing) {
+            if interaction.inspectorPresentation != nil {
+                LinearGradient(
+                    colors: [.clear, Color(.systemBackground)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: 36)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+            }
+        }
         .scrollPosition(id: $localScrolledID)
         .scrollTargetBehavior(.viewAligned)
         .onChange(of: localScrolledID, initial: true) { _, entryID in

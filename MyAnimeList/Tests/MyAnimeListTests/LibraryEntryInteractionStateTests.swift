@@ -61,22 +61,8 @@ struct LibraryEntryInteractionStateTests {
         )
     }
 
-    @Test func galleryAlwaysUsesSheetForEveryHorizontalSizeClass() {
-        let sizeClasses: [UserInterfaceSizeClass?] = [.compact, .regular, nil]
-
-        for sizeClass in sizeClasses {
-            let policy = LibraryEntryDetailHostPolicy(
-                mode: .gallery,
-                horizontalSizeClass: sizeClass
-            )
-
-            #expect(policy.host == .sheet)
-            #expect(policy.activation == .userPreference)
-        }
-    }
-
-    @Test func listAndGridUseInspectorOnlyInRegularWidth() {
-        for mode in [LibraryEntryDetailMode.list, .grid] {
+    @Test func allViewStylesUseInspectorOnlyInRegularWidth() {
+        for mode in [LibraryEntryDetailMode.gallery, .list, .grid] {
             let regularPolicy = LibraryEntryDetailHostPolicy(
                 mode: mode,
                 horizontalSizeClass: .regular

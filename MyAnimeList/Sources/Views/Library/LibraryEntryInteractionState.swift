@@ -58,7 +58,7 @@ struct LibraryEntryDetailHostPolicy: Equatable, Sendable {
         mode: LibraryEntryDetailMode,
         horizontalSizeClass: UserInterfaceSizeClass?
     ) {
-        if mode != .gallery, horizontalSizeClass == .regular {
+        if horizontalSizeClass == .regular {
             host = .inspector
             activation = .singleTap
         } else {
