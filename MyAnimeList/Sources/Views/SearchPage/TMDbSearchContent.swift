@@ -23,8 +23,10 @@ struct TMDbSearchContent: View {
             case .loaded:
                 List {
                     languagePicker
+                        .listRowBackground(Color.clear)
                     results
                 }
+                .scrollContentBackground(.hidden)
             case .loading:
                 Spacer()
                 ProgressView()
@@ -71,6 +73,7 @@ struct TMDbSearchContent: View {
                 "No Results",
                 systemImage: "magnifyingglass",
                 description: Text("Try a different search term"))
+                .listRowBackground(Color.clear)
         } else {
             seriesResults
             movieResults
@@ -150,6 +153,7 @@ struct TMDbSearchContent: View {
                     .onTapGesture {
                         if isDuplicate { onDuplicateTapped(series.tmdbID) }
                     }
+                    .listRowBackground(Color.clear)
                 }
             }
         }
@@ -178,6 +182,7 @@ struct TMDbSearchContent: View {
                     .onTapGesture {
                         if isDuplicate { onDuplicateTapped(movie.tmdbID) }
                     }
+                    .listRowBackground(Color.clear)
                 }
             }
         }

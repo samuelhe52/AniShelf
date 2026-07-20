@@ -55,8 +55,10 @@ struct LibrarySearchContent: View {
                             librarySearchService.jumpToEntryInLibrary(result.tmdbID)
                         }
                     )
+                    .listRowBackground(Color.clear)
                 }
             }
+            .scrollContentBackground(.hidden)
         }
     }
 }
