@@ -114,16 +114,24 @@ struct AnimeSharingSheet: View {
             stackedSharingContent
         } else {
             ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: 24) {
-                    sharingPreview
-                        .frame(width: 420)
-                    sharingControls
-                        .frame(width: 320)
-                }
+                horizontalSharingContent
 
                 stackedSharingContent
             }
         }
+    }
+
+    private var horizontalSharingContent: some View {
+        HStack(alignment: .center, spacing: 32) {
+            sharingPreview
+                .frame(width: 420)
+            sharingControls
+                .frame(width: 320)
+        }
+        // Keep the full-size preview and controls together. Without this, the
+        // HStack can be compressed enough to fit a page sheet while making
+        // both panels unnecessarily narrow.
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     private var stackedSharingContent: some View {
