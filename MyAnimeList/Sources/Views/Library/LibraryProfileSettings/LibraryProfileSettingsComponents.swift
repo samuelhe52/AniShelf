@@ -12,6 +12,7 @@ struct LibraryProfileMetricCard: View {
     let value: Int
     let systemImage: String
     let tint: Color
+    var fillsAvailableHeight = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -30,7 +31,11 @@ struct LibraryProfileMetricCard: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(
+            maxWidth: .infinity,
+            maxHeight: fillsAvailableHeight ? .infinity : nil,
+            alignment: .leading
+        )
         .padding(16)
         .libraryProfileMetricPanel(cornerRadius: 24, tint: tint)
     }

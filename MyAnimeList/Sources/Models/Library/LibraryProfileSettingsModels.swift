@@ -8,6 +8,23 @@
 import DataProvider
 import SwiftUI
 
+enum LibraryProfileSettingsLayout: Equatable {
+    case compactScroll
+    case wideGrid
+}
+
+struct LibraryProfileSettingsLayoutPolicy {
+    func layout(
+        horizontalSizeClass: UserInterfaceSizeClass?,
+        dynamicTypeSize: DynamicTypeSize
+    ) -> LibraryProfileSettingsLayout {
+        guard horizontalSizeClass == .regular, !dynamicTypeSize.isAccessibilitySize else {
+            return .compactScroll
+        }
+        return .wideGrid
+    }
+}
+
 struct LibraryProfileStats: Equatable {
     let totalCount: Int
     let watchedCount: Int

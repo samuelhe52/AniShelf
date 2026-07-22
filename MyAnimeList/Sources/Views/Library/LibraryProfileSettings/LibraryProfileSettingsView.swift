@@ -16,6 +16,8 @@ struct LibraryProfileSettingsView: View {
     @Environment(WhatsNewController.self) private var whatsNew
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
@@ -65,19 +67,7 @@ struct LibraryProfileSettingsView: View {
                 LibraryProfileBackdrop(reduceMotion: reduceMotion)
 
                 ScrollView {
-                    VStack(spacing: 16) {
-                        heroCard
-                            .profileReveal(index: 0, appeared: appeared, reduceMotion: reduceMotion)
-                        primaryStatsGrid
-                            .profileReveal(index: 1, appeared: appeared, reduceMotion: reduceMotion)
-                        libraryDetailsCard
-                            .profileReveal(index: 2, appeared: appeared, reduceMotion: reduceMotion)
-                        settingsCard
-                            .profileReveal(index: 3, appeared: appeared, reduceMotion: reduceMotion)
-                    }
-                    .padding(.horizontal, 18)
-                    .padding(.top, 16)
-                    .padding(.bottom, 32)
+                    profileContent
                 }
                 .scrollContentBackground(.hidden)
             }
@@ -197,7 +187,10 @@ struct LibraryProfileSettingsView: View {
     }
 
     private var primaryStatsGrid: some View {
-        LibraryProfilePrimaryStatsGrid(stats: stats)
+        LibraryProfilePrimaryStatsGrid(
+            stats: stats,
+            layout: layout == .wideGrid ? .fillsSummaryHeight : .compact
+        )
     }
 
     private var libraryDetailsCard: some View {
@@ -205,7 +198,40 @@ struct LibraryProfileSettingsView: View {
     }
 
     @ViewBuilder
-    private var settingsCard: some View {
+    private var profileContent: some View {
+        VStack(spacing: profileContentSpacing) {
+            heroCard
+                .profileReveal(index: 0, appeared: appeared, reduceMotion: reduceMotion)
+
+            profileSummary
+
+            settingsCard(layout: settingsCardLayout)
+                .profileReveal(
+                    index: settingsRevealIndex,
+                    appeared: appeared,
+                    reduceMotion: reduceMotion
+                )
+        }
+        .frame(maxWidth: layout == .wideGrid ? 1_180 : nil)
+        .padding(.horizontal, layout == .wideGrid ? 28 : 18)
+        .padding(.top, layout == .wideGrid ? 24 : 16)
+        .padding(.bottom, layout == .wideGrid ? 40 : 32)
+        .frame(maxWidth: layout == .wideGrid ? .infinity : nil)
+    }
+
+    private var profileSummary: some View {
+        summaryLayout {
+            primaryStatsGrid
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .profileReveal(index: 1, appeared: appeared, reduceMotion: reduceMotion)
+            libraryDetailsCard
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .profileReveal(index: 2, appeared: appeared, reduceMotion: reduceMotion)
+        }
+    }
+
+    @ViewBuilder
+    private func settingsCard(layout: LibraryProfileSettingsCard.Layout) -> some View {
         @Bindable var store = store
 
         LibraryProfileSettingsCard(
@@ -223,6 +249,7 @@ struct LibraryProfileSettingsView: View {
             longTermGalleryPosterCachingEnabled: $store.longTermGalleryPosterCachingEnabled,
             useTMDbRelayServer: $useTMDbRelayServer,
             preferredLanguage: $preferredLanguage,
+            layout: layout,
             libraryCloudSyncStatus: store.libraryCloudSyncStatus,
             restoreCompleted: restoreCompleted,
             createBackupItems: createBackupItems,
@@ -250,6 +277,34 @@ struct LibraryProfileSettingsView: View {
         .animation(languagePickerAnimation, value: store.libraryCloudSyncStatus)
         .onChange(of: scoringEnabled, handleScoringEnabledChange)
         .onChange(of: useTMDbRelayServer, handleTMDbRelayServerChange)
+    }
+
+    private var layout: LibraryProfileSettingsLayout {
+        LibraryProfileSettingsLayoutPolicy().layout(
+            horizontalSizeClass: horizontalSizeClass,
+            dynamicTypeSize: dynamicTypeSize
+        )
+    }
+
+    private var summaryLayout: AnyLayout {
+        switch layout {
+        case .compactScroll:
+            AnyLayout(VStackLayout(spacing: 16))
+        case .wideGrid:
+            AnyLayout(HStackLayout(spacing: 20))
+        }
+    }
+
+    private var profileContentSpacing: CGFloat {
+        layout == .wideGrid ? 24 : 16
+    }
+
+    private var settingsCardLayout: LibraryProfileSettingsCard.Layout {
+        layout == .wideGrid ? .workspaceGrid : .compactCard
+    }
+
+    private var settingsRevealIndex: Int {
+        layout == .wideGrid ? 2 : 3
     }
 
     private var followsSystemLanguageBinding: Binding<Bool> {

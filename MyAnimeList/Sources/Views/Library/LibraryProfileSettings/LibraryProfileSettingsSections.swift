@@ -56,34 +56,100 @@ struct LibraryProfileHeroCard: View {
 }
 
 struct LibraryProfilePrimaryStatsGrid: View {
-    let stats: LibraryProfileStats
+    enum Layout {
+        case compact
+        case fillsSummaryHeight
+    }
 
+    let stats: LibraryProfileStats
+    let layout: Layout
+
+    @ViewBuilder
     var body: some View {
+        switch layout {
+        case .compact:
+            compactGrid
+        case .fillsSummaryHeight:
+            expandedGrid
+        }
+    }
+
+    private var compactGrid: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
-            LibraryProfileMetricCard(
-                title: "Watched",
-                value: stats.watchedCount,
-                systemImage: "checkmark.circle.fill",
-                tint: AnimeEntry.WatchStatus.watched.libraryTintColor
-            )
-            LibraryProfileMetricCard(
-                title: "Watching",
-                value: stats.watchingCount,
-                systemImage: "play.circle.fill",
-                tint: AnimeEntry.WatchStatus.watching.libraryTintColor
-            )
-            LibraryProfileMetricCard(
-                title: "Favorites",
-                value: stats.favoriteCount,
-                systemImage: "heart.fill",
-                tint: .pink
-            )
-            LibraryProfileMetricCard(
-                title: "Planned",
-                value: stats.planToWatchCount,
-                systemImage: "bookmark.fill",
-                tint: AnimeEntry.WatchStatus.planToWatch.libraryTintColor
-            )
+            watchedMetric
+            watchingMetric
+            favoriteMetric
+            plannedMetric
+        }
+    }
+
+    private var expandedGrid: some View {
+        VStack(spacing: 12) {
+            metricRow(watchedMetric, watchingMetric)
+            metricRow(favoriteMetric, plannedMetric)
+        }
+        .frame(maxHeight: .infinity)
+    }
+
+    private var watchedMetric: some View {
+        LibraryProfileMetricCard(
+            title: "Watched",
+            value: stats.watchedCount,
+            systemImage: "checkmark.circle.fill",
+            tint: AnimeEntry.WatchStatus.watched.libraryTintColor,
+            fillsAvailableHeight: fillsAvailableHeight
+        )
+    }
+
+    private var watchingMetric: some View {
+        LibraryProfileMetricCard(
+            title: "Watching",
+            value: stats.watchingCount,
+            systemImage: "play.circle.fill",
+            tint: AnimeEntry.WatchStatus.watching.libraryTintColor,
+            fillsAvailableHeight: fillsAvailableHeight
+        )
+    }
+
+    private var favoriteMetric: some View {
+        LibraryProfileMetricCard(
+            title: "Favorites",
+            value: stats.favoriteCount,
+            systemImage: "heart.fill",
+            tint: .pink,
+            fillsAvailableHeight: fillsAvailableHeight
+        )
+    }
+
+    private var plannedMetric: some View {
+        LibraryProfileMetricCard(
+            title: "Planned",
+            value: stats.planToWatchCount,
+            systemImage: "bookmark.fill",
+            tint: AnimeEntry.WatchStatus.planToWatch.libraryTintColor,
+            fillsAvailableHeight: fillsAvailableHeight
+        )
+    }
+
+    private func metricRow<Leading: View, Trailing: View>(
+        _ leading: Leading,
+        _ trailing: Trailing
+    ) -> some View {
+        HStack(spacing: 12) {
+            leading
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+            trailing
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+        .frame(maxHeight: .infinity)
+    }
+
+    private var fillsAvailableHeight: Bool {
+        switch layout {
+        case .compact:
+            false
+        case .fillsSummaryHeight:
+            true
         }
     }
 }
@@ -139,6 +205,11 @@ struct LibraryProfileLibraryDetailsCard: View {
 }
 
 struct LibraryProfileSettingsCard: View {
+    enum Layout {
+        case compactCard
+        case workspaceGrid
+    }
+
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var cloudSyncActionInFlight = false
@@ -160,6 +231,7 @@ struct LibraryProfileSettingsCard: View {
     @Binding var useTMDbRelayServer: Bool
     @Binding var preferredLanguage: Language
 
+    let layout: Layout
     let libraryCloudSyncStatus: LibraryCloudSyncStatus
     let restoreCompleted: Bool
     let createBackupItems: () -> [Any]?
@@ -181,82 +253,145 @@ struct LibraryProfileSettingsCard: View {
     let onDeleteAllAnimes: () -> Void
 
     var body: some View {
-        PopupSectionCard(
-            "Settings",
-            systemImage: "gearshape.2",
-            spacing: 14,
-            panelTint: sectionCardTint
-        ) {
-            VStack(spacing: 14) {
-                LibraryProfileLanguageSettingsSection(
-                    followsSystemLanguage: $followsSystemLanguage,
-                    preferredLanguage: $preferredLanguage
-                )
-                LibraryProfileDefaultSettingsSection(
-                    hideDroppedByDefault: $hideDroppedByDefault,
-                    defaultNewEntryWatchStatus: $defaultNewEntryWatchStatus,
-                    defaultFilters: $defaultFilters,
-                    openDetailWithSingleTap: $openDetailWithSingleTap,
-                    entryDetailCharactersExpandedByDefault: $entryDetailCharactersExpandedByDefault,
-                    entryDetailStaffExpandedByDefault: $entryDetailStaffExpandedByDefault,
-                    scoringEnabled: $scoringEnabled,
-                    episodeProgressTrackingEnabled: $episodeProgressTrackingEnabled,
-                    posterProgressBarOverlayEnabled: $posterProgressBarOverlayEnabled,
-                    autoPrefetchImagesOnAddAndRestore: $autoPrefetchImagesOnAddAndRestore,
-                    longTermGalleryPosterCachingEnabled: $longTermGalleryPosterCachingEnabled
-                )
-                LibraryProfileTMDbConnectionSection(useTMDbRelayServer: $useTMDbRelayServer)
-                LibraryProfileICloudSyncSection(
-                    libraryCloudSyncStatus: libraryCloudSyncStatus,
-                    cloudSyncToggleBinding: cloudSyncToggleBinding,
-                    cloudSyncToggleDisabled: cloudSyncToggleDisabled,
-                    cloudSyncToggleSubtitle: cloudSyncToggleSubtitle,
-                    cloudSyncIsBusy: cloudSyncIsBusy,
-                    cloudSyncStatusTitleColor: cloudSyncStatusTitleColor,
-                    cloudSyncManualRetryDisabled: cloudSyncManualRetryDisabled,
-                    onRetryLibraryCloudSync: retryLibraryCloudSync
-                )
-                LibraryProfileBackupExportSection(
-                    libraryCloudSyncStatus: libraryCloudSyncStatus,
-                    restoreCompleted: restoreCompleted,
-                    createBackupItems: createBackupItems,
-                    onExportLibrary: onExportLibrary,
-                    onRestoreButtonPress: handleRestoreButtonPress
-                )
-                LibraryProfileMaintenanceActionsSection(
-                    onChangeAPIKey: onChangeAPIKey,
-                    onCheckMetadataCacheSize: onCheckMetadataCacheSize,
-                    onRefreshInfos: onRefreshInfos,
-                    onPrefetchImages: onPrefetchImages,
-                    onShowSupport: onShowSupport,
-                    whatsNewVersion: whatsNewVersion,
-                    onShowWhatsNew: onShowWhatsNew,
-                    onShowAbout: onShowAbout,
-                    onDeleteAllAnimes: onDeleteAllAnimes
+        settingsContent
+            .alert("Resolve iCloud Sync Conflict", isPresented: $showCloudSyncConflictAlert) {
+                Button("Use iCloud") {
+                    resolveLibraryCloudSyncConflicts(.preferCloud)
+                }
+                Button("Use This Device") {
+                    resolveLibraryCloudSyncConflicts(.preferLocal)
+                }
+                Button("Cancel", role: .cancel, action: cancelLibraryCloudSyncEnablement)
+            } message: {
+                Text(libraryCloudSyncStatus.conflictSummaryResource)
+            }
+            .alert("Restore Unavailable", isPresented: $showRestoreUnavailableAlert) {
+                Button("OK") {}
+            } message: {
+                Text(
+                    "Turn off iCloud Sync before restoring a backup. You can turn it on again after restore."
                 )
             }
-        }
-        .alert("Resolve iCloud Sync Conflict", isPresented: $showCloudSyncConflictAlert) {
-            Button("Use iCloud") {
-                resolveLibraryCloudSyncConflicts(.preferCloud)
+            .onAppear(perform: updateCloudSyncConflictAlertPresentation)
+            .onChange(of: libraryCloudSyncStatus.bootstrapState) {
+                updateCloudSyncConflictAlertPresentation()
             }
-            Button("Use This Device") {
-                resolveLibraryCloudSyncConflicts(.preferLocal)
+    }
+
+    @ViewBuilder
+    private var settingsContent: some View {
+        switch layout {
+        case .compactCard:
+            PopupSectionCard(
+                "Settings",
+                systemImage: "gearshape.2",
+                spacing: 14,
+                panelTint: sectionCardTint
+            ) {
+                VStack(spacing: 14) {
+                    settingsSections
+                }
             }
-            Button("Cancel", role: .cancel, action: cancelLibraryCloudSyncEnablement)
-        } message: {
-            Text(libraryCloudSyncStatus.conflictSummaryResource)
+        case .workspaceGrid:
+            VStack(alignment: .leading, spacing: 14) {
+                Label("Settings", systemImage: "gearshape.2")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.primary)
+
+                workspaceSettingsColumns
+            }
         }
-        .alert("Restore Unavailable", isPresented: $showRestoreUnavailableAlert) {
-            Button("OK") {}
-        } message: {
-            Text(
-                "Turn off iCloud Sync before restoring a backup. You can turn it on again after restore."
-            )
-        }
-        .onAppear(perform: updateCloudSyncConflictAlertPresentation)
-        .onChange(of: libraryCloudSyncStatus.bootstrapState) {
-            updateCloudSyncConflictAlertPresentation()
+    }
+
+    @ViewBuilder
+    private var settingsSections: some View {
+        languageSettingsSection
+        defaultSettingsSection
+        tmdbConnectionSection
+        iCloudSyncSection
+        backupExportSection
+        maintenanceActionsSection
+    }
+
+    private var languageSettingsSection: some View {
+        LibraryProfileLanguageSettingsSection(
+            followsSystemLanguage: $followsSystemLanguage,
+            preferredLanguage: $preferredLanguage
+        )
+    }
+
+    private var defaultSettingsSection: some View {
+        LibraryProfileDefaultSettingsSection(
+            hideDroppedByDefault: $hideDroppedByDefault,
+            defaultNewEntryWatchStatus: $defaultNewEntryWatchStatus,
+            defaultFilters: $defaultFilters,
+            openDetailWithSingleTap: $openDetailWithSingleTap,
+            entryDetailCharactersExpandedByDefault: $entryDetailCharactersExpandedByDefault,
+            entryDetailStaffExpandedByDefault: $entryDetailStaffExpandedByDefault,
+            scoringEnabled: $scoringEnabled,
+            episodeProgressTrackingEnabled: $episodeProgressTrackingEnabled,
+            posterProgressBarOverlayEnabled: $posterProgressBarOverlayEnabled,
+            autoPrefetchImagesOnAddAndRestore: $autoPrefetchImagesOnAddAndRestore,
+            longTermGalleryPosterCachingEnabled: $longTermGalleryPosterCachingEnabled
+        )
+    }
+
+    private var tmdbConnectionSection: some View {
+        LibraryProfileTMDbConnectionSection(useTMDbRelayServer: $useTMDbRelayServer)
+    }
+
+    private var iCloudSyncSection: some View {
+        LibraryProfileICloudSyncSection(
+            libraryCloudSyncStatus: libraryCloudSyncStatus,
+            cloudSyncToggleBinding: cloudSyncToggleBinding,
+            cloudSyncToggleDisabled: cloudSyncToggleDisabled,
+            cloudSyncToggleSubtitle: cloudSyncToggleSubtitle,
+            cloudSyncIsBusy: cloudSyncIsBusy,
+            cloudSyncStatusTitleColor: cloudSyncStatusTitleColor,
+            cloudSyncManualRetryDisabled: cloudSyncManualRetryDisabled,
+            onRetryLibraryCloudSync: retryLibraryCloudSync
+        )
+    }
+
+    private var backupExportSection: some View {
+        LibraryProfileBackupExportSection(
+            libraryCloudSyncStatus: libraryCloudSyncStatus,
+            restoreCompleted: restoreCompleted,
+            createBackupItems: createBackupItems,
+            onExportLibrary: onExportLibrary,
+            onRestoreButtonPress: handleRestoreButtonPress
+        )
+    }
+
+    private var maintenanceActionsSection: some View {
+        LibraryProfileMaintenanceActionsSection(
+            onChangeAPIKey: onChangeAPIKey,
+            onCheckMetadataCacheSize: onCheckMetadataCacheSize,
+            onRefreshInfos: onRefreshInfos,
+            onPrefetchImages: onPrefetchImages,
+            onShowSupport: onShowSupport,
+            whatsNewVersion: whatsNewVersion,
+            onShowWhatsNew: onShowWhatsNew,
+            onShowAbout: onShowAbout,
+            onDeleteAllAnimes: onDeleteAllAnimes
+        )
+    }
+
+    private var workspaceSettingsColumns: some View {
+        HStack(alignment: .top, spacing: 20) {
+            VStack(spacing: 20) {
+                languageSettingsSection
+                defaultSettingsSection
+                tmdbConnectionSection
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+
+            VStack(spacing: 20) {
+                iCloudSyncSection
+                backupExportSection
+                maintenanceActionsSection
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
     }
 
