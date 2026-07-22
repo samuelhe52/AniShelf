@@ -18,7 +18,7 @@ The implementation must preserve the current on-device iPhone experience exactly
 **Goals:**
 
 - Keep the library as the primary full-canvas surface in all three display modes.
-- Always present Gallery entry detail in a genuine system sheet; in List and Grid, use a genuine sheet in horizontally compact environments and a system inspector in horizontally regular environments.
+- Use a genuine detail sheet in horizontally compact environments and a system inspector in horizontally regular environments across all library modes.
 - Make Gallery more browsable in wide scenes without turning it into Grid or a narrow master column.
 - Adapt content-heavy sheets by task type and available content area.
 - Preserve state and active work through live scene resizing.
@@ -37,17 +37,17 @@ The implementation must preserve the current on-device iPhone experience exactly
 
 ## Decisions
 
-### 1. Use a full-canvas library with mode- and size-class-driven detail hosts
+### 1. Use a full-canvas library with size-class-driven detail hosts
 
-Gallery, List, and Grid continue to own the complete library canvas whenever entry detail is closed. Gallery always opens detail in a genuine SwiftUI sheet, regardless of size class, so presenting detail never narrows or occludes the neighboring shelf posters. List and Grid use a genuine sheet when the library root's horizontal size class is compact and a trailing SwiftUI inspector when it is regular. Both hosts render the same canonical detail presentation and `EntryDetailSession`.
+Gallery, List, and Grid continue to own the complete library canvas whenever entry detail is closed. Every mode uses a genuine sheet when the library root's horizontal size class is compact and a trailing SwiftUI inspector when it is regular. Both hosts render the same canonical detail presentation and `EntryDetailSession`.
 
 A controlled A/B test on the same build replaced the compact inspector host with a plain sheet while leaving `EntryDetailView` and all app-owned styling unchanged. The genuine sheet restored the exact v1.95 Liquid Glass tint and card depth; the inspector's compact adaptation remained flatter and more opaque. Compact visual parity therefore requires the genuine sheet host rather than app-side material approximation.
 
-The detail surface is never an always-visible empty column. Closing it restores the full library canvas. While an inspector is open in List or Grid, focusing another entry updates the inspector. Gallery remains the primary surface rather than becoming a sidebar.
+The detail surface is never an always-visible empty column. Closing it restores the full library canvas. While an inspector is open, focusing another entry updates the inspector. Gallery remains the primary surface rather than becoming a sidebar.
 
-The app reads `horizontalSizeClass` once at the library root instead of measuring window geometry or treating size class as a continuous width sensor. In horizontally regular List and Grid, a primary tap opens or updates the inspector immediately. Gallery and compact List/Grid continue to honor the user's existing single- versus double-tap preference and use the genuine sheet even when a phone-hosted scene becomes geometrically wide.
+The app reads `horizontalSizeClass` once at the library root instead of measuring window geometry or treating size class as a continuous width sensor. In horizontally regular environments, a primary tap opens or updates the inspector immediately in every mode. Compact environments continue to honor the user's existing single- versus double-tap preference and use the genuine sheet even when a phone-hosted scene becomes geometrically wide.
 
-Sheet-versus-inspector is a discrete presentation-semantic decision derived from the active library mode and, for List/Grid, the root horizontal size class. During interactive resize, the app records the desired host and defers committing a host migration until resizing ends. Noninteractive size-class or display-mode changes commit immediately when safe. The host decision does not depend on the width remaining after an inspector opens, avoiding a presentation feedback loop.
+Sheet-versus-inspector is a discrete presentation-semantic decision derived only from the root horizontal size class. During interactive resize, the app records the desired host and defers committing a host migration until resizing ends. Noninteractive size-class changes commit immediately when safe. The host decision does not depend on the width remaining after an inspector opens, avoiding a presentation feedback loop.
 
 This uses inspector semantics rather than master-detail navigation semantics: detail supplements selected library content and is dismissible. A permanent `NavigationSplitView` was rejected because its collapsed navigation behavior would change the current iPhone sheet interaction and because its leading column would constrain all three browsing modes even when detail is closed.
 
@@ -57,7 +57,7 @@ A Gallery-local `LibraryGalleryLayoutPolicy` evaluates Gallery's proposed size a
 
 The policy exposes one semantic result: `galleryArrangement`, which is either single-page or shelf.
 
-Minimum sizes are Gallery design tokens derived from poster geometry and visible chrome, not device-width breakpoints. Gallery detail always uses a sheet; List/Grid detail selection remains an independent root size-class policy.
+Minimum sizes are Gallery design tokens derived from poster geometry and visible chrome, not device-width breakpoints. Detail-host selection remains an independent root size-class policy.
 
 The first implementation will validate and tune these tokens using resizable previews/simulators and the regression matrix rather than embedding device names or idiom checks.
 
@@ -73,7 +73,7 @@ The shelf preserves the difference between modes:
 - Grid: small cards, vertical movement, many entries visible simultaneously.
 - List: rich textual rows, vertical movement, synopsis and status scanning.
 
-The shelf does not gain Gallery multi-selection and does not become a detail master column. Gallery never presents entry detail in an inspector, so opening detail cannot reduce the shelf's proposed width or cut off neighboring posters.
+The shelf does not gain Gallery multi-selection and does not become a detail master column. Entry detail remains an on-demand system presentation rather than a permanent Gallery column.
 
 ### 4. Separate focused selection, detail presentation, and active workflows
 
@@ -107,8 +107,7 @@ Presentation type is selected by task semantics and then adapted to available sp
 
 | Destination | Spacious presentation | Constrained presentation | Internal adaptation |
 | --- | --- | --- | --- |
-| Entry detail/edit in List/Grid | System inspector column | Genuine system sheet | Shared session, adaptive hero, and readable content width |
-| Entry detail/edit in Gallery | Genuine system sheet | Genuine system sheet | Preserve the full-width shelf and neighboring posters |
+| Entry detail/edit | System inspector column | Genuine system sheet | Shared session, adaptive hero, and readable content width |
 | Search/Add Anime | Page-sized sheet | Existing full-width sheet | Preserve current search modes and behavior |
 | Poster selection | Page-sized sheet | Existing sheet | Existing adaptive poster grid |
 | Poster preview | Full-screen cover | Full-screen cover | Preserve media-focused paging |
@@ -136,7 +135,7 @@ At all current on-device iPhone portrait and landscape geometries, the implement
 - Existing genuine detail/edit sheet appearance, Liquid Glass compositing, interaction semantics, and dismissal safeguards.
 - Existing sheet and full-screen workflows for Search, sharing, and poster selection.
 
-This guarantee is enforced with regression scenarios, not `userInterfaceIdiom == .phone`. A resizable iPhone-app scene uses a sheet in Gallery and the root size class's detail host in List/Grid, alongside Gallery's content-fit sizing rules. If the phone-hosted trait environment remains compact at a wide geometry, entry detail intentionally remains a sheet in every mode.
+This guarantee is enforced with regression scenarios, not `userInterfaceIdiom == .phone`. A resizable iPhone-app scene uses the root size class's detail host in every mode, alongside Gallery's content-fit sizing rules. If the phone-hosted trait environment remains compact at a wide geometry, entry detail intentionally remains a sheet.
 
 The existing idiom check in `ShareSheetPresenter` will be replaced with presentation-context anchoring that works in any idiom and scene size.
 
@@ -163,15 +162,13 @@ Screenshots and previews assert layout invariants at representative sizes, while
 - **[Risk] An outgoing host reports dismissal after the incoming host appears.** → Give each transient host presentation a generation identifier and reject stale callbacks without clearing canonical detail state.
 - **[Risk] Gallery shelf becomes visually indistinguishable from Grid.** → Preserve large card scale, horizontal paging, focus alignment, dates, and poster overlays; never use the small vertical grid composition.
 - **[Risk] Centralizing sheets causes subtle iPhone regressions.** → Land state-routing refactors separately from visual adaptations and gate progress on the current-iPhone regression matrix.
-- **[Decision] Gallery detail never uses an inspector.** → Preserve the full shelf width and neighboring posters by presenting Gallery detail in a genuine sheet at every size class.
-- **[Trade-off] Modes do not share one identical wide-window structure.** → Accept the difference because Gallery is a focus mode while List and Grid are scanning modes; shared state and presentation policy maintain consistency.
 
 ## Migration Plan
 
 1. Add regression coverage for the current iPhone library and detail workflows before structural refactoring.
 2. Introduce scene-owned focus, canonical detail presentation, and enum-driven workflow state.
 3. Extract reusable entry-detail content and session state shared by sheet and inspector hosts.
-4. Attach stable genuine-sheet and inspector hosts, always select the sheet for Gallery, select the List/Grid host from the library root horizontal size class, and preserve the canonical session through deferred host migration.
+4. Attach stable genuine-sheet and inspector hosts, select the host from the library root horizontal size class, and preserve the canonical session through deferred host migration.
 5. Add the wide Gallery shelf while leaving the compact Gallery implementation unchanged.
 6. Apply semantic sizing and internal responsive composition to content-heavy modal destinations in small groups.
 7. Replace the share presenter idiom check with scene/presentation-context behavior.

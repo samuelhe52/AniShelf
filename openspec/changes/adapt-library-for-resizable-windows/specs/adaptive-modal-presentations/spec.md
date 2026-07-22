@@ -23,11 +23,11 @@ Entry-detail content SHALL render within either a genuine system sheet or a syst
 - **THEN** all required entry actions and information remain reachable without horizontal clipping, the inspector uses a coherent surface with the library, and its hero proportions respond to the inspector width
 
 #### Scenario: Entry detail appears in a genuine sheet
-- **WHEN** entry detail is hosted in Gallery or in compact-width List/Grid
+- **WHEN** entry detail is hosted in a compact-width library
 - **THEN** the sheet uses the v1.95 system presentation surface and the same detail session, navigation state, and unsaved-change protection as the inspector host
 
 #### Scenario: Entry detail migrates between hosts
-- **WHEN** the committed mode- and size-class policy changes the active detail host
+- **WHEN** the committed size-class policy changes the active detail host
 - **THEN** the reusable detail content resumes from the same scroll position, editing state, loaded data, and unsaved changes in the incoming host
 
 ### Requirement: Responsive sharing composition
