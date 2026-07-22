@@ -7612,6 +7612,54 @@
           }
         }
       }
+    },
+    "This release improves AniShelf on iPad and larger displays." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このリリースでは、iPadと大画面でのAniShelfの体験を改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此版本优化了 AniShelf 在 iPad 和大屏设备上的体验。"
+          }
+        }
+      }
+    },
+    "AniShelf now adapts to resizable iPad windows for a more natural large-screen experience." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可変サイズのiPadウインドウに対応し、大画面でより自然に操作できるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "适配 iPad 可变大小窗口，大屏交互更自然。"
+          }
+        }
+      }
+    },
+    "Added a Dark Mode app icon." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダークモード用のAppアイコンを追加しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加深色模式 App 图标。"
+          }
+        }
+      }
     }
   },
   "version" : "1.2"

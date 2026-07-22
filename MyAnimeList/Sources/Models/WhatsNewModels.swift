@@ -296,6 +296,23 @@ enum WhatsNewRegistry {
                     kind: .openURL(projectURL)
                 )
             ]
+        ),
+        "1.96": .init(
+            version: "1.96",
+            summary: "This release improves AniShelf on iPad and larger displays.",
+            highlights: [
+                "AniShelf now adapts to resizable iPad windows for a more natural large-screen experience.",
+                "Added a Dark Mode app icon."
+            ],
+            primaryAction: nil,
+            secondaryActions: [
+                .init(
+                    id: "project-github",
+                    title: "AniShelf on GitHub",
+                    systemImage: "arrow.up.right.square",
+                    kind: .openURL(projectURL)
+                )
+            ]
         )
     ]
 
