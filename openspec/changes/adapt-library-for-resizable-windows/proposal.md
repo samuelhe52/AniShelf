@@ -10,7 +10,7 @@ AniShelf currently scales its phone-oriented library and modal presentations int
 - Let List continue using additional width for rich rows and let Grid add adaptive columns; neither mode loses space to an empty persistent detail pane.
 - Select Gallery arrangements from Gallery's available content area and minimum viable card geometry, not from device idiom, orientation, or named device families.
 - Preserve the current iPhone library layout, gestures, toolbars, transitions, and sheet behavior at all existing on-device iPhone sizes.
-- Preserve focused entry, scroll position, selection, detail session, and active workflows across live window resizing while entry detail migrates between the sheet and inspector hosts.
+- Preserve focused entry, scroll position, selection, detail session, and root-owned workflows across live window resizing. Root-owned Search, profile/settings, and context-menu workflows take precedence over detail and leave prior inspector detail dormant rather than revealing a compact detail sheet; detail-owned poster selection and sharing dismiss when their parent detail host changes.
 - Classify and adapt content-heavy sheets using semantic presentation sizes and responsive internal layouts, while retaining system alerts, confirmation dialogs, popovers, and full-screen media previews where they already fit their purpose.
 - Add a resizable-window and current-iPhone regression matrix covering all library modes and modal destinations.
 

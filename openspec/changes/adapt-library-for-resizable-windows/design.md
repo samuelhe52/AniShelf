@@ -81,12 +81,13 @@ The current `detailingEntry` state conflates selection with presentation. A scen
 
 - `focusedEntryID`: the entry currently focused by Gallery, List, or Grid.
 - `presentedDetailEntryID`: an explicitly opened detail presentation.
-- `activeWorkflow`: poster selection, sharing, Search/Add, or another explicit modal task.
+- `rootPresentation`: Search/Add, profile/settings, context-menu poster selection or sharing, or another task launched from the library root.
+- `detailNestedPresentation`: poster selection, sharing, or another task launched from the canonical detail surface.
 - Existing multi-selection IDs, scroll state, highlight state, and display mode.
 
 Views resolve identifiers through `LibraryStore` rather than storing heavy views or long-lived presentation models in route values. Entry editing is requested within the canonical detail presentation, while mutually exclusive workflow sheets use enum-driven state.
 
-Presentation state is owned above Gallery's responsive layout branch so changing scene geometry does not reset selection or dismiss work. A canonical detail route and session remain stable while transient host presentations migrate between sheet and inspector. Active editing and modal workflows retain their identity, model state, and unsaved-change protection.
+Presentation state is owned above Gallery's responsive layout branch so changing scene geometry does not reset selection or dismiss work. A canonical detail route and session remain stable while transient host presentations migrate between sheet and inspector. Root-owned presentations have priority over detail. If a root-owned presentation crosses from an inspector environment into compact width, the detail host becomes inspector-only dormant: the canonical detail remains retained, dismissing the root presentation reveals the library home, and the inspector is represented only after inspector capacity returns. An explicit compact open-detail action ends dormancy and presents the selected detail in a sheet.
 
 ### 5. Separate entry-detail content from presentation chrome
 
@@ -94,7 +95,9 @@ Presentation state is owned above Gallery's responsive layout branch so changing
 
 The sheet preserves the v1.95 system presentation surface and Liquid Glass compositing. The inspector uses a coherent system column surface. In either host, hero height is derived from the proposed width and dense statistic regions reduce their column count before their content becomes cramped.
 
-Both host modifiers remain attached at stable positions in the library hierarchy, but only the committed host is presented. Host-generation identifiers ensure a delayed dismissal callback from the outgoing sheet or inspector cannot clear the canonical detail route or the incoming host. Host migration is also deferred while a nested detail workflow cannot be safely rehosted.
+Both host modifiers remain attached at stable positions in the library hierarchy, but only the committed host is presented. Host-generation identifiers ensure a delayed dismissal callback from the outgoing sheet or inspector cannot clear the canonical detail route or the incoming host.
+
+Detail-owned poster selection and sharing remain genuine nested presentations attached to `EntryDetailView`; they are not hoisted into the root workflow sheet. When their parent detail host must change, the nested presentation dismisses first and migration waits for its dismissal callback. The canonical detail route and `EntryDetailSession` then migrate without restoring the nested destination. This intentionally favors a simple, predictable host transition over preserving transient child-modal work.
 
 If the complete episode, character, and staff experience proves unsuitable at the minimum inspector width during the visual spike, the inspector may use a condensed summary followed by an “Open Full Details” action. This is an implementation fallback, not the default contract; the first prototype uses the complete detail content.
 
@@ -155,7 +158,8 @@ Screenshots and previews assert layout invariants at representative sizes, while
 
 - **[Risk] Content-derived thresholds still feel like arbitrary breakpoints.** → Define them as named minimum widths/heights owned by the relevant surfaces, validate them visually across a resize sweep, and avoid device-specific values.
 - **[Risk] A full `EntryDetailView` is too dense for an inspector.** → Adapt hero/content composition first; fall back to a condensed inspector with an explicit full-detail action only if the prototype proves necessary.
-- **[Risk] Host migration resets editing, scroll state, or nested presentation state.** → Keep the canonical detail route and `EntryDetailSession` above both hosts, defer migration until interactive resize and unsafe nested presentation transitions end, and test resizing during active work.
+- **[Risk] Host migration resets editing or scroll state.** → Keep the canonical detail route and `EntryDetailSession` above both hosts. Detail-owned poster/share presentations are an intentional exception and dismiss before migration.
+- **[Risk] Root-owned work unexpectedly reveals old compact detail.** → Retain canonical detail separately from visible host state and use inspector-only dormancy until inspector capacity returns or the user explicitly opens detail.
 - **[Risk] An outgoing host reports dismissal after the incoming host appears.** → Give each transient host presentation a generation identifier and reject stale callbacks without clearing canonical detail state.
 - **[Risk] Gallery shelf becomes visually indistinguishable from Grid.** → Preserve large card scale, horizontal paging, focus alignment, dates, and poster overlays; never use the small vertical grid composition.
 - **[Risk] Centralizing sheets causes subtle iPhone regressions.** → Land state-routing refactors separately from visual adaptations and gate progress on the current-iPhone regression matrix.

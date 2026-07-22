@@ -69,7 +69,7 @@ The system SHALL present entry detail only after an explicit open-detail action.
 - **THEN** the active library mode immediately reclaims the complete library canvas
 
 ### Requirement: Separate focus and presentation state
-The system SHALL distinguish the focused library entry, an explicitly presented detail entry, its transient system host, multi-selection, and an active modal workflow. Presentation routes MUST carry lightweight stable identifiers rather than view instances. The canonical detail route and session MUST remain independent from sheet and inspector host lifecycles.
+The system SHALL distinguish the focused library entry, an explicitly presented detail entry, its transient system host, multi-selection, a root-owned presentation, and a detail-owned nested presentation. Presentation routes MUST carry lightweight stable identifiers rather than view instances. The canonical detail route and session MUST remain independent from sheet and inspector host lifecycles, including while retained detail is inspector-only dormant.
 
 #### Scenario: Gallery focus moves without opening detail
 - **WHEN** the user pages to another Gallery card without invoking the open-detail gesture
@@ -79,8 +79,20 @@ The system SHALL distinguish the focused library entry, an explicitly presented 
 - **WHEN** the user enters List or Grid multi-selection
 - **THEN** focused-entry state does not replace or corrupt the set of selected entry identifiers
 
+#### Scenario: Root workflow crosses into compact width
+- **WHEN** Search, profile/settings, or context-menu poster selection or sharing remains active while its underlying inspector environment becomes compact
+- **THEN** the root workflow remains uninterrupted while detail becomes inspector-only dormant without clearing its canonical route or session
+
+#### Scenario: Dormant detail resumes according to the active host policy
+- **WHEN** the root-owned presentation dismisses after detail became inspector-only dormant
+- **THEN** compact width reveals the library home without a detail sheet, while later inspector capacity restores the same detail session
+
+#### Scenario: User explicitly opens detail while dormant and compact
+- **WHEN** inspector-only dormant detail exists and the user explicitly opens an entry in compact width
+- **THEN** dormancy ends and the explicitly selected entry opens in a genuine detail sheet
+
 ### Requirement: Non-destructive live resizing
-The system SHALL preserve display mode, focused entry, scroll position, multi-selection, presented destination, and active workflow state while the scene resizes. Resizing MUST NOT dismiss or reset unsaved work.
+The system SHALL preserve display mode, focused entry, scroll position, multi-selection, canonical detail state, and root-owned workflow state while the scene resizes. Resizing MUST NOT dismiss or reset unsaved detail work. Detail-owned poster selection and sharing are transient exceptions that dismiss when their parent detail host changes.
 
 #### Scenario: Interactive resize crosses the host boundary
 - **WHEN** the library root horizontal size class changes while the scene is being interactively resized and detail is presented
@@ -99,8 +111,8 @@ The system SHALL preserve display mode, focused entry, scroll position, multi-se
 - **THEN** the callback is rejected without clearing the canonical detail route or dismissing the incoming host
 
 #### Scenario: Nested detail workflow is active during migration
-- **WHEN** a host change is requested while detail owns a nested presentation that cannot be safely rehosted
-- **THEN** the canonical detail and nested workflow state remain intact and host migration waits until the unsafe transition has ended
+- **WHEN** a host change is requested while detail owns poster selection or sharing
+- **THEN** the system dismisses the nested presentation, waits for dismissal to complete, and migrates the canonical detail session without restoring the nested destination
 
 #### Scenario: Editing during resize
 - **WHEN** the scene resizes while entry edits are unsaved

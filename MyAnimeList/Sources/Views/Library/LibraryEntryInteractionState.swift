@@ -124,6 +124,7 @@ final class LibraryEntryInteractionState {
     private(set) var detailHostPresentation: LibraryEntryDetailHostPresentation?
     private(set) var workflowPresentation: LibraryEntryWorkflowPresentation?
     private(set) var isInteractivelyResizing = false
+    private(set) var isDetailDormantUntilInspector = false
 
     init(initialDetailHost: LibraryEntryDetailHost = .sheet) {
         desiredDetailHost = initialDetailHost
@@ -188,6 +189,7 @@ final class LibraryEntryInteractionState {
     }
 
     func openDetails(for entry: AnimeEntry) {
+        isDetailDormantUntilInspector = false
         if detailEditRequest?.entryIdentity != entry.syncIdentity {
             detailEditRequest = nil
         }
@@ -212,6 +214,7 @@ final class LibraryEntryInteractionState {
         detailPresentation = nil
         detailHostPresentation = nil
         detailEditRequest = nil
+        isDetailDormantUntilInspector = false
     }
 
     func dismissDetails(ifPresentationID presentationID: UUID) {
@@ -227,9 +230,26 @@ final class LibraryEntryInteractionState {
     func requestDetailHost(
         _ host: LibraryEntryDetailHost,
         source: LibraryEntryDetailHostChangeSource,
-        migrationBlocked: Bool
+        migrationBlocked: Bool,
+        rootPresentationActive: Bool = false
     ) {
         desiredDetailHost = host
+
+        if rootPresentationActive,
+            host == .sheet,
+            detailPresentation != nil,
+            detailHostPresentation?.host == .inspector
+        {
+            isDetailDormantUntilInspector = true
+            detailHostPresentation?.isHostPresented = false
+            return
+        }
+
+        if isDetailDormantUntilInspector {
+            guard host == .inspector else { return }
+            isDetailDormantUntilInspector = false
+        }
+
         guard !migrationBlocked else { return }
         guard source != .horizontalSizeClass || !isInteractivelyResizing else { return }
         reconcileDetailHostPresentation()
@@ -246,13 +266,19 @@ final class LibraryEntryInteractionState {
     }
 
     func reconcileDetailHostIfPossible(migrationBlocked: Bool) {
-        guard !isInteractivelyResizing, !migrationBlocked else { return }
+        guard !isInteractivelyResizing,
+            !migrationBlocked,
+            !isDetailDormantUntilInspector
+        else { return }
         reconcileDetailHostPresentation()
     }
 
     func detailHostDidDismiss(_ presentation: LibraryEntryDetailHostPresentation) {
         guard detailHostPresentation?.id == presentation.id else { return }
-        if isInteractivelyResizing {
+        if isInteractivelyResizing
+            || isDetailDormantUntilInspector
+            || hasPendingDetailHostMigration
+        {
             detailHostPresentation?.isHostPresented = false
         } else {
             dismissDetails()

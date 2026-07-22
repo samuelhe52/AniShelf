@@ -53,11 +53,15 @@ Poster selection SHALL use available page width for its existing adaptive grid, 
 - **THEN** the preview remains full screen with paging and selection confirmation intact
 
 ### Requirement: Nested workflow containment
-A substep belonging to an active modal workflow SHALL use that workflow's navigation context when practical instead of layering an unrelated full-screen or sheet presentation.
+A substep belonging to an active modal workflow SHALL use that workflow's navigation context when practical instead of layering an unrelated full-screen or sheet presentation. Poster selection and sharing invoked from entry detail SHALL remain genuinely detail-owned presentations and MUST NOT be promoted to root-owned workflows during host migration.
 
 #### Scenario: Change poster from Sharing
 - **WHEN** the user chooses Change Poster inside the sharing workflow
 - **THEN** poster selection remains within the sharing navigation workflow and returns to the same sharing state after selection or cancellation
+
+#### Scenario: Detail-owned workflow crosses a host boundary
+- **WHEN** poster selection or sharing was invoked from entry detail and the detail host changes between inspector and sheet
+- **THEN** the nested destination dismisses before the canonical detail moves to the incoming host
 
 ### Requirement: Preserve contextual system presentations
 Alerts, confirmation dialogs, small anchored tips, episode previews, and full-screen media previews SHALL retain their current system presentation category unless their content purpose changes.
@@ -71,11 +75,15 @@ Alerts, confirmation dialogs, small anchored tips, episode previews, and full-sc
 - **THEN** the system alert or confirmation dialog remains the presentation mechanism
 
 ### Requirement: Stable modal routing
-Mutually exclusive modal destinations SHALL be represented by enum-driven presentation state owned above responsive layout branches. A resize MUST NOT create duplicate or stacked copies of the same workflow.
+Mutually exclusive root modal destinations SHALL be represented by enum-driven presentation state owned above responsive layout branches. Root-owned Search, profile/settings, and context-menu poster selection or sharing SHALL outrank detail host presentation. Detail-owned nested destinations SHALL remain in the canonical detail session. A resize MUST NOT create duplicate or stacked copies of the same workflow.
 
 #### Scenario: Window resizes with a modal open
-- **WHEN** an active content-heavy modal remains presented while the scene changes size
+- **WHEN** an active root-owned content-heavy modal remains presented while the scene changes size
 - **THEN** the same destination and workflow state adapt in place without dismissal or duplicate presentation
+
+#### Scenario: Root presentation dismisses after compacting
+- **WHEN** a root-owned presentation took focus from inspector detail and dismisses in compact width
+- **THEN** it returns to the library home while retaining the prior detail only for future inspector restoration
 
 #### Scenario: Modal is replaced intentionally
 - **WHEN** the user completes or dismisses one modal workflow and explicitly opens another

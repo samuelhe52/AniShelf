@@ -767,17 +767,32 @@ struct LibraryView: View {
     }
 
     private var detailHostMigrationBlocked: Bool {
-        interaction.workflowPresentation != nil
-            || detailSessionStore.session(
-                for: interaction.presentedDetailEntryID
-            )?.blocksHostMigration == true
+        detailSessionStore.session(
+            for: interaction.presentedDetailEntryID
+        )?.blocksHostMigration == true
+    }
+
+    private var isRootPresentationActive: Bool {
+        isSearching
+            || showProfileSettings
+            || interaction.workflowPresentation != nil
     }
 
     private func updateDetailHost(source: LibraryEntryDetailHostChangeSource) {
+        let desiredHost = detailHostPolicy.host
+        if !isRootPresentationActive,
+            let presentation = interaction.detailHostPresentation,
+            presentation.host != desiredHost || !presentation.isHostPresented
+        {
+            detailSessionStore.session(for: interaction.presentedDetailEntryID)?
+                .dismissActiveSheetForHostChange()
+        }
+
         interaction.requestDetailHost(
-            detailHostPolicy.host,
+            desiredHost,
             source: source,
-            migrationBlocked: detailHostMigrationBlocked
+            migrationBlocked: detailHostMigrationBlocked,
+            rootPresentationActive: isRootPresentationActive
         )
     }
 

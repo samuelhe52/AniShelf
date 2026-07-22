@@ -11,6 +11,37 @@ import Testing
 @testable import MyAnimeList
 
 struct EntryDetailSessionTests {
+    @Test @MainActor func detailHostMigratesAfterNestedSheetDismissesWithoutRestoringIt() throws {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let entry = AnimeEntry.template(id: 42)
+        let session = EntryDetailSession(entry: entry, repository: repository)
+        let state = LibraryEntryInteractionState(initialDetailHost: .inspector)
+        state.openDetails(for: entry)
+        let inspector = try #require(state.inspectorPresentation)
+
+        session.presentation.activeSheet = .changePoster
+        session.dismissActiveSheetForHostChange()
+        #expect(session.presentation.activeSheet == nil)
+        #expect(session.blocksHostMigration)
+
+        state.requestDetailHost(
+            .sheet,
+            source: .horizontalSizeClass,
+            migrationBlocked: session.blocksHostMigration
+        )
+
+        #expect(state.inspectorPresentation?.id == inspector.id)
+        #expect(state.hasPendingDetailHostMigration)
+
+        session.activeSheetDidDismiss()
+        state.reconcileDetailHostIfPossible(
+            migrationBlocked: session.blocksHostMigration
+        )
+
+        #expect(state.detailSheetPresentation != nil)
+        #expect(session.presentation.activeSheet == nil)
+    }
+
     @Test @MainActor func samePresentedEntryKeepsSessionAndScrollStateAcrossSynchronization() throws {
         let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
         let entry = AnimeEntry.template(id: 42)

@@ -57,9 +57,12 @@ final class EntryDetailSession {
     var isCharacterExpanded: Bool
     var isStaffExpanded: Bool
     var scrollPosition = ScrollPosition()
+    private(set) var isAwaitingActiveSheetDismissalForHostChange = false
 
     var blocksHostMigration: Bool {
-        presentation.blocksHostMigration || conversion.inProgress
+        presentation.blocksHostMigration
+            || isAwaitingActiveSheetDismissalForHostChange
+            || conversion.inProgress
     }
 
     init(
@@ -105,6 +108,16 @@ final class EntryDetailSession {
             guard isCurrentHostPresentation?(hostPresentationID) == true else { return }
         }
         update(&presentation)
+    }
+
+    func dismissActiveSheetForHostChange() {
+        guard presentation.activeSheet != nil else { return }
+        isAwaitingActiveSheetDismissalForHostChange = true
+        presentation.activeSheet = nil
+    }
+
+    func activeSheetDidDismiss() {
+        isAwaitingActiveSheetDismissalForHostChange = false
     }
 }
 

@@ -338,6 +338,61 @@ struct LibraryEntryInteractionStateTests {
         #expect(!state.hasPendingDetailHostMigration)
     }
 
+    @Test @MainActor func rootPresentationKeepsDetailDormantUntilInspectorReturns() throws {
+        let state = LibraryEntryInteractionState(initialDetailHost: .inspector)
+        let entry = AnimeEntry.template(id: 42)
+        state.openDetails(for: entry)
+        let canonicalPresentation = try #require(state.detailPresentation)
+        let inspectorPresentation = try #require(state.inspectorPresentation)
+
+        state.requestDetailHost(
+            .sheet,
+            source: .horizontalSizeClass,
+            migrationBlocked: false,
+            rootPresentationActive: true
+        )
+        state.detailHostDidDismiss(inspectorPresentation)
+
+        #expect(state.isDetailDormantUntilInspector)
+        #expect(state.detailPresentation?.id == canonicalPresentation.id)
+        #expect(state.inspectorPresentation == nil)
+        #expect(state.detailSheetPresentation == nil)
+
+        state.reconcileDetailHostIfPossible(migrationBlocked: false)
+        #expect(state.detailSheetPresentation == nil)
+
+        state.requestDetailHost(
+            .inspector,
+            source: .horizontalSizeClass,
+            migrationBlocked: false
+        )
+
+        let restoredInspector = try #require(state.inspectorPresentation)
+        #expect(!state.isDetailDormantUntilInspector)
+        #expect(restoredInspector.id != inspectorPresentation.id)
+        #expect(restoredInspector.detailPresentationID == canonicalPresentation.id)
+    }
+
+    @Test @MainActor func explicitCompactOpenSupersedesDormantInspectorDetail() throws {
+        let state = LibraryEntryInteractionState(initialDetailHost: .inspector)
+        let originalEntry = AnimeEntry.template(id: 42)
+        let selectedEntry = AnimeEntry.template(id: 43)
+        state.openDetails(for: originalEntry)
+        state.requestDetailHost(
+            .sheet,
+            source: .horizontalSizeClass,
+            migrationBlocked: false,
+            rootPresentationActive: true
+        )
+
+        state.openDetails(for: selectedEntry)
+
+        #expect(!state.isDetailDormantUntilInspector)
+        #expect(state.presentedDetailEntryID == selectedEntry.syncIdentity)
+        #expect(state.detailSheetPresentation?.entryIdentity == selectedEntry.syncIdentity)
+        #expect(state.inspectorPresentation == nil)
+    }
+
     @Test @MainActor func sheetAndInspectorMigrationsPreserveCanonicalDetailRoute() throws {
         let state = LibraryEntryInteractionState()
         let entry = AnimeEntry.template(id: 42)

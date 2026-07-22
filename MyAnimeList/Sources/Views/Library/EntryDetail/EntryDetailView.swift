@@ -95,7 +95,7 @@ struct EntryDetailView: View {
         .interactiveDismissDisabled(
             session.entry.userInfoHasChanges(comparedTo: session.originalUserInfo)
         )
-        .sheet(item: activeSheetBinding) { activeSheet in
+        .sheet(item: activeSheetBinding, onDismiss: session.activeSheetDidDismiss) { activeSheet in
             switch activeSheet {
             case .changePoster:
                 NavigationStack {
