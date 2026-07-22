@@ -44,12 +44,12 @@
 ## 6. Scene-Aware System Sharing
 
 - [x] 6.1 Replace the `ShareSheetPresenter` device-idiom branch with anchoring derived from the active scene and presentation context
-- [ ] 6.2 Verify system sharing from the library, Sharing workflow, profile export, and startup recovery in both constrained and spacious resizable scenes
+- [x] 6.2 Verify system sharing from the library, Sharing workflow, profile export, and startup recovery in both constrained and spacious resizable scenes
 
 ## 7. Accessibility and Input Validation
 
 - [x] 7.1 Verify library and modal layouts through accessibility Dynamic Type sizes, including automatic fallback from side-by-side to single-surface or stacked composition
-- [ ] 7.2 Verify keyboard navigation, pointer scrolling and dismissal, reduced-motion transitions, and VoiceOver reachability for the Gallery shelf, inspector, and adapted modals
+- [x] 7.2 Verify keyboard navigation, pointer scrolling and dismissal, reduced-motion transitions, and VoiceOver reachability for the Gallery shelf, inspector, and adapted modals
 - [x] 7.3 Add accessibility labels or focus-order fixes required by the new inspector and shelf controls without altering current iPhone control semantics
 
 ## 8. Regression and Resize Matrix
@@ -57,7 +57,7 @@
 - [x] 8.1 Run the targeted app tests for Gallery layout policy, interaction state, detail routing, Gallery behavior, and modal routing
 - [x] 8.2 Visually compare Gallery, List, Grid, detail, editing, Search, sharing, and poster workflows against the current iPhone portrait and landscape baselines
 - [ ] 8.3 Sweep narrow, nearly full, full-screen, very wide, and very short iPad scenes in every library mode with detail closed and open
-- [ ] 8.4 Resize while detail, editing, root-owned sharing/poster selection, Search, and settings content are active and confirm that state is retained and no presentation is duplicated; separately confirm detail-owned sharing/poster selection dismiss before detail-host migration
+- [x] 8.4 Resize while detail, editing, root-owned sharing/poster selection, Search, and settings content are active and confirm that state is retained and no presentation is duplicated; separately confirm detail-owned sharing/poster selection dismiss before detail-host migration
 - [x] 8.5 Run `make format`, the smallest relevant lint/build commands, and `make test-sim`, resolving all regressions before completing the change
 
 ## 9. Size-Class-Aware Genuine Detail Hosts
