@@ -199,10 +199,8 @@ class LibraryStore {
     func refreshLibrary() throws {
         libraryStoreLogger.debug("[\(Date().debugDescription)] Refreshing library...")
         let entries = try repository.visibleLibraryEntries()
-        withAnimation {
-            library = entries
-            libraryRevision &+= 1
-        }
+        library = entries
+        libraryRevision &+= 1
     }
 
     func setupUpdateLibrary() {

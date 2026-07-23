@@ -325,10 +325,11 @@ struct LibraryView: View {
     @ViewBuilder
     private var libraryView: some View {
         let displayItems = selectionDisplayItems ?? store.libraryDisplayItems
+        let layoutIDs = displayItems.map(\.id)
 
         switch libraryViewStyle {
         case .gallery:
-            libraryViewPage(id: .gallery) {
+            libraryViewPage(id: .gallery, layoutIDs: layoutIDs) {
                 LibraryGalleryView(
                     scrolledID: $scrollState.scrolledID
                 )
@@ -336,7 +337,7 @@ struct LibraryView: View {
                 .ignoresSafeArea(.keyboard, edges: .bottom)
             }
         case .list:
-            libraryViewPage(id: .list) {
+            libraryViewPage(id: .list, layoutIDs: layoutIDs) {
                 LibraryListView(
                     displayItems: displayItems,
                     scrolledID: $scrollState.scrolledID,
@@ -345,7 +346,7 @@ struct LibraryView: View {
                 .safeAreaPadding(.bottom, 20)
             }
         case .grid:
-            libraryViewPage(id: .grid) {
+            libraryViewPage(id: .grid, layoutIDs: layoutIDs) {
                 LibraryGridView(
                     displayItems: displayItems,
                     scrolledID: $scrollState.scrolledID,
@@ -1003,10 +1004,12 @@ struct LibraryView: View {
 
     private func libraryViewPage<Content: View>(
         id: LibraryViewStyle,
+        layoutIDs: [Int],
         @ViewBuilder content: () -> Content
     ) -> some View {
         content()
             .id(id)
+            .animation(.default, value: layoutIDs)
             .transition(libraryViewTransition)
     }
 
