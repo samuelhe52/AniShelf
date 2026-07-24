@@ -56,7 +56,7 @@
 
 - [x] 8.1 Run the targeted app tests for Gallery layout policy, interaction state, detail routing, Gallery behavior, and modal routing
 - [x] 8.2 Visually compare Gallery, List, Grid, detail, editing, Search, sharing, and poster workflows against the current iPhone portrait and landscape baselines
-- [ ] 8.3 Sweep narrow, nearly full, full-screen, very wide, and very short iPad scenes in every library mode with detail closed and open
+- [x] 8.3 Sweep narrow, nearly full, full-screen, very wide, and very short iPad scenes in every library mode with detail closed and open
 - [x] 8.4 Resize while detail, editing, root-owned sharing/poster selection, Search, and settings content are active and confirm that state is retained and no presentation is duplicated; separately confirm detail-owned sharing/poster selection dismiss before detail-host migration
 - [x] 8.5 Run `make format`, the smallest relevant lint/build commands, and `make test-sim`, resolving all regressions before completing the change
 
@@ -67,7 +67,7 @@
 - [x] 9.3 Keep sheet and inspector modifiers at stable hierarchy positions, present only the committed host, and defer migration until interactive resizing ends
 - [x] 9.4 Preserve the canonical detail route and `EntryDetailSession` across host migration, use host-generation identifiers to reject stale dismissals, and defer migration while an unsafe nested detail presentation is active
 - [x] 9.5 Add focused tests proving the compact/regular host policy, activation behavior, deferred interactive migration, detail-session continuity, and stale-callback rejection
-- [ ] 9.6 Re-run the same-entry visual comparison and the pending resize matrix with detail, editing, and root-owned workflows active, confirming v1.95 sheet parity and uncropped Gallery side posters; confirm detail-owned poster/share views dismiss cleanly before host migration
+- [x] 9.6 Re-run the same-entry visual comparison and the pending resize matrix with detail, editing, and root-owned workflows active, confirming v1.95 sheet parity and uncropped Gallery side posters; confirm detail-owned poster/share views dismiss cleanly before host migration
 
 ## 10. Root-Presentation Priority and Nested Detail Dismissal
 
