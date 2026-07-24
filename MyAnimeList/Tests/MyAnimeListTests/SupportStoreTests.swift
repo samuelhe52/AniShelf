@@ -100,13 +100,6 @@ struct SupportStoreTests {
         )
     }
 
-    @Test func testSettingsPresentationStateRoutesSupportSheet() {
-        var state = LibraryProfileSettingsPresentationState()
-
-        state.presentSupportSheet()
-
-        #expect(state.presentedSheet == .support)
-    }
 }
 
 

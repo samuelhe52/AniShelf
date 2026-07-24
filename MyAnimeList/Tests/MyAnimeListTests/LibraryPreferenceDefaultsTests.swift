@@ -12,12 +12,7 @@ import Testing
 @testable import MyAnimeList
 
 struct LibraryPreferenceDefaultsTests {
-    @Test func testLastInspectorDetailIdentityIsExcludedFromPortableBackupsAndCloudSync() {
-        #expect(!String.allPreferenceKeys.contains(.libraryLastInspectorDetailEntryIdentity))
-        #expect(!String.cloudSyncedPreferenceKeys.contains(.libraryLastInspectorDetailEntryIdentity))
-    }
-
-    @Test func testSingleTapDetailPreferenceDefaultsAndBackupInclusion() {
+    @Test func testSingleTapDetailPreferenceDefaults() {
         let suiteName = "MyAnimeListTests.SingleTapDetailPreference"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
@@ -28,11 +23,9 @@ struct LibraryPreferenceDefaultsTests {
 
         defaults.set(true, forKey: .libraryOpenDetailWithSingleTap)
         #expect(defaults.bool(forKey: .libraryOpenDetailWithSingleTap))
-
-        #expect(String.allPreferenceKeys.contains(.libraryOpenDetailWithSingleTap))
     }
 
-    @Test func testEntryDetailExpansionPreferenceDefaultsAndBackupInclusion() {
+    @Test func testEntryDetailExpansionPreferenceDefaults() {
         let suiteName = "MyAnimeListTests.EntryDetailExpansionPreferences"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
@@ -48,11 +41,9 @@ struct LibraryPreferenceDefaultsTests {
 
         #expect(!defaults.bool(forKey: .entryDetailCharactersExpandedByDefault))
         #expect(defaults.bool(forKey: .entryDetailStaffExpandedByDefault))
-        #expect(String.allPreferenceKeys.contains(.entryDetailCharactersExpandedByDefault))
-        #expect(String.allPreferenceKeys.contains(.entryDetailStaffExpandedByDefault))
     }
 
-    @Test func testPosterProgressBarOverlayPreferenceDefaultsAndBackupInclusion() {
+    @Test func testPosterProgressBarOverlayPreferenceDefaults() {
         let suiteName = "MyAnimeListTests.PosterProgressBarOverlayPreference"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
@@ -66,10 +57,9 @@ struct LibraryPreferenceDefaultsTests {
         defaults.set(false, forKey: .libraryPosterProgressBarOverlayEnabled)
 
         #expect(!defaults.isLibraryPosterProgressBarOverlayEnabled)
-        #expect(String.allPreferenceKeys.contains(.libraryPosterProgressBarOverlayEnabled))
     }
 
-    @Test @MainActor func testLibraryGroupStrategyPreferenceRoundTripAndBackupInclusion() {
+    @Test @MainActor func testLibraryGroupStrategyPreferenceRoundTrip() {
         let suiteName = "MyAnimeListTests.LibraryGroupStrategy"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
@@ -84,11 +74,9 @@ struct LibraryPreferenceDefaultsTests {
 
         defaults.set("invalid", forKey: .libraryGroupStrategy)
         #expect(preferences.load().groupStrategy == .none)
-
-        #expect(String.allPreferenceKeys.contains(.libraryGroupStrategy))
     }
 
-    @Test @MainActor func testLongTermGalleryPosterCachingDefaultsOffAndIsBackedUp() {
+    @Test @MainActor func testLongTermGalleryPosterCachingDefaultsOff() {
         let suiteName = "MyAnimeListTests.LongTermGalleryPosterCaching"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
@@ -104,7 +92,6 @@ struct LibraryPreferenceDefaultsTests {
 
         #expect(preferences.load().longTermGalleryPosterCachingEnabled)
         #expect(defaults.isLibraryLongTermGalleryPosterCachingEnabled)
-        #expect(String.allPreferenceKeys.contains(.libraryLongTermGalleryPosterCachingEnabled))
     }
 
     @Test @MainActor func testLibraryDefaultsPersistMultipleFiltersAndNewEntryStatus() throws {

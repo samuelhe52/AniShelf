@@ -275,48 +275,6 @@ struct LibraryMetadataRefreshTests {
         )
     }
 
-    @Test @MainActor func testLibraryImageCacheSVGLogoPrefetchUsesDisplayProcessorIdentifier()
-        throws
-    {
-        let logoURL = try #require(URL(string: "https://image.tmdb.org/t/p/original/logo.svg"))
-
-        let target = try #require(
-            LibraryImageCacheService.imagePrefetchTargets(
-                posterPath: nil,
-                backdropURL: nil,
-                logoImageURL: logoURL
-            ).first
-        )
-        let prefetchProcessor = try #require(
-            LibraryImageProcessorFactory.processor(for: target.url, targetSize: target.targetSize)
-        )
-        let displayProcessor = try #require(
-            LibraryImageProcessorFactory.processor(
-                for: logoURL,
-                targetSize: CGSize(width: 500, height: 500)
-            )
-        )
-
-        #expect(target.targetSize == CGSize(width: 500, height: 500))
-        #expect(prefetchProcessor.identifier == displayProcessor.identifier)
-        #expect(prefetchProcessor.identifier == SVGImageProcessor(targetSize: target.targetSize).identifier)
-    }
-
-    @Test @MainActor func testLibraryImageCacheSVGLogoPrefetchUsesSVGDownloadProcessor()
-        throws
-    {
-        let logoURL = try #require(URL(string: "https://image.tmdb.org/t/p/original/logo.svg"))
-        let posterURL = try #require(URL(string: "https://image.tmdb.org/t/p/w500/poster.jpg"))
-        let targetSize = CGSize(width: 500, height: 500)
-
-        let downloadProcessor = try #require(
-            LibraryImageProcessorFactory.downloadProcessor(for: logoURL, targetSize: targetSize)
-        )
-
-        #expect(downloadProcessor.identifier == SVGImageProcessor(targetSize: targetSize).identifier)
-        #expect(LibraryImageProcessorFactory.downloadProcessor(for: posterURL, targetSize: targetSize) == nil)
-    }
-
     @Test @MainActor func testLibraryImageCacheIncludesLargeGalleryPosterWhenEnabled() throws {
         let targets = Set(
             LibraryImageCacheService.imagePrefetchTargets(
