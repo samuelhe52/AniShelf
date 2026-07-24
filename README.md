@@ -1,6 +1,6 @@
 # AniShelf 📺
 
-A beautiful, native iOS app for tracking and managing your anime library.
+A native iOS app for tracking and managing your anime library.
 
 [中文](README.zh-CN.md) · [使用教程](docs/anishelf_overview.md)
 
@@ -21,45 +21,42 @@ A beautiful, native iOS app for tracking and managing your anime library.
   </table>
 </div>
 
+## 📱 Availability
+
+AniShelf is currently available on the [App Store](https://apps.apple.com/us/app/anishelf/id6759359144).
+
+New features will be released on TestFlight before being pushed to the App Store. You can join the [TestFlight Beta](https://testflight.apple.com/join/ns3sR38X) to get early access to new features and provide feedback.
+
+> You need a TMDb API key to use the app, which can be obtained for free from [The Movie Database](https://www.themoviedb.org/settings/api).
+
 ## ✨ Features
 
 - **📚 Library Management** - Keep track of all your anime in one place
 - **🔍 Smart Search** - Find anime using The Movie Database (TMDb) with multi-language support
 - **🎨 Beautiful UI** - Native SwiftUI interface, polished and consistent design language
 - **📊 Track Progress** - Track watch status, scores, and episode-level progress
-- **👤 Library Profile** - Overview your library with a dedicated profile page
 - **💾 Backup & Restore** - Export and import your library data
-- **☁️ iCloud Sync** - Keep your library, settings, and episode progress in sync across your devices
-- **🌍 Multi-language** - Support for anime titles and descriptions in multiple languages
+- **☁️ iCloud Sync** - Keep your library and preferences in sync across your devices
+- **🌍 Multi-language** - Support for anime metadata in English, Chinese, and Japanese.
 
-## 📱 Availability
+## CLI & Agentic Access
 
-AniShelf is currently available on the iOS App Store. You can download it here: [App Store Link](https://apps.apple.com/us/app/anishelf/id6759359144). The app is available in all countries except for China Mainland.
+AniShelf also has a companion CLI: [anishelf-cli](https://github.com/samuelhe52/anishelf-cli). It provides the `ani` command for read-only access to your AniShelf library. Turn on iCloud Sync in AniShelf first.
 
-Note that new features will first be released on TestFlight before being pushed to the App Store. You can join the TestFlight beta here: [AniShelf TestFlight](https://testflight.apple.com/join/ns3sR38X).
+If you are an agent, follow [SKILL.md](https://github.com/samuelhe52/anishelf-cli/blob/main/skills/anishelf-cli/SKILL.md) for installation and usage details.
 
-> You still need a TMDb API key to use the app, which can be obtained for free from [The Movie Database](https://www.themoviedb.org/settings/api).
+For manual installation and setup, follow the [anishelf-cli README](https://github.com/samuelhe52/anishelf-cli#readme).
 
-## 🛠 Tech Stack
+## 🔧 Development
 
-- **Swift 6.0+** with strict concurrency
-- **SwiftUI** for modern, declarative UI
-- **SwiftData** for data persistence
-- **TMDb API** integration for anime metadata
-- **Kingfisher** for efficient image loading and caching
+### 📋 Build/Run Requirements
 
-## 🗺 Plans
-
-- Watch-data sync with platforms such as TMDb, Bangumi, and AniList; this is a large feature and may take time
-
-## 📋 Build/Run Requirements
-
-- iOS 26.0+
+- iOS/iPadOS 26.0+
 - Xcode 26.0+
 - Swift 6.0+
 - TMDb API key (free from [The Movie Database](https://www.themoviedb.org/settings/api))
 
-## 🚀 Getting Started
+### 🚀 Getting Started
 
 1. **Clone the repository**
 
@@ -79,66 +76,16 @@ Note that new features will first be released on TestFlight before being pushed 
    - Press `⌘R` to build and run
    - On first launch, you'll be prompted to enter your TMDb API key
 
-## 🔧 Development
-
-### Build Commands
+### Common Commands
 
 ```bash
-# Clean build artifacts
-make clean
-
-# Refresh Swift package dependencies
-make refresh-packages
-
-# Format code
-make format
-
-# Lint code
-make lint
-
-# Build the app for iOS
 make build
-
-# Run the app on a booted simulator
-make run-sim
-
-# Run the app and DataProvider test suites on a booted simulator
-make test-sim
-
-# Build, install, and launch on a connected iPhone
-make run-device
-
-# Reset the TMDb API key before launching on a connected iPhone
-make run-device-reset-tmdb-api-key
+make run-sim # Build and run on a booted simulator
+make test-sim # Run the app and DataProvider test suites on a booted simulator
+make lint
 ```
 
-### Project Structure
-
-> **Note:** The app was renamed from **MyAnimeList** to **AniShelf**. Only the display name and the top-level repository folder were changed; internal directory and file names still use `MyAnimeList` for simplicity and backward compatibility.
-
-- `MyAnimeList/` - Main iOS application
-- `DataProvider/` - SwiftData persistence layer (Swift Package)
-
-For detailed architecture and development guidelines, see [AGENTS.md](AGENTS.md).
-
-### CLI & Agentic Access
-
-AniShelf's command-line companion lives in
-[samuelhe52/anishelf-cli](https://github.com/samuelhe52/anishelf-cli). It
-provides the `ani` command for read-only access to a user-authorized AniShelf
-CloudKit library (requires the user to enable iCloud Sync in the app).
-
-For agents, go to [SKILL.md](https://github.com/samuelhe52/anishelf-cli/blob/main/skills/anishelf-cli/SKILL.md) for details on how to install and use the `ani` command.
-
-For humans, installation/bootstrap requires Python 3.13+ and `uv`:
-
-```bash
-uv tool install --python 3.13 git+https://github.com/samuelhe52/anishelf-cli.git@v0.1.0
-ani auth login
-ani config set-tmdb-api-key
-ani lib init
-ani lib list
-```
+> **Note:** The app was renamed from **MyAnimeList** to **AniShelf**. The app display name changed, but internal directories and the Xcode project still use `MyAnimeList` for backward compatibility.
 
 ## 🤝 Contributing
 
@@ -174,4 +121,4 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ---
 
-**Built with ❤️ using Swift and SwiftUI**
+**Made with ❤️ using Swift and SwiftUI**
