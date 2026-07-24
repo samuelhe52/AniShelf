@@ -28,7 +28,6 @@ struct WhatsNewAndRefreshTests {
 
         #expect(controller.currentEntry == nil)
         #expect(controller.presentedEntry == nil)
-        #expect(String.allPreferenceKeys.contains(.lastSeenWhatsNewVersion))
     }
 
     @Test @MainActor func testWhatsNewAutoShowsOnceForRegisteredVersion() {

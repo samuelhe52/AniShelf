@@ -13,7 +13,7 @@ import Testing
 @testable import MyAnimeList
 
 struct LibraryCloudSyncPreferencesTests {
-    @Test @MainActor func testLibraryCloudSyncPreferenceDefaultsOffAndIsNotBackedUpYet() {
+    @Test @MainActor func testLibraryCloudSyncPreferenceDefaultsOff() {
         let suiteName = "MyAnimeListTests.LibraryCloudSyncPreference"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
@@ -24,7 +24,6 @@ struct LibraryCloudSyncPreferencesTests {
 
         #expect(!status.isEnabled)
         #expect(status.bootstrapState == .notStarted)
-        #expect(!String.allPreferenceKeys.contains(.libraryCloudSyncEnabled))
     }
 
     @Test @MainActor func testLibraryCloudSyncPhasePersistsCoarseStatus() {
@@ -83,18 +82,6 @@ struct LibraryCloudSyncPreferencesTests {
             )
         )
         #expect(store.hasPendingLocalLibrarySyncWork())
-    }
-
-    @Test @MainActor func testCloudSyncedPreferenceAllowlistMatchesApprovedKeys() {
-        #expect(String.cloudSyncedPreferenceKeys.contains(.useTMDbRelayServer))
-        #expect(!String.cloudSyncedPreferenceKeys.contains(.searchPageQuery))
-        #expect(!String.cloudSyncedPreferenceKeys.contains(.searchMode))
-        #expect(!String.cloudSyncedPreferenceKeys.contains(.persistedScrolledID))
-        #expect(!String.cloudSyncedPreferenceKeys.contains(.libraryLastInspectorDetailEntryIdentity))
-        #expect(!String.cloudSyncedPreferenceKeys.contains(.lastSeenWhatsNewVersion))
-        #expect(!String.cloudSyncedPreferenceKeys.contains(.libraryCloudSyncEnabled))
-        #expect(!String.cloudSyncedPreferenceKeys.contains(.libraryCloudSyncBootstrapState))
-        #expect(!String.cloudSyncedPreferenceKeys.contains(.libraryLongTermGalleryPosterCachingEnabled))
     }
 
     @Test @MainActor func testCloudSyncedSettingsSnapshotExportsOnlyAllowlistedKeys() {

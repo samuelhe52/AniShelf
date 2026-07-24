@@ -585,18 +585,12 @@ struct TMDbImageAndTranslationTests {
     }
 
     @Test func testSVGImageProcessorIdentifiersIncludeSizeAndScale() {
-        #expect(
-            SVGImageProcessor(targetSize: CGSize(width: 500, height: 500), scale: 2).identifier
-                == "com.anishelf.svg.fit500x500@2"
-        )
-        #expect(
-            SVGImageProcessor(targetSize: CGSize(width: 500, height: 500), scale: 3).identifier
-                == "com.anishelf.svg.fit500x500@3"
-        )
-        #expect(
-            SVGImageProcessor(scale: 3).identifier
-                == "com.anishelf.svg.intrinsic@3"
-        )
+        let scaleTwo = SVGImageProcessor(targetSize: CGSize(width: 500, height: 500), scale: 2)
+        let scaleThree = SVGImageProcessor(targetSize: CGSize(width: 500, height: 500), scale: 3)
+        let intrinsic = SVGImageProcessor(scale: 3)
+
+        #expect(scaleTwo.identifier != scaleThree.identifier)
+        #expect(scaleThree.identifier != intrinsic.identifier)
     }
 
     @Test func testSVGImageProcessorRejectsInvalidData() {

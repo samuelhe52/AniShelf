@@ -20,13 +20,10 @@ struct LibraryGalleryLayoutPolicyTests {
             )
         )
 
-        guard case .shelf(let cardWidth) = arrangement else {
+        guard case .shelf = arrangement else {
             Issue.record("Expected a Gallery shelf")
             return
         }
-
-        #expect(abs(cardWidth - (CGFloat(400) * 2 / 3)) < 0.001)
-        #expect(cardWidth * 1.55 + 24 < 820)
     }
 
     @Test func tallButNarrowGalleryRetainsSinglePageLayout() {

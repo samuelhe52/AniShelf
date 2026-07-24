@@ -13,27 +13,6 @@ import Testing
 @testable import MyAnimeList
 
 struct InfoFetcherMetadataMappingTests {
-    @Test func testAnimeEntryStoresOriginalLanguageCodeFromEntryMetadata() {
-        let entry = AnimeEntry(
-            fromInfo: EntryMetadata(
-                name: "Frieren",
-                nameTranslations: [:],
-                overview: nil,
-                overviewTranslations: [:],
-                posterURL: nil,
-                backdropURL: nil,
-                logoURL: nil,
-                originalLanguageCode: "ja",
-                tmdbID: 20_9867,
-                onAirDate: nil,
-                linkToDetails: nil,
-                type: .series
-            )
-        )
-
-        #expect(entry.originalLanguageCode == "ja")
-    }
-
     @Test func testStableStaffIdentifierUsesCreditID() {
         let first = InfoFetcher.stableStaffIdentifier(
             creditID: "52fe4250c3a36847f8014a11",

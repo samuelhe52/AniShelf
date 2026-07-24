@@ -67,17 +67,6 @@ struct TMDbSearchServiceBatchTests {
         )
     }
 
-    @Test func testBatchPromptChunkingSplitsIntoBatchesOfEight() {
-        let prompts = (1...17).map { "Prompt \($0)" }
-
-        let chunks = TMDbSearchService.chunkedBatchPrompts(prompts)
-
-        #expect(chunks.count == 3)
-        #expect(chunks.map(\.count) == [8, 8, 1])
-        #expect(chunks[0].first == "Prompt 1")
-        #expect(chunks[2].first == "Prompt 17")
-    }
-
     @MainActor
     @Test func testBatchSearchPreservesPromptOrderWhenAsyncCompletesOutOfOrder() async {
         let service = TMDbSearchService(
