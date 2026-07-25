@@ -173,15 +173,12 @@ final class LibraryProfileSettingsActions {
                 )
                 let entries = try getRefreshEntries(for: store)
                 await store.performWithDeferredLibrarySaveRefresh {
-                    await store.syncChangeRecorder.withSuppressedRecordingAsync {
-                        await metadataRefresher.refreshInfos(
-                            for: entries,
-                            fetcher: store.infoFetcher,
-                            language: store.language,
-                            options: options
-                        )
-                    }
-                    store.rebuildSyncChangeTracking()
+                    await metadataRefresher.refreshInfos(
+                        for: entries,
+                        fetcher: store.infoFetcher,
+                        language: store.language,
+                        options: options
+                    )
                 }
             } catch {
                 libraryStoreLogger.error(

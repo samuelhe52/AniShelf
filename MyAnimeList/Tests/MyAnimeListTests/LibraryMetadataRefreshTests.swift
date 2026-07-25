@@ -541,6 +541,68 @@ struct LibraryMetadataRefreshTests {
         #expect(store.library.map(\.tmdbID) == [500_100])
     }
 
+    @Test @MainActor func testMetadataRefreshRecordsTrackingEditsMadeWhileFetching() async throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let entry = AnimeEntry(
+            name: "Before Refresh",
+            type: .movie,
+            tmdbID: 550
+        )
+        entry.markCreatedForLibrary(at: referenceDate(year: 2026, month: 6, day: 1))
+        try store.repository.newEntry(entry)
+        try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([])
+        store.rebuildSyncChangeTracking()
+
+        let requestGate = MetadataRefreshRequestGate()
+        let completion = MetadataRefreshCompletionSignal()
+        let httpClient = RecordingTMDbHTTPClient { request in
+            if request.url.path == "/3/movie/550" {
+                await requestGate.blockRequest()
+            }
+            return HTTPResponse(data: libraryMetadataRefreshFixtureData(for: request.url.path))
+        }
+        store.infoFetcher = InfoFetcher(
+            client: TMDbClient(
+                apiKey: "test-key",
+                httpClient: httpClient,
+                configuration: .default
+            ),
+            fetchTranslationResponseData: { path in
+                libraryMetadataRefreshFixtureData(for: path)
+            }
+        )
+        let reporter = LibraryRefreshReporter { event in
+            if case .refreshComplete = event {
+                Task { await completion.signal() }
+            }
+        }
+
+        LibraryProfileSettingsActions(store: store).refreshInfos(
+            options: .init(reporter: reporter, prefetchImages: false)
+        )
+        await requestGate.waitForRequest()
+
+        let editDate = referenceDate(year: 2026, month: 6, day: 2)
+        entry.updateFavorite(true, at: editDate)
+        try store.repository.save()
+
+        await requestGate.release()
+        for _ in 0..<100 where !(await completion.isSignaled) {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        let queue = store.syncChangeRecorder.dirtyQueueStore.load()
+        let didComplete = await completion.isSignaled
+        #expect(didComplete)
+        #expect(queue.entries.count == 1)
+        if case .upsert(let pendingUpsert)? = queue.entries.first {
+            #expect(pendingUpsert.identity == entry.syncIdentity)
+            #expect(pendingUpsert.dirtyAt == editDate)
+        } else {
+            #expect(Bool(false))
+        }
+    }
+
     @Test @MainActor func testBackgroundMetadataRefreshWriterRepairsParentLinksWithoutSyncDirtyWork()
         async throws
     {
@@ -1147,6 +1209,41 @@ private actor MetadataFetchConcurrencyProbe {
             try await Task.sleep(nanoseconds: 250_000_000)
             firstMovieReturned = true
         }
+    }
+}
+
+private actor MetadataRefreshRequestGate {
+    private var requestStarted = false
+    private var requestStartWaiter: CheckedContinuation<Void, Never>?
+    private var releaseWaiter: CheckedContinuation<Void, Never>?
+
+    func blockRequest() async {
+        requestStarted = true
+        requestStartWaiter?.resume()
+        requestStartWaiter = nil
+        await withCheckedContinuation { releaseWaiter = $0 }
+    }
+
+    func waitForRequest() async {
+        guard !requestStarted else { return }
+        await withCheckedContinuation { requestStartWaiter = $0 }
+    }
+
+    func release() {
+        releaseWaiter?.resume()
+        releaseWaiter = nil
+    }
+}
+
+private actor MetadataRefreshCompletionSignal {
+    private var didSignal = false
+
+    var isSignaled: Bool {
+        didSignal
+    }
+
+    func signal() {
+        didSignal = true
     }
 }
 
