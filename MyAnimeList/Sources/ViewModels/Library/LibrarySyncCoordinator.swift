@@ -69,7 +69,7 @@ final class LibrarySyncCoordinator {
     let hydrateMissingEntry: @MainActor (LibraryEntrySyncSnapshot, LibraryStore) async throws -> AnimeEntry
     private let dateProvider: @MainActor @Sendable () -> Date
 
-    private var isSyncing = false
+    private var isPipelineRunning = false
     private var syncRequestedWhileRunning = false
     private var syncWaiters: [CheckedContinuation<SyncResult, Never>] = []
     private var ordinarySyncCancellationGeneration = 0
@@ -168,7 +168,7 @@ final class LibrarySyncCoordinator {
             )
             return .permanentFailure
         }
-        if isSyncing {
+        if isPipelineRunning {
             syncRequestedWhileRunning = true
             librarySyncCoordinatorLogger.info(
                 "Queued iCloud library sync for \(trigger.rawValue, privacy: .public) while another sync was already running."
@@ -189,7 +189,7 @@ final class LibrarySyncCoordinator {
             return .skipped(blockedReason)
         }
 
-        isSyncing = true
+        isPipelineRunning = true
         librarySyncCoordinatorLogger.info(
             "Starting iCloud library sync triggered by \(trigger.rawValue, privacy: .public)."
         )
@@ -205,7 +205,7 @@ final class LibrarySyncCoordinator {
                 ))
         } while syncRequestedWhileRunning
 
-        isSyncing = false
+        isPipelineRunning = false
         let waiters = syncWaiters
         syncWaiters.removeAll()
         for waiter in waiters {
@@ -392,7 +392,7 @@ final class LibrarySyncCoordinator {
         preference: LibraryCloudSyncConflictPreference?
     ) async -> SyncResult {
         let bootstrapID = UUID()
-        if isSyncing {
+        if isPipelineRunning {
             syncRequestedWhileRunning = true
             librarySyncCoordinatorLogger.info(
                 "Queued iCloud library first-enable bootstrap while another sync was already running."
@@ -402,7 +402,7 @@ final class LibrarySyncCoordinator {
             }
         }
 
-        isSyncing = true
+        isPipelineRunning = true
         activeFirstEnableBootstrapIDs.insert(bootstrapID)
         var result = await runFirstEnableBootstrap(
             preference: preference,
@@ -421,7 +421,7 @@ final class LibrarySyncCoordinator {
                     ))
             }
         }
-        isSyncing = false
+        isPipelineRunning = false
         if result == .conflictChoiceRequired, !syncWaiters.isEmpty {
             return result
         }
@@ -433,19 +433,14 @@ final class LibrarySyncCoordinator {
         return result
     }
 
-    func cancelOrdinarySync() {
+    func cancelAllSync() {
         ordinarySyncCancellationGeneration &+= 1
-        syncRequestedWhileRunning = false
-        let waiters = syncWaiters
-        syncWaiters.removeAll()
-        for waiter in waiters {
-            waiter.resume(returning: .skipped(.disabled))
-        }
-    }
-
-    func cancelFirstEnableBootstrap() {
         canceledFirstEnableBootstrapIDs.formUnion(activeFirstEnableBootstrapIDs)
         syncRequestedWhileRunning = false
+        resumeSyncWaitersAsCancelled()
+    }
+
+    private func resumeSyncWaitersAsCancelled() {
         let waiters = syncWaiters
         syncWaiters.removeAll()
         for waiter in waiters {

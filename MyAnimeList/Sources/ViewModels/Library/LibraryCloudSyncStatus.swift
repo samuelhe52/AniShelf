@@ -171,7 +171,15 @@ struct LibraryCloudSyncStatus: Equatable {
         degradedReason: nil
     )
 
+    /// Whether a sync operation is active or has unfinished persisted work.
+    ///
+    /// A running bootstrap has no phase until its first remote operation begins,
+    /// so it must be included independently of `currentPhase`.
+    var isSyncInProgress: Bool {
+        bootstrapState == .running || (currentPhase != nil && lastResult == nil)
+    }
+
     var blocksBackupRestore: Bool {
-        isEnabled || (currentPhase != nil && lastResult == nil)
+        isEnabled || isSyncInProgress
     }
 }

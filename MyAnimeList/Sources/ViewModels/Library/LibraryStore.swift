@@ -375,23 +375,17 @@ class LibraryStore {
         guard cloudSyncStateController.canCancelFirstEnablement(libraryCloudSyncStatus) else {
             return
         }
-        cancelOrdinaryLibrarySyncTasks()
-        syncCoordinator?.cancelOrdinarySync()
-        syncCoordinator?.cancelFirstEnableBootstrap()
+        cancelAllLibraryCloudSyncWork()
         resetLibraryCloudSyncDisabledState(resetRetryState: false)
     }
 
     func disableLibraryCloudSync() {
-        cancelOrdinaryLibrarySyncTasks()
-        syncCoordinator?.cancelOrdinarySync()
-        syncCoordinator?.cancelFirstEnableBootstrap()
+        cancelAllLibraryCloudSyncWork()
         resetLibraryCloudSyncDisabledState(resetRetryState: true)
     }
 
     func resetLibraryCloudSyncAfterBackupRestore() {
-        cancelOrdinaryLibrarySyncTasks()
-        syncCoordinator?.cancelOrdinarySync()
-        syncCoordinator?.cancelFirstEnableBootstrap()
+        cancelAllLibraryCloudSyncWork()
         syncScheduler?.resetRetryBackoff()
         updateLibraryCloudSyncStatus { status in
             status = .defaultValue
@@ -414,9 +408,7 @@ class LibraryStore {
     /// resume through first-enable bootstrap so CloudKit can repopulate the
     /// replacement store from scratch.
     func prepareLibraryCloudSyncAfterPersistentStoreRecovery() {
-        cancelOrdinaryLibrarySyncTasks()
-        syncCoordinator?.cancelOrdinarySync()
-        syncCoordinator?.cancelFirstEnableBootstrap()
+        cancelAllLibraryCloudSyncWork()
         syncScheduler?.resetRetryBackoff()
 
         do {
@@ -470,6 +462,11 @@ class LibraryStore {
             syncTask.cancel()
         }
         ordinarySyncTasks.removeAll()
+    }
+
+    private func cancelAllLibraryCloudSyncWork() {
+        cancelOrdinaryLibrarySyncTasks()
+        syncCoordinator?.cancelAllSync()
     }
 
     @discardableResult

@@ -14,6 +14,22 @@ import Testing
 @testable import MyAnimeList
 
 extension LibrarySyncCoordinatorTests {
+    @Test @MainActor func syncInProgressIncludesBootstrapBeforeItsFirstPhase() {
+        var status = LibraryCloudSyncStatus.defaultValue
+        status.isEnabled = true
+        status.bootstrapState = .running
+
+        #expect(status.isSyncInProgress)
+
+        status.bootstrapState = .completed
+        status.currentPhase = .syncing
+        #expect(status.isSyncInProgress)
+
+        status.currentPhase = nil
+        status.lastResult = .success
+        #expect(!status.isSyncInProgress)
+    }
+
     @Test @MainActor func disablingLibraryCloudSyncClearsTransientStateAndPersists() {
         let store = makeStore(
             enabled: true,

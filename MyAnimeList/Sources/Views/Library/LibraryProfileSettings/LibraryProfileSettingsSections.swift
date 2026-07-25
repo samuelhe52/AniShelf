@@ -421,9 +421,7 @@ struct LibraryProfileSettingsCard: View {
     }
 
     private var cloudSyncIsBusy: Bool {
-        cloudSyncActionInFlight
-            || libraryCloudSyncStatus.bootstrapState == .running
-            || libraryCloudSyncStatus.hasActiveSyncPhase
+        cloudSyncActionInFlight || libraryCloudSyncStatus.isSyncInProgress
     }
 
     private var cloudSyncManualRetryDisabled: Bool {
@@ -1069,10 +1067,6 @@ extension LibraryCloudSyncStatus {
         let tint: Color
     }
 
-    fileprivate var hasActiveSyncPhase: Bool {
-        bootstrapState == .completed && currentPhase != nil && lastResult == nil
-    }
-
     fileprivate var isFailureDisplay: Bool {
         if bootstrapState == .failed {
             return true
@@ -1089,7 +1083,7 @@ extension LibraryCloudSyncStatus {
         if bootstrapState == .running {
             return DisplayStatus(title: "Preparing iCloud", systemImage: "arrow.triangle.2.circlepath", tint: .indigo)
         }
-        if hasActiveSyncPhase {
+        if isSyncInProgress {
             return DisplayStatus(title: "Syncing", systemImage: "arrow.triangle.2.circlepath", tint: .indigo)
         }
 
