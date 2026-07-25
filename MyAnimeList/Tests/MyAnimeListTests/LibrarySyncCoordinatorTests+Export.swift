@@ -14,6 +14,52 @@ import Testing
 @testable import MyAnimeList
 
 extension LibrarySyncCoordinatorTests {
+    @Test @MainActor
+    func cancellationImmediatelyAfterExportDequeuesConfirmedDirtyEntriesWithoutRecordingSuccess() async throws {
+        let store = makeSyncReadyStore()
+        let entry = AnimeEntry(name: "Cancelled Export", type: .movie, tmdbID: 706)
+        entry.markCreatedForLibrary(at: referenceDate(year: 2026, month: 5, day: 1))
+        try store.repository.newEntry(entry)
+        try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([
+            .upsert(
+                .init(
+                    identity: entry.syncIdentity,
+                    dirtyAt: referenceDate(year: 2026, month: 5, day: 8)
+                ))
+        ])
+        store.rebuildSyncChangeTracking()
+
+        let client = CloudLibrarySyncClient()
+        let database = FakeCloudLibrarySyncDatabase(changes: [makeEmptyChangeBatch()])
+        database.suspendNextSave = true
+        let coordinator = LibrarySyncCoordinator(
+            store: store,
+            client: client,
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        let syncTask = Task {
+            await coordinator.syncResult(trigger: .manualRetry)
+        }
+        while !database.isSaveSuspended {
+            await Task.yield()
+        }
+
+        database.resumeSuspendedSave()
+        coordinator.cancelAllSync()
+
+        // `merged(with:)` seeds `.success`, so a skipped pass reports `.success`
+        // here; the recorded status below is what reflects the cancellation.
+        #expect(await syncTask.value == .success)
+        #expect(database.savedRecords.count == 1)
+        #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
+        // A pass cancelled after export must not stamp success over the status
+        // the disable path already reset.
+        #expect(store.libraryCloudSyncStatus.lastResult == nil)
+        #expect(store.libraryCloudSyncStatus.lastSuccessfulSyncDate == nil)
+    }
+
     @Test @MainActor func partialExportOnlyDequeuesAcceptedDirtyEntries() async throws {
         let store = makeSyncReadyStore()
         let first = AnimeEntry(name: "First Export", type: .movie, tmdbID: 707)

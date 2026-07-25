@@ -262,7 +262,13 @@ extension LibrarySyncCoordinatorTests {
 
         #expect(!succeeded)
         #expect(!store.libraryCloudSyncStatus.isEnabled)
+        // A deliberate cancel must return without recording an outcome, leaving
+        // the reset the cancel itself performed intact. If the bootstrap ever
+        // stops distinguishing its own cancellation sentinel from an ambient
+        // `CancellationError`, this lands on `.failed` with a reason instead.
         #expect(store.libraryCloudSyncStatus.bootstrapState == .notStarted)
+        #expect(store.libraryCloudSyncStatus.lastResult == .skipped)
+        #expect(store.libraryCloudSyncStatus.lastFailureReason == nil)
         #expect(database.savedRecords.isEmpty)
     }
 }
