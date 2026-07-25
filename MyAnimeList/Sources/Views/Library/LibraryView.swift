@@ -34,6 +34,11 @@ struct LibraryView: View {
     @State private var isShowingBatchDeleteConfirmation = false
     @State private var inspectorDetailWorkspaceState = LibraryInspectorDetailWorkspaceState()
 
+    // Multi-selection snapshot: decouples selection rendering from live store
+    // recomputation so toggling items stays cheap. See LibraryView+MultiSelection.
+    @State var selectionDisplayItems: [LibraryEntryDisplayItem]?
+    @State var selectionEntriesByID: [Int: AnimeEntry] = [:]
+
     // Persistent UI preference
     @AppStorage(.libraryViewStyle) var libraryViewStyle: LibraryViewStyle = .gallery
     @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
@@ -72,8 +77,23 @@ struct LibraryView: View {
             workspaceState: $inspectorDetailWorkspaceState,
             persistedLastInspectorDetailEntryIdentity: $persistedLastInspectorDetailEntryIdentity
         )
-        .onChange(of: store.libraryDisplayItems.map(\.id)) { _, ids in
-            pruneSelection(to: ids)
+        .onChange(of: store.libraryRevision) {
+            refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(of: store.filters) {
+            refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(of: store.groupStrategy) {
+            refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(of: store.sortStrategy) {
+            refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(of: store.sortReversed) {
+            refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(of: store.hideDroppedByDefault) {
+            refreshSelectionDisplayItemsIfNeeded()
         }
     }
 
@@ -258,7 +278,7 @@ struct LibraryView: View {
 
     @ViewBuilder
     private var libraryView: some View {
-        let displayItems = store.libraryDisplayItems
+        let displayItems = selectionDisplayItems ?? store.libraryDisplayItems
         let layoutIDs = displayItems.map(\.id)
 
         switch libraryViewStyle {

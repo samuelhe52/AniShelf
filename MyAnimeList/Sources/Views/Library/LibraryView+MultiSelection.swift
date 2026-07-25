@@ -14,10 +14,7 @@ extension LibraryView {
     }
 
     var selectedEntries: [AnimeEntry] {
-        let entriesByID = Dictionary(
-            uniqueKeysWithValues: store.libraryDisplayItems.map { ($0.id, $0.entry) }
-        )
-        return interaction.selectedEntryIDs.compactMap { entriesByID[$0] }
+        interaction.selectedEntryIDs.compactMap { selectionEntriesByID[$0] }
     }
 
     var allFavorite: Bool {
@@ -57,7 +54,7 @@ extension LibraryView {
     }
 
     func enterMultiSelection() {
-        interaction.selectedEntryIDs.formIntersection(Set(store.libraryDisplayItems.map(\.id)))
+        updateSelectionDisplayItems()
         withAnimation(LibraryViewTransitions.selectionModeAnimation(reduceMotion: reduceMotion)) {
             interaction.enterMultiSelection()
         }
@@ -67,10 +64,22 @@ extension LibraryView {
         withAnimation(LibraryViewTransitions.selectionModeAnimation(reduceMotion: reduceMotion)) {
             interaction.exitMultiSelection()
         }
+        selectionDisplayItems = nil
+        selectionEntriesByID.removeAll(keepingCapacity: true)
     }
 
-    func pruneSelection(to displayedIDs: [Int]) {
+    func refreshSelectionDisplayItemsIfNeeded() {
         guard interaction.isMultiSelecting else { return }
-        interaction.selectedEntryIDs.formIntersection(Set(displayedIDs))
+        updateSelectionDisplayItems()
+    }
+
+    private func updateSelectionDisplayItems() {
+        let items = store.libraryDisplayItems
+        let displayedIDs = Set(items.map(\.id))
+        interaction.selectedEntryIDs.formIntersection(displayedIDs)
+        selectionDisplayItems = items
+        selectionEntriesByID = Dictionary(
+            uniqueKeysWithValues: items.map { ($0.id, $0.entry) }
+        )
     }
 }
