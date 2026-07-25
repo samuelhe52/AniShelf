@@ -15,6 +15,7 @@ struct AnimeEntryListRow: View {
 
     var entry: AnimeEntry
     var snapshot: LibraryEntrySnapshot
+    var tapGesturesEnabled: Bool = true
     var onTap: (() -> Void)? = nil
     var onOpenDetails: (() -> Void)? = nil
 
@@ -28,11 +29,13 @@ struct AnimeEntryListRow: View {
     init(
         entry: AnimeEntry,
         snapshot: LibraryEntrySnapshot? = nil,
+        tapGesturesEnabled: Bool = true,
         onTap: (() -> Void)? = nil,
         onOpenDetails: (() -> Void)? = nil
     ) {
         self.entry = entry
         self.snapshot = snapshot ?? LibraryEntrySnapshot(entry: entry)
+        self.tapGesturesEnabled = tapGesturesEnabled
         self.onTap = onTap
         self.onOpenDetails = onOpenDetails
     }
@@ -66,25 +69,38 @@ struct AnimeEntryListRow: View {
             if detailActivation.usesSingleTap(userPreference: openDetailWithSingleTap) {
                 Color.clear
                     .contentShape(.rect)
-                    .onTapGesture {
-                        onOpenDetails()
-                    }
+                    .gesture(
+                        TapGesture().onEnded { onOpenDetails() },
+                        including: tapGestureMask
+                    )
             } else {
                 // Keep focus immediate without allowing one tap to open double-tap detail.
                 Color.clear
                     .contentShape(.rect)
                     .simultaneousGesture(
-                        TapGesture().onEnded { onTap?() }
+                        TapGesture().onEnded { onTap?() },
+                        including: tapGestureMask
                     )
                     .simultaneousGesture(
-                        TapGesture(count: 2).onEnded { onOpenDetails() }
+                        TapGesture(count: 2).onEnded { onOpenDetails() },
+                        including: tapGestureMask
                     )
             }
         } else {
             Color.clear
                 .contentShape(.rect)
-                .onTapGesture { onTap?() }
+                .gesture(
+                    TapGesture().onEnded { onTap?() },
+                    including: tapGestureMask
+                )
         }
+    }
+
+    /// Disabling via a mask (instead of swapping tap wrappers) keeps the row's
+    /// recognizer tree stable and lets the List's edit-mode selection receive
+    /// whole-row taps during multi-selection.
+    private var tapGestureMask: GestureMask {
+        tapGesturesEnabled ? .all : .subviews
     }
 
     private var info: some View {

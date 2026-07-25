@@ -14,6 +14,7 @@ struct LibraryListView: View {
     @Environment(\.toggleFavorite) var toggleFavorite
     @Environment(\.libraryEntryOpenDetailAction) private var openDetailAction
     @Environment(\.libraryEntryEditAction) private var editAction
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var listEditMode: EditMode = .inactive
 
@@ -36,7 +37,11 @@ struct LibraryListView: View {
                 if let scrolledID { proxy.scrollTo(scrolledID) }
             }
             .onChange(of: interaction.isMultiSelecting, initial: true) { _, isMultiSelecting in
-                withAnimation {
+                // Match the selection-mode curve so the edit-mode transition
+                // doesn't race the row and toolbar animations on dismiss.
+                withAnimation(
+                    LibraryViewTransitions.selectionModeAnimation(reduceMotion: reduceMotion)
+                ) {
                     listEditMode = isMultiSelecting ? .active : .inactive
                 }
             }
@@ -55,6 +60,7 @@ struct LibraryListView: View {
         AnimeEntryListRow(
             entry: item.entry,
             snapshot: item.snapshot,
+            tapGesturesEnabled: !interaction.isMultiSelecting,
             onTap: {
                 scrolledID = item.id
                 interaction.focus(item.entry)
