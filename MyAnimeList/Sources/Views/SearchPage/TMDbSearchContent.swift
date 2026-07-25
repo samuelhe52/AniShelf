@@ -72,8 +72,9 @@ struct TMDbSearchContent: View {
             ContentUnavailableView(
                 "No Results",
                 systemImage: "magnifyingglass",
-                description: Text("Try a different search term"))
-                .listRowBackground(Color.clear)
+                description: Text("Try a different search term")
+            )
+            .listRowBackground(Color.clear)
         } else {
             seriesResults
             movieResults
