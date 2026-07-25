@@ -24,7 +24,7 @@ extension TMDbSearchService {
         let seasonPreselection: BatchSeasonPreselection?
     }
 
-    private static let batchPromptChunkSize = 8
+    nonisolated private static let batchPromptChunkSize = 8
 
     func performBatchSearch(input: String, language: Language) async {
         let prompts = Self.parsedBatchPrompts(from: input)
@@ -95,7 +95,7 @@ extension TMDbSearchService {
 
     nonisolated static func chunkedBatchPrompts(
         _ prompts: [String],
-        chunkSize: Int = 8
+        chunkSize: Int = batchPromptChunkSize
     ) -> [[String]] {
         let normalizedChunkSize = max(1, chunkSize)
         return stride(from: 0, to: prompts.count, by: normalizedChunkSize).map { start in
@@ -106,7 +106,7 @@ extension TMDbSearchService {
 
     nonisolated static func chunkedBatchPrompts(
         _ prompts: [TMDbBatchPrompt],
-        chunkSize: Int = 8
+        chunkSize: Int = batchPromptChunkSize
     ) -> [[TMDbBatchPrompt]] {
         let normalizedChunkSize = max(1, chunkSize)
         return stride(from: 0, to: prompts.count, by: normalizedChunkSize).map { start in
