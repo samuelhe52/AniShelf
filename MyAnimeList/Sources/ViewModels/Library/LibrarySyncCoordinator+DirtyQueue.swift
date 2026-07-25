@@ -204,7 +204,7 @@ extension LibrarySyncCoordinator {
             }
 
             duplicateCountsByIdentity[identity, default: 1] += 1
-            if Self.prefersLocalSnapshotEntry(entry, over: existingEntry) {
+            if AnimeEntryDuplicateResolver.prefers(entry, existingEntry) {
                 entriesByIdentity[identity] = entry
             }
         }
@@ -269,26 +269,6 @@ extension LibrarySyncCoordinator {
         }
 
         return changesByIdentity
-    }
-
-    private static func prefersLocalSnapshotEntry(_ lhs: AnimeEntry, over rhs: AnimeEntry) -> Bool {
-        if lhs.onDisplay != rhs.onDisplay {
-            return lhs.onDisplay && !rhs.onDisplay
-        }
-
-        if lhs.childSeasonEntries.count != rhs.childSeasonEntries.count {
-            return lhs.childSeasonEntries.count > rhs.childSeasonEntries.count
-        }
-
-        if (lhs.detail != nil) != (rhs.detail != nil) {
-            return lhs.detail != nil
-        }
-
-        if lhs.dateSaved != rhs.dateSaved {
-            return lhs.dateSaved > rhs.dateSaved
-        }
-
-        return lhs.name < rhs.name
     }
 }
 

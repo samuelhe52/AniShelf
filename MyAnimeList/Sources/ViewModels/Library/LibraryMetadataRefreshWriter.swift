@@ -180,30 +180,9 @@ struct LibraryMetadataRefreshWriter: Sendable {
                 entry.tmdbID == tmdbID
             }
         )
-        descriptor.fetchLimit = 20
-        return try modelContext.fetch(descriptor)
-            .sorted(by: compareExistingEntries)
-            .first
-    }
-
-    private func compareExistingEntries(_ lhs: AnimeEntry, _ rhs: AnimeEntry) -> Bool {
-        if lhs.onDisplay != rhs.onDisplay {
-            return lhs.onDisplay && !rhs.onDisplay
-        }
-
-        if lhs.childSeasonEntries.count != rhs.childSeasonEntries.count {
-            return lhs.childSeasonEntries.count > rhs.childSeasonEntries.count
-        }
-
-        if (lhs.detail != nil) != (rhs.detail != nil) {
-            return lhs.detail != nil
-        }
-
-        if lhs.dateSaved != rhs.dateSaved {
-            return lhs.dateSaved > rhs.dateSaved
-        }
-
-        return lhs.name < rhs.name
+        return AnimeEntryDuplicateResolver.preferredEntry(
+            from: try modelContext.fetch(descriptor)
+        )
     }
 }
 

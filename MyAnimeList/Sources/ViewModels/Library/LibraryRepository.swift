@@ -88,9 +88,9 @@ final class LibraryRepository {
 
     func existingEntry(tmdbID: Int) -> AnimeEntry? {
         do {
-            return try matchingEntries(tmdbID: tmdbID)
-                .sorted(by: compareExistingEntries)
-                .first
+            return AnimeEntryDuplicateResolver.preferredEntry(
+                from: try matchingEntries(tmdbID: tmdbID)
+            )
         } catch {
             libraryStoreLogger.warning(
                 "Failed to fetch existing entry \(tmdbID, privacy: .public): \(error.localizedDescription)")
@@ -105,10 +105,10 @@ final class LibraryRepository {
             return nil
         }
         do {
-            return try matchingEntries(tmdbID: tmdbID)
-                .filter { $0.syncIdentity == identity }
-                .sorted(by: compareExistingEntries)
-                .first
+            return AnimeEntryDuplicateResolver.preferredEntry(
+                from: try matchingEntries(tmdbID: tmdbID)
+                    .filter { $0.syncIdentity == identity }
+            )
         } catch {
             libraryStoreLogger.warning(
                 "Failed to fetch sync entry \(identity.rawID, privacy: .public): \(error.localizedDescription)")
@@ -125,10 +125,10 @@ final class LibraryRepository {
             return nil
         }
         do {
-            return try matchingEntries(tmdbID: tmdbID)
-                .filter { $0.syncIdentity.rawID == identityRawID }
-                .sorted(by: compareExistingEntries)
-                .first
+            return AnimeEntryDuplicateResolver.preferredEntry(
+                from: try matchingEntries(tmdbID: tmdbID)
+                    .filter { $0.syncIdentity.rawID == identityRawID }
+            )
         } catch {
             libraryStoreLogger.warning(
                 "Failed to fetch local entry identity \(identityRawID, privacy: .private): \(error.localizedDescription)"
@@ -142,25 +142,5 @@ final class LibraryRepository {
             ofType: AnimeEntry.self,
             predicate: #Predicate { $0.tmdbID == tmdbID }
         )
-    }
-
-    private func compareExistingEntries(_ lhs: AnimeEntry, _ rhs: AnimeEntry) -> Bool {
-        if lhs.onDisplay != rhs.onDisplay {
-            return lhs.onDisplay && !rhs.onDisplay
-        }
-
-        if lhs.childSeasonEntries.count != rhs.childSeasonEntries.count {
-            return lhs.childSeasonEntries.count > rhs.childSeasonEntries.count
-        }
-
-        if (lhs.detail != nil) != (rhs.detail != nil) {
-            return lhs.detail != nil
-        }
-
-        if lhs.dateSaved != rhs.dateSaved {
-            return lhs.dateSaved > rhs.dateSaved
-        }
-
-        return lhs.name < rhs.name
     }
 }

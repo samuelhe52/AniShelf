@@ -603,7 +603,7 @@ struct LibraryMetadataRefreshTests {
         }
     }
 
-    @Test @MainActor func testBackgroundMetadataRefreshWriterRepairsParentLinksWithoutSyncDirtyWork()
+    @Test @MainActor func testBackgroundMetadataRefreshWriterRepairsParentLinksUsingUncappedPreferredParent()
         async throws
     {
         let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
@@ -621,6 +621,23 @@ struct LibraryMetadataRefreshTests {
         child.parentSeriesEntry = oldParent
 
         try store.repository.newEntry(oldParent)
+        for index in 0..<20 {
+            let duplicateParent = AnimeEntry(
+                name: "Hidden Parent \(index)",
+                type: .series,
+                tmdbID: 300,
+                dateSaved: referenceDate(year: 2026, month: 5, day: 1)
+            )
+            duplicateParent.setDisplayState(false)
+            try store.repository.newEntry(duplicateParent)
+        }
+        let preferredParent = AnimeEntry(
+            name: "Preferred Parent",
+            type: .series,
+            tmdbID: 300,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 2)
+        )
+        try store.repository.newEntry(preferredParent)
         try store.repository.newEntry(child)
         store.rebuildSyncChangeTracking()
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([])
@@ -689,16 +706,8 @@ struct LibraryMetadataRefreshTests {
                 predicate: #Predicate { $0.tmdbID == 200 }
             ).first
         )
-        let insertedParent = try #require(
-            store.dataProvider.getModels(
-                ofType: AnimeEntry.self,
-                predicate: #Predicate { $0.tmdbID == 300 }
-            ).first
-        )
-
         #expect(refreshedChild.name == "Season 1 Refreshed")
-        #expect(refreshedChild.parentSeriesEntry?.tmdbID == 300)
-        #expect(insertedParent.onDisplay == false)
+        #expect(refreshedChild.parentSeriesEntry?.id == preferredParent.id)
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
     }
 
