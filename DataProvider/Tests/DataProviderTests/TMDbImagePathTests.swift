@@ -93,6 +93,20 @@ struct TMDbImagePathTests {
         #expect(destination.selectedPosterPath == "/posters/custom.jpg")
     }
 
+    @Test func selectedPosterPathFallsBackToBasePosterWhenCustomPathIsMissing() {
+        let entry = AnimeEntry(
+            name: "Incomplete Custom Poster Entry",
+            type: .movie,
+            posterPath: "/posters/base.jpg",
+            tmdbID: 80,
+            usingCustomPoster: false
+        )
+        entry.usingCustomPoster = true
+
+        #expect(entry.customPosterPath == nil)
+        #expect(entry.selectedPosterPath == "/posters/base.jpg")
+    }
+
     private func url(_ value: String) -> URL {
         URL(string: value)!
     }

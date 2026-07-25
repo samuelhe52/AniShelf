@@ -49,6 +49,9 @@ public struct UserEntryInfo: Equatable, Codable {
     /// Whether the entry is using a custom poster image.
     public var usingCustomPoster: Bool
 
+    /// The custom poster path when ``usingCustomPoster`` is true.
+    public var customPosterPath: String?
+
     /// Episode progress grouped by season/special partition.
     public var episodeProgresses: [EpisodeProgressSnapshot]
 
@@ -61,6 +64,7 @@ public struct UserEntryInfo: Equatable, Codable {
         favorite: Bool,
         notes: String,
         usingCustomPoster: Bool,
+        customPosterPath: String? = nil,
         episodeProgresses: [EpisodeProgressSnapshot] = []
     ) {
         self.watchStatus = watchStatus
@@ -70,7 +74,8 @@ public struct UserEntryInfo: Equatable, Codable {
         self.score = normalizedEntryScore(score)
         self.favorite = favorite
         self.notes = notes
-        self.usingCustomPoster = usingCustomPoster
+        self.customPosterPath = usingCustomPoster ? customPosterPath : nil
+        self.usingCustomPoster = self.customPosterPath != nil
         self.episodeProgresses = Self.normalizedEpisodeProgresses(episodeProgresses)
     }
 
@@ -82,7 +87,8 @@ public struct UserEntryInfo: Equatable, Codable {
         self.score = normalizedEntryScore(entry.score)
         self.favorite = entry.favorite
         self.notes = entry.notes
-        self.usingCustomPoster = entry.usingCustomPoster
+        customPosterPath = entry.usingCustomPoster ? entry.customPosterPath : nil
+        usingCustomPoster = customPosterPath != nil
         self.episodeProgresses = Self.normalizedEpisodeProgresses(
             entry.orderedEpisodeProgresses.map {
                 EpisodeProgressSnapshot(
@@ -111,6 +117,7 @@ public struct UserEntryInfo: Equatable, Codable {
         case favorite
         case notes
         case usingCustomPoster
+        case customPosterPath
         case episodeProgresses
     }
 
@@ -125,6 +132,7 @@ public struct UserEntryInfo: Equatable, Codable {
             favorite: try container.decode(Bool.self, forKey: .favorite),
             notes: try container.decode(String.self, forKey: .notes),
             usingCustomPoster: try container.decode(Bool.self, forKey: .usingCustomPoster),
+            customPosterPath: try container.decodeIfPresent(String.self, forKey: .customPosterPath),
             episodeProgresses: try container.decodeIfPresent(
                 [EpisodeProgressSnapshot].self,
                 forKey: .episodeProgresses
@@ -142,6 +150,7 @@ public struct UserEntryInfo: Equatable, Codable {
         try container.encode(favorite, forKey: .favorite)
         try container.encode(notes, forKey: .notes)
         try container.encode(usingCustomPoster, forKey: .usingCustomPoster)
+        try container.encodeIfPresent(customPosterPath, forKey: .customPosterPath)
         try container.encode(episodeProgresses, forKey: .episodeProgresses)
     }
 
@@ -182,6 +191,7 @@ public struct UserEntryInfo: Equatable, Codable {
             && favorite == other.favorite
             && notes == other.notes
             && usingCustomPoster == other.usingCustomPoster
+            && customPosterPath == other.customPosterPath
             && semanticEpisodeProgresses == other.semanticEpisodeProgresses
     }
 
@@ -378,7 +388,8 @@ extension AnimeEntry {
         score = normalizedEntryScore(userInfo.score)
         favorite = userInfo.favorite
         notes = userInfo.notes
-        usingCustomPoster = userInfo.usingCustomPoster
+        customPosterPath = userInfo.usingCustomPoster ? userInfo.customPosterPath : nil
+        usingCustomPoster = customPosterPath != nil
         episodeProgresses.forEach { modelContext?.delete($0) }
         episodeProgresses.removeAll()
         for progress in filteredEpisodeProgresses(from: userInfo) {

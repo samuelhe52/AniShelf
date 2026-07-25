@@ -50,7 +50,7 @@ extension SchemaV2_8_0 {
         public var trackingUpdatedAt: Date?
 
         public var selectedPosterPath: String? {
-            usingCustomPoster ? customPosterPath : posterPath
+            usingCustomPoster ? (customPosterPath ?? posterPath) : posterPath
         }
 
         public init(

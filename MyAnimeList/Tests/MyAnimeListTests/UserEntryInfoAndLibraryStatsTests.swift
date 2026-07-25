@@ -174,6 +174,49 @@ struct UserEntryInfoAndLibraryStatsTests {
         #expect(!entry.userInfoHasChanges(comparedTo: originalUserInfo))
     }
 
+    @Test func testUserInfoCopyPreservesCustomPosterPathAndDetectsPosterChanges() throws {
+        let source = AnimeEntry(
+            name: "Source",
+            type: .movie,
+            posterPath: "/posters/source-base.jpg",
+            customPosterPath: "/posters/source-custom.jpg",
+            tmdbID: 116,
+            usingCustomPoster: true
+        )
+        let copiedInfo = try JSONDecoder().decode(
+            UserEntryInfo.self,
+            from: JSONEncoder().encode(source.userInfo)
+        )
+        let destination = AnimeEntry(
+            name: "Destination",
+            type: .movie,
+            posterPath: "/posters/destination-base.jpg",
+            tmdbID: 117
+        )
+
+        destination.updateUserInfoFromUserAction(
+            copiedInfo,
+            at: referenceDate(year: 2026, month: 5, day: 14)
+        )
+
+        #expect(destination.usingCustomPoster)
+        #expect(destination.customPosterPath == "/posters/source-custom.jpg")
+        #expect(destination.selectedPosterPath == "/posters/source-custom.jpg")
+
+        let originalUserInfo = destination.userInfo
+        destination.updateCustomPosterURL(
+            URL(string: "https://image.tmdb.org/t/p/original/posters/new-custom.jpg")!,
+            at: referenceDate(year: 2026, month: 5, day: 15)
+        )
+
+        #expect(destination.userInfoHasChanges(comparedTo: originalUserInfo))
+
+        destination.updateUserInfo(from: originalUserInfo)
+
+        #expect(destination.customPosterPath == "/posters/source-custom.jpg")
+        #expect(destination.selectedPosterPath == "/posters/source-custom.jpg")
+    }
+
     @Test func testDateTrackingTogglePreservesCurrentDates() {
         let watching = AnimeEntry.template(id: 211)
         watching.setDateTrackingEnabled(false)
