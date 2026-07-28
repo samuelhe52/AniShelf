@@ -220,7 +220,7 @@ fileprivate struct EntryDetailTrackingEditor: View {
                 Text(EntryDetailL10n.notes)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
-                PlaceholderTextEditor(
+                ScrollIsolatedPlaceholderTextEditor(
                     text: Binding(
                         get: { entry.notes },
                         set: { entry.updateNotes($0) }
