@@ -39,7 +39,7 @@ struct LibrarySearchButton: View {
 
 extension LibraryView {
     func jumpToEntryInLibrary(withID id: Int) {
-        scrollState.scrolledID = id
+        requestLibraryScroll(to: id)
         highlightedEntryID = id
     }
 

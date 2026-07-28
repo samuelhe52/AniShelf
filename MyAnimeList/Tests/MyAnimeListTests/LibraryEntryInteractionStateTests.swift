@@ -12,6 +12,14 @@ import Testing
 @testable import MyAnimeList
 
 struct LibraryEntryInteractionStateTests {
+    @Test func repeatedLibraryScrollRequestsRemainDistinct() {
+        let first = LibraryScrollRequest(entryID: 42)
+        let second = LibraryScrollRequest(entryID: 42)
+
+        #expect(first.entryID == second.entryID)
+        #expect(first != second)
+    }
+
     @Test @MainActor func focusAndPresentationStayIndependent() {
         let state = LibraryEntryInteractionState()
         let entry = AnimeEntry.template(id: 42)

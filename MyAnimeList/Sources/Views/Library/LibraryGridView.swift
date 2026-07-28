@@ -20,6 +20,7 @@ struct LibraryGridView: View {
     @Environment(\.libraryEntryEditAction) private var editAction
     let displayItems: [LibraryEntryDisplayItem]
     @Binding var scrolledID: Int?
+    let scrollRequest: LibraryScrollRequest?
     @Binding var highlightedEntryID: Int?
     private let columns = [GridItem(.adaptive(minimum: 104, maximum: 132), spacing: 10)]
 
@@ -35,7 +36,7 @@ struct LibraryGridView: View {
                 .transaction(value: isInspectorPresented) { transaction in
                     transaction.animation = reduceMotion ? nil : .smooth(duration: 0.3)
                 }
-                .onChange(of: scrolledID) { onChangeOfScrolledID(proxy: proxy) }
+                .onChange(of: scrollRequest) { handleScrollRequest(proxy: proxy) }
                 .onAppear { onGridViewAppear(proxy: proxy) }
                 .padding(.horizontal, 14)
                 .padding(.top, 6)
@@ -52,13 +53,10 @@ struct LibraryGridView: View {
         interaction.inspectorPresentation != nil
     }
 
-    private func onChangeOfScrolledID(proxy: ScrollViewProxy) {
-        guard let scrolledID else { return }
-        guard interaction.inspectorPresentation?.entryIdentity.tmdbID != scrolledID else {
-            return
-        }
+    private func handleScrollRequest(proxy: ScrollViewProxy) {
+        guard let entryID = scrollRequest?.entryID else { return }
         withAnimation(.bouncy) {
-            proxy.scrollTo(scrolledID)
+            proxy.scrollTo(entryID)
         }
     }
 
@@ -276,6 +274,7 @@ fileprivate struct LibraryGridItem: View {
     LibraryGridView(
         displayItems: store.libraryDisplayItems,
         scrolledID: .constant(nil),
+        scrollRequest: nil,
         highlightedEntryID: .constant(nil)
     )
     .onAppear {

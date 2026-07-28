@@ -20,6 +20,7 @@ struct LibraryListView: View {
 
     let displayItems: [LibraryEntryDisplayItem]
     @Binding var scrolledID: Int?
+    let scrollRequest: LibraryScrollRequest?
     @Binding var highlightedEntryID: Int?
 
     var body: some View {
@@ -45,10 +46,10 @@ struct LibraryListView: View {
                     listEditMode = isMultiSelecting ? .active : .inactive
                 }
             }
-            .onChange(of: scrolledID) {
-                if let scrolledID {
+            .onChange(of: scrollRequest) {
+                if let entryID = scrollRequest?.entryID {
                     withAnimation(.bouncy) {
-                        proxy.scrollTo(scrolledID)
+                        proxy.scrollTo(entryID)
                     }
                 }
             }

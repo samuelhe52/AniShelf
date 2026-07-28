@@ -15,6 +15,12 @@ extension EnvironmentValues {
     @Entry var toggleFavorite: (AnimeEntry) -> Void = { _ in }
 }
 
+struct LibraryScrollRequest: Equatable {
+    // Keep repeated explicit requests to the same entry observable.
+    let token = UUID()
+    let entryID: Int?
+}
+
 struct LibraryView: View {
     // MARK: - Stored Properties
 
@@ -31,6 +37,7 @@ struct LibraryView: View {
     @State var scrollState = ScrollState()
     @State var newEntriesAddedToggle = false
     @State var highlightedEntryID: Int?
+    @State var scrollRequest: LibraryScrollRequest?
     @State private var isShowingBatchDeleteConfirmation = false
     @State private var inspectorDetailWorkspaceState = LibraryInspectorDetailWorkspaceState()
 
@@ -145,7 +152,7 @@ struct LibraryView: View {
             .libraryEntryInteractionOverlays(
                 state: interaction,
                 deleteEntry: { entry in
-                    store.deleteEntry(entry) { scrollState.scrolledID = $0 }
+                    store.deleteEntry(entry) { requestLibraryScroll(to: $0) }
                 },
                 resolveEntry: { store.repository.existingEntry(identity: $0) }
             )
@@ -285,7 +292,8 @@ struct LibraryView: View {
         case .gallery:
             libraryViewPage(id: .gallery, layoutIDs: layoutIDs) {
                 LibraryGalleryView(
-                    scrolledID: $scrollState.scrolledID
+                    scrolledID: $scrollState.scrolledID,
+                    scrollRequest: scrollRequest
                 )
                 .scenePadding(.vertical)
                 .ignoresSafeArea(.keyboard, edges: .bottom)
@@ -295,6 +303,7 @@ struct LibraryView: View {
                 LibraryListView(
                     displayItems: displayItems,
                     scrolledID: $scrollState.scrolledID,
+                    scrollRequest: scrollRequest,
                     highlightedEntryID: $highlightedEntryID
                 )
                 .safeAreaPadding(.bottom, 20)
@@ -304,6 +313,7 @@ struct LibraryView: View {
                 LibraryGridView(
                     displayItems: displayItems,
                     scrolledID: $scrollState.scrolledID,
+                    scrollRequest: scrollRequest,
                     highlightedEntryID: $highlightedEntryID
                 )
                 .safeAreaPadding(.bottom, 20)
@@ -409,6 +419,11 @@ struct LibraryView: View {
 
     private func toggleFavorite(_ entry: AnimeEntry) {
         store.repository.toggleFavorite(entry)
+    }
+
+    func requestLibraryScroll(to entryID: Int?) {
+        scrollState.scrolledID = entryID
+        scrollRequest = LibraryScrollRequest(entryID: entryID)
     }
 
     private func openProfileSettings() {

@@ -44,7 +44,7 @@ struct ScrollIsolatedPlaceholderTextEditor: View {
     }
 }
 
-private struct ScrollIsolatedTextView: UIViewRepresentable {
+fileprivate struct ScrollIsolatedTextView: UIViewRepresentable {
     @Binding var text: String
 
     func makeCoordinator() -> Coordinator {

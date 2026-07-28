@@ -49,7 +49,7 @@ extension LibraryView {
             _ = store.deleteEntry(entry)
         }
 
-        scrollState.scrolledID = scrollTarget
+        requestLibraryScroll(to: scrollTarget)
         exitMultiSelection()
     }
 

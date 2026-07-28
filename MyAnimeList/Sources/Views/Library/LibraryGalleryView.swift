@@ -14,10 +14,15 @@ struct LibraryGalleryView: View {
     @Environment(LibraryEntryInteractionState.self) var interaction
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Binding var scrolledID: Int?
+    let scrollRequest: LibraryScrollRequest?
     @State private var localScrolledID: Int?
 
-    init(scrolledID: Binding<Int?>) {
+    init(
+        scrolledID: Binding<Int?>,
+        scrollRequest: LibraryScrollRequest?
+    ) {
         self._scrolledID = scrolledID
+        self.scrollRequest = scrollRequest
         self._localScrolledID = State(initialValue: scrolledID.wrappedValue)
     }
 
@@ -109,9 +114,9 @@ struct LibraryGalleryView: View {
             else { return }
             interaction.focus(entry)
         }
-        .onChange(of: scrolledID) {
-            guard localScrolledID != scrolledID else { return }
-            localScrolledID = scrolledID
+        .onChange(of: scrollRequest) {
+            guard localScrolledID != scrollRequest?.entryID else { return }
+            localScrolledID = scrollRequest?.entryID
         }
         .onScrollPhaseChange { _, newPhase in
             if !newPhase.isScrolling {
