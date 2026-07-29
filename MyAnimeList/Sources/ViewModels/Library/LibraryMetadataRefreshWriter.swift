@@ -175,7 +175,7 @@ struct LibraryMetadataRefreshWriter: Sendable {
         tmdbID: Int,
         in modelContext: ModelContext
     ) throws -> AnimeEntry? {
-        var descriptor = FetchDescriptor(
+        let descriptor = FetchDescriptor(
             predicate: #Predicate<AnimeEntry> { entry in
                 entry.tmdbID == tmdbID
             }

@@ -18,6 +18,7 @@ struct AnimeEntryListRow: View {
     var tapGesturesEnabled: Bool = true
     var onTap: (() -> Void)? = nil
     var onOpenDetails: (() -> Void)? = nil
+    var onToggleFavorite: (AnimeEntry) -> Void = { _ in }
 
     private let metadataFont = Font.system(size: 10.5, weight: .medium)
     private let overviewFont = Font.system(size: 11, weight: .regular)
@@ -31,13 +32,15 @@ struct AnimeEntryListRow: View {
         snapshot: LibraryEntrySnapshot? = nil,
         tapGesturesEnabled: Bool = true,
         onTap: (() -> Void)? = nil,
-        onOpenDetails: (() -> Void)? = nil
+        onOpenDetails: (() -> Void)? = nil,
+        onToggleFavorite: @escaping (AnimeEntry) -> Void = { _ in }
     ) {
         self.entry = entry
         self.snapshot = snapshot ?? LibraryEntrySnapshot(entry: entry)
         self.tapGesturesEnabled = tapGesturesEnabled
         self.onTap = onTap
         self.onOpenDetails = onOpenDetails
+        self.onToggleFavorite = onToggleFavorite
     }
 
     var body: some View {
@@ -179,7 +182,11 @@ struct AnimeEntryListRow: View {
     }
 
     private var favoriteButton: some View {
-        LibraryFavoriteToggle(entry: entry, displayedIsFavorite: snapshot.isFavorite) { isFavorite in
+        LibraryFavoriteToggle(
+            entry: entry,
+            displayedIsFavorite: snapshot.isFavorite,
+            onToggleFavorite: onToggleFavorite
+        ) { isFavorite in
             LibraryFavoriteSymbol(
                 isFavorite: isFavorite,
                 font: .footnote.weight(.semibold)

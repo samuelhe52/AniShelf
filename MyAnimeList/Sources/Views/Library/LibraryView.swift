@@ -9,12 +9,6 @@ import DataProvider
 import LibrarySync
 import SwiftUI
 
-// MARK: - Environment Keys
-
-extension EnvironmentValues {
-    @Entry var toggleFavorite: (AnimeEntry) -> Void = { _ in }
-}
-
 struct LibraryScrollRequest: Equatable {
     // Keep repeated explicit requests to the same entry observable.
     let token = UUID()
@@ -122,8 +116,6 @@ struct LibraryView: View {
         return
             libraryNavigationStack
             .environment(\.libraryEntryDetailActivation, detailActivation)
-            .environment(\.libraryEntryOpenDetailAction, openDetails)
-            .environment(\.libraryEntryEditAction, editDetails)
             .inspector(
                 isPresented: Binding(
                     get: {
@@ -258,7 +250,6 @@ struct LibraryView: View {
                     jumpToEntryInLibrary: jumpToEntryInLibrary
                 )
             }
-            .environment(\.toggleFavorite, toggleFavorite)
             .environment(interaction)
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
@@ -287,13 +278,18 @@ struct LibraryView: View {
     private var libraryView: some View {
         let displayItems = selectionDisplayItems ?? store.libraryDisplayItems
         let layoutIDs = displayItems.map(\.id)
+        let detailActions = LibraryEntryDetailActions(
+            open: openDetails,
+            edit: editDetails
+        )
 
         switch libraryViewStyle {
         case .gallery:
             libraryViewPage(id: .gallery, layoutIDs: layoutIDs) {
                 LibraryGalleryView(
                     scrolledID: $scrollState.scrolledID,
-                    scrollRequest: scrollRequest
+                    scrollRequest: scrollRequest,
+                    detailActions: detailActions
                 )
                 .scenePadding(.vertical)
                 .ignoresSafeArea(.keyboard, edges: .bottom)
@@ -301,6 +297,7 @@ struct LibraryView: View {
         case .list:
             libraryViewPage(id: .list, layoutIDs: layoutIDs) {
                 LibraryListView(
+                    detailActions: detailActions,
                     displayItems: displayItems,
                     scrolledID: $scrollState.scrolledID,
                     scrollRequest: scrollRequest,
@@ -311,6 +308,7 @@ struct LibraryView: View {
         case .grid:
             libraryViewPage(id: .grid, layoutIDs: layoutIDs) {
                 LibraryGridView(
+                    detailActions: detailActions,
                     displayItems: displayItems,
                     scrolledID: $scrollState.scrolledID,
                     scrollRequest: scrollRequest,
@@ -415,10 +413,6 @@ struct LibraryView: View {
             interaction.detailEditRequest?.hostPresentationID == hostPresentationID
         else { return nil }
         return interaction.detailEditRequest?.id
-    }
-
-    private func toggleFavorite(_ entry: AnimeEntry) {
-        store.repository.toggleFavorite(entry)
     }
 
     func requestLibraryScroll(to entryID: Int?) {

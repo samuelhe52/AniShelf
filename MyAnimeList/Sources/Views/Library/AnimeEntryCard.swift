@@ -11,6 +11,7 @@ struct AnimeEntryCard: View {
     var entry: AnimeEntry
     var snapshot: LibraryEntrySnapshot
     var onOpenDetails: (() -> Void)? = nil
+    var onToggleFavorite: (AnimeEntry) -> Void = { _ in }
     @Binding var imageLoaded: Bool
     var imageMissing: Bool { snapshot.posterMissing }
     private let posterShape = RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -20,11 +21,13 @@ struct AnimeEntryCard: View {
         entry: AnimeEntry,
         snapshot: LibraryEntrySnapshot? = nil,
         onOpenDetails: (() -> Void)? = nil,
+        onToggleFavorite: @escaping (AnimeEntry) -> Void = { _ in },
         imageLoaded: Binding<Bool>
     ) {
         self.entry = entry
         self.snapshot = snapshot ?? LibraryEntrySnapshot(entry: entry)
         self.onOpenDetails = onOpenDetails
+        self.onToggleFavorite = onToggleFavorite
         self._imageLoaded = imageLoaded
     }
 
@@ -108,7 +111,11 @@ struct AnimeEntryCard: View {
     }
 
     private var favoriteIndicator: some View {
-        LibraryFavoriteToggle(entry: entry, displayedIsFavorite: snapshot.isFavorite) { isFavorite in
+        LibraryFavoriteToggle(
+            entry: entry,
+            displayedIsFavorite: snapshot.isFavorite,
+            onToggleFavorite: onToggleFavorite
+        ) { isFavorite in
             LibraryFavoriteSymbol(
                 isFavorite: isFavorite,
                 font: .system(size: 15, weight: .bold),

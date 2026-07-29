@@ -315,27 +315,29 @@ struct LibraryFavoriteSymbol: View {
 }
 
 struct LibraryFavoriteToggle<Label: View>: View {
-    @Environment(\.toggleFavorite) private var toggleFavorite
     @State private var favoriteOverride: Bool?
 
     let entry: AnimeEntry
     let displayedIsFavorite: Bool
+    private let onToggleFavorite: (AnimeEntry) -> Void
     private let label: (Bool) -> Label
 
     init(
         entry: AnimeEntry,
         displayedIsFavorite: Bool? = nil,
+        onToggleFavorite: @escaping (AnimeEntry) -> Void = { _ in },
         @ViewBuilder label: @escaping (Bool) -> Label
     ) {
         self.entry = entry
         self.displayedIsFavorite = displayedIsFavorite ?? entry.favorite
+        self.onToggleFavorite = onToggleFavorite
         self.label = label
     }
 
     var body: some View {
         Button {
             favoriteOverride = !isFavorite
-            toggleFavorite(entry)
+            onToggleFavorite(entry)
         } label: {
             label(isFavorite)
         }

@@ -29,6 +29,11 @@ enum LibraryEntryDetailHost: Equatable, Sendable {
     case inspector
 }
 
+struct LibraryEntryDetailActions {
+    let open: @MainActor (AnimeEntry) -> Void
+    let edit: @MainActor (AnimeEntry) -> Void
+}
+
 struct LibraryEntryDetailHostPolicy: Equatable, Sendable {
     let host: LibraryEntryDetailHost
     let activation: LibraryEntryDetailActivation
@@ -424,8 +429,6 @@ extension EnvironmentValues {
     }
 
     @Entry var libraryEntryDetailHost: LibraryEntryDetailHost?
-    @Entry var libraryEntryOpenDetailAction: ((AnimeEntry) -> Void)?
-    @Entry var libraryEntryEditAction: ((AnimeEntry) -> Void)?
 }
 
 extension LibraryEntryInteractionState {

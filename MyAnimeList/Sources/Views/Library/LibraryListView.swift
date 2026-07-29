@@ -11,13 +11,11 @@ import SwiftUI
 struct LibraryListView: View {
     @Environment(LibraryStore.self) private var store
     @Environment(LibraryEntryInteractionState.self) var interaction
-    @Environment(\.toggleFavorite) var toggleFavorite
-    @Environment(\.libraryEntryOpenDetailAction) private var openDetailAction
-    @Environment(\.libraryEntryEditAction) private var editAction
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var listEditMode: EditMode = .inactive
 
+    let detailActions: LibraryEntryDetailActions
     let displayItems: [LibraryEntryDisplayItem]
     @Binding var scrolledID: Int?
     let scrollRequest: LibraryScrollRequest?
@@ -71,7 +69,8 @@ struct LibraryListView: View {
                 guard !interaction.isMultiSelecting else { return }
                 scrolledID = item.id
                 openDetails(for: item.entry)
-            }
+            },
+            onToggleFavorite: toggleFavorite
         )
         .opacity(
             !interaction.isMultiSelecting || interaction.isSelected(item.id) ? 1 : 0.48
@@ -134,19 +133,15 @@ struct LibraryListView: View {
     }
 
     private func openDetails(for entry: AnimeEntry) {
-        if let openDetailAction {
-            openDetailAction(entry)
-        } else {
-            interaction.openDetails(for: entry)
-        }
+        detailActions.open(entry)
     }
 
     private func editEntry(_ entry: AnimeEntry) {
-        if let editAction {
-            editAction(entry)
-        } else {
-            interaction.setEditingEntry(entry)
-        }
+        detailActions.edit(entry)
+    }
+
+    private func toggleFavorite(_ entry: AnimeEntry) {
+        store.repository.toggleFavorite(entry)
     }
 
 }

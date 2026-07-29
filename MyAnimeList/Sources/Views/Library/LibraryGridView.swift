@@ -14,10 +14,8 @@ struct LibraryGridView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @Environment(LibraryStore.self) private var store
-    @Environment(\.toggleFavorite) var toggleFavorite
     @Environment(LibraryEntryInteractionState.self) var interaction
-    @Environment(\.libraryEntryOpenDetailAction) private var openDetailAction
-    @Environment(\.libraryEntryEditAction) private var editAction
+    let detailActions: LibraryEntryDetailActions
     let displayItems: [LibraryEntryDisplayItem]
     @Binding var scrolledID: Int?
     let scrollRequest: LibraryScrollRequest?
@@ -127,19 +125,15 @@ struct LibraryGridView: View {
     }
 
     private func openDetails(for entry: AnimeEntry) {
-        if let openDetailAction {
-            openDetailAction(entry)
-        } else {
-            interaction.openDetails(for: entry)
-        }
+        detailActions.open(entry)
     }
 
     private func editEntry(_ entry: AnimeEntry) {
-        if let editAction {
-            editAction(entry)
-        } else {
-            interaction.setEditingEntry(entry)
-        }
+        detailActions.edit(entry)
+    }
+
+    private func toggleFavorite(_ entry: AnimeEntry) {
+        store.repository.toggleFavorite(entry)
     }
 }
 
@@ -273,6 +267,10 @@ fileprivate struct LibraryGridItem: View {
     @Previewable let store = LibraryStore(dataProvider: .forPreview)
 
     LibraryGridView(
+        detailActions: LibraryEntryDetailActions(
+            open: { _ in },
+            edit: { _ in }
+        ),
         displayItems: store.libraryDisplayItems,
         scrolledID: .constant(nil),
         scrollRequest: nil,
