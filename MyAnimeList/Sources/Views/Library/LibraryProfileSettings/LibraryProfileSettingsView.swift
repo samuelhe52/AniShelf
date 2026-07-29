@@ -70,6 +70,7 @@ struct LibraryProfileSettingsView: View {
                     profileContent
                 }
                 .scrollContentBackground(.hidden)
+                .scrollEdgeEffectStyle(.soft, for: .all)
             }
             .navigationTitle(profileTitleResource)
             .navigationBarTitleDisplayMode(.inline)

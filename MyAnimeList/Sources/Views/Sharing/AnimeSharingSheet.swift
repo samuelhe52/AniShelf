@@ -34,6 +34,7 @@ struct AnimeSharingSheet: View {
                     .frame(maxWidth: 1_040)
                     .frame(maxWidth: .infinity)
             }
+            .scrollEdgeEffectStyle(.soft, for: .all)
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Share")
             .navigationBarTitleDisplayMode(.inline)

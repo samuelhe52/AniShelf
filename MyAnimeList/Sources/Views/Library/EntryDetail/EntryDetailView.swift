@@ -76,6 +76,7 @@ struct EntryDetailView: View {
                 }
                 .scrollPosition($bindableSession.scrollPosition)
                 .coordinateSpace(name: scrollCoordinateSpaceName)
+                .scrollEdgeEffectStyle(.soft, for: .all)
                 .task(id: editingRequestID) {
                     let requestID = editingRequestID
                     guard let requestID else { return }

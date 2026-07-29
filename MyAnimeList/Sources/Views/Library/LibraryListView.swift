@@ -29,6 +29,7 @@ struct LibraryListView: View {
                 rowContent(for: item)
             }
             .listStyle(.plain)
+            .scrollEdgeEffectStyle(.soft, for: .all)
             .environment(\.editMode, $listEditMode)
             .animation(.default, value: store.groupStrategy)
             .animation(.default, value: store.sortReversed)

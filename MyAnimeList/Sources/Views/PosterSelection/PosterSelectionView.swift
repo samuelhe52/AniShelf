@@ -103,6 +103,7 @@ struct PosterSelectionView: View {
             .frame(maxWidth: 1_100)
             .frame(maxWidth: .infinity)
         }
+        .scrollEdgeEffectStyle(.soft, for: .all)
         .background(Color(.systemGroupedBackground))
         .navigationBarTitleDisplayMode(.inline)
         .presentationDragIndicator(.visible)
