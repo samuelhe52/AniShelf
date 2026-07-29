@@ -30,6 +30,8 @@
 - Run tests with `make test-sim` by default. Use `make test` only when the user explicitly asks for physical-device testing or there is a specific device-only reason.
 - When developing new features or adding tests, run only the relevant tests first. For app tests, pass one or more whitespace-separated Xcode test identifiers with `APP_TEST_ONLY`, for example `make test-app-sim APP_TEST_ONLY='MyAnimeListTests/LibraryMetadataRefreshTests'` or `make test-app-sim APP_TEST_ONLY='MyAnimeListTests/LibraryExportManagerTests MyAnimeListTests/LibraryBackupRestoreTests'`. For DataProvider package tests, use Swift Testing's native filter syntax, for example `make test-dataprovider DATAPROVIDER_TEST_FILTER='LibrarySyncTests'` or `make test-dataprovider DATAPROVIDER_TEST_FILTER='LibrarySyncTests|MigrationTests'`. Only run the full suite when there is a good reason.
 - Add or update tests with behavior changes when practical.
+- If a simulator is already booted, use that simulator for install/testing as you normally would. Do not boot another simulator wihout explicit user permission.
+- Do not start simulators without explicit user permission, even if you need a booted simulator for unit tests.
 
 ## Commits
 

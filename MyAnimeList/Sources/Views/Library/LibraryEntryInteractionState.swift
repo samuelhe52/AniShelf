@@ -27,6 +27,15 @@ enum LibraryEntryWorkflow: Equatable, Sendable {
 enum LibraryEntryDetailHost: Equatable, Sendable {
     case sheet
     case inspector
+
+    var pageBackground: Color {
+        switch self {
+        case .sheet:
+            Color(.systemGroupedBackground)
+        case .inspector:
+            Color(.systemBackground)
+        }
+    }
 }
 
 struct LibraryEntryDetailActions {
@@ -427,8 +436,6 @@ extension EnvironmentValues {
         get { self[LibraryEntryDetailActivationKey.self] }
         set { self[LibraryEntryDetailActivationKey.self] = newValue }
     }
-
-    @Entry var libraryEntryDetailHost: LibraryEntryDetailHost?
 }
 
 extension LibraryEntryInteractionState {

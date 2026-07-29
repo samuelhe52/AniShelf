@@ -135,6 +135,7 @@ struct LibraryView: View {
                         presentation: inspectorPresentation,
                         session: detailSession
                     )
+                    .presentationBackground(inspectorPresentation.host.pageBackground)
                     .inspectorColumnWidth(min: 400, ideal: 480, max: 520)
                 }
             }
@@ -162,6 +163,7 @@ struct LibraryView: View {
                     presentation: presentation,
                     session: detailSession
                 )
+                .presentationBackground(presentation.host.pageBackground)
             }
         case .workflow(let presentation):
             workflowContent(for: presentation)
@@ -175,6 +177,7 @@ struct LibraryView: View {
         NavigationStack {
             EntryDetailView(
                 session: session,
+                detailHost: presentation.host,
                 onClose: { _ in
                     interaction.dismissDetails(
                         ifHostPresentationID: presentation.id
@@ -196,7 +199,6 @@ struct LibraryView: View {
                 }
             )
         }
-        .environment(\.libraryEntryDetailHost, presentation.host)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 

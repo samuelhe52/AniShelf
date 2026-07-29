@@ -14,7 +14,6 @@ struct EntryDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppReviewPromptController.self) private var appReview
-    @Environment(\.libraryEntryDetailHost) private var detailHost
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
@@ -22,6 +21,7 @@ struct EntryDetailView: View {
     @AppStorage(.episodeProgressTrackingEnabled) private var episodeProgressTrackingEnabled = false
 
     private let session: EntryDetailSession
+    private let detailHost: LibraryEntryDetailHost
     private let onClose: ((LibraryEntrySyncIdentity) -> Void)?
     private let editingRequestID: UUID?
     private let onEditingRequestHandled: ((UUID) -> Void)?
@@ -38,6 +38,7 @@ struct EntryDetailView: View {
 
     init(
         session: EntryDetailSession,
+        detailHost: LibraryEntryDetailHost,
         onClose: ((LibraryEntrySyncIdentity) -> Void)? = nil,
         editingRequestID: UUID? = nil,
         onEditingRequestHandled: ((UUID) -> Void)? = nil,
@@ -45,6 +46,7 @@ struct EntryDetailView: View {
         isCurrentHostPresentation: ((UUID) -> Bool)? = nil
     ) {
         self.session = session
+        self.detailHost = detailHost
         self.onClose = onClose
         self.editingRequestID = editingRequestID
         self.onEditingRequestHandled = onEditingRequestHandled
@@ -91,7 +93,6 @@ struct EntryDetailView: View {
         .ignoresSafeArea(edges: .top)
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar { toolbarContent }
-        .presentationBackground(pageBackground)
         .presentationDragIndicator(.visible)
         .interactiveDismissDisabled(
             session.entry.userInfoHasChanges(comparedTo: session.originalUserInfo)
@@ -199,17 +200,11 @@ struct EntryDetailView: View {
 
     // MARK: - Hero
 
-    private var pageBackground: Color {
-        detailHost == .sheet ? Color(.systemGroupedBackground) : Color(.systemBackground)
-    }
-
     private var entryReplacementAnimation: Animation? {
         reduceMotion ? nil : .easeInOut(duration: 0.18)
     }
 
-    private var editingSectionRevealDelay: Duration {
-        detailHost == .inspector ? .milliseconds(250) : .milliseconds(150)
-    }
+    private let editingSectionRevealDelay: Duration = .milliseconds(150)
 
     @discardableResult
     @MainActor
@@ -271,7 +266,7 @@ struct EntryDetailView: View {
             VStack(spacing: 0) {
                 Spacer()
                 LinearGradient(
-                    colors: [.clear, pageBackground],
+                    colors: [.clear, detailHost.pageBackground],
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -938,7 +933,8 @@ fileprivate struct EntryDetailPreviewHost: View {
             .sheet(isPresented: $showDetail) {
                 NavigationStack {
                     EntryDetailView(
-                        session: session
+                        session: session,
+                        detailHost: .sheet
                     )
                 }
             }
