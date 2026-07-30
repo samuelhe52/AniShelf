@@ -11,7 +11,6 @@ import SwiftUI
 struct LibraryGridView: View {
     @AppStorage(.libraryOpenDetailWithSingleTap) private var openDetailWithSingleTap = false
     @Environment(\.libraryEntryDetailActivation) private var detailActivation
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @Environment(LibraryStore.self) private var store
     @Environment(LibraryEntryInteractionState.self) var interaction
@@ -32,7 +31,7 @@ struct LibraryGridView: View {
                     }
                 }
                 .transaction(value: isInspectorPresented) { transaction in
-                    transaction.animation = reduceMotion ? nil : .smooth(duration: 0.3)
+                    transaction.animation = .smooth(duration: 0.3)
                 }
                 .onChange(of: scrollRequest) { handleScrollRequest(proxy: proxy) }
                 .onAppear { onGridViewAppear(proxy: proxy) }

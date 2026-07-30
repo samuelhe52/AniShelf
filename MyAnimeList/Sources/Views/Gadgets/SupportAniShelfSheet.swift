@@ -10,7 +10,6 @@ import SwiftUI
 struct SupportAniShelfSheet: View {
     @Environment(SupportStore.self) private var supportStore
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var purchaseErrorMessage: String?
     @State private var purchaseSucceeded = false
@@ -22,7 +21,7 @@ struct SupportAniShelfSheet: View {
 
     var body: some View {
         ZStack {
-            LibraryProfileBackdrop(reduceMotion: reduceMotion)
+            LibraryProfileBackdrop()
 
             ScrollView {
                 VStack(spacing: 14) {
@@ -37,8 +36,8 @@ struct SupportAniShelfSheet: View {
                 .padding(.bottom, 32)
                 .frame(maxWidth: 680)
                 .frame(maxWidth: .infinity)
-                .animation(reduceMotion ? nil : contentTransitionAnimation, value: supportStore.loadState)
-                .animation(reduceMotion ? nil : thankYouTransitionAnimation, value: purchaseSucceeded)
+                .animation(contentTransitionAnimation, value: supportStore.loadState)
+                .animation(thankYouTransitionAnimation, value: purchaseSucceeded)
             }
             .scrollBounceBehavior(.basedOnSize)
         }
@@ -172,14 +171,12 @@ struct SupportAniShelfSheet: View {
     private var thankYouCard: some View {
         VStack(spacing: 18) {
             ZStack {
-                if !reduceMotion {
-                    TimelineView(.animation) { timeline in
-                        Canvas { ctx, size in
-                            drawParticles(ctx: ctx, size: size, now: timeline.date)
-                        }
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
+                TimelineView(.animation) { timeline in
+                    Canvas { ctx, size in
+                        drawParticles(ctx: ctx, size: size, now: timeline.date)
                     }
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
                 }
 
                 Image(systemName: "heart.fill")
@@ -356,16 +353,14 @@ struct SupportAniShelfSheet: View {
     }
 
     private var contentTransition: AnyTransition {
-        reduceMotion
-            ? .opacity
-            : .asymmetric(
-                insertion: .opacity.combined(with: .scale(scale: 0.98, anchor: .top)),
-                removal: .opacity
-            )
+        .asymmetric(
+            insertion: .opacity.combined(with: .scale(scale: 0.98, anchor: .top)),
+            removal: .opacity
+        )
     }
 
     private var thankYouTransition: AnyTransition {
-        reduceMotion ? .opacity : .opacityScale.animation(.spring(response: 1.55, dampingFraction: 0.92))
+        .opacityScale.animation(.spring(response: 1.55, dampingFraction: 0.92))
     }
 }
 

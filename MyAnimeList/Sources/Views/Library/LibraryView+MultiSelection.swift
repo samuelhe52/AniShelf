@@ -55,13 +55,13 @@ extension LibraryView {
 
     func enterMultiSelection() {
         updateSelectionDisplayItems()
-        withAnimation(LibraryViewTransitions.selectionModeAnimation(reduceMotion: reduceMotion)) {
+        withAnimation(LibraryViewTransitions.selectionModeAnimation()) {
             interaction.enterMultiSelection()
         }
     }
 
     func exitMultiSelection() {
-        withAnimation(LibraryViewTransitions.selectionModeAnimation(reduceMotion: reduceMotion)) {
+        withAnimation(LibraryViewTransitions.selectionModeAnimation()) {
             interaction.exitMultiSelection()
         }
         selectionDisplayItems = nil

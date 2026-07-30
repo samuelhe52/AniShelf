@@ -12,7 +12,6 @@ import SwiftUI
 
 struct EntryDetailView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppReviewPromptController.self) private var appReview
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
@@ -200,8 +199,8 @@ struct EntryDetailView: View {
 
     // MARK: - Hero
 
-    private var entryReplacementAnimation: Animation? {
-        reduceMotion ? nil : .easeInOut(duration: 0.18)
+    private var entryReplacementAnimation: Animation {
+        .easeInOut(duration: 0.18)
     }
 
     private let editingSectionRevealDelay: Duration = .milliseconds(150)
@@ -217,18 +216,11 @@ struct EntryDetailView: View {
         }
         guard !Task.isCancelled else { return false }
 
-        if reduceMotion {
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.86)) {
             proxy.scrollTo(
                 EntryDetailScrollTarget.editingSection,
                 anchor: .center
             )
-        } else {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.86)) {
-                proxy.scrollTo(
-                    EntryDetailScrollTarget.editingSection,
-                    anchor: .center
-                )
-            }
         }
         return true
     }

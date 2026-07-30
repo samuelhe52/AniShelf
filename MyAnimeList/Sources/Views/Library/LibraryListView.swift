@@ -11,7 +11,6 @@ import SwiftUI
 struct LibraryListView: View {
     @Environment(LibraryStore.self) private var store
     @Environment(LibraryEntryInteractionState.self) var interaction
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var listEditMode: EditMode = .inactive
 
@@ -39,9 +38,7 @@ struct LibraryListView: View {
             .onChange(of: interaction.isMultiSelecting, initial: true) { _, isMultiSelecting in
                 // Match the selection-mode curve so the edit-mode transition
                 // doesn't race the row and toolbar animations on dismiss.
-                withAnimation(
-                    LibraryViewTransitions.selectionModeAnimation(reduceMotion: reduceMotion)
-                ) {
+                withAnimation(LibraryViewTransitions.selectionModeAnimation()) {
                     listEditMode = isMultiSelecting ? .active : .inactive
                 }
             }

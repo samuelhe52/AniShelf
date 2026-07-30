@@ -21,7 +21,6 @@ struct LibraryView: View {
     @Environment(LibraryStore.self) var store
     @State var interaction = LibraryEntryInteractionState()
     @State private var detailSessionStore = EntryDetailSessionStore()
-    @Environment(\.accessibilityReduceMotion) var reduceMotion
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(AppReviewPromptController.self) var appReview
 
@@ -341,20 +340,20 @@ struct LibraryView: View {
         )
     }
 
-    private var libraryViewStyleAnimation: Animation? {
-        LibraryViewTransitions.libraryViewStyleAnimation(reduceMotion: reduceMotion)
+    private var libraryViewStyleAnimation: Animation {
+        LibraryViewTransitions.libraryViewStyleAnimation()
     }
 
     private var libraryViewTransition: AnyTransition {
-        LibraryViewTransitions.libraryViewTransition(reduceMotion: reduceMotion)
+        LibraryViewTransitions.libraryViewTransition()
     }
 
-    private var profileSettingsAnimation: Animation? {
-        LibraryViewTransitions.profileSettingsAnimation(reduceMotion: reduceMotion)
+    private var profileSettingsAnimation: Animation {
+        LibraryViewTransitions.profileSettingsAnimation()
     }
 
     private var profileSettingsTransition: AnyTransition {
-        LibraryViewTransitions.profileSettingsTransition(reduceMotion: reduceMotion)
+        LibraryViewTransitions.profileSettingsTransition()
     }
 
     // MARK: - Entry Actions

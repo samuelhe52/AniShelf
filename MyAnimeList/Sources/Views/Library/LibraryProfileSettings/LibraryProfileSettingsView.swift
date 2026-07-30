@@ -15,7 +15,6 @@ struct LibraryProfileSettingsView: View {
     @Environment(LibraryStore.self) private var store
     @Environment(WhatsNewController.self) private var whatsNew
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
@@ -64,7 +63,7 @@ struct LibraryProfileSettingsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                LibraryProfileBackdrop(reduceMotion: reduceMotion)
+                LibraryProfileBackdrop()
 
                 ScrollView {
                     profileContent
@@ -202,15 +201,14 @@ struct LibraryProfileSettingsView: View {
     private var profileContent: some View {
         VStack(spacing: profileContentSpacing) {
             heroCard
-                .profileReveal(index: 0, appeared: appeared, reduceMotion: reduceMotion)
+                .profileReveal(index: 0, appeared: appeared)
 
             profileSummary
 
             settingsCard(layout: settingsCardLayout)
                 .profileReveal(
                     index: settingsRevealIndex,
-                    appeared: appeared,
-                    reduceMotion: reduceMotion
+                    appeared: appeared
                 )
         }
         .frame(maxWidth: layout == .wideGrid ? 1_180 : nil)
@@ -224,10 +222,10 @@ struct LibraryProfileSettingsView: View {
         summaryLayout {
             primaryStatsGrid
                 .frame(maxWidth: .infinity, alignment: .topLeading)
-                .profileReveal(index: 1, appeared: appeared, reduceMotion: reduceMotion)
+                .profileReveal(index: 1, appeared: appeared)
             libraryDetailsCard
                 .frame(maxWidth: .infinity, alignment: .topLeading)
-                .profileReveal(index: 2, appeared: appeared, reduceMotion: reduceMotion)
+                .profileReveal(index: 2, appeared: appeared)
         }
     }
 
@@ -319,8 +317,8 @@ struct LibraryProfileSettingsView: View {
         )
     }
 
-    private var languagePickerAnimation: Animation? {
-        reduceMotion ? nil : .spring(response: 0.34, dampingFraction: 0.88)
+    private var languagePickerAnimation: Animation {
+        .spring(response: 0.34, dampingFraction: 0.88)
     }
 
     private var effectiveLanguage: Language {
@@ -349,7 +347,7 @@ struct LibraryProfileSettingsView: View {
 
     private func handleAppear() {
         store.language = effectiveLanguage
-        withAnimation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.86)) {
+        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
             appeared = true
         }
     }

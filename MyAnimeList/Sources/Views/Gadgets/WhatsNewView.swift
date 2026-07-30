@@ -12,12 +12,11 @@ struct WhatsNewView: View {
     let actionRunner: WhatsNewActionRunner
     let onDismiss: () -> Void
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
 
     var body: some View {
         ZStack {
-            LibraryProfileBackdrop(reduceMotion: reduceMotion)
+            LibraryProfileBackdrop()
 
             ScrollView {
                 VStack(spacing: 16) {

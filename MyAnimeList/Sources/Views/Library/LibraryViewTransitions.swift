@@ -8,17 +8,16 @@
 import SwiftUI
 
 enum LibraryViewTransitions {
-    static func libraryViewStyleAnimation(reduceMotion: Bool) -> Animation? {
-        reduceMotion ? nil : .smooth(duration: 0.34, extraBounce: 0.12)
+    static func libraryViewStyleAnimation() -> Animation {
+        .smooth(duration: 0.34, extraBounce: 0.12)
     }
 
-    static func selectionModeAnimation(reduceMotion: Bool) -> Animation? {
-        reduceMotion ? nil : .smooth(duration: 0.26, extraBounce: 0.06)
+    static func selectionModeAnimation() -> Animation {
+        .smooth(duration: 0.26, extraBounce: 0.06)
     }
 
-    static func libraryViewTransition(reduceMotion: Bool) -> AnyTransition {
-        guard !reduceMotion else { return .opacity }
-        return .asymmetric(
+    static func libraryViewTransition() -> AnyTransition {
+        .asymmetric(
             insertion: .modifier(
                 active: LibraryViewTransitionModifier(
                     opacity: 0,
@@ -50,13 +49,12 @@ enum LibraryViewTransitions {
         )
     }
 
-    static func profileSettingsAnimation(reduceMotion: Bool) -> Animation? {
-        reduceMotion ? nil : .smooth(duration: 0.45, extraBounce: 0)
+    static func profileSettingsAnimation() -> Animation {
+        .smooth(duration: 0.45, extraBounce: 0)
     }
 
-    static func profileSettingsTransition(reduceMotion: Bool) -> AnyTransition {
-        guard !reduceMotion else { return .opacity }
-        return .asymmetric(
+    static func profileSettingsTransition() -> AnyTransition {
+        .asymmetric(
             insertion: .modifier(
                 active: LibraryProfileSettingsBlendModifier(
                     opacity: 0,

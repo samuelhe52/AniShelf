@@ -211,7 +211,6 @@ struct LibraryProfileSettingsCard: View {
     }
 
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var cloudSyncActionInFlight = false
     @State private var showCloudSyncConflictAlert = false
     @State private var showRestoreUnavailableAlert = false

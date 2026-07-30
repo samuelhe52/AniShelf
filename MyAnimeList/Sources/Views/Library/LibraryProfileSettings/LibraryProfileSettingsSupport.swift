@@ -10,8 +10,6 @@ import SwiftUI
 struct LibraryProfileBackdrop: View {
     @Environment(\.colorScheme) private var colorScheme
 
-    let reduceMotion: Bool
-
     var body: some View {
         ZStack {
             backdropGradient
@@ -23,7 +21,7 @@ struct LibraryProfileBackdrop: View {
                 .blur(radius: colorScheme == .dark ? 58 : 72)
                 .offset(x: -145, y: -230)
                 .blendMode(orbBlendMode)
-                .opacity(reduceMotion ? primaryOrbReducedOpacity : primaryOrbOpacity)
+                .opacity(primaryOrbOpacity)
 
             Circle()
                 .fill(secondaryOrbColor)
@@ -31,7 +29,7 @@ struct LibraryProfileBackdrop: View {
                 .blur(radius: colorScheme == .dark ? 62 : 74)
                 .offset(x: 155, y: 35)
                 .blendMode(orbBlendMode)
-                .opacity(reduceMotion ? secondaryOrbReducedOpacity : secondaryOrbOpacity)
+                .opacity(secondaryOrbOpacity)
 
             Circle()
                 .fill(tertiaryOrbColor)
@@ -39,7 +37,7 @@ struct LibraryProfileBackdrop: View {
                 .blur(radius: colorScheme == .dark ? 66 : 78)
                 .offset(x: -125, y: 320)
                 .blendMode(orbBlendMode)
-                .opacity(reduceMotion ? tertiaryOrbReducedOpacity : tertiaryOrbOpacity)
+                .opacity(tertiaryOrbOpacity)
 
             Rectangle()
                 .fill(backdropVeilColor)
@@ -110,18 +108,6 @@ struct LibraryProfileBackdrop: View {
         colorScheme == .dark ? 0.80 : 0.78
     }
 
-    private var primaryOrbReducedOpacity: Double {
-        colorScheme == .dark ? 0.58 : 0.56
-    }
-
-    private var secondaryOrbReducedOpacity: Double {
-        colorScheme == .dark ? 0.54 : 0.52
-    }
-
-    private var tertiaryOrbReducedOpacity: Double {
-        colorScheme == .dark ? 0.48 : 0.46
-    }
-
     private var orbBlendMode: BlendMode {
         colorScheme == .dark ? .screen : .normal
     }
@@ -134,30 +120,26 @@ struct LibraryProfileBackdrop: View {
 struct LibraryProfileRevealModifier: ViewModifier {
     let index: Int
     let appeared: Bool
-    let reduceMotion: Bool
 
     func body(content: Content) -> some View {
         content
             .opacity(appeared ? 1 : 0)
-            .scaleEffect(reduceMotion || appeared ? 1 : 0.965)
-            .offset(y: reduceMotion || appeared ? 0 : 18)
-            .blur(radius: reduceMotion || appeared ? 0 : 10)
+            .scaleEffect(appeared ? 1 : 0.965)
+            .offset(y: appeared ? 0 : 18)
+            .blur(radius: appeared ? 0 : 10)
             .animation(
-                reduceMotion
-                    ? nil
-                    : .spring(response: 0.44, dampingFraction: 0.86).delay(Double(index) * 0.055),
+                .spring(response: 0.44, dampingFraction: 0.86).delay(Double(index) * 0.055),
                 value: appeared
             )
     }
 }
 
 extension View {
-    func profileReveal(index: Int, appeared: Bool, reduceMotion: Bool) -> some View {
+    func profileReveal(index: Int, appeared: Bool) -> some View {
         modifier(
             LibraryProfileRevealModifier(
                 index: index,
-                appeared: appeared,
-                reduceMotion: reduceMotion
+                appeared: appeared
             )
         )
     }
