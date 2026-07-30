@@ -3,15 +3,17 @@
 # Configuration
 PROJECT ?= MyAnimeList.xcodeproj
 SCHEME ?= MyAnimeList
+DEVICE_SCHEME ?= MyAnimeList-Release
 APP_NAME ?= MyAnimeList
 CONFIGURATION ?= Debug
+DEVICE_CONFIGURATION ?= Release
 BUNDLE_ID ?= com.samuelhe.MyAnimeList
 APP_TEST_ONLY ?= MyAnimeListTests
 DATAPROVIDER_TEST_FILTER ?=
 SKIP_APP_TESTS ?= MyAnimeListTests/InfoFetcherLiveFetchTests
 CONNECTED_IOS_DEVICE_ID := $(shell xcrun xcdevice list | /usr/bin/python3 -c 'import json, sys; devices = json.load(sys.stdin); print(next((device["identifier"] for device in devices if device.get("platform") == "com.apple.platform.iphoneos" and device.get("available") and not device.get("simulator")), ""))')
 BOOTED_SIMULATOR_ID := $(shell xcrun simctl list devices booted -j | /usr/bin/python3 -c 'import json, sys; devices = json.load(sys.stdin).get("devices", {}); print(next((device["udid"] for runtime_name, runtime_devices in devices.items() if "iOS" in runtime_name for device in runtime_devices if device.get("isAvailable") and device.get("state") == "Booted"), ""))')
-DEVICE_APP_PATH = $(shell xcodebuild -quiet -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "id=$(CONNECTED_IOS_DEVICE_ID)" -showBuildSettings -json | /usr/bin/python3 -c 'import json, sys; data = json.load(sys.stdin); item = next(entry for entry in data if entry.get("target") == "$(APP_NAME)"); settings = item["buildSettings"]; print(settings["TARGET_BUILD_DIR"] + "/" + settings["FULL_PRODUCT_NAME"])')
+DEVICE_APP_PATH = $(shell xcodebuild -quiet -project $(PROJECT) -scheme $(DEVICE_SCHEME) -configuration $(DEVICE_CONFIGURATION) -destination "id=$(CONNECTED_IOS_DEVICE_ID)" -showBuildSettings -json | /usr/bin/python3 -c 'import json, sys; data = json.load(sys.stdin); item = next(entry for entry in data if entry.get("target") == "$(APP_NAME)"); settings = item["buildSettings"]; print(settings["TARGET_BUILD_DIR"] + "/" + settings["FULL_PRODUCT_NAME"])')
 SIMULATOR_APP_PATH = $(shell if [ -n "$(BOOTED_SIMULATOR_ID)" ]; then xcodebuild -quiet -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "id=$(BOOTED_SIMULATOR_ID)" -showBuildSettings -json | /usr/bin/python3 -c 'import json, sys; data = json.load(sys.stdin); item = next(entry for entry in data if entry.get("target") == "$(APP_NAME)"); settings = item["buildSettings"]; print(settings["TARGET_BUILD_DIR"] + "/" + settings["FULL_PRODUCT_NAME"])'; fi)
 DEVICE_PROCESS_LAUNCH_ARGS ?=
 APP_ONLY_TESTING_ARGS = $(foreach test,$(APP_TEST_ONLY),-only-testing:$(test))
@@ -26,7 +28,7 @@ test-app:
 	@[ -n "$(CONNECTED_IOS_DEVICE_ID)" ] || { echo "No connected iPhone found."; exit 1; }
 	@echo "Using device $(CONNECTED_IOS_DEVICE_ID)"
 	@echo "Running MyAnimeList tests..."
-	@set -o pipefail; NSUnbufferedIO=YES xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "id=$(CONNECTED_IOS_DEVICE_ID)" test $(APP_ONLY_TESTING_ARGS) $(SKIP_ONLY_TESTING_ARGS) -collect-test-diagnostics never 2>&1 | xcbeautify --disable-logging && echo "** TEST SUCCEEDED **"
+	@set -o pipefail; NSUnbufferedIO=YES xcodebuild -project $(PROJECT) -scheme $(DEVICE_SCHEME) -configuration $(DEVICE_CONFIGURATION) -destination "id=$(CONNECTED_IOS_DEVICE_ID)" test $(APP_ONLY_TESTING_ARGS) $(SKIP_ONLY_TESTING_ARGS) -collect-test-diagnostics never 2>&1 | xcbeautify --disable-logging && echo "** TEST SUCCEEDED **"
 	@echo "MyAnimeList tests completed."
 
 .PHONY: test-dataprovider
@@ -48,7 +50,7 @@ test-app-live-fetch:
 	@[ -n "$(CONNECTED_IOS_DEVICE_ID)" ] || { echo "No connected iPhone found."; exit 1; }
 	@echo "Using device $(CONNECTED_IOS_DEVICE_ID)"
 	@echo "Running InfoFetcher live-fetch tests..."
-	@set -o pipefail; NSUnbufferedIO=YES xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "id=$(CONNECTED_IOS_DEVICE_ID)" test -only-testing:MyAnimeListTests/InfoFetcherLiveFetchTests -collect-test-diagnostics never 2>&1 | xcbeautify --disable-logging && echo "** TEST SUCCEEDED **"
+	@set -o pipefail; NSUnbufferedIO=YES xcodebuild -project $(PROJECT) -scheme $(DEVICE_SCHEME) -configuration $(DEVICE_CONFIGURATION) -destination "id=$(CONNECTED_IOS_DEVICE_ID)" test -only-testing:MyAnimeListTests/InfoFetcherLiveFetchTests -collect-test-diagnostics never 2>&1 | xcbeautify --disable-logging && echo "** TEST SUCCEEDED **"
 	@echo "InfoFetcher live-fetch tests completed."
 
 .PHONY: test-app-sim-live-fetch
@@ -82,7 +84,7 @@ build:
 run-device:
 	@[ -n "$(CONNECTED_IOS_DEVICE_ID)" ] || { echo "No connected iPhone found."; exit 1; }
 	@echo "Using device $(CONNECTED_IOS_DEVICE_ID)"
-	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "id=$(CONNECTED_IOS_DEVICE_ID)" build
+	xcodebuild -project $(PROJECT) -scheme $(DEVICE_SCHEME) -configuration $(DEVICE_CONFIGURATION) -destination "id=$(CONNECTED_IOS_DEVICE_ID)" build
 	xcrun devicectl device install app --device $(CONNECTED_IOS_DEVICE_ID) "$(DEVICE_APP_PATH)"
 	xcrun devicectl device process launch --terminate-existing --device $(CONNECTED_IOS_DEVICE_ID) $(BUNDLE_ID) $(DEVICE_PROCESS_LAUNCH_ARGS)
 
