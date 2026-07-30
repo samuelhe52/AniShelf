@@ -15,11 +15,7 @@ extension DataProvider {
         guard inMemory else { return }
         do {
             try dataHandler.newEntry(AnimeEntry.frieren)
-            try dataHandler.newEntry(
-                AnimeEntry(
-                    name: "CLANNAD Season 1",
-                    type: .season(seasonNumber: 1, parentSeriesID: 24835),
-                    tmdbID: 35033))
+            try dataHandler.newEntry(AnimeEntry.clannadSeasonOne)
             try dataHandler.newEntry(AnimeEntry.yourName)
         } catch {
             print("Error generating preview entries: \(error)")
