@@ -10,10 +10,18 @@ import Kingfisher
 import SwiftUI
 
 struct PersonCardView: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let card: EntryDetailPersonCard
 
     private let cardWidth: CGFloat = 146
     private let portraitHeight: CGFloat = 168
+
+    private var backgroundStyle: AnyShapeStyle {
+        colorScheme == .dark
+            ? AnyShapeStyle(Color(uiColor: .quaternarySystemFill))
+            : AnyShapeStyle(.thinMaterial)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -48,7 +56,7 @@ struct PersonCardView: View {
             .padding(12)
         }
         .frame(width: cardWidth, alignment: .leading)
-        .background(.thinMaterial)
+        .background(backgroundStyle)
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
@@ -71,7 +79,7 @@ struct EpisodeRowView: View {
     }
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 0) {
             Group {
                 if let imageURL = card.imageURL {
                     KFImageView(url: imageURL, targetWidth: 500, diskCacheExpiration: .transient)
@@ -90,6 +98,7 @@ struct EpisodeRowView: View {
             .frame(width: 126, height: 74)
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             .accessibilityHidden(true)
+            .padding(.trailing, 12)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(card.title)
@@ -101,13 +110,11 @@ struct EpisodeRowView: View {
                     .lineLimit(2)
             }
 
-            Spacer(minLength: 0)
+            Spacer(minLength: 4)
 
             statusAccessory
         }
-        .padding(12)
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
         .accessibilityValue(Text(verbatim: isWatched ? String(localized: EntryDetailL10n.watched) : ""))
         .onLongPressGesture {
