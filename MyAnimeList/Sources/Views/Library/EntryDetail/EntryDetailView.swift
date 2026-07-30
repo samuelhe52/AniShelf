@@ -917,7 +917,7 @@ fileprivate struct EntryDetailPreviewHost: View {
         let dataProvider = DataProvider.forPreview
         _session = State(
             initialValue: EntryDetailSession(
-                entry: .yourName,
+                entry: .frieren,
                 repository: LibraryRepository(dataProvider: dataProvider)
             )
         )
@@ -947,4 +947,5 @@ fileprivate struct EntryDetailPreviewHost: View {
 
 #Preview {
     EntryDetailPreviewHost()
+        .environment(AppReviewPromptController())
 }

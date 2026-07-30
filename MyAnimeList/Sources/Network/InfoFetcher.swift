@@ -54,7 +54,13 @@ final class InfoFetcher: Sendable {
         httpClient: some HTTPClient,
         configuration: TMDbConfiguration = .system
     ) {
-        let key = apiKey ?? TMDbAPIKeyStorage().key
+        #if DEBUG
+            // LOCAL DEBUG ONLY, NEVER COMMIT A KEY
+            let debugKey: String? = nil  // Temporarily replace locally when needed.
+            let key = apiKey ?? debugKey ?? TMDbAPIKeyStorage().key
+        #else
+            let key = apiKey ?? TMDbAPIKeyStorage().key
+        #endif
         let trimmedKey = key?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         tmdbClient = .init(
             apiKey: trimmedKey ?? "",

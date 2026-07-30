@@ -12,14 +12,15 @@ import SwiftUI
 struct PersonCardView: View {
     let card: EntryDetailPersonCard
 
+    private let cardWidth: CGFloat = 146
+    private let portraitHeight: CGFloat = 168
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 0) {
             Group {
                 if let profileURL = card.profileURL {
                     KFImageView(url: profileURL, targetWidth: 240, diskCacheExpiration: .shortTerm)
                         .scaledToFill()
-                        .frame(width: 122, height: 156)
-                        .clipped()
                 } else {
                     Rectangle()
                         .fill(Color.secondary.opacity(0.15))
@@ -30,21 +31,25 @@ struct PersonCardView: View {
                         }
                 }
             }
-            .frame(width: 122, height: 156)
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .frame(width: cardWidth, height: portraitHeight)
+            .clipped()
 
-            Text(card.primaryText)
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(2)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(card.primaryText)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(2)
 
-            Text(card.secondaryText)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
+                Text(card.secondaryText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
         }
-        .frame(width: 138, alignment: .leading)
-        .padding(12)
-        .popupGlassPanel(cornerRadius: 24)
+        .frame(width: cardWidth, alignment: .leading)
+        .background(.thinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
 
@@ -101,7 +106,8 @@ struct EpisodeRowView: View {
             statusAccessory
         }
         .padding(12)
-        .popupGlassPanel(cornerRadius: 22)
+        .background(.thinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityValue(Text(verbatim: isWatched ? String(localized: EntryDetailL10n.watched) : ""))
         .onLongPressGesture {
