@@ -185,6 +185,28 @@ struct SharingCardExportPipeline {
         style: SharingCardExportStyle,
         exportSize: SharingCardExportSize
     ) async throws -> SharingCardExportResult {
+        let renderedImage = try await renderPosterImage(
+            image: image,
+            metadata: metadata,
+            aspectRatio: aspectRatio,
+            usesRoundedCorners: style.usesRoundedCorners,
+            exportSize: exportSize
+        )
+        return try await persistRenderedPoster(
+            renderedImage,
+            fileName: fileName,
+            style: style
+        )
+    }
+
+    /// Produces the normalized visual result independently of its output codec.
+    func renderPosterImage(
+        image: UIImage,
+        metadata: PosterMetadata,
+        aspectRatio: CGFloat,
+        usesRoundedCorners: Bool,
+        exportSize: SharingCardExportSize
+    ) async throws -> UIImage {
         let baseHeight = baseWidth / max(aspectRatio, 0.0001)
         let sourcePixelWidth = Int((image.size.width * image.scale).rounded())
         let outputPixelWidth = exportSize.outputPixelWidth(forSourceWidth: sourcePixelWidth)
@@ -197,13 +219,13 @@ struct SharingCardExportPipeline {
                 subtitle: metadata.subtitle,
                 detail: metadata.detail,
                 aspectRatio: aspectRatio,
-                usesRoundedCorners: style.usesRoundedCorners,
+                usesRoundedCorners: usesRoundedCorners,
                 showsShadow: false
             )
             .frame(width: baseWidth, height: baseHeight)
         )
         renderer.scale = scaleFactor
-        renderer.isOpaque = !style.usesRoundedCorners
+        renderer.isOpaque = !usesRoundedCorners
 
         guard let renderedImage = renderer.uiImage else {
             throw SharingCardRenderError.renderFailed
@@ -211,6 +233,16 @@ struct SharingCardExportPipeline {
 
         let normalizedImage = try await SharingCardExportPipeline.convertToSRGB(renderedImage)
         try Task.checkCancellation()
+        return normalizedImage
+    }
+
+    /// Encodes an already-rendered poster without repeating its SwiftUI render
+    /// or color-space normalization.
+    func persistRenderedPoster(
+        _ normalizedImage: UIImage,
+        fileName: String,
+        style: SharingCardExportStyle
+    ) async throws -> SharingCardExportResult {
         let imageURL = try await persist(normalizedImage, fileName: fileName, style: style)
         let pixelSize =
             normalizedImage.cgImage.map {
@@ -347,6 +379,23 @@ struct SharingCardRenderTrigger: Hashable {
     let posterURL: URL?
     let language: Language
     let exportStyle: SharingCardExportStyle
+    let exportSize: SharingCardExportSize
+
+    var visualRenderKey: SharingCardVisualRenderKey {
+        SharingCardVisualRenderKey(
+            posterURL: posterURL,
+            language: language,
+            usesRoundedCorners: exportStyle.usesRoundedCorners,
+            exportSize: exportSize
+        )
+    }
+}
+
+/// Identity of the pixels produced before choosing an output codec.
+struct SharingCardVisualRenderKey: Hashable {
+    let posterURL: URL?
+    let language: Language
+    let usesRoundedCorners: Bool
     let exportSize: SharingCardExportSize
 }
 

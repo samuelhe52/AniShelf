@@ -903,6 +903,32 @@ struct SharingCardExportPipelineTests {
         #expect(Set([light, medium, full]).count == 3)
     }
 
+    @Test func roundedCodecsShareVisualRenderIdentity() {
+        let posterURL = URL(string: "https://example.com/poster.jpg")
+        let png = SharingCardRenderTrigger(
+            posterURL: posterURL,
+            language: .english,
+            exportStyle: .roundedPNG,
+            exportSize: .full
+        )
+        let heic = SharingCardRenderTrigger(
+            posterURL: posterURL,
+            language: .english,
+            exportStyle: .roundedHEIC,
+            exportSize: .full
+        )
+        let jpeg = SharingCardRenderTrigger(
+            posterURL: posterURL,
+            language: .english,
+            exportStyle: .squareJPEG,
+            exportSize: .full
+        )
+
+        #expect(png != heic)
+        #expect(png.visualRenderKey == heic.visualRenderKey)
+        #expect(png.visualRenderKey != jpeg.visualRenderKey)
+    }
+
     @Test @MainActor func sharingViewModelDefaultsToMediumExportSize() {
         let suiteName = "SharingCardExportPipelineTests.defaults.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

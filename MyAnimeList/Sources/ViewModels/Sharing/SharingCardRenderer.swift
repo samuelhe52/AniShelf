@@ -30,6 +30,8 @@ final class SharingCardRenderer {
 
     private var lastLoadedPosterKey: LoadedPosterKey?
     private var cachedImage: UIImage?
+    private var lastRenderedImageKey: SharingCardVisualRenderKey?
+    private var cachedRenderedImage: UIImage?
 
     private let logger = Logger(subsystem: "com.samuelhe.MyAnimeList", category: "SharingCardRenderer")
 
@@ -87,13 +89,17 @@ final class SharingCardRenderer {
             onPosterLoaded(image, aspectRatio)
             await Task.yield()
             guard !Task.isCancelled else { return nil }
-            let export = try await pipeline.renderPoster(
-                image: image,
+            let renderedImage = try await renderImageIfNeeded(
+                from: image,
                 metadata: metadata,
                 aspectRatio: aspectRatio,
+                for: trigger
+            )
+            guard !Task.isCancelled else { return nil }
+            let export = try await pipeline.persistRenderedPoster(
+                renderedImage,
                 fileName: fileName,
-                style: trigger.exportStyle,
-                exportSize: trigger.exportSize
+                style: trigger.exportStyle
             )
             guard !Task.isCancelled else {
                 try? FileManager.default.removeItem(at: export.imageURL)
@@ -122,6 +128,8 @@ final class SharingCardRenderer {
         renderCache.removeAll()
         cachedImage = nil
         lastLoadedPosterKey = nil
+        cachedRenderedImage = nil
+        lastRenderedImageKey = nil
     }
 
     /// Retrieves the poster image, respecting the last-loaded cache.
@@ -145,6 +153,37 @@ final class SharingCardRenderer {
             logger.error("Error loading image: \(error.localizedDescription)")
             return nil
         }
+    }
+
+    /// Reuses the normalized rounded bitmap when only PNG/HEIC encoding changes.
+    private func renderImageIfNeeded(
+        from image: UIImage,
+        metadata: PosterMetadata,
+        aspectRatio: CGFloat,
+        for trigger: SharingCardRenderTrigger
+    ) async throws -> UIImage {
+        let key = trigger.visualRenderKey
+        if lastRenderedImageKey == key, let cachedRenderedImage {
+            return cachedRenderedImage
+        }
+
+        let renderedImage = try await pipeline.renderPosterImage(
+            image: image,
+            metadata: metadata,
+            aspectRatio: aspectRatio,
+            usesRoundedCorners: trigger.exportStyle.usesRoundedCorners,
+            exportSize: trigger.exportSize
+        )
+        try Task.checkCancellation()
+
+        if trigger.exportStyle.usesRoundedCorners {
+            cachedRenderedImage = renderedImage
+            lastRenderedImageKey = key
+        } else {
+            cachedRenderedImage = nil
+            lastRenderedImageKey = nil
+        }
+        return renderedImage
     }
 
     /// Converts an image's intrinsic ratio into the nearest supported variant.
