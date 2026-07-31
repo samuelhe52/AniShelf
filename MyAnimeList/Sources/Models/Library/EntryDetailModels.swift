@@ -58,7 +58,14 @@ enum EntryDetailEpisodePresentation {
         watchStatus: AnimeEntry.WatchStatus,
         summary: AnimeEntryEpisodeProgressSummary?
     ) -> Bool {
-        guard watchStatus == .watching, seasonNumber > 0, let summary, summary.watchedThroughEpisode > 0
+        switch watchStatus {
+        case .watching, .watched, .dropped:
+            break
+        case .planToWatch:
+            return false
+        }
+
+        guard seasonNumber > 0, let summary, summary.watchedThroughEpisode > 0
         else { return false }
         return episodeNumber <= summary.watchedThroughEpisode
     }

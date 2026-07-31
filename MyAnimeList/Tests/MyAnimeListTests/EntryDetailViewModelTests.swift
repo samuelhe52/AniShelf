@@ -1211,7 +1211,7 @@ struct EntryDetailViewModelTests {
         )
     }
 
-    @Test func testEpisodePresentationOnlyMarksWatchedEpisodesWhileWatching() {
+    @Test func testEpisodePresentationMarksProgressForWatchingWatchedAndDroppedStatuses() {
         let summary = AnimeEntryEpisodeProgressSummary(
             seasonNumber: 1,
             watchedThroughEpisode: 4,
@@ -1236,10 +1236,18 @@ struct EntryDetailViewModelTests {
             )
         )
         #expect(
-            !EntryDetailEpisodePresentation.isEpisodeWatched(
+            EntryDetailEpisodePresentation.isEpisodeWatched(
                 1,
                 inSeason: 1,
                 watchStatus: .watched,
+                summary: summary
+            )
+        )
+        #expect(
+            EntryDetailEpisodePresentation.isEpisodeWatched(
+                1,
+                inSeason: 1,
+                watchStatus: .dropped,
                 summary: summary
             )
         )
