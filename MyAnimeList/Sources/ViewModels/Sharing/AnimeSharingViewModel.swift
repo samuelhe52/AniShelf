@@ -198,8 +198,7 @@ final class AnimeSharingViewModel {
     /// card for the provided trigger.
     func processRenderRequest(for trigger: SharingCardRenderTrigger) async {
         guard !Task.isCancelled else { return }
-        renderedImageURL = nil
-        renderedPixelSize = nil
+        invalidateRenderedArtifact()
         let metadata = posterMetadata(for: trigger.language)
         let fileName = fileName(for: trigger)
 
@@ -226,8 +225,7 @@ final class AnimeSharingViewModel {
     /// Removes cached render artifacts to free disk space.
     func cleanupRenderedFiles() {
         renderer.cleanup()
-        renderedImageURL = nil
-        renderedPixelSize = nil
+        invalidateRenderedArtifact()
         loadedImage = nil
         posterAspectRatio = AnimeSharingViewModel.defaultAspectRatio
     }

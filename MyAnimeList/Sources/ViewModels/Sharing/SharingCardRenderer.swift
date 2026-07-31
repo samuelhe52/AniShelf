@@ -30,7 +30,6 @@ final class SharingCardRenderer {
 
     private var lastLoadedPosterKey: LoadedPosterKey?
     private var cachedImage: UIImage?
-    private var cachedAspectRatio: CGFloat
 
     private let logger = Logger(subsystem: "com.samuelhe.MyAnimeList", category: "SharingCardRenderer")
 
@@ -51,7 +50,6 @@ final class SharingCardRenderer {
         self.defaultAspectRatio = defaultAspectRatio
         self.minAspectRatio = minAspectRatio
         self.maxAspectRatio = maxAspectRatio
-        self.cachedAspectRatio = defaultAspectRatio
     }
 
     /// Produces (or reuses) a rendered poster for the given trigger.
@@ -101,7 +99,6 @@ final class SharingCardRenderer {
                 try? FileManager.default.removeItem(at: export.imageURL)
                 return nil
             }
-            cachedAspectRatio = aspectRatio
             let outcome = SharingCardRenderOutcome(
                 imageURL: export.imageURL,
                 aspectRatio: aspectRatio,
@@ -117,7 +114,7 @@ final class SharingCardRenderer {
         }
     }
 
-    /// Deletes cached files and resets any memoized bitmaps/aspect ratios.
+    /// Deletes cached files and resets the memoized poster bitmap.
     func cleanup() {
         for outcome in renderCache.values {
             try? FileManager.default.removeItem(at: outcome.imageURL)
@@ -125,7 +122,6 @@ final class SharingCardRenderer {
         renderCache.removeAll()
         cachedImage = nil
         lastLoadedPosterKey = nil
-        cachedAspectRatio = defaultAspectRatio
     }
 
     /// Retrieves the poster image, respecting the last-loaded cache.
@@ -142,7 +138,6 @@ final class SharingCardRenderer {
             let image = try await pipeline.loadImage(from: url, exportSize: exportSize)
             cachedImage = image
             lastLoadedPosterKey = key
-            cachedAspectRatio = clampAspectRatio(for: image)
             return image
         } catch is CancellationError {
             return nil
