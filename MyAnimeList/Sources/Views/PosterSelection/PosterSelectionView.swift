@@ -40,6 +40,7 @@ struct PosterSelectionView: View {
     @State private var availablePosters: [Poster] = []
     @State private var seriesPosters: [Poster] = []
     @State private var previewPoster: Poster?
+    @State private var pendingPosterSelectionURL: URL?
     @State private var useSeriesPoster: Bool = false
     @Environment(\.dismiss) private var dismiss
     @Namespace private var preview
@@ -112,17 +113,17 @@ struct PosterSelectionView: View {
                 Button("Cancel") { dismiss() }
             }
         }
-        .fullScreenCover(item: $previewPoster) { poster in
+        .sheet(item: $previewPoster, onDismiss: finishPendingPosterSelection) { poster in
             PosterSlides(
                 posters: currentPosters,
                 currentPoster: poster,
                 onPosterSelected: { url in
-                    if let url {
-                        onPosterSelected(url)
-                    }
-                    dismiss()
+                    pendingPosterSelectionURL = url
+                    previewPoster = nil
                 }
             )
+            .presentationSizing(.page)
+            .presentationCompactAdaptation(.fullScreenCover)
             .navigationTransition(
                 .zoom(
                     sourceID: poster.metadata.filePath,
@@ -205,6 +206,13 @@ struct PosterSelectionView: View {
     @MainActor
     private func syncLoadState() {
         loadState = currentPosters.isEmpty ? .empty : .loaded
+    }
+
+    private func finishPendingPosterSelection() {
+        guard let pendingPosterSelectionURL else { return }
+        self.pendingPosterSelectionURL = nil
+        onPosterSelected(pendingPosterSelectionURL)
+        dismiss()
     }
 
     private enum LoadState: Equatable {

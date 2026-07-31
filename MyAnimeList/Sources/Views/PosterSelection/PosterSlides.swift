@@ -23,19 +23,31 @@ struct PosterSlides: View {
     @State private var currentSlideID: String?
     @State private var showSelectionConfirmation = false
 
+    private let contentTransitionAnimation = Animation.easeInOut(duration: 0.2)
+
     var body: some View {
-        Group {
+        ZStack {
+            Color(.systemBackground)
+                .ignoresSafeArea()
+
             switch fetchState {
             case .idle, .loading:
                 loadingView
+                    .transition(.opacity)
             case .empty:
                 emptyView
+                    .transition(.opacity)
             case .failed(let message):
                 errorView(message)
+                    .transition(.opacity)
             case .loaded:
                 loadedView
+                    .padding()
+                    .transition(.opacity)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .animation(contentTransitionAnimation, value: fetchState)
         .task(id: posters) {
             await loadPosterURLsOnAppear(force: true)
         }
@@ -52,18 +64,26 @@ struct PosterSlides: View {
 
     private var loadedView: some View {
         VStack(spacing: 12) {
-            TabView(selection: $currentSlideID) {
-                ForEach(loadedPosters, id: \.poster.id) { item in
-                    KFImageView(url: item.url, diskCacheExpiration: .shortTerm)
-                        .aspectRatio(contentMode: .fit)
-                        .clipShape(.rect(cornerRadius: 15))
-                        .containerRelativeFrame(.vertical)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 10)
-                        .tag(item.poster.id)
+            // A page-styled TabView can recalculate its page geometry as remote images load,
+            // producing visible jitter during a swipe. Full-container scroll targets keep
+            // each page stable while retaining the system's native paging behavior.
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 0) {
+                    ForEach(loadedPosters, id: \.poster.id) { item in
+                        posterPage(for: item)
+                    }
                 }
+                .scrollTargetLayout()
             }
-            .tabViewStyle(.page(indexDisplayMode: .automatic))
+            .scrollIndicators(.hidden)
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $currentSlideID)
+
+            PosterPageIndicator(
+                numberOfPages: loadedPosters.count,
+                currentPage: currentSlideIndex
+            )
+            .frame(height: 8)
 
             if let slide = currentSlide {
                 VStack(spacing: 15) {
@@ -78,6 +98,23 @@ struct PosterSlides: View {
                 }
             }
         }
+    }
+
+    private func posterPage(for item: (poster: Poster, url: URL)) -> some View {
+        let width = item.poster.metadata.width
+        let height = item.poster.metadata.height
+        let aspectRatio = CGFloat(width) / CGFloat(max(height, 1))
+
+        return KFImageView(
+            url: item.url,
+            animation: contentTransitionAnimation,
+            diskCacheExpiration: .shortTerm
+        )
+        .aspectRatio(aspectRatio, contentMode: .fit)
+        .clipShape(.rect(cornerRadius: 15))
+        .padding(8)
+        .containerRelativeFrame([.horizontal, .vertical])
+        .id(item.poster.id)
     }
 
     private var loadedPosters: [(poster: Poster, url: URL)] {
@@ -95,6 +132,11 @@ struct PosterSlides: View {
             return match
         }
         return first
+    }
+
+    private var currentSlideIndex: Int {
+        guard let currentSlideID else { return 0 }
+        return loadedPosters.firstIndex(where: { $0.poster.id == currentSlideID }) ?? 0
     }
 
     @ViewBuilder
@@ -233,5 +275,26 @@ struct PosterSlides: View {
         case loaded
         case empty
         case failed(String)
+    }
+}
+
+/// Mirrors the current scroll target with system page dots. ScrollView paging does not
+/// provide them, and disabling interaction keeps swipe ownership in the ScrollView.
+fileprivate struct PosterPageIndicator: UIViewRepresentable {
+    let numberOfPages: Int
+    let currentPage: Int
+
+    func makeUIView(context: Context) -> UIPageControl {
+        let pageControl = UIPageControl()
+        pageControl.isUserInteractionEnabled = false
+        pageControl.currentPageIndicatorTintColor = .secondaryLabel
+        pageControl.pageIndicatorTintColor = .tertiaryLabel
+        return pageControl
+    }
+
+    func updateUIView(_ pageControl: UIPageControl, context: Context) {
+        pageControl.numberOfPages = numberOfPages
+        pageControl.currentPage = currentPage
+        pageControl.hidesForSinglePage = true
     }
 }
