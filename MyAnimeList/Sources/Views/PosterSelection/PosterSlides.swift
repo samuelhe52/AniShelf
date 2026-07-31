@@ -278,7 +278,9 @@ struct PosterSlides: View {
     }
 }
 
-/// Mirrors the current scroll target with system page dots. ScrollView paging does not
+/// Mirrors the current scroll target with system page dots.
+///
+/// ScrollView paging does not
 /// provide them, and disabling interaction keeps swipe ownership in the ScrollView.
 fileprivate struct PosterPageIndicator: UIViewRepresentable {
     let numberOfPages: Int

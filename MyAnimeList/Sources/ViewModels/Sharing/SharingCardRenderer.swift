@@ -6,12 +6,12 @@ import os
 /// Output payload returned after a poster render completes.
 @MainActor
 struct SharingCardRenderOutcome {
-    /// Final JPEG location.
+    /// Final PNG or JPEG location.
     let imageURL: URL
-    /// Cached bitmap used for previews while the sheet stays open.
-    let image: UIImage?
     /// Aspect ratio used to render the card, already clamped to allowed bounds.
     let aspectRatio: CGFloat
+    /// Pixel dimensions of the persisted image.
+    let pixelSize: CGSize
 }
 
 /// Handles poster loading, caching, and export so the view model stays lean.
@@ -22,8 +22,13 @@ final class SharingCardRenderer {
     private let minAspectRatio: CGFloat
     private let maxAspectRatio: CGFloat
 
-    private var renderCache: [SharingCardRenderTrigger: URL] = [:]
-    private var lastLoadedPosterURL: URL?
+    private var renderCache: [SharingCardRenderTrigger: SharingCardRenderOutcome] = [:]
+    private struct LoadedPosterKey: Equatable {
+        let url: URL
+        let exportSize: SharingCardExportSize
+    }
+
+    private var lastLoadedPosterKey: LoadedPosterKey?
     private var cachedImage: UIImage?
     private var cachedAspectRatio: CGFloat
 
@@ -37,7 +42,10 @@ final class SharingCardRenderer {
         minAspectRatio: CGFloat,
         maxAspectRatio: CGFloat
     ) {
-        self.pipeline = SharingCardExportPipeline(baseWidth: baseWidth, jpegQuality: jpegQuality)
+        self.pipeline = SharingCardExportPipeline(
+            baseWidth: baseWidth,
+            jpegQuality: jpegQuality
+        )
         self.defaultAspectRatio = defaultAspectRatio
         self.minAspectRatio = minAspectRatio
         self.maxAspectRatio = maxAspectRatio
@@ -48,33 +56,57 @@ final class SharingCardRenderer {
     func renderPoster(
         for trigger: SharingCardRenderTrigger,
         metadata: PosterMetadata,
-        fileName: String
+        fileName: String,
+        onPosterLoaded: (UIImage, CGFloat) -> Void
     ) async -> SharingCardRenderOutcome? {
         guard let posterURL = trigger.posterURL else { return nil }
         guard !Task.isCancelled else { return nil }
 
-        if let cachedURL = renderCache[trigger] {
-            return SharingCardRenderOutcome(
-                imageURL: cachedURL,
-                image: cachedImage,
-                aspectRatio: cachedAspectRatio
-            )
+        if let cachedOutcome = renderCache[trigger] {
+            guard
+                let image = await loadImageIfNeeded(
+                    from: posterURL,
+                    exportSize: trigger.exportSize
+                )
+            else { return nil }
+            guard !Task.isCancelled else { return nil }
+            onPosterLoaded(image, cachedOutcome.aspectRatio)
+            return cachedOutcome
         }
 
-        guard let image = await loadImageIfNeeded(from: posterURL) else { return nil }
+        guard
+            let image = await loadImageIfNeeded(
+                from: posterURL,
+                exportSize: trigger.exportSize
+            )
+        else { return nil }
         guard !Task.isCancelled else { return nil }
 
         do {
             let aspectRatio = clampAspectRatio(for: image)
-            let fileURL = try await pipeline.renderPoster(
+            onPosterLoaded(image, aspectRatio)
+            await Task.yield()
+            guard !Task.isCancelled else { return nil }
+            let export = try await pipeline.renderPoster(
                 image: image,
                 metadata: metadata,
                 aspectRatio: aspectRatio,
-                fileName: fileName
+                fileName: fileName,
+                style: trigger.exportStyle,
+                exportSize: trigger.exportSize
             )
-            renderCache[trigger] = fileURL
+            guard !Task.isCancelled else {
+                try? FileManager.default.removeItem(at: export.imageURL)
+                return nil
+            }
             cachedAspectRatio = aspectRatio
-            return SharingCardRenderOutcome(imageURL: fileURL, image: image, aspectRatio: aspectRatio)
+            let outcome = SharingCardRenderOutcome(
+                imageURL: export.imageURL,
+                aspectRatio: aspectRatio,
+                pixelSize: export.pixelSize
+            )
+            renderCache[trigger] = outcome
+            return outcome
         } catch is CancellationError {
             return nil
         } catch {
@@ -85,25 +117,29 @@ final class SharingCardRenderer {
 
     /// Deletes cached files and resets any memoized bitmaps/aspect ratios.
     func cleanup() {
-        for url in renderCache.values {
-            try? FileManager.default.removeItem(at: url)
+        for outcome in renderCache.values {
+            try? FileManager.default.removeItem(at: outcome.imageURL)
         }
         renderCache.removeAll()
         cachedImage = nil
-        lastLoadedPosterURL = nil
+        lastLoadedPosterKey = nil
         cachedAspectRatio = defaultAspectRatio
     }
 
     /// Retrieves the poster image, respecting the last-loaded cache.
-    private func loadImageIfNeeded(from url: URL) async -> UIImage? {
-        if lastLoadedPosterURL == url, let cachedImage {
+    private func loadImageIfNeeded(
+        from url: URL,
+        exportSize: SharingCardExportSize
+    ) async -> UIImage? {
+        let key = LoadedPosterKey(url: url, exportSize: exportSize)
+        if lastLoadedPosterKey == key, let cachedImage {
             return cachedImage
         }
 
         do {
-            let image = try await pipeline.loadImage(from: url)
+            let image = try await pipeline.loadImage(from: url, exportSize: exportSize)
             cachedImage = image
-            lastLoadedPosterURL = url
+            lastLoadedPosterKey = key
             cachedAspectRatio = clampAspectRatio(for: image)
             return image
         } catch is CancellationError {

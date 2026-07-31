@@ -6,9 +6,13 @@
 //
 
 import Foundation
+import ImageIO
 import Kingfisher
+import SwiftUI
 import TMDb
 import Testing
+import UIKit
+import UniformTypeIdentifiers
 
 @testable import DataProvider
 @testable import MyAnimeList
@@ -841,6 +845,160 @@ struct TMDbImageAndTranslationTests {
 
         #expect(snapshot.posterMissing == true)
         #expect(snapshot.displayPosterURL(for: .gallery) == nil)
+    }
+}
+
+struct SharingCardExportPipelineTests {
+    @Test func exportSizeTiersCapWidthWithoutUpscaling() {
+        #expect(SharingCardExportSize.light.outputPixelWidth(forSourceWidth: 700) == 700)
+        #expect(SharingCardExportSize.medium.outputPixelWidth(forSourceWidth: 700) == 700)
+        #expect(SharingCardExportSize.full.outputPixelWidth(forSourceWidth: 700) == 700)
+
+        #expect(SharingCardExportSize.light.outputPixelWidth(forSourceWidth: 1_080) == 1_080)
+        #expect(SharingCardExportSize.medium.outputPixelWidth(forSourceWidth: 1_080) == 1_080)
+        #expect(SharingCardExportSize.full.outputPixelWidth(forSourceWidth: 1_080) == 1_080)
+
+        #expect(SharingCardExportSize.light.outputPixelWidth(forSourceWidth: 1_081) == 1_080)
+        #expect(SharingCardExportSize.medium.outputPixelWidth(forSourceWidth: 1_081) == 1_081)
+        #expect(SharingCardExportSize.full.outputPixelWidth(forSourceWidth: 1_081) == 1_081)
+
+        #expect(SharingCardExportSize.light.outputPixelWidth(forSourceWidth: 1_500) == 1_080)
+        #expect(SharingCardExportSize.medium.outputPixelWidth(forSourceWidth: 1_500) == 1_500)
+        #expect(SharingCardExportSize.full.outputPixelWidth(forSourceWidth: 1_500) == 1_500)
+
+        #expect(SharingCardExportSize.light.outputPixelWidth(forSourceWidth: 1_499) == 1_080)
+        #expect(SharingCardExportSize.medium.outputPixelWidth(forSourceWidth: 1_499) == 1_499)
+        #expect(SharingCardExportSize.full.outputPixelWidth(forSourceWidth: 1_499) == 1_499)
+
+        #expect(SharingCardExportSize.light.outputPixelWidth(forSourceWidth: 1_501) == 1_080)
+        #expect(SharingCardExportSize.medium.outputPixelWidth(forSourceWidth: 1_501) == 1_500)
+        #expect(SharingCardExportSize.full.outputPixelWidth(forSourceWidth: 1_501) == 1_501)
+
+        #expect(SharingCardExportSize.light.outputPixelWidth(forSourceWidth: 2_000) == 1_080)
+        #expect(SharingCardExportSize.medium.outputPixelWidth(forSourceWidth: 2_000) == 1_500)
+        #expect(SharingCardExportSize.full.outputPixelWidth(forSourceWidth: 2_000) == 2_000)
+    }
+
+    @Test func renderTriggerIncludesExportSize() {
+        let posterURL = URL(string: "https://example.com/poster.jpg")
+        let light = SharingCardRenderTrigger(
+            posterURL: posterURL,
+            language: .english,
+            exportStyle: .roundedPNG,
+            exportSize: .light
+        )
+        let medium = SharingCardRenderTrigger(
+            posterURL: posterURL,
+            language: .english,
+            exportStyle: .roundedPNG,
+            exportSize: .medium
+        )
+        let full = SharingCardRenderTrigger(
+            posterURL: posterURL,
+            language: .english,
+            exportStyle: .roundedPNG,
+            exportSize: .full
+        )
+
+        #expect(Set([light, medium, full]).count == 3)
+    }
+
+    @Test @MainActor func sharingViewModelDefaultsToMediumExportSize() {
+        let viewModel = AnimeSharingViewModel(entry: .frieren)
+
+        #expect(viewModel.exportSize == .medium)
+        #expect(viewModel.renderTrigger.exportSize == .medium)
+    }
+
+    @Test @MainActor func roundedExportUsesPNGAndPreservesTransparentCorners() async throws {
+        let result = try await render(style: .roundedPNG, exportSize: .medium)
+        defer { try? FileManager.default.removeItem(at: result.imageURL) }
+
+        let source = try #require(CGImageSourceCreateWithURL(result.imageURL as CFURL, nil))
+        let image = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
+
+        #expect(result.imageURL.pathExtension == "png")
+        #expect(CGImageSourceGetType(source) as String? == UTType.png.identifier)
+        #expect(result.pixelSize == CGSize(width: 180, height: 270))
+        #expect(cornerAlpha(of: image) == 0)
+    }
+
+    @Test @MainActor func squareExportUsesJPEGAndOpaqueCorners() async throws {
+        let result = try await render(style: .squareJPEG, exportSize: .medium)
+        defer { try? FileManager.default.removeItem(at: result.imageURL) }
+
+        let source = try #require(CGImageSourceCreateWithURL(result.imageURL as CFURL, nil))
+        let image = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
+
+        #expect(result.imageURL.pathExtension == "jpg")
+        #expect(CGImageSourceGetType(source) as String? == UTType.jpeg.identifier)
+        #expect(result.pixelSize == CGSize(width: 180, height: 270))
+        #expect(cornerAlpha(of: image) == 255)
+    }
+
+    @Test @MainActor func exportDoesNotUpscaleSmallerSources() async throws {
+        let result = try await render(
+            style: .squareJPEG,
+            exportSize: .medium,
+            sourceSize: CGSize(width: 60, height: 90)
+        )
+        defer { try? FileManager.default.removeItem(at: result.imageURL) }
+
+        #expect(result.pixelSize == CGSize(width: 60, height: 90))
+    }
+
+    @MainActor
+    private func render(
+        style: SharingCardExportStyle,
+        exportSize: SharingCardExportSize,
+        sourceSize: CGSize = CGSize(width: 180, height: 270)
+    ) async throws -> SharingCardExportResult {
+        let layoutSize = CGSize(width: 90, height: 135)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let sourceImage = UIGraphicsImageRenderer(size: sourceSize, format: format).image { context in
+            UIColor.systemBlue.setFill()
+            context.cgContext.fill(CGRect(origin: .zero, size: sourceSize))
+        }
+        let pipeline = SharingCardExportPipeline(
+            baseWidth: layoutSize.width,
+            jpegQuality: 0.9
+        )
+        let fileName = "sharing-card-export-test-\(UUID().uuidString).\(style.fileExtension)"
+
+        return try await pipeline.renderPoster(
+            image: sourceImage,
+            metadata: PosterMetadata(
+                title: AttributedString("Test"),
+                subtitle: nil,
+                detail: "2026 • TV SERIES"
+            ),
+            aspectRatio: layoutSize.width / layoutSize.height,
+            fileName: fileName,
+            style: style,
+            exportSize: exportSize
+        )
+    }
+
+    private func cornerAlpha(of image: CGImage) -> UInt8 {
+        guard let corner = image.cropping(to: CGRect(x: 0, y: 0, width: 1, height: 1)) else {
+            return 0
+        }
+
+        var pixel: [UInt8] = [0, 0, 0, 0]
+        guard
+            let context = CGContext(
+                data: &pixel,
+                width: 1,
+                height: 1,
+                bitsPerComponent: 8,
+                bytesPerRow: 4,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
+        else { return 0 }
+        context.draw(corner, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+        return pixel[3]
     }
 }
 

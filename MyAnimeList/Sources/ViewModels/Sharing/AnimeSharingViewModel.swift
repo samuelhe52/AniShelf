@@ -36,10 +36,34 @@ final class AnimeSharingViewModel {
     /// Root entry the sharing UI references, collapsing seasons into series.
     let entry: AnimeEntry
 
-    var selectedLanguage: Language
-    var selectedPosterURL: URL?
+    var selectedLanguage: Language {
+        didSet {
+            guard selectedLanguage != oldValue else { return }
+            invalidateRenderedArtifact()
+        }
+    }
+    var selectedPosterURL: URL? {
+        didSet {
+            guard selectedPosterURL != oldValue else { return }
+            invalidateRenderedArtifact()
+        }
+    }
+    var usesRoundedCorners = true {
+        didSet {
+            guard usesRoundedCorners != oldValue else { return }
+            invalidateRenderedArtifact()
+        }
+    }
+    var exportSize: SharingCardExportSize = .medium {
+        didSet {
+            guard exportSize != oldValue else { return }
+            invalidateRenderedArtifact()
+        }
+    }
     private(set) var renderedImageURL: URL?
+    private(set) var renderedPixelSize: CGSize?
     private(set) var loadedImage: UIImage?
+    private(set) var previewRevision = 0
     /// Aspect ratio applied to previews and exports, sourced from renderer output.
     private(set) var posterAspectRatio: CGFloat = AnimeSharingViewModel.defaultAspectRatio
 
@@ -75,9 +99,19 @@ final class AnimeSharingViewModel {
         posterAspectRatio
     }
 
-    /// Hashable token that captures the poster/language pair for rendering.
+    /// Stable TMDb path used to highlight the selected poster across image rendition URLs.
+    var selectedPosterPath: String? {
+        TMDbImagePath.storagePath(from: selectedPosterURL)
+    }
+
+    /// Hashable token that captures all inputs that affect loading and export.
     var renderTrigger: SharingCardRenderTrigger {
-        SharingCardRenderTrigger(posterURL: selectedPosterURL, language: selectedLanguage)
+        SharingCardRenderTrigger(
+            posterURL: selectedPosterURL,
+            language: selectedLanguage,
+            exportStyle: usesRoundedCorners ? .roundedPNG : .squareJPEG,
+            exportSize: exportSize
+        )
     }
 
     @ObservationIgnored private var preferredLanguage: Language
@@ -130,6 +164,8 @@ final class AnimeSharingViewModel {
     /// card for the provided trigger.
     func processRenderRequest(for trigger: SharingCardRenderTrigger) async {
         guard !Task.isCancelled else { return }
+        renderedImageURL = nil
+        renderedPixelSize = nil
         let metadata = posterMetadata(for: trigger.language)
         let fileName = fileName(for: trigger)
 
@@ -137,15 +173,19 @@ final class AnimeSharingViewModel {
             let outcome = await renderer.renderPoster(
                 for: trigger,
                 metadata: metadata,
-                fileName: fileName
+                fileName: fileName,
+                onPosterLoaded: { [weak self] image, aspectRatio in
+                    guard let self, !Task.isCancelled, self.renderTrigger == trigger else { return }
+                    loadedImage = image
+                    posterAspectRatio = aspectRatio
+                    previewRevision &+= 1
+                }
             )
         else { return }
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled, renderTrigger == trigger else { return }
 
         renderedImageURL = outcome.imageURL
-        if let image = outcome.image {
-            loadedImage = image
-        }
+        renderedPixelSize = outcome.pixelSize
         posterAspectRatio = outcome.aspectRatio
     }
 
@@ -153,14 +193,24 @@ final class AnimeSharingViewModel {
     func cleanupRenderedFiles() {
         renderer.cleanup()
         renderedImageURL = nil
+        renderedPixelSize = nil
         loadedImage = nil
         posterAspectRatio = AnimeSharingViewModel.defaultAspectRatio
     }
 
-    /// Builds a stable filename so repeat renders overwrite earlier versions
-    /// for the same poster/language pair.
+    /// Builds a stable filename so repeat renders overwrite the same variant.
     private func fileName(for trigger: SharingCardRenderTrigger) -> String {
-        "poster_\(entry.tmdbID)_\(trigger.language).jpg"
+        let posterIdentifier =
+            trigger.posterURL?
+            .deletingPathExtension()
+            .lastPathComponent ?? "default"
+        return
+            "poster_\(entry.tmdbID)_\(trigger.language)_\(posterIdentifier)_\(trigger.exportSize.rawValue).\(trigger.exportStyle.fileExtension)"
+    }
+
+    private func invalidateRenderedArtifact() {
+        renderedImageURL = nil
+        renderedPixelSize = nil
     }
 
     private func attributedTitle(for language: Language) -> AttributedString {

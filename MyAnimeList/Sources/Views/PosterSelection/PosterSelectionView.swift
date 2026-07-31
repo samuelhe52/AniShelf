@@ -6,12 +6,7 @@
 //
 
 import DataProvider
-import Kingfisher
 import SwiftUI
-import TMDb
-import os
-
-fileprivate let logger = Logger(subsystem: .bundleIdentifier, category: "PosterSelectionView")
 
 typealias Poster = ImageURLWithMetadata
 
@@ -20,6 +15,7 @@ struct PosterSelectionView: View {
     let type: AnimeType
     let originalPosterLanguageCode: String?
     let fetcher: InfoFetcher
+    let showsDismissButton: Bool
     let onPosterSelected: (URL) -> Void
 
     init(
@@ -27,79 +23,38 @@ struct PosterSelectionView: View {
         type: AnimeType,
         originalPosterLanguageCode: String? = nil,
         infoFetcher: InfoFetcher = .init(),
+        showsDismissButton: Bool = true,
         onPosterSelected: @escaping (URL) -> Void
     ) {
         self.tmdbID = tmdbID
         self.type = type
         self.originalPosterLanguageCode = originalPosterLanguageCode
         self.fetcher = infoFetcher
+        self.showsDismissButton = showsDismissButton
         self.onPosterSelected = onPosterSelected
     }
 
-    @State private var loadState: LoadState = .loading
-    @State private var availablePosters: [Poster] = []
-    @State private var seriesPosters: [Poster] = []
-    @State private var previewPoster: Poster?
+    @State private var previewSelection: PosterPreviewSelection?
     @State private var pendingPosterSelectionURL: URL?
-    @State private var useSeriesPoster: Bool = false
     @Environment(\.dismiss) private var dismiss
     @Namespace private var preview
-    @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
-    @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
-        Language.followsSystemPreference()
-
-    private var currentPosters: [Poster] {
-        useSeriesPoster ? seriesPosters : availablePosters
-    }
-    private var metadataLanguageCode: String {
-        (followsSystemLanguage ? Language.current : preferredLanguage).rawValue
-    }
-
-    @MainActor
-    private struct Constants {
-        static let idealPosterWidth: Int = 200
-    }
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 16) {
-                if case .season = type {
-                    Picker(selection: $useSeriesPoster) {
-                        Text("Season").tag(false)
-                        Text("TV Series").tag(true)
-                    } label: {
-                    }
-                    .pickerStyle(.segmented)
-                }
-
-                switch loadState {
-                case .loading:
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 40)
-                case .loaded:
-                    PosterGridView(
-                        posters: currentPosters,
-                        previewNamespace: preview,
-                        onPosterTap: { poster in
-                            previewPoster = poster
-                        }
-                    )
-                case .empty:
-                    ContentUnavailableView(
-                        "No Posters Available",
-                        systemImage: "photo.on.rectangle",
-                        description: Text(
-                            "TMDb did not return posters for this selection yet.")
-                    )
-                case .error(let error):
-                    ContentUnavailableView(
-                        "Error Loading Posters",
-                        systemImage: "exclamationmark.triangle",
-                        description: Text(error.localizedDescription)
+            PosterBrowserView(
+                tmdbID: tmdbID,
+                type: type,
+                originalPosterLanguageCode: originalPosterLanguageCode,
+                fetcher: fetcher,
+                previewNamespace: preview,
+                selectedPosterPath: nil,
+                onPosterTap: { poster, posters in
+                    previewSelection = PosterPreviewSelection(
+                        poster: poster,
+                        posters: posters
                     )
                 }
-            }
+            )
             .padding(.horizontal, 16)
             .frame(maxWidth: 1_100)
             .frame(maxWidth: .infinity)
@@ -109,103 +64,34 @@ struct PosterSelectionView: View {
         .navigationBarTitleDisplayMode(.inline)
         .presentationDragIndicator(.visible)
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
+            if showsDismissButton {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel(Text("Close"))
+                }
             }
         }
-        .sheet(item: $previewPoster, onDismiss: finishPendingPosterSelection) { poster in
+        .sheet(item: $previewSelection, onDismiss: finishPendingPosterSelection) { selection in
             PosterSlides(
-                posters: currentPosters,
-                currentPoster: poster,
+                posters: selection.posters,
+                currentPoster: selection.poster,
                 onPosterSelected: { url in
                     pendingPosterSelectionURL = url
-                    previewPoster = nil
+                    previewSelection = nil
                 }
             )
             .presentationSizing(.page)
             .presentationCompactAdaptation(.fullScreenCover)
             .navigationTransition(
                 .zoom(
-                    sourceID: poster.metadata.filePath,
+                    sourceID: selection.poster.metadata.filePath,
                     in: preview))
         }
-        .onChange(of: useSeriesPoster, initial: false) { _, newValue in
-            guard case .season = type else { return }
-            previewPoster = nil
-            Task {
-                if newValue {
-                    await fetchSeriesPostersIfNeeded()
-                } else {
-                    syncLoadState()
-                }
-            }
-        }
-        .task { await fetchPrimaryPosters() }
         .presentationSizing(.page)
-    }
-
-    // MARK: - Data Fetching
-
-    @MainActor
-    private func fetchPrimaryPosters() async {
-        do {
-            loadState = .loading
-            let resolvedPosters = try await primaryPosterRequest()
-            availablePosters = resolvedPosters.filteredAndSorted(
-                originalLanguageCode: originalPosterLanguageCode,
-                metadataLanguageCode: metadataLanguageCode
-            )
-            syncLoadState()
-        } catch {
-            logger.error("Error fetching posters: \(error.localizedDescription)")
-            loadState = .error(error)
-        }
-    }
-
-    @MainActor
-    private func fetchSeriesPostersIfNeeded() async {
-        guard case .season(_, let parentSeriesID) = type else { return }
-        if !seriesPosters.isEmpty {
-            syncLoadState()
-            return
-        }
-
-        do {
-            loadState = .loading
-            seriesPosters = try await fetcher.postersForSeries(
-                seriesID: parentSeriesID,
-                idealWidth: Constants.idealPosterWidth
-            )
-            .filteredAndSorted(
-                originalLanguageCode: originalPosterLanguageCode,
-                metadataLanguageCode: metadataLanguageCode
-            )
-            syncLoadState()
-        } catch {
-            logger.error("Error fetching posters: \(error.localizedDescription)")
-            loadState = .error(error)
-        }
-    }
-
-    @MainActor
-    private func primaryPosterRequest() async throws -> [Poster] {
-        switch type {
-        case .movie:
-            return try await fetcher.postersForMovie(
-                for: tmdbID, idealWidth: Constants.idealPosterWidth)
-        case .series:
-            return try await fetcher.postersForSeries(
-                seriesID: tmdbID, idealWidth: Constants.idealPosterWidth)
-        case .season(let seasonNumber, let parentSeriesID):
-            return try await fetcher.postersForSeason(
-                forSeason: seasonNumber, inParentSeries: parentSeriesID,
-                idealWidth: Constants.idealPosterWidth)
-        }
-    }
-
-    @MainActor
-    private func syncLoadState() {
-        loadState = currentPosters.isEmpty ? .empty : .loaded
     }
 
     private func finishPendingPosterSelection() {
@@ -214,21 +100,13 @@ struct PosterSelectionView: View {
         onPosterSelected(pendingPosterSelectionURL)
         dismiss()
     }
+}
 
-    private enum LoadState: Equatable {
-        case loading
-        case loaded
-        case empty
-        case error(Error)
+fileprivate struct PosterPreviewSelection: Identifiable {
+    let poster: Poster
+    let posters: [Poster]
 
-        static func == (lhs: LoadState, rhs: LoadState) -> Bool {
-            switch (lhs, rhs) {
-            case (.loading, .loading), (.loaded, .loaded), (.empty, .empty): return true
-            case (.error, .error): return true
-            default: return false
-            }
-        }
-    }
+    var id: Poster.ID { poster.id }
 }
 
 extension Array where Element == Poster {

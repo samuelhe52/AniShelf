@@ -807,6 +807,22 @@
         }
       }
     },
+    "AniShelf never enlarges poster artwork. If the source is smaller than the selected export size, the source resolution is used instead. Some size options may therefore produce identical results." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfはポスター画像を拡大しません。元画像が選択した書き出しサイズより小さい場合は、元画像の解像度が使用されます。そのため、一部のサイズ設定では同じ結果になることがあります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf 不会放大海报图片。如果源图小于所选导出尺寸，则会使用源图分辨率。因此，某些尺寸选项可能会产生相同的结果。"
+          }
+        }
+      }
+    },
     "AniShelf on GitHub" : {
       "localizations" : {
         "ja" : {
@@ -867,6 +883,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "您的资料库中已存在该系列的其他季度条目。将此季度转换为系列后，资料库中可能会同时保留系列条目和其他同系列季度条目。"
+          }
+        }
+      }
+    },
+    "Appearance" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外観"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外观"
           }
         }
       }
@@ -1721,6 +1753,22 @@
         }
       }
     },
+    "Customize" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カスタマイズ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自定义"
+          }
+        }
+      }
+    },
     "Convert Anyway" : {
       "localizations" : {
         "ja" : {
@@ -2544,6 +2592,22 @@
         }
       }
     },
+    "Export Size" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "書き出しサイズ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出尺寸"
+          }
+        }
+      }
+    },
     "Export as..." : {
       "localizations" : {
         "ja" : {
@@ -3009,6 +3073,22 @@
         }
       }
     },
+    "Full" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フル"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完整"
+          }
+        }
+      }
+    },
     "Frieren\nmovie:4935\nseries:24835\nseason:24835:1" : {
       "localizations" : {
         "ja" : {
@@ -3279,6 +3359,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "日语"
+          }
+        }
+      }
+    },
+    "JPEG · %lld × %lld" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JPEG · %1$lld × %2$lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JPEG · %1$lld × %2$lld"
+          }
+        }
+      }
+    },
+    "JPEG · Rendering…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JPEG · レンダリング中…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JPEG · 渲染中…"
           }
         }
       }
@@ -3558,6 +3670,22 @@
         }
       }
     },
+    "Light" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "軽量"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "轻量"
+          }
+        }
+      }
+    },
     "Links" : {
       "localizations" : {
         "ja" : {
@@ -3752,6 +3880,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "总开关"
+          }
+        }
+      }
+    },
+    "Medium" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "標準"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标准"
           }
         }
       }
@@ -4517,6 +4661,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "覆盖当前资料库？"
+          }
+        }
+      }
+    },
+    "PNG · %lld × %lld" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PNG · %1$lld × %2$lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PNG · %1$lld × %2$lld"
+          }
+        }
+      }
+    },
+    "PNG · Rendering…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PNG · レンダリング中…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PNG · 渲染中…"
           }
         }
       }
@@ -5354,6 +5530,22 @@
         }
       }
     },
+    "Rounded Corners" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "角を丸くする"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "圆角"
+          }
+        }
+      }
+    },
     "Runtime" : {
       "localizations" : {
         "ja" : {
@@ -5863,6 +6055,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "排序"
+          }
+        }
+      }
+    },
+    "Source Resolution" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "元画像の解像度"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "源图分辨率"
           }
         }
       }

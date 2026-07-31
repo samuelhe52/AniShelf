@@ -13,6 +13,8 @@ struct SharingCardView: View {
     let subtitle: AttributedString?
     let detail: String?
     let aspectRatio: CGFloat
+    let usesRoundedCorners: Bool
+    let showsShadow: Bool
 
     private struct Constants {
         static let minAspectRatio: CGFloat = 0.45
@@ -21,6 +23,10 @@ struct SharingCardView: View {
 
     private var safeAspectRatio: CGFloat {
         max(Constants.minAspectRatio, min(aspectRatio, Constants.maxAspectRatio))
+    }
+
+    private var cornerRadius: CGFloat {
+        usesRoundedCorners ? 24 : 0
     }
 
     private var titleLineLimit: Int { subtitle == nil ? 3 : 2 }
@@ -39,12 +45,17 @@ struct SharingCardView: View {
             .padding(24)
         }
         .aspectRatio(safeAspectRatio, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .strokeBorder(.white.opacity(0.25), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.25), radius: 30, x: 0, y: 25)
+        .shadow(
+            color: showsShadow ? .black.opacity(0.25) : .clear,
+            radius: showsShadow ? 30 : 0,
+            x: 0,
+            y: showsShadow ? 25 : 0
+        )
     }
 
     @ViewBuilder

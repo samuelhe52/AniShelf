@@ -19,6 +19,17 @@ struct AnimeSharingSheet: View {
 
     @State private var showPosterSelection = false
     @State private var didActivateShare = false
+    @Namespace private var embeddedPosterPreview
+
+    private let posterFetcher = InfoFetcher()
+
+    private struct Constants {
+        static let embeddedBrowserMinimumWidth: CGFloat = 820
+        static let contentMaximumWidth: CGFloat = 1_040
+        static let horizontalPadding: CGFloat = 20
+        static let wideColumnSpacing: CGFloat = 24
+        static let previewColumnWidth: CGFloat = 400
+    }
 
     init(entry: AnimeEntry) {
         _viewModel = State(initialValue: AnimeSharingViewModel(entry: entry))
@@ -26,24 +37,25 @@ struct AnimeSharingSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                sharingContent
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                    .padding(.bottom, 32)
-                    .frame(maxWidth: 1_040)
-                    .frame(maxWidth: .infinity)
+            GeometryReader { proxy in
+                if usesEmbeddedPosterBrowser(availableWidth: proxy.size.width) {
+                    wideSharingContent
+                } else {
+                    compactSharingContent
+                }
             }
-            .preferredNavigationBarScrollEdgeEffect()
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Share")
             .navigationBarTitleDisplayMode(.inline)
             .presentationDragIndicator(.visible)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button {
                         dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
                     }
+                    .accessibilityLabel(Text("Close"))
                 }
 
                 ToolbarItem(placement: .primaryAction) {
@@ -71,8 +83,8 @@ struct AnimeSharingSheet: View {
                 PosterSelectionView(
                     tmdbID: viewModel.entry.tmdbID,
                     type: viewModel.entry.type,
-                    originalPosterLanguageCode: viewModel.entry.originalLanguageCode
-                        ?? viewModel.entry.parentSeriesEntry?.originalLanguageCode,
+                    originalPosterLanguageCode: originalPosterLanguageCode,
+                    showsDismissButton: false,
                     onPosterSelected: { url in
                         viewModel.updateSelectedPosterURL(url)
                     }
@@ -109,37 +121,90 @@ struct AnimeSharingSheet: View {
         .presentationSizing(.page)
     }
 
-    @ViewBuilder
-    private var sharingContent: some View {
-        if dynamicTypeSize.isAccessibilitySize {
-            stackedSharingContent
-        } else {
-            ViewThatFits(in: .horizontal) {
-                horizontalSharingContent
-
-                stackedSharingContent
+    private var wideSharingContent: some View {
+        HStack(spacing: Constants.wideColumnSpacing) {
+            GeometryReader { previewProxy in
+                ScrollView {
+                    sharingPreview
+                        .padding(.vertical, 36)
+                        .frame(minHeight: previewProxy.size.height)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.hidden)
+                .scrollClipDisabled()
             }
+            .frame(width: Constants.previewColumnWidth)
+
+            embeddedControls
         }
+        .padding(.horizontal, Constants.horizontalPadding)
+        .padding(.top, 12)
+        .padding(.bottom, 20)
+        .frame(maxWidth: Constants.contentMaximumWidth, maxHeight: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity)
     }
 
-    private var horizontalSharingContent: some View {
-        HStack(alignment: .center, spacing: 32) {
-            sharingPreview
-                .frame(width: 420)
-            sharingControls
-                .frame(width: 320)
+    private var compactSharingContent: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                sharingPreview
+                sharingControls
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 32)
+            .frame(maxWidth: 680)
+            .frame(maxWidth: .infinity)
         }
-        // Keep the full-size preview and controls together. Without this, the
-        // HStack can be compressed enough to fit a page sheet while making
-        // both panels unnecessarily narrow.
-        .fixedSize(horizontal: true, vertical: false)
+        .preferredNavigationBarScrollEdgeEffect()
     }
 
-    private var stackedSharingContent: some View {
-        VStack(spacing: 24) {
-            sharingPreview
-            sharingControls
+    private var embeddedControls: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text("Customize")
+                    .font(.title3.weight(.bold))
+            }
+
+            AnimeSharingLanguageControl(
+                availableLanguages: viewModel.availableLanguages,
+                selectedLanguage: $viewModel.selectedLanguage,
+                canSelectLanguage: viewModel.canSelectLanguage
+            )
+
+            AnimeSharingAppearanceControl(usesRoundedCorners: $viewModel.usesRoundedCorners)
+
+            AnimeSharingExportSizeControl(exportSize: $viewModel.exportSize)
+
+            Divider()
+
+            Text("Artwork")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            ScrollView {
+                PosterBrowserView(
+                    tmdbID: viewModel.entry.tmdbID,
+                    type: viewModel.entry.type,
+                    originalPosterLanguageCode: originalPosterLanguageCode,
+                    fetcher: posterFetcher,
+                    previewNamespace: embeddedPosterPreview,
+                    selectedPosterPath: viewModel.selectedPosterPath,
+                    onPosterTap: { poster, _ in
+                        selectEmbeddedPoster(poster)
+                    }
+                )
+                .padding(.bottom, 4)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .preferredNavigationBarScrollEdgeEffect()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(18)
+        .popupGlassPanel(cornerRadius: 24)
     }
 
     private var sharingPreview: some View {
@@ -149,7 +214,9 @@ struct AnimeSharingSheet: View {
             detail: viewModel.previewDetailLine,
             aspectRatio: viewModel.previewAspectRatio,
             image: viewModel.loadedImage,
-            animationTrigger: viewModel.selectedLanguage
+            renderedPixelSize: viewModel.renderedPixelSize,
+            usesRoundedCorners: viewModel.usesRoundedCorners,
+            animationTrigger: viewModel.previewRevision
         )
     }
 
@@ -157,9 +224,29 @@ struct AnimeSharingSheet: View {
         AnimeSharingControlsSection(
             availableLanguages: viewModel.availableLanguages,
             selectedLanguage: $viewModel.selectedLanguage,
+            usesRoundedCorners: $viewModel.usesRoundedCorners,
+            exportSize: $viewModel.exportSize,
             canSelectLanguage: viewModel.canSelectLanguage,
             onChangePoster: { showPosterSelection = true }
         )
+    }
+
+    private var originalPosterLanguageCode: String? {
+        viewModel.entry.originalLanguageCode
+            ?? viewModel.entry.parentSeriesEntry?.originalLanguageCode
+    }
+
+    private func usesEmbeddedPosterBrowser(availableWidth: CGFloat) -> Bool {
+        !dynamicTypeSize.isAccessibilitySize
+            && availableWidth >= Constants.embeddedBrowserMinimumWidth
+    }
+
+    private func selectEmbeddedPoster(_ poster: Poster) {
+        let posterPath = TMDbImagePath.storagePath(from: poster.metadata.filePath)
+        let originalURL = TMDbImageURLResolver.current.url(for: posterPath, role: .poster)
+        withAnimation(.snappy(duration: 0.22)) {
+            viewModel.updateSelectedPosterURL(originalURL ?? poster.url)
+        }
     }
 }
 

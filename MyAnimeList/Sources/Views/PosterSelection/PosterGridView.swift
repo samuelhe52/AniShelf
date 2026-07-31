@@ -5,6 +5,7 @@
 //  Created by Samuel He on 2025/12/17.
 //
 
+import DataProvider
 import Foundation
 import Kingfisher
 import SwiftUI
@@ -12,6 +13,7 @@ import SwiftUI
 struct PosterGridView: View {
     let posters: [Poster]
     let previewNamespace: Namespace.ID
+    let selectedPosterPath: String?
     let onPosterTap: (Poster) -> Void
 
     private struct Constants {
@@ -19,7 +21,8 @@ struct PosterGridView: View {
         static let gridItemMaxSize: CGFloat = 200
         static let gridItemVerticalSpacing: CGFloat = 12
         static let gridItemHorizontalSpacing: CGFloat = 12
-        static let posterCornerRadius: CGFloat = 5
+        static let posterCornerRadius: CGFloat = 8
+        static let selectedStrokeWidth: CGFloat = 4
         static let cacheExpiration: StorageExpiration = .transient
     }
 
@@ -35,10 +38,13 @@ struct PosterGridView: View {
             spacing: Constants.gridItemVerticalSpacing
         ) {
             ForEach(posters, id: \.url) { poster in
-                posterWithInfo(poster: poster)
-                    .onTapGesture {
-                        onPosterTap(poster)
-                    }
+                Button {
+                    onPosterTap(poster)
+                } label: {
+                    posterWithInfo(poster: poster)
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isSelected(poster) ? .isSelected : [])
             }
         }
     }
@@ -48,6 +54,7 @@ struct PosterGridView: View {
         let width = poster.metadata.width
         let height = poster.metadata.height
         let aspectRatio = CGFloat(width) / CGFloat(max(height, 1))
+        let selected = isSelected(poster)
 
         VStack {
             Color.clear
@@ -64,7 +71,21 @@ struct PosterGridView: View {
                 }
                 .overlay {
                     RoundedRectangle(cornerRadius: Constants.posterCornerRadius, style: .continuous)
-                        .stroke(.white.opacity(0.18), lineWidth: 1)
+                        .strokeBorder(
+                            selected ? Color.accentColor : .white.opacity(0.18),
+                            lineWidth: selected ? Constants.selectedStrokeWidth : 1
+                        )
+                }
+                .overlay(alignment: .topTrailing) {
+                    if selected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.title3.weight(.semibold))
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, Color.accentColor)
+                            .padding(7)
+                            .transition(.scale(scale: 0.7).combined(with: .opacity))
+                            .accessibilityHidden(true)
+                    }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: Constants.posterCornerRadius))
             Text("\(width) x \(height)")
@@ -72,5 +93,10 @@ struct PosterGridView: View {
                 .foregroundStyle(.secondary)
         }
         .matchedTransitionSource(id: poster.metadata.filePath, in: previewNamespace)
+        .animation(.snappy(duration: 0.2), value: selected)
+    }
+
+    private func isSelected(_ poster: Poster) -> Bool {
+        TMDbImagePath.storagePath(from: poster.metadata.filePath) == selectedPosterPath
     }
 }
