@@ -22,15 +22,32 @@ struct PosterBrowserView: View {
     let onPosterTap: (Poster, [Poster]) -> Void
 
     @State private var loadState: LoadState = .loading
-    @State private var availablePosters: [Poster] = []
-    @State private var seriesPosters: [Poster] = []
+    @State private var postersBySource: [PosterSource: [Poster]] = [:]
     @State private var useSeriesPoster = false
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
 
     private var currentPosters: [Poster] {
-        useSeriesPoster ? seriesPosters : availablePosters
+        postersBySource[selectedPosterSource] ?? []
+    }
+
+    private var selectedPosterSource: PosterSource {
+        if useSeriesPoster, case .season(_, let parentSeriesID) = type {
+            return .series(parentSeriesID)
+        }
+        return primaryPosterSource
+    }
+
+    private var primaryPosterSource: PosterSource {
+        switch type {
+        case .movie:
+            return .movie(tmdbID)
+        case .series:
+            return .series(tmdbID)
+        case .season(let seasonNumber, let parentSeriesID):
+            return .season(number: seasonNumber, parentSeriesID: parentSeriesID)
+        }
     }
 
     private var metadataLanguageCode: String {
@@ -55,16 +72,10 @@ struct PosterBrowserView: View {
 
             browserContent
         }
-        .onChange(of: useSeriesPoster, initial: false) { _, newValue in
-            Task {
-                if newValue {
-                    await fetchSeriesPostersIfNeeded()
-                } else {
-                    syncLoadState()
-                }
-            }
+        .task(id: selectedPosterSource) {
+            let source = selectedPosterSource
+            await loadPosters(for: source)
         }
-        .task { await fetchPrimaryPosters() }
     }
 
     @ViewBuilder
@@ -99,63 +110,43 @@ struct PosterBrowserView: View {
     }
 
     @MainActor
-    private func fetchPrimaryPosters() async {
+    private func loadPosters(for source: PosterSource) async {
+        if let cachedPosters = postersBySource[source] {
+            guard selectedPosterSource == source else { return }
+            loadState = cachedPosters.isEmpty ? .empty : .loaded
+            return
+        }
+
         do {
             loadState = .loading
-            let resolvedPosters = try await primaryPosterRequest()
-            guard !Task.isCancelled else { return }
-            availablePosters = resolvedPosters.filteredAndSorted(
+            let resolvedPosters = try await posterRequest(for: source)
+            guard !Task.isCancelled, selectedPosterSource == source else { return }
+            let posters = resolvedPosters.filteredAndSorted(
                 originalLanguageCode: originalPosterLanguageCode,
                 metadataLanguageCode: metadataLanguageCode
             )
-            syncLoadState()
+            postersBySource[source] = posters
+            loadState = posters.isEmpty ? .empty : .loaded
         } catch is CancellationError {
             return
         } catch {
+            guard !Task.isCancelled, selectedPosterSource == source else { return }
             logger.error("Error fetching posters: \(error.localizedDescription)")
             loadState = .error(error)
         }
     }
 
     @MainActor
-    private func fetchSeriesPostersIfNeeded() async {
-        guard case .season(_, let parentSeriesID) = type else { return }
-        if !seriesPosters.isEmpty {
-            syncLoadState()
-            return
-        }
-
-        do {
-            loadState = .loading
-            let resolvedPosters = try await fetcher.postersForSeries(
-                seriesID: parentSeriesID,
-                idealWidth: Constants.idealPosterWidth
-            )
-            guard !Task.isCancelled else { return }
-            seriesPosters = resolvedPosters.filteredAndSorted(
-                originalLanguageCode: originalPosterLanguageCode,
-                metadataLanguageCode: metadataLanguageCode
-            )
-            syncLoadState()
-        } catch is CancellationError {
-            return
-        } catch {
-            logger.error("Error fetching posters: \(error.localizedDescription)")
-            loadState = .error(error)
-        }
-    }
-
-    @MainActor
-    private func primaryPosterRequest() async throws -> [Poster] {
-        switch type {
-        case .movie:
+    private func posterRequest(for source: PosterSource) async throws -> [Poster] {
+        switch source {
+        case .movie(let id):
             return try await fetcher.postersForMovie(
-                for: tmdbID,
+                for: id,
                 idealWidth: Constants.idealPosterWidth
             )
-        case .series:
+        case .series(let id):
             return try await fetcher.postersForSeries(
-                seriesID: tmdbID,
+                seriesID: id,
                 idealWidth: Constants.idealPosterWidth
             )
         case .season(let seasonNumber, let parentSeriesID):
@@ -167,9 +158,10 @@ struct PosterBrowserView: View {
         }
     }
 
-    @MainActor
-    private func syncLoadState() {
-        loadState = currentPosters.isEmpty ? .empty : .loaded
+    private enum PosterSource: Hashable {
+        case movie(Int)
+        case series(Int)
+        case season(number: Int, parentSeriesID: Int)
     }
 
     private enum LoadState: Equatable {
