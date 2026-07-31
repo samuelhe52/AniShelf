@@ -189,7 +189,9 @@ struct AnimeEntryListRow: View {
         ) { isFavorite in
             LibraryFavoriteSymbol(
                 isFavorite: isFavorite,
-                font: .footnote.weight(.semibold)
+                font: .footnote.weight(.semibold),
+                shadowColor: isFavorite ? .pink.opacity(0.3) : .clear,
+                shadowRadius: isFavorite ? 5 : 0
             )
             .frame(width: 34, height: 34)
             .background {
