@@ -237,3 +237,30 @@ struct LibraryProfileCommandButtonStyle: ButtonStyle {
         filled ? .white.opacity(0.24) : tint.opacity(0.18)
     }
 }
+
+struct LibraryProfileSettingsToggleRow: View {
+    let title: LocalizedStringResource
+    let subtitle: LocalizedStringResource
+    @Binding var isOn: Bool
+    var tint: Color = .mint
+
+    var body: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 12)
+            Toggle(title, isOn: $isOn)
+                .labelsHidden()
+                .tint(tint)
+                .scaleEffect(0.78, anchor: .trailing)
+                .frame(width: 42, height: 26, alignment: .trailing)
+        }
+        .padding(.vertical, 2)
+    }
+}
