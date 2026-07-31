@@ -916,6 +916,31 @@ struct SharingCardExportPipelineTests {
         #expect(viewModel.renderTrigger.exportStyle == .roundedPNG)
     }
 
+    @Test @MainActor func enabledSharingMemoryWithoutStoredLanguageUsesAppPreference() {
+        let suiteName = "SharingCardExportPipelineTests.missingLanguage.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(true, forKey: .rememberShareSheetSettings)
+        let entry = AnimeEntry(
+            name: "Test",
+            nameTranslations: [
+                Language.english.rawValueWithRegion: "Test",
+                Language.japanese.rawValueWithRegion: "テスト",
+            ],
+            type: .series,
+            tmdbID: 91_000
+        )
+        let viewModel = AnimeSharingViewModel(entry: entry, defaults: defaults)
+
+        #expect(viewModel.hasRestoredRememberedLanguage == false)
+        viewModel.applyPreferredLanguage(
+            .japanese,
+            respectingCurrentSelection: viewModel.hasRestoredRememberedLanguage
+        )
+        #expect(viewModel.selectedLanguage == .japanese)
+    }
+
     @Test @MainActor func sharingViewModelRestoresAndPersistsRememberedSettings() {
         let suiteName = "SharingCardExportPipelineTests.remembered.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -929,6 +954,7 @@ struct SharingCardExportPipelineTests {
 
         let viewModel = AnimeSharingViewModel(entry: .frieren, defaults: defaults)
 
+        #expect(viewModel.hasRestoredRememberedLanguage == true)
         #expect(viewModel.selectedLanguage == .japanese)
         #expect(viewModel.usesRoundedCorners == false)
         #expect(viewModel.roundedExportFormat == .heic)
@@ -985,6 +1011,7 @@ struct SharingCardExportPipelineTests {
         )
         viewModel.exportSize = .light
 
+        #expect(viewModel.hasRestoredRememberedLanguage == false)
         #expect(viewModel.selectedLanguage == .english)
         #expect(defaults.string(forKey: .shareSheetLanguage) == Language.chinese.rawValue)
     }

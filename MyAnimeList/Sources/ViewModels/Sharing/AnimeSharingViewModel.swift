@@ -127,9 +127,9 @@ final class AnimeSharingViewModel {
         )
     }
 
-    var remembersSettings: Bool {
-        sharingPreferences.remembersSettings
-    }
+    /// Whether a remembered language was restored for this entry rather than
+    /// supplied by the temporary initialization fallback.
+    let hasRestoredRememberedLanguage: Bool
 
     @ObservationIgnored private var preferredLanguage: Language
     @ObservationIgnored private var isApplyingLanguageFallback = false
@@ -145,14 +145,19 @@ final class AnimeSharingViewModel {
     ) {
         let sharingPreferences = AnimeSharingPreferences(defaults: defaults)
         let initialSettings = sharingPreferences.load(defaultLanguage: defaultLanguage)
-        self.entry = entry.parentSeriesEntry ?? entry
+        let sharingEntry = entry.parentSeriesEntry ?? entry
+        let translations = AnimeSharingViewModel.buildTranslations(from: sharingEntry)
+        self.entry = sharingEntry
         self.selectedPosterURL = self.entry.posterURL
         self.selectedLanguage = initialSettings.selectedLanguage
         self.usesRoundedCorners = initialSettings.usesRoundedCorners
         self.roundedExportFormat = initialSettings.roundedExportFormat
         self.exportSize = initialSettings.exportSize
         self.preferredLanguage = defaultLanguage
-        self.translations = AnimeSharingViewModel.buildTranslations(from: self.entry)
+        self.translations = translations
+        self.hasRestoredRememberedLanguage =
+            initialSettings.didRestoreSelectedLanguage
+            && translations.keys.contains(initialSettings.selectedLanguage)
         self.sharingPreferences = sharingPreferences
         self.renderer = SharingCardRenderer(
             baseWidth: AnimeSharingViewModel.previewCardWidth,
@@ -164,7 +169,7 @@ final class AnimeSharingViewModel {
         )
         applyPreferredLanguage(
             defaultLanguage,
-            respectingCurrentSelection: sharingPreferences.remembersSettings
+            respectingCurrentSelection: hasRestoredRememberedLanguage
         )
     }
 

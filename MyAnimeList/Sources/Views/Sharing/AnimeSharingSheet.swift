@@ -98,7 +98,7 @@ struct AnimeSharingSheet: View {
             .onAppear {
                 viewModel.applyPreferredLanguage(
                     followsSystemLanguage ? .current : defaultLanguage,
-                    respectingCurrentSelection: viewModel.remembersSettings
+                    respectingCurrentSelection: viewModel.hasRestoredRememberedLanguage
                 )
             }
             .onDisappear {

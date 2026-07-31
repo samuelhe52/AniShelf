@@ -9,6 +9,7 @@ import Foundation
 
 struct AnimeSharingSettings: Equatable {
     let selectedLanguage: Language
+    let didRestoreSelectedLanguage: Bool
     let usesRoundedCorners: Bool
     let roundedExportFormat: SharingCardRoundedExportFormat
     let exportSize: SharingCardExportSize
@@ -16,6 +17,7 @@ struct AnimeSharingSettings: Equatable {
     static func defaultValue(language: Language) -> AnimeSharingSettings {
         AnimeSharingSettings(
             selectedLanguage: language,
+            didRestoreSelectedLanguage: false,
             usesRoundedCorners: true,
             roundedExportFormat: .png,
             exportSize: .medium
@@ -38,11 +40,13 @@ struct AnimeSharingPreferences {
         let fallback = AnimeSharingSettings.defaultValue(language: defaultLanguage)
         guard remembersSettings else { return fallback }
 
+        let rememberedLanguage =
+            defaults.string(forKey: .shareSheetLanguage)
+            .flatMap(Language.init(rawValue:))
+
         return AnimeSharingSettings(
-            selectedLanguage:
-                defaults.string(forKey: .shareSheetLanguage)
-                .flatMap(Language.init(rawValue:))
-                ?? fallback.selectedLanguage,
+            selectedLanguage: rememberedLanguage ?? fallback.selectedLanguage,
+            didRestoreSelectedLanguage: rememberedLanguage != nil,
             usesRoundedCorners: defaults.bool(
                 forKey: .shareSheetUsesRoundedCorners,
                 defaultValue: fallback.usesRoundedCorners
