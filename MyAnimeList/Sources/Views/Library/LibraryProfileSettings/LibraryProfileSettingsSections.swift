@@ -592,15 +592,9 @@ fileprivate struct LibraryProfileDefaultSettingsSection: View {
                 .font(.subheadline.weight(.semibold))
             Spacer(minLength: 12)
             Menu {
-                ForEach(AnimeEntry.WatchStatus.allCases, id: \.self) { status in
-                    Button {
-                        defaultNewEntryWatchStatus = status
-                    } label: {
-                        if status == defaultNewEntryWatchStatus {
-                            Label(status.localizedStringResource, systemImage: "checkmark")
-                        } else {
-                            Text(status.localizedStringResource)
-                        }
+                Picker("New Entries Start As", selection: $defaultNewEntryWatchStatus) {
+                    ForEach(AnimeEntry.WatchStatus.allCases, id: \.self) { status in
+                        Text(status.localizedStringResource).tag(status)
                     }
                 }
             } label: {
