@@ -40,6 +40,7 @@ struct SupportAniShelfSheet: View {
                 .animation(thankYouTransitionAnimation, value: purchaseSucceeded)
             }
             .scrollBounceBehavior(.basedOnSize)
+            .preferredNavigationBarScrollEdgeEffect()
         }
         .navigationTitle(supportTitleResource)
         .navigationBarTitleDisplayMode(.inline)

@@ -29,6 +29,7 @@ struct LibraryProfileSettingsView: View {
     @AppStorage(.episodeProgressTrackingEnabled) private var episodeProgressTrackingEnabled = false
     @AppStorage(.libraryPosterProgressBarOverlayEnabled)
     private var posterProgressBarOverlayEnabled = true
+    @AppStorage(.useSoftNavigationBarEdges) private var useSoftNavigationBarEdges = true
     @AppStorage(.useTMDbRelayServer) private var useTMDbRelayServer = false
 
     @State private var showCacheAlert = false
@@ -69,7 +70,7 @@ struct LibraryProfileSettingsView: View {
                     profileContent
                 }
                 .scrollContentBackground(.hidden)
-                .scrollEdgeEffectStyle(.soft, for: .all)
+                .preferredNavigationBarScrollEdgeEffect()
             }
             .navigationTitle(profileTitleResource)
             .navigationBarTitleDisplayMode(.inline)
@@ -246,6 +247,7 @@ struct LibraryProfileSettingsView: View {
             posterProgressBarOverlayEnabled: $posterProgressBarOverlayEnabled,
             autoPrefetchImagesOnAddAndRestore: $store.autoPrefetchImagesOnAddAndRestore,
             longTermGalleryPosterCachingEnabled: $store.longTermGalleryPosterCachingEnabled,
+            useSoftNavigationBarEdges: $useSoftNavigationBarEdges,
             useTMDbRelayServer: $useTMDbRelayServer,
             preferredLanguage: $preferredLanguage,
             layout: layout,

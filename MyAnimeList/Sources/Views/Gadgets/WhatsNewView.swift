@@ -35,6 +35,7 @@ struct WhatsNewView: View {
                 .frame(maxWidth: .infinity)
             }
             .scrollBounceBehavior(.basedOnSize)
+            .preferredNavigationBarScrollEdgeEffect()
         }
         .navigationTitle(whatsNewTitleResource)
         .navigationBarTitleDisplayMode(.inline)

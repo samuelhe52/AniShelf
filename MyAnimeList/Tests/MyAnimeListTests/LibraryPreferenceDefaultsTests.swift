@@ -59,6 +59,20 @@ struct LibraryPreferenceDefaultsTests {
         #expect(!defaults.isLibraryPosterProgressBarOverlayEnabled)
     }
 
+    @Test func testSoftNavigationBarEdgesPreferenceDefaultsOn() {
+        let suiteName = "MyAnimeListTests.SoftNavigationBarEdgesPreference"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        #expect(defaults.object(forKey: .useSoftNavigationBarEdges) == nil)
+        #expect(defaults.bool(forKey: .useSoftNavigationBarEdges, defaultValue: true))
+
+        defaults.set(false, forKey: .useSoftNavigationBarEdges)
+
+        #expect(!defaults.bool(forKey: .useSoftNavigationBarEdges, defaultValue: true))
+    }
+
     @Test @MainActor func testLibraryGroupStrategyPreferenceRoundTrip() {
         let suiteName = "MyAnimeListTests.LibraryGroupStrategy"
         let defaults = UserDefaults(suiteName: suiteName)!

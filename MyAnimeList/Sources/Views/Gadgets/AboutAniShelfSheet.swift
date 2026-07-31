@@ -21,6 +21,7 @@ struct AboutAniShelfSheet: View {
             .frame(maxWidth: .infinity)
         }
         .scrollBounceBehavior(.basedOnSize)
+        .preferredNavigationBarScrollEdgeEffect()
         .navigationTitle(aboutTitleResource)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

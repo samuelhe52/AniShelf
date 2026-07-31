@@ -3250,6 +3250,22 @@
         }
       }
     },
+    "Interface" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インターフェイス"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "界面"
+          }
+        }
+      }
+    },
     "Japanese" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4229,6 +4245,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "好"
+          }
+        }
+      }
+    },
+    "Available on iOS 27 or later. Turn off to use the system appearance." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS 27以降で利用できます。オフにするとシステムの外観になります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅适用于 iOS 27 或更高版本。关闭后使用系统外观。"
           }
         }
       }
@@ -7107,6 +7139,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用海报"
+          }
+        }
+      }
+    },
+    "Use Soft Navigation Bar Edges" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ナビゲーションバーの境界をソフトにする"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用柔和的导航栏边缘"
           }
         }
       }

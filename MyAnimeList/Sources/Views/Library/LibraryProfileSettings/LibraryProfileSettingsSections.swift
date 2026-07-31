@@ -227,6 +227,7 @@ struct LibraryProfileSettingsCard: View {
     @Binding var posterProgressBarOverlayEnabled: Bool
     @Binding var autoPrefetchImagesOnAddAndRestore: Bool
     @Binding var longTermGalleryPosterCachingEnabled: Bool
+    @Binding var useSoftNavigationBarEdges: Bool
     @Binding var useTMDbRelayServer: Bool
     @Binding var preferredLanguage: Language
 
@@ -306,6 +307,7 @@ struct LibraryProfileSettingsCard: View {
     private var settingsSections: some View {
         languageSettingsSection
         defaultSettingsSection
+        interfaceSettingsSection
         tmdbConnectionSection
         iCloudSyncSection
         backupExportSection
@@ -324,14 +326,20 @@ struct LibraryProfileSettingsCard: View {
             hideDroppedByDefault: $hideDroppedByDefault,
             defaultNewEntryWatchStatus: $defaultNewEntryWatchStatus,
             defaultFilters: $defaultFilters,
+            autoPrefetchImagesOnAddAndRestore: $autoPrefetchImagesOnAddAndRestore,
+            longTermGalleryPosterCachingEnabled: $longTermGalleryPosterCachingEnabled
+        )
+    }
+
+    private var interfaceSettingsSection: some View {
+        LibraryProfileInterfaceSettingsSection(
             openDetailWithSingleTap: $openDetailWithSingleTap,
             entryDetailCharactersExpandedByDefault: $entryDetailCharactersExpandedByDefault,
             entryDetailStaffExpandedByDefault: $entryDetailStaffExpandedByDefault,
             scoringEnabled: $scoringEnabled,
             episodeProgressTrackingEnabled: $episodeProgressTrackingEnabled,
             posterProgressBarOverlayEnabled: $posterProgressBarOverlayEnabled,
-            autoPrefetchImagesOnAddAndRestore: $autoPrefetchImagesOnAddAndRestore,
-            longTermGalleryPosterCachingEnabled: $longTermGalleryPosterCachingEnabled
+            useSoftNavigationBarEdges: $useSoftNavigationBarEdges
         )
     }
 
@@ -381,13 +389,14 @@ struct LibraryProfileSettingsCard: View {
             VStack(spacing: 20) {
                 languageSettingsSection
                 defaultSettingsSection
-                tmdbConnectionSection
+                interfaceSettingsSection
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
 
             VStack(spacing: 20) {
                 iCloudSyncSection
                 backupExportSection
+                tmdbConnectionSection
                 maintenanceActionsSection
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -540,12 +549,6 @@ fileprivate struct LibraryProfileDefaultSettingsSection: View {
     @Binding var hideDroppedByDefault: Bool
     @Binding var defaultNewEntryWatchStatus: AnimeEntry.WatchStatus
     @Binding var defaultFilters: Set<LibraryStore.AnimeFilter>
-    @Binding var openDetailWithSingleTap: Bool
-    @Binding var entryDetailCharactersExpandedByDefault: Bool
-    @Binding var entryDetailStaffExpandedByDefault: Bool
-    @Binding var scoringEnabled: Bool
-    @Binding var episodeProgressTrackingEnabled: Bool
-    @Binding var posterProgressBarOverlayEnabled: Bool
     @Binding var autoPrefetchImagesOnAddAndRestore: Bool
     @Binding var longTermGalleryPosterCachingEnabled: Bool
 
@@ -553,50 +556,12 @@ fileprivate struct LibraryProfileDefaultSettingsSection: View {
         VStack(alignment: .leading, spacing: 10) {
             LibraryProfileSettingHeader(
                 title: "Library Defaults",
-                systemImage: "line.3.horizontal.decrease.circle",
+                systemImage: "books.vertical.fill",
                 tint: .mint
             )
 
             defaultWatchStatusRow
             defaultFiltersRow
-
-            LibraryProfileSettingsToggleRow(
-                title: "Open Detail with Single Tap",
-                subtitle: "By default, double tap opens detail. Turn this on to use single tap instead.",
-                isOn: $openDetailWithSingleTap
-            )
-
-            LibraryProfileSettingsToggleRow(
-                title: "Expand Characters by Default",
-                subtitle: "Open the Characters section automatically in entry detail view.",
-                isOn: $entryDetailCharactersExpandedByDefault
-            )
-
-            LibraryProfileSettingsToggleRow(
-                title: "Expand Staff by Default",
-                subtitle: "Open the Staff section automatically in entry detail view.",
-                isOn: $entryDetailStaffExpandedByDefault
-            )
-
-            LibraryProfileSettingsToggleRow(
-                title: "Enable Scoring",
-                subtitle: "Turning this off does not delete previously saved scores.",
-                isOn: $scoringEnabled
-            )
-
-            LibraryProfileSettingsToggleRow(
-                title: "Track Episode Progress",
-                subtitle: "Turning this off hides episode progress without deleting saved progress.",
-                isOn: $episodeProgressTrackingEnabled
-            )
-
-            if episodeProgressTrackingEnabled {
-                LibraryProfileSettingsToggleRow(
-                    title: "Show Poster Progress Bar",
-                    subtitle: "Show episode progress as a poster overlay in the library.",
-                    isOn: $posterProgressBarOverlayEnabled
-                )
-            }
 
             LibraryProfileSettingsToggleRow(
                 title: "Hide Dropped Entries",
@@ -739,6 +704,82 @@ fileprivate struct LibraryProfileDefaultSettingsSection: View {
             isOn: defaultFilterBinding(for: filter),
             label: { Text(filter.name) }
         )
+    }
+}
+
+fileprivate struct LibraryProfileInterfaceSettingsSection: View {
+    @Binding var openDetailWithSingleTap: Bool
+    @Binding var entryDetailCharactersExpandedByDefault: Bool
+    @Binding var entryDetailStaffExpandedByDefault: Bool
+    @Binding var scoringEnabled: Bool
+    @Binding var episodeProgressTrackingEnabled: Bool
+    @Binding var posterProgressBarOverlayEnabled: Bool
+    @Binding var useSoftNavigationBarEdges: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            LibraryProfileSettingHeader(
+                title: "Interface",
+                systemImage: "rectangle.3.group.fill",
+                tint: .teal
+            )
+
+            LibraryProfileSettingsToggleRow(
+                title: "Open Detail with Single Tap",
+                subtitle: "By default, double tap opens detail. Turn this on to use single tap instead.",
+                isOn: $openDetailWithSingleTap,
+                tint: .teal
+            )
+
+            LibraryProfileSettingsToggleRow(
+                title: "Expand Characters by Default",
+                subtitle: "Open the Characters section automatically in entry detail view.",
+                isOn: $entryDetailCharactersExpandedByDefault,
+                tint: .teal
+            )
+
+            LibraryProfileSettingsToggleRow(
+                title: "Expand Staff by Default",
+                subtitle: "Open the Staff section automatically in entry detail view.",
+                isOn: $entryDetailStaffExpandedByDefault,
+                tint: .teal
+            )
+
+            LibraryProfileSettingsToggleRow(
+                title: "Enable Scoring",
+                subtitle: "Turning this off does not delete previously saved scores.",
+                isOn: $scoringEnabled,
+                tint: .teal
+            )
+
+            LibraryProfileSettingsToggleRow(
+                title: "Track Episode Progress",
+                subtitle: "Turning this off hides episode progress without deleting saved progress.",
+                isOn: $episodeProgressTrackingEnabled,
+                tint: .teal
+            )
+
+            if episodeProgressTrackingEnabled {
+                LibraryProfileSettingsToggleRow(
+                    title: "Show Poster Progress Bar",
+                    subtitle: "Show episode progress as a poster overlay in the library.",
+                    isOn: $posterProgressBarOverlayEnabled,
+                    tint: .teal
+                )
+            }
+
+            if #available(iOS 27, *) {
+                LibraryProfileSettingsToggleRow(
+                    title: "Use Soft Navigation Bar Edges",
+                    subtitle:
+                        "Available on iOS 27 or later. Turn off to use the system appearance.",
+                    isOn: $useSoftNavigationBarEdges,
+                    tint: .teal
+                )
+            }
+        }
+        .padding(14)
+        .libraryProfileInsetPanel(cornerRadius: 22, tint: .teal)
     }
 }
 

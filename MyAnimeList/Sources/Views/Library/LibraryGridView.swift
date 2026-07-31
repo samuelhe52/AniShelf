@@ -39,7 +39,7 @@ struct LibraryGridView: View {
                 .padding(.top, 6)
                 .padding(.bottom, 104)
             }
-            .scrollEdgeEffectStyle(.soft, for: .all)
+            .preferredNavigationBarScrollEdgeEffect()
             .animation(.spring, value: store.groupStrategy)
             .animation(.spring, value: store.sortReversed)
             .animation(.spring, value: store.sortStrategy)
