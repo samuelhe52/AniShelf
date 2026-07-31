@@ -69,6 +69,7 @@
 				Tests/MyAnimeListTests/LibraryCloudSyncPreferencesTests.swift,
 				Tests/MyAnimeListTests/LibraryEntryInteractionStateTests.swift,
 				Tests/MyAnimeListTests/LibraryExportManagerTests.swift,
+				Tests/MyAnimeListTests/LibraryGalleryLayoutPolicyTests.swift,
 				Tests/MyAnimeListTests/LibraryMetadataRefreshTests.swift,
 				"Tests/MyAnimeListTests/LibraryMetadataRefreshTests+DetailComparison.swift",
 				"Tests/MyAnimeListTests/LibraryMetadataRefreshTests+ImageCache.swift",
@@ -77,7 +78,6 @@
 				"Tests/MyAnimeListTests/LibraryMetadataRefreshTests+Writer.swift",
 				Tests/MyAnimeListTests/LibraryMetadataRefreshTestSupport.swift,
 				Tests/MyAnimeListTests/LibraryPreferenceDefaultsTests.swift,
-				Tests/MyAnimeListTests/LibraryGalleryLayoutPolicyTests.swift,
 				Tests/MyAnimeListTests/LibraryProfileSettingsLayoutPolicyTests.swift,
 				Tests/MyAnimeListTests/LibraryRelationshipAndConversionTests.swift,
 				Tests/MyAnimeListTests/LibrarySortingAndDeletionTests.swift,
@@ -127,6 +127,7 @@
 				Tests/MyAnimeListTests/LibraryCloudSyncPreferencesTests.swift,
 				Tests/MyAnimeListTests/LibraryEntryInteractionStateTests.swift,
 				Tests/MyAnimeListTests/LibraryExportManagerTests.swift,
+				Tests/MyAnimeListTests/LibraryGalleryLayoutPolicyTests.swift,
 				Tests/MyAnimeListTests/LibraryMetadataRefreshTests.swift,
 				"Tests/MyAnimeListTests/LibraryMetadataRefreshTests+DetailComparison.swift",
 				"Tests/MyAnimeListTests/LibraryMetadataRefreshTests+ImageCache.swift",
@@ -135,7 +136,6 @@
 				"Tests/MyAnimeListTests/LibraryMetadataRefreshTests+Writer.swift",
 				Tests/MyAnimeListTests/LibraryMetadataRefreshTestSupport.swift,
 				Tests/MyAnimeListTests/LibraryPreferenceDefaultsTests.swift,
-				Tests/MyAnimeListTests/LibraryGalleryLayoutPolicyTests.swift,
 				Tests/MyAnimeListTests/LibraryProfileSettingsLayoutPolicyTests.swift,
 				Tests/MyAnimeListTests/LibraryRelationshipAndConversionTests.swift,
 				Tests/MyAnimeListTests/LibrarySortingAndDeletionTests.swift,
@@ -582,7 +582,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = MyAnimeList/MyAnimeList.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"MyAnimeList/Preview Content\"";
 				DEVELOPMENT_TEAM = 768QBKMWKW;
 				ENABLE_PREVIEWS = YES;
@@ -602,7 +602,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.96;
+				MARKETING_VERSION = 1.97;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelhe.MyAnimeList;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -623,7 +623,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = MyAnimeList/MyAnimeList.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"MyAnimeList/Preview Content\"";
 				DEVELOPMENT_TEAM = 768QBKMWKW;
 				ENABLE_PREVIEWS = YES;
@@ -643,7 +643,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.96;
+				MARKETING_VERSION = 1.97;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelhe.MyAnimeList;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;

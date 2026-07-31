@@ -389,6 +389,22 @@
         }
       }
     },
+    "Added a Dark Mode app icon." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダークモード用のAppアイコンを追加しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加深色模式 App 图标。"
+          }
+        }
+      }
+    },
     "Added a rating feature: you can now rate anime in your library from 1 to 5." : {
       "localizations" : {
         "ja" : {
@@ -743,6 +759,22 @@
         }
       }
     },
+    "AniShelf can now ask for an App Store review after sustained, meaningful use, without interrupting what you are doing." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfは、十分に継続してご利用いただいた後、操作を妨げないタイミングでApp Storeのレビューをお願いするようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf 现在会在您持续、有意义地使用后，于不打断操作的时机邀请您在 App Store 留下评价。"
+          }
+        }
+      }
+    },
     "AniShelf can now show selected update notes after launch and reopen them later from Settings." : {
       "localizations" : {
         "ja" : {
@@ -823,6 +855,22 @@
         }
       }
     },
+    "AniShelf now adapts to resizable iPad windows for a more natural large-screen experience." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可変サイズのiPadウインドウに対応し、大画面でより自然に操作できるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "适配 iPad 可变大小窗口，大屏交互更自然。"
+          }
+        }
+      }
+    },
     "AniShelf on GitHub" : {
       "localizations" : {
         "ja" : {
@@ -887,22 +935,6 @@
         }
       }
     },
-    "Appearance" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "外観"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "外观"
-          }
-        }
-      }
-    },
     "App backups keep AniShelf data and settings for restore. Library exports create user-facing files in standard formats." : {
       "localizations" : {
         "ja" : {
@@ -915,6 +947,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "应用备份会保存AniShelf数据和设置，以便日后恢复。资料库导出会生成标准格式文件。"
+          }
+        }
+      }
+    },
+    "Appearance" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外観"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外观"
           }
         }
       }
@@ -947,6 +995,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "自动预加载图片"
+          }
+        }
+      }
+    },
+    "Available on iOS 27 or later. Turn off to use the system appearance." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS 27以降で利用できます。オフにするとシステムの外観になります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅适用于 iOS 27 或更高版本。关闭后使用系统外观。"
           }
         }
       }
@@ -1738,6 +1802,7 @@
       }
     },
     "Controls" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -1749,22 +1814,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "设置"
-          }
-        }
-      }
-    },
-    "Customize" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "カスタマイズ"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自定义"
           }
         }
       }
@@ -1958,6 +2007,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "请先创建账号或登录。"
+          }
+        }
+      }
+    },
+    "Customize" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カスタマイズ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自定义"
           }
         }
       }
@@ -2313,6 +2378,22 @@
         }
       }
     },
+    "Enhanced sharing customization with image size, rounded corner, and export format controls." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有のカスタマイズ機能を強化し、画像サイズ、角丸、書き出し形式を設定できるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "增强分享自定义能力，现支持图像大小、圆角与导出格式设置。"
+          }
+        }
+      }
+    },
     "Enter Batch Add?" : {
       "localizations" : {
         "ja" : {
@@ -2592,102 +2673,6 @@
         }
       }
     },
-    "Export Size" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "書き出しサイズ"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "导出尺寸"
-          }
-        }
-      }
-    },
-    "Format" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "形式"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "格式"
-          }
-        }
-      }
-    },
-    "HEIC" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "HEIC"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "HEIC"
-          }
-        }
-      }
-    },
-    "PNG" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PNG"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PNG"
-          }
-        }
-      }
-    },
-    "Remember Share Settings" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "共有設定を記憶"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "记住共享设置"
-          }
-        }
-      }
-    },
-    "Remember language, corner style, image format, and export size preferences in the share sheet." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "共有シートで選んだ言語、角のスタイル、画像形式、書き出しサイズを記憶します。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "记住共享表单中的语言、圆角样式、图像格式和导出尺寸偏好。"
-          }
-        }
-      }
-    },
     "Export as..." : {
       "localizations" : {
         "ja" : {
@@ -2732,6 +2717,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "导出恢复包"
+          }
+        }
+      }
+    },
+    "Export Size" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "書き出しサイズ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出尺寸"
           }
         }
       }
@@ -3153,18 +3154,18 @@
         }
       }
     },
-    "Full" : {
+    "Format" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "フル"
+            "value" : "形式"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "完整"
+            "value" : "格式"
           }
         }
       }
@@ -3185,6 +3186,22 @@
         }
       }
     },
+    "Full" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フル"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完整"
+          }
+        }
+      }
+    },
     "Gallery" : {
       "localizations" : {
         "ja" : {
@@ -3197,6 +3214,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "图库"
+          }
+        }
+      }
+    },
+    "General" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一般"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通用"
           }
         }
       }
@@ -3261,6 +3294,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "分组方式"
+          }
+        }
+      }
+    },
+    "HEIC" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HEIC"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HEIC"
           }
         }
       }
@@ -3394,6 +3443,22 @@
         }
       }
     },
+    "Improved TMDb API key handling at launch to avoid unnecessary setup prompts." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "起動時のTMDb APIキーの処理を改善し、不必要な設定画面が表示されないようにしました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "改进了启动时的 TMDb API 密钥处理，避免出现不必要的设置提示。"
+          }
+        }
+      }
+    },
     "Improved watch status switching and date selection UX." : {
       "localizations" : {
         "ja" : {
@@ -3459,18 +3524,18 @@
         }
       }
     },
-    "Jumps to the episodes section." : {
+    "JPEG" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "エピソードセクションに移動します。"
+            "value" : "JPEG"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "跳转到集数部分。"
+            "value" : "JPEG"
           }
         }
       }
@@ -3487,6 +3552,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "JSON (.json)"
+          }
+        }
+      }
+    },
+    "Jumps to the episodes section." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エピソードセクションに移動します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跳转到集数部分。"
           }
         }
       }
@@ -3655,6 +3736,7 @@
       }
     },
     "Library Defaults" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -4441,22 +4523,6 @@
         }
       }
     },
-    "Available on iOS 27 or later. Turn off to use the system appearance." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iOS 27以降で利用できます。オフにするとシステムの外観になります。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "仅适用于 iOS 27 或更高版本。关闭后使用系统外观。"
-          }
-        }
-      }
-    },
     "On the details page, long-press an episode to view that episode's staff." : {
       "localizations" : {
         "ja" : {
@@ -4906,6 +4972,22 @@
         }
       }
     },
+    "PNG" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PNG"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PNG"
+          }
+        }
+      }
+    },
     "Prefetch Images" : {
       "localizations" : {
         "ja" : {
@@ -4955,22 +5037,6 @@
         }
       }
     },
-    "General" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一般"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "通用"
-          }
-        }
-      }
-    },
     "Preparing iCloud" : {
       "localizations" : {
         "ja" : {
@@ -4988,6 +5054,7 @@
       }
     },
     "Preview" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -5350,6 +5417,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重新加载"
+          }
+        }
+      }
+    },
+    "Remember language, corner style, image format, and export size preferences in the share sheet." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有シートで選んだ言語、角のスタイル、画像形式、書き出しサイズを記憶します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记住共享表单中的语言、圆角样式、图像格式和导出尺寸偏好。"
+          }
+        }
+      }
+    },
+    "Remember Share Settings" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有設定を記憶"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记住共享设置"
           }
         }
       }
@@ -6655,6 +6754,22 @@
         }
       }
     },
+    "This release adds thoughtful review prompts and improves the reliability of TMDb artwork and setup." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このリリースでは、配慮したレビューのお願いを追加し、TMDbアートワークと設定の信頼性を改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此版本新增了更周到的评价提示，并提升了 TMDb 图片与设置的可靠性。"
+          }
+        }
+      }
+    },
     "This release fixes data correctness issues. Existing users should perform an info refresh by tapping the action button below so their library metadata can be corrected." : {
       "localizations" : {
         "ja" : {
@@ -6667,6 +6782,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此版本修复了影响数据正确性的问题。现有用户请点击下方操作按钮执行一次信息刷新，以修正资料库中的元数据。"
+          }
+        }
+      }
+    },
+    "This release improves AniShelf on iPad and larger displays." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このリリースでは、iPadと大画面でのAniShelfの体験を改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此版本优化了 AniShelf 在 iPad 和大屏设备上的体验。"
+          }
+        }
+      }
+    },
+    "This release updates AniShelf for iOS 27 and makes sharing more flexible across iPhone and iPad." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このリリースでは、AniShelfをiOS 27に対応させ、iPhoneとiPadでの共有機能をより柔軟にしました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此版本适配 iOS 27，并增强了 AniShelf 在 iPhone 和 iPad 上的分享体验。"
           }
         }
       }
@@ -6892,6 +7039,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "TMDb会为每个账号提供专属API密钥。个人使用完全免费。"
+          }
+        }
+      }
+    },
+    "TMDb logos now support SVG artwork for sharper images." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDbのロゴでSVGアートワークをサポートし、より鮮明な画像を表示できるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb 标志现已支持 SVG 图像，可显示更清晰的图片。"
           }
         }
       }
@@ -7315,6 +7478,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更新用于元数据的TMDb密钥。"
+          }
+        }
+      }
+    },
+    "Optimized sharing for iPad windows, with wide layouts showing the preview, poster picker, and controls together." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPadウインドウ向けの共有レイアウトを最適化し、ワイド表示では共有画像のプレビュー、ポスター選択、設定調整を同時に行えるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "优化 iPad 窗口下的分享布局，宽屏时可同时预览分享图、选择海报并调整设置。"
+          }
+        }
+      }
+    },
+    "Updated AniShelf for iOS 27, refined styling throughout the app, and added a soft navigation bar edge option available only on iOS 27." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS 27に対応し、アプリ全体のUIスタイルを改善しました。iOS 27では、ナビゲーションバーの境界をソフトにする新しいオプションも利用できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "适配 iOS 27，优化多处 UI 样式，新增柔和导航栏边缘选项（仅在 iOS 27 系统上可见）。"
           }
         }
       }
@@ -7833,118 +8028,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "原始文件已保留"
-          }
-        }
-      }
-    },
-    "This release adds thoughtful review prompts and improves the reliability of TMDb artwork and setup." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このリリースでは、配慮したレビューのお願いを追加し、TMDbアートワークと設定の信頼性を改善しました。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此版本新增了更周到的评价提示，并提升了 TMDb 图片与设置的可靠性。"
-          }
-        }
-      }
-    },
-    "AniShelf can now ask for an App Store review after sustained, meaningful use, without interrupting what you are doing." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AniShelfは、十分に継続してご利用いただいた後、操作を妨げないタイミングでApp Storeのレビューをお願いするようになりました。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AniShelf 现在会在您持续、有意义地使用后，于不打断操作的时机邀请您在 App Store 留下评价。"
-          }
-        }
-      }
-    },
-    "TMDb logos now support SVG artwork for sharper images." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "TMDbのロゴでSVGアートワークをサポートし、より鮮明な画像を表示できるようになりました。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "TMDb 标志现已支持 SVG 图像，可显示更清晰的图片。"
-          }
-        }
-      }
-    },
-    "Improved TMDb API key handling at launch to avoid unnecessary setup prompts." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "起動時のTMDb APIキーの処理を改善し、不必要な設定画面が表示されないようにしました。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "改进了启动时的 TMDb API 密钥处理，避免出现不必要的设置提示。"
-          }
-        }
-      }
-    },
-    "This release improves AniShelf on iPad and larger displays." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このリリースでは、iPadと大画面でのAniShelfの体験を改善しました。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此版本优化了 AniShelf 在 iPad 和大屏设备上的体验。"
-          }
-        }
-      }
-    },
-    "AniShelf now adapts to resizable iPad windows for a more natural large-screen experience." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "可変サイズのiPadウインドウに対応し、大画面でより自然に操作できるようになりました。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "适配 iPad 可变大小窗口，大屏交互更自然。"
-          }
-        }
-      }
-    },
-    "Added a Dark Mode app icon." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ダークモード用のAppアイコンを追加しました。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "添加深色模式 App 图标。"
           }
         }
       }

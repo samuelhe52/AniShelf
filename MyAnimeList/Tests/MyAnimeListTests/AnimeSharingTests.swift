@@ -119,7 +119,7 @@ struct AnimeSharingTests {
             name: "Test",
             nameTranslations: [
                 Language.english.rawValueWithRegion: "Test",
-                Language.japanese.rawValueWithRegion: "テスト",
+                Language.japanese.rawValueWithRegion: "テスト"
             ],
             type: .series,
             tmdbID: 91_000
@@ -327,4 +327,3 @@ struct AnimeSharingTests {
         return pixel[3]
     }
 }
-

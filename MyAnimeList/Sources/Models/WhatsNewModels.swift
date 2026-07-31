@@ -313,6 +313,25 @@ enum WhatsNewRegistry {
                     kind: .openURL(projectURL)
                 )
             ]
+        ),
+        "1.97": .init(
+            version: "1.97",
+            summary:
+                "This release updates AniShelf for iOS 27 and makes sharing more flexible across iPhone and iPad.",
+            highlights: [
+                "Updated AniShelf for iOS 27, refined styling throughout the app, and added a soft navigation bar edge option available only on iOS 27.",
+                "Enhanced sharing customization with image size, rounded corner, and export format controls.",
+                "Optimized sharing for iPad windows, with wide layouts showing the preview, poster picker, and controls together."
+            ],
+            primaryAction: nil,
+            secondaryActions: [
+                .init(
+                    id: "project-github",
+                    title: "AniShelf on GitHub",
+                    systemImage: "arrow.up.right.square",
+                    kind: .openURL(projectURL)
+                )
+            ]
         )
     ]
 
