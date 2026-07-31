@@ -3443,38 +3443,6 @@
         }
       }
     },
-    "JPEG · %lld × %lld" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "JPEG · %1$lld × %2$lld"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "JPEG · %1$lld × %2$lld"
-          }
-        }
-      }
-    },
-    "JPEG · Rendering…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "JPEG · レンダリング中…"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "JPEG · 渲染中…"
-          }
-        }
-      }
-    },
     "Join TMDB" : {
       "localizations" : {
         "ja" : {
@@ -4741,38 +4709,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "覆盖当前资料库？"
-          }
-        }
-      }
-    },
-    "PNG · %lld × %lld" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PNG · %1$lld × %2$lld"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PNG · %1$lld × %2$lld"
-          }
-        }
-      }
-    },
-    "PNG · Rendering…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PNG · レンダリング中…"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PNG · 渲染中…"
           }
         }
       }
