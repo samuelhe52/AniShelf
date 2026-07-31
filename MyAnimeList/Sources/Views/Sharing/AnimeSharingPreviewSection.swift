@@ -16,6 +16,7 @@ struct AnimeSharingPreviewSection: View {
     let image: UIImage?
     let renderedPixelSize: CGSize?
     let usesRoundedCorners: Bool
+    @Binding var roundedExportFormat: SharingCardRoundedExportFormat
     let animationTrigger: Int
 
     var body: some View {
@@ -29,8 +30,7 @@ struct AnimeSharingPreviewSection: View {
                 usesRoundedCorners: usesRoundedCorners,
                 showsShadow: true
             )
-            .id(animationTrigger)
-            .transition(.opacity.combined(with: .scale(scale: 0.985)))
+            .contentTransition(.interpolate)
             .frame(maxWidth: AnimeSharingViewModel.previewCardWidth)
             .frame(maxWidth: .infinity)
 
@@ -46,16 +46,17 @@ struct AnimeSharingPreviewSection: View {
 
     @ViewBuilder
     private var outputDescription: some View {
-        if let renderedPixelSize {
-            let width = Int(renderedPixelSize.width.rounded())
-            let height = Int(renderedPixelSize.height.rounded())
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                if usesRoundedCorners {
-                    Text("PNG · \(width) × \(height)")
-                } else {
-                    Text("JPEG · \(width) × \(height)")
-                }
+        HStack(spacing: 6) {
+            if usesRoundedCorners {
+                roundedFormatPicker
+            } else {
+                Text("JPEG")
+            }
+            Text(verbatim: "·")
+            outputStatusText
+                .contentTransition(.numericText())
 
+            if renderedPixelSize != nil {
                 InfoTip(
                     title: "Source Resolution",
                     message:
@@ -64,16 +65,37 @@ struct AnimeSharingPreviewSection: View {
                     iconFont: .footnote
                 )
             }
-            .id(usesRoundedCorners ? "rendered-png" : "rendered-jpeg")
-            .transition(.opacity.combined(with: .move(edge: .bottom)))
-        } else if usesRoundedCorners {
-            Text("PNG · Rendering…")
-                .id("rendering-png")
-                .transition(.opacity.combined(with: .move(edge: .top)))
-        } else {
-            Text("JPEG · Rendering…")
-                .id("rendering-jpeg")
-                .transition(.opacity.combined(with: .move(edge: .top)))
         }
+    }
+
+    private var outputStatusText: Text {
+        if let renderedPixelSize {
+            let width = Int(renderedPixelSize.width.rounded())
+            let height = Int(renderedPixelSize.height.rounded())
+            return Text(verbatim: "\(width) × \(height)")
+        }
+        return Text("Rendering…")
+    }
+
+    private var roundedFormatPicker: some View {
+        Menu {
+            Picker("Format", selection: $roundedExportFormat) {
+                ForEach(SharingCardRoundedExportFormat.allCases, id: \.self) { format in
+                    Text(format.localizedName).tag(format)
+                }
+            }
+        } label: {
+            HStack(spacing: 2) {
+                Text(roundedExportFormat.localizedName)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 7, weight: .semibold))
+                    .accessibilityHidden(true)
+            }
+            .foregroundStyle(.secondary)
+        }
+        .buttonStyle(.plain)
+        .fixedSize()
+        .accessibilityLabel(Text("Format"))
+        .accessibilityValue(Text(roundedExportFormat.localizedName))
     }
 }

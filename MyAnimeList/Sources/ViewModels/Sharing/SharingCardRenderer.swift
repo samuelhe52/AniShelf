@@ -6,7 +6,7 @@ import os
 /// Output payload returned after a poster render completes.
 @MainActor
 struct SharingCardRenderOutcome {
-    /// Final PNG or JPEG location.
+    /// Final PNG, HEIC, or JPEG location.
     let imageURL: URL
     /// Aspect ratio used to render the card, already clamped to allowed bounds.
     let aspectRatio: CGFloat
@@ -38,13 +38,15 @@ final class SharingCardRenderer {
     init(
         baseWidth: CGFloat,
         jpegQuality: CGFloat,
+        heicQuality: CGFloat,
         defaultAspectRatio: CGFloat,
         minAspectRatio: CGFloat,
         maxAspectRatio: CGFloat
     ) {
         self.pipeline = SharingCardExportPipeline(
             baseWidth: baseWidth,
-            jpegQuality: jpegQuality
+            jpegQuality: jpegQuality,
+            heicQuality: heicQuality
         )
         self.defaultAspectRatio = defaultAspectRatio
         self.minAspectRatio = minAspectRatio

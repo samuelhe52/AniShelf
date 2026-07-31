@@ -21,6 +21,7 @@ final class AnimeSharingViewModel {
     private static let minAspectRatio: CGFloat = 0.45
     private static let maxAspectRatio: CGFloat = 0.85
     private static let jpegQuality: CGFloat = 0.9
+    private static let heicQuality: CGFloat = 0.95
 
     private static let yearFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -40,6 +41,9 @@ final class AnimeSharingViewModel {
         didSet {
             guard selectedLanguage != oldValue else { return }
             invalidateRenderedArtifact()
+            if !isApplyingLanguageFallback {
+                sharingPreferences.saveSelectedLanguage(selectedLanguage)
+            }
         }
     }
     var selectedPosterURL: URL? {
@@ -48,16 +52,25 @@ final class AnimeSharingViewModel {
             invalidateRenderedArtifact()
         }
     }
-    var usesRoundedCorners = true {
+    var usesRoundedCorners: Bool {
         didSet {
             guard usesRoundedCorners != oldValue else { return }
             invalidateRenderedArtifact()
+            sharingPreferences.saveUsesRoundedCorners(usesRoundedCorners)
         }
     }
-    var exportSize: SharingCardExportSize = .medium {
+    var roundedExportFormat: SharingCardRoundedExportFormat {
+        didSet {
+            guard roundedExportFormat != oldValue else { return }
+            invalidateRenderedArtifact()
+            sharingPreferences.saveRoundedExportFormat(roundedExportFormat)
+        }
+    }
+    var exportSize: SharingCardExportSize {
         didSet {
             guard exportSize != oldValue else { return }
             invalidateRenderedArtifact()
+            sharingPreferences.saveExportSize(exportSize)
         }
     }
     private(set) var renderedImageURL: URL?
@@ -109,30 +122,50 @@ final class AnimeSharingViewModel {
         SharingCardRenderTrigger(
             posterURL: selectedPosterURL,
             language: selectedLanguage,
-            exportStyle: usesRoundedCorners ? .roundedPNG : .squareJPEG,
+            exportStyle: usesRoundedCorners ? roundedExportFormat.exportStyle : .squareJPEG,
             exportSize: exportSize
         )
     }
 
+    var remembersSettings: Bool {
+        sharingPreferences.remembersSettings
+    }
+
     @ObservationIgnored private var preferredLanguage: Language
+    @ObservationIgnored private var isApplyingLanguageFallback = false
     @ObservationIgnored private let renderer: SharingCardRenderer
+    @ObservationIgnored private let sharingPreferences: AnimeSharingPreferences
 
     /// Creates a view model scoped to the provided entry, optionally forcing a
     /// specific default language for the generated metadata.
-    init(entry: AnimeEntry, defaultLanguage: Language = .english) {
+    init(
+        entry: AnimeEntry,
+        defaultLanguage: Language = .english,
+        defaults: UserDefaults = .standard
+    ) {
+        let sharingPreferences = AnimeSharingPreferences(defaults: defaults)
+        let initialSettings = sharingPreferences.load(defaultLanguage: defaultLanguage)
         self.entry = entry.parentSeriesEntry ?? entry
         self.selectedPosterURL = self.entry.posterURL
-        self.selectedLanguage = defaultLanguage
+        self.selectedLanguage = initialSettings.selectedLanguage
+        self.usesRoundedCorners = initialSettings.usesRoundedCorners
+        self.roundedExportFormat = initialSettings.roundedExportFormat
+        self.exportSize = initialSettings.exportSize
         self.preferredLanguage = defaultLanguage
         self.translations = AnimeSharingViewModel.buildTranslations(from: self.entry)
+        self.sharingPreferences = sharingPreferences
         self.renderer = SharingCardRenderer(
             baseWidth: AnimeSharingViewModel.previewCardWidth,
             jpegQuality: AnimeSharingViewModel.jpegQuality,
+            heicQuality: AnimeSharingViewModel.heicQuality,
             defaultAspectRatio: AnimeSharingViewModel.defaultAspectRatio,
             minAspectRatio: AnimeSharingViewModel.minAspectRatio,
             maxAspectRatio: AnimeSharingViewModel.maxAspectRatio
         )
-        applyPreferredLanguage(defaultLanguage, respectingCurrentSelection: false)
+        applyPreferredLanguage(
+            defaultLanguage,
+            respectingCurrentSelection: sharingPreferences.remembersSettings
+        )
     }
 
     /// Adjusts the preferred language if available, optionally keeping the
@@ -145,11 +178,12 @@ final class AnimeSharingViewModel {
             return
         }
 
-        if availableLanguages.contains(language) {
-            selectedLanguage = language
-        } else if let fallback = availableLanguages.first {
-            selectedLanguage = fallback
-        }
+        let resolvedLanguage = availableLanguages.contains(language) ? language : availableLanguages.first
+        guard let resolvedLanguage, resolvedLanguage != selectedLanguage else { return }
+
+        isApplyingLanguageFallback = true
+        selectedLanguage = resolvedLanguage
+        isApplyingLanguageFallback = false
     }
 
     /// Updates the candidate poster URL while falling back to the entry

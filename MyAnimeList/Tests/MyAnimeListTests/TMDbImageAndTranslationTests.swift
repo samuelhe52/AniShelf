@@ -896,7 +896,7 @@ struct SharingCardExportPipelineTests {
         let full = SharingCardRenderTrigger(
             posterURL: posterURL,
             language: .english,
-            exportStyle: .roundedPNG,
+            exportStyle: .roundedHEIC,
             exportSize: .full
         )
 
@@ -904,10 +904,102 @@ struct SharingCardExportPipelineTests {
     }
 
     @Test @MainActor func sharingViewModelDefaultsToMediumExportSize() {
-        let viewModel = AnimeSharingViewModel(entry: .frieren)
+        let suiteName = "SharingCardExportPipelineTests.defaults.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let viewModel = AnimeSharingViewModel(entry: .frieren, defaults: defaults)
 
         #expect(viewModel.exportSize == .medium)
+        #expect(viewModel.roundedExportFormat == .png)
         #expect(viewModel.renderTrigger.exportSize == .medium)
+        #expect(viewModel.renderTrigger.exportStyle == .roundedPNG)
+    }
+
+    @Test @MainActor func sharingViewModelRestoresAndPersistsRememberedSettings() {
+        let suiteName = "SharingCardExportPipelineTests.remembered.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(true, forKey: .rememberShareSheetSettings)
+        defaults.set(Language.japanese.rawValue, forKey: .shareSheetLanguage)
+        defaults.set(false, forKey: .shareSheetUsesRoundedCorners)
+        defaults.set(SharingCardRoundedExportFormat.heic.rawValue, forKey: .shareSheetRoundedExportFormat)
+        defaults.set(SharingCardExportSize.full.rawValue, forKey: .shareSheetExportSize)
+
+        let viewModel = AnimeSharingViewModel(entry: .frieren, defaults: defaults)
+
+        #expect(viewModel.selectedLanguage == .japanese)
+        #expect(viewModel.usesRoundedCorners == false)
+        #expect(viewModel.roundedExportFormat == .heic)
+        #expect(viewModel.exportSize == .full)
+        #expect(viewModel.renderTrigger.exportStyle == .squareJPEG)
+
+        viewModel.usesRoundedCorners = true
+        viewModel.exportSize = .light
+
+        #expect(defaults.bool(forKey: .shareSheetUsesRoundedCorners) == true)
+        #expect(defaults.string(forKey: .shareSheetExportSize) == SharingCardExportSize.light.rawValue)
+        #expect(viewModel.renderTrigger.exportStyle == .roundedHEIC)
+    }
+
+    @Test func disabledSharingMemoryUsesDefaultsAndResetClearsOnlyRememberedValues() {
+        let suiteName = "SharingCardExportPipelineTests.reset.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(Language.japanese.rawValue, forKey: .shareSheetLanguage)
+        defaults.set(false, forKey: .shareSheetUsesRoundedCorners)
+        defaults.set(SharingCardRoundedExportFormat.heic.rawValue, forKey: .shareSheetRoundedExportFormat)
+        defaults.set(SharingCardExportSize.full.rawValue, forKey: .shareSheetExportSize)
+
+        let preferences = AnimeSharingPreferences(defaults: defaults)
+        let settings = preferences.load(defaultLanguage: .chinese)
+
+        #expect(settings == .defaultValue(language: .chinese))
+        preferences.resetRememberedSettings()
+        #expect(defaults.object(forKey: .shareSheetLanguage) == nil)
+        #expect(defaults.object(forKey: .shareSheetUsesRoundedCorners) == nil)
+        #expect(defaults.object(forKey: .shareSheetRoundedExportFormat) == nil)
+        #expect(defaults.object(forKey: .shareSheetExportSize) == nil)
+    }
+
+    @Test @MainActor func unavailableRememberedLanguageFallsBackWithoutReplacingPreference() {
+        let suiteName = "SharingCardExportPipelineTests.languageFallback.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(true, forKey: .rememberShareSheetSettings)
+        defaults.set(Language.chinese.rawValue, forKey: .shareSheetLanguage)
+        let entry = AnimeEntry(
+            name: "Test",
+            nameTranslations: [Language.english.rawValueWithRegion: "Test"],
+            type: .series,
+            tmdbID: 91_001
+        )
+
+        let viewModel = AnimeSharingViewModel(
+            entry: entry,
+            defaultLanguage: .english,
+            defaults: defaults
+        )
+        viewModel.exportSize = .light
+
+        #expect(viewModel.selectedLanguage == .english)
+        #expect(defaults.string(forKey: .shareSheetLanguage) == Language.chinese.rawValue)
+    }
+
+    @Test func sharingMemoryKeysStayDeviceLocal() {
+        let keys: [String] = [
+            .rememberShareSheetSettings,
+            .shareSheetLanguage,
+            .shareSheetUsesRoundedCorners,
+            .shareSheetRoundedExportFormat,
+            .shareSheetExportSize
+        ]
+
+        #expect(keys.allSatisfy { !String.cloudSyncedPreferenceKeys.contains($0) })
+        #expect(keys.allSatisfy { !String.allPreferenceKeys.contains($0) })
     }
 
     @Test @MainActor func roundedExportUsesPNGAndPreservesTransparentCorners() async throws {
@@ -936,6 +1028,19 @@ struct SharingCardExportPipelineTests {
         #expect(cornerAlpha(of: image) == 255)
     }
 
+    @Test @MainActor func roundedExportUsesHEICAndPreservesTransparentCorners() async throws {
+        let result = try await render(style: .roundedHEIC, exportSize: .medium)
+        defer { try? FileManager.default.removeItem(at: result.imageURL) }
+
+        let source = try #require(CGImageSourceCreateWithURL(result.imageURL as CFURL, nil))
+        let image = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
+
+        #expect(result.imageURL.pathExtension == "heic")
+        #expect(CGImageSourceGetType(source) as String? == UTType.heic.identifier)
+        #expect(result.pixelSize == CGSize(width: 180, height: 270))
+        #expect(cornerAlpha(of: image) == 0)
+    }
+
     @Test @MainActor func exportDoesNotUpscaleSmallerSources() async throws {
         let result = try await render(
             style: .squareJPEG,
@@ -962,7 +1067,8 @@ struct SharingCardExportPipelineTests {
         }
         let pipeline = SharingCardExportPipeline(
             baseWidth: layoutSize.width,
-            jpegQuality: 0.9
+            jpegQuality: 0.9,
+            heicQuality: 0.95
         )
         let fileName = "sharing-card-export-test-\(UUID().uuidString).\(style.fileExtension)"
 

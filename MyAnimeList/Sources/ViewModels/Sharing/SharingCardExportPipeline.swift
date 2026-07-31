@@ -18,18 +18,44 @@ struct SharingCardExportResult {
 
 enum SharingCardExportStyle: Hashable, Sendable {
     case roundedPNG
+    case roundedHEIC
     case squareJPEG
 
     var usesRoundedCorners: Bool {
-        self == .roundedPNG
+        self != .squareJPEG
     }
 
     var fileExtension: String {
         switch self {
         case .roundedPNG:
             return "png"
+        case .roundedHEIC:
+            return "heic"
         case .squareJPEG:
             return "jpg"
+        }
+    }
+}
+
+enum SharingCardRoundedExportFormat: String, CaseIterable, Hashable, Sendable {
+    case png
+    case heic
+
+    var localizedName: LocalizedStringResource {
+        switch self {
+        case .png:
+            return "PNG"
+        case .heic:
+            return "HEIC"
+        }
+    }
+
+    var exportStyle: SharingCardExportStyle {
+        switch self {
+        case .png:
+            return .roundedPNG
+        case .heic:
+            return .roundedHEIC
         }
     }
 }
@@ -122,14 +148,18 @@ struct SharingCardExportPipeline {
     private let baseWidth: CGFloat
     /// Compression ratio applied when persisting the rendered JPEG.
     private let jpegQuality: CGFloat
+    /// Compression ratio applied when persisting the rendered HEIC.
+    private let heicQuality: CGFloat
 
     /// Creates an export pipeline tuned for the given layout width and quality.
     init(
         baseWidth: CGFloat,
-        jpegQuality: CGFloat
+        jpegQuality: CGFloat,
+        heicQuality: CGFloat
     ) {
         self.baseWidth = baseWidth
         self.jpegQuality = jpegQuality
+        self.heicQuality = heicQuality
     }
 
     /// Fetches an image through Kingfisher and converts it to sRGB for
@@ -226,6 +256,11 @@ struct SharingCardExportPipeline {
             case .roundedPNG:
                 type = .png
                 options = [:]
+            case .roundedHEIC:
+                type = .heic
+                options = [
+                    kCGImageDestinationLossyCompressionQuality: heicQuality
+                ]
             case .squareJPEG:
                 type = .jpeg
                 options = [

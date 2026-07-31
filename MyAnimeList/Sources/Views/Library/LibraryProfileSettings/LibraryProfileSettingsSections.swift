@@ -228,6 +228,7 @@ struct LibraryProfileSettingsCard: View {
     @Binding var autoPrefetchImagesOnAddAndRestore: Bool
     @Binding var longTermGalleryPosterCachingEnabled: Bool
     @Binding var useSoftNavigationBarEdges: Bool
+    @Binding var rememberShareSheetSettings: Bool
     @Binding var useTMDbRelayServer: Bool
     @Binding var preferredLanguage: Language
 
@@ -306,7 +307,7 @@ struct LibraryProfileSettingsCard: View {
     @ViewBuilder
     private var settingsSections: some View {
         languageSettingsSection
-        defaultSettingsSection
+        preferencesSection
         interfaceSettingsSection
         tmdbConnectionSection
         iCloudSyncSection
@@ -321,13 +322,14 @@ struct LibraryProfileSettingsCard: View {
         )
     }
 
-    private var defaultSettingsSection: some View {
-        LibraryProfileDefaultSettingsSection(
+    private var preferencesSection: some View {
+        LibraryProfilePreferencesSection(
             hideDroppedByDefault: $hideDroppedByDefault,
             defaultNewEntryWatchStatus: $defaultNewEntryWatchStatus,
             defaultFilters: $defaultFilters,
             autoPrefetchImagesOnAddAndRestore: $autoPrefetchImagesOnAddAndRestore,
-            longTermGalleryPosterCachingEnabled: $longTermGalleryPosterCachingEnabled
+            longTermGalleryPosterCachingEnabled: $longTermGalleryPosterCachingEnabled,
+            rememberShareSheetSettings: $rememberShareSheetSettings
         )
     }
 
@@ -388,7 +390,7 @@ struct LibraryProfileSettingsCard: View {
         HStack(alignment: .top, spacing: 20) {
             VStack(spacing: 20) {
                 languageSettingsSection
-                defaultSettingsSection
+                preferencesSection
                 interfaceSettingsSection
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -545,18 +547,19 @@ fileprivate struct LibraryProfileLanguageSettingsSection: View {
     }
 }
 
-fileprivate struct LibraryProfileDefaultSettingsSection: View {
+fileprivate struct LibraryProfilePreferencesSection: View {
     @Binding var hideDroppedByDefault: Bool
     @Binding var defaultNewEntryWatchStatus: AnimeEntry.WatchStatus
     @Binding var defaultFilters: Set<LibraryStore.AnimeFilter>
     @Binding var autoPrefetchImagesOnAddAndRestore: Bool
     @Binding var longTermGalleryPosterCachingEnabled: Bool
+    @Binding var rememberShareSheetSettings: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             LibraryProfileSettingHeader(
-                title: "Library Defaults",
-                systemImage: "books.vertical.fill",
+                title: "General",
+                systemImage: "slider.horizontal.3",
                 tint: .mint
             )
 
@@ -580,6 +583,13 @@ fileprivate struct LibraryProfileDefaultSettingsSection: View {
                 subtitle:
                     "Store large Gallery posters longer. Off by default and may use more disk space.",
                 isOn: $longTermGalleryPosterCachingEnabled
+            )
+
+            LibraryProfileSettingsToggleRow(
+                title: "Remember Share Settings",
+                subtitle:
+                    "Remember language, corner style, image format, and export size preferences in the share sheet.",
+                isOn: $rememberShareSheetSettings
             )
         }
         .padding(14)

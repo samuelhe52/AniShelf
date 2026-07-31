@@ -33,6 +33,12 @@ extension String {
     static let libraryAutoPrefetchImagesOnAddAndRestore = "LibraryAutoPrefetchImagesOnAddAndRestore"
     static let libraryLongTermGalleryPosterCachingEnabled = "LibraryLongTermGalleryPosterCachingEnabled"
     static let useSoftNavigationBarEdges = "UseSoftNavigationBarEdges"
+    // Device-local share-sheet settings. Keep these out of the backup and CloudKit allowlists below.
+    static let rememberShareSheetSettings = "RememberShareSheetSettings"
+    static let shareSheetLanguage = "ShareSheetLanguage"
+    static let shareSheetUsesRoundedCorners = "ShareSheetUsesRoundedCorners"
+    static let shareSheetRoundedExportFormat = "ShareSheetRoundedExportFormat"
+    static let shareSheetExportSize = "ShareSheetExportSize"
     static let libraryCloudSyncEnabled = "LibraryCloudSyncEnabled"
     static let libraryCloudSyncBootstrapState = "LibraryCloudSyncBootstrapState"
     static let libraryCloudSyncCloudKitAvailability = "LibraryCloudSyncCloudKitAvailability"

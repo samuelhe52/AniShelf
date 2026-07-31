@@ -30,6 +30,7 @@ struct LibraryProfileSettingsView: View {
     @AppStorage(.libraryPosterProgressBarOverlayEnabled)
     private var posterProgressBarOverlayEnabled = true
     @AppStorage(.useSoftNavigationBarEdges) private var useSoftNavigationBarEdges = true
+    @AppStorage(.rememberShareSheetSettings) private var rememberShareSheetSettings = false
     @AppStorage(.useTMDbRelayServer) private var useTMDbRelayServer = false
 
     @State private var showCacheAlert = false
@@ -248,6 +249,7 @@ struct LibraryProfileSettingsView: View {
             autoPrefetchImagesOnAddAndRestore: $store.autoPrefetchImagesOnAddAndRestore,
             longTermGalleryPosterCachingEnabled: $store.longTermGalleryPosterCachingEnabled,
             useSoftNavigationBarEdges: $useSoftNavigationBarEdges,
+            rememberShareSheetSettings: $rememberShareSheetSettings,
             useTMDbRelayServer: $useTMDbRelayServer,
             preferredLanguage: $preferredLanguage,
             layout: layout,
@@ -277,6 +279,7 @@ struct LibraryProfileSettingsView: View {
         .animation(languagePickerAnimation, value: episodeProgressTrackingEnabled)
         .animation(languagePickerAnimation, value: store.libraryCloudSyncStatus)
         .onChange(of: scoringEnabled, handleScoringEnabledChange)
+        .onChange(of: rememberShareSheetSettings, handleRememberShareSheetSettingsChange)
         .onChange(of: useTMDbRelayServer, handleTMDbRelayServerChange)
     }
 
@@ -382,6 +385,11 @@ struct LibraryProfileSettingsView: View {
             object: nil
         )
         showTMDbRelayRestartAlert = true
+    }
+
+    private func handleRememberShareSheetSettingsChange(old: Bool, new: Bool) {
+        guard old != new, !new else { return }
+        AnimeSharingPreferences().resetRememberedSettings()
     }
 
     private func handleScoringEnabledChange(old: Bool, new: Bool) {

@@ -98,7 +98,7 @@ struct AnimeSharingSheet: View {
             .onAppear {
                 viewModel.applyPreferredLanguage(
                     followsSystemLanguage ? .current : defaultLanguage,
-                    respectingCurrentSelection: false
+                    respectingCurrentSelection: viewModel.remembersSettings
                 )
             }
             .onDisappear {
@@ -216,6 +216,7 @@ struct AnimeSharingSheet: View {
             image: viewModel.loadedImage,
             renderedPixelSize: viewModel.renderedPixelSize,
             usesRoundedCorners: viewModel.usesRoundedCorners,
+            roundedExportFormat: $viewModel.roundedExportFormat,
             animationTrigger: viewModel.previewRevision
         )
     }

@@ -116,6 +116,9 @@ struct LibraryListView: View {
                     editEntry(item.entry)
                 }
                 .tint(.blue)
+
+                interaction.shareButton(for: item.entry)
+                    .tint(.indigo)
             }
         }
     }
