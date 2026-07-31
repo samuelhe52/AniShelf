@@ -30,7 +30,6 @@ struct EntryDetailView: View {
     @State private var conversionTask: Task<Void, Never>?
     @State private var conversionTaskID: UUID?
 
-    private var accentColor: Color { session.entry.favorite ? .orange : .blue }
     private var currentLanguage: Language { followsSystemLanguage ? .current : preferredLanguage }
     private let scrollCoordinateSpaceName = "EntryDetailScroll"
     private let heroHeight: CGFloat = 420
@@ -60,7 +59,20 @@ struct EntryDetailView: View {
             ScrollViewReader { proxy in
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
-                        stretchyHeroSection(heroHeight: heroHeight)
+                        EntryDetailHeroSection(
+                            imageURL: session.model.heroImageURL
+                                ?? session.entry.backdropURL
+                                ?? session.entry.posterURL,
+                            logoImageURL: session.model.logoImageURL,
+                            displayTitle: session.model.displayTitle,
+                            subtitleText: session.model.subtitleText,
+                            metadataLineItems: session.model.metadataLineItems,
+                            genreNames: session.model.genreNames,
+                            accentColor: session.entry.favorite ? .orange : .blue,
+                            pageBackground: detailHost.pageBackground,
+                            scrollCoordinateSpaceName: scrollCoordinateSpaceName,
+                            height: heroHeight
+                        )
 
                         VStack(alignment: .leading, spacing: 20) {
                             quickActionsRow
@@ -223,129 +235,6 @@ struct EntryDetailView: View {
             )
         }
         return true
-    }
-
-    private func stretchyHeroSection(heroHeight: CGFloat) -> some View {
-        GeometryReader { proxy in
-            let overscroll = max(proxy.frame(in: .named(scrollCoordinateSpaceName)).minY, 0)
-            let stretchedHeight = heroHeight + overscroll
-
-            heroSection(height: stretchedHeight)
-                .offset(y: -overscroll)
-        }
-        .frame(height: heroHeight)
-    }
-
-    private func heroSection(height: CGFloat) -> some View {
-        ZStack(alignment: .bottom) {
-            heroArtwork
-
-            // Top scrim — keeps toolbar buttons legible
-            LinearGradient(
-                colors: [.black.opacity(0.42), .clear],
-                startPoint: .top,
-                endPoint: UnitPoint(x: 0.5, y: 0.22)
-            )
-
-            // Gradient scrim for text legibility
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.78)],
-                startPoint: UnitPoint(x: 0.5, y: 0.35),
-                endPoint: .bottom
-            )
-
-            // Fade bottom edge into page background
-            VStack(spacing: 0) {
-                Spacer()
-                LinearGradient(
-                    colors: [.clear, detailHost.pageBackground],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 120)
-            }
-
-            VStack(spacing: 0) {
-                Spacer(minLength: 0)
-
-                VStack(alignment: .center, spacing: 6) {
-                    if let logoImageURL = session.model.logoImageURL {
-                        KFImageView(
-                            url: logoImageURL,
-                            targetSize: CGSize(width: 500, height: 500),
-                            diskCacheExpiration: .longTerm
-                        )
-                        .scaledToFit()
-                        .frame(maxWidth: 280)
-                        .frame(height: 78)
-                        .shadow(color: .black.opacity(0.28), radius: 10, y: 6)
-                    } else {
-                        Text(session.model.displayTitle)
-                            .font(.largeTitle.weight(.bold))
-                            .foregroundStyle(.white)
-                            .lineLimit(3)
-                            .minimumScaleFactor(0.78)
-                            .multilineTextAlignment(.center)
-                    }
-
-                    if let subtitle = session.model.subtitleText {
-                        Text(subtitle)
-                            .font(.subheadline.weight(.regular))
-                            .foregroundStyle(.white.opacity(0.82))
-                            .lineLimit(2)
-                            .multilineTextAlignment(.center)
-                    }
-
-                    if !session.model.metadataLineItems.isEmpty {
-                        Text(session.model.metadataLineItems.joined(separator: "  ·  "))
-                            .font(.footnote)
-                            .foregroundStyle(.white.opacity(0.68))
-                            .lineLimit(2)
-                            .multilineTextAlignment(.center)
-                    }
-
-                    if !session.model.genreNames.isEmpty {
-                        Text(session.model.genreNames.joined(separator: ", "))
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.56))
-                            .lineLimit(1)
-                    }
-                }
-                .frame(maxWidth: 360)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 36)
-                .frame(maxWidth: .infinity)
-            }
-        }
-        .containerRelativeFrame(.horizontal)
-        .frame(height: height)
-        .clipped()
-    }
-
-    @ViewBuilder
-    private var heroArtwork: some View {
-        let url = session.model.heroImageURL ?? session.entry.backdropURL ?? session.entry.posterURL
-        if let url {
-            KFImageView(
-                url: url,
-                targetSize: CGSize(width: 1_200, height: 675),
-                diskCacheExpiration: .longTerm
-            )
-            .scaledToFill()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-            LinearGradient(
-                colors: [accentColor.opacity(0.45), Color.blue.opacity(0.25)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay {
-                Image(systemName: "sparkles.tv")
-                    .font(.system(size: 52))
-                    .foregroundStyle(.white.opacity(0.55))
-            }
-        }
     }
 
     // MARK: - Quick Actions
@@ -899,45 +788,4 @@ struct EntryDetailView: View {
     private static func isCancellation(_ error: Error) -> Bool {
         error is CancellationError || (error as? URLError)?.code == .cancelled
     }
-}
-
-fileprivate struct EntryDetailPreviewHost: View {
-    @State private var showDetail = false
-    @State private var session: EntryDetailSession
-
-    init() {
-        let dataProvider = DataProvider.forPreview
-        _session = State(
-            initialValue: EntryDetailSession(
-                entry: .frieren,
-                repository: LibraryRepository(dataProvider: dataProvider)
-            )
-        )
-    }
-
-    var body: some View {
-        NavigationStack {
-            VStack {
-                Button(String(localized: EntryDetailL10n.showDetail)) {
-                    showDetail = true
-                }
-            }
-            .sheet(isPresented: $showDetail) {
-                NavigationStack {
-                    EntryDetailView(
-                        session: session,
-                        detailHost: .sheet
-                    )
-                }
-            }
-            .onAppear {
-                showDetail = true
-            }
-        }
-    }
-}
-
-#Preview {
-    EntryDetailPreviewHost()
-        .environment(AppReviewPromptController())
 }
