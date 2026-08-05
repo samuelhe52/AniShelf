@@ -179,7 +179,7 @@ struct LibraryPreferences {
 
     private func loadCloudSyncStatus() -> LibraryCloudSyncStatus {
         var status = LibraryCloudSyncStatus.defaultValue
-        status.isEnabled = loadBool(forKey: .libraryCloudSyncEnabled, defaultValue: false)
+        status.isEnabled = loadBool(forKey: .libraryCloudSyncEnabled, defaultValue: true)
         status.bootstrapState =
             defaults
             .string(forKey: .libraryCloudSyncBootstrapState)
