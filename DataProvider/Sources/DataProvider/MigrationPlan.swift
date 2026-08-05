@@ -90,7 +90,7 @@ extension MigrationStage {
         let dateFinished: Date?
     }
 
-    private final class MigrationState<Value: Sendable>: @unchecked Sendable {
+    final class MigrationState<Value: Sendable>: @unchecked Sendable {
         private let lock = NSLock()
         private var value: Value
 
@@ -309,7 +309,7 @@ extension MigrationStage {
         )
     }
 
-    private static func captureAndDeleteEntries<Entry: PersistentModel>(
+    static func captureAndDeleteEntries<Entry: PersistentModel>(
         in context: ModelContext,
         map: (Int, Entry) -> AnimeEntryMigrationDTO
     ) throws -> [AnimeEntryMigrationDTO] {
@@ -326,7 +326,7 @@ extension MigrationStage {
         return snapshots
     }
 
-    private static func rebuildEntries<Entry: PersistentModel>(
+    static func rebuildEntries<Entry: PersistentModel>(
         from snapshots: [AnimeEntryMigrationDTO],
         in context: ModelContext,
         include: (AnimeEntryMigrationDTO) -> Bool = { _ in true },

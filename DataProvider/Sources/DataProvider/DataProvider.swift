@@ -127,10 +127,11 @@ let persistenStoreURL = URL.applicationSupportDirectory
             )
         }
 
-        return try ModelContainer(
-            for: schema,
-            migrationPlan: MigrationPlan.self,
-            configurations: modelConfiguration)
+        return try ModelContainerLoader.load(
+            schema: schema,
+            configuration: modelConfiguration,
+            allowsRecovery: !inMemory
+        )
     }
 
     private static func createParentDirectoryIfNeeded(for url: URL) throws {
