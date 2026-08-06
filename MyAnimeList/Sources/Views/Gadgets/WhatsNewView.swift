@@ -9,6 +9,7 @@ import SwiftUI
 
 struct WhatsNewView: View {
     let entry: WhatsNewEntry
+    let pastEntries: [WhatsNewEntry]
     let actionRunner: WhatsNewActionRunner
     let onDismiss: () -> Void
 
@@ -19,13 +20,19 @@ struct WhatsNewView: View {
             LibraryProfileBackdrop()
 
             ScrollView {
-                VStack(spacing: 16) {
+                LazyVStack(spacing: 16) {
                     heroCard
                     highlightsCard
                     if showsInlinePrimaryAction {
                         primaryActionButton
                     } else if showsActionsCard {
                         actionsCard
+                    }
+                    if !pastEntries.isEmpty {
+                        previousUpdatesHeader
+                        ForEach(pastEntries) { pastEntry in
+                            pastEntryCard(pastEntry)
+                        }
                     }
                 }
                 .padding(.horizontal, 20)
@@ -61,7 +68,33 @@ struct WhatsNewView: View {
         .popupGlassPanel(cornerRadius: 28, tint: .clear)
     }
 
+    private var previousUpdatesHeader: some View {
+        HStack(spacing: 12) {
+            horizontalRule
+            Label {
+                Text(previousUpdatesTitleResource)
+            } icon: {
+                Image(systemName: "clock.arrow.circlepath")
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .fixedSize()
+            horizontalRule
+        }
+        .padding(.vertical, 8)
+    }
+
+    private var horizontalRule: some View {
+        Rectangle()
+            .fill(.secondary.opacity(0.22))
+            .frame(height: 1)
+    }
+
     private var versionBadge: some View {
+        versionBadge(for: entry)
+    }
+
+    private func versionBadge(for entry: WhatsNewEntry) -> some View {
         HStack(spacing: 10) {
             Image(systemName: "sparkles.rectangle.stack.fill")
                 .font(.subheadline.weight(.bold))
@@ -76,6 +109,28 @@ struct WhatsNewView: View {
             Capsule(style: .continuous)
                 .stroke(.orange.opacity(0.18), lineWidth: 1)
         }
+    }
+
+    private func pastEntryCard(_ entry: WhatsNewEntry) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            versionBadge(for: entry)
+
+            Text(entry.summary)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(entry.highlights.indices, id: \.self) { index in
+                    highlightRow(entry.highlights[index])
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .popupGlassPanel(cornerRadius: 28, tint: .clear)
     }
 
     private var highlightsCard: some View {
@@ -211,6 +266,10 @@ struct WhatsNewView: View {
         "What's New"
     }
 
+    private var previousUpdatesTitleResource: LocalizedStringResource {
+        "Previous Updates"
+    }
+
     private var doneTitleResource: LocalizedStringResource {
         "Done"
     }
@@ -299,6 +358,7 @@ struct WhatsNewView: View {
     NavigationStack {
         WhatsNewView(
             entry: WhatsNewRegistry.currentEntry(for: "1.54")!,
+            pastEntries: [],
             actionRunner: .init(refreshMetadata: { _ in }),
             onDismiss: {}
         )

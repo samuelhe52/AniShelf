@@ -11,6 +11,11 @@ fileprivate func currentWhatsNewAppVersion(bundle: Bundle = .main) -> String? {
     bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
 }
 
+enum WhatsNewPresentationSource: Equatable {
+    case automatic
+    case settings
+}
+
 @Observable @MainActor
 final class WhatsNewController {
     @ObservationIgnored private let defaults: UserDefaults
@@ -18,6 +23,7 @@ final class WhatsNewController {
     let currentVersion: String?
     let currentEntry: WhatsNewEntry?
     var presentedEntry: WhatsNewEntry?
+    private(set) var presentationSource: WhatsNewPresentationSource?
 
     init(
         defaults: UserDefaults = .standard,
@@ -31,6 +37,7 @@ final class WhatsNewController {
                 entryProvider(version)
             }
         self.presentedEntry = nil
+        self.presentationSource = nil
     }
 
     func presentIfNeeded(allowsAutoPresentation: Bool) {
@@ -38,25 +45,24 @@ final class WhatsNewController {
         guard presentedEntry == nil else { return }
         guard let currentEntry else { return }
         guard lastSeenVersion != currentEntry.version else { return }
+        presentationSource = .automatic
         presentedEntry = currentEntry
     }
 
     func presentCurrentEntry() {
         guard let currentEntry else { return }
+        presentationSource = .settings
         presentedEntry = currentEntry
     }
 
     func dismissPresentedEntry(markSeen: Bool = true) {
-        guard let presentedEntry else {
-            self.presentedEntry = nil
-            return
-        }
+        let dismissedEntry = presentedEntry
+        presentedEntry = nil
+        presentationSource = nil
 
-        if markSeen {
-            defaults.set(presentedEntry.version, forKey: .lastSeenWhatsNewVersion)
+        if markSeen, let dismissedEntry {
+            defaults.set(dismissedEntry.version, forKey: .lastSeenWhatsNewVersion)
         }
-
-        self.presentedEntry = nil
     }
 
     private var lastSeenVersion: String? {

@@ -332,10 +332,44 @@ enum WhatsNewRegistry {
                     kind: .openURL(projectURL)
                 )
             ]
+        ),
+        "1.98": .init(
+            version: "1.98",
+            summary:
+                "This release enriches entry details and makes previous updates easier to revisit. Existing users should perform an info refresh by tapping the action below so production company information can be added to existing entries.",
+            highlights: [
+                "Added production companies to entry details, with an option to show them instead of runtime for series and seasons.",
+                "TMDb status labels now follow your selected metadata language.",
+                "Open What's New from Settings to browse notes from previous releases."
+            ],
+            primaryAction: .init(
+                id: "refresh-metadata",
+                title: "Refresh Metadata",
+                systemImage: "arrow.clockwise",
+                kind: .refreshMetadata
+            ),
+            secondaryActions: [
+                .init(
+                    id: "project-github",
+                    title: "AniShelf on GitHub",
+                    systemImage: "arrow.up.right.square",
+                    kind: .openURL(projectURL)
+                )
+            ]
         )
     ]
 
     static func currentEntry(for version: String) -> WhatsNewEntry? {
         entriesByVersion[version]
+    }
+
+    static func pastEntries(before version: String) -> [WhatsNewEntry] {
+        entriesByVersion.values
+            .filter {
+                $0.version.compare(version, options: .numeric) == .orderedAscending
+            }
+            .sorted {
+                $0.version.compare($1.version, options: .numeric) == .orderedDescending
+            }
     }
 }

@@ -565,6 +565,22 @@
         }
       }
     },
+    "Added production companies to entry details, with an option to show them instead of runtime for series and seasons." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作品詳細に制作会社を追加し、シリーズとシーズンでは再生時間の代わりに制作会社を表示できるオプションを追加しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "条目详情现已加入制作公司，并可选择在剧集与季条目中以制作公司替代时长。"
+          }
+        }
+      }
+    },
     "Added sorting by name (A–Z)." : {
       "localizations" : {
         "ja" : {
@@ -4696,6 +4712,22 @@
         }
       }
     },
+    "Open What's New from Settings to browse notes from previous releases." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定から「新機能」を開くと、過去のリリースノートも確認できるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从“设置”打开“更新内容”，即可浏览过往版本说明。"
+          }
+        }
+      }
+    },
     "Optimized backup file size." : {
       "localizations" : {
         "ja" : {
@@ -5095,6 +5127,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "预览"
+          }
+        }
+      }
+    },
+    "Previous Updates" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "過去のアップデート"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "过往更新"
           }
         }
       }
@@ -6863,6 +6911,22 @@
         }
       }
     },
+    "This release enriches entry details and makes previous updates easier to revisit. Existing users should perform an info refresh by tapping the action below so production company information can be added to existing entries." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このリリースでは作品詳細の情報を拡充し、過去のアップデートを振り返りやすくしました。既存ユーザーは、既存の項目に制作会社の情報を追加するため、下のアクションから情報を更新してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此版本丰富了条目详情，并让你更方便地回顾过往更新。现有用户请点击下方操作刷新信息，以便为现有条目添加制作公司信息。"
+          }
+        }
+      }
+    },
     "This release fixes data correctness issues. Existing users should perform an info refresh by tapping the action button below so their library metadata can be corrected." : {
       "localizations" : {
         "ja" : {
@@ -7228,6 +7292,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "TMDb评分"
+          }
+        }
+      }
+    },
+    "TMDb status labels now follow your selected metadata language." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDbのステータス表示が、選択したメタデータ言語に対応しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb 状态标签现会跟随你选择的元数据语言显示。"
           }
         }
       }

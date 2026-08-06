@@ -123,6 +123,9 @@ struct MyAnimeListApp: App {
                 NavigationStack {
                     WhatsNewRootSheet(
                         entry: entry,
+                        pastEntries: whatsNew.presentationSource == .settings
+                            ? WhatsNewRegistry.pastEntries(before: entry.version)
+                            : [],
                         settingsActions: .init(store: libraryStore),
                         onDismiss: { whatsNew.dismissPresentedEntry() }
                     )
@@ -220,16 +223,19 @@ final class StartupRecoveryActivityGate {
 
 fileprivate struct WhatsNewRootSheet: View {
     let entry: WhatsNewEntry
+    let pastEntries: [WhatsNewEntry]
     let onDismiss: () -> Void
 
     @State private var actionRunner: WhatsNewActionRunner
 
     init(
         entry: WhatsNewEntry,
+        pastEntries: [WhatsNewEntry],
         settingsActions: LibraryProfileSettingsActions,
         onDismiss: @escaping () -> Void
     ) {
         self.entry = entry
+        self.pastEntries = pastEntries
         self.onDismiss = onDismiss
         _actionRunner = State(initialValue: settingsActions.makeWhatsNewActionRunner())
     }
@@ -237,6 +243,7 @@ fileprivate struct WhatsNewRootSheet: View {
     var body: some View {
         WhatsNewView(
             entry: entry,
+            pastEntries: pastEntries,
             actionRunner: actionRunner,
             onDismiss: onDismiss
         )
