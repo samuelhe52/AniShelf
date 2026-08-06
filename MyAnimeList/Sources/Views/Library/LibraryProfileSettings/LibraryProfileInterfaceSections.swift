@@ -9,16 +9,20 @@ import DataProvider
 import SwiftUI
 
 struct LibraryProfileInterfaceSettingsSection: View {
+    @Environment(LibraryStore.self) private var store
+
+    @AppStorage(.libraryOpenDetailWithSingleTap) private var openDetailWithSingleTap = false
+    @AppStorage(.entryDetailCharactersExpandedByDefault)
+    private var entryDetailCharactersExpandedByDefault = true
+    @AppStorage(.entryDetailStaffExpandedByDefault)
+    private var entryDetailStaffExpandedByDefault = false
+    @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
+    @AppStorage(.episodeProgressTrackingEnabled) private var episodeProgressTrackingEnabled = false
+    @AppStorage(.libraryPosterProgressBarOverlayEnabled)
+    private var posterProgressBarOverlayEnabled = true
+    @AppStorage(.useSoftNavigationBarEdges) private var useSoftNavigationBarEdges = true
     @AppStorage(.showProductionCompanyInsteadOfRuntime)
     private var showProductionCompanyInsteadOfRuntime = false
-
-    @Binding var openDetailWithSingleTap: Bool
-    @Binding var entryDetailCharactersExpandedByDefault: Bool
-    @Binding var entryDetailStaffExpandedByDefault: Bool
-    @Binding var scoringEnabled: Bool
-    @Binding var episodeProgressTrackingEnabled: Bool
-    @Binding var posterProgressBarOverlayEnabled: Bool
-    @Binding var useSoftNavigationBarEdges: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -91,11 +95,18 @@ struct LibraryProfileInterfaceSettingsSection: View {
         }
         .padding(14)
         .libraryProfileInsetPanel(cornerRadius: 22, tint: .teal)
+        .onChange(of: scoringEnabled, handleScoringEnabledChange)
+    }
+
+    private func handleScoringEnabledChange(old: Bool, new: Bool) {
+        guard old != new, !new, store.groupStrategy == .score else { return }
+        store.groupStrategy = .none
     }
 }
 
 struct LibraryProfileTMDbConnectionSection: View {
-    @Binding var useTMDbRelayServer: Bool
+    @AppStorage(.useTMDbRelayServer) private var useTMDbRelayServer = false
+    @State private var showRestartAlert = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -115,5 +126,20 @@ struct LibraryProfileTMDbConnectionSection: View {
         }
         .padding(14)
         .libraryProfileInsetPanel(cornerRadius: 22, tint: .cyan)
+        .alert("TMDb Proxy Updated", isPresented: $showRestartAlert) {
+            Button("OK") {}
+        } message: {
+            Text("You might need to restart the app for this change to take effect.")
+        }
+        .onChange(of: useTMDbRelayServer, handleTMDbRelayServerChange)
+    }
+
+    private func handleTMDbRelayServerChange(old: Bool, new: Bool) {
+        guard old != new else { return }
+        NotificationCenter.default.post(
+            name: .tmdbAPIConfigurationDidChange,
+            object: nil
+        )
+        showRestartAlert = true
     }
 }

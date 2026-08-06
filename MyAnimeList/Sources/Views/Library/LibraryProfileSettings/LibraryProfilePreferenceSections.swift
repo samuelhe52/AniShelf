@@ -55,12 +55,13 @@ struct LibraryProfileLanguageSettingsSection: View {
 }
 
 struct LibraryProfilePreferencesSection: View {
+    @AppStorage(.rememberShareSheetSettings) private var rememberShareSheetSettings = false
+
     @Binding var hideDroppedByDefault: Bool
     @Binding var defaultNewEntryWatchStatus: AnimeEntry.WatchStatus
     @Binding var defaultFilters: Set<LibraryStore.AnimeFilter>
     @Binding var autoPrefetchImagesOnAddAndRestore: Bool
     @Binding var longTermGalleryPosterCachingEnabled: Bool
-    @Binding var rememberShareSheetSettings: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -101,6 +102,7 @@ struct LibraryProfilePreferencesSection: View {
         }
         .padding(14)
         .libraryProfileInsetPanel(cornerRadius: 22, tint: .mint)
+        .onChange(of: rememberShareSheetSettings, handleRememberShareSheetSettingsChange)
     }
 
     private var defaultWatchStatusRow: some View {
@@ -188,6 +190,11 @@ struct LibraryProfilePreferencesSection: View {
                 }
             }
         )
+    }
+
+    private func handleRememberShareSheetSettingsChange(old: Bool, new: Bool) {
+        guard old != new, !new else { return }
+        AnimeSharingPreferences().resetRememberedSettings()
     }
 
     private func defaultFilterSummaryResource(

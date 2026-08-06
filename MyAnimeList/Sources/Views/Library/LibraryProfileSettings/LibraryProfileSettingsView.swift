@@ -20,18 +20,7 @@ struct LibraryProfileSettingsView: View {
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
-    @AppStorage(.libraryOpenDetailWithSingleTap) private var openDetailWithSingleTap = false
-    @AppStorage(.entryDetailCharactersExpandedByDefault)
-    private var entryDetailCharactersExpandedByDefault = true
-    @AppStorage(.entryDetailStaffExpandedByDefault)
-    private var entryDetailStaffExpandedByDefault = false
-    @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
     @AppStorage(.episodeProgressTrackingEnabled) private var episodeProgressTrackingEnabled = false
-    @AppStorage(.libraryPosterProgressBarOverlayEnabled)
-    private var posterProgressBarOverlayEnabled = true
-    @AppStorage(.useSoftNavigationBarEdges) private var useSoftNavigationBarEdges = true
-    @AppStorage(.rememberShareSheetSettings) private var rememberShareSheetSettings = false
-    @AppStorage(.useTMDbRelayServer) private var useTMDbRelayServer = false
 
     @State private var showCacheAlert = false
     @State private var showClearAllAlert = false
@@ -44,7 +33,6 @@ struct LibraryProfileSettingsView: View {
     @State private var showRestoreConfirmation = false
     @State private var showRefreshInfoOnLanguageUpdateAlert = false
     @State private var showRefreshInfoAlert = false
-    @State private var showTMDbRelayRestartAlert = false
     @State private var presentationState = LibraryProfileSettingsPresentationState()
     @State private var cacheSizeResult: Result<UInt, KingfisherError>?
     @State private var appeared = false
@@ -119,11 +107,6 @@ struct LibraryProfileSettingsView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This may take considerable time.")
-        }
-        .alert("TMDb Proxy Updated", isPresented: $showTMDbRelayRestartAlert) {
-            Button("OK") {}
-        } message: {
-            Text("You might need to restart the app for this change to take effect.")
         }
         .alert(
             "Error exporting library",
@@ -240,17 +223,8 @@ struct LibraryProfileSettingsView: View {
             hideDroppedByDefault: $store.hideDroppedByDefault,
             defaultNewEntryWatchStatus: $store.defaultNewEntryWatchStatus,
             defaultFilters: $store.defaultFilters,
-            openDetailWithSingleTap: $openDetailWithSingleTap,
-            entryDetailCharactersExpandedByDefault: $entryDetailCharactersExpandedByDefault,
-            entryDetailStaffExpandedByDefault: $entryDetailStaffExpandedByDefault,
-            scoringEnabled: $scoringEnabled,
-            episodeProgressTrackingEnabled: $episodeProgressTrackingEnabled,
-            posterProgressBarOverlayEnabled: $posterProgressBarOverlayEnabled,
             autoPrefetchImagesOnAddAndRestore: $store.autoPrefetchImagesOnAddAndRestore,
             longTermGalleryPosterCachingEnabled: $store.longTermGalleryPosterCachingEnabled,
-            useSoftNavigationBarEdges: $useSoftNavigationBarEdges,
-            rememberShareSheetSettings: $rememberShareSheetSettings,
-            useTMDbRelayServer: $useTMDbRelayServer,
             preferredLanguage: $preferredLanguage,
             layout: layout,
             libraryCloudSyncStatus: store.libraryCloudSyncStatus,
@@ -278,9 +252,6 @@ struct LibraryProfileSettingsView: View {
         .animation(languagePickerAnimation, value: followsSystemLanguage)
         .animation(languagePickerAnimation, value: episodeProgressTrackingEnabled)
         .animation(languagePickerAnimation, value: store.libraryCloudSyncStatus)
-        .onChange(of: scoringEnabled, handleScoringEnabledChange)
-        .onChange(of: rememberShareSheetSettings, handleRememberShareSheetSettingsChange)
-        .onChange(of: useTMDbRelayServer, handleTMDbRelayServerChange)
     }
 
     private var layout: LibraryProfileSettingsLayout {
@@ -376,25 +347,6 @@ struct LibraryProfileSettingsView: View {
         store.language = new ? .current : preferredLanguage
         guard oldLanguage != newLanguage else { return }
         showRefreshInfoOnLanguageUpdateAlert = true
-    }
-
-    private func handleTMDbRelayServerChange(old: Bool, new: Bool) {
-        guard old != new else { return }
-        NotificationCenter.default.post(
-            name: .tmdbAPIConfigurationDidChange,
-            object: nil
-        )
-        showTMDbRelayRestartAlert = true
-    }
-
-    private func handleRememberShareSheetSettingsChange(old: Bool, new: Bool) {
-        guard old != new, !new else { return }
-        AnimeSharingPreferences().resetRememberedSettings()
-    }
-
-    private func handleScoringEnabledChange(old: Bool, new: Bool) {
-        guard old != new, !new, store.groupStrategy == .score else { return }
-        store.groupStrategy = .none
     }
 
     private func requestAPIKeySheet() {
