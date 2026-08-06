@@ -3,7 +3,7 @@
 ## Workflow
 
 - Use the Makefile for routine tasks: `make clean`, `make refresh-packages`, `make format`, `make lint`, `make build`, `make test-sim`, and `make run-sim`.
-- Prefer `make test-sim` and `make run-sim` for validation unless the user explicitly asks for device-based verification.
+- Use `make test-sim` for broad simulator-based validation. Use `make run-sim` when validating app runtime or UI behavior, unless the user explicitly asks for device-based verification.
 - Use `make run-device` for build, install, and launch on a connected iPhone only when the user explicitly asks for device-based verification.
 - If visual feedback is needed for a device run, use `make run-device`, then use Computer Use to open iPhone Mirroring or Quicktime and inspect the launched app there. Default to Quicktime, unless the user dictates otherwise.
 - Prefer the smallest relevant build or test command before broad verification.
@@ -28,11 +28,10 @@
 ## Testing
 
 - Unit tests live in `MyAnimeList/Tests/` and `DataProvider/Tests/`.
-- Run tests with `make test-sim` by default. Use `make test` only when the user explicitly asks for physical-device testing or there is a specific device-only reason.
+- Run the smallest relevant test target first, then use `make test-sim` when broad validation is warranted. Use `make test` only when the user explicitly asks for physical-device testing or there is a specific device-only reason.
 - When developing new features or adding tests, run only the relevant tests first. For app tests, pass one or more whitespace-separated Xcode test identifiers with `APP_TEST_ONLY`, for example `make test-app-sim APP_TEST_ONLY='MyAnimeListTests/LibraryMetadataRefreshTests'` or `make test-app-sim APP_TEST_ONLY='MyAnimeListTests/LibraryExportManagerTests MyAnimeListTests/LibraryBackupRestoreTests'`. For DataProvider package tests, use Swift Testing's native filter syntax, for example `make test-dataprovider DATAPROVIDER_TEST_FILTER='LibrarySyncTests'` or `make test-dataprovider DATAPROVIDER_TEST_FILTER='LibrarySyncTests|MigrationTests'`. Only run the full suite when there is a good reason.
-- Add or update tests with behavior changes when practical.
-- If a simulator is already booted, use that simulator for install/testing as you normally would. Prefer running `make run-sim` after any concrete change, not just `make build`. Do not boot another simulator wihout explicit user permission.
-- Do not start simulators without explicit user permission, even if you need a booted simulator for unit tests.
+- Do not create excessive or redundant tests. Add only the smallest set that protects distinct behavior, prefer extending existing tests, and avoid duplicating coverage across layers. Simple wiring, copy, or layout changes may need no new tests.
+- If a simulator is already booted, use it for install/testing as appropriate. For changes affecting app runtime or UI behavior, prefer `make run-sim` over relying only on `make build`. Do not boot a simulator without explicit user permission, even when tests require one.
 
 ## Commits
 
