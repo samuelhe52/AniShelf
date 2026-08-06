@@ -8,6 +8,7 @@
 - If visual feedback is needed for a device run, use `make run-device`, then use Computer Use to open iPhone Mirroring or Quicktime and inspect the launched app there. Default to Quicktime, unless the user dictates otherwise.
 - Prefer the smallest relevant build or test command before broad verification.
 - If the user asks to perform a change in a new worktree, create that worktree under ../AniShelf-worktrees/.
+- Do not use any of the `openspec` workflows unless the user explicitly requests it.
 
 ## Code Style
 

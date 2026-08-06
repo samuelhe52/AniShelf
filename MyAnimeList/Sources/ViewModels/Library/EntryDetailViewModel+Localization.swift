@@ -60,6 +60,20 @@ extension EntryDetailViewModel {
             .joined(separator: " / ")
     }
 
+    static func localizedStatus(_ status: String, language: Language) -> String {
+        let translations: [String: String]
+        switch language {
+        case .english:
+            return status
+        case .japanese:
+            translations = japaneseStatusNames
+        case .chinese:
+            translations = chineseStatusNames
+        }
+
+        return translations[status] ?? status
+    }
+
     static func localizedGenreNames(_ genreIDs: [Int], language: Language) -> [String] {
         genreIDs.compactMap { localizedGenreName(for: $0, language: language) }
     }
@@ -101,6 +115,39 @@ extension EntryDetailViewModel {
         10402: "音乐", 10749: "爱情", 10751: "家庭", 10752: "战争", 10759: "动作冒险",
         10762: "儿童", 10763: "新闻", 10764: "真人秀", 10765: "科幻奇幻",
         10766: "肥皂剧", 10767: "脱口秀", 10768: "战争政治", 10770: "电视电影"
+    ]
+
+    // Status vocabulary provenance, verified 2026-08-06:
+    // - TMDb documents TV Discover's `with_status` filter as codes 0 through 5. Querying
+    //   each code and then fetching a returned series detail produced Returning Series,
+    //   Planned, In Production, Ended, Canceled, and Pilot.
+    // - The user's library export contained Released, Ended, and Returning Series.
+    // - Live movie-detail responses additionally confirmed Rumored and Post Production.
+    // Localized detail requests still returned these raw English values. TMDb exposes the
+    // detail status as a string rather than a closed enum, so it may add, remove, or rename
+    // values. Unknown values intentionally fall back to the raw response above.
+    private static let japaneseStatusNames: [String: String] = [
+        "Rumored": "噂",
+        "Planned": "企画中",
+        "In Production": "制作中",
+        "Post Production": "ポストプロダクション",
+        "Released": "公開済み",
+        "Canceled": "キャンセル",
+        "Returning Series": "継続中",
+        "Ended": "終了",
+        "Pilot": "パイロット"
+    ]
+
+    private static let chineseStatusNames: [String: String] = [
+        "Rumored": "传闻",
+        "Planned": "计划中",
+        "In Production": "制作中",
+        "Post Production": "后期制作",
+        "Released": "已上映",
+        "Canceled": "已取消",
+        "Returning Series": "连载中",
+        "Ended": "已完结",
+        "Pilot": "试播集"
     ]
 
     // TMDb still returns English anime crew job labels in localized credits responses, so

@@ -354,19 +354,19 @@ final class EntryDetailViewModel {
                 [
                     detail.airDate?.formatted(date: .abbreviated, time: .omitted),
                     detail.runtimeMinutes.map(Self.minutesText),
-                    detail.status
+                    detail.status.map { Self.localizedStatus($0, language: language) }
                 ].compactMap(\.self)
             case .series:
                 [
                     detail.airDate?.formatted(date: .abbreviated, time: .omitted),
-                    detail.status,
+                    detail.status.map { Self.localizedStatus($0, language: language) },
                     detail.seasonCount.map(Self.seasonCountText)
                 ].compactMap(\.self)
             case .season:
                 [
                     detail.airDate?.formatted(date: .abbreviated, time: .omitted),
                     detail.episodeCount.map(Self.episodeCountText),
-                    detail.status
+                    detail.status.map { Self.localizedStatus($0, language: language) }
                 ].compactMap(\.self)
             }
 
