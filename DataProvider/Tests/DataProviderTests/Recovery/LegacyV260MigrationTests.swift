@@ -130,7 +130,18 @@ struct LegacyV260MigrationTests {
         legacyContainer.mainContext.insert(legacyEntry)
         try legacyContainer.mainContext.save()
 
-        let migratedProvider = DataProvider(url: storeURL)
+        let currentSchema = Schema(versionedSchema: CurrentSchema.self)
+        let currentConfiguration = ModelConfiguration(schema: currentSchema, url: storeURL)
+        let migratedContainer = try ModelContainer(
+            for: currentSchema,
+            migrationPlan: LegacyV260MigrationPlan.self,
+            configurations: currentConfiguration
+        )
+        let migratedProvider = DataProvider(
+            container: migratedContainer,
+            inMemory: false,
+            url: storeURL
+        )
         let migratedEntry = try #require(
             try migratedProvider.getAllModels(ofType: AnimeEntry.self).first
         )
