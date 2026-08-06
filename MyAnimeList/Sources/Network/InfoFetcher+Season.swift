@@ -320,6 +320,7 @@ extension InfoFetcher {
             voteAverage: parentSeries.voteAverage,
             runtimeMinutes: parentSeries.episodeRunTime?.first,
             episodeCount: season.episodes?.count,
+            productionCompanies: Self.productionCompanyDTOs(from: parentSeries.productionCompanies),
             characters: makeCharacters(
                 from: credits.cast.prefix(12),
                 imagesConfiguration: imagesConfiguration,

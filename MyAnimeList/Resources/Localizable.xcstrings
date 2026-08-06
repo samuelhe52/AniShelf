@@ -935,6 +935,22 @@
         }
       }
     },
+    "Applies to series and seasons when both are available." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シリーズとシーズンで両方の情報がある場合に適用されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "适用于同时提供这两项信息的剧集与季。"
+          }
+        }
+      }
+    },
     "App backups keep AniShelf data and settings for restore. Library exports create user-facing files in standard formats." : {
       "localizations" : {
         "ja" : {
@@ -1526,7 +1542,20 @@
       }
     },
     "Checking TMDb API key..." : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb APIキーを確認中..."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在验证 TMDb API 密钥..."
+          }
+        }
+      }
     },
     "Checking..." : {
       "localizations" : {
@@ -5070,6 +5099,38 @@
         }
       }
     },
+    "Production" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "制作"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "制作"
+          }
+        }
+      }
+    },
+    "Production Companies" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "制作会社"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "制作公司"
+          }
+        }
+      }
+    },
     "Purchase pending approval." : {
       "localizations" : {
         "ja" : {
@@ -6106,6 +6167,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "显示海报进度条"
+          }
+        }
+      }
+    },
+    "Show production company instead of runtime" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再生時間の代わりに制作会社を表示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示制作公司而非时长"
+          }
+        }
+      }
+    },
+    "Shows all production companies." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべての制作会社を表示します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示所有制作公司。"
           }
         }
       }

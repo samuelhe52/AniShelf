@@ -21,8 +21,15 @@ struct LibraryListView: View {
     @Binding var highlightedEntryID: Int?
 
     var body: some View {
+        @Bindable var interaction = interaction
+
         ScrollViewReader { proxy in
-            List(displayItems, selection: listSelection) { item in
+            List(
+                displayItems,
+                selection: interaction.isMultiSelecting
+                    ? $interaction.selectedEntryIDs
+                    : nil
+            ) { item in
                 rowContent(for: item)
             }
             .listStyle(.plain)
@@ -121,15 +128,6 @@ struct LibraryListView: View {
                     .tint(.indigo)
             }
         }
-    }
-
-    private var listSelection: Binding<Set<Int>>? {
-        guard interaction.isMultiSelecting else { return nil }
-
-        return Binding(
-            get: { interaction.selectedEntryIDs },
-            set: { interaction.selectedEntryIDs = $0 }
-        )
     }
 
     private func openDetails(for entry: AnimeEntry) {

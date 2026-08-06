@@ -146,6 +146,20 @@ extension LibraryMetadataRefreshTests {
         let queue = store.syncChangeRecorder.dirtyQueueStore.load()
         let didComplete = await completion.isSignaled
         #expect(didComplete)
+        let refreshedEntry = try #require(
+            store.dataProvider.getModels(
+                ofType: AnimeEntry.self,
+                predicate: #Predicate { $0.tmdbID == 550 }
+            ).first
+        )
+        #expect(
+            refreshedEntry.detail?.orderedProductionCompanies.map(\.name) == [
+                "Regency Enterprises"
+            ])
+        #expect(
+            refreshedEntry.detail?.orderedProductionCompanies.map(\.logoPath) == [
+                "/7PzJdsLGlR7oW4J0J5Xcd0pHGRg.png"
+            ])
         #expect(queue.entries.count == 1)
         if case .upsert(let pendingUpsert)? = queue.entries.first {
             #expect(pendingUpsert.identity == entry.syncIdentity)

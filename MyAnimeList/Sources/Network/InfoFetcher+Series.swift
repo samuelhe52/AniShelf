@@ -250,6 +250,7 @@ extension InfoFetcher {
             runtimeMinutes: series.episodeRunTime?.first,
             episodeCount: series.numberOfEpisodes,
             seasonCount: series.numberOfSeasons,
+            productionCompanies: Self.productionCompanyDTOs(from: series.productionCompanies),
             characters: makeCharacters(
                 from: credits.cast.prefix(12),
                 imagesConfiguration: imagesConfiguration,

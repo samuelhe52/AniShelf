@@ -125,6 +125,12 @@ extension AnimeEntryDetail {
     }
 }
 
+extension AnimeEntryProductionCompany {
+    var logoURL: URL? {
+        TMDbImageURLResolver.current.url(for: logoPath, role: .logo, idealWidth: 500)
+    }
+}
+
 extension AnimeEntryCharacter {
     var profileURL: URL? {
         TMDbImageURLResolver.current.url(for: profilePath, role: .profile, idealWidth: 185)

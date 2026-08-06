@@ -176,7 +176,7 @@ struct LibraryProfileSettingsView: View {
             allowedContentTypes: [.mallib],
             onCompletion: handleFileImport
         )
-        .sheet(item: presentedSheetBinding) { sheet in
+        .sheet(item: $presentationState.presentedSheet) { sheet in
             sheetView(for: sheet)
         }
     }
@@ -507,13 +507,6 @@ struct LibraryProfileSettingsView: View {
         preferredLanguage: Language
     ) -> Language {
         followsSystem ? .current : preferredLanguage
-    }
-
-    private var presentedSheetBinding: Binding<LibraryProfileSettingsSheet?> {
-        Binding(
-            get: { presentationState.presentedSheet },
-            set: { presentationState.presentedSheet = $0 }
-        )
     }
 
     @ViewBuilder

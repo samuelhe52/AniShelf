@@ -9,6 +9,12 @@ import DataProvider
 import Foundation
 
 enum LibraryMetadataRefreshDetailComparator {
+    private struct ComparableProductionCompany: Equatable {
+        let id: Int
+        let name: String
+        let logoPath: String?
+    }
+
     private struct ComparableCharacter: Equatable {
         let id: Int
         let characterName: String
@@ -61,6 +67,7 @@ enum LibraryMetadataRefreshDetailComparator {
         let runtimeMinutes: Int?
         let episodeCount: Int?
         let seasonCount: Int?
+        let productionCompanies: [ComparableProductionCompany]
         let characters: [ComparableCharacter]
         let staff: [ComparableStaff]
         let seasons: [ComparableSeason]
@@ -90,6 +97,13 @@ enum LibraryMetadataRefreshDetailComparator {
             runtimeMinutes: detail.runtimeMinutes,
             episodeCount: detail.episodeCount,
             seasonCount: detail.seasonCount,
+            productionCompanies: detail.orderedProductionCompanies.map {
+                ComparableProductionCompany(
+                    id: $0.id,
+                    name: $0.name,
+                    logoPath: $0.logoPath
+                )
+            },
             characters: normalizedCharacters(
                 detail.characters.map {
                     ComparableCharacter(
@@ -163,6 +177,13 @@ enum LibraryMetadataRefreshDetailComparator {
             runtimeMinutes: dto.runtimeMinutes,
             episodeCount: dto.episodeCount,
             seasonCount: dto.seasonCount,
+            productionCompanies: dto.productionCompanies.map {
+                ComparableProductionCompany(
+                    id: $0.id,
+                    name: $0.name,
+                    logoPath: TMDbImagePath.storagePath(from: $0.logoPath)
+                )
+            },
             characters: normalizedCharacters(
                 dto.characters.map {
                     ComparableCharacter(

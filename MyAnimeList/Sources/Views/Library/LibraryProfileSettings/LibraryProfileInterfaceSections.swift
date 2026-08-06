@@ -9,6 +9,9 @@ import DataProvider
 import SwiftUI
 
 struct LibraryProfileInterfaceSettingsSection: View {
+    @AppStorage(.showProductionCompanyInsteadOfRuntime)
+    private var showProductionCompanyInsteadOfRuntime = false
+
     @Binding var openDetailWithSingleTap: Bool
     @Binding var entryDetailCharactersExpandedByDefault: Bool
     @Binding var entryDetailStaffExpandedByDefault: Bool
@@ -43,6 +46,13 @@ struct LibraryProfileInterfaceSettingsSection: View {
                 title: "Expand Staff by Default",
                 subtitle: "Open the Staff section automatically in entry detail view.",
                 isOn: $entryDetailStaffExpandedByDefault,
+                tint: .teal
+            )
+
+            LibraryProfileSettingsToggleRow(
+                title: "Show production company instead of runtime",
+                subtitle: "Applies to series and seasons when both are available.",
+                isOn: $showProductionCompanyInsteadOfRuntime,
                 tint: .teal
             )
 

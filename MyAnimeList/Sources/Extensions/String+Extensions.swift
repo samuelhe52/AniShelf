@@ -23,6 +23,7 @@ extension String {
     static let libraryOpenDetailWithSingleTap = "LibraryOpenDetailWithSingleTap"
     static let entryDetailCharactersExpandedByDefault = "EntryDetailCharactersExpandedByDefault"
     static let entryDetailStaffExpandedByDefault = "EntryDetailStaffExpandedByDefault"
+    static let showProductionCompanyInsteadOfRuntime = "ShowProductionCompanyInsteadOfRuntime"
     static let libraryScoringEnabled = "LibraryScoringEnabled"
     static let episodeProgressTrackingEnabled = "EpisodeProgressTrackingEnabled"
     static let libraryPosterProgressBarOverlayEnabled = "LibraryPosterProgressBarOverlayEnabled"
@@ -70,6 +71,7 @@ extension String {
         .libraryOpenDetailWithSingleTap,
         .entryDetailCharactersExpandedByDefault,
         .entryDetailStaffExpandedByDefault,
+        .showProductionCompanyInsteadOfRuntime,
         .libraryScoringEnabled,
         .episodeProgressTrackingEnabled,
         .libraryPosterProgressBarOverlayEnabled,
@@ -93,6 +95,7 @@ extension String {
         .libraryOpenDetailWithSingleTap,
         .entryDetailCharactersExpandedByDefault,
         .entryDetailStaffExpandedByDefault,
+        .showProductionCompanyInsteadOfRuntime,
         .libraryScoringEnabled,
         .episodeProgressTrackingEnabled,
         .libraryPosterProgressBarOverlayEnabled,
