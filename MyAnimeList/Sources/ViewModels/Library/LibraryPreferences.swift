@@ -234,6 +234,7 @@ struct LibraryPreferences {
                 .libraryOpenDetailWithSingleTap,
                 .entryDetailCharactersExpandedByDefault,
                 .entryDetailStaffExpandedByDefault,
+                .showProductionCompanyInsteadOfRuntime,
                 .libraryScoringEnabled,
                 .episodeProgressTrackingEnabled,
                 .libraryPosterProgressBarOverlayEnabled,
