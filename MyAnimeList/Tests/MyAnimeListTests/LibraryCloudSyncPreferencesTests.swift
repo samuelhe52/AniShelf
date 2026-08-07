@@ -13,7 +13,7 @@ import Testing
 @testable import MyAnimeList
 
 struct LibraryCloudSyncPreferencesTests {
-    @Test @MainActor func testLibraryCloudSyncPreferenceDefaultsOff() {
+    @Test @MainActor func testLibraryCloudSyncPreferenceDefaultsOnAndPreservesStoredOptOut() {
         let suiteName = "MyAnimeListTests.LibraryCloudSyncPreference"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
@@ -22,8 +22,12 @@ struct LibraryCloudSyncPreferencesTests {
         let preferences = LibraryPreferences(defaults: defaults)
         let status = preferences.load().cloudSyncStatus
 
-        #expect(!status.isEnabled)
+        #expect(status.isEnabled)
         #expect(status.bootstrapState == .notStarted)
+
+        defaults.set(false, forKey: .libraryCloudSyncEnabled)
+
+        #expect(!preferences.load().cloudSyncStatus.isEnabled)
     }
 
     @Test @MainActor func testLibraryCloudSyncPhasePersistsCoarseStatus() {

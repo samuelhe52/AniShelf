@@ -125,6 +125,7 @@ struct LibraryBackupRestoreTests {
             dataProvider: targetProvider,
             preferences: LibraryPreferences(defaults: defaults)
         )
+        store.disableLibraryCloudSync()
         store.updateLibraryCloudSyncStatus { status in
             status.bootstrapState = .failed
             status.retryState = .init(
@@ -171,6 +172,8 @@ struct LibraryBackupRestoreTests {
         #expect(store.library.map(\.tmdbID) == [700_001])
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
         #expect(tokenDefaults.object(forKey: tokenKey) == nil)
+        #expect(!store.libraryCloudSyncStatus.isEnabled)
+        #expect(!store.preferences.load().cloudSyncStatus.isEnabled)
         #expect(store.libraryCloudSyncStatus == .defaultValue)
         #expect(store.preferences.load().cloudSyncStatus == .defaultValue)
     }

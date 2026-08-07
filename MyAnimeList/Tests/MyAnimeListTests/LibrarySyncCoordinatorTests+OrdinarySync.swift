@@ -13,6 +13,11 @@ import Testing
 @testable import LibrarySync
 @testable import MyAnimeList
 
+@MainActor
+fileprivate final class TestTMDbAPIKeyAvailability {
+    var isAvailable = false
+}
+
 extension LibrarySyncCoordinatorTests {
     @Test @MainActor func ordinarySyncSkipsWhenCloudSyncDisabled() async throws {
         let store = makeStore(
@@ -94,6 +99,43 @@ extension LibrarySyncCoordinatorTests {
         #expect(store.libraryCloudSyncStatus.isEnabled)
         #expect(store.libraryCloudSyncStatus.bootstrapState == .completed)
         #expect(store.libraryCloudSyncStatus.lastResult == .success)
+        #expect(database.ensureZoneCallCount == 1)
+    }
+
+    @Test @MainActor func appLaunchWaitsForAPIKeyThenBootstrapsDefaultEnabledCloudSync()
+        async throws
+    {
+        let suiteName = "LibrarySyncCoordinatorTests.DefaultEnabled.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let apiKeyAvailability = TestTMDbAPIKeyAvailability()
+        let store = LibraryStore(
+            dataProvider: DataProvider(inMemory: true),
+            preferences: LibraryPreferences(defaults: defaults),
+            hasTMDbAPIKey: { apiKeyAvailability.isAvailable }
+        )
+        let database = FakeCloudLibrarySyncDatabase(changes: [makeEmptyChangeBatch()])
+        store.configureLibrarySyncCoordinator(
+            client: CloudLibrarySyncClient(),
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        let missingKeyResult = await store.performLibrarySyncResult(trigger: .appLaunch)
+
+        #expect(missingKeyResult == .skipped(.missingTMDbAPIKey))
+        #expect(store.libraryCloudSyncStatus.isEnabled)
+        #expect(store.libraryCloudSyncStatus.bootstrapState == .notStarted)
+        #expect(database.ensureZoneCallCount == 0)
+
+        apiKeyAvailability.isAvailable = true
+        let bootstrapResult = await store.performLibrarySyncResult(trigger: .foreground)
+
+        #expect(bootstrapResult == .success)
+        #expect(store.libraryCloudSyncStatus.isEnabled)
+        #expect(store.libraryCloudSyncStatus.bootstrapState == .completed)
         #expect(database.ensureZoneCallCount == 1)
     }
 

@@ -137,6 +137,9 @@ struct MyAnimeListApp: App {
             .onChange(of: keyStorage.key) { _, _ in
                 updateWhatsNewPresentation()
                 recordActiveLibraryDayIfUsable()
+                if hasTMDbAPIKey {
+                    requestSync(trigger: .foreground)
+                }
             }
             .task(id: reviewPresentationTaskID) {
                 guard appReview.scheduledRequestToken != nil, scenePhase == .active else { return }
