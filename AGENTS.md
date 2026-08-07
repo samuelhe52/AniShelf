@@ -42,16 +42,7 @@
 
 ## Releases
 
-- Start from an up-to-date `main` and review all changes since the latest release tag. Preserve unrelated working-tree changes.
-- Run the normal format and lint checks, relevant tests, and a Release build. Check the localization catalogs for missing translations.
-- Confirm that the target version has an appropriate What's New entry and that the app version is updated correctly.
-- Check whether `README.md` and `docs/anishelf_overview.md` need changes. Update them only with user permission.
-- With permission, create a preflight commit containing release preparation other than the Xcode project version change, then create the release commit containing the version change. These commits may be combined when the user requests it.
-- With permission, create an annotated `vX.Y` tag on the release commit and verify its target.
-- With permission, push `main`, then open a `main` to `release` pull request. Start an independent reviewer subagent to review the exact pull request diff without modifying it.
-- Address review findings and rerun affected validation before merging.
-- With permission, merge the pull request without squash or rebase so the tagged release commit is preserved.
-- With permission, push the release tag.
+- Follow [`docs/workflows/release.md`](docs/workflows/release.md) for every release.
 
 ## Additional Notes
 
