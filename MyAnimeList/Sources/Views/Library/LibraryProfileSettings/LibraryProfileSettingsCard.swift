@@ -23,17 +23,8 @@ struct LibraryProfileSettingsCard: View {
     @Binding var hideDroppedByDefault: Bool
     @Binding var defaultNewEntryWatchStatus: AnimeEntry.WatchStatus
     @Binding var defaultFilters: Set<LibraryStore.AnimeFilter>
-    @Binding var openDetailWithSingleTap: Bool
-    @Binding var entryDetailCharactersExpandedByDefault: Bool
-    @Binding var entryDetailStaffExpandedByDefault: Bool
-    @Binding var scoringEnabled: Bool
-    @Binding var episodeProgressTrackingEnabled: Bool
-    @Binding var posterProgressBarOverlayEnabled: Bool
     @Binding var autoPrefetchImagesOnAddAndRestore: Bool
     @Binding var longTermGalleryPosterCachingEnabled: Bool
-    @Binding var useSoftNavigationBarEdges: Bool
-    @Binding var rememberShareSheetSettings: Bool
-    @Binding var useTMDbRelayServer: Bool
     @Binding var preferredLanguage: Language
 
     let layout: Layout
@@ -132,25 +123,16 @@ struct LibraryProfileSettingsCard: View {
             defaultNewEntryWatchStatus: $defaultNewEntryWatchStatus,
             defaultFilters: $defaultFilters,
             autoPrefetchImagesOnAddAndRestore: $autoPrefetchImagesOnAddAndRestore,
-            longTermGalleryPosterCachingEnabled: $longTermGalleryPosterCachingEnabled,
-            rememberShareSheetSettings: $rememberShareSheetSettings
+            longTermGalleryPosterCachingEnabled: $longTermGalleryPosterCachingEnabled
         )
     }
 
     private var interfaceSettingsSection: some View {
-        LibraryProfileInterfaceSettingsSection(
-            openDetailWithSingleTap: $openDetailWithSingleTap,
-            entryDetailCharactersExpandedByDefault: $entryDetailCharactersExpandedByDefault,
-            entryDetailStaffExpandedByDefault: $entryDetailStaffExpandedByDefault,
-            scoringEnabled: $scoringEnabled,
-            episodeProgressTrackingEnabled: $episodeProgressTrackingEnabled,
-            posterProgressBarOverlayEnabled: $posterProgressBarOverlayEnabled,
-            useSoftNavigationBarEdges: $useSoftNavigationBarEdges
-        )
+        LibraryProfileInterfaceSettingsSection()
     }
 
     private var tmdbConnectionSection: some View {
-        LibraryProfileTMDbConnectionSection(useTMDbRelayServer: $useTMDbRelayServer)
+        LibraryProfileTMDbConnectionSection()
     }
 
     private var iCloudSyncSection: some View {

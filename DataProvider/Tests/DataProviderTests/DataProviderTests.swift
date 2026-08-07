@@ -316,6 +316,75 @@ fileprivate enum TestStartupError: Error {
     #expect(detail.orderedEpisodes.map(\.id) == [2, 1])
 }
 
+@Test func productionCompanyRoundTripPreservesOrderAndNormalizesLogoPaths() async throws {
+    let detail = AnimeEntryDetail(
+        from: AnimeEntryDetailDTO(
+            language: "en-US",
+            title: "Production Detail",
+            productionCompanies: [
+                AnimeEntryProductionCompanyDTO(
+                    id: 30,
+                    name: "Third ID, First Company",
+                    logoPath: "logos/first.png"
+                ),
+                AnimeEntryProductionCompanyDTO(
+                    id: 10,
+                    name: "First ID, Second Company",
+                    logoPath: "/logos/second.svg"
+                )
+            ]
+        )
+    )
+
+    #expect(detail.orderedProductionCompanies.map(\.id) == [30, 10])
+    #expect(
+        detail.orderedProductionCompanies.map(\.logoPath) == [
+            "/logos/first.png", "/logos/second.svg"
+        ])
+    #expect(detail.snapshotDTO().productionCompanies.map(\.id) == [30, 10])
+    #expect(
+        detail.snapshotDTO().productionCompanies.map(\.logoPath) == [
+            "/logos/first.png", "/logos/second.svg"
+        ])
+}
+
+@Test @MainActor func applyingDetailReplacesAndDeletesOldProductionCompanies() throws {
+    let provider = DataProvider(inMemory: true)
+    let entry = AnimeEntry(
+        name: "Production Replacement",
+        type: .movie,
+        tmdbID: 808_101,
+        detail: AnimeEntryDetail(
+            from: AnimeEntryDetailDTO(
+                language: "en-US",
+                title: "Old",
+                productionCompanies: [
+                    AnimeEntryProductionCompanyDTO(id: 1, name: "Old Company")
+                ]
+            )
+        )
+    )
+    provider.sharedModelContainer.mainContext.insert(entry)
+    try provider.sharedModelContainer.mainContext.save()
+    let oldCompanyID = try #require(entry.detail?.orderedProductionCompanies.first?.persistentModelID)
+
+    entry.detail?.apply(
+        dto: AnimeEntryDetailDTO(
+            language: "en-US",
+            title: "New",
+            productionCompanies: [
+                AnimeEntryProductionCompanyDTO(id: 2, name: "New Company")
+            ]
+        )
+    )
+    try provider.sharedModelContainer.mainContext.save()
+
+    let companies = try provider.getAllModels(ofType: AnimeEntryProductionCompany.self)
+    #expect(companies.map(\.id) == [2])
+    #expect(companies.allSatisfy { $0.persistentModelID != oldCompanyID })
+    #expect(companies.first?.detail?.entry?.tmdbID == 808_101)
+}
+
 @Test func replaceDetailPersistsAggregateStaffJobs() async throws {
     let entry = AnimeEntry.template()
 

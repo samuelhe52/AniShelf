@@ -18,8 +18,10 @@ struct EntryDetailView: View {
         Language.followsSystemPreference()
     @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
     @AppStorage(.episodeProgressTrackingEnabled) private var episodeProgressTrackingEnabled = false
+    @AppStorage(.showProductionCompanyInsteadOfRuntime)
+    private var showProductionCompanyInsteadOfRuntime = false
 
-    private let session: EntryDetailSession
+    @Bindable private var session: EntryDetailSession
     private let detailHost: LibraryEntryDetailHost
     private let onClose: ((LibraryEntrySyncIdentity) -> Void)?
     private let editingRequestID: UUID?
@@ -53,8 +55,6 @@ struct EntryDetailView: View {
     }
 
     var body: some View {
-        @Bindable var bindableSession = session
-
         ZStack {
             ScrollViewReader { proxy in
                 ScrollView(showsIndicators: false) {
@@ -87,7 +87,7 @@ struct EntryDetailView: View {
                         .frame(maxWidth: .infinity)
                     }
                 }
-                .scrollPosition($bindableSession.scrollPosition)
+                .scrollPosition($session.scrollPosition)
                 .coordinateSpace(name: scrollCoordinateSpaceName)
                 .preferredNavigationBarScrollEdgeEffect()
                 .task(id: editingRequestID) {
@@ -266,31 +266,17 @@ struct EntryDetailView: View {
     @ViewBuilder
     private func detailsContent(_ proxy: ScrollViewProxy) -> some View {
         if !session.model.statCards.isEmpty {
-            LazyVGrid(columns: statColumns, spacing: 12) {
-                ForEach(session.model.statCards) { card in
-                    if card.id == "episodes" {
-                        Button {
-                            withAnimation(.spring(response: 0.6, dampingFraction: 0.86)) {
-                                proxy.scrollTo(
-                                    EntryDetailScrollTarget.episodesSection,
-                                    anchor: .top
-                                )
-                            }
-                        } label: {
-                            DetailStatCard(card: card)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(
-                            Text(
-                                verbatim: "\(card.value), \(String(localized: card.title))"
-                            )
-                        )
-                        .accessibilityHint(Text(EntryDetailL10n.jumpsToEpisodesSection))
-                    } else {
-                        DetailStatCard(card: card)
+            EntryDetailStatGrid(
+                availableCards: session.model.statCards,
+                productionCompanies: session.model.productionCompanies,
+                entryType: session.entry.type,
+                showProductionCompanyInsteadOfRuntime: showProductionCompanyInsteadOfRuntime,
+                onJumpToEpisodes: {
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.86)) {
+                        proxy.scrollTo(EntryDetailScrollTarget.episodesSection, anchor: .top)
                     }
                 }
-            }
+            )
         }
 
         editingSection
@@ -307,7 +293,7 @@ struct EntryDetailView: View {
             PopupDisclosureCard(
                 session.model.characterSectionTitle,
                 systemImage: "person.2.fill",
-                isExpanded: characterExpandedBinding
+                isExpanded: $session.isCharacterExpanded
             ) {
                 horizontalCards(session.model.characterCards) { card in
                     PersonCardView(card: card)
@@ -319,7 +305,7 @@ struct EntryDetailView: View {
             PopupDisclosureCard(
                 EntryDetailL10n.staff,
                 systemImage: "person.2.fill",
-                isExpanded: staffExpandedBinding
+                isExpanded: $session.isStaffExpanded
             ) {
                 horizontalCards(session.model.staffCards) { card in
                     PersonCardView(card: card)
@@ -404,16 +390,9 @@ struct EntryDetailView: View {
             episodeProgressTrackingEnabled: episodeProgressTrackingEnabled,
             onWatchStatusSelected: requestWatchStatusChange,
             onEpisodeProgressCompletionSuggested: handleEpisodeProgressCompletionSuggestion,
-            isEditingDetails: editingDetailsBinding
+            isEditingDetails: $session.isEditingDetails
         )
         .id(EntryDetailScrollTarget.editingSection)
-    }
-
-    private var statColumns: [GridItem] {
-        Array(
-            repeating: GridItem(.flexible(), spacing: 12, alignment: .top),
-            count: min(max(session.model.statCards.count, 1), 3)
-        )
     }
 
     @ViewBuilder
@@ -565,27 +544,6 @@ struct EntryDetailView: View {
             from: hostPresentationID,
             ifCurrent: isCurrentHostPresentation,
             update
-        )
-    }
-
-    private var editingDetailsBinding: Binding<Bool> {
-        Binding(
-            get: { session.isEditingDetails },
-            set: { session.isEditingDetails = $0 }
-        )
-    }
-
-    private var characterExpandedBinding: Binding<Bool> {
-        Binding(
-            get: { session.isCharacterExpanded },
-            set: { session.isCharacterExpanded = $0 }
-        )
-    }
-
-    private var staffExpandedBinding: Binding<Bool> {
-        Binding(
-            get: { session.isStaffExpanded },
-            set: { session.isStaffExpanded = $0 }
         )
     }
 

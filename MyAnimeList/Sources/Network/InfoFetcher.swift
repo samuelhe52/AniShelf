@@ -264,3 +264,17 @@ final class InfoFetcher: Sendable {
         }
     }
 }
+
+extension InfoFetcher {
+    static func productionCompanyDTOs(
+        from companies: [ProductionCompany]?
+    ) -> [AnimeEntryProductionCompanyDTO] {
+        companies?.map {
+            AnimeEntryProductionCompanyDTO(
+                id: $0.id,
+                name: $0.name,
+                logoPath: TMDbImagePath.storagePath(from: $0.logoPath)
+            )
+        } ?? []
+    }
+}

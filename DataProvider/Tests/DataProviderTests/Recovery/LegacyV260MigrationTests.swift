@@ -130,7 +130,18 @@ struct LegacyV260MigrationTests {
         legacyContainer.mainContext.insert(legacyEntry)
         try legacyContainer.mainContext.save()
 
-        let migratedProvider = DataProvider(url: storeURL)
+        let currentSchema = Schema(versionedSchema: CurrentSchema.self)
+        let currentConfiguration = ModelConfiguration(schema: currentSchema, url: storeURL)
+        let migratedContainer = try ModelContainer(
+            for: currentSchema,
+            migrationPlan: LegacyV260MigrationPlan.self,
+            configurations: currentConfiguration
+        )
+        let migratedProvider = DataProvider(
+            container: migratedContainer,
+            inMemory: false,
+            url: storeURL
+        )
         let migratedEntry = try #require(
             try migratedProvider.getAllModels(ofType: AnimeEntry.self).first
         )
@@ -143,6 +154,39 @@ struct LegacyV260MigrationTests {
         #expect(migratedDetail.orderedCharacters.map(\.characterName) == ["Lead"])
         #expect(migratedDetail.seasons.map(\.title) == ["Season 1"])
         #expect(migratedDetail.orderedEpisodes.map(\.title) == ["Episode 1"])
+    }
+
+    @Test @MainActor func legacyV260StoreLoadsThroughDataProviderRecoveryFallback() throws {
+        let directoryURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "AniShelfTests-legacy-v260-loader-\(UUID().uuidString)",
+                isDirectory: true
+            )
+        try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directoryURL) }
+        let storeURL = directoryURL.appendingPathComponent("library.store")
+        let legacySchema = Schema(versionedSchema: SchemaV2_6_0Legacy.self)
+        let legacyConfiguration = ModelConfiguration(schema: legacySchema, url: storeURL)
+        let legacyContainer = try ModelContainer(
+            for: legacySchema,
+            configurations: legacyConfiguration
+        )
+        legacyContainer.mainContext.insert(
+            SchemaV2_6_0Legacy.AnimeEntry(
+                name: "Loader fallback entry",
+                type: .movie,
+                tmdbID: 9_002
+            )
+        )
+        try legacyContainer.mainContext.save()
+
+        let migratedProvider = DataProvider(url: storeURL)
+        let migratedEntry = try #require(
+            try migratedProvider.getAllModels(ofType: AnimeEntry.self).first
+        )
+
+        #expect(migratedEntry.name == "Loader fallback entry")
+        #expect(migratedEntry.tmdbID == 9_002)
     }
 }
 

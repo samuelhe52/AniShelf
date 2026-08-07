@@ -548,8 +548,8 @@ struct MigrationTests {
         #expect(migratedEntry.trackingUpdatedAt == nil)
     }
 
-    @Test @MainActor func launchMigrationFromV278ThroughV280PreservesGraph() throws {
-        let storeURL = temporaryStoreURL(name: "launch-migration-v278-through-v280")
+    @Test @MainActor func launchMigrationFromV278ThroughV281PreservesGraph() throws {
+        let storeURL = temporaryStoreURL(name: "launch-migration-v278-through-v281")
 
         let legacySchema = Schema(versionedSchema: SchemaV2_7_8.self)
         let legacyConfiguration = ModelConfiguration(schema: legacySchema, url: storeURL)
@@ -644,6 +644,40 @@ struct MigrationTests {
         #expect(migratedDetail.orderedCharacters.map(\.profilePath) == ["/characters/lead.jpg"])
         #expect(migratedDetail.seasons.map(\.posterPath) == ["/seasons/1.jpg"])
         #expect(migratedDetail.orderedEpisodes.map(\.imagePath) == ["/episodes/1.jpg"])
+    }
+
+    @Test @MainActor func productionCompanyMigrationFromV280PreservesGraphWithEmptyCompanies() throws {
+        let storeURL = temporaryStoreURL(name: "production-company-migration-v280")
+        let legacySchema = Schema(versionedSchema: SchemaV2_8_0.self)
+        let legacyConfiguration = ModelConfiguration(schema: legacySchema, url: storeURL)
+        let legacyContainer = try ModelContainer(
+            for: legacySchema,
+            configurations: legacyConfiguration
+        )
+        let legacyDetail = SchemaV2_8_0.AnimeEntryDetail(
+            language: "en-US",
+            title: "Legacy Detail",
+            runtimeMinutes: 24
+        )
+        let legacyEntry = SchemaV2_8_0.AnimeEntry(
+            name: "Legacy Series",
+            type: .series,
+            tmdbID: 808_100,
+            detail: legacyDetail,
+            dateSaved: referenceDate(year: 2026, month: 8, day: 1)
+        )
+        legacyContainer.mainContext.insert(legacyEntry)
+        try legacyContainer.mainContext.save()
+
+        let migratedProvider = DataProvider(url: storeURL)
+        let migratedEntry = try #require(
+            try migratedProvider.getAllModels(ofType: AnimeEntry.self).first
+        )
+        let migratedDetail = try #require(migratedEntry.detail)
+
+        #expect(migratedDetail.title == "Legacy Detail")
+        #expect(migratedDetail.runtimeMinutes == 24)
+        #expect(migratedDetail.orderedProductionCompanies.isEmpty)
     }
 
     @Test @MainActor func imagePathMigrationFromV279PreservesUserState() throws {

@@ -75,6 +75,10 @@ enum EntryDetailL10n {
     static let tmdbScore: LocalizedStringResource = "TMDb Score"
     static let runtime: LocalizedStringResource = "Runtime"
     static let averageRuntime: LocalizedStringResource = "Avg Runtime"
+    static let production: LocalizedStringResource = "Production"
+    static let productionCompanies: LocalizedStringResource = "Production Companies"
+    static let showsAllProductionCompanies: LocalizedStringResource =
+        "Shows all production companies."
     static let episode: LocalizedStringResource = "Episode"
     static let noEpisodesAvailable: LocalizedStringResource = "No episodes available for this season."
 }

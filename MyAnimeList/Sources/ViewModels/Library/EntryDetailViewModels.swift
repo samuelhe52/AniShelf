@@ -162,6 +162,7 @@ final class EntryDetailViewModel {
     private(set) var overviewText = String(localized: EntryDetailL10n.noOverviewAvailable)
     private(set) var genreNames: [String] = []
     private(set) var statCards: [EntryDetailStatCard] = []
+    private(set) var productionCompanies: [EntryDetailProductionCompanyCard] = []
     private(set) var characterCards: [EntryDetailPersonCard] = []
     private(set) var staffCards: [EntryDetailPersonCard] = []
     private(set) var seasonCards: [EntryDetailSeasonCard] = []
@@ -211,6 +212,7 @@ final class EntryDetailViewModel {
         overviewText = entry.displayOverview ?? String(localized: EntryDetailL10n.noOverviewAvailable)
         genreNames = []
         statCards = []
+        productionCompanies = []
         characterCards = []
         staffCards = []
         seasonCards = []
@@ -347,6 +349,14 @@ final class EntryDetailViewModel {
         logoImageURL = detail.logoImageURL
         primaryLinkURL = detail.primaryLinkURL ?? entry.linkToDetails
         characterSectionTitle = EntryDetailL10n.characters
+        productionCompanies = detail.orderedProductionCompanies.map {
+            EntryDetailProductionCompanyCard(
+                id: $0.id,
+                name: $0.name,
+                logoURL: $0.logoURL
+            )
+        }
+        let primaryProductionCompany = productionCompanies.first
 
         metadataLineItems =
             switch entry.type {
@@ -354,71 +364,55 @@ final class EntryDetailViewModel {
                 [
                     detail.airDate?.formatted(date: .abbreviated, time: .omitted),
                     detail.runtimeMinutes.map(Self.minutesText),
-                    detail.status
+                    detail.status.map { Self.localizedStatus($0, language: language) }
                 ].compactMap(\.self)
             case .series:
                 [
                     detail.airDate?.formatted(date: .abbreviated, time: .omitted),
-                    detail.status,
+                    detail.status.map { Self.localizedStatus($0, language: language) },
                     detail.seasonCount.map(Self.seasonCountText)
                 ].compactMap(\.self)
             case .season:
                 [
                     detail.airDate?.formatted(date: .abbreviated, time: .omitted),
                     detail.episodeCount.map(Self.episodeCountText),
-                    detail.status
+                    detail.status.map { Self.localizedStatus($0, language: language) }
                 ].compactMap(\.self)
             }
 
-        statCards =
-            switch entry.type {
-            case .movie:
-                [
-                    detail.voteAverage.map {
-                        EntryDetailStatCard(
-                            id: "rating",
-                            title: EntryDetailL10n.tmdbScore,
-                            value: String(format: "%.1f", $0),
-                            symbolName: "star.fill"
-                        )
-                    },
-                    detail.runtimeMinutes.map {
-                        EntryDetailStatCard(
-                            id: "runtime",
-                            title: EntryDetailL10n.runtime,
-                            value: Self.minutesText($0),
-                            symbolName: "clock.fill"
-                        )
-                    }
-                ].compactMap(\.self)
-            case .series, .season:
-                [
-                    detail.voteAverage.map {
-                        EntryDetailStatCard(
-                            id: "rating",
-                            title: EntryDetailL10n.tmdbScore,
-                            value: String(format: "%.1f", $0),
-                            symbolName: "star.fill"
-                        )
-                    },
-                    detail.episodeCount.map {
-                        EntryDetailStatCard(
-                            id: "episodes",
-                            title: EntryDetailL10n.episodes,
-                            value: "\($0)",
-                            symbolName: "play.rectangle.fill"
-                        )
-                    },
-                    detail.runtimeMinutes.map {
-                        EntryDetailStatCard(
-                            id: "runtime",
-                            title: EntryDetailL10n.averageRuntime,
-                            value: Self.minutesText($0),
-                            symbolName: "clock.fill"
-                        )
-                    }
-                ].compactMap(\.self)
+        statCards = [
+            detail.voteAverage.map {
+                EntryDetailStatCard(
+                    kind: .tmdbScore,
+                    title: EntryDetailL10n.tmdbScore,
+                    value: String(format: "%.1f", $0)
+                )
+            },
+            entry.type == .movie
+                ? nil
+                : detail.episodeCount.map {
+                    EntryDetailStatCard(
+                        kind: .episodes,
+                        title: EntryDetailL10n.episodes,
+                        value: "\($0)"
+                    )
+                },
+            detail.runtimeMinutes.map {
+                EntryDetailStatCard(
+                    kind: .runtime,
+                    title: entry.type == .movie
+                        ? EntryDetailL10n.runtime : EntryDetailL10n.averageRuntime,
+                    value: Self.minutesText($0)
+                )
+            },
+            primaryProductionCompany.map {
+                EntryDetailStatCard(
+                    kind: .production,
+                    title: EntryDetailL10n.production,
+                    value: $0.name
+                )
             }
+        ].compactMap(\.self)
 
         characterCards = detail.orderedCharacters.map {
             EntryDetailPersonCard(

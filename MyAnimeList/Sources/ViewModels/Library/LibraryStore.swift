@@ -294,7 +294,17 @@ class LibraryStore {
     {
         guard let syncCoordinator else { return .permanentFailure }
         guard !Task.isCancelled else { return .skipped(.disabled) }
-        if shouldResumeInterruptedCloudSyncBootstrap {
+        let shouldBootstrapDefaultEnablement =
+            libraryCloudSyncStatus.isEnabled
+            && libraryCloudSyncStatus.bootstrapState == .notStarted
+        if shouldResumeInterruptedCloudSyncBootstrap || shouldBootstrapDefaultEnablement {
+            guard cloudSyncStateController.hasRequiredBootstrapInputs() else {
+                recordLibraryCloudSyncSkipped(
+                    trigger: trigger,
+                    reason: .missingTMDbAPIKey
+                )
+                return .skipped(.missingTMDbAPIKey)
+            }
             shouldResumeInterruptedCloudSyncBootstrap = false
             return await bootstrapLibraryCloudSyncEnablement()
         }

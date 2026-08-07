@@ -8,11 +8,44 @@
 import DataProvider
 import SwiftUI
 
+struct EntryDetailProductionCompanyCard: Identifiable {
+    let id: Int
+    let name: String
+    let logoURL: URL?
+}
+
+/// Identity for a detail stat card.
+///
+/// Presentation details derive from the kind so behavior is never inferred from
+/// an icon name or a position in the card array.
+enum EntryDetailStatKind: String {
+    case tmdbScore
+    case episodes
+    case runtime
+    case production
+
+    var symbolName: String {
+        switch self {
+        case .tmdbScore: "star.fill"
+        case .episodes: "play.rectangle.fill"
+        case .runtime: "clock.fill"
+        case .production: "movieclapper.fill"
+        }
+    }
+
+    /// Company names are free-form text, unlike the numeric stats, so they may
+    /// shrink to fit a card.
+    var valueIsShrinkable: Bool { self == .production }
+}
+
 struct EntryDetailStatCard: Identifiable {
-    let id: String
+    let kind: EntryDetailStatKind
     let title: LocalizedStringResource
     let value: String
-    let symbolName: String
+
+    var id: EntryDetailStatKind { kind }
+    var symbolName: String { kind.symbolName }
+    var valueIsShrinkable: Bool { kind.valueIsShrinkable }
 }
 
 struct EntryDetailPersonCard: Identifiable {

@@ -148,18 +148,24 @@ struct EntryDetailHeroSection: View {
 struct DetailStatCard: View {
     let card: EntryDetailStatCard
 
+    private var valueIsShrinkable: Bool { card.valueIsShrinkable }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading) {
             Image(systemName: card.symbolName)
                 .font(.headline)
                 .foregroundStyle(.blue)
+            Spacer()
             Text(card.value)
                 .font(.title3.weight(.bold))
+                .allowsTightening(valueIsShrinkable)
+                .minimumScaleFactor(valueIsShrinkable ? 0.65 : 1)
+            Spacer()
             Text(String(localized: card.title))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, minHeight: 80, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: 85, maxHeight: 85, alignment: .topLeading)
         .padding(16)
         .popupGlassPanel(cornerRadius: 24)
     }

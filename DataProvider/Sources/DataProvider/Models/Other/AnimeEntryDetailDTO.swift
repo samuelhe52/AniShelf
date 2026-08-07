@@ -149,6 +149,7 @@ public struct AnimeEntryDetailDTO: Equatable, Sendable {
     public var runtimeMinutes: Int?
     public var episodeCount: Int?
     public var seasonCount: Int?
+    public var productionCompanies: [AnimeEntryProductionCompanyDTO]
     public var characters: [AnimeEntryCharacterDTO]
     public var staff: [AnimeEntryStaffDTO]
     public var seasons: [AnimeEntrySeasonSummaryDTO]
@@ -169,6 +170,7 @@ public struct AnimeEntryDetailDTO: Equatable, Sendable {
         runtimeMinutes: Int? = nil,
         episodeCount: Int? = nil,
         seasonCount: Int? = nil,
+        productionCompanies: [AnimeEntryProductionCompanyDTO] = [],
         characters: [AnimeEntryCharacterDTO] = [],
         staff: [AnimeEntryStaffDTO] = [],
         seasons: [AnimeEntrySeasonSummaryDTO] = [],
@@ -189,6 +191,7 @@ public struct AnimeEntryDetailDTO: Equatable, Sendable {
         self.runtimeMinutes = runtimeMinutes
         self.episodeCount = episodeCount
         self.seasonCount = seasonCount
+        self.productionCompanies = productionCompanies
         self.characters = characters
         self.staff = staff
         self.seasons = seasons
@@ -238,6 +241,22 @@ public struct AnimeEntryDetailDTO: Equatable, Sendable {
                 )
             }
         )
+    }
+}
+
+public struct AnimeEntryProductionCompanyDTO: Equatable, Sendable, Identifiable {
+    public var id: Int
+    public var name: String
+    public var logoPath: String?
+
+    public init(
+        id: Int,
+        name: String,
+        logoPath: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.logoPath = TMDbImagePath.storagePath(from: logoPath)
     }
 }
 
