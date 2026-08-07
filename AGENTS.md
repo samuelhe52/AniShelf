@@ -22,7 +22,7 @@
   //
   ```
   Omit this header only when the user explicitly requests it.
-- Follow `swift-format` and keep edits aligned with existing project style.
+- Keep edits aligned with existing project style.
 - Use `LocalizedStringResource` whenever possible for user-facing SwiftUI strings, including labels, helper text, and accessibility copy.
 
 ## Testing
@@ -39,6 +39,19 @@
 - Write imperative, capitalized subjects; keep them concise and avoid periods.
 - Add a body when the change needs explanation.
 - For long-running, complex tasks, or when the task can be split into several subtasks cleanly, make coherent checkpoint commits along the way instead of waiting until the entire task is complete.
+
+## Releases
+
+- Start from an up-to-date `main` and review all changes since the latest release tag. Preserve unrelated working-tree changes.
+- Run the normal format and lint checks, relevant tests, and a Release build. Check the localization catalogs for missing translations.
+- Confirm that the target version has an appropriate What's New entry and that the app version is updated correctly.
+- Check whether `README.md` and `docs/anishelf_overview.md` need changes. Update them only with user permission.
+- With permission, create a preflight commit containing release preparation other than the Xcode project version change, then create the release commit containing the version change. These commits may be combined when the user requests it.
+- With permission, create an annotated `vX.Y` tag on the release commit and verify its target.
+- With permission, push `main`, then open a `main` to `release` pull request. Start an independent reviewer subagent to review the exact pull request diff without modifying it.
+- Address review findings and rerun affected validation before merging.
+- With permission, merge the pull request without squash or rebase so the tagged release commit is preserved.
+- With permission, push the release tag.
 
 ## Additional Notes
 
