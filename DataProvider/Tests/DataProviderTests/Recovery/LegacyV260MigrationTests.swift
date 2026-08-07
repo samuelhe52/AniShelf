@@ -64,7 +64,7 @@ struct LegacyV260MigrationTests {
         }
     }
 
-    @Test @MainActor func legacyV260StoreMigratesThroughCompatibilityPlan() throws {
+    @Test @MainActor func legacyV260StoreBridgesIntoCurrentMigrationPlan() throws {
         let directoryURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("AniShelfTests-legacy-v260-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
@@ -130,11 +130,19 @@ struct LegacyV260MigrationTests {
         legacyContainer.mainContext.insert(legacyEntry)
         try legacyContainer.mainContext.save()
 
+        let bridgeSchema = Schema(versionedSchema: SchemaV2_7_0.self)
+        let bridgeConfiguration = ModelConfiguration(schema: bridgeSchema, url: storeURL)
+        _ = try ModelContainer(
+            for: bridgeSchema,
+            migrationPlan: LegacyV260BridgePlan.self,
+            configurations: bridgeConfiguration
+        )
+
         let currentSchema = Schema(versionedSchema: CurrentSchema.self)
         let currentConfiguration = ModelConfiguration(schema: currentSchema, url: storeURL)
         let migratedContainer = try ModelContainer(
             for: currentSchema,
-            migrationPlan: LegacyV260MigrationPlan.self,
+            migrationPlan: MigrationPlan.self,
             configurations: currentConfiguration
         )
         let migratedProvider = DataProvider(

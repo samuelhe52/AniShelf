@@ -5,6 +5,7 @@
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/8/6.
 //
 
+import Foundation
 import SwiftData
 
 /// Loads a model container, using narrowly scoped compatibility measures when needed.
@@ -14,30 +15,42 @@ enum ModelContainerLoader {
         configuration: ModelConfiguration,
         allowsRecovery: Bool
     ) throws -> ModelContainer {
+        let makeCurrentContainer = {
+            try ModelContainer(
+                for: schema,
+                migrationPlan: MigrationPlan.self,
+                configurations: configuration
+            )
+        }
         let measures: [(name: String, attempt: () throws -> ModelContainer)] =
             allowsRecovery
             ? [
                 (
-                    "legacy-v2.6.0-migration",
+                    "legacy-v2.6.0-bridge",
                     {
-                        try ModelContainer(
-                            for: schema,
-                            migrationPlan: LegacyV260MigrationPlan.self,
-                            configurations: configuration
-                        )
+                        try bridgeLegacyV260Store(at: configuration.url)
+                        return try makeCurrentContainer()
                     }
                 )
             ] : []
 
         return try load(
-            primary: {
-                try ModelContainer(
-                    for: schema,
-                    migrationPlan: MigrationPlan.self,
-                    configurations: configuration
-                )
-            },
+            primary: makeCurrentContainer,
             recoveryMeasures: measures
+        )
+    }
+
+    private static func bridgeLegacyV260Store(at storeURL: URL) throws {
+        let bridgeSchema = Schema(versionedSchema: SchemaV2_7_0.self)
+        let bridgeConfiguration = ModelConfiguration(
+            schema: bridgeSchema,
+            url: storeURL,
+            cloudKitDatabase: .none
+        )
+        _ = try ModelContainer(
+            for: bridgeSchema,
+            migrationPlan: LegacyV260BridgePlan.self,
+            configurations: bridgeConfiguration
         )
     }
 
