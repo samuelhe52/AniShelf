@@ -1,0 +1,9 @@
+{
+  "id" : "d354d7f1-ca86-4b27-9d96-086a18f6f4c7",
+  "targets" : [
+    {
+      "id" : "160adf6c-903c-4a45-bbc5-8490f30c5e90",
+      "name" : "MyAnimeList"
+    }
+  ]
+}

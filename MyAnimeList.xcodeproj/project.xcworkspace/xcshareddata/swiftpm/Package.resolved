@@ -1,5 +1,5 @@
 {
-  "originHash" : "540d97151d6de5cda209b8be10710e5293076cc17ea444fbac74b8594d9472dd",
+  "originHash" : "8c4bd39758db236909d4cfa1a2f5aab5d2aae897c299c1f0716097742c7fe760",
   "pins" : [
     {
       "identity" : "alerttoast",
@@ -13,10 +13,10 @@
     {
       "identity" : "kingfisher",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/onevcat/Kingfisher",
+      "location" : "https://github.com/samuelhe52/Kingfisher",
       "state" : {
-        "revision" : "cf8be20d07654570554c8a8a4952bc8a5766a8b0",
-        "version" : "8.9.0"
+        "revision" : "410984bf301f4fa224fe56277b3f8672cc465c79",
+        "version" : "8.11.0"
       }
     },
     {
@@ -58,7 +58,7 @@
     {
       "identity" : "zipfoundation",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/weichsel/ZIPFoundation",
+      "location" : "https://github.com/samuelhe52/ZIPFoundation",
       "state" : {
         "revision" : "22787ffb59de99e5dc1fbfe80b19c97a904ad48d",
         "version" : "0.9.20"
