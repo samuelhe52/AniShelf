@@ -40,7 +40,7 @@ private actor TMDbResourceCache {
 final class InfoFetcher: Sendable {
     let tmdbClient: TMDbClient
     private let cache: TMDbResourceCache
-    private let fetchTranslationResponseData: @Sendable (String) async throws -> Data
+    private let fetchTMDbResponseData: @Sendable (String) async throws -> Data
 
     convenience init(apiKey: String? = nil) {
         self.init(
@@ -67,7 +67,7 @@ final class InfoFetcher: Sendable {
             httpClient: httpClient,
             configuration: configuration
         )
-        fetchTranslationResponseData = Self.makeTranslationResponseDataFetcher(
+        fetchTMDbResponseData = Self.makeTMDbResponseDataFetcher(
             apiKey: trimmedKey,
             httpClient: httpClient
         )
@@ -76,10 +76,10 @@ final class InfoFetcher: Sendable {
 
     init(
         client: TMDbClient,
-        fetchTranslationResponseData: @escaping @Sendable (String) async throws -> Data
+        fetchTMDbResponseData: @escaping @Sendable (String) async throws -> Data
     ) {
         tmdbClient = client
-        self.fetchTranslationResponseData = fetchTranslationResponseData
+        self.fetchTMDbResponseData = fetchTMDbResponseData
         cache = .init()
     }
 
@@ -226,11 +226,11 @@ final class InfoFetcher: Sendable {
         }
     }
 
-    func translationResponseData(path: String) async throws -> Data {
-        try await fetchTranslationResponseData(path)
+    func tmdbResponseData(path: String) async throws -> Data {
+        try await fetchTMDbResponseData(path)
     }
 
-    private static func makeTranslationResponseDataFetcher<HTTPClientType: HTTPClient>(
+    private static func makeTMDbResponseDataFetcher<HTTPClientType: HTTPClient>(
         apiKey: String?,
         httpClient: HTTPClientType
     ) -> @Sendable (String) async throws -> Data {

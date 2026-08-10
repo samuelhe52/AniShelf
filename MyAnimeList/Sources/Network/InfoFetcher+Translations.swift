@@ -176,7 +176,7 @@ extension InfoFetcher {
             // (for example `tv/35610` in `zh-TW`), but the upstream package models
             // those values as non-optional strings. Re-decode this endpoint
             // permissively so one sparse translation does not block entry creation.
-            let data = try await translationResponseData(path: path)
+            let data = try await tmdbResponseData(path: path)
             return try decodeLenientTranslationDictionaries(
                 from: data,
                 dataType: dataType,

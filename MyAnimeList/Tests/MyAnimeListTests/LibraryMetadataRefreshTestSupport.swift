@@ -83,7 +83,7 @@ func makeLibraryMetadataRefreshTestFetcher() -> InfoFetcher {
             httpClient: httpClient,
             configuration: .default
         ),
-        fetchTranslationResponseData: { path in
+        fetchTMDbResponseData: { path in
             libraryMetadataRefreshFixtureData(for: path)
         }
     )

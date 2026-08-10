@@ -9,6 +9,21 @@ import DataProvider
 import Foundation
 import TMDb
 
+struct TMDbSeriesExternalIDs: Equatable, Sendable {
+    let tvdbID: Int?
+    let imdbID: String?
+}
+
+fileprivate struct TMDbSeriesExternalIDsResponse: Decodable {
+    let tvdbID: Int?
+    let imdbID: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case tvdbID = "tvdb_id"
+        case imdbID = "imdb_id"
+    }
+}
+
 fileprivate struct TVSeriesPayload {
     let series: TVSeries
     let imageResources: ImageCollection
@@ -32,6 +47,18 @@ fileprivate struct TVSeriesPayload {
 }
 
 extension InfoFetcher {
+    func tvSeriesExternalIDs(tmdbID: Int) async throws -> TMDbSeriesExternalIDs {
+        let data = try await tmdbResponseData(path: "/tv/\(tmdbID)/external_ids")
+        let response = try JSONDecoder().decode(TMDbSeriesExternalIDsResponse.self, from: data)
+
+        return TMDbSeriesExternalIDs(
+            tvdbID: response.tvdbID,
+            imdbID: response.imdbID?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .nilIfEmpty
+        )
+    }
+
     /// Returns localized TV series info only when the TMDb entry is tagged as animation.
     ///
     /// Non-animation series return `nil` so direct ID batch lookups obey AniShelf's anime-only policy.

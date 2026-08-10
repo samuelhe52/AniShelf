@@ -13,6 +13,46 @@ import Testing
 @testable import MyAnimeList
 
 struct InfoFetcherMetadataMappingTests {
+    @Test func testTVSeriesExternalIDsUsesTypedRawTMDbResponse() async throws {
+        let responseData = Data(
+            #"{"id":209867,"imdb_id":"tt22248376","tvdb_id":424536}"#.utf8
+        )
+        let httpClient = RecordingTMDbHTTPClient { request in
+            #expect(request.url.path == "/3/tv/209867/external_ids")
+            return HTTPResponse(data: responseData)
+        }
+        let fetcher = InfoFetcher(
+            apiKey: "test-key",
+            httpClient: httpClient,
+            configuration: .default
+        )
+
+        let externalIDs = try await fetcher.tvSeriesExternalIDs(tmdbID: 209_867)
+        let requests = await httpClient.requests
+
+        #expect(externalIDs == TMDbSeriesExternalIDs(tvdbID: 424_536, imdbID: "tt22248376"))
+        #expect(requests.count == 1)
+        #expect(requests.first?.url.queryValue(named: "api_key") == "test-key")
+    }
+
+    @Test func testTVSeriesExternalIDsKeepsMissingIdentifiersOptional() async throws {
+        let responseData = Data(
+            #"{"id":274580,"imdb_id":"  \n","tvdb_id":null}"#.utf8
+        )
+        let httpClient = RecordingTMDbHTTPClient { _ in
+            HTTPResponse(data: responseData)
+        }
+        let fetcher = InfoFetcher(
+            apiKey: "test-key",
+            httpClient: httpClient,
+            configuration: .default
+        )
+
+        let externalIDs = try await fetcher.tvSeriesExternalIDs(tmdbID: 274_580)
+
+        #expect(externalIDs == TMDbSeriesExternalIDs(tvdbID: nil, imdbID: nil))
+    }
+
     @Test func testStableStaffIdentifierUsesCreditID() {
         let first = InfoFetcher.stableStaffIdentifier(
             creditID: "52fe4250c3a36847f8014a11",

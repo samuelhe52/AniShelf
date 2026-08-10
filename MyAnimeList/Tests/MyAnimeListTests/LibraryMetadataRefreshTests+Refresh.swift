@@ -119,7 +119,7 @@ extension LibraryMetadataRefreshTests {
                 httpClient: httpClient,
                 configuration: .default
             ),
-            fetchTranslationResponseData: { path in
+            fetchTMDbResponseData: { path in
                 libraryMetadataRefreshFixtureData(for: path)
             }
         )
@@ -352,7 +352,7 @@ extension LibraryMetadataRefreshTests {
                 httpClient: httpClient,
                 configuration: .default
             ),
-            fetchTranslationResponseData: { path in
+            fetchTMDbResponseData: { path in
                 try await probe.recordRequest(path: path)
                 return libraryMetadataRefreshFixtureData(for: path)
             }

@@ -801,8 +801,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/adamayoung/TMDb";
 			requirement = {
-				branch = main;
-				kind = branch;
+				kind = upToNextMajorVersion;
+				minimumVersion = 19.0.0;
 			};
 		};
 		9FB6FEEF2D8FCE5A00B423D0 /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
