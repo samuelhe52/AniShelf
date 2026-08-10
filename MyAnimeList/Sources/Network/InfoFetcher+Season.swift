@@ -318,7 +318,7 @@ extension InfoFetcher {
             ),
             genreIDs: parentSeries.genres?.map(\.id) ?? [],
             voteAverage: parentSeries.voteAverage,
-            runtimeMinutes: parentSeries.episodeRunTime?.first,
+            runtimeMinutes: Self.runtimeMinutes(from: parentSeries.episodeRunTime?.first),
             episodeCount: season.episodes?.count,
             productionCompanies: Self.productionCompanyDTOs(from: parentSeries.productionCompanies),
             characters: makeCharacters(

@@ -50,7 +50,7 @@ extension InfoFetcher {
         do {
             let translations = try await tmdbClient.movies.translations(forMovie: tmdbID)
             return translationDictionaries(from: translations)
-        } catch let error as TMDbError {
+        } catch {
             return try await fallbackTranslationDictionaries(
                 after: error,
                 path: "/movie/\(tmdbID)/translations",
@@ -65,7 +65,7 @@ extension InfoFetcher {
         do {
             let translations = try await tmdbClient.tvSeries.translations(forTVSeries: tmdbID)
             return translationDictionaries(from: translations)
-        } catch let error as TMDbError {
+        } catch {
             return try await fallbackTranslationDictionaries(
                 after: error,
                 path: "/tv/\(tmdbID)/translations",
@@ -85,7 +85,7 @@ extension InfoFetcher {
                 inTVSeries: parentSeriesID
             )
             return translationDictionaries(from: translations)
-        } catch let error as TMDbError {
+        } catch {
             return try await fallbackTranslationDictionaries(
                 after: error,
                 path: "/tv/\(parentSeriesID)/season/\(seasonNumber)/translations",

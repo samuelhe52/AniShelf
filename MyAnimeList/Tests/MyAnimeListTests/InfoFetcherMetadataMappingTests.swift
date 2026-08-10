@@ -13,6 +13,10 @@ import Testing
 @testable import MyAnimeList
 
 struct InfoFetcherMetadataMappingTests {
+    @Test func testRuntimeDurationMapsToWholeMinutes() {
+        #expect(InfoFetcher.runtimeMinutes(from: .seconds(90 * 60)) == 90)
+    }
+
     @Test func testTVSeriesExternalIDsUsesTypedRawTMDbResponse() async throws {
         let responseData = Data(
             #"{"id":209867,"imdb_id":"tt22248376","tvdb_id":424536}"#.utf8

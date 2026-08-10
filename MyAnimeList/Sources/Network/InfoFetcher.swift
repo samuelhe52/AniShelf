@@ -266,6 +266,10 @@ final class InfoFetcher: Sendable {
 }
 
 extension InfoFetcher {
+    static func runtimeMinutes(from duration: Duration?) -> Int? {
+        duration.map { Int($0.components.seconds / 60) }
+    }
+
     static func productionCompanyDTOs(
         from companies: [ProductionCompany]?
     ) -> [AnimeEntryProductionCompanyDTO] {

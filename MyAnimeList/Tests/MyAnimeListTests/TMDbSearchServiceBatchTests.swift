@@ -297,10 +297,13 @@ struct TMDbSearchServiceBatchTests {
 
     @MainActor
     @Test func testBatchSearchDirectMovieFailureBecomesBatchError() async {
+        let expectedError = TMDbError.unauthorised(
+            TMDbErrorContext(statusMessage: "Invalid API key")
+        )
         let service = TMDbSearchService(
             client: makeClient(
                 directMovieErrorsByID: [
-                    4935: TMDbError.unauthorised("Invalid API key")
+                    4935: expectedError
                 ]
             )
         )
@@ -311,7 +314,7 @@ struct TMDbSearchServiceBatchTests {
             Issue.record("Expected batchStatus to be .error")
             return
         }
-        #expect((error as? TMDbError) == .unauthorised("Invalid API key"))
+        #expect((error as? TMDbError) == expectedError)
         #expect(service.batchResults.isEmpty)
         #expect(service.batchRegisteredCount == 0)
     }
