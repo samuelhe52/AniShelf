@@ -103,6 +103,7 @@
 				Tests/MyAnimeListTests/TMDbSearchServiceBatchTests.swift,
 				Tests/MyAnimeListTests/TVMazeClientTests.swift,
 				Tests/MyAnimeListTests/TVMazeModelsTests.swift,
+				Tests/MyAnimeListTests/TVMazeResolverTests.swift,
 				Tests/MyAnimeListTests/UserEntryInfoAndLibraryStatsTests.swift,
 				Tests/MyAnimeListTests/WhatsNewAndRefreshTests.swift,
 				Tests/MyAnimeListUITests/MyAnimeListUITests.swift,
@@ -163,6 +164,7 @@
 				Tests/MyAnimeListTests/TMDbSearchServiceBatchTests.swift,
 				Tests/MyAnimeListTests/TVMazeClientTests.swift,
 				Tests/MyAnimeListTests/TVMazeModelsTests.swift,
+				Tests/MyAnimeListTests/TVMazeResolverTests.swift,
 				Tests/MyAnimeListTests/UserEntryInfoAndLibraryStatsTests.swift,
 				Tests/MyAnimeListTests/WhatsNewAndRefreshTests.swift,
 			);

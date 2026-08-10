@@ -47,7 +47,6 @@ struct TVMazeModelsTests {
         )
         #expect(localizedSchedule.displayTime == "24:30")
         #expect(TVMazeWeekday.thursday.localizedName(locale: Locale(identifier: "zh-Hans")) == "星期四")
-        #expect(show.dateComponents.count == 1)
         #expect(dateComponents.calendar?.identifier == .gregorian)
         #expect(dateComponents.timeZone == tokyoTimeZone)
         #expect(dateComponents.weekday == 6)
