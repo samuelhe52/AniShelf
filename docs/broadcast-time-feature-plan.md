@@ -2,96 +2,78 @@
 
 Created: 2026-08-09
 
-This document records the current direction for adding TVMaze broadcast-time
-information to AniShelf. It is an outline rather than a final technical design.
-
-## Goal
+## Scope
 
 Allow AniShelf to fetch and present a series' recurring broadcast time from
-TVMaze when the user opens its detail view.
-
-The feature is on-demand and setting-gated. Broadcast information will not be
-added to the SwiftData schema.
+TVMaze when the user opens its detail view. The feature is on-demand,
+setting-gated, and does not add broadcast data to the SwiftData schema.
 
 ## User Experience
 
-- Start resolving broadcast information when an eligible detail view opens and
-  the feature's preconditions are met.
-- Keep the result out of the main detail content. Present it from the existing
-  ellipsis menu.
-- When AniShelf finds a direct match, show its broadcast weekday and time in a
-  clearly labelled airtime section in that menu.
-- When the identifier-based lookup cannot produce a match, show an action in
-  the menu asking the user to validate a title-based result.
-- Present title-based candidates in a sheet with enough returned metadata for
-  the user to decide whether an entry is correct.
-- After the user confirms a candidate, use that match for the current entry and
-  remember it for later detail sessions.
+- Resolve eligible entries when their detail views open. Present successful
+  results in an airtime section of the existing ellipsis menu, not in the main
+  detail content.
+- If identifier lookup fails, offer a button asking the user to help confirm a
+  match. Tapping it opens the validation sheet and starts title fallback.
+- Show one hydrated candidate with enough metadata and next-airing information
+  to make a decision. Remember it only after explicit user confirmation.
 
-Notification booking may be added later, but it is not part of this work.
+## Resolver Contract
 
-## Resolution Direction
+The resolver exposes two operations:
 
-The runtime flow is:
+1. **Automatic resolution:** derive the TMDb series ID, use a saved mapping or
+   retrieve its TVDB and IMDb IDs for TVMaze lookup, then fetch the full show
+   with its embedded next episode. On an ID miss, return a user-assistance
+   outcome without starting title search.
+2. **User-initiated title fallback:** only after the validation sheet opens,
+   search for the top TVMaze ID and fetch the same full show response.
 
-1. Resolve the relevant TMDb series ID from the AniShelf entry.
-2. Check for a previously recorded TMDb-to-TVMaze mapping.
-3. If a mapping exists, use its TVMaze ID to fetch the current show and schedule
-   information.
-4. Otherwise, request the series' TVDB and IMDb identifiers from TMDb.
-5. Use those identifiers to look for a direct TVMaze match.
-6. If the identifier path does not match, make title-based candidates available
-   for user validation.
-7. Record a user-confirmed TMDb-to-TVMaze mapping so later detail sessions can
-   skip the TMDb external-ID request.
+Each operation returns a hydrated show or a resolution outcome. ID discovery
+and show retrieval may be separate internally but are never exposed as caller-
+orchestrated stages. Title fallback does not write the TMDb-to-TVMaze mapping;
+confirmation does.
 
 ## Feature Boundaries
 
-The business logic should be divided into three small parts:
-
 - A narrow TMDb external-ID provider responsible only for retrieving the TVDB
-  and IMDb identifiers needed by this feature.
-- A TVMaze client responsible for the limited lookup, search, and show requests
-  used by the feature.
-- A resolver responsible for mapping an AniShelf entry through those providers
-  and returning either a match with schedule information or an outcome that
-  requires user validation.
+  and IMDb IDs.
+- A TVMaze client responsible for ID lookup, top-result title search, and full
+  show retrieval with the next episode embedded.
+- A resolver responsible for the two workflows above.
 
-The clients must return dedicated, typed data structures. They must not expose
-raw JSON or dictionary-based results. These types should have descriptive names
-without a `DTO` suffix and should contain only fields the feature uses.
+Clients return dedicated types containing only fields the feature uses. They do
+not expose raw JSON, dictionaries, or types with a `DTO` suffix.
 
-## Storage And Caching
+## Schedule Representation
 
-- Do not persist broadcast schedules or TVMaze response data in SwiftData.
-- Persist only the small mapping from a TMDb series ID to a confirmed TVMaze
-  show ID.
+- Keep the provider-local schedule and its `TimeZone` as the canonical source.
+- Derive device-local weekdays and display times for presentation. Preserve
+  late-night broadcast notation where useful, such as Thursday `24:30`, rather
+  than presenting it as an apparently unrelated Friday slot.
+- Keep the next episode's `airstamp` as a `Date`.
+- Expose provider-zone `DateComponents` for future repeating notifications;
+  booking those notifications remains out of scope.
+
+## Persistence And Networking
+
+- Persist only confirmed TMDb-to-TVMaze mappings, not schedules or TVMaze
+  responses.
 - The final storage location for this map remains open: UserDefaults and a small
   dedicated file are both candidates.
-- Use normal URL-session HTTP caching for network responses. A separately
-  configured custom URL session is not required by the current direction.
-
-## Settings
-
-The feature will be controlled through settings. The exact set of options and
-their wording still need to be finalized.
+- Use normal URL-session HTTP caching; no custom session is currently needed.
 
 ## Implementation Outline
 
-1. Add the narrow typed models, TMDb external-ID provider, TVMaze client, and
-   resolver.
-2. Add the persistent TMDb-to-TVMaze mapping store.
-3. Start resolution from the detail-view lifecycle when the feature is enabled
-   and the entry is eligible.
-4. Add the airtime section and validation action to the detail ellipsis menu.
-5. Add the candidate-validation sheet and connect confirmation to the mapping
-   store.
-6. Add the finalized settings controls and focused tests for the accepted
-   resolution paths.
+1. Complete the plumbing with the TMDb external-ID provider and resolver around
+   the TVMaze models and client.
+2. Add the confirmed-mapping store.
+3. Integrate resolution, the airtime menu, the validation sheet, and settings
+   with the detail-view lifecycle.
+4. Add focused tests for the accepted resolution paths.
 
 ## Open Decisions
 
 - Whether the mapping should live in UserDefaults or a dedicated file.
 - The exact settings options, wording, and defaults.
 - The final metadata and visual layout used by the validation sheet.
-- The precise presentation and formatting of broadcast weekday and time.
