@@ -25,6 +25,9 @@ struct TVMazeResolver: Sendable {
     /// Returns a previously confirmed TVMaze show ID for a TMDb series ID.
     private let loadMappedShowID: @Sendable (Int) async throws -> Int?
 
+    /// Records a confirmed TVMaze show ID for a TMDb series ID.
+    private let saveMappedShowID: @Sendable (Int, Int) async throws -> Void
+
     /// Retrieves the TVDB and IMDb identifiers attached to a TMDb series.
     private let fetchExternalIDs: @Sendable (Int) async throws -> TMDbSeriesExternalIDs
 
@@ -45,10 +48,18 @@ struct TVMazeResolver: Sendable {
     init(
         infoFetcher: InfoFetcher = InfoFetcher(),
         tvMazeClient: TVMazeClient = TVMazeClient(),
-        loadMappedShowID: @escaping @Sendable (Int) async throws -> Int? = { _ in nil }
+        mappingStore: TVMazeConfirmedMappingStore = .shared
     ) {
         self.init(
-            loadMappedShowID: loadMappedShowID,
+            loadMappedShowID: { tmdbSeriesID in
+                await mappingStore.showID(forTMDbSeriesID: tmdbSeriesID)
+            },
+            saveMappedShowID: { tmdbSeriesID, tvMazeShowID in
+                await mappingStore.confirm(
+                    showID: tvMazeShowID,
+                    forTMDbSeriesID: tmdbSeriesID
+                )
+            },
             fetchExternalIDs: { tmdbSeriesID in
                 try await infoFetcher.tvSeriesExternalIDs(tmdbID: tmdbSeriesID)
             },
@@ -69,6 +80,7 @@ struct TVMazeResolver: Sendable {
 
     init(
         loadMappedShowID: @escaping @Sendable (Int) async throws -> Int?,
+        saveMappedShowID: @escaping @Sendable (Int, Int) async throws -> Void,
         fetchExternalIDs: @escaping @Sendable (Int) async throws -> TMDbSeriesExternalIDs,
         lookupTVDBShowID: @escaping @Sendable (Int) async throws -> Int?,
         lookupIMDbShowID: @escaping @Sendable (String) async throws -> Int?,
@@ -76,6 +88,7 @@ struct TVMazeResolver: Sendable {
         fetchShow: @escaping @Sendable (Int) async throws -> TVMazeShow?
     ) {
         self.loadMappedShowID = loadMappedShowID
+        self.saveMappedShowID = saveMappedShowID
         self.fetchExternalIDs = fetchExternalIDs
         self.lookupTVDBShowID = lookupTVDBShowID
         self.lookupIMDbShowID = lookupIMDbShowID
@@ -103,6 +116,7 @@ struct TVMazeResolver: Sendable {
             let showID = try await lookupTVDBShowID(tvdbID),
             let show = try await fetchShow(showID)
         {
+            try await saveMappedShowID(tmdbSeriesID, show.id)
             return .resolved(show)
         }
 
@@ -110,6 +124,7 @@ struct TVMazeResolver: Sendable {
             let showID = try await lookupIMDbShowID(imdbID),
             let show = try await fetchShow(showID)
         {
+            try await saveMappedShowID(tmdbSeriesID, show.id)
             return .resolved(show)
         }
 
@@ -125,6 +140,24 @@ struct TVMazeResolver: Sendable {
     func resolveTitleFallback(named title: String) async throws -> TVMazeShow? {
         guard let showID = try await searchShowID(title) else { return nil }
         return try await fetchShow(showID)
+    }
+
+    /// Records a title-search candidate only after the user explicitly confirms it.
+    ///
+    /// Seasons are stored against their parent series. Movies remain ineligible and return
+    /// `false` without writing a mapping.
+    @discardableResult
+    func confirmTitleFallbackCandidate(
+        _ candidate: TVMazeShow,
+        entryType: AnimeType,
+        tmdbID: Int
+    ) async throws -> Bool {
+        guard let tmdbSeriesID = seriesTMDbID(entryType: entryType, tmdbID: tmdbID) else {
+            return false
+        }
+
+        try await saveMappedShowID(tmdbSeriesID, candidate.id)
+        return true
     }
 
     // MARK: - Entry Identity

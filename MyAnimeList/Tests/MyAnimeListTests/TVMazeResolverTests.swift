@@ -24,6 +24,7 @@ struct TVMazeResolverTests {
 
         #expect(result == .resolved(expectedShow))
         #expect(await probe.externalIDTMDbIDs.isEmpty)
+        #expect(await probe.savedMappings.isEmpty)
     }
 
     @Test func automaticResolutionUsesSeasonParentAndFallsBackFromTVDBToIMDb() async throws {
@@ -44,6 +45,23 @@ struct TVMazeResolverTests {
         #expect(await probe.externalIDTMDbIDs == [20])
         #expect(await probe.lookedUpTVDBIDs == [30])
         #expect(await probe.lookedUpIMDbIDs == ["tt40"])
+        #expect(await probe.savedMappings == [TVMazeResolverProbe.Mapping(tmdbSeriesID: 20, showID: 80)])
+    }
+
+    @Test func automaticResolutionPersistsHydratedTVDBMatch() async throws {
+        let expectedShow = makeTVMazeResolverTestShow(id: 70)
+        let probe = TVMazeResolverProbe(
+            externalIDs: [10: TMDbSeriesExternalIDs(tvdbID: 30, imdbID: "tt40")],
+            tvdbShowIDs: [30: 70],
+            shows: [70: expectedShow]
+        )
+        let resolver = makeTVMazeResolver(probe: probe)
+
+        let result = try await resolver.resolve(entryType: .series, tmdbID: 10)
+
+        #expect(result == .resolved(expectedShow))
+        #expect(await probe.lookedUpIMDbIDs.isEmpty)
+        #expect(await probe.savedMappings == [TVMazeResolverProbe.Mapping(tmdbSeriesID: 10, showID: 70)])
     }
 
     @Test func automaticIDMissRequestsUserAssistanceWithoutTitleSearch() async throws {
@@ -70,11 +88,41 @@ struct TVMazeResolverTests {
 
         #expect(result == expectedShow)
         #expect(await probe.searchedTitles == ["Frieren"])
+        #expect(await probe.savedMappings.isEmpty)
+
+        let didConfirm = try await resolver.confirmTitleFallbackCandidate(
+            expectedShow,
+            entryType: .season(seasonNumber: 2, parentSeriesID: 10),
+            tmdbID: 11
+        )
+
+        #expect(didConfirm)
+        #expect(await probe.savedMappings == [TVMazeResolverProbe.Mapping(tmdbSeriesID: 10, showID: 90)])
+    }
+
+    @Test func moviesCannotConfirmTitleFallbackCandidates() async throws {
+        let candidate = makeTVMazeResolverTestShow(id: 90)
+        let probe = TVMazeResolverProbe()
+        let resolver = makeTVMazeResolver(probe: probe)
+
+        let didConfirm = try await resolver.confirmTitleFallbackCandidate(
+            candidate,
+            entryType: .movie,
+            tmdbID: 10
+        )
+
+        #expect(!didConfirm)
+        #expect(await probe.savedMappings.isEmpty)
     }
 }
 
 private actor TVMazeResolverProbe {
-    private let mappedShowIDs: [Int: Int]
+    struct Mapping: Equatable, Sendable {
+        let tmdbSeriesID: Int
+        let showID: Int
+    }
+
+    private var mappedShowIDs: [Int: Int]
     private let externalIDs: [Int: TMDbSeriesExternalIDs]
     private let tvdbShowIDs: [Int: Int]
     private let imdbShowIDs: [String: Int]
@@ -85,6 +133,7 @@ private actor TVMazeResolverProbe {
     private(set) var lookedUpTVDBIDs: [Int] = []
     private(set) var lookedUpIMDbIDs: [String] = []
     private(set) var searchedTitles: [String] = []
+    private(set) var savedMappings: [Mapping] = []
 
     init(
         mappedShowIDs: [Int: Int] = [:],
@@ -104,6 +153,11 @@ private actor TVMazeResolverProbe {
 
     func mappedShowID(tmdbSeriesID: Int) -> Int? {
         mappedShowIDs[tmdbSeriesID]
+    }
+
+    func saveMappedShowID(tmdbSeriesID: Int, showID: Int) {
+        mappedShowIDs[tmdbSeriesID] = showID
+        savedMappings.append(Mapping(tmdbSeriesID: tmdbSeriesID, showID: showID))
     }
 
     func externalIDs(tmdbSeriesID: Int) -> TMDbSeriesExternalIDs {
@@ -135,6 +189,9 @@ fileprivate func makeTVMazeResolver(probe: TVMazeResolverProbe) -> TVMazeResolve
     TVMazeResolver(
         loadMappedShowID: { tmdbSeriesID in
             await probe.mappedShowID(tmdbSeriesID: tmdbSeriesID)
+        },
+        saveMappedShowID: { tmdbSeriesID, showID in
+            await probe.saveMappedShowID(tmdbSeriesID: tmdbSeriesID, showID: showID)
         },
         fetchExternalIDs: { tmdbSeriesID in
             await probe.externalIDs(tmdbSeriesID: tmdbSeriesID)
