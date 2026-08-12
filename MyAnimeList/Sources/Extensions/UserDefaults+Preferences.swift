@@ -28,6 +28,10 @@ extension UserDefaults {
         bool(forKey: .episodeProgressTrackingEnabled, defaultValue: false)
     }
 
+    var isBroadcastScheduleEnabled: Bool {
+        bool(forKey: .broadcastScheduleEnabled, defaultValue: false)
+    }
+
     var isLibraryPosterProgressBarOverlayEnabled: Bool {
         bool(forKey: .libraryPosterProgressBarOverlayEnabled, defaultValue: true)
     }

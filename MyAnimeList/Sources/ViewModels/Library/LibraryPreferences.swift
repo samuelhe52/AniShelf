@@ -237,6 +237,7 @@ struct LibraryPreferences {
                 .showProductionCompanyInsteadOfRuntime,
                 .libraryScoringEnabled,
                 .episodeProgressTrackingEnabled,
+                .broadcastScheduleEnabled,
                 .libraryPosterProgressBarOverlayEnabled,
                 .libraryHideDroppedByDefault,
                 .libraryAutoPrefetchImagesOnAddAndRestore,

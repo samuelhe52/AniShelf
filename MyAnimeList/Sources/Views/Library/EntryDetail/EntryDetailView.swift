@@ -18,6 +18,7 @@ struct EntryDetailView: View {
         Language.followsSystemPreference()
     @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
     @AppStorage(.episodeProgressTrackingEnabled) private var episodeProgressTrackingEnabled = false
+    @AppStorage(.broadcastScheduleEnabled) private var broadcastScheduleEnabled = false
     @AppStorage(.showProductionCompanyInsteadOfRuntime)
     private var showProductionCompanyInsteadOfRuntime = false
 
@@ -201,12 +202,23 @@ struct EntryDetailView: View {
                 language: currentLanguage
             )
         }
+        .task(id: broadcastActivation) {
+            session.broadcast.update(broadcastActivation)
+        }
         .onChange(of: session.instanceID) {
             cancelConversionTask()
         }
         .onDisappear {
             cancelConversionTask()
         }
+    }
+
+    private var broadcastActivation: EntryDetailBroadcastModel.Activation {
+        EntryDetailBroadcastModel.Activation(
+            isEnabled: broadcastScheduleEnabled,
+            entryType: session.entry.type,
+            seriesStatus: session.entry.detail?.status
+        )
     }
 
     // MARK: - Hero

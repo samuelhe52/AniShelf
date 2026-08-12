@@ -20,17 +20,19 @@ struct TVMazeResolverTests {
         )
         let resolver = makeTVMazeResolver(probe: probe)
 
-        let result = try await resolver.resolve(entryType: .series, tmdbID: 10)
+        let result = try await resolver.resolve(
+            entryType: .series,
+            tmdbID: 10,
+            externalIDs: TMDbSeriesExternalIDs(tvdbID: nil, imdbID: nil)
+        )
 
         #expect(result == .resolved(expectedShow))
-        #expect(await probe.externalIDTMDbIDs.isEmpty)
         #expect(await probe.savedMappings.isEmpty)
     }
 
     @Test func automaticResolutionUsesSeasonParentAndFallsBackFromTVDBToIMDb() async throws {
         let expectedShow = makeTVMazeResolverTestShow(id: 80)
         let probe = TVMazeResolverProbe(
-            externalIDs: [20: TMDbSeriesExternalIDs(tvdbID: 30, imdbID: "tt40")],
             imdbShowIDs: ["tt40": 80],
             shows: [80: expectedShow]
         )
@@ -38,11 +40,11 @@ struct TVMazeResolverTests {
 
         let result = try await resolver.resolve(
             entryType: .season(seasonNumber: 2, parentSeriesID: 20),
-            tmdbID: 21
+            tmdbID: 21,
+            externalIDs: TMDbSeriesExternalIDs(tvdbID: 30, imdbID: "tt40")
         )
 
         #expect(result == .resolved(expectedShow))
-        #expect(await probe.externalIDTMDbIDs == [20])
         #expect(await probe.lookedUpTVDBIDs == [30])
         #expect(await probe.lookedUpIMDbIDs == ["tt40"])
         #expect(await probe.savedMappings == [TVMazeResolverProbe.Mapping(tmdbSeriesID: 20, showID: 80)])
@@ -51,13 +53,16 @@ struct TVMazeResolverTests {
     @Test func automaticResolutionPersistsHydratedTVDBMatch() async throws {
         let expectedShow = makeTVMazeResolverTestShow(id: 70)
         let probe = TVMazeResolverProbe(
-            externalIDs: [10: TMDbSeriesExternalIDs(tvdbID: 30, imdbID: "tt40")],
             tvdbShowIDs: [30: 70],
             shows: [70: expectedShow]
         )
         let resolver = makeTVMazeResolver(probe: probe)
 
-        let result = try await resolver.resolve(entryType: .series, tmdbID: 10)
+        let result = try await resolver.resolve(
+            entryType: .series,
+            tmdbID: 10,
+            externalIDs: TMDbSeriesExternalIDs(tvdbID: 30, imdbID: "tt40")
+        )
 
         #expect(result == .resolved(expectedShow))
         #expect(await probe.lookedUpIMDbIDs.isEmpty)
@@ -65,12 +70,14 @@ struct TVMazeResolverTests {
     }
 
     @Test func automaticIDMissRequestsUserAssistanceWithoutTitleSearch() async throws {
-        let probe = TVMazeResolverProbe(
-            externalIDs: [10: TMDbSeriesExternalIDs(tvdbID: nil, imdbID: nil)]
-        )
+        let probe = TVMazeResolverProbe()
         let resolver = makeTVMazeResolver(probe: probe)
 
-        let result = try await resolver.resolve(entryType: .series, tmdbID: 10)
+        let result = try await resolver.resolve(
+            entryType: .series,
+            tmdbID: 10,
+            externalIDs: TMDbSeriesExternalIDs(tvdbID: nil, imdbID: nil)
+        )
 
         #expect(result == .requiresUserAssistance)
         #expect(await probe.searchedTitles.isEmpty)
@@ -123,13 +130,11 @@ private actor TVMazeResolverProbe {
     }
 
     private var mappedShowIDs: [Int: Int]
-    private let externalIDs: [Int: TMDbSeriesExternalIDs]
     private let tvdbShowIDs: [Int: Int]
     private let imdbShowIDs: [String: Int]
     private let titleShowIDs: [String: Int]
     private let shows: [Int: TVMazeShow]
 
-    private(set) var externalIDTMDbIDs: [Int] = []
     private(set) var lookedUpTVDBIDs: [Int] = []
     private(set) var lookedUpIMDbIDs: [String] = []
     private(set) var searchedTitles: [String] = []
@@ -137,14 +142,12 @@ private actor TVMazeResolverProbe {
 
     init(
         mappedShowIDs: [Int: Int] = [:],
-        externalIDs: [Int: TMDbSeriesExternalIDs] = [:],
         tvdbShowIDs: [Int: Int] = [:],
         imdbShowIDs: [String: Int] = [:],
         titleShowIDs: [String: Int] = [:],
         shows: [Int: TVMazeShow] = [:]
     ) {
         self.mappedShowIDs = mappedShowIDs
-        self.externalIDs = externalIDs
         self.tvdbShowIDs = tvdbShowIDs
         self.imdbShowIDs = imdbShowIDs
         self.titleShowIDs = titleShowIDs
@@ -158,11 +161,6 @@ private actor TVMazeResolverProbe {
     func saveMappedShowID(tmdbSeriesID: Int, showID: Int) {
         mappedShowIDs[tmdbSeriesID] = showID
         savedMappings.append(Mapping(tmdbSeriesID: tmdbSeriesID, showID: showID))
-    }
-
-    func externalIDs(tmdbSeriesID: Int) -> TMDbSeriesExternalIDs {
-        externalIDTMDbIDs.append(tmdbSeriesID)
-        return externalIDs[tmdbSeriesID] ?? TMDbSeriesExternalIDs(tvdbID: nil, imdbID: nil)
     }
 
     func lookupTVDBShowID(tvdbID: Int) -> Int? {
@@ -192,9 +190,6 @@ fileprivate func makeTVMazeResolver(probe: TVMazeResolverProbe) -> TVMazeResolve
         },
         saveMappedShowID: { tmdbSeriesID, showID in
             await probe.saveMappedShowID(tmdbSeriesID: tmdbSeriesID, showID: showID)
-        },
-        fetchExternalIDs: { tmdbSeriesID in
-            await probe.externalIDs(tmdbSeriesID: tmdbSeriesID)
         },
         lookupTVDBShowID: { tvdbID in
             await probe.lookupTVDBShowID(tvdbID: tvdbID)

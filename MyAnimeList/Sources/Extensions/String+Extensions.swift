@@ -26,6 +26,7 @@ extension String {
     static let showProductionCompanyInsteadOfRuntime = "ShowProductionCompanyInsteadOfRuntime"
     static let libraryScoringEnabled = "LibraryScoringEnabled"
     static let episodeProgressTrackingEnabled = "EpisodeProgressTrackingEnabled"
+    static let broadcastScheduleEnabled = "BroadcastScheduleEnabled"
     static let libraryPosterProgressBarOverlayEnabled = "LibraryPosterProgressBarOverlayEnabled"
     static let libraryHideDroppedByDefault = "LibraryHideDroppedByDefault"
     static let libraryDefaultWatchStatus = "LibraryDefaultWatchStatus"
@@ -74,6 +75,7 @@ extension String {
         .showProductionCompanyInsteadOfRuntime,
         .libraryScoringEnabled,
         .episodeProgressTrackingEnabled,
+        .broadcastScheduleEnabled,
         .libraryPosterProgressBarOverlayEnabled,
         .libraryHideDroppedByDefault,
         .libraryDefaultWatchStatus,
@@ -98,6 +100,7 @@ extension String {
         .showProductionCompanyInsteadOfRuntime,
         .libraryScoringEnabled,
         .episodeProgressTrackingEnabled,
+        .broadcastScheduleEnabled,
         .libraryPosterProgressBarOverlayEnabled,
         .libraryHideDroppedByDefault,
         .libraryDefaultWatchStatus,

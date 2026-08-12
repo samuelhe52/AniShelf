@@ -46,6 +46,7 @@ final class EntryDetailSession {
     let entry: AnimeEntry
     let entryIdentity: LibraryEntrySyncIdentity
     let model: EntryDetailViewModel
+    let broadcast: EntryDetailBroadcastModel
     private let repository: LibraryRepository
 
     var presentation = EntryDetailPresentationState()
@@ -68,6 +69,8 @@ final class EntryDetailSession {
     init(
         entry: AnimeEntry,
         repository: LibraryRepository,
+        broadcastEligibilityChecker: TMDbBroadcastEligibilityChecker = .init(),
+        broadcastResolver: TVMazeResolver = TVMazeResolver(),
         isCharacterExpanded: Bool? = nil,
         isStaffExpanded: Bool? = nil
     ) {
@@ -75,6 +78,12 @@ final class EntryDetailSession {
         self.entryIdentity = entry.syncIdentity
         self.repository = repository
         self.model = EntryDetailViewModel(repository: repository)
+        self.broadcast = EntryDetailBroadcastModel(
+            entryType: entry.type,
+            tmdbID: entry.tmdbID,
+            eligibilityChecker: broadcastEligibilityChecker,
+            resolver: broadcastResolver
+        )
         self.originalUserInfo = entry.userInfo
         self.originalTrackingUpdatedAt = entry.trackingUpdatedAt
         self.isCharacterExpanded =
@@ -125,6 +134,16 @@ final class EntryDetailSession {
 @MainActor
 final class EntryDetailSessionStore {
     private(set) var presentedSession: EntryDetailSession?
+    private let broadcastEligibilityChecker: TMDbBroadcastEligibilityChecker
+    private let broadcastResolver: TVMazeResolver
+
+    init(
+        broadcastEligibilityChecker: TMDbBroadcastEligibilityChecker = .init(),
+        broadcastResolver: TVMazeResolver = TVMazeResolver()
+    ) {
+        self.broadcastEligibilityChecker = broadcastEligibilityChecker
+        self.broadcastResolver = broadcastResolver
+    }
 
     @discardableResult
     func synchronizePresentedDetail(
@@ -133,18 +152,23 @@ final class EntryDetailSessionStore {
         resolveEntry: (LibraryEntrySyncIdentity) -> AnimeEntry?
     ) -> Bool {
         guard let identity else {
+            presentedSession?.broadcast.cancel()
             presentedSession = nil
             return true
         }
 
         guard let entry = resolveEntry(identity) else {
+            presentedSession?.broadcast.cancel()
             presentedSession = nil
             return false
         }
         guard presentedSession?.entry === entry else {
+            presentedSession?.broadcast.cancel()
             presentedSession = EntryDetailSession(
                 entry: entry,
-                repository: repository
+                repository: repository,
+                broadcastEligibilityChecker: broadcastEligibilityChecker,
+                broadcastResolver: broadcastResolver
             )
             return true
         }

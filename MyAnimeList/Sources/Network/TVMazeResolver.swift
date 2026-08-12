@@ -28,9 +28,6 @@ struct TVMazeResolver: Sendable {
     /// Records a confirmed TVMaze show ID for a TMDb series ID.
     private let saveMappedShowID: @Sendable (Int, Int) async throws -> Void
 
-    /// Retrieves the TVDB and IMDb identifiers attached to a TMDb series.
-    private let fetchExternalIDs: @Sendable (Int) async throws -> TMDbSeriesExternalIDs
-
     /// Finds the TVMaze show ID associated with a TVDB ID.
     private let lookupTVDBShowID: @Sendable (Int) async throws -> Int?
 
@@ -46,7 +43,6 @@ struct TVMazeResolver: Sendable {
     // MARK: - Initialization
 
     init(
-        infoFetcher: InfoFetcher = InfoFetcher(),
         tvMazeClient: TVMazeClient = TVMazeClient(),
         mappingStore: TVMazeConfirmedMappingStore = .shared
     ) {
@@ -59,9 +55,6 @@ struct TVMazeResolver: Sendable {
                     showID: tvMazeShowID,
                     forTMDbSeriesID: tmdbSeriesID
                 )
-            },
-            fetchExternalIDs: { tmdbSeriesID in
-                try await infoFetcher.tvSeriesExternalIDs(tmdbID: tmdbSeriesID)
             },
             lookupTVDBShowID: { tvdbID in
                 try await tvMazeClient.lookupShowID(tvdbID: tvdbID)
@@ -81,7 +74,6 @@ struct TVMazeResolver: Sendable {
     init(
         loadMappedShowID: @escaping @Sendable (Int) async throws -> Int?,
         saveMappedShowID: @escaping @Sendable (Int, Int) async throws -> Void,
-        fetchExternalIDs: @escaping @Sendable (Int) async throws -> TMDbSeriesExternalIDs,
         lookupTVDBShowID: @escaping @Sendable (Int) async throws -> Int?,
         lookupIMDbShowID: @escaping @Sendable (String) async throws -> Int?,
         searchShowID: @escaping @Sendable (String) async throws -> Int?,
@@ -89,7 +81,6 @@ struct TVMazeResolver: Sendable {
     ) {
         self.loadMappedShowID = loadMappedShowID
         self.saveMappedShowID = saveMappedShowID
-        self.fetchExternalIDs = fetchExternalIDs
         self.lookupTVDBShowID = lookupTVDBShowID
         self.lookupIMDbShowID = lookupIMDbShowID
         self.searchShowID = searchShowID
@@ -99,7 +90,11 @@ struct TVMazeResolver: Sendable {
     // MARK: - Automatic Resolution
 
     /// Resolves an eligible entry without performing title search.
-    func resolve(entryType: AnimeType, tmdbID: Int) async throws -> TVMazeAutomaticResolution {
+    func resolve(
+        entryType: AnimeType,
+        tmdbID: Int,
+        externalIDs: TMDbSeriesExternalIDs
+    ) async throws -> TVMazeAutomaticResolution {
         guard let tmdbSeriesID = seriesTMDbID(entryType: entryType, tmdbID: tmdbID) else {
             return .ineligible
         }
@@ -109,8 +104,6 @@ struct TVMazeResolver: Sendable {
         {
             return .resolved(show)
         }
-
-        let externalIDs = try await fetchExternalIDs(tmdbSeriesID)
 
         if let tvdbID = externalIDs.tvdbID,
             let showID = try await lookupTVDBShowID(tvdbID),

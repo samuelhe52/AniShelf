@@ -17,12 +17,28 @@ struct InfoFetcherMetadataMappingTests {
         #expect(InfoFetcher.runtimeMinutes(from: .seconds(90 * 60)) == 90)
     }
 
-    @Test func testTVSeriesExternalIDsUsesTypedRawTMDbResponse() async throws {
+    @Test func testTVSeriesBroadcastDetailsCombinesSchedulingAndExternalIDs() async throws {
         let responseData = Data(
-            #"{"id":209867,"imdb_id":"tt22248376","tvdb_id":424536}"#.utf8
+            #"""
+            {
+                "first_air_date": "2026-01-01",
+                "next_episode_to_air": {
+                    "season_number": 2,
+                    "air_date": "2026-08-13"
+                },
+                "seasons": [
+                    { "season_number": 1, "air_date": "2026-01-01" },
+                    { "season_number": 2, "air_date": "2026-08-01" }
+                ],
+                "external_ids": {
+                    "imdb_id": "tt22248376",
+                    "tvdb_id": 424536
+                }
+            }
+            """#.utf8
         )
         let httpClient = RecordingTMDbHTTPClient { request in
-            #expect(request.url.path == "/3/tv/209867/external_ids")
+            #expect(request.url.path == "/3/tv/209867")
             return HTTPResponse(data: responseData)
         }
         let fetcher = InfoFetcher(
@@ -31,17 +47,36 @@ struct InfoFetcherMetadataMappingTests {
             configuration: .default
         )
 
-        let externalIDs = try await fetcher.tvSeriesExternalIDs(tmdbID: 209_867)
+        let details = try await fetcher.tvSeriesBroadcastDetails(tmdbID: 209_867)
         let requests = await httpClient.requests
 
-        #expect(externalIDs == TMDbSeriesExternalIDs(tvdbID: 424_536, imdbID: "tt22248376"))
+        #expect(
+            details.externalIDs
+                == TMDbSeriesExternalIDs(tvdbID: 424_536, imdbID: "tt22248376")
+        )
+        #expect(details.schedule.nextEpisode?.seasonNumber == 2)
+        #expect(
+            details.schedule.nextEpisode?.airDate
+                == TMDbCalendarDate(year: 2026, month: 8, day: 13)
+        )
+        #expect(details.schedule.seasonAirDates.keys.sorted() == [1, 2])
         #expect(requests.count == 1)
         #expect(requests.first?.url.queryValue(named: "api_key") == "test-key")
+        #expect(
+            requests.first?.url.queryValue(named: "append_to_response") == "external_ids"
+        )
     }
 
-    @Test func testTVSeriesExternalIDsKeepsMissingIdentifiersOptional() async throws {
+    @Test func testTVSeriesBroadcastDetailsKeepsMissingIdentifiersOptional() async throws {
         let responseData = Data(
-            #"{"id":274580,"imdb_id":"  \n","tvdb_id":null}"#.utf8
+            #"""
+            {
+                "first_air_date": null,
+                "next_episode_to_air": null,
+                "seasons": [],
+                "external_ids": { "imdb_id": "  \n", "tvdb_id": null }
+            }
+            """#.utf8
         )
         let httpClient = RecordingTMDbHTTPClient { _ in
             HTTPResponse(data: responseData)
@@ -52,9 +87,55 @@ struct InfoFetcherMetadataMappingTests {
             configuration: .default
         )
 
-        let externalIDs = try await fetcher.tvSeriesExternalIDs(tmdbID: 274_580)
+        let details = try await fetcher.tvSeriesBroadcastDetails(tmdbID: 274_580)
 
-        #expect(externalIDs == TMDbSeriesExternalIDs(tvdbID: nil, imdbID: nil))
+        #expect(details.externalIDs == TMDbSeriesExternalIDs(tvdbID: nil, imdbID: nil))
+    }
+
+    @Test func testBroadcastEligibilityPreservesTMDbDateInNegativeOffsetCalendar() async throws {
+        let responseData = Data(
+            #"""
+            {
+                "first_air_date": "2020-01-01",
+                "next_episode_to_air": {
+                    "season_number": 2,
+                    "air_date": "2026-08-13"
+                },
+                "seasons": [],
+                "external_ids": { "imdb_id": "tt22248376", "tvdb_id": 424536 }
+            }
+            """#.utf8
+        )
+        let fetcher = InfoFetcher(
+            apiKey: "test-key",
+            httpClient: RecordingTMDbHTTPClient { _ in HTTPResponse(data: responseData) },
+            configuration: .default
+        )
+        let checker = TMDbBroadcastEligibilityChecker(infoFetcher: fetcher)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        let now = try #require(
+            calendar.date(
+                from: DateComponents(year: 2026, month: 8, day: 13, hour: 1)
+            )
+        )
+
+        let result = try await checker.check(
+            entryType: .series,
+            tmdbSeriesID: 209_867,
+            now: now,
+            calendar: calendar
+        )
+
+        #expect(
+            result
+                == .eligible(
+                    externalIDs: TMDbSeriesExternalIDs(
+                        tvdbID: 424_536,
+                        imdbID: "tt22248376"
+                    )
+                )
+        )
     }
 
     @Test func testStableStaffIdentifierUsesCreditID() {

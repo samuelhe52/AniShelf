@@ -106,6 +106,7 @@ struct LibraryCloudSyncPreferencesTests {
         defaults.set(Data([0x01]), forKey: "CloudLibrarySyncToken.test")
         defaults.set(true, forKey: .showProductionCompanyInsteadOfRuntime)
         defaults.set(true, forKey: .useTMDbRelayServer)
+        defaults.set(true, forKey: .broadcastScheduleEnabled)
 
         let preferences = LibraryPreferences(defaults: defaults)
         let snapshot = preferences.loadCloudSyncedSettingsSnapshot()
@@ -114,6 +115,7 @@ struct LibraryCloudSyncPreferencesTests {
         #expect(snapshot.payload[.libraryViewStyle] == nil)
         #expect(snapshot.payload[.showProductionCompanyInsteadOfRuntime] == .bool(true))
         #expect(snapshot.payload[.useTMDbRelayServer] == .bool(true))
+        #expect(snapshot.payload[.broadcastScheduleEnabled] == .bool(true))
         #expect(snapshot.payload[.searchPageQuery] == nil)
         #expect(snapshot.payload[.persistedScrolledID] == nil)
         #expect(snapshot.payload[.libraryLastInspectorDetailEntryIdentity] == nil)

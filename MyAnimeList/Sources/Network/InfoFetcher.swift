@@ -40,7 +40,7 @@ private actor TMDbResourceCache {
 final class InfoFetcher: Sendable {
     let tmdbClient: TMDbClient
     private let cache: TMDbResourceCache
-    private let fetchTMDbResponseData: @Sendable (String) async throws -> Data
+    private let fetchTMDbResponseData: @Sendable (String, [URLQueryItem]) async throws -> Data
 
     convenience init(apiKey: String? = nil) {
         self.init(
@@ -79,7 +79,9 @@ final class InfoFetcher: Sendable {
         fetchTMDbResponseData: @escaping @Sendable (String) async throws -> Data
     ) {
         tmdbClient = client
-        self.fetchTMDbResponseData = fetchTMDbResponseData
+        self.fetchTMDbResponseData = { path, _ in
+            try await fetchTMDbResponseData(path)
+        }
         cache = .init()
     }
 
@@ -226,15 +228,18 @@ final class InfoFetcher: Sendable {
         }
     }
 
-    func tmdbResponseData(path: String) async throws -> Data {
-        try await fetchTMDbResponseData(path)
+    func tmdbResponseData(
+        path: String,
+        queryItems: [URLQueryItem] = []
+    ) async throws -> Data {
+        try await fetchTMDbResponseData(path, queryItems)
     }
 
     private static func makeTMDbResponseDataFetcher<HTTPClientType: HTTPClient>(
         apiKey: String?,
         httpClient: HTTPClientType
-    ) -> @Sendable (String) async throws -> Data {
-        { path in
+    ) -> @Sendable (String, [URLQueryItem]) async throws -> Data {
+        { path, queryItems in
             guard let apiKey else {
                 throw URLError(.userAuthenticationRequired)
             }
@@ -243,7 +248,7 @@ final class InfoFetcher: Sendable {
             components.scheme = "https"
             components.host = "api.themoviedb.org"
             components.path = "/3\(path)"
-            components.queryItems = [URLQueryItem(name: "api_key", value: apiKey)]
+            components.queryItems = [URLQueryItem(name: "api_key", value: apiKey)] + queryItems
 
             guard let url = components.url else {
                 throw URLError(.badURL)
