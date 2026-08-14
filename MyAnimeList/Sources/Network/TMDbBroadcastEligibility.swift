@@ -75,8 +75,22 @@ struct TMDbSeriesBroadcastDetails: Equatable, Sendable {
     let externalIDs: TMDbSeriesExternalIDs
 }
 
+struct TMDbAiringEvidence: Equatable, Sendable {
+    enum Basis: Equatable, Sendable {
+        case nextEpisode
+        case seriesPremiere
+        case seasonPremiere
+    }
+
+    let airDate: TMDbCalendarDate
+    let basis: Basis
+}
+
 enum TMDbBroadcastEligibilityResult: Equatable, Sendable {
-    case eligible(externalIDs: TMDbSeriesExternalIDs)
+    case eligible(
+        externalIDs: TMDbSeriesExternalIDs,
+        airingEvidence: TMDbAiringEvidence
+    )
     case ineligible
 }
 
@@ -120,23 +134,50 @@ struct TMDbBroadcastEligibilityChecker: Sendable {
             date.map { $0 >= today } ?? false
         }
 
-        let isEligible: Bool
+        let airingEvidence: TMDbAiringEvidence?
         switch entryType {
         case .series:
-            isEligible =
-                isTodayOrLater(schedule.nextEpisode?.airDate)
-                || isTodayOrLater(schedule.firstAirDate)
+            if let airDate = schedule.nextEpisode?.airDate, isTodayOrLater(airDate) {
+                airingEvidence = TMDbAiringEvidence(
+                    airDate: airDate,
+                    basis: .nextEpisode
+                )
+            } else if let airDate = schedule.firstAirDate, isTodayOrLater(airDate) {
+                airingEvidence = TMDbAiringEvidence(
+                    airDate: airDate,
+                    basis: .seriesPremiere
+                )
+            } else {
+                airingEvidence = nil
+            }
         case .season(let seasonNumber, _):
-            let hasScheduledEpisode =
-                schedule.nextEpisode?.seasonNumber == seasonNumber
-                && isTodayOrLater(schedule.nextEpisode?.airDate)
-            isEligible =
-                hasScheduledEpisode || isTodayOrLater(schedule.seasonAirDates[seasonNumber])
+            if schedule.nextEpisode?.seasonNumber == seasonNumber,
+                let airDate = schedule.nextEpisode?.airDate,
+                isTodayOrLater(airDate)
+            {
+                airingEvidence = TMDbAiringEvidence(
+                    airDate: airDate,
+                    basis: .nextEpisode
+                )
+            } else if let airDate = schedule.seasonAirDates[seasonNumber],
+                isTodayOrLater(airDate)
+            {
+                airingEvidence = TMDbAiringEvidence(
+                    airDate: airDate,
+                    basis: .seasonPremiere
+                )
+            } else {
+                airingEvidence = nil
+            }
         case .movie:
-            isEligible = false
+            airingEvidence = nil
         }
 
-        return isEligible ? .eligible(externalIDs: details.externalIDs) : .ineligible
+        guard let airingEvidence else { return .ineligible }
+        return .eligible(
+            externalIDs: details.externalIDs,
+            airingEvidence: airingEvidence
+        )
     }
 }
 

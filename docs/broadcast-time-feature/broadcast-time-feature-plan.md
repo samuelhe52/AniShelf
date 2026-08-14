@@ -107,6 +107,26 @@ with the inspector host neither cancels nor restarts a request. Disabling the
 feature cancels active work and moves the model to disabled; destroying or
 replacing the session cancels work for the old entry.
 
+## Resolved Availability
+
+The live TMDb eligibility result carries its selected future air date and the
+date's basis—next episode, series premiere, or season premiere—alongside the
+external IDs. This evidence is transient detail-session state and is not added
+to SwiftData.
+
+When TVMaze supplies a valid next-episode `airstamp`, it is the next-airing
+oracle. Compare its provider-local calendar date with TMDb only when the TMDb
+evidence represents a next episode, and classify the result as agreeing, not
+comparable, or disagreeing. A disagreement does not replace or remove the
+TVMaze airing; it marks that airing as potentially unreliable. Season and
+episode numbering differences do not affect availability.
+
+When the resolved TVMaze show lacks an embedded next episode or valid
+`airstamp`, ignore its recurring schedule and fall back to the selected TMDb
+date as an expected airing. If neither provider has a usable next-airing date,
+the resolved availability is unavailable. Presentation wording, warnings, and
+notification permission rules remain outside this state slice.
+
 ## Schedule Representation
 
 - Keep the provider-local schedule and its `TimeZone` as the canonical source.
@@ -114,8 +134,8 @@ replacing the session cancels work for the old entry.
   late-night broadcast notation where useful, such as Thursday `24:30`, rather
   than presenting it as an apparently unrelated Friday slot.
 - Keep the next episode's `airstamp` as a `Date`.
-- Expose provider-zone `DateComponents` for future repeating notifications;
-  booking those notifications remains out of scope.
+- Keep provider-zone schedule components available for later notification
+  policy; booking notifications remains out of scope.
 
 ## Persistence And Networking
 
@@ -138,12 +158,12 @@ replacing the session cancels work for the old entry.
 3. **Complete:** Add the off-by-default preference, live TMDb scheduling
    eligibility checker, `EntryDetailBroadcastModel`, session ownership,
    dependency injection, and setting-gated automatic resolution.
-4. Add the user-facing setting toggle, airtime section, and user-assistance
+4. **Complete:** Retain transient TMDb airing evidence and derive resolved
+   TVMaze, expected TMDb, and unavailable availability states.
+5. Add the user-facing setting toggle, airtime section, and user-assistance
    action to the detail ellipsis menu.
-5. Add the candidate-validation sheet and connect confirmation to the existing
+6. Add the candidate-validation sheet and connect confirmation to the existing
    resolver seam.
-6. Add focused state, lifecycle, menu, and validation tests as each slice is
-   implemented.
 
 ## Open Decisions
 

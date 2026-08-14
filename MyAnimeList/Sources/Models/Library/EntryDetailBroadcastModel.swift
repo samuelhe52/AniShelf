@@ -9,6 +9,72 @@ import DataProvider
 import Foundation
 import Observation
 
+enum BroadcastDateAssessment: Equatable, Sendable {
+    case agrees
+    case notComparable
+    case disagrees(tmdbDate: TMDbCalendarDate)
+}
+
+enum BroadcastAvailability: Equatable, Sendable {
+    case tvMazeNextAiring(
+        show: TVMazeShow,
+        airing: TVMazeNextEpisodeAiring,
+        dateAssessment: BroadcastDateAssessment
+    )
+    case tmdbExpected(TMDbAiringEvidence)
+    case unavailable
+
+    init(
+        resolvedShow show: TVMazeShow,
+        tmdbEvidence: TMDbAiringEvidence?
+    ) {
+        guard let airing = show.nextEpisodeAiring else {
+            self = tmdbEvidence.map(Self.tmdbExpected) ?? .unavailable
+            return
+        }
+
+        let dateAssessment: BroadcastDateAssessment
+        if tmdbEvidence?.basis != .nextEpisode {
+            dateAssessment = .notComparable
+        } else if let tmdbDate = tmdbEvidence?.airDate,
+            let tvMazeDate = Self.providerLocalDate(
+                for: airing.airStamp,
+                timeZone: show.timeZone
+            )
+        {
+            dateAssessment =
+                tvMazeDate == tmdbDate ? .agrees : .disagrees(tmdbDate: tmdbDate)
+        } else {
+            dateAssessment = .notComparable
+        }
+
+        self = .tvMazeNextAiring(
+            show: show,
+            airing: airing,
+            dateAssessment: dateAssessment
+        )
+    }
+
+    private static func providerLocalDate(
+        for date: Date,
+        timeZone: TimeZone?
+    ) -> TMDbCalendarDate? {
+        guard let timeZone else { return nil }
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        guard
+            let year = components.year,
+            let month = components.month,
+            let day = components.day
+        else {
+            return nil
+        }
+        return TMDbCalendarDate(year: year, month: month, day: day)
+    }
+}
+
 @MainActor
 @Observable
 final class EntryDetailBroadcastModel {
@@ -24,7 +90,7 @@ final class EntryDetailBroadcastModel {
         case idle
         case checkingEligibility
         case resolving
-        case resolved(TVMazeShow)
+        case resolved(BroadcastAvailability)
         case requiresUserAssistance
         case titleSearching
         case titleCandidate(TVMazeShow)
@@ -139,7 +205,7 @@ final class EntryDetailBroadcastModel {
                 )
                 try Task.checkCancellation()
                 guard let self, self.resolutionID == resolutionID else { return }
-                guard case .eligible(let externalIDs) = eligibility else {
+                guard case .eligible(let externalIDs, let airingEvidence) = eligibility else {
                     self.phase = .ineligible
                     self.finishResolution(resolutionID)
                     return
@@ -156,7 +222,12 @@ final class EntryDetailBroadcastModel {
 
                 switch result {
                 case .resolved(let show):
-                    self.phase = .resolved(show)
+                    self.phase = .resolved(
+                        BroadcastAvailability(
+                            resolvedShow: show,
+                            tmdbEvidence: airingEvidence
+                        )
+                    )
                 case .requiresUserAssistance:
                     self.phase = .requiresUserAssistance
                 case .ineligible:

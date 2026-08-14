@@ -133,6 +133,10 @@ struct InfoFetcherMetadataMappingTests {
                     externalIDs: TMDbSeriesExternalIDs(
                         tvdbID: 424_536,
                         imdbID: "tt22248376"
+                    ),
+                    airingEvidence: TMDbAiringEvidence(
+                        airDate: TMDbCalendarDate(year: 2026, month: 8, day: 13),
+                        basis: .nextEpisode
                     )
                 )
         )

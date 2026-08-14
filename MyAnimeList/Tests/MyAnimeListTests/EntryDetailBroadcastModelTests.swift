@@ -60,7 +60,7 @@ struct EntryDetailBroadcastModelTests {
                 now: date(day: 12),
                 calendar: broadcastTestCalendar
             )
-                == .eligible(externalIDs: broadcastTestExternalIDs)
+                == eligibleResult(day: 12, basis: .nextEpisode)
         )
 
         let futurePremiereChecker = makeEligibilityChecker(
@@ -77,7 +77,7 @@ struct EntryDetailBroadcastModelTests {
                 now: date(day: 12),
                 calendar: broadcastTestCalendar
             )
-                == .eligible(externalIDs: broadcastTestExternalIDs)
+                == eligibleResult(day: 13, basis: .seriesPremiere)
         )
 
         let unscheduledChecker = makeEligibilityChecker(schedule: ineligibleSchedule)
@@ -107,7 +107,7 @@ struct EntryDetailBroadcastModelTests {
                 now: date(day: 12),
                 calendar: broadcastTestCalendar
             )
-                == .eligible(externalIDs: broadcastTestExternalIDs)
+                == eligibleResult(day: 13, basis: .nextEpisode)
         )
         #expect(
             try await matchingEpisodeChecker.check(
@@ -133,12 +133,117 @@ struct EntryDetailBroadcastModelTests {
                 now: date(day: 12),
                 calendar: broadcastTestCalendar
             )
-                == .eligible(externalIDs: broadcastTestExternalIDs)
+                == eligibleResult(day: 20, basis: .seasonPremiere)
         )
     }
 
+    @Test func availabilityUsesTVMazeAirstampAndNormalizesAfterMidnightDate() {
+        let airing = TVMazeNextEpisodeAiring(
+            seasonNumber: 7,
+            episodeNumber: 99,
+            airStamp: providerDate(day: 17, hour: 0, minute: 30)
+        )
+        let show = makeBroadcastTestShow(id: 70, nextEpisodeAiring: airing)
+        let tmdbEvidence = airingEvidence(day: 17, basis: .nextEpisode)
+
+        let availability = BroadcastAvailability(
+            resolvedShow: show,
+            tmdbEvidence: tmdbEvidence
+        )
+
+        #expect(
+            availability
+                == .tvMazeNextAiring(
+                    show: show,
+                    airing: airing,
+                    dateAssessment: .agrees
+                )
+        )
+    }
+
+    @Test func availabilityKeepsDisagreeingTVMazeAirstamp() {
+        let airing = TVMazeNextEpisodeAiring(
+            seasonNumber: 1,
+            episodeNumber: 7,
+            airStamp: providerDate(day: 14, hour: 23, minute: 30)
+        )
+        let show = makeBroadcastTestShow(id: 70, nextEpisodeAiring: airing)
+        let tmdbEvidence = airingEvidence(day: 21, basis: .nextEpisode)
+
+        let availability = BroadcastAvailability(
+            resolvedShow: show,
+            tmdbEvidence: tmdbEvidence
+        )
+
+        #expect(
+            availability
+                == .tvMazeNextAiring(
+                    show: show,
+                    airing: airing,
+                    dateAssessment: .disagrees(tmdbDate: calendarDate(day: 21))
+                )
+        )
+    }
+
+    @Test func availabilityDoesNotCompareTVMazeAirstampWithPremiereEvidence() {
+        let airing = TVMazeNextEpisodeAiring(
+            seasonNumber: 1,
+            episodeNumber: 1,
+            airStamp: providerDate(day: 20, hour: 23, minute: 30)
+        )
+        let show = makeBroadcastTestShow(id: 70, nextEpisodeAiring: airing)
+
+        let availability = BroadcastAvailability(
+            resolvedShow: show,
+            tmdbEvidence: airingEvidence(day: 20, basis: .seriesPremiere)
+        )
+
+        #expect(
+            availability
+                == .tvMazeNextAiring(
+                    show: show,
+                    airing: airing,
+                    dateAssessment: .notComparable
+                )
+        )
+    }
+
+    @Test func availabilityFallsBackToTMDbWhenTVMazeAirstampIsMissing() {
+        let show = makeBroadcastTestShow(id: 70)
+        let tmdbEvidence = airingEvidence(day: 13, basis: .nextEpisode)
+
+        let availability = BroadcastAvailability(
+            resolvedShow: show,
+            tmdbEvidence: tmdbEvidence
+        )
+
+        #expect(availability == .tmdbExpected(tmdbEvidence))
+    }
+
+    @Test func availabilityIsUnavailableWithoutEitherProviderDate() {
+        let availability = BroadcastAvailability(
+            resolvedShow: makeBroadcastTestShow(id: 70),
+            tmdbEvidence: nil
+        )
+
+        #expect(availability == .unavailable)
+    }
+
     @Test @MainActor func eligibleActivationChecksTMDbBeforeResolvingTVMaze() async throws {
-        let expectedShow = makeBroadcastTestShow(id: 70)
+        let expectedAiring = TVMazeNextEpisodeAiring(
+            seasonNumber: 4,
+            episodeNumber: 12,
+            airStamp: providerDate(day: 13, hour: 23, minute: 30)
+        )
+        let expectedShow = makeBroadcastTestShow(
+            id: 70,
+            nextEpisodeAiring: expectedAiring
+        )
+        let expectedAvailability = BroadcastAvailability.tvMazeNextAiring(
+            show: expectedShow,
+            airing: expectedAiring,
+            dateAssessment: .agrees
+        )
         let probe = BroadcastResolutionProbe(tvdbShowID: expectedShow.id, show: expectedShow)
         let model = EntryDetailBroadcastModel(
             entryType: .series,
@@ -156,7 +261,7 @@ struct EntryDetailBroadcastModelTests {
                 seriesStatus: "Returning Series"
             )
         )
-        await waitUntil { model.phase == .resolved(expectedShow) }
+        await waitUntil { model.phase == .resolved(expectedAvailability) }
 
         model.update(
             .init(
@@ -167,7 +272,7 @@ struct EntryDetailBroadcastModelTests {
         )
         await Task.yield()
 
-        #expect(model.phase == .resolved(expectedShow))
+        #expect(model.phase == .resolved(expectedAvailability))
         #expect(await probe.loadedMappingTMDbIDs == [42])
         #expect(await probe.lookedUpTVDBIDs == [424_536])
     }
@@ -275,6 +380,23 @@ fileprivate let broadcastTestExternalIDs = TMDbSeriesExternalIDs(
     imdbID: "tt22248376"
 )
 
+fileprivate func eligibleResult(
+    day: Int,
+    basis: TMDbAiringEvidence.Basis
+) -> TMDbBroadcastEligibilityResult {
+    .eligible(
+        externalIDs: broadcastTestExternalIDs,
+        airingEvidence: airingEvidence(day: day, basis: basis)
+    )
+}
+
+fileprivate func airingEvidence(
+    day: Int,
+    basis: TMDbAiringEvidence.Basis
+) -> TMDbAiringEvidence {
+    TMDbAiringEvidence(airDate: calendarDate(day: day), basis: basis)
+}
+
 fileprivate func makeEligibilityChecker(
     schedule: TMDbSeriesBroadcastSchedule,
     externalIDs: TMDbSeriesExternalIDs = broadcastTestExternalIDs
@@ -290,6 +412,20 @@ fileprivate func date(day: Int) -> Date {
 
 fileprivate func calendarDate(day: Int) -> TMDbCalendarDate {
     TMDbCalendarDate(year: 2026, month: 8, day: day)
+}
+
+fileprivate func providerDate(day: Int, hour: Int, minute: Int) -> Date {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "Asia/Tokyo")!
+    return calendar.date(
+        from: DateComponents(
+            year: 2026,
+            month: 8,
+            day: day,
+            hour: hour,
+            minute: minute
+        )
+    )!
 }
 
 private actor BroadcastResolutionProbe {
@@ -351,7 +487,10 @@ fileprivate func makeBroadcastResolver(probe: BroadcastResolutionProbe) -> TVMaz
     )
 }
 
-fileprivate func makeBroadcastTestShow(id: Int) -> TVMazeShow {
+fileprivate func makeBroadcastTestShow(
+    id: Int,
+    nextEpisodeAiring: TVMazeNextEpisodeAiring? = nil
+) -> TVMazeShow {
     TVMazeShow(
         id: id,
         name: "Test Show",
@@ -364,7 +503,7 @@ fileprivate func makeBroadcastTestShow(id: Int) -> TVMazeShow {
         ),
         timeZone: TimeZone(identifier: "Asia/Tokyo"),
         fullImageURL: nil,
-        nextEpisodeAiring: nil
+        nextEpisodeAiring: nextEpisodeAiring
     )
 }
 
