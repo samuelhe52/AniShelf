@@ -29,7 +29,7 @@ extension UserDefaults {
     }
 
     var isBroadcastScheduleEnabled: Bool {
-        bool(forKey: .broadcastScheduleEnabled, defaultValue: false)
+        bool(forKey: .broadcastScheduleEnabled, defaultValue: true)
     }
 
     var isLibraryPosterProgressBarOverlayEnabled: Bool {

@@ -18,7 +18,7 @@ struct EntryDetailView: View {
         Language.followsSystemPreference()
     @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
     @AppStorage(.episodeProgressTrackingEnabled) private var episodeProgressTrackingEnabled = false
-    @AppStorage(.broadcastScheduleEnabled) private var broadcastScheduleEnabled = false
+    @AppStorage(.broadcastScheduleEnabled) private var broadcastScheduleEnabled = true
     @AppStorage(.showProductionCompanyInsteadOfRuntime)
     private var showProductionCompanyInsteadOfRuntime = false
 
@@ -111,6 +111,11 @@ struct EntryDetailView: View {
         )
         .sheet(item: activeSheetBinding, onDismiss: session.activeSheetDidDismiss) { activeSheet in
             switch activeSheet {
+            case .broadcastValidation:
+                EntryDetailBroadcastValidationSheet(
+                    model: session.broadcast,
+                    searchTitle: broadcastTitleFallbackName
+                )
             case .changePoster:
                 NavigationStack {
                     PosterSelectionView(
@@ -261,9 +266,12 @@ struct EntryDetailView: View {
             dropActionTitle: dropActionTitle,
             dropActionSystemImage: dropActionSystemImage,
             dropActionIsDestructive: session.entry.watchStatus != .dropped,
+            broadcastPhase: session.broadcast.phase,
             onShare: { updatePresentation { $0.activeSheet = .sharing } },
             onToggleFavorite: toggleFavorite,
             onChangePoster: { updatePresentation { $0.activeSheet = .changePoster } },
+            onPresentBroadcastValidation: presentBroadcastValidation,
+            onRetryBroadcast: session.broadcast.retryAutomaticResolution,
             onConvert: {
                 startConversionTask {
                     await handleConvertTap()
@@ -450,6 +458,23 @@ struct EntryDetailView: View {
 
     private func toggleDroppedStatus() {
         requestWatchStatusChange(session.entry.watchStatus == .dropped ? .watching : .dropped)
+    }
+
+    private func presentBroadcastValidation() {
+        updatePresentation { $0.activeSheet = .broadcastValidation }
+        session.broadcast.startTitleFallback(named: broadcastTitleFallbackName)
+    }
+
+    private var broadcastTitleFallbackName: String {
+        let seriesEntry = session.entry.parentSeriesEntry ?? session.entry
+        let englishTitle = seriesEntry.nameTranslations
+            .sorted { $0.key < $1.key }
+            .first { key, value in
+                key.lowercased().hasPrefix("en-")
+                    && !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }?
+            .value
+        return englishTitle ?? seriesEntry.name
     }
 
     private var dropActionTitle: LocalizedStringResource {

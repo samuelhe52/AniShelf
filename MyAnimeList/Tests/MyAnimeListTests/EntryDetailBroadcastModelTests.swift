@@ -332,6 +332,47 @@ struct EntryDetailBroadcastModelTests {
         #expect(model.phase == .disabled)
     }
 
+    @Test @MainActor func titleFallbackRequiresConfirmationBeforeResolvingAndSaving() async throws {
+        let candidate = makeBroadcastTestShow(id: 90)
+        let probe = BroadcastResolutionProbe(
+            titleShowID: candidate.id,
+            show: candidate
+        )
+        let model = EntryDetailBroadcastModel(
+            entryType: .season(seasonNumber: 1, parentSeriesID: 42),
+            tmdbID: 84,
+            eligibilityChecker: makeEligibilityChecker(schedule: eligibleSchedule),
+            resolver: makeBroadcastResolver(probe: probe),
+            now: { date(day: 12) },
+            calendar: broadcastTestCalendar
+        )
+
+        model.update(
+            .init(
+                isEnabled: true,
+                entryType: .season(seasonNumber: 1, parentSeriesID: 42),
+                seriesStatus: "Returning Series"
+            )
+        )
+        await waitUntil { model.phase == .requiresUserAssistance }
+
+        model.startTitleFallback(named: "Frieren")
+        await waitUntil { model.phase == .titleCandidate(candidate) }
+
+        #expect(await probe.searchedTitles == ["Frieren"])
+        #expect(await probe.savedMappings.isEmpty)
+
+        model.confirmTitleFallbackCandidate()
+        await waitUntil {
+            model.phase
+                == .resolved(
+                    .tmdbExpected(airingEvidence(day: 13, basis: .nextEpisode))
+                )
+        }
+
+        #expect(await probe.savedMappings == [.init(tmdbSeriesID: 42, showID: 90)])
+    }
+
     @Test @MainActor func detailHostSynchronizationKeepsTheSameBroadcastModel() throws {
         let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
         let entry = AnimeEntry(name: "Test Series", type: .series, tmdbID: 42)
@@ -429,24 +470,34 @@ fileprivate func providerDate(day: Int, hour: Int, minute: Int) -> Date {
 }
 
 private actor BroadcastResolutionProbe {
+    struct Mapping: Equatable, Sendable {
+        let tmdbSeriesID: Int
+        let showID: Int
+    }
+
     private let mappedShowID: Int?
     private let tvdbShowID: Int?
+    private let titleShowID: Int?
     private let show: TVMazeShow?
     private let suspendsMappingLoad: Bool
 
     private(set) var loadedMappingTMDbIDs: [Int] = []
     private(set) var lookedUpTVDBIDs: [Int] = []
+    private(set) var searchedTitles: [String] = []
+    private(set) var savedMappings: [Mapping] = []
     private(set) var didStartSuspendedLoad = false
     private(set) var didCancelSuspendedLoad = false
 
     init(
         mappedShowID: Int? = nil,
         tvdbShowID: Int? = nil,
+        titleShowID: Int? = nil,
         show: TVMazeShow? = nil,
         suspendsMappingLoad: Bool = false
     ) {
         self.mappedShowID = mappedShowID
         self.tvdbShowID = tvdbShowID
+        self.titleShowID = titleShowID
         self.show = show
         self.suspendsMappingLoad = suspendsMappingLoad
     }
@@ -474,15 +525,24 @@ private actor BroadcastResolutionProbe {
         lookedUpTVDBIDs.append(tvdbID)
         return tvdbShowID
     }
+
+    func searchShowID(title: String) -> Int? {
+        searchedTitles.append(title)
+        return titleShowID
+    }
+
+    func saveMapping(tmdbSeriesID: Int, showID: Int) {
+        savedMappings.append(.init(tmdbSeriesID: tmdbSeriesID, showID: showID))
+    }
 }
 
 fileprivate func makeBroadcastResolver(probe: BroadcastResolutionProbe) -> TVMazeResolver {
     TVMazeResolver(
         loadMappedShowID: { try await probe.loadMapping(for: $0) },
-        saveMappedShowID: { _, _ in },
+        saveMappedShowID: { await probe.saveMapping(tmdbSeriesID: $0, showID: $1) },
         lookupTVDBShowID: { await probe.lookupTVDBShowID(tvdbID: $0) },
         lookupIMDbShowID: { _ in nil },
-        searchShowID: { _ in nil },
+        searchShowID: { await probe.searchShowID(title: $0) },
         fetchShow: { await probe.hydratedShow(id: $0) }
     )
 }

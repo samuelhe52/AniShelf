@@ -17,6 +17,168 @@
         }
       }
     },
+    "Airtime" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送時刻" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "播出时间" } }
+      }
+    },
+    "Airtime Unavailable" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送時刻を取得できません" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无可用播出时间" } }
+      }
+    },
+    "AniShelf will use TMDb’s expected date after confirmation." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "確認後、AniShelfはTMDbの予想日を使用します。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "确认后，AniShelf 将使用 TMDb 的预计日期。" } }
+      }
+    },
+    "AniShelf Title" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "AniShelfのタイトル" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "AniShelf 标题" } }
+      }
+    },
+    "Broadcast Airtimes" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送時刻" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "播出时间" } }
+      }
+    },
+    "Broadcast Schedule" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送スケジュール" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "播出时间表" } }
+      }
+    },
+    "Candidate" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "候補" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "候选结果" } }
+      }
+    },
+    "Confirm Airtime Match" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送情報の一致を確認" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "确认播出匹配" } }
+      }
+    },
+    "Couldn’t Find a Match" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "一致する番組が見つかりませんでした" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "未找到匹配项" } }
+      }
+    },
+    "Couldn’t Load Airtime" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送時刻を読み込めませんでした" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法载入播出时间" } }
+      }
+    },
+    "Date may be unreliable" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "日付が正確でない可能性があります" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "日期可能不可靠" } }
+      }
+    },
+    "Expected" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "予定" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "预计" } }
+      }
+    },
+    "Fetch upcoming TV broadcast times when you open eligible series and seasons." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "対象のシリーズやシーズンを開いたときに、今後のテレビ放送時刻を取得します。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开符合条件的剧集或季度时，获取即将到来的电视播出时间。" } }
+      }
+    },
+    "Finding Airtime…" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送時刻を検索中…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在查找播出时间…" } }
+      }
+    },
+    "Help Confirm Airtime" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送時刻の確認に協力" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "帮助确认播出时间" } }
+      }
+    },
+    "Next Airing" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "次回放送" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "下次播出" } }
+      }
+    },
+    "Next Up" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "次回放送" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "下次播出" } }
+      }
+    },
+    "Next airtime unavailable" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "次回の放送時刻は利用できません" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "暂无下次播出时间" } }
+      }
+    },
+    "Not a Match" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "一致しない" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "不是此剧集" } }
+      }
+    },
+    "Premiered" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "初回放送" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "首播" } }
+      }
+    },
+    "Retry Airtime" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送時刻を再試行" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "重试播出时间" } }
+      }
+    },
+    "Review Airtime Match" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送情報の一致を確認" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "查看播出匹配" } }
+      }
+    },
+    "Saving Airtime Match…" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送情報を保存中…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在保存播出匹配…" } }
+      }
+    },
+    "Searching TVMaze…" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "TVMazeを検索中…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在搜索 TVMaze…" } }
+      }
+    },
+    "This Is the Series" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "このシリーズです" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "就是这个剧集" } }
+      }
+    },
+    "TVMaze found this series. Confirm it before AniShelf remembers the match." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "TVMazeでこのシリーズが見つかりました。AniShelfが一致を記憶する前に確認してください。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "TVMaze 找到了这个剧集。请先确认，AniShelf 才会记住此匹配。" } }
+      }
+    },
+    "TVMaze has no concrete next airing for this series." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "TVMazeにはこのシリーズの具体的な次回放送情報がありません。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "TVMaze 没有此剧集的具体下次播出信息。" } }
+      }
+    },
     "* For security reasons, your TMDb API Key will not be exported." : {
       "localizations" : {
         "ja" : {

@@ -116,6 +116,7 @@ final class EntryDetailBroadcastModel {
     private let now: @Sendable () -> Date
     private let calendar: Calendar
     private var gate: PreliminaryGate?
+    private var airingEvidence: TMDbAiringEvidence?
     private var resolutionTask: Task<Void, Never>?
     private var resolutionID: UUID?
 
@@ -162,6 +163,7 @@ final class EntryDetailBroadcastModel {
         guard nextGate != gate else { return }
         gate = nextGate
         cancelResolution()
+        airingEvidence = nil
 
         switch nextGate {
         case .disabled:
@@ -211,6 +213,7 @@ final class EntryDetailBroadcastModel {
                     return
                 }
 
+                self.airingEvidence = airingEvidence
                 self.phase = .resolving
                 let result = try await resolver.resolve(
                     entryType: entryType,
@@ -241,6 +244,104 @@ final class EntryDetailBroadcastModel {
                 self.finishResolution(resolutionID)
             }
         }
+    }
+
+    func startTitleFallback(named title: String) {
+        guard case .requiresUserAssistance = phase else { return }
+
+        let normalizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedTitle.isEmpty else {
+            phase = .failed
+            return
+        }
+
+        let resolutionID = UUID()
+        let resolver = resolver
+        self.resolutionID = resolutionID
+        phase = .titleSearching
+
+        resolutionTask = Task { [weak self] in
+            do {
+                let candidate = try await resolver.resolveTitleFallback(named: normalizedTitle)
+                try Task.checkCancellation()
+                guard let self, self.resolutionID == resolutionID else { return }
+
+                self.phase = candidate.map(Phase.titleCandidate) ?? .failed
+                self.finishResolution(resolutionID)
+            } catch {
+                guard !Self.isCancellation(error) else { return }
+                guard let self, self.resolutionID == resolutionID else { return }
+                self.phase = .failed
+                self.finishResolution(resolutionID)
+            }
+        }
+    }
+
+    func retryTitleFallback(named title: String) {
+        guard case .failed = phase else { return }
+        phase = .requiresUserAssistance
+        startTitleFallback(named: title)
+    }
+
+    func confirmTitleFallbackCandidate() {
+        guard case .titleCandidate(let candidate) = phase else { return }
+
+        let resolutionID = UUID()
+        let resolver = resolver
+        let entryType = entryType
+        let tmdbID = tmdbID
+        let airingEvidence = airingEvidence
+        self.resolutionID = resolutionID
+        phase = .titleSearching
+
+        resolutionTask = Task { [weak self] in
+            do {
+                let didConfirm = try await resolver.confirmTitleFallbackCandidate(
+                    candidate,
+                    entryType: entryType,
+                    tmdbID: tmdbID
+                )
+                try Task.checkCancellation()
+                guard let self, self.resolutionID == resolutionID else { return }
+                guard didConfirm else {
+                    self.phase = .failed
+                    self.finishResolution(resolutionID)
+                    return
+                }
+
+                self.phase = .resolved(
+                    BroadcastAvailability(
+                        resolvedShow: candidate,
+                        tmdbEvidence: airingEvidence
+                    )
+                )
+                self.finishResolution(resolutionID)
+            } catch {
+                guard !Self.isCancellation(error) else { return }
+                guard let self, self.resolutionID == resolutionID else { return }
+                self.phase = .failed
+                self.finishResolution(resolutionID)
+            }
+        }
+    }
+
+    func rejectTitleFallbackCandidate() {
+        guard case .titleCandidate = phase else { return }
+        cancelResolution()
+        phase = .requiresUserAssistance
+    }
+
+    func retryAutomaticResolution() {
+        guard gate == .eligible, case .failed = phase else { return }
+        airingEvidence = nil
+        startEligibilityCheck()
+    }
+
+    func availability(for candidate: TVMazeShow) -> BroadcastAvailability {
+        BroadcastAvailability(
+            resolvedShow: candidate,
+            tmdbEvidence: airingEvidence
+        )
     }
 
     private func cancelResolution() {

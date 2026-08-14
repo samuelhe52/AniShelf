@@ -1,7 +1,7 @@
 # AniShelf Broadcast Time Feature Plan
 
 Created: 2026-08-09
-Updated: 2026-08-12
+Updated: 2026-08-14
 
 ## Scope
 
@@ -13,13 +13,16 @@ setting-gated, and does not add broadcast data to the SwiftData schema.
 
 - Resolve eligible entries when their detail views open. Present successful
   results in an airtime section of the existing ellipsis menu, not in the main
-  detail content.
+  detail content. Keep the next-airing summary in the section header and reserve
+  section rows for actions. Until notification controls are implemented, use an
+  inaccessible blank placeholder row so SwiftUI preserves resolved and loading
+  section headers.
 - If identifier lookup fails, offer a button asking the user to help confirm a
   match. Tapping it opens the validation sheet and starts title fallback.
 - Show one hydrated candidate with enough metadata and next-airing information
   to make a decision. Remember it only after explicit user confirmation.
 
-The feature uses one Boolean setting and is off by default. Enabling it affects
+The feature uses one Boolean setting and is on by default. Changing it affects
 new and currently presented eligible details without changing library data.
 
 ## Eligibility
@@ -124,8 +127,8 @@ episode numbering differences do not affect availability.
 When the resolved TVMaze show lacks an embedded next episode or valid
 `airstamp`, ignore its recurring schedule and fall back to the selected TMDb
 date as an expected airing. If neither provider has a usable next-airing date,
-the resolved availability is unavailable. Presentation wording, warnings, and
-notification permission rules remain outside this state slice.
+the resolved availability is unavailable. The menu labels disagreements as
+potentially unreliable and labels the TMDb-only fallback as expected.
 
 ## Schedule Representation
 
@@ -155,17 +158,17 @@ notification permission rules remain outside this state slice.
 2. **Complete:** Add the UserDefaults confirmed-mapping store, inject it into
    the resolver, save direct TVDB/IMDb matches, and expose explicit confirmation
    for title candidates.
-3. **Complete:** Add the off-by-default preference, live TMDb scheduling
+3. **Complete:** Add the on-by-default preference, live TMDb scheduling
    eligibility checker, `EntryDetailBroadcastModel`, session ownership,
    dependency injection, and setting-gated automatic resolution.
 4. **Complete:** Retain transient TMDb airing evidence and derive resolved
    TVMaze, expected TMDb, and unavailable availability states.
-5. Add the user-facing setting toggle, airtime section, and user-assistance
-   action to the detail ellipsis menu.
-6. Add the candidate-validation sheet and connect confirmation to the existing
-   resolver seam.
+5. **Complete:** Add the user-facing setting toggle, airtime section, and user-
+   assistance action to the detail ellipsis menu.
+6. **Complete:** Add the candidate-validation sheet and connect confirmation to
+   the existing resolver seam.
 
-## Open Decisions
+## Deferred Work
 
-- The final user-facing wording for the broadcast-time setting.
-- The final metadata and visual layout used by the validation sheet.
+- Notification eligibility, scheduling, permissions, and presentation remain
+  deferred until the rest of the broadcast-time behavior is settled.

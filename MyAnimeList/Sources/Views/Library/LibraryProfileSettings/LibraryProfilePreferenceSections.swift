@@ -56,6 +56,7 @@ struct LibraryProfileLanguageSettingsSection: View {
 
 struct LibraryProfilePreferencesSection: View {
     @AppStorage(.rememberShareSheetSettings) private var rememberShareSheetSettings = false
+    @AppStorage(.broadcastScheduleEnabled) private var broadcastScheduleEnabled = true
 
     @Binding var hideDroppedByDefault: Bool
     @Binding var defaultNewEntryWatchStatus: AnimeEntry.WatchStatus
@@ -98,6 +99,13 @@ struct LibraryProfilePreferencesSection: View {
                 subtitle:
                     "Remember language, corner style, image format, and export size preferences in the share sheet.",
                 isOn: $rememberShareSheetSettings
+            )
+
+            LibraryProfileSettingsToggleRow(
+                title: "Broadcast Airtimes",
+                subtitle:
+                    "Fetch upcoming TV broadcast times when you open eligible series and seasons.",
+                isOn: $broadcastScheduleEnabled
             )
         }
         .padding(14)

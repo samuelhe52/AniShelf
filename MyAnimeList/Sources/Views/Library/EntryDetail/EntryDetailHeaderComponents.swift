@@ -180,9 +180,12 @@ struct EntryDetailQuickActionsRow: View {
     let dropActionTitle: LocalizedStringResource
     let dropActionSystemImage: String
     let dropActionIsDestructive: Bool
+    let broadcastPhase: EntryDetailBroadcastModel.Phase
     let onShare: () -> Void
     let onToggleFavorite: () -> Void
     let onChangePoster: () -> Void
+    let onPresentBroadcastValidation: () -> Void
+    let onRetryBroadcast: () -> Void
     let onConvert: () async -> Void
     let onToggleDroppedStatus: () -> Void
 
@@ -215,6 +218,17 @@ struct EntryDetailQuickActionsRow: View {
             )
 
             Menu {
+                let broadcastMenuContent = EntryDetailBroadcastMenuContent(
+                    phase: broadcastPhase,
+                    onPresentValidation: onPresentBroadcastValidation,
+                    onRetry: onRetryBroadcast
+                )
+                broadcastMenuContent
+
+                if broadcastMenuContent.isVisible {
+                    Divider()
+                }
+
                 Button(action: onChangePoster) {
                     Label(EntryDetailL10n.changePoster, systemImage: "photo.on.rectangle")
                 }

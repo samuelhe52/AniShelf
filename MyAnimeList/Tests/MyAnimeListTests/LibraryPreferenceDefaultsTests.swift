@@ -59,18 +59,18 @@ struct LibraryPreferenceDefaultsTests {
         #expect(!defaults.isLibraryPosterProgressBarOverlayEnabled)
     }
 
-    @Test func testBroadcastSchedulePreferenceDefaultsOff() {
+    @Test func testBroadcastSchedulePreferenceDefaultsOn() {
         let suiteName = "MyAnimeListTests.BroadcastSchedulePreference"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         #expect(defaults.object(forKey: .broadcastScheduleEnabled) == nil)
-        #expect(!defaults.isBroadcastScheduleEnabled)
-
-        defaults.set(true, forKey: .broadcastScheduleEnabled)
-
         #expect(defaults.isBroadcastScheduleEnabled)
+
+        defaults.set(false, forKey: .broadcastScheduleEnabled)
+
+        #expect(!defaults.isBroadcastScheduleEnabled)
     }
 
     @Test func testSoftNavigationBarEdgesPreferenceDefaultsOn() {

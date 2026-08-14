@@ -81,6 +81,37 @@ enum EntryDetailL10n {
         "Shows all production companies."
     static let episode: LocalizedStringResource = "Episode"
     static let noEpisodesAvailable: LocalizedStringResource = "No episodes available for this season."
+    static let airtime: LocalizedStringResource = "Airtime"
+    static let airtimeUnavailable: LocalizedStringResource = "Airtime Unavailable"
+    static let findingAirtime: LocalizedStringResource = "Finding Airtime…"
+    static let nextAiring: LocalizedStringResource = "Next Airing"
+    static let nextUp: LocalizedStringResource = "Next Up"
+    static let expected: LocalizedStringResource = "Expected"
+    static let unreliableAirtime: LocalizedStringResource = "Date may be unreliable"
+    static let nextAirtimeUnavailable: LocalizedStringResource = "Next airtime unavailable"
+    static let helpConfirmAirtime: LocalizedStringResource = "Help Confirm Airtime"
+    static let reviewAirtimeMatch: LocalizedStringResource = "Review Airtime Match"
+    static let couldNotLoadAirtime: LocalizedStringResource = "Couldn’t Load Airtime"
+    static let retryAirtime: LocalizedStringResource = "Retry Airtime"
+    static let confirmAirtimeMatch: LocalizedStringResource = "Confirm Airtime Match"
+    static let searchingTVMaze: LocalizedStringResource = "Searching TVMaze…"
+    static let savingAirtimeMatch: LocalizedStringResource = "Saving Airtime Match…"
+    static let candidate: LocalizedStringResource = "Candidate"
+    static let aniShelfTitle: LocalizedStringResource = "AniShelf Title"
+    static let candidateConfirmationHelp: LocalizedStringResource =
+        "TVMaze found this series. Confirm it before AniShelf remembers the match."
+    static let language: LocalizedStringResource = "Language"
+    static let premiered: LocalizedStringResource = "Premiered"
+    static let broadcastSchedule: LocalizedStringResource = "Broadcast Schedule"
+    static let missingTVMazeNextAiring: LocalizedStringResource =
+        "TVMaze has no concrete next airing for this series."
+    static let usesTMDbExpectedDateAfterConfirmation: LocalizedStringResource =
+        "AniShelf will use TMDb’s expected date after confirmation."
+    static let thisIsTheSeries: LocalizedStringResource = "This Is the Series"
+    static let notAMatch: LocalizedStringResource = "Not a Match"
+    static let couldNotFindMatch: LocalizedStringResource = "Couldn’t Find a Match"
+    static let tryAgain: LocalizedStringResource = "Try Again"
+    static let close: LocalizedStringResource = "Close"
 }
 
 enum EntryDetailScrollTarget: Hashable {

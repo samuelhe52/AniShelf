@@ -11,6 +11,7 @@ import Observation
 import SwiftUI
 
 enum EntryDetailSheet: Identifiable, Equatable {
+    case broadcastValidation
     case changePoster
     case sharing
 
