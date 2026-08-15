@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Kingfisher
 import SwiftUI
 
 struct EntryDetailBroadcastMenuContent: View {
@@ -79,6 +80,7 @@ struct EntryDetailBroadcastMenuContent: View {
 
 struct EntryDetailBroadcastValidationSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
 
     let model: EntryDetailBroadcastModel
     let searchTitle: String
@@ -155,51 +157,33 @@ struct EntryDetailBroadcastValidationSheet: View {
     private func candidateContent(_ candidate: TVMazeShow) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                candidateArtwork(candidate)
+                candidateHeader(candidate)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(EntryDetailL10n.candidate)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                    Text(candidate.name)
-                        .font(.title2.weight(.bold))
-                    Text(EntryDetailL10n.candidateConfirmationHelp)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
-                VStack(spacing: 12) {
-                    metadataRow(title: EntryDetailL10n.aniShelfTitle, value: searchTitle)
-                    if let language = candidate.language {
-                        metadataRow(title: EntryDetailL10n.language, value: language)
-                    }
-                    if let premiered = candidate.premiered {
-                        metadataRow(title: EntryDetailL10n.premiered, value: premiered)
-                    }
-                    if let schedule = EntryDetailBroadcastFormatting.scheduleSummary(candidate) {
-                        metadataRow(title: EntryDetailL10n.broadcastSchedule, value: schedule)
-                    }
-                }
+                candidateMetadata(candidate)
 
                 nextAiringContent(candidate)
 
-                VStack(spacing: 10) {
+                VStack(spacing: 15) {
                     Button {
                         isConfirming = true
                         model.confirmTitleFallbackCandidate()
                     } label: {
-                        Text(EntryDetailL10n.thisIsTheSeries)
+                        Text(EntryDetailL10n.thisIsTheAnime)
+                            .bold()
                             .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
                     }
                     .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.roundedRectangle(radius: 15))
 
                     Button(EntryDetailL10n.notAMatch, role: .cancel) {
                         model.rejectTitleFallbackCandidate()
                         dismiss()
                     }
+                    .bold()
                     .frame(maxWidth: .infinity)
                 }
+                .padding(.top, 8)
             }
             .padding(20)
             .frame(maxWidth: 560)
@@ -207,50 +191,116 @@ struct EntryDetailBroadcastValidationSheet: View {
         }
     }
 
-    @ViewBuilder
-    private func candidateArtwork(_ candidate: TVMazeShow) -> some View {
-        if let imageURL = candidate.fullImageURL {
-            AsyncImage(url: imageURL) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFit()
-                default:
-                    artworkPlaceholder
-                }
+    private func candidateHeader(_ candidate: TVMazeShow) -> some View {
+        HStack(alignment: .center, spacing: 14) {
+            candidateArtwork(candidate)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(EntryDetailL10n.candidate)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(Color.accentColor)
+                    .textCase(.uppercase)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.accentColor.opacity(0.12), in: Capsule())
+                Text(candidate.name)
+                    .font(.title2.weight(.bold))
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(EntryDetailL10n.candidateConfirmationHelp)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 280)
-            .background(.quaternary)
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        } else {
-            artworkPlaceholder
-                .frame(maxWidth: .infinity)
-                .frame(height: 180)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(12)
+        .background(
+            Color(uiColor: .secondarySystemGroupedBackground),
+            in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(.primary.opacity(0.06), lineWidth: 1)
         }
     }
 
-    private var artworkPlaceholder: some View {
-        RoundedRectangle(cornerRadius: 20, style: .continuous)
-            .fill(.quaternary)
-            .overlay {
-                Image(systemName: "tv")
-                    .font(.system(size: 42))
-                    .foregroundStyle(.secondary)
+    private func candidateArtwork(_ candidate: TVMazeShow) -> some View {
+        KFImageView(
+            url: candidate.fullImageURL,
+            targetWidth: 240,
+            diskCacheExpiration: .transient
+        )
+        .scaledToFill()
+        .frame(width: 96, height: 144)
+        .clipped()
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(.white.opacity(0.1), lineWidth: 1)
+        }
+        .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private func candidateMetadata(_ candidate: TVMazeShow) -> some View {
+        let rows = candidateMetadataRows(candidate)
+
+        VStack(spacing: 0) {
+            ForEach(rows.indices, id: \.self) { index in
+                metadataRow(title: rows[index].title, value: rows[index].value)
+                if index < rows.count - 1 {
+                    Divider()
+                }
             }
+        }
+        .padding(.horizontal, 12)
+        .background(
+            Color(uiColor: .secondarySystemGroupedBackground),
+            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(.primary.opacity(0.05), lineWidth: 1)
+        }
+    }
+
+    private func candidateMetadataRows(
+        _ candidate: TVMazeShow
+    ) -> [(title: LocalizedStringResource, value: String)] {
+        var rows: [(LocalizedStringResource, String)] = [
+            (EntryDetailL10n.aniShelfTitle, searchTitle)
+        ]
+        if let language = candidate.language {
+            rows.append(
+                (
+                    EntryDetailL10n.language,
+                    EntryDetailBroadcastFormatting.localizedLanguageName(
+                        language,
+                        locale: locale
+                    )
+                )
+            )
+        }
+        if let premiered = candidate.premiered {
+            rows.append((EntryDetailL10n.premiered, premiered))
+        }
+        if let schedule = EntryDetailBroadcastFormatting.scheduleSummary(candidate) {
+            rows.append((EntryDetailL10n.broadcastSchedule, schedule))
+        }
+        return rows
     }
 
     @ViewBuilder
     private func nextAiringContent(_ candidate: TVMazeShow) -> some View {
         switch model.availability(for: candidate) {
         case .tvMazeNextAiring(_, let airing, let assessment):
-            VStack(alignment: .leading, spacing: 8) {
-                Label(
-                    EntryDetailBroadcastFormatting.nextAiringSummary(airing.airStamp),
-                    systemImage: "clock"
-                )
-                .font(.headline)
+            VStack(alignment: .leading, spacing: 6) {
+                Label(EntryDetailL10n.nextAiring, systemImage: "clock")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text(EntryDetailBroadcastFormatting.nextAiringDateTime(airing.airStamp))
+                    .font(.title3.weight(.medium))
+                    .monospacedDigit()
                 if let episode = EntryDetailBroadcastFormatting.episodeSummary(airing) {
                     Text(episode)
                         .font(.subheadline)
@@ -265,13 +315,15 @@ struct EntryDetailBroadcastValidationSheet: View {
                     .foregroundStyle(.orange)
                 }
             }
+            .nextAiringSectionStyle()
         case .tmdbExpected(let evidence):
-            VStack(alignment: .leading, spacing: 8) {
-                Label(
-                    EntryDetailBroadcastFormatting.expectedSummary(evidence.airDate),
-                    systemImage: "calendar.badge.clock"
-                )
-                .font(.headline)
+            VStack(alignment: .leading, spacing: 6) {
+                Label(EntryDetailL10n.expected, systemImage: "calendar.badge.clock")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text(EntryDetailBroadcastFormatting.expectedDate(evidence.airDate))
+                    .font(.title3.weight(.medium))
+                    .monospacedDigit()
                 Text(EntryDetailL10n.missingTVMazeNextAiring)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -279,9 +331,11 @@ struct EntryDetailBroadcastValidationSheet: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+            .nextAiringSectionStyle()
         case .unavailable:
             Label(EntryDetailL10n.nextAirtimeUnavailable, systemImage: "clock.badge.questionmark")
                 .font(.headline)
+                .nextAiringSectionStyle()
         }
     }
 
@@ -295,12 +349,42 @@ struct EntryDetailBroadcastValidationSheet: View {
             Spacer(minLength: 12)
             Text(value)
                 .multilineTextAlignment(.trailing)
+                .lineLimit(2)
         }
         .font(.subheadline)
+        .padding(.vertical, 10)
+    }
+}
+
+extension View {
+    fileprivate func nextAiringSectionStyle() -> some View {
+        self
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                Color(uiColor: .secondarySystemGroupedBackground),
+                in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(.primary.opacity(0.05), lineWidth: 1)
+            }
     }
 }
 
 fileprivate enum EntryDetailBroadcastFormatting {
+    private static let languageCodeByEnglishName: [String: String] = {
+        let englishLocale = Locale(identifier: "en")
+        var result: [String: String] = [:]
+        for code in Locale.LanguageCode.isoLanguageCodes {
+            guard let name = englishLocale.localizedString(forLanguageCode: code.identifier) else {
+                continue
+            }
+            result[name.lowercased()] = code.identifier
+        }
+        return result
+    }()
+
     static func menuHeader(for availability: BroadcastAvailability) -> String {
         switch availability {
         case .tvMazeNextAiring(_, let airing, let assessment):
@@ -324,16 +408,12 @@ fileprivate enum EntryDetailBroadcastFormatting {
         }
     }
 
-    static func nextAiringSummary(_ date: Date) -> String {
-        String(localized: EntryDetailL10n.nextAiring)
-            + ": "
-            + date.formatted(date: .abbreviated, time: .shortened)
+    static func nextAiringDateTime(_ date: Date) -> String {
+        date.formatted(date: .abbreviated, time: .shortened)
     }
 
-    static func expectedSummary(_ tmdbDate: TMDbCalendarDate) -> String {
-        String(localized: EntryDetailL10n.expected)
-            + ": "
-            + calendarDate(tmdbDate)
+    static func expectedDate(_ tmdbDate: TMDbCalendarDate) -> String {
+        calendarDate(tmdbDate)
     }
 
     static func scheduleSummary(_ show: TVMazeShow) -> String? {
@@ -349,9 +429,32 @@ fileprivate enum EntryDetailBroadcastFormatting {
             components.append(displayTime)
         }
         if let timeZone = show.timeZone {
-            components.append(timeZone.identifier)
+            let referenceDate = show.nextEpisodeAiring?.airStamp ?? .now
+            let compactTimeZoneName =
+                timeZone.abbreviation(for: referenceDate)
+                ?? timeZone.localizedName(
+                    for: .shortGeneric,
+                    locale: .autoupdatingCurrent
+                )
+            if let compactTimeZoneName {
+                components.append(compactTimeZoneName)
+            }
         }
         return components.joined(separator: " · ")
+    }
+
+    static func localizedLanguageName(
+        _ providerValue: String,
+        locale: Locale = .autoupdatingCurrent
+    ) -> String {
+        let normalizedValue =
+            providerValue
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        guard let languageCode = languageCodeByEnglishName[normalizedValue] else {
+            return providerValue
+        }
+        return locale.localizedString(forLanguageCode: languageCode) ?? providerValue
     }
 
     static func episodeSummary(_ airing: TVMazeNextEpisodeAiring) -> String? {

@@ -99,15 +99,15 @@ enum EntryDetailL10n {
     static let candidate: LocalizedStringResource = "Candidate"
     static let aniShelfTitle: LocalizedStringResource = "AniShelf Title"
     static let candidateConfirmationHelp: LocalizedStringResource =
-        "TVMaze found this series. Confirm it before AniShelf remembers the match."
+        "TVMaze found this anime. Confirm it before AniShelf remembers the match."
     static let language: LocalizedStringResource = "Language"
     static let premiered: LocalizedStringResource = "Premiered"
-    static let broadcastSchedule: LocalizedStringResource = "Broadcast Schedule"
+    static let broadcastSchedule: LocalizedStringResource = "Schedule"
     static let missingTVMazeNextAiring: LocalizedStringResource =
-        "TVMaze has no concrete next airing for this series."
+        "TVMaze has no concrete next airing for this anime."
     static let usesTMDbExpectedDateAfterConfirmation: LocalizedStringResource =
         "AniShelf will use TMDb’s expected date after confirmation."
-    static let thisIsTheSeries: LocalizedStringResource = "This Is the Series"
+    static let thisIsTheAnime: LocalizedStringResource = "This Is the Anime"
     static let notAMatch: LocalizedStringResource = "Not a Match"
     static let couldNotFindMatch: LocalizedStringResource = "Couldn’t Find a Match"
     static let tryAgain: LocalizedStringResource = "Try Again"

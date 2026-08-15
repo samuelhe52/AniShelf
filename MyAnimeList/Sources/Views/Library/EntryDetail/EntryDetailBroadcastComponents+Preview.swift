@@ -49,6 +49,79 @@ fileprivate struct EntryDetailBroadcastPolicyPreview: View {
 }
 
 @MainActor
+fileprivate struct EntryDetailBroadcastConfirmationPreview: View {
+    @State private var isPresented = false
+    @State private var model: EntryDetailBroadcastModel
+
+    private let searchTitle = "正反対な君と僕"
+
+    init() {
+        let candidate = BroadcastPolicyPreviewCase.confirmationCandidate
+        let details = BroadcastPolicyPreviewCase.confirmationDetails
+        let now = BroadcastPolicyPreviewCase.tokyoDate(
+            year: 2026,
+            month: 8,
+            day: 15,
+            hour: 12,
+            minute: 0
+        )
+        let eligibilityChecker = TMDbBroadcastEligibilityChecker { _ in details }
+        let resolver = TVMazeResolver(
+            loadMappedShowID: { _ in nil },
+            saveMappedShowID: { _, _ in },
+            lookupTVDBShowID: { _ in nil },
+            lookupIMDbShowID: { _ in nil },
+            searchShowID: { _ in candidate.id },
+            fetchShow: { showID in showID == candidate.id ? candidate : nil }
+        )
+        _model = State(
+            initialValue: EntryDetailBroadcastModel(
+                entryType: .series,
+                tmdbID: 10_002,
+                eligibilityChecker: eligibilityChecker,
+                resolver: resolver,
+                now: { now }
+            )
+        )
+    }
+
+    var body: some View {
+        NavigationStack {
+            Button {
+                isPresented = true
+            } label: {
+                Text(verbatim: "Show confirmation sheet")
+            }
+            .buttonStyle(.borderedProminent)
+            .navigationTitle(Text(verbatim: "Confirmation Preview"))
+        }
+        .sheet(isPresented: $isPresented) {
+            EntryDetailBroadcastValidationSheet(
+                model: model,
+                searchTitle: searchTitle
+            )
+        }
+        .task {
+            model.update(
+                .init(
+                    isEnabled: true,
+                    entryType: .series,
+                    seriesStatus: "Returning Series"
+                )
+            )
+
+            for _ in 0..<100 {
+                if case .requiresUserAssistance = model.phase {
+                    isPresented = true
+                    return
+                }
+                await Task.yield()
+            }
+        }
+    }
+}
+
+@MainActor
 fileprivate struct BroadcastPolicyPreviewCase: Identifiable {
     let id: String
     let entry: AnimeEntry
@@ -62,6 +135,40 @@ fileprivate struct BroadcastPolicyPreviewCase: Identifiable {
         expectedTMDbDate,
         unavailable
     ]
+
+    static let confirmationCandidate = show(
+        id: 20_207,
+        name: "正反対な君と僕",
+        scheduleDays: [.sunday],
+        scheduleHour: 17,
+        scheduleMinute: 0,
+        fullImageURL: URL(
+            string: "https://static.tvmaze.com/uploads/images/original_untouched/631/1578230.jpg"
+        ),
+        nextEpisodeAiring: TVMazeNextEpisodeAiring(
+            seasonNumber: 2,
+            episodeNumber: 7,
+            airStamp: tokyoDate(
+                year: 2026,
+                month: 8,
+                day: 16,
+                hour: 17,
+                minute: 0
+            )
+        )
+    )
+
+    static let confirmationDetails = TMDbSeriesBroadcastDetails(
+        schedule: TMDbSeriesBroadcastSchedule(
+            firstAirDate: TMDbCalendarDate(year: 2026, month: 7, day: 5),
+            nextEpisode: TMDbNextEpisodeSchedule(
+                seasonNumber: 1,
+                airDate: TMDbCalendarDate(year: 2026, month: 8, day: 16)
+            ),
+            seasonAirDates: [:]
+        ),
+        externalIDs: TMDbSeriesExternalIDs(tvdbID: nil, imdbID: nil)
+    )
 
     private static let tokyoTimeZone = TimeZone(identifier: "Asia/Tokyo")!
 
@@ -211,6 +318,7 @@ fileprivate struct BroadcastPolicyPreviewCase: Identifiable {
         scheduleHour: Int?,
         scheduleMinute: Int?,
         scheduleDayOffset: Int = 0,
+        fullImageURL: URL? = nil,
         nextEpisodeAiring: TVMazeNextEpisodeAiring?
     ) -> TVMazeShow {
         let scheduleTime: TVMazeTimeOfDay?
@@ -235,12 +343,12 @@ fileprivate struct BroadcastPolicyPreviewCase: Identifiable {
                 dayOffsetFromBroadcastDay: scheduleDayOffset
             ),
             timeZone: tokyoTimeZone,
-            fullImageURL: nil,
+            fullImageURL: fullImageURL,
             nextEpisodeAiring: nextEpisodeAiring
         )
     }
 
-    private static func tokyoDate(
+    static func tokyoDate(
         year: Int,
         month: Int,
         day: Int,
@@ -269,4 +377,8 @@ fileprivate struct BroadcastPolicyPreviewCase: Identifiable {
 
 #Preview("Broadcast Availability Policy") {
     EntryDetailBroadcastPolicyPreview()
+}
+
+#Preview("Broadcast Confirmation Sheet") {
+    EntryDetailBroadcastConfirmationPreview()
 }
