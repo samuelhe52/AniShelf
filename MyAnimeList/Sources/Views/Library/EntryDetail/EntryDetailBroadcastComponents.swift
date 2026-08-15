@@ -29,13 +29,13 @@ struct EntryDetailBroadcastMenuContent: View {
             EmptyView()
         case .checkingEligibility, .resolving:
             airtimeSection(header: String(localized: EntryDetailL10n.findingAirtime)) {
-                placeholderRow
+                notificationsButton
             }
         case .resolved(let availability):
             airtimeSection(
                 header: EntryDetailBroadcastFormatting.menuHeader(for: availability)
             ) {
-                placeholderRow
+                notificationsButton
             }
         case .requiresUserAssistance:
             airtimeSection(header: String(localized: EntryDetailL10n.airtime)) {
@@ -58,9 +58,11 @@ struct EntryDetailBroadcastMenuContent: View {
         }
     }
 
-    private var placeholderRow: some View {
-        Text(verbatim: " ")
-            .accessibilityHidden(true)
+    private var notificationsButton: some View {
+        Button(action: {}) {
+            Label(EntryDetailL10n.notifications, systemImage: "bell")
+        }
+        .disabled(true)
     }
 
     private func airtimeSection<Content: View>(
@@ -256,7 +258,7 @@ struct EntryDetailBroadcastValidationSheet: View {
                 }
                 if case .disagrees = assessment {
                     Label(
-                        EntryDetailL10n.unreliableAirtime,
+                        EntryDetailL10n.uncertainAirtime,
                         systemImage: "exclamationmark.triangle.fill"
                     )
                     .font(.subheadline)
@@ -302,13 +304,13 @@ fileprivate enum EntryDetailBroadcastFormatting {
     static func menuHeader(for availability: BroadcastAvailability) -> String {
         switch availability {
         case .tvMazeNextAiring(_, let airing, let assessment):
-            var components = [String(localized: EntryDetailL10n.nextUp)]
+            var components: [String] = []
             if let episode = episodeSummary(airing) {
                 components.append(episode)
             }
             components.append(compactDateTime(airing.airStamp))
             if case .disagrees = assessment {
-                components.append("⚠︎")
+                components.append("⚠︎ " + String(localized: EntryDetailL10n.uncertainAirtime))
             }
             return components.joined(separator: " · ")
         case .tmdbExpected(let evidence):

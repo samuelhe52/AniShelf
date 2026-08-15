@@ -14,9 +14,9 @@ setting-gated, and does not add broadcast data to the SwiftData schema.
 - Resolve eligible entries when their detail views open. Present successful
   results in an airtime section of the existing ellipsis menu, not in the main
   detail content. Keep the next-airing summary in the section header and reserve
-  section rows for actions. Until notification controls are implemented, use an
-  inaccessible blank placeholder row so SwiftUI preserves resolved and loading
-  section headers.
+  section rows for actions. Until notification behavior is implemented, show a
+  disabled Notifications button with an empty action in resolved and
+  loading sections.
 - If identifier lookup fails, offer a button asking the user to help confirm a
   match. Tapping it opens the validation sheet and starts title fallback.
 - Show one hydrated candidate with enough metadata and next-airing information

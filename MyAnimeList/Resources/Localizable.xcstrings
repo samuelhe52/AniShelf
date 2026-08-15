@@ -77,10 +77,10 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法载入播出时间" } }
       }
     },
-    "Date may be unreliable" : {
+    "Airtime uncertain" : {
       "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "日付が正確でない可能性があります" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "日期可能不可靠" } }
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送時刻が不確か" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "播出时间不确定" } }
       }
     },
     "Expected" : {
@@ -107,13 +107,13 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "帮助确认播出时间" } }
       }
     },
-    "Next Airing" : {
+    "Notifications" : {
       "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "次回放送" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "下次播出" } }
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "通知" } }
       }
     },
-    "Next Up" : {
+    "Next Airing" : {
       "localizations" : {
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "次回放送" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "下次播出" } }
