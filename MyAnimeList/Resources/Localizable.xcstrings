@@ -23,22 +23,28 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "播出时间" } }
       }
     },
+    "Matched Anime" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "一致したアニメ" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已匹配动画" } }
+      }
+    },
     "Airtime Unavailable" : {
       "localizations" : {
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送時刻を取得できません" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无可用播出时间" } }
       }
     },
-    "AniShelf will use TMDb’s expected date after confirmation." : {
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "確認後、AniShelfはTMDbの予想日を使用します。" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "确认后，AniShelf 将使用 TMDb 的预计日期。" } }
-      }
-    },
     "AniShelf Title" : {
       "localizations" : {
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "AniShelfのタイトル" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "AniShelf 标题" } }
+      }
+    },
+    "AniShelf links this entry to this anime on TVMaze to retrieve broadcast times." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送時刻を取得するため、AniShelfはこの項目をTVMazeのアニメに関連付けています。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "为获取播出时间，AniShelf 已将此条目关联到 TVMaze 上的这部动画。" } }
       }
     },
     "Broadcast Airtimes" : {
@@ -59,10 +65,10 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "候选结果" } }
       }
     },
-    "Confirm Airtime Match" : {
+    "Confirm Anime" : {
       "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送情報の一致を確認" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "确认播出匹配" } }
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "アニメを確認" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "确认动画" } }
       }
     },
     "Couldn’t Find a Match" : {
@@ -77,10 +83,28 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法载入播出时间" } }
       }
     },
+    "Couldn’t Save Selection" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "選択内容を保存できませんでした" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法保存选择" } }
+      }
+    },
     "Airtime uncertain" : {
       "localizations" : {
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送時刻が不確か" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "播出时间不确定" } }
+      }
+    },
+    "This may be the wrong anime" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "別のアニメかもしれません" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这可能不是同一部动画" } }
+      }
+    },
+    "TVMaze’s network-local next-airing date is %@, while TMDb expects %@." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "TVMazeの放送地域では次回放送日が%1$@ですが、TMDbでは%2$@の予定です。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "按 TVMaze 播出地区的当地日期，下次播出为 %1$@，而 TMDb 预计为 %2$@。" } }
       }
     },
     "Expected" : {
@@ -89,10 +113,10 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "预计" } }
       }
     },
-    "Fetch upcoming TV broadcast times when you open eligible series and seasons." : {
+    "Look up TV broadcast times when you open an eligible anime or season." : {
       "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "対象のシリーズやシーズンを開いたときに、今後のテレビ放送時刻を取得します。" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开符合条件的剧集或季度时，获取即将到来的电视播出时间。" } }
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "対象のアニメやシーズンを開いたときに、テレビの放送時刻を取得します。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开符合条件的动画或单季条目时，查询电视播出时间。" } }
       }
     },
     "Finding Airtime…" : {
@@ -131,28 +155,34 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "不是这部动画" } }
       }
     },
+    "Not This Anime" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "このアニメではありません" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "不是这部动画" } }
+      }
+    },
     "Premiered" : {
       "localizations" : {
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "初回放送" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "首播" } }
       }
     },
-    "Retry Airtime" : {
+    "Review Match" : {
       "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送時刻を再試行" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "重试播出时间" } }
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "一致を確認" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "查看匹配" } }
       }
     },
-    "Review Airtime Match" : {
+    "Resolved" : {
       "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送情報の一致を確認" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "查看播出匹配" } }
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "解決済み" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已匹配" } }
       }
     },
-    "Saving Airtime Match…" : {
+    "Saving Selection…" : {
       "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送情報を保存中…" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在保存播出匹配…" } }
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "選択内容を保存中…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在保存选择…" } }
       }
     },
     "Searching TVMaze…" : {
@@ -161,22 +191,34 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在搜索 TVMaze…" } }
       }
     },
+    "Search for an anime..." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "アニメを検索…" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "搜索动画…" } }
+      }
+    },
+    "Search TVMaze" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "TVMazeを検索" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "搜索 TVMaze" } }
+      }
+    },
+    "Enter a title to search TVMaze." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "タイトルを入力してTVMazeを検索してください。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "输入标题以搜索 TVMaze。" } }
+      }
+    },
     "This Is the Anime" : {
       "localizations" : {
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "このアニメです" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "就是这部动画" } }
       }
     },
-    "TVMaze found this anime. Confirm it before AniShelf remembers the match." : {
+    "Is this the same anime? AniShelf uses TVMaze to retrieve broadcast times." : {
       "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "TVMazeでこのアニメが見つかりました。AniShelfが一致を記憶する前に確認してください。" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "TVMaze 找到了这部动画。请先确认，AniShelf 才会记住此匹配。" } }
-      }
-    },
-    "TVMaze has no concrete next airing for this anime." : {
-      "localizations" : {
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "TVMazeにはこのアニメの具体的な次回放送情報がありません。" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "TVMaze 没有这部动画的具体下次播出信息。" } }
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "同じアニメですか？AniShelfはTVMazeから放送時刻を取得します。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "这是同一部动画吗？AniShelf 会通过 TVMaze 获取播出时间。" } }
       }
     },
     "* For security reasons, your TMDb API Key will not be exported." : {

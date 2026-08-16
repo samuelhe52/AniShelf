@@ -53,7 +53,8 @@ fileprivate struct EntryDetailBroadcastConfirmationPreview: View {
     @State private var isPresented = false
     @State private var model: EntryDetailBroadcastModel
 
-    private let searchTitle = "正反対な君と僕"
+    private let searchTitle = "You and I Are Polar Opposites"
+    private let displayTitle = "正反対な君と僕"
 
     init() {
         let candidate = BroadcastPolicyPreviewCase.confirmationCandidate
@@ -71,7 +72,7 @@ fileprivate struct EntryDetailBroadcastConfirmationPreview: View {
             saveMappedShowID: { _, _ in },
             lookupTVDBShowID: { _ in nil },
             lookupIMDbShowID: { _ in nil },
-            searchShowID: { _ in candidate.id },
+            searchShows: { _ in [candidate] },
             fetchShow: { showID in showID == candidate.id ? candidate : nil }
         )
         _model = State(
@@ -98,7 +99,8 @@ fileprivate struct EntryDetailBroadcastConfirmationPreview: View {
         .sheet(isPresented: $isPresented) {
             EntryDetailBroadcastValidationSheet(
                 model: model,
-                searchTitle: searchTitle
+                searchTitle: searchTitle,
+                displayTitle: displayTitle
             )
         }
         .task {
@@ -137,8 +139,8 @@ fileprivate struct BroadcastPolicyPreviewCase: Identifiable {
     ]
 
     static let confirmationCandidate = show(
-        id: 20_207,
-        name: "正反対な君と僕",
+        id: 89_103,
+        name: "You and I Are Polar Opposites",
         scheduleDays: [.sunday],
         scheduleHour: 17,
         scheduleMinute: 0,

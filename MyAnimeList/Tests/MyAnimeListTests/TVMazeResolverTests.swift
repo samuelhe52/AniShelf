@@ -173,9 +173,15 @@ private actor TVMazeResolverProbe {
         return imdbShowIDs[imdbID]
     }
 
-    func searchShowID(title: String) -> Int? {
+    func searchShows(title: String) -> [TVMazeShow] {
         searchedTitles.append(title)
-        return titleShowIDs[title]
+        guard
+            let showID = titleShowIDs[title],
+            let show = shows[showID]
+        else {
+            return []
+        }
+        return [show]
     }
 
     func show(id: Int) -> TVMazeShow? {
@@ -197,8 +203,8 @@ fileprivate func makeTVMazeResolver(probe: TVMazeResolverProbe) -> TVMazeResolve
         lookupIMDbShowID: { imdbID in
             await probe.lookupIMDbShowID(imdbID: imdbID)
         },
-        searchShowID: { title in
-            await probe.searchShowID(title: title)
+        searchShows: { title in
+            await probe.searchShows(title: title)
         },
         fetchShow: { showID in
             await probe.show(id: showID)

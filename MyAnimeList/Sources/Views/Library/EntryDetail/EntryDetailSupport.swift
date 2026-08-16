@@ -87,31 +87,45 @@ enum EntryDetailL10n {
     static let nextAiring: LocalizedStringResource = "Next Airing"
     static let expected: LocalizedStringResource = "Expected"
     static let uncertainAirtime: LocalizedStringResource = "Airtime uncertain"
+    static let possiblyWrongAnime: LocalizedStringResource = "This may be the wrong anime"
     static let nextAirtimeUnavailable: LocalizedStringResource = "Next airtime unavailable"
     static let notifications: LocalizedStringResource = "Notifications"
     static let helpConfirmAirtime: LocalizedStringResource = "Help Confirm Airtime"
-    static let reviewAirtimeMatch: LocalizedStringResource = "Review Airtime Match"
+    static let reviewAirtimeMatch: LocalizedStringResource = "Review Match"
     static let couldNotLoadAirtime: LocalizedStringResource = "Couldn’t Load Airtime"
-    static let retryAirtime: LocalizedStringResource = "Retry Airtime"
-    static let confirmAirtimeMatch: LocalizedStringResource = "Confirm Airtime Match"
+    static let airtimeMatch: LocalizedStringResource = "Matched Anime"
+    static let confirmAirtimeMatch: LocalizedStringResource = "Confirm Anime"
     static let searchingTVMaze: LocalizedStringResource = "Searching TVMaze…"
-    static let savingAirtimeMatch: LocalizedStringResource = "Saving Airtime Match…"
+    static let savingAirtimeMatch: LocalizedStringResource = "Saving Selection…"
+    static let couldNotSaveAirtimeMatch: LocalizedStringResource = "Couldn’t Save Selection"
     static let candidate: LocalizedStringResource = "Candidate"
+    static let resolved: LocalizedStringResource = "Resolved"
     static let aniShelfTitle: LocalizedStringResource = "AniShelf Title"
     static let candidateConfirmationHelp: LocalizedStringResource =
-        "TVMaze found this anime. Confirm it before AniShelf remembers the match."
+        "Is this the same anime? AniShelf uses TVMaze to retrieve broadcast times."
+    static let resolvedMatchHelp: LocalizedStringResource =
+        "AniShelf links this entry to this anime on TVMaze to retrieve broadcast times."
     static let language: LocalizedStringResource = "Language"
     static let premiered: LocalizedStringResource = "Premiered"
     static let broadcastSchedule: LocalizedStringResource = "Schedule"
-    static let missingTVMazeNextAiring: LocalizedStringResource =
-        "TVMaze has no concrete next airing for this anime."
-    static let usesTMDbExpectedDateAfterConfirmation: LocalizedStringResource =
-        "AniShelf will use TMDb’s expected date after confirmation."
     static let thisIsTheAnime: LocalizedStringResource = "This Is the Anime"
+    static let notThisAnime: LocalizedStringResource = "Not This Anime"
     static let notAMatch: LocalizedStringResource = "Not a Match"
+    static let searchTVMaze: LocalizedStringResource = "Search TVMaze"
+    static let searchAnimePrompt: LocalizedStringResource = "Search for an anime..."
+    static let searchTVMazeHelp: LocalizedStringResource = "Enter a title to search TVMaze."
+    static let noResults: LocalizedStringResource = "No Results"
+    static let tryDifferentSearchTerm: LocalizedStringResource = "Try a different search term"
     static let couldNotFindMatch: LocalizedStringResource = "Couldn’t Find a Match"
     static let tryAgain: LocalizedStringResource = "Try Again"
     static let close: LocalizedStringResource = "Close"
+
+    static func airingDateConflictReason(
+        tvMazeDate: String,
+        tmdbDate: String
+    ) -> LocalizedStringResource {
+        "TVMaze’s network-local next-airing date is \(tvMazeDate), while TMDb expects \(tmdbDate)."
+    }
 }
 
 enum EntryDetailScrollTarget: Hashable {

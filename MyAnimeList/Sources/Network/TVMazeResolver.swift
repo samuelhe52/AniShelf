@@ -17,8 +17,8 @@ enum TVMazeAutomaticResolution: Equatable, Sendable {
 /// Resolves AniShelf entries to hydrated TVMaze shows.
 ///
 /// Identifier discovery and show retrieval remain internal steps. Automatic resolution never
-/// performs title search, while ``resolveTitleFallback(named:)`` always searches and retrieves
-/// the full show before returning a candidate.
+/// performs title search, while user-initiated search stays read-only until a candidate is
+/// explicitly confirmed.
 struct TVMazeResolver: Sendable {
     // MARK: - Dependencies
 
@@ -34,8 +34,8 @@ struct TVMazeResolver: Sendable {
     /// Finds the TVMaze show ID associated with an IMDb ID.
     private let lookupIMDbShowID: @Sendable (String) async throws -> Int?
 
-    /// Returns the top title-search result's TVMaze show ID.
-    private let searchShowID: @Sendable (String) async throws -> Int?
+    /// Returns TVMaze's ranked title-search results.
+    private let searchShows: @Sendable (String) async throws -> [TVMazeShow]
 
     /// Retrieves the hydrated TVMaze show, including its embedded next episode.
     private let fetchShow: @Sendable (Int) async throws -> TVMazeShow?
@@ -62,8 +62,8 @@ struct TVMazeResolver: Sendable {
             lookupIMDbShowID: { imdbID in
                 try await tvMazeClient.lookupShowID(imdbID: imdbID)
             },
-            searchShowID: { title in
-                try await tvMazeClient.searchShowID(named: title)
+            searchShows: { title in
+                try await tvMazeClient.searchShows(named: title)
             },
             fetchShow: { tvMazeID in
                 try await tvMazeClient.show(id: tvMazeID)
@@ -76,14 +76,14 @@ struct TVMazeResolver: Sendable {
         saveMappedShowID: @escaping @Sendable (Int, Int) async throws -> Void,
         lookupTVDBShowID: @escaping @Sendable (Int) async throws -> Int?,
         lookupIMDbShowID: @escaping @Sendable (String) async throws -> Int?,
-        searchShowID: @escaping @Sendable (String) async throws -> Int?,
+        searchShows: @escaping @Sendable (String) async throws -> [TVMazeShow],
         fetchShow: @escaping @Sendable (Int) async throws -> TVMazeShow?
     ) {
         self.loadMappedShowID = loadMappedShowID
         self.saveMappedShowID = saveMappedShowID
         self.lookupTVDBShowID = lookupTVDBShowID
         self.lookupIMDbShowID = lookupIMDbShowID
-        self.searchShowID = searchShowID
+        self.searchShows = searchShows
         self.fetchShow = fetchShow
     }
 
@@ -131,8 +131,20 @@ struct TVMazeResolver: Sendable {
     /// Calling this method does not persist a TMDb-to-TVMaze mapping. The caller must wait for
     /// explicit user confirmation before recording one.
     func resolveTitleFallback(named title: String) async throws -> TVMazeShow? {
-        guard let showID = try await searchShowID(title) else { return nil }
-        return try await fetchShow(showID)
+        guard let candidate = try await searchTitleCandidates(named: title).first else {
+            return nil
+        }
+        return try await hydrateTitleCandidate(id: candidate.id)
+    }
+
+    /// Returns every ranked title-search result without changing the saved mapping.
+    func searchTitleCandidates(named title: String) async throws -> [TVMazeShow] {
+        try await searchShows(title)
+    }
+
+    /// Retrieves full schedule and next-episode details for a selected search result.
+    func hydrateTitleCandidate(id: Int) async throws -> TVMazeShow? {
+        try await fetchShow(id)
     }
 
     /// Records a title-search candidate only after the user explicitly confirms it.

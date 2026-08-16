@@ -100,20 +100,34 @@ struct TVMazeClientTests {
         #expect(requests[1].url.flatMap { queryValue(named: "imdb", in: $0) } == "tt22248376")
     }
 
-    @Test func titleSearchReturnsTopCandidateID() async throws {
+    @Test func titleSearchReturnsEveryCandidateInProviderRankOrder() async throws {
         let searchResponseData = Data(
             #"""
             [
               {
                 "score": 0.9,
                 "show": {
-                  "id": 69956
+                  "id": 69956,
+                  "name": "Frieren: Beyond Journey's End",
+                  "language": "Japanese",
+                  "premiered": "2023-09-29",
+                  "schedule": { "time": "23:00", "days": ["Friday"] },
+                  "network": null,
+                  "webChannel": null,
+                  "image": { "original": "https://example.com/frieren.jpg" }
                 }
               },
               {
                 "score": 0.5,
                 "show": {
-                  "id": 80137
+                  "id": 80137,
+                  "name": "Frieren & Himmel",
+                  "language": "Japanese",
+                  "premiered": null,
+                  "schedule": { "time": "", "days": [] },
+                  "network": null,
+                  "webChannel": null,
+                  "image": null
                 }
               }
             ]
@@ -128,11 +142,13 @@ struct TVMazeClientTests {
             }
         )
 
-        let showID = try await client.searchShowID(named: "  Frieren & Himmel  ")
+        let shows = try await client.searchShows(named: "  Frieren & Himmel  ")
         let requests = await transport.requests
         let searchURL = try #require(requests.first?.url)
 
-        #expect(showID == 69_956)
+        #expect(shows.map(\.id) == [69_956, 80_137])
+        #expect(shows.map(\.name) == ["Frieren: Beyond Journey's End", "Frieren & Himmel"])
+        #expect(shows.first?.nextEpisodeAiring == nil)
         #expect(requests.count == 1)
         #expect(searchURL.path == "/search/shows")
         #expect(queryValue(named: "q", in: searchURL) == "Frieren & Himmel")

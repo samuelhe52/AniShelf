@@ -1,7 +1,7 @@
 # AniShelf Broadcast Time Feature Plan
 
 Created: 2026-08-09
-Updated: 2026-08-14
+Updated: 2026-08-16
 
 ## Scope
 
@@ -21,6 +21,13 @@ setting-gated, and does not add broadcast data to the SwiftData schema.
   match. Tapping it opens the validation sheet and starts title fallback.
 - Show one hydrated candidate with enough metadata and next-airing information
   to make a decision. Remember it only after explicit user confirmation.
+- Let resolved entries reopen the same sheet to review the current match. Its
+  only match action is to reject that anime and open a dedicated TVMaze search.
+  Unresolved candidates retain both confirmation and rejection actions.
+- The search starts with the AniShelf title, runs only when submitted, and shows
+  the full ranked result list. Selecting a result hydrates it, returns to the
+  validation sheet, and still requires confirmation. Closing either sheet
+  without confirmation preserves the previously resolved mapping.
 
 The feature uses one Boolean setting and is on by default. Changing it affects
 new and currently presented eligible details without changing library data.
@@ -52,19 +59,23 @@ evidence.
 
 ## Resolver Contract
 
-The resolver exposes two operations:
+The resolver supports three workflows:
 
 1. **Automatic resolution:** derive the TMDb series ID, use a saved mapping or
    the TVDB and IMDb IDs supplied by the live eligibility result for TVMaze
    lookup, then fetch the full show with its embedded next episode. On an ID
    miss, return a user-assistance outcome without starting title search.
-2. **User-initiated title fallback:** only after the validation sheet opens,
+2. **Initial user-assisted fallback:** only after the validation sheet opens,
    search for the top TVMaze ID and fetch the same full show response.
+3. **Explicit replacement search:** return the full ranked TVMaze result list,
+   then hydrate the show selected by the user before returning it to the
+   validation sheet.
 
-Each operation returns a hydrated show or a resolution outcome. ID discovery
+The automatic and initial fallback workflows return a hydrated show or a
+resolution outcome. ID discovery
 and show retrieval may be separate internally but are never exposed as caller-
 orchestrated stages. Title fallback does not write the TMDb-to-TVMaze mapping;
-confirmation does.
+confirmation does. A replacement likewise remains transient until confirmed.
 
 ## Feature Boundaries
 
@@ -124,11 +135,18 @@ comparable, or disagreeing. A disagreement does not replace or remove the
 TVMaze airing; it marks that airing as potentially unreliable. Season and
 episode numbering differences do not affect availability.
 
-When the resolved TVMaze show lacks an embedded next episode or valid
-`airstamp`, ignore its recurring schedule and fall back to the selected TMDb
-date as an expected airing. If neither provider has a usable next-airing date,
-the resolved availability is unavailable. The menu labels disagreements as
-potentially unreliable and labels the TMDb-only fallback as expected.
+The outer menu may fall back to the selected TMDb date as an expected airing
+when the resolved TVMaze show lacks an embedded next episode or valid
+`airstamp`. If neither provider has a usable next-airing date, the resolved
+availability is unavailable. The menu labels disagreements as potentially
+unreliable and labels the TMDb-only fallback as expected.
+
+The confirmation and review sheet never displays TMDb's date as an airing.
+Without a valid TVMaze `airstamp`, it shows the next airtime as unavailable.
+When TVMaze and comparable TMDb next-episode dates disagree, it continues to
+show the TVMaze timestamp but warns that the selected anime may be wrong and
+states both conflicting dates. TMDb is validation evidence on this surface,
+not a fallback airtime provider.
 
 ## Schedule Representation
 
@@ -167,6 +185,9 @@ potentially unreliable and labels the TMDb-only fallback as expected.
    assistance action to the detail ellipsis menu.
 6. **Complete:** Add the candidate-validation sheet and connect confirmation to
    the existing resolver seam.
+7. **Complete:** Add resolved-match review and full-result replacement search,
+   preserving the existing mapping until a replacement is confirmed. Keep TMDb
+   dates validation-only in confirmation and review sheets.
 
 ## Deferred Work
 

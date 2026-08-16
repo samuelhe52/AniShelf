@@ -104,7 +104,7 @@ struct LibraryProfilePreferencesSection: View {
             LibraryProfileSettingsToggleRow(
                 title: "Broadcast Airtimes",
                 subtitle:
-                    "Fetch upcoming TV broadcast times when you open eligible series and seasons.",
+                    "Look up TV broadcast times when you open an eligible anime or season.",
                 isOn: $broadcastScheduleEnabled
             )
         }

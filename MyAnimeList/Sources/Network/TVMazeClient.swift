@@ -86,22 +86,20 @@ struct TVMazeClient: Sendable {
         try await lookupShowID(queryItem: URLQueryItem(name: "imdb", value: imdbID))
     }
 
-    /// Returns the top title-search candidate's TVMaze ID without retrieving its details.
-    func searchShowID(named query: String) async throws -> Int? {
+    /// Returns TVMaze's ranked title-search results without embedded episode details.
+    func searchShows(named query: String) async throws -> [TVMazeShow] {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return nil }
+        guard !query.isEmpty else { return [] }
 
         let data = try await requestData(
             path: "/search/shows",
             queryItems: [URLQueryItem(name: "q", value: query)]
         )
-        guard let data else { return nil }
+        guard let data else { return [] }
 
         return try JSONDecoder()
             .decode([TVMazeSearchResultResponse].self, from: data)
-            .first?
-            .show
-            .id
+            .map(\.show.value)
     }
 
     // MARK: - Show Details
@@ -194,7 +192,7 @@ fileprivate struct TVMazeShowIDResponse: Decodable {
 }
 
 fileprivate struct TVMazeSearchResultResponse: Decodable {
-    let show: TVMazeShowIDResponse
+    let show: TVMazeShowResponse
 }
 
 // MARK: - Show Response

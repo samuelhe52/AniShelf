@@ -114,7 +114,8 @@ struct EntryDetailView: View {
             case .broadcastValidation:
                 EntryDetailBroadcastValidationSheet(
                     model: session.broadcast,
-                    searchTitle: broadcastTitleFallbackName
+                    searchTitle: broadcastTitleFallbackName,
+                    displayTitle: session.model.displayTitle
                 )
             case .changePoster:
                 NavigationStack {
@@ -207,8 +208,8 @@ struct EntryDetailView: View {
                 language: currentLanguage
             )
         }
-        .task(id: broadcastActivation) {
-            session.broadcast.update(broadcastActivation)
+        .task(id: broadcastActivationTaskID) {
+            session.broadcast.update(broadcastActivationTaskID.activation)
         }
         .onChange(of: session.instanceID) {
             cancelConversionTask()
@@ -224,6 +225,18 @@ struct EntryDetailView: View {
             entryType: session.entry.type,
             seriesStatus: session.entry.detail?.status
         )
+    }
+
+    private var broadcastActivationTaskID: BroadcastActivationTaskID {
+        BroadcastActivationTaskID(
+            sessionInstanceID: session.instanceID,
+            activation: broadcastActivation
+        )
+    }
+
+    private struct BroadcastActivationTaskID: Equatable {
+        let sessionInstanceID: UUID
+        let activation: EntryDetailBroadcastModel.Activation
     }
 
     // MARK: - Hero

@@ -180,7 +180,10 @@ struct EntryDetailBroadcastModelTests {
                 == .tvMazeNextAiring(
                     show: show,
                     airing: airing,
-                    dateAssessment: .disagrees(tmdbDate: calendarDate(day: 21))
+                    dateAssessment: .disagrees(
+                        tvMazeDate: calendarDate(day: 14),
+                        tmdbDate: calendarDate(day: 21)
+                    )
                 )
         )
     }
@@ -218,6 +221,14 @@ struct EntryDetailBroadcastModelTests {
         )
 
         #expect(availability == .tmdbExpected(tmdbEvidence))
+
+        let replacementAvailability = BroadcastAvailability(
+            resolvedShow: show,
+            tmdbEvidence: tmdbEvidence,
+            allowsTMDbFallback: false
+        )
+
+        #expect(replacementAvailability == .unavailable)
     }
 
     @Test func availabilityIsUnavailableWithoutEitherProviderDate() {
@@ -273,6 +284,7 @@ struct EntryDetailBroadcastModelTests {
         await Task.yield()
 
         #expect(model.phase == .resolved(expectedAvailability))
+        #expect(model.resolvedShow == expectedShow)
         #expect(await probe.loadedMappingTMDbIDs == [42])
         #expect(await probe.lookedUpTVDBIDs == [424_536])
     }
@@ -370,6 +382,52 @@ struct EntryDetailBroadcastModelTests {
                 )
         }
 
+        #expect(await probe.savedMappings == [.init(tmdbSeriesID: 42, showID: 90)])
+    }
+
+    @Test @MainActor func replacementSearchKeepsResolvedMappingUntilConfirmation() async throws {
+        let resolvedShow = makeBroadcastTestShow(id: 70)
+        let replacement = makeBroadcastTestShow(id: 90)
+        let expectedAvailability = BroadcastAvailability.tmdbExpected(
+            airingEvidence(day: 13, basis: .nextEpisode)
+        )
+        let probe = BroadcastResolutionProbe(
+            mappedShowID: resolvedShow.id,
+            titleShowID: replacement.id,
+            show: resolvedShow,
+            additionalShows: [replacement.id: replacement]
+        )
+        let model = EntryDetailBroadcastModel(
+            entryType: .series,
+            tmdbID: 42,
+            eligibilityChecker: makeEligibilityChecker(schedule: eligibleSchedule),
+            resolver: makeBroadcastResolver(probe: probe),
+            now: { date(day: 12) },
+            calendar: broadcastTestCalendar
+        )
+
+        model.update(
+            .init(
+                isEnabled: true,
+                entryType: .series,
+                seriesStatus: "Returning Series"
+            )
+        )
+        await waitUntil { model.phase == .resolved(expectedAvailability) }
+
+        let results = try await model.searchTitleCandidates(named: "  Replacement  ")
+        let selected = try #require(await model.hydrateTitleCandidate(id: replacement.id))
+
+        #expect(results == [replacement])
+        #expect(await probe.searchedTitles == ["Replacement"])
+        #expect(await probe.savedMappings.isEmpty)
+        #expect(model.phase == .resolved(expectedAvailability))
+        #expect(model.resolvedShow == resolvedShow)
+
+        model.confirm(candidate: selected)
+        await waitUntil { model.phase == .resolved(expectedAvailability) }
+
+        #expect(model.resolvedShow == replacement)
         #expect(await probe.savedMappings == [.init(tmdbSeriesID: 42, showID: 90)])
     }
 
@@ -478,7 +536,7 @@ private actor BroadcastResolutionProbe {
     private let mappedShowID: Int?
     private let tvdbShowID: Int?
     private let titleShowID: Int?
-    private let show: TVMazeShow?
+    private let shows: [Int: TVMazeShow]
     private let suspendsMappingLoad: Bool
 
     private(set) var loadedMappingTMDbIDs: [Int] = []
@@ -493,12 +551,17 @@ private actor BroadcastResolutionProbe {
         tvdbShowID: Int? = nil,
         titleShowID: Int? = nil,
         show: TVMazeShow? = nil,
+        additionalShows: [Int: TVMazeShow] = [:],
         suspendsMappingLoad: Bool = false
     ) {
         self.mappedShowID = mappedShowID
         self.tvdbShowID = tvdbShowID
         self.titleShowID = titleShowID
-        self.show = show
+        var shows = additionalShows
+        if let show {
+            shows[show.id] = show
+        }
+        self.shows = shows
         self.suspendsMappingLoad = suspendsMappingLoad
     }
 
@@ -517,8 +580,7 @@ private actor BroadcastResolutionProbe {
     }
 
     func hydratedShow(id: Int) -> TVMazeShow? {
-        guard show?.id == id else { return nil }
-        return show
+        shows[id]
     }
 
     func lookupTVDBShowID(tvdbID: Int) -> Int? {
@@ -526,9 +588,10 @@ private actor BroadcastResolutionProbe {
         return tvdbShowID
     }
 
-    func searchShowID(title: String) -> Int? {
+    func searchShows(title: String) -> [TVMazeShow] {
         searchedTitles.append(title)
-        return titleShowID
+        guard let titleShowID, let show = shows[titleShowID] else { return [] }
+        return [show]
     }
 
     func saveMapping(tmdbSeriesID: Int, showID: Int) {
@@ -542,7 +605,7 @@ fileprivate func makeBroadcastResolver(probe: BroadcastResolutionProbe) -> TVMaz
         saveMappedShowID: { await probe.saveMapping(tmdbSeriesID: $0, showID: $1) },
         lookupTVDBShowID: { await probe.lookupTVDBShowID(tvdbID: $0) },
         lookupIMDbShowID: { _ in nil },
-        searchShowID: { await probe.searchShowID(title: $0) },
+        searchShows: { await probe.searchShows(title: $0) },
         fetchShow: { await probe.hydratedShow(id: $0) }
     )
 }

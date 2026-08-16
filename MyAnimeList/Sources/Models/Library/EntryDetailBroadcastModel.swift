@@ -12,7 +12,10 @@ import Observation
 enum BroadcastDateAssessment: Equatable, Sendable {
     case agrees
     case notComparable
-    case disagrees(tmdbDate: TMDbCalendarDate)
+    case disagrees(
+        tvMazeDate: TMDbCalendarDate,
+        tmdbDate: TMDbCalendarDate
+    )
 }
 
 enum BroadcastAvailability: Equatable, Sendable {
@@ -24,12 +27,21 @@ enum BroadcastAvailability: Equatable, Sendable {
     case tmdbExpected(TMDbAiringEvidence)
     case unavailable
 
+    /// Builds the availability used by the outer Airtime menu and resolved lifecycle state.
+    ///
+    /// TVMaze's concrete `airstamp` is always preferred. TMDb's next-episode date validates
+    /// that timestamp when both describe the same event. The outer menu may also fall back to
+    /// TMDb when TVMaze has no concrete airing; confirmation surfaces disable that fallback.
     init(
         resolvedShow show: TVMazeShow,
-        tmdbEvidence: TMDbAiringEvidence?
+        tmdbEvidence: TMDbAiringEvidence?,
+        allowsTMDbFallback: Bool = true
     ) {
         guard let airing = show.nextEpisodeAiring else {
-            self = tmdbEvidence.map(Self.tmdbExpected) ?? .unavailable
+            self =
+                allowsTMDbFallback
+                ? tmdbEvidence.map(Self.tmdbExpected) ?? .unavailable
+                : .unavailable
             return
         }
 
@@ -43,7 +55,9 @@ enum BroadcastAvailability: Equatable, Sendable {
             )
         {
             dateAssessment =
-                tvMazeDate == tmdbDate ? .agrees : .disagrees(tmdbDate: tmdbDate)
+                tvMazeDate == tmdbDate
+                ? .agrees
+                : .disagrees(tvMazeDate: tvMazeDate, tmdbDate: tmdbDate)
         } else {
             dateAssessment = .notComparable
         }
@@ -121,6 +135,7 @@ final class EntryDetailBroadcastModel {
     private var resolutionID: UUID?
 
     private(set) var phase: Phase = .disabled
+    private(set) var resolvedShow: TVMazeShow?
 
     init(
         entryType: AnimeType,
@@ -164,6 +179,7 @@ final class EntryDetailBroadcastModel {
         gate = nextGate
         cancelResolution()
         airingEvidence = nil
+        resolvedShow = nil
 
         switch nextGate {
         case .disabled:
@@ -225,6 +241,7 @@ final class EntryDetailBroadcastModel {
 
                 switch result {
                 case .resolved(let show):
+                    self.resolvedShow = show
                     self.phase = .resolved(
                         BroadcastAvailability(
                             resolvedShow: show,
@@ -232,8 +249,10 @@ final class EntryDetailBroadcastModel {
                         )
                     )
                 case .requiresUserAssistance:
+                    self.resolvedShow = nil
                     self.phase = .requiresUserAssistance
                 case .ineligible:
+                    self.resolvedShow = nil
                     self.phase = .ineligible
                 }
                 self.finishResolution(resolutionID)
@@ -285,6 +304,11 @@ final class EntryDetailBroadcastModel {
 
     func confirmTitleFallbackCandidate() {
         guard case .titleCandidate(let candidate) = phase else { return }
+        confirm(candidate: candidate)
+    }
+
+    func confirm(candidate: TVMazeShow) {
+        guard gate == .eligible else { return }
 
         let resolutionID = UUID()
         let resolver = resolver
@@ -309,6 +333,7 @@ final class EntryDetailBroadcastModel {
                     return
                 }
 
+                self.resolvedShow = candidate
                 self.phase = .resolved(
                     BroadcastAvailability(
                         resolvedShow: candidate,
@@ -337,11 +362,28 @@ final class EntryDetailBroadcastModel {
         startEligibilityCheck()
     }
 
-    func availability(for candidate: TVMazeShow) -> BroadcastAvailability {
+    /// Availability for confirmation and review sheets.
+    ///
+    /// These sheets display only a concrete TVMaze `airstamp`. TMDb evidence remains available
+    /// solely to validate a comparable next-episode date and explain conflicts; it must never
+    /// become the displayed airtime when TVMaze has no concrete next episode. The outer menu
+    /// continues to use the resolved phase's availability, where TMDb fallback remains enabled.
+    func confirmationAvailability(for candidate: TVMazeShow) -> BroadcastAvailability {
         BroadcastAvailability(
             resolvedShow: candidate,
-            tmdbEvidence: airingEvidence
+            tmdbEvidence: airingEvidence,
+            allowsTMDbFallback: false
         )
+    }
+
+    func searchTitleCandidates(named title: String) async throws -> [TVMazeShow] {
+        let normalizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedTitle.isEmpty else { return [] }
+        return try await resolver.searchTitleCandidates(named: normalizedTitle)
+    }
+
+    func hydrateTitleCandidate(id: Int) async throws -> TVMazeShow? {
+        try await resolver.hydrateTitleCandidate(id: id)
     }
 
     private func cancelResolution() {
