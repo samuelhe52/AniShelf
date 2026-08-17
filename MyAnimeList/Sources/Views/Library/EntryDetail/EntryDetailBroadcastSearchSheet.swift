@@ -75,6 +75,7 @@ struct EntryDetailBroadcastSearchSheet: View {
             } catch is CancellationError {
                 return
             } catch {
+                guard !Task.isCancelled, self.request?.id == request.id else { return }
                 state = .failed
             }
         }
