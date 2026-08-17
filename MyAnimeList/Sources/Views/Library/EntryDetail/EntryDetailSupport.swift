@@ -82,6 +82,7 @@ enum EntryDetailL10n {
     static let episode: LocalizedStringResource = "Episode"
     static let noEpisodesAvailable: LocalizedStringResource = "No episodes available for this season."
     static let airtime: LocalizedStringResource = "Airtime"
+    static let airtimeNotSupported: LocalizedStringResource = "Airtime Not Supported"
     static let airtimeUnavailable: LocalizedStringResource = "Airtime Unavailable"
     static let findingAirtime: LocalizedStringResource = "Finding Airtime…"
     static let nextAiring: LocalizedStringResource = "Next Airing"

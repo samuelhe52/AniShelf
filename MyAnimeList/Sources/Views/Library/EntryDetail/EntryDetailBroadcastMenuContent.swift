@@ -14,54 +14,24 @@ struct EntryDetailBroadcastMenuContent: View {
     let onRetry: () -> Void
 
     var isVisible: Bool {
-        switch phase {
-        case .disabled, .ineligible, .idle:
-            false
-        default:
-            true
-        }
+        phase != .disabled
     }
 
     @ViewBuilder
     var body: some View {
-        switch phase {
-        case .disabled, .ineligible, .idle:
-            EmptyView()
-        case .checkingEligibility, .resolving:
-            airtimeSection(header: String(localized: EntryDetailL10n.findingAirtime)) {
+        if isVisible {
+            airtimeSection(header: sectionHeader) {
+                primaryButton
                 notificationsButton
-            }
-        case .resolved(let availability):
-            airtimeSection(
-                header: EntryDetailBroadcastFormatting.menuHeader(for: availability)
-            ) {
-                Button(action: onPresentValidation) {
-                    Label(EntryDetailL10n.reviewAirtimeMatch, systemImage: "checkmark.bubble")
-                }
-                notificationsButton
-            }
-        case .requiresUserAssistance:
-            airtimeSection(header: String(localized: EntryDetailL10n.airtime)) {
-                Button(action: onPresentValidation) {
-                    Label(EntryDetailL10n.helpConfirmAirtime, systemImage: "person.crop.circle.badge.questionmark")
-                }
-            }
-        case .titleSearching, .titleCandidate:
-            airtimeSection(header: String(localized: EntryDetailL10n.airtime)) {
-                Button(action: onPresentValidation) {
-                    Label(
-                        EntryDetailL10n.helpConfirmAirtime,
-                        systemImage: "person.crop.circle.badge.questionmark"
-                    )
-                }
-            }
-        case .failed:
-            airtimeSection(header: String(localized: EntryDetailL10n.couldNotLoadAirtime)) {
-                Button(action: onRetry) {
-                    Label(EntryDetailL10n.tryAgain, systemImage: "arrow.clockwise")
-                }
             }
         }
+    }
+
+    private var primaryButton: some View {
+        Button(action: primaryAction) {
+            Label(primaryTitle, systemImage: primarySystemImage)
+        }
+        .disabled(primaryIsDisabled)
     }
 
     private var notificationsButton: some View {
@@ -69,6 +39,60 @@ struct EntryDetailBroadcastMenuContent: View {
             Label(EntryDetailL10n.notifications, systemImage: "bell")
         }
         .disabled(true)
+    }
+
+    private var sectionHeader: String {
+        switch phase {
+        case .disabled, .idle, .checkingEligibility, .resolving:
+            String(localized: EntryDetailL10n.findingAirtime)
+        case .ineligible:
+            String(localized: EntryDetailL10n.airtimeNotSupported)
+        case .resolved(let availability):
+            EntryDetailBroadcastFormatting.menuHeader(for: availability)
+        case .requiresUserAssistance, .titleSearching, .titleCandidate:
+            String(localized: EntryDetailL10n.airtime)
+        case .failed:
+            String(localized: EntryDetailL10n.couldNotLoadAirtime)
+        }
+    }
+
+    private var primaryTitle: LocalizedStringResource {
+        switch phase {
+        case .requiresUserAssistance, .titleSearching, .titleCandidate:
+            EntryDetailL10n.helpConfirmAirtime
+        case .failed:
+            EntryDetailL10n.tryAgain
+        default:
+            EntryDetailL10n.reviewAirtimeMatch
+        }
+    }
+
+    private var primarySystemImage: String {
+        switch phase {
+        case .requiresUserAssistance, .titleSearching, .titleCandidate:
+            "person.crop.circle.badge.questionmark"
+        case .failed:
+            "arrow.clockwise"
+        default:
+            "checkmark.bubble"
+        }
+    }
+
+    private var primaryIsDisabled: Bool {
+        switch phase {
+        case .resolved, .requiresUserAssistance, .titleSearching, .titleCandidate, .failed:
+            false
+        case .disabled, .ineligible, .idle, .checkingEligibility, .resolving:
+            true
+        }
+    }
+
+    private func primaryAction() {
+        if case .failed = phase {
+            onRetry()
+        } else {
+            onPresentValidation()
+        }
     }
 
     private func airtimeSection<Content: View>(

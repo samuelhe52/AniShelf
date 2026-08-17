@@ -368,9 +368,9 @@ final class EntryDetailBroadcastModel {
     /// solely to validate a comparable next-episode date and explain conflicts; it must never
     /// become the displayed airtime when TVMaze has no concrete next episode. The outer menu
     /// continues to use the resolved phase's availability, where TMDb fallback remains enabled.
-    func confirmationAvailability(for candidate: TVMazeShow) -> BroadcastAvailability {
+    func confirmationAvailability(for show: TVMazeShow) -> BroadcastAvailability {
         BroadcastAvailability(
-            resolvedShow: candidate,
+            resolvedShow: show,
             tmdbEvidence: airingEvidence,
             allowsTMDbFallback: false
         )

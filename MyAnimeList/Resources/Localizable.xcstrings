@@ -23,6 +23,12 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "播出时间" } }
       }
     },
+    "Airtime Not Supported" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送時刻は非対応" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "不支持播出时间" } }
+      }
+    },
     "Matched Anime" : {
       "localizations" : {
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "一致したアニメ" } },

@@ -117,6 +117,7 @@ struct EntryDetailView: View {
                     searchTitle: broadcastTitleFallbackName,
                     displayTitle: session.model.displayTitle
                 )
+                .presentationBackground(Color(.systemGroupedBackground))
             case .changePoster:
                 NavigationStack {
                     PosterSelectionView(

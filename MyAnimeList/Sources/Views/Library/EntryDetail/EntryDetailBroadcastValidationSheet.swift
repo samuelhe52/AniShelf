@@ -76,18 +76,18 @@ struct EntryDetailBroadcastValidationSheet: View {
                 progressContent
             }
         } else if let replacementCandidate {
-            candidateContent(replacementCandidate, presentation: .candidate)
+            matchContent(replacementCandidate, presentation: .candidate)
         } else {
             switch model.phase {
             case .titleCandidate(let candidate):
-                candidateContent(candidate, presentation: .candidate)
+                matchContent(candidate, presentation: .candidate)
             case .titleSearching:
                 progressContent
             case .failed:
                 failureContent
             case .resolved:
                 if let resolvedShow = model.resolvedShow {
-                    candidateContent(resolvedShow, presentation: .resolved)
+                    matchContent(resolvedShow, presentation: .resolved)
                 } else {
                     failureContent
                 }
@@ -133,7 +133,7 @@ struct EntryDetailBroadcastValidationSheet: View {
                 isConfirming = false
                 model.retryTitleFallback(named: searchTitle)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.glassProminent)
         }
     }
 
@@ -145,35 +145,35 @@ struct EntryDetailBroadcastValidationSheet: View {
                 guard let confirmingCandidate else { return }
                 model.confirm(candidate: confirmingCandidate)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.glassProminent)
         }
     }
 
-    private func candidateContent(
-        _ candidate: TVMazeShow,
+    private func matchContent(
+        _ show: TVMazeShow,
         presentation: MatchPresentation
     ) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                candidateHeader(candidate, presentation: presentation)
+                matchHeader(show, presentation: presentation)
 
-                candidateMetadata(candidate)
+                showMetadata(show)
 
-                nextAiringContent(candidate)
+                nextAiringContent(show)
 
                 VStack(spacing: 15) {
                     if presentation == .candidate {
                         Button {
-                            confirmingCandidate = candidate
+                            confirmingCandidate = show
                             isConfirming = true
-                            model.confirm(candidate: candidate)
+                            model.confirm(candidate: show)
                         } label: {
                             Text(EntryDetailL10n.thisIsTheAnime)
                                 .bold()
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 5)
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.glassProminent)
                         .buttonBorderShape(.roundedRectangle(radius: 15))
                     }
 
@@ -184,7 +184,7 @@ struct EntryDetailBroadcastValidationSheet: View {
                     ) {
                         isShowingSearch = true
                     }
-                    .bold()
+                    .font(.subheadline.weight(.bold))
                     .frame(maxWidth: .infinity)
                 }
                 .padding(.top, 8)
@@ -193,14 +193,15 @@ struct EntryDetailBroadcastValidationSheet: View {
             .frame(maxWidth: 560)
             .frame(maxWidth: .infinity)
         }
+        .preferredNavigationBarScrollEdgeEffect()
     }
 
-    private func candidateHeader(
-        _ candidate: TVMazeShow,
+    private func matchHeader(
+        _ show: TVMazeShow,
         presentation: MatchPresentation
     ) -> some View {
         HStack(alignment: .center, spacing: 14) {
-            candidateArtwork(candidate)
+            showArtwork(show)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(
@@ -214,13 +215,13 @@ struct EntryDetailBroadcastValidationSheet: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(Color.accentColor.opacity(0.12), in: Capsule())
-                Text(presentation == .resolved ? displayTitle : candidate.name)
+                Text(presentation == .resolved ? displayTitle : show.name)
                     .font(.title2.weight(.bold))
                     .fixedSize(horizontal: false, vertical: true)
                 if presentation == .resolved,
-                    candidate.name.localizedCaseInsensitiveCompare(displayTitle) != .orderedSame
+                    show.name.localizedCaseInsensitiveCompare(displayTitle) != .orderedSame
                 {
-                    Text(candidate.name)
+                    Text(show.name)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -237,19 +238,12 @@ struct EntryDetailBroadcastValidationSheet: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(12)
-        .background(
-            Color(uiColor: .secondarySystemGroupedBackground),
-            in: RoundedRectangle(cornerRadius: 20, style: .continuous)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(.primary.opacity(0.06), lineWidth: 1)
-        }
+        .popupGlassPanel(cornerRadius: 24)
     }
 
-    private func candidateArtwork(_ candidate: TVMazeShow) -> some View {
+    private func showArtwork(_ show: TVMazeShow) -> some View {
         KFImageView(
-            url: candidate.fullImageURL,
+            url: show.fullImageURL,
             targetWidth: 240,
             diskCacheExpiration: .transient
         )
@@ -265,8 +259,8 @@ struct EntryDetailBroadcastValidationSheet: View {
     }
 
     @ViewBuilder
-    private func candidateMetadata(_ candidate: TVMazeShow) -> some View {
-        let rows = candidateMetadataRows(candidate)
+    private func showMetadata(_ show: TVMazeShow) -> some View {
+        let rows = showMetadataRows(show)
 
         VStack(spacing: 0) {
             ForEach(rows.indices, id: \.self) { index in
@@ -277,23 +271,16 @@ struct EntryDetailBroadcastValidationSheet: View {
             }
         }
         .padding(.horizontal, 12)
-        .background(
-            Color(uiColor: .secondarySystemGroupedBackground),
-            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(.primary.opacity(0.05), lineWidth: 1)
-        }
+        .popupGlassPanel(cornerRadius: 24)
     }
 
-    private func candidateMetadataRows(
-        _ candidate: TVMazeShow
+    private func showMetadataRows(
+        _ show: TVMazeShow
     ) -> [(title: LocalizedStringResource, value: String)] {
         var rows: [(LocalizedStringResource, String)] = [
             (EntryDetailL10n.aniShelfTitle, displayTitle)
         ]
-        if let language = candidate.language {
+        if let language = show.language {
             rows.append(
                 (
                     EntryDetailL10n.language,
@@ -304,18 +291,18 @@ struct EntryDetailBroadcastValidationSheet: View {
                 )
             )
         }
-        if let premiered = candidate.premiered {
+        if let premiered = show.premiered {
             rows.append((EntryDetailL10n.premiered, premiered))
         }
-        if let schedule = EntryDetailBroadcastFormatting.scheduleSummary(candidate) {
+        if let schedule = EntryDetailBroadcastFormatting.scheduleSummary(show) {
             rows.append((EntryDetailL10n.broadcastSchedule, schedule))
         }
         return rows
     }
 
     @ViewBuilder
-    private func nextAiringContent(_ candidate: TVMazeShow) -> some View {
-        switch model.confirmationAvailability(for: candidate) {
+    private func nextAiringContent(_ show: TVMazeShow) -> some View {
+        switch model.confirmationAvailability(for: show) {
         case .tvMazeNextAiring(_, let airing, let assessment):
             VStack(alignment: .leading, spacing: 6) {
                 Label(EntryDetailL10n.nextAiring, systemImage: "clock")
@@ -349,7 +336,7 @@ struct EntryDetailBroadcastValidationSheet: View {
             }
             .nextAiringSectionStyle()
         // `confirmationAvailability` suppresses TMDb fallback. Keep `.tmdbExpected` defensive so
-        // this sheet never presents a TMDb date as the candidate's next airing.
+        // this sheet never presents a TMDb date as the selected show's next airing.
         case .tmdbExpected, .unavailable:
             Label(EntryDetailL10n.nextAirtimeUnavailable, systemImage: "clock.badge.questionmark")
                 .font(.headline)
@@ -379,13 +366,6 @@ extension View {
         self
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                Color(uiColor: .secondarySystemGroupedBackground),
-                in: RoundedRectangle(cornerRadius: 18, style: .continuous)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(.primary.opacity(0.05), lineWidth: 1)
-            }
+            .popupGlassPanel(cornerRadius: 24)
     }
 }

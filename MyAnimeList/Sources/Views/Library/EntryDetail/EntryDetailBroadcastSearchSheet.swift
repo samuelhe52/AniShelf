@@ -138,6 +138,7 @@ struct EntryDetailBroadcastSearchSheet: View {
                         .disabled(pendingResult != nil)
                     }
                     .listStyle(.inset)
+                    .preferredNavigationBarScrollEdgeEffect()
                     .transition(.opacity)
                 }
             case .failed:
