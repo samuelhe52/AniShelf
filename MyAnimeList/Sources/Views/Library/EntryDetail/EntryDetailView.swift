@@ -24,7 +24,7 @@ struct EntryDetailView: View {
 
     @Bindable private var session: EntryDetailSession
     private let detailHost: LibraryEntryDetailHost
-    private let onClose: ((LibraryEntrySyncIdentity) -> Void)?
+    private let onClose: ((LibraryEntryIdentity) -> Void)?
     private let editingRequestID: UUID?
     private let onEditingRequestHandled: ((UUID) -> Void)?
     private let hostPresentationID: UUID?
@@ -40,7 +40,7 @@ struct EntryDetailView: View {
     init(
         session: EntryDetailSession,
         detailHost: LibraryEntryDetailHost,
-        onClose: ((LibraryEntrySyncIdentity) -> Void)? = nil,
+        onClose: ((LibraryEntryIdentity) -> Void)? = nil,
         editingRequestID: UUID? = nil,
         onEditingRequestHandled: ((UUID) -> Void)? = nil,
         hostPresentationID: UUID? = nil,

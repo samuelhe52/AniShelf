@@ -6,6 +6,7 @@
 //
 
 import Collections
+import DataProvider
 import SwiftUI
 
 /// View responsible for displaying TMDb search results and handling TMDb-specific interactions.
@@ -14,8 +15,8 @@ struct TMDbSearchContent: View {
     @Binding var language: Language
 
     let onRetry: () -> Void
-    let onDuplicateTapped: (Int) -> Void
-    let checkDuplicate: (Int) -> Bool
+    let onDuplicateTapped: (LibraryEntryIdentity) -> Void
+    let checkDuplicate: (LibraryEntryIdentity) -> Bool
 
     var body: some View {
         VStack {
@@ -113,8 +114,10 @@ struct TMDbSearchContent: View {
     @ViewBuilder private var seriesResults: some View {
         if !tmdbSearchService.seriesResults.isEmpty {
             Section("TV Series") {
-                ForEach(tmdbSearchService.seriesResults.prefix(8), id: \.tmdbID) { series in
-                    let isDuplicate = checkDuplicate(series.tmdbID)
+                ForEach(tmdbSearchService.seriesResults.prefix(8), id: \.libraryIdentity) { series in
+                    let isDuplicate = checkDuplicate(
+                        LibraryEntryIdentity(entryType: .series, tmdbID: series.tmdbID)
+                    )
                     SeriesResultItem(
                         series: series,
                         selectionState: tmdbSearchService.seriesSelectionState(
@@ -152,7 +155,7 @@ struct TMDbSearchContent: View {
                         message: alreadyAddedMessage
                     )
                     .onTapGesture {
-                        if isDuplicate { onDuplicateTapped(series.tmdbID) }
+                        if isDuplicate { onDuplicateTapped(series.libraryIdentity) }
                     }
                     .listRowBackground(Color.clear)
                 }
@@ -163,8 +166,10 @@ struct TMDbSearchContent: View {
     @ViewBuilder private var movieResults: some View {
         if !tmdbSearchService.movieResults.isEmpty {
             Section("Movies") {
-                ForEach(tmdbSearchService.movieResults.prefix(8), id: \.tmdbID) { movie in
-                    let isDuplicate = checkDuplicate(movie.tmdbID)
+                ForEach(tmdbSearchService.movieResults.prefix(8), id: \.libraryIdentity) { movie in
+                    let isDuplicate = checkDuplicate(
+                        LibraryEntryIdentity(entryType: .movie, tmdbID: movie.tmdbID)
+                    )
                     MovieResultItem(
                         movie: movie,
                         isSelected: tmdbSearchService.isRegistered(info: movie),
@@ -181,7 +186,7 @@ struct TMDbSearchContent: View {
                         message: alreadyAddedMessage
                     )
                     .onTapGesture {
-                        if isDuplicate { onDuplicateTapped(movie.tmdbID) }
+                        if isDuplicate { onDuplicateTapped(movie.libraryIdentity) }
                     }
                     .listRowBackground(Color.clear)
                 }

@@ -21,7 +21,7 @@ extension LibrarySyncCoordinator {
     func applyImportedChanges(
         _ batch: CloudLibrarySyncImportBatch,
         to store: LibraryStore,
-        forcedDomainsByIdentity: [LibraryEntrySyncIdentity: Set<LibraryCloudSyncConflictDomain>] = [:]
+        forcedDomainsByIdentity: [LibraryEntryIdentity: Set<LibraryCloudSyncConflictDomain>] = [:]
     ) async throws -> (appliedChangesCount: Int, hydratedEntriesCount: Int) {
         var appliedChangesCount = 0
         var hydratedEntriesCount = 0
@@ -130,7 +130,7 @@ extension LibrarySyncCoordinator {
         if let parentSeriesID = snapshot.parentSeriesID {
             if let parentSeriesEntry = store.repository.existingEntry(
                 identity: .init(entryType: .series, tmdbID: parentSeriesID)
-            ) ?? store.repository.existingEntry(tmdbID: parentSeriesID) {
+            ) {
                 entry.parentSeriesEntry = parentSeriesEntry
             } else {
                 let parentSeriesEntry = try await AnimeEntry.generateParentSeriesEntryForSeason(

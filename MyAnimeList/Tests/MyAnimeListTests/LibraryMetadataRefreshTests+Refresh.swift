@@ -162,7 +162,7 @@ extension LibraryMetadataRefreshTests {
             ])
         #expect(queue.entries.count == 1)
         if case .upsert(let pendingUpsert)? = queue.entries.first {
-            #expect(pendingUpsert.identity == entry.syncIdentity)
+            #expect(pendingUpsert.identity == entry.libraryIdentity)
             #expect(pendingUpsert.dirtyAt == editDate)
         } else {
             #expect(Bool(false))
@@ -214,6 +214,22 @@ extension LibraryMetadataRefreshTests {
         #expect(completion.state == .completed)
         #expect(completion.successfulItemCount == 0)
         #expect(completion.failedItemCount == 0)
+    }
+
+    @Test @MainActor func testCreateEntryAllowsDifferentTypesWithTheSameTMDbID() async throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        store.infoFetcher = makeLibraryMetadataRefreshTestFetcher()
+
+        let series = AnimeEntry(name: "Series 550", type: .series, tmdbID: 550)
+        try store.repository.newEntry(series)
+
+        let movie = try #require(
+            try await store.createNewEntry(tmdbID: 550, type: .movie)
+        )
+
+        #expect(movie.type == .movie)
+        #expect(movie.libraryIdentity != series.libraryIdentity)
+        #expect(try store.dataProvider.getAllModels(ofType: AnimeEntry.self).count == 2)
     }
 
     @Test @MainActor func testHydrateHiddenHelperParentAppliesDefaultsAndDetail() throws {

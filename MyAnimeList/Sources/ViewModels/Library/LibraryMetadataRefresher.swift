@@ -429,11 +429,15 @@ final class LibraryMetadataRefresher {
     ) async -> LibraryMetadataRefreshParentUpdate? {
         guard let parentSeriesID = refreshedInfo.type.parentSeriesID else { return nil }
 
-        if entry.parentSeriesEntry?.tmdbID == parentSeriesID {
+        if entry.parentSeriesEntry?.libraryIdentity
+            == LibraryEntryIdentity(entryType: .series, tmdbID: parentSeriesID)
+        {
             return nil
         }
 
-        if repository.existingEntry(tmdbID: parentSeriesID) != nil {
+        if repository.existingEntry(
+            identity: .init(entryType: .series, tmdbID: parentSeriesID)
+        ) != nil {
             return .init(
                 childEntryID: entry.id,
                 parentSeriesID: parentSeriesID,

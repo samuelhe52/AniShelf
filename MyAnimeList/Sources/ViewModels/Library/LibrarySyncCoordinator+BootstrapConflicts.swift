@@ -13,7 +13,7 @@ import os
 extension LibrarySyncCoordinator {
     func resolvedBatch(
         from batch: CloudLibrarySyncImportBatch,
-        localSnapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot],
+        localSnapshotsByIdentity: [LibraryEntryIdentity: LibraryEntrySyncSnapshot],
         conflicts: AmbiguousConflictSet,
         preference: LibraryCloudSyncConflictPreference
     ) throws -> CloudLibrarySyncImportBatch {
@@ -53,7 +53,7 @@ extension LibrarySyncCoordinator {
 
     private func resolvedChange(
         _ remoteChange: LibraryEntrySyncRemoteChange,
-        localSnapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot]
+        localSnapshotsByIdentity: [LibraryEntryIdentity: LibraryEntrySyncSnapshot]
     ) throws -> LibraryEntrySyncRemoteChange {
         guard case .snapshot(let remoteSnapshot) = remoteChange,
             let localSnapshot = localSnapshotsByIdentity[remoteSnapshot.identity]
@@ -73,7 +73,7 @@ extension LibrarySyncCoordinator {
         var changed = false
         try store.syncChangeRecorder.withSuppressedRecording {
             for entry in entries {
-                guard let conflict = conflicts.conflictsByIdentity[entry.syncIdentity] else {
+                guard let conflict = conflicts.conflictsByIdentity[entry.libraryIdentity] else {
                     continue
                 }
                 if conflict.domains.contains(.library), entry.libraryUpdatedAt == nil {
@@ -96,13 +96,13 @@ extension LibrarySyncCoordinator {
 
     func dropCloudSupersededDirtyWork(
         conflicts: AmbiguousConflictSet,
-        localSnapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot],
+        localSnapshotsByIdentity: [LibraryEntryIdentity: LibraryEntrySyncSnapshot],
         remoteChanges: [LibraryEntrySyncRemoteChange],
         in store: LibraryStore
     ) throws {
         guard !conflicts.isEmpty else { return }
         let remoteSnapshotsByIdentity = remoteChanges.reduce(
-            into: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot]()
+            into: [LibraryEntryIdentity: LibraryEntrySyncSnapshot]()
         ) { snapshotsByIdentity, remoteChange in
             guard case .snapshot(let snapshot) = remoteChange else { return }
             snapshotsByIdentity[snapshot.identity] = snapshot
@@ -125,10 +125,10 @@ extension LibrarySyncCoordinator {
     }
 
     func ambiguousConflicts(
-        localSnapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot],
+        localSnapshotsByIdentity: [LibraryEntryIdentity: LibraryEntrySyncSnapshot],
         remoteChanges: [LibraryEntrySyncRemoteChange]
     ) -> AmbiguousConflictSet {
-        var conflictsByIdentity: [LibraryEntrySyncIdentity: AmbiguousConflict] = [:]
+        var conflictsByIdentity: [LibraryEntryIdentity: AmbiguousConflict] = [:]
         for remoteChange in remoteChanges {
             guard case .snapshot(let remoteSnapshot) = remoteChange,
                 let localSnapshot = localSnapshotsByIdentity[remoteSnapshot.identity]
@@ -189,12 +189,12 @@ extension LibrarySyncCoordinator {
 }
 
 struct AmbiguousConflict {
-    var identity: LibraryEntrySyncIdentity
+    var identity: LibraryEntryIdentity
     var domains: Set<LibraryCloudSyncConflictDomain>
 }
 
 struct AmbiguousConflictSet {
-    var conflictsByIdentity: [LibraryEntrySyncIdentity: AmbiguousConflict]
+    var conflictsByIdentity: [LibraryEntryIdentity: AmbiguousConflict]
 
     var isEmpty: Bool {
         conflictsByIdentity.isEmpty
@@ -209,7 +209,7 @@ struct AmbiguousConflictSet {
         )
     }
 
-    var domainsByIdentity: [LibraryEntrySyncIdentity: Set<LibraryCloudSyncConflictDomain>] {
+    var domainsByIdentity: [LibraryEntryIdentity: Set<LibraryCloudSyncConflictDomain>] {
         conflictsByIdentity.mapValues(\.domains)
     }
 

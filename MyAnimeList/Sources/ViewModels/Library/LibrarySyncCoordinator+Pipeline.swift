@@ -50,7 +50,7 @@ extension LibrarySyncCoordinator {
 
     struct ImportHead {
         let namespace: CloudLibrarySyncChangeTokenStore.Namespace
-        let preImportSnapshots: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot]
+        let preImportSnapshots: [LibraryEntryIdentity: LibraryEntrySyncSnapshot]
         let importBatch: CloudLibrarySyncImportBatch
     }
 
@@ -146,7 +146,7 @@ extension LibrarySyncCoordinator {
         state: SyncPipelineState,
         store: LibraryStore,
         importBatch: CloudLibrarySyncImportBatch,
-        forcedDomainsByIdentity: [LibraryEntrySyncIdentity: Set<LibraryCloudSyncConflictDomain>] = [:]
+        forcedDomainsByIdentity: [LibraryEntryIdentity: Set<LibraryCloudSyncConflictDomain>] = [:]
     ) async throws -> SyncResult {
         _ = try await pass.run(.hydrationApply, state: state, store: store) {
             try await applyImportedChanges(

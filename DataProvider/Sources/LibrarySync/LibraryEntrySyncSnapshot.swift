@@ -8,39 +8,6 @@
 import DataProvider
 import Foundation
 
-/// Stable CloudKit-facing identity for one library entry.
-///
-/// The identity is derived from AniShelf's entry type plus TMDb identifiers so
-/// every device can address the same movie, series, or season record without
-/// depending on local SwiftData identifiers.
-public struct LibraryEntrySyncIdentity: Codable, Hashable, Sendable {
-    public let rawID: String
-
-    /// Creates the record identity for a library entry.
-    ///
-    /// - Parameters:
-    ///   - entryType: Entry kind and, for seasons, the parent series context.
-    ///   - tmdbID: TMDb identifier for the concrete entry being synced.
-    public init(entryType: AnimeType, tmdbID: Int) {
-        switch entryType {
-        case .movie:
-            rawID = "movie:\(tmdbID)"
-        case .series:
-            rawID = "series:\(tmdbID)"
-        case .season(let seasonNumber, let parentSeriesID):
-            rawID = "season:\(parentSeriesID):\(seasonNumber):\(tmdbID)"
-        }
-    }
-
-    /// Extracts the concrete entry TMDb identifier from the stable record name.
-    public var tmdbID: Int? {
-        guard let suffix = rawID.split(separator: ":").last else {
-            return nil
-        }
-        return Int(suffix)
-    }
-}
-
 /// Lean user-owned state that is safe to sync through iCloud.
 ///
 /// This snapshot intentionally excludes fetched TMDb metadata. It carries only
@@ -91,11 +58,11 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     }
 
     public enum MergeError: Error, Equatable {
-        case identityMismatch(local: LibraryEntrySyncIdentity, remote: LibraryEntrySyncIdentity)
+        case identityMismatch(local: LibraryEntryIdentity, remote: LibraryEntryIdentity)
     }
 
     public var schemaVersion: Int
-    public var identity: LibraryEntrySyncIdentity
+    public var identity: LibraryEntryIdentity
     public var tmdbID: Int
     public var parentSeriesID: Int?
     public var seasonNumber: Int?
@@ -171,7 +138,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     ///     poster, and progress changes.
     public init(
         schemaVersion: Int = Self.currentSchemaVersion,
-        identity: LibraryEntrySyncIdentity,
+        identity: LibraryEntryIdentity,
         tmdbID: Int,
         parentSeriesID: Int?,
         seasonNumber: Int?,
@@ -215,7 +182,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
 
     public init(
         schemaVersion: Int = Self.currentSchemaVersion,
-        identity: LibraryEntrySyncIdentity,
+        identity: LibraryEntryIdentity,
         tmdbID: Int,
         parentSeriesID: Int?,
         seasonNumber: Int?,
@@ -262,7 +229,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     /// Projects a local `AnimeEntry` into the lean sync model.
     public init(entry: AnimeEntry) {
         self.init(
-            identity: entry.syncIdentity,
+            identity: entry.libraryIdentity,
             tmdbID: entry.tmdbID,
             parentSeriesID: entry.type.parentSeriesID,
             seasonNumber: entry.type.seasonNumber,
@@ -295,7 +262,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         self.init(
             schemaVersion: try container.decodeIfPresent(Int.self, forKey: .schemaVersion)
                 ?? Self.currentSchemaVersion,
-            identity: try container.decode(LibraryEntrySyncIdentity.self, forKey: .identity),
+            identity: try container.decode(LibraryEntryIdentity.self, forKey: .identity),
             tmdbID: try container.decode(Int.self, forKey: .tmdbID),
             parentSeriesID: try container.decodeIfPresent(Int.self, forKey: .parentSeriesID),
             seasonNumber: try container.decodeIfPresent(Int.self, forKey: .seasonNumber),
@@ -460,11 +427,6 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
 }
 
 extension AnimeEntry {
-    /// Stable sync identity for this local entry.
-    public var syncIdentity: LibraryEntrySyncIdentity {
-        LibraryEntrySyncIdentity(entryType: type, tmdbID: tmdbID)
-    }
-
     /// Applies a merged remote snapshot to an existing local entry.
     ///
     /// This method respects the snapshot clocks instead of blindly overwriting
@@ -477,9 +439,9 @@ extension AnimeEntry {
     /// - Throws: `MergeError.identityMismatch` when the snapshot targets a
     ///   different sync identity.
     public func applySyncSnapshot(_ snapshot: LibraryEntrySyncSnapshot, now: Date = .now) throws {
-        guard syncIdentity == snapshot.identity else {
+        guard libraryIdentity == snapshot.identity else {
             throw LibraryEntrySyncSnapshot.MergeError.identityMismatch(
-                local: syncIdentity,
+                local: libraryIdentity,
                 remote: snapshot.identity
             )
         }
@@ -525,9 +487,9 @@ extension AnimeEntry {
     /// - Throws: `MergeError.identityMismatch` when the snapshot targets a
     ///   different sync identity.
     public func applyInitialSyncSnapshot(_ snapshot: LibraryEntrySyncSnapshot, now: Date = .now) throws {
-        guard syncIdentity == snapshot.identity else {
+        guard libraryIdentity == snapshot.identity else {
             throw LibraryEntrySyncSnapshot.MergeError.identityMismatch(
-                local: syncIdentity,
+                local: libraryIdentity,
                 remote: snapshot.identity
             )
         }
@@ -556,9 +518,9 @@ extension AnimeEntry {
     /// Delete sync hides the entry rather than removing the local row, preserving
     /// enough local metadata for later rehydration and conflict resolution.
     public func applySyncTombstone(_ tombstone: LibraryEntrySyncTombstone) throws {
-        guard syncIdentity == tombstone.identity else {
+        guard libraryIdentity == tombstone.identity else {
             throw LibraryEntrySyncSnapshot.MergeError.identityMismatch(
-                local: syncIdentity,
+                local: libraryIdentity,
                 remote: tombstone.identity
             )
         }

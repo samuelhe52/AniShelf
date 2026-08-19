@@ -5,6 +5,7 @@
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/5/10.
 //
 
+import DataProvider
 import SwiftUI
 
 fileprivate enum TMDbBatchAddStep {
@@ -20,8 +21,8 @@ struct TMDbBatchAddView: View {
     @Environment(TMDbSearchService.self) private var tmdbSearchService: TMDbSearchService
 
     let language: Language
-    let checkDuplicate: (Int) -> Bool
-    let onDuplicateTapped: (Int) -> Void
+    let checkDuplicate: (LibraryEntryIdentity) -> Bool
+    let onDuplicateTapped: (LibraryEntryIdentity) -> Void
     let onExit: () -> Void
 
     @State private var step: TMDbBatchAddStep = .input
@@ -288,7 +289,9 @@ struct TMDbBatchAddView: View {
                     ForEach(seriesCandidates) { promptResult in
                         if let series = promptResult.series {
                             candidateRow(prompt: promptResult.prompt) {
-                                let isDuplicate = checkDuplicate(series.tmdbID)
+                                let isDuplicate = checkDuplicate(
+                                    LibraryEntryIdentity(entryType: .series, tmdbID: series.tmdbID)
+                                )
                                 SeriesResultItem(
                                     series: series,
                                     selectionState: tmdbSearchService.seriesSelectionState(
@@ -329,7 +332,7 @@ struct TMDbBatchAddView: View {
                                     message: alreadyAddedMessageResource
                                 )
                                 .onTapGesture {
-                                    if isDuplicate { onDuplicateTapped(series.tmdbID) }
+                                    if isDuplicate { onDuplicateTapped(series.libraryIdentity) }
                                 }
                             }
                             .transition(batchRowTransition)
@@ -344,7 +347,9 @@ struct TMDbBatchAddView: View {
                     ForEach(movieCandidates) { promptResult in
                         if let movie = promptResult.movie {
                             candidateRow(prompt: promptResult.prompt) {
-                                let isDuplicate = checkDuplicate(movie.tmdbID)
+                                let isDuplicate = checkDuplicate(
+                                    LibraryEntryIdentity(entryType: .movie, tmdbID: movie.tmdbID)
+                                )
                                 MovieResultItem(
                                     movie: movie,
                                     isSelected: tmdbSearchService.isBatchSelected(info: movie),
@@ -364,7 +369,7 @@ struct TMDbBatchAddView: View {
                                     message: alreadyAddedMessageResource
                                 )
                                 .onTapGesture {
-                                    if isDuplicate { onDuplicateTapped(movie.tmdbID) }
+                                    if isDuplicate { onDuplicateTapped(movie.libraryIdentity) }
                                 }
                             }
                             .transition(batchRowTransition)

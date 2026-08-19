@@ -52,7 +52,7 @@ struct LibrarySearchContent: View {
                     AnimeEntryListRow(
                         entry: result,
                         onTap: {
-                            librarySearchService.jumpToEntryInLibrary(result.tmdbID)
+                            librarySearchService.jumpToEntryInLibrary(result.libraryIdentity)
                         }
                     )
                     .listRowBackground(Color.clear)

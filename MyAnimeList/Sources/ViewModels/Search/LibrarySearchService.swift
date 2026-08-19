@@ -12,14 +12,14 @@ import SwiftUI
 @Observable @MainActor
 class LibrarySearchService {
     @ObservationIgnored var entriesProvider: @MainActor () -> [AnimeEntry] = { [] }
-    var jumpToEntryInLibrary: (Int) -> Void
+    var jumpToEntryInLibrary: (LibraryEntryIdentity) -> Void
 
     private(set) var results: [AnimeEntry] = []
     private(set) var status: Status = .loaded
 
     init(
         entriesProvider: @escaping @MainActor () -> [AnimeEntry] = { [] },
-        jumpToEntryInLibrary: @escaping (Int) -> Void = { _ in }
+        jumpToEntryInLibrary: @escaping (LibraryEntryIdentity) -> Void = { _ in }
     ) {
         self.entriesProvider = entriesProvider
         self.jumpToEntryInLibrary = jumpToEntryInLibrary

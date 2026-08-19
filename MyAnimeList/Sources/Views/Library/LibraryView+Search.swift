@@ -6,13 +6,14 @@
 //
 
 import Collections
+import DataProvider
 import SwiftUI
 
 struct LibrarySearchButton: View {
     @Binding var isSearching: Bool
-    let checkDuplicate: (Int) -> Bool
+    let checkDuplicate: (LibraryEntryIdentity) -> Bool
     let processTMDbSearchResults: (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void
-    let jumpToEntryInLibrary: (Int) -> Void
+    let jumpToEntryInLibrary: (LibraryEntryIdentity) -> Void
 
     var body: some View {
         Button("Search...", systemImage: "magnifyingglass") { isSearching = true }
@@ -38,7 +39,7 @@ struct LibrarySearchButton: View {
 }
 
 extension LibraryView {
-    func jumpToEntryInLibrary(withID id: Int) {
+    func jumpToEntryInLibrary(withID id: LibraryEntryIdentity) {
         requestLibraryScroll(to: id)
         highlightedEntryID = id
     }
@@ -56,7 +57,7 @@ extension LibraryView {
                 ToastCenter.global.loadingMessage = nil
                 withAnimation {
                     newEntriesAddedToggle.toggle()
-                    if let id = results.first?.tmdbID {
+                    if let id = results.first?.libraryIdentity {
                         jumpToEntryInLibrary(withID: id)
                     }
                 }

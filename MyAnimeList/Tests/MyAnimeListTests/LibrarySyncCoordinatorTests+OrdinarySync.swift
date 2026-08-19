@@ -178,7 +178,7 @@ extension LibrarySyncCoordinatorTests {
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([
             .upsert(
                 .init(
-                    identity: entry.syncIdentity,
+                    identity: entry.libraryIdentity,
                     dirtyAt: referenceDate(year: 2026, month: 5, day: 2)
                 ))
         ])

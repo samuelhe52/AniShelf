@@ -25,7 +25,7 @@ fileprivate let syncRecorderLogger = Logger(
 final class LibrarySyncChangeRecorder {
     /// Restores one previously queued delete if a bulk operation is rolled back.
     struct PendingDeleteRestoreToken {
-        var identity: LibraryEntrySyncIdentity
+        var identity: LibraryEntryIdentity
         var previousEntry: LibraryEntrySyncDirtyQueueEntry?
     }
 
@@ -175,7 +175,7 @@ final class LibrarySyncChangeRecorder {
         }
         for entry in entries {
             syncRecorderLogger.info(
-                "Queued iCloud sync delete for \(entry.syncIdentity.rawID, privacy: .private) at \(deletedAt, privacy: .public)."
+                "Queued iCloud sync delete for \(entry.libraryIdentity.rawID, privacy: .private) at \(deletedAt, privacy: .public)."
             )
         }
         if !entries.isEmpty {
@@ -275,10 +275,10 @@ final class LibrarySyncChangeRecorder {
 
             do {
                 try dirtyQueueStore.setPendingUpsert(
-                    .init(identity: entry.syncIdentity, dirtyAt: dirtyAt)
+                    .init(identity: entry.libraryIdentity, dirtyAt: dirtyAt)
                 )
                 syncRecorderLogger.info(
-                    "Queued iCloud sync upsert for \(entry.syncIdentity.rawID, privacy: .private) at \(dirtyAt, privacy: .public)."
+                    "Queued iCloud sync upsert for \(entry.libraryIdentity.rawID, privacy: .private) at \(dirtyAt, privacy: .public)."
                 )
                 onDirtyQueueChanged?()
                 lastSeenClocksByIdentifier[identifier] = currentBaseline
@@ -289,7 +289,7 @@ final class LibrarySyncChangeRecorder {
                     lastSeenClocksByIdentifier.removeValue(forKey: identifier)
                 }
                 syncRecorderLogger.error(
-                    "Failed to queue an iCloud sync upsert for \(entry.syncIdentity.rawID, privacy: .private): \(error.localizedDescription, privacy: .private)"
+                    "Failed to queue an iCloud sync upsert for \(entry.libraryIdentity.rawID, privacy: .private): \(error.localizedDescription, privacy: .private)"
                 )
             }
         }

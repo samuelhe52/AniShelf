@@ -6,6 +6,7 @@
 //
 
 import CloudKit
+import DataProvider
 import Foundation
 import os
 
@@ -16,11 +17,11 @@ fileprivate let cloudLibrarySyncExportLogger = Logger(
 
 /// Result of pushing queued local changes to CloudKit.
 public struct CloudLibrarySyncExportResult: Sendable {
-    public var exportedIdentities: Set<LibraryEntrySyncIdentity>
+    public var exportedIdentities: Set<LibraryEntryIdentity>
     public var settingsExported: Bool
 
     /// Creates the export result from the identities CloudKit accepted.
-    public init(exportedIdentities: Set<LibraryEntrySyncIdentity>, settingsExported: Bool = false) {
+    public init(exportedIdentities: Set<LibraryEntryIdentity>, settingsExported: Bool = false) {
         self.exportedIdentities = exportedIdentities
         self.settingsExported = settingsExported
     }
@@ -75,7 +76,7 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
     /// - Throws: Encoding or CloudKit errors that prevent the export attempt.
     public func export(
         entries: [LibraryEntrySyncDirtyQueueEntry],
-        localSnapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot],
+        localSnapshotsByIdentity: [LibraryEntryIdentity: LibraryEntrySyncSnapshot],
         settingsSnapshot: LibrarySettingsSyncSnapshot? = nil
     ) async throws -> CloudLibrarySyncExportResult {
         let preparedRecords = try prepareRecords(
@@ -87,7 +88,7 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
             Array(preparedRecords.recordsByIdentity.values)
             + (preparedRecords.settingsRecord.map { [$0] } ?? [])
         let identitiesByRecordID = preparedRecords.recordsByIdentity.reduce(
-            into: [CKRecord.ID: LibraryEntrySyncIdentity]()
+            into: [CKRecord.ID: LibraryEntryIdentity]()
         ) { identitiesByRecordID, pair in
             identitiesByRecordID[pair.value.recordID] = pair.key
         }
@@ -121,7 +122,7 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
 
     private func exportResult(
         savedRecordIDs: [CKRecord.ID],
-        identitiesByRecordID: [CKRecord.ID: LibraryEntrySyncIdentity]
+        identitiesByRecordID: [CKRecord.ID: LibraryEntryIdentity]
     ) -> CloudLibrarySyncExportResult {
         let exportedIdentities = Set(
             savedRecordIDs.compactMap { recordID in identitiesByRecordID[recordID] }
@@ -200,7 +201,7 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
     }
 
     private struct PreparedRecords {
-        var recordsByIdentity: [LibraryEntrySyncIdentity: CKRecord]
+        var recordsByIdentity: [LibraryEntryIdentity: CKRecord]
         var settingsRecord: CKRecord?
     }
 
@@ -208,10 +209,10 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
     /// local snapshots no longer exist.
     private func prepareRecords(
         for entries: [LibraryEntrySyncDirtyQueueEntry],
-        localSnapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot],
+        localSnapshotsByIdentity: [LibraryEntryIdentity: LibraryEntrySyncSnapshot],
         settingsSnapshot: LibrarySettingsSyncSnapshot?
     ) throws -> PreparedRecords {
-        var recordsByIdentity: [LibraryEntrySyncIdentity: CKRecord] = [:]
+        var recordsByIdentity: [LibraryEntryIdentity: CKRecord] = [:]
 
         for entry in entries {
             switch entry {

@@ -61,7 +61,11 @@ struct LibraryRelationshipAndConversionTests {
         seasonEntry.parentSeriesEntry = referencedHiddenParent
         try repository.newEntry(seasonEntry)
 
-        let resolvedEntry = try #require(repository.existingEntry(tmdbID: 209867))
+        let resolvedEntry = try #require(
+            repository.existingEntry(
+                identity: .init(entryType: .series, tmdbID: 209867)
+            )
+        )
         #expect(resolvedEntry.id == referencedHiddenParent.id)
     }
 
@@ -85,7 +89,7 @@ struct LibraryRelationshipAndConversionTests {
         )
         try repository.newEntry(movieEntry)
 
-        let resolvedEntry = try #require(repository.existingEntry(identity: seriesEntry.syncIdentity))
+        let resolvedEntry = try #require(repository.existingEntry(identity: seriesEntry.libraryIdentity))
         #expect(resolvedEntry.id == seriesEntry.id)
     }
 
@@ -108,7 +112,7 @@ struct LibraryRelationshipAndConversionTests {
         try repository.newEntry(movieEntry)
 
         let resolvedEntry = try #require(
-            repository.existingEntry(identityRawID: seriesEntry.syncIdentity.rawID)
+            repository.existingEntry(identityRawID: seriesEntry.libraryIdentity.rawID)
         )
         #expect(resolvedEntry.id == seriesEntry.id)
         #expect(repository.existingEntry(identityRawID: "invalid") == nil)
@@ -127,7 +131,7 @@ struct LibraryRelationshipAndConversionTests {
         try repository.newEntry(hiddenEntry)
 
         let resolvedEntry = try #require(
-            repository.existingEntry(identityRawID: hiddenEntry.syncIdentity.rawID)
+            repository.existingEntry(identityRawID: hiddenEntry.libraryIdentity.rawID)
         )
         #expect(resolvedEntry.id == hiddenEntry.id)
     }

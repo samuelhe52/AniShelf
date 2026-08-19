@@ -733,10 +733,6 @@ class LibraryStore {
 
     // MARK: - Shared Helpers
 
-    func existingEntry(tmdbID: Int) -> AnimeEntry? {
-        repository.existingEntry(tmdbID: tmdbID)
-    }
-
     func applyNewEntryDefaults(to entry: AnimeEntry) {
         let now = Date.now
         entry.updateWatchStatus(defaultNewEntryWatchStatus, at: now)

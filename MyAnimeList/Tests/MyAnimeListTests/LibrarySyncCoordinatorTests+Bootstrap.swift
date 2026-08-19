@@ -49,10 +49,10 @@ extension LibrarySyncCoordinatorTests {
         #expect(store.preferences.load().cloudSyncStatus.lastSuccessfulSyncDate != nil)
         #expect(database.savedRecords.count == 2)
         let savedEntryRecord = try #require(
-            database.savedRecords.first { $0.recordID == client.recordID(for: entry.syncIdentity) }
+            database.savedRecords.first { $0.recordID == client.recordID(for: entry.libraryIdentity) }
         )
         let savedSnapshot = try savedSnapshot(from: savedEntryRecord, client: client)
-        #expect(savedSnapshot.identity == entry.syncIdentity)
+        #expect(savedSnapshot.identity == entry.libraryIdentity)
         let savedSettingsRecord = try #require(
             database.savedRecords.first { $0.recordID == client.librarySettingsRecordID }
         )
@@ -86,7 +86,7 @@ extension LibrarySyncCoordinatorTests {
 
         let client = CloudLibrarySyncClient()
         let remoteSnapshot = makeSnapshot(
-            identity: entry.syncIdentity,
+            identity: entry.libraryIdentity,
             tmdbID: entry.tmdbID,
             notes: "Remote notes",
             trackingUpdatedAt: referenceDate(year: 2026, month: 5, day: 2)

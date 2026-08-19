@@ -48,7 +48,7 @@ struct LibrarySyncRecorderBehaviorTests {
 
         var queue = recorder.dirtyQueueStore.load()
         #expect(queue.entries.count == 1)
-        #expect(queue.entries.first?.identity.rawID == entry.syncIdentity.rawID)
+        #expect(queue.entries.first?.identity.rawID == entry.libraryIdentity.rawID)
         #expect(writeCount == 1)
         #expect(dirtyQueueChangeCount == 1)
 
@@ -120,7 +120,7 @@ struct LibrarySyncRecorderBehaviorTests {
 
         let queue = recorder.dirtyQueueStore.load()
         #expect(queue.entries.count == 1)
-        #expect(queue.entries.first?.identity == entry.syncIdentity)
+        #expect(queue.entries.first?.identity == entry.libraryIdentity)
         #expect(dirtyQueueChangeCount == 1)
     }
 
@@ -219,7 +219,7 @@ struct LibrarySyncRecorderBehaviorTests {
 
         let queue = recorder.dirtyQueueStore.load()
         #expect(queue.entries.count == 1)
-        #expect(queue.entries.first?.identity == entry.syncIdentity)
+        #expect(queue.entries.first?.identity == entry.libraryIdentity)
     }
 
     @Test @MainActor func testLibrarySyncRecorderQueuesDeleteTombstonesAndBulkDeletes() throws {
@@ -246,7 +246,7 @@ struct LibrarySyncRecorderBehaviorTests {
         #expect(
             queue.entries.contains { entry in
                 guard case .delete(let pendingDelete) = entry else { return false }
-                return pendingDelete.identity == first.syncIdentity
+                return pendingDelete.identity == first.libraryIdentity
             })
 
         let actions = LibraryProfileSettingsActions(store: store)
@@ -307,13 +307,13 @@ struct LibrarySyncRecorderBehaviorTests {
         #expect(queue.entries.count == 3)
         #expect(queue.entry(for: retainedUpsert.identity) == .upsert(retainedUpsert))
         #expect(
-            queue.entry(for: first.syncIdentity)
+            queue.entry(for: first.libraryIdentity)
                 == .delete(
                     .init(
                         tombstone: .init(entry: first, deletedAt: deletedAt)
                     )))
         #expect(
-            queue.entry(for: second.syncIdentity)
+            queue.entry(for: second.libraryIdentity)
                 == .delete(
                     .init(
                         tombstone: .init(entry: second, deletedAt: deletedAt)
@@ -361,8 +361,8 @@ struct LibrarySyncRecorderBehaviorTests {
         )
 
         try recorder.restoreDeleteRecords([
-            .init(identity: deletedFirst.syncIdentity, previousEntry: .upsert(restoredUpsert)),
-            .init(identity: deletedSecond.syncIdentity, previousEntry: nil)
+            .init(identity: deletedFirst.libraryIdentity, previousEntry: .upsert(restoredUpsert)),
+            .init(identity: deletedSecond.libraryIdentity, previousEntry: nil)
         ])
 
         #expect(writeCount == 1)
@@ -371,7 +371,7 @@ struct LibrarySyncRecorderBehaviorTests {
         #expect(queue.entries.count == 2)
         #expect(queue.entry(for: restoredUpsert.identity) == .upsert(restoredUpsert))
         #expect(queue.entry(for: retainedUpsert.identity) == .upsert(retainedUpsert))
-        #expect(queue.entry(for: deletedSecond.syncIdentity) == nil)
+        #expect(queue.entry(for: deletedSecond.libraryIdentity) == nil)
     }
 }
 

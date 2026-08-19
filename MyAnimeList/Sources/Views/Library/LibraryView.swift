@@ -12,7 +12,7 @@ import SwiftUI
 struct LibraryScrollRequest: Equatable {
     // Keep repeated explicit requests to the same entry observable.
     let token = UUID()
-    let entryID: Int?
+    let entryID: LibraryEntryIdentity?
 }
 
 struct LibraryView: View {
@@ -29,7 +29,7 @@ struct LibraryView: View {
     @State private var showProfileSettings = false
     @State var scrollState = ScrollState()
     @State var newEntriesAddedToggle = false
-    @State var highlightedEntryID: Int?
+    @State var highlightedEntryID: LibraryEntryIdentity?
     @State var scrollRequest: LibraryScrollRequest?
     @State private var isShowingBatchDeleteConfirmation = false
     @State private var inspectorDetailWorkspaceState = LibraryInspectorDetailWorkspaceState()
@@ -37,7 +37,7 @@ struct LibraryView: View {
     // Multi-selection snapshot: decouples selection rendering from live store
     // recomputation so toggling items stays cheap. See LibraryView+MultiSelection.
     @State var selectionDisplayItems: [LibraryEntryDisplayItem]?
-    @State var selectionEntriesByID: [Int: AnimeEntry] = [:]
+    @State var selectionEntriesByID: [LibraryEntryIdentity: AnimeEntry] = [:]
 
     // Persistent UI preference
     @AppStorage(.libraryViewStyle) var libraryViewStyle: LibraryViewStyle = .gallery
@@ -246,7 +246,7 @@ struct LibraryView: View {
                     exitMultiSelection: exitMultiSelection,
                     applyBatchAction: applyBatchAction,
                     openProfileSettings: openProfileSettings,
-                    checkDuplicate: { store.libraryOnDisplay.map(\.tmdbID).contains($0) },
+                    checkDuplicate: { store.libraryOnDisplay.map(\.libraryIdentity).contains($0) },
                     processTMDbSearchResults: processTMDbSearchResults,
                     jumpToEntryInLibrary: jumpToEntryInLibrary
                 )
@@ -407,7 +407,7 @@ struct LibraryView: View {
     }
 
     private func detailEditingRequestID(
-        for identity: LibraryEntrySyncIdentity,
+        for identity: LibraryEntryIdentity,
         hostPresentationID: UUID
     ) -> UUID? {
         guard interaction.detailEditRequest?.entryIdentity == identity,
@@ -416,7 +416,7 @@ struct LibraryView: View {
         return interaction.detailEditRequest?.id
     }
 
-    func requestLibraryScroll(to entryID: Int?) {
+    func requestLibraryScroll(to entryID: LibraryEntryIdentity?) {
         scrollState.scrolledID = entryID
         scrollRequest = LibraryScrollRequest(entryID: entryID)
     }
@@ -435,7 +435,7 @@ struct LibraryView: View {
 
     private func libraryViewPage<Content: View>(
         id: LibraryViewStyle,
-        layoutIDs: [Int],
+        layoutIDs: [LibraryEntryIdentity],
         @ViewBuilder content: () -> Content
     ) -> some View {
         content()

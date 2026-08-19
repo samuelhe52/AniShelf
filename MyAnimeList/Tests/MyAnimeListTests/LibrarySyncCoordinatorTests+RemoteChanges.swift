@@ -25,7 +25,7 @@ extension LibrarySyncCoordinatorTests {
         let client = CloudLibrarySyncClient()
         let namespace = makeNamespace()
         let remoteSnapshot = makeSnapshot(
-            identity: entry.syncIdentity,
+            identity: entry.libraryIdentity,
             tmdbID: entry.tmdbID,
             notes: "Remote notes",
             trackingUpdatedAt: referenceDate(year: 2026, month: 5, day: 5)
@@ -33,7 +33,7 @@ extension LibrarySyncCoordinatorTests {
         let database = FakeCloudLibrarySyncDatabase(changes: [
             .init(
                 modifiedRecordsByID: [
-                    client.recordID(for: entry.syncIdentity): try client.record(from: remoteSnapshot)
+                    client.recordID(for: entry.libraryIdentity): try client.record(from: remoteSnapshot)
                 ],
                 deletedRecordIDs: [],
                 changeToken: makeToken(),
@@ -50,7 +50,7 @@ extension LibrarySyncCoordinatorTests {
         await coordinator.sync(trigger: .manualRetry)
 
         try store.refreshLibrary()
-        let refreshed = try #require(store.library.first { $0.syncIdentity == entry.syncIdentity })
+        let refreshed = try #require(store.library.first { $0.libraryIdentity == entry.libraryIdentity })
         #expect(refreshed.notes == "Remote notes")
         #expect(database.savedRecords.isEmpty)
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
@@ -59,7 +59,7 @@ extension LibrarySyncCoordinatorTests {
     @Test @MainActor func missingRowHydratesInsertsAndAppliesSnapshot() async throws {
         let store = makeSyncReadyStore()
         let namespace = makeNamespace()
-        let identity = LibraryEntrySyncIdentity(entryType: .movie, tmdbID: 702)
+        let identity = LibraryEntryIdentity(entryType: .movie, tmdbID: 702)
         let client = CloudLibrarySyncClient()
         let snapshot = makeSnapshot(
             identity: identity,
@@ -94,7 +94,7 @@ extension LibrarySyncCoordinatorTests {
         await coordinator.sync(trigger: .manualRetry)
 
         try store.refreshLibrary()
-        let hydrated = try #require(store.library.first { $0.syncIdentity == identity })
+        let hydrated = try #require(store.library.first { $0.libraryIdentity == identity })
         #expect(hydrated.notes == "Hydrated")
         #expect(hydrated.tmdbID == 702)
     }
@@ -102,7 +102,7 @@ extension LibrarySyncCoordinatorTests {
     @Test @MainActor func missingRowWithNilClocksAppliesRemoteState() async throws {
         let store = makeSyncReadyStore()
         let namespace = makeNamespace()
-        let identity = LibraryEntrySyncIdentity(entryType: .series, tmdbID: 706)
+        let identity = LibraryEntryIdentity(entryType: .series, tmdbID: 706)
         let client = CloudLibrarySyncClient()
         var snapshot = makeSnapshot(
             identity: identity,
@@ -141,7 +141,7 @@ extension LibrarySyncCoordinatorTests {
         await coordinator.sync(trigger: .manualRetry)
 
         try store.refreshLibrary()
-        let hydrated = try #require(store.library.first { $0.syncIdentity == identity })
+        let hydrated = try #require(store.library.first { $0.libraryIdentity == identity })
         #expect(hydrated.notes == "Nil clock remote")
         #expect(hydrated.favorite)
         #expect(hydrated.score == 5)
@@ -158,7 +158,7 @@ extension LibrarySyncCoordinatorTests {
         store.rebuildSyncChangeTracking()
 
         let namespace = makeNamespace()
-        let remoteIdentity = LibraryEntrySyncIdentity(entryType: .movie, tmdbID: 710)
+        let remoteIdentity = LibraryEntryIdentity(entryType: .movie, tmdbID: 710)
         let client = CloudLibrarySyncClient()
         let remoteSnapshot = makeSnapshot(
             identity: remoteIdentity,
@@ -219,7 +219,7 @@ extension LibrarySyncCoordinatorTests {
         }
         #expect(
             savedSnapshots.contains { snapshot in
-                snapshot.identity == unrelated.syncIdentity
+                snapshot.identity == unrelated.libraryIdentity
                     && snapshot.notes == "User edit during hydration"
             })
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
@@ -235,7 +235,7 @@ extension LibrarySyncCoordinatorTests {
         )
         entry.libraryUpdatedAt = referenceDate(year: 2026, month: 5, day: 1)
         try store.repository.newEntry(entry)
-        let identity = entry.syncIdentity
+        let identity = entry.libraryIdentity
         try store.repository.deleteEntry(entry)
 
         let client = CloudLibrarySyncClient()
@@ -290,7 +290,7 @@ extension LibrarySyncCoordinatorTests {
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([
             .upsert(
                 .init(
-                    identity: entry.syncIdentity,
+                    identity: entry.libraryIdentity,
                     dirtyAt: referenceDate(year: 2026, month: 5, day: 20)
                 ))
         ])
@@ -298,7 +298,7 @@ extension LibrarySyncCoordinatorTests {
 
         let client = CloudLibrarySyncClient()
         let remoteTombstone = LibraryEntrySyncTombstone(
-            identity: entry.syncIdentity,
+            identity: entry.libraryIdentity,
             tmdbID: entry.tmdbID,
             parentSeriesID: entry.type.parentSeriesID,
             seasonNumber: entry.type.seasonNumber,
@@ -308,7 +308,7 @@ extension LibrarySyncCoordinatorTests {
         let database = FakeCloudLibrarySyncDatabase(changes: [
             .init(
                 modifiedRecordsByID: [
-                    client.recordID(for: entry.syncIdentity): try client.record(from: remoteTombstone)
+                    client.recordID(for: entry.libraryIdentity): try client.record(from: remoteTombstone)
                 ],
                 deletedRecordIDs: [],
                 changeToken: makeToken(),
@@ -325,7 +325,7 @@ extension LibrarySyncCoordinatorTests {
         await coordinator.sync(trigger: .manualRetry)
 
         try store.refreshLibrary()
-        let refreshed = try #require(store.library.first { $0.syncIdentity == entry.syncIdentity })
+        let refreshed = try #require(store.library.first { $0.libraryIdentity == entry.libraryIdentity })
         #expect(refreshed.onDisplay)
         #expect(database.savedRecords.count == 1)
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
@@ -344,7 +344,7 @@ extension LibrarySyncCoordinatorTests {
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([
             .upsert(
                 .init(
-                    identity: entry.syncIdentity,
+                    identity: entry.libraryIdentity,
                     dirtyAt: referenceDate(year: 2026, month: 5, day: 3)
                 ))
         ])
@@ -352,7 +352,7 @@ extension LibrarySyncCoordinatorTests {
 
         let client = CloudLibrarySyncClient()
         let remoteTombstone = LibraryEntrySyncTombstone(
-            identity: entry.syncIdentity,
+            identity: entry.libraryIdentity,
             tmdbID: entry.tmdbID,
             parentSeriesID: entry.type.parentSeriesID,
             seasonNumber: entry.type.seasonNumber,
@@ -362,7 +362,7 @@ extension LibrarySyncCoordinatorTests {
         let database = FakeCloudLibrarySyncDatabase(changes: [
             .init(
                 modifiedRecordsByID: [
-                    client.recordID(for: entry.syncIdentity): try client.record(from: remoteTombstone)
+                    client.recordID(for: entry.libraryIdentity): try client.record(from: remoteTombstone)
                 ],
                 deletedRecordIDs: [],
                 changeToken: makeToken(),
@@ -378,14 +378,14 @@ extension LibrarySyncCoordinatorTests {
 
         await coordinator.sync(trigger: .manualRetry)
 
-        let stored = try #require(store.repository.existingEntry(identity: entry.syncIdentity))
+        let stored = try #require(store.repository.existingEntry(identity: entry.libraryIdentity))
         #expect(!stored.onDisplay)
-        #expect(store.syncChangeRecorder.dirtyQueueStore.load().entry(for: entry.syncIdentity) == nil)
+        #expect(store.syncChangeRecorder.dirtyQueueStore.load().entry(for: entry.libraryIdentity) == nil)
         #expect(database.savedRecords.isEmpty)
     }
 
     @Test @MainActor func duplicateRemoteChangesCoalesceBeforeDirtyQueueReconciliation() throws {
-        let identity = LibraryEntrySyncIdentity(entryType: .series, tmdbID: 712)
+        let identity = LibraryEntryIdentity(entryType: .series, tmdbID: 712)
         let olderRemoteSnapshot = makeSnapshot(
             identity: identity,
             tmdbID: 712,
@@ -417,7 +417,7 @@ extension LibrarySyncCoordinatorTests {
         let store = makeSyncReadyStore()
         let client = CloudLibrarySyncClient()
         let namespace = makeNamespace()
-        let identity = LibraryEntrySyncIdentity(entryType: .movie, tmdbID: 705)
+        let identity = LibraryEntryIdentity(entryType: .movie, tmdbID: 705)
         let snapshot = makeSnapshot(
             identity: identity,
             tmdbID: 705,

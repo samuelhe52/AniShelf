@@ -5,11 +5,12 @@
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/7/25.
 //
 
+import DataProvider
 import LibrarySync
 
 enum LibraryInspectorDetailPersistenceAction: Equatable {
     case clear
-    case persist(LibraryEntrySyncIdentity)
+    case persist(LibraryEntryIdentity)
     case preserve
 }
 
@@ -23,7 +24,7 @@ struct LibraryInspectorDetailWorkspaceState {
     private(set) var hasCompletedLaunchRestoration = false
 
     static func persistenceAction(
-        for presentedDetailEntryIdentity: LibraryEntrySyncIdentity?,
+        for presentedDetailEntryIdentity: LibraryEntryIdentity?,
         committedHostPresentation: LibraryEntryDetailHostPresentation?
     ) -> LibraryInspectorDetailPersistenceAction {
         guard let presentedDetailEntryIdentity else { return .clear }
@@ -35,7 +36,7 @@ struct LibraryInspectorDetailWorkspaceState {
 
     mutating func initialRestorationAction(
         for host: LibraryEntryDetailHost,
-        presentedDetailEntryIdentity: LibraryEntrySyncIdentity?,
+        presentedDetailEntryIdentity: LibraryEntryIdentity?,
         savedIdentityRawID: String?,
         isRestorableIdentity: (String) -> Bool
     ) -> LibraryInspectorDetailLaunchRestorationAction {

@@ -49,6 +49,13 @@ extension LibraryMetadataRefreshTests {
             dateSaved: referenceDate(year: 2026, month: 5, day: 2)
         )
         try store.repository.newEntry(preferredParent)
+        let collidingMovie = AnimeEntry(
+            name: "Colliding Movie",
+            type: .movie,
+            tmdbID: 300,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 3)
+        )
+        try store.repository.newEntry(collidingMovie)
         try store.repository.newEntry(child)
         store.rebuildSyncChangeTracking()
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([])

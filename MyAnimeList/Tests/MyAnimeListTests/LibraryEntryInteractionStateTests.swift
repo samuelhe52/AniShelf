@@ -13,8 +13,9 @@ import Testing
 
 struct LibraryEntryInteractionStateTests {
     @Test func repeatedLibraryScrollRequestsRemainDistinct() {
-        let first = LibraryScrollRequest(entryID: 42)
-        let second = LibraryScrollRequest(entryID: 42)
+        let identity = LibraryEntryIdentity(entryType: .movie, tmdbID: 42)
+        let first = LibraryScrollRequest(entryID: identity)
+        let second = LibraryScrollRequest(entryID: identity)
 
         #expect(first.entryID == second.entryID)
         #expect(first != second)
@@ -26,17 +27,17 @@ struct LibraryEntryInteractionStateTests {
 
         state.focus(entry)
 
-        #expect(state.focusedEntryID == entry.syncIdentity)
+        #expect(state.focusedEntryID == entry.libraryIdentity)
         #expect(state.presentedDetailEntryID == nil)
 
         state.openDetails(for: entry)
 
-        #expect(state.focusedEntryID == entry.syncIdentity)
-        #expect(state.presentedDetailEntryID == entry.syncIdentity)
+        #expect(state.focusedEntryID == entry.libraryIdentity)
+        #expect(state.presentedDetailEntryID == entry.libraryIdentity)
 
         state.dismissDetails()
 
-        #expect(state.focusedEntryID == entry.syncIdentity)
+        #expect(state.focusedEntryID == entry.libraryIdentity)
         #expect(state.presentedDetailEntryID == nil)
     }
 
@@ -51,11 +52,11 @@ struct LibraryEntryInteractionStateTests {
 
         state.openDetails(for: second)
 
-        #expect(state.focusedEntryID == second.syncIdentity)
-        #expect(state.presentedDetailEntryID == second.syncIdentity)
+        #expect(state.focusedEntryID == second.libraryIdentity)
+        #expect(state.presentedDetailEntryID == second.libraryIdentity)
         #expect(state.detailPresentation?.id != firstDetailPresentation.id)
         #expect(state.inspectorPresentation?.id == inspectorPresentation.id)
-        #expect(state.inspectorPresentation?.entryIdentity == second.syncIdentity)
+        #expect(state.inspectorPresentation?.entryIdentity == second.libraryIdentity)
         #expect(
             state.inspectorPresentation?.detailPresentationID
                 == state.detailPresentation?.id
@@ -82,9 +83,9 @@ struct LibraryEntryInteractionStateTests {
         state.setEditingEntry(entry)
 
         let request = try #require(state.detailEditRequest)
-        #expect(state.focusedEntryID == entry.syncIdentity)
-        #expect(state.presentedDetailEntryID == entry.syncIdentity)
-        #expect(request.entryIdentity == entry.syncIdentity)
+        #expect(state.focusedEntryID == entry.libraryIdentity)
+        #expect(state.presentedDetailEntryID == entry.libraryIdentity)
+        #expect(request.entryIdentity == entry.libraryIdentity)
         #expect(state.workflowPresentation == nil)
 
         let hostPresentation = try #require(state.detailHostPresentation)
@@ -96,7 +97,7 @@ struct LibraryEntryInteractionStateTests {
         )
 
         #expect(state.detailEditRequest == nil)
-        #expect(state.presentedDetailEntryID == entry.syncIdentity)
+        #expect(state.presentedDetailEntryID == entry.libraryIdentity)
     }
 
     @Test @MainActor func multiSelectionDoesNotReplaceFocusedEntry() {
@@ -105,11 +106,28 @@ struct LibraryEntryInteractionStateTests {
         state.focus(entry)
 
         state.enterMultiSelection()
-        state.toggleSelection(for: 7)
-        state.toggleSelection(for: 9)
+        let firstSelection = LibraryEntryIdentity(entryType: .movie, tmdbID: 7)
+        let secondSelection = LibraryEntryIdentity(entryType: .series, tmdbID: 9)
+        state.toggleSelection(for: firstSelection)
+        state.toggleSelection(for: secondSelection)
 
-        #expect(state.focusedEntryID == entry.syncIdentity)
-        #expect(state.selectedEntryIDs == [7, 9])
+        #expect(state.focusedEntryID == entry.libraryIdentity)
+        #expect(state.selectedEntryIDs == [firstSelection, secondSelection])
+    }
+
+    @Test @MainActor func multiSelectionDistinguishesEntryTypesWithTheSameTMDbID() {
+        let state = LibraryEntryInteractionState()
+        let movie = AnimeEntry(name: "Movie", type: .movie, tmdbID: 42)
+        let series = AnimeEntry(name: "Series", type: .series, tmdbID: 42)
+
+        state.enterMultiSelection()
+        state.toggleSelection(for: movie.libraryIdentity)
+        state.toggleSelection(for: series.libraryIdentity)
+
+        #expect(state.selectedEntryIDs.count == 2)
+        #expect(state.isSelected(movie.libraryIdentity))
+        #expect(state.isSelected(series.libraryIdentity))
+        #expect(LibraryEntrySnapshot(entry: movie).id != LibraryEntrySnapshot(entry: series).id)
     }
 
     @Test @MainActor func workflowPresentationsUseTypeQualifiedIdentity() throws {
@@ -117,14 +135,14 @@ struct LibraryEntryInteractionStateTests {
         let movie = AnimeEntry(name: "Movie", type: .movie, tmdbID: 42)
         let series = AnimeEntry(name: "Series", type: .series, tmdbID: 42)
 
-        state.presentWorkflow(.sharing(movie.syncIdentity))
-        #expect(state.workflowPresentation?.workflow == .sharing(movie.syncIdentity))
+        state.presentWorkflow(.sharing(movie.libraryIdentity))
+        #expect(state.workflowPresentation?.workflow == .sharing(movie.libraryIdentity))
 
-        state.presentWorkflow(.sharing(series.syncIdentity))
+        state.presentWorkflow(.sharing(series.libraryIdentity))
 
         let presentation = try #require(state.workflowPresentation)
-        #expect(presentation.workflow == .sharing(series.syncIdentity))
-        #expect(movie.syncIdentity != series.syncIdentity)
+        #expect(presentation.workflow == .sharing(series.libraryIdentity))
+        #expect(movie.libraryIdentity != series.libraryIdentity)
     }
 
     @Test @MainActor func newerWorkflowSupersedesPendingEditWithoutRetiringDetail() {
@@ -133,11 +151,11 @@ struct LibraryEntryInteractionStateTests {
         state.setEditingEntry(entry)
         let detailPresentationID = state.detailPresentation?.id
 
-        state.presentWorkflow(.sharing(entry.syncIdentity))
+        state.presentWorkflow(.sharing(entry.libraryIdentity))
 
         #expect(state.detailEditRequest == nil)
         #expect(state.detailPresentation?.id == detailPresentationID)
-        #expect(state.workflowPresentation?.workflow == .sharing(entry.syncIdentity))
+        #expect(state.workflowPresentation?.workflow == .sharing(entry.libraryIdentity))
     }
 
     @Test @MainActor func pasteConfirmationResolvesTheCurrentModelByIdentity() throws {
@@ -152,7 +170,7 @@ struct LibraryEntryInteractionStateTests {
         state.preparePaste(source.userInfo, for: original)
         let request = try #require(state.pendingPasteRequest)
         state.confirmPaste(requestID: request.id) { identity in
-            identity == replacement.syncIdentity ? replacement : nil
+            identity == replacement.libraryIdentity ? replacement : nil
         }
 
         #expect(original.notes == "Original model")
@@ -211,8 +229,8 @@ struct LibraryEntryInteractionStateTests {
         #expect(state.detailHostPresentation?.id == inspectorPresentation.id)
         #expect(state.inspectorPresentation?.id == inspectorPresentation.id)
         #expect(state.hasPendingDetailHostMigration)
-        #expect(state.focusedEntryID == entry.syncIdentity)
-        #expect(state.presentedDetailEntryID == entry.syncIdentity)
+        #expect(state.focusedEntryID == entry.libraryIdentity)
+        #expect(state.presentedDetailEntryID == entry.libraryIdentity)
         #expect(state.detailPresentation?.id == canonicalPresentation.id)
 
         state.interactiveResizeDidChange(false, migrationBlocked: false)
@@ -222,7 +240,7 @@ struct LibraryEntryInteractionStateTests {
         #expect(sheetPresentation.id != inspectorPresentation.id)
         #expect(sheetPresentation.detailPresentationID == canonicalPresentation.id)
         #expect(!state.hasPendingDetailHostMigration)
-        #expect(state.presentedDetailEntryID == entry.syncIdentity)
+        #expect(state.presentedDetailEntryID == entry.libraryIdentity)
         #expect(state.detailPresentation?.id == canonicalPresentation.id)
     }
 
@@ -301,8 +319,8 @@ struct LibraryEntryInteractionStateTests {
         state.openDetails(for: selectedEntry)
 
         #expect(!state.isDetailDormantUntilInspector)
-        #expect(state.presentedDetailEntryID == selectedEntry.syncIdentity)
-        #expect(state.detailSheetPresentation?.entryIdentity == selectedEntry.syncIdentity)
+        #expect(state.presentedDetailEntryID == selectedEntry.libraryIdentity)
+        #expect(state.detailSheetPresentation?.entryIdentity == selectedEntry.libraryIdentity)
         #expect(state.inspectorPresentation == nil)
     }
 
@@ -338,7 +356,7 @@ struct LibraryEntryInteractionStateTests {
         )
 
         #expect(state.detailEditRequest == nil)
-        #expect(state.presentedDetailEntryID == entry.syncIdentity)
+        #expect(state.presentedDetailEntryID == entry.libraryIdentity)
     }
 
     @Test @MainActor func currentHostDismissalClearsCanonicalDetailAndPreservesFocus() throws {
@@ -349,7 +367,7 @@ struct LibraryEntryInteractionStateTests {
 
         state.detailHostDidDismiss(inspectorPresentation)
 
-        #expect(state.focusedEntryID == entry.syncIdentity)
+        #expect(state.focusedEntryID == entry.libraryIdentity)
         #expect(state.presentedDetailEntryID == nil)
         #expect(state.detailPresentation == nil)
         #expect(state.detailHostPresentation == nil)
@@ -366,7 +384,7 @@ struct LibraryEntryInteractionStateTests {
         state.detailHostDidDismiss(firstInspector)
 
         #expect(state.detailPresentation?.id == canonicalPresentation.id)
-        #expect(state.presentedDetailEntryID == entry.syncIdentity)
+        #expect(state.presentedDetailEntryID == entry.libraryIdentity)
         #expect(state.inspectorPresentation == nil)
         #expect(state.detailHostPresentation?.isHostPresented == false)
         #expect(state.hasPendingDetailHostMigration)
@@ -377,14 +395,14 @@ struct LibraryEntryInteractionStateTests {
         #expect(representedInspector.id != firstInspector.id)
         #expect(representedInspector.detailPresentationID == canonicalPresentation.id)
         #expect(state.detailPresentation?.id == canonicalPresentation.id)
-        #expect(state.presentedDetailEntryID == entry.syncIdentity)
+        #expect(state.presentedDetailEntryID == entry.libraryIdentity)
         #expect(!state.hasPendingDetailHostMigration)
     }
 
     @Test @MainActor func staleWorkflowDismissalCannotCloseAReopenedWorkflow() throws {
         let state = LibraryEntryInteractionState()
         let entry = AnimeEntry.template(id: 42)
-        let workflow = LibraryEntryWorkflow.sharing(entry.syncIdentity)
+        let workflow = LibraryEntryWorkflow.sharing(entry.libraryIdentity)
         state.presentWorkflow(workflow)
         let firstPresentation = try #require(state.workflowPresentation)
         state.workflowPresentationDidDismiss(firstPresentation)
@@ -408,7 +426,7 @@ struct LibraryEntryInteractionStateTests {
             LibraryInspectorDetailWorkspaceState.persistenceAction(
                 for: state.presentedDetailEntryID,
                 committedHostPresentation: state.detailHostPresentation
-            ) == .persist(entry.syncIdentity)
+            ) == .persist(entry.libraryIdentity)
         )
 
         state.dismissDetails()

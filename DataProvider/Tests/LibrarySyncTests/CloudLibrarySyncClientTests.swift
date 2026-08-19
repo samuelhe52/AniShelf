@@ -17,9 +17,9 @@ struct CloudLibrarySyncClientTests {
     private let client = CloudLibrarySyncClient()
 
     @Test func deterministicRecordIDsUseStableZoneAndIdentityNames() {
-        let movie = LibraryEntrySyncIdentity(entryType: .movie, tmdbID: 11)
-        let series = LibraryEntrySyncIdentity(entryType: .series, tmdbID: 22)
-        let season = LibraryEntrySyncIdentity(
+        let movie = LibraryEntryIdentity(entryType: .movie, tmdbID: 11)
+        let series = LibraryEntryIdentity(entryType: .series, tmdbID: 22)
+        let season = LibraryEntryIdentity(
             entryType: .season(seasonNumber: 3, parentSeriesID: 22),
             tmdbID: 33
         )
@@ -32,7 +32,7 @@ struct CloudLibrarySyncClientTests {
 
     @Test func snapshotRoundTripsThroughCloudKitRecord() throws {
         let snapshot = LibraryEntrySyncSnapshot(
-            identity: LibraryEntrySyncIdentity(
+            identity: LibraryEntryIdentity(
                 entryType: .season(seasonNumber: 2, parentSeriesID: 44),
                 tmdbID: 55
             ),
@@ -262,7 +262,7 @@ struct CloudLibrarySyncClientTests {
         entryType: AnimeType = .series,
         tmdbID: Int = 101
     ) -> LibraryEntrySyncSnapshot {
-        let identity = LibraryEntrySyncIdentity(entryType: entryType, tmdbID: tmdbID)
+        let identity = LibraryEntryIdentity(entryType: entryType, tmdbID: tmdbID)
         return LibraryEntrySyncSnapshot(
             identity: identity,
             tmdbID: tmdbID,

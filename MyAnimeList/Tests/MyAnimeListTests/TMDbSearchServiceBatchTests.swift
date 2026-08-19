@@ -436,7 +436,7 @@ struct TMDbSearchServiceBatchTests {
                     "Ghost in the Shell": [duplicateMovie]
                 ]
             ),
-            checkDuplicate: { $0 == 301 }
+            checkDuplicate: { $0 == LibraryEntryIdentity(entryType: .movie, tmdbID: 301) }
         )
 
         await service.performBatchSearch(input: "Ghost in the Shell", language: .english)
@@ -445,6 +445,24 @@ struct TMDbSearchServiceBatchTests {
         #expect(service.batchResults[0].movie?.tmdbID == 301)
         #expect(service.batchRegisteredCount == 0)
         #expect(!service.isBatchSelected(info: duplicateMovie))
+    }
+
+    @MainActor
+    @Test func testBatchSearchDoesNotTreatAnotherEntryTypeAsDuplicate() async {
+        let movie = makeEntryMetadata("Ghost in the Shell", tmdbID: 301, type: .movie)
+        let service = TMDbSearchService(
+            client: makeClient(
+                moviesByPrompt: [
+                    "Ghost in the Shell": [movie]
+                ]
+            ),
+            checkDuplicate: { $0 == LibraryEntryIdentity(entryType: .series, tmdbID: 301) }
+        )
+
+        await service.performBatchSearch(input: "Ghost in the Shell", language: .english)
+
+        #expect(service.batchRegisteredCount == 1)
+        #expect(service.isBatchSelected(info: movie))
     }
 
     @MainActor

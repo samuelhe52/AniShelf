@@ -41,9 +41,9 @@ extension LibraryView {
         }
 
         let remainingEntries = store.libraryOnDisplay.filter { entry in
-            !interaction.selectedEntryIDs.contains(entry.tmdbID)
+            !interaction.selectedEntryIDs.contains(entry.libraryIdentity)
         }
-        let scrollTarget = remainingEntries.first?.tmdbID
+        let scrollTarget = remainingEntries.first?.libraryIdentity
 
         for entry in entries {
             _ = store.deleteEntry(entry)

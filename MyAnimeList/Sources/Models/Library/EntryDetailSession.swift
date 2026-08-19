@@ -45,7 +45,7 @@ struct EntryDetailConversionState {
 final class EntryDetailSession {
     let instanceID = UUID()
     let entry: AnimeEntry
-    let entryIdentity: LibraryEntrySyncIdentity
+    let entryIdentity: LibraryEntryIdentity
     let model: EntryDetailViewModel
     let broadcast: EntryDetailBroadcastModel
     private let repository: LibraryRepository
@@ -76,7 +76,7 @@ final class EntryDetailSession {
         isStaffExpanded: Bool? = nil
     ) {
         self.entry = entry
-        self.entryIdentity = entry.syncIdentity
+        self.entryIdentity = entry.libraryIdentity
         self.repository = repository
         self.model = EntryDetailViewModel(repository: repository)
         self.broadcast = EntryDetailBroadcastModel(
@@ -148,9 +148,9 @@ final class EntryDetailSessionStore {
 
     @discardableResult
     func synchronizePresentedDetail(
-        identity: LibraryEntrySyncIdentity?,
+        identity: LibraryEntryIdentity?,
         repository: LibraryRepository,
-        resolveEntry: (LibraryEntrySyncIdentity) -> AnimeEntry?
+        resolveEntry: (LibraryEntryIdentity) -> AnimeEntry?
     ) -> Bool {
         guard let identity else {
             presentedSession?.broadcast.cancel()
@@ -177,7 +177,7 @@ final class EntryDetailSessionStore {
         return true
     }
 
-    func session(for identity: LibraryEntrySyncIdentity?) -> EntryDetailSession? {
+    func session(for identity: LibraryEntryIdentity?) -> EntryDetailSession? {
         guard presentedSession?.entryIdentity == identity else { return nil }
         return presentedSession
     }

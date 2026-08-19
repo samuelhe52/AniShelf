@@ -50,7 +50,7 @@ struct ClocklessTrackingConflictFixture {
     let store: LibraryStore
     let client: CloudLibrarySyncClient
     let database: FakeCloudLibrarySyncDatabase
-    let identity: LibraryEntrySyncIdentity
+    let identity: LibraryEntryIdentity
 }
 
 @MainActor
@@ -80,7 +80,7 @@ func makeClocklessTrackingConflictFixture(
 
     let client = CloudLibrarySyncClient()
     var remoteSnapshot = makeSnapshot(
-        identity: entry.syncIdentity,
+        identity: entry.libraryIdentity,
         tmdbID: entry.tmdbID,
         notes: "Remote notes",
         trackingUpdatedAt: nil
@@ -100,7 +100,7 @@ func makeClocklessTrackingConflictFixture(
         store: store,
         client: client,
         database: database,
-        identity: entry.syncIdentity
+        identity: entry.libraryIdentity
     )
 }
 
@@ -253,7 +253,7 @@ func savedSnapshot(
 }
 
 func makeSnapshot(
-    identity: LibraryEntrySyncIdentity,
+    identity: LibraryEntryIdentity,
     tmdbID: Int,
     entryType: AnimeType = .series,
     notes: String = "",

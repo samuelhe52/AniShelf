@@ -23,7 +23,7 @@ extension LibrarySyncCoordinatorTests {
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([
             .upsert(
                 .init(
-                    identity: entry.syncIdentity,
+                    identity: entry.libraryIdentity,
                     dirtyAt: referenceDate(year: 2026, month: 5, day: 8)
                 ))
         ])
@@ -71,12 +71,12 @@ extension LibrarySyncCoordinatorTests {
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([
             .upsert(
                 .init(
-                    identity: first.syncIdentity,
+                    identity: first.libraryIdentity,
                     dirtyAt: referenceDate(year: 2026, month: 5, day: 8)
                 )),
             .upsert(
                 .init(
-                    identity: second.syncIdentity,
+                    identity: second.libraryIdentity,
                     dirtyAt: referenceDate(year: 2026, month: 5, day: 9)
                 ))
         ])
@@ -92,7 +92,7 @@ extension LibrarySyncCoordinatorTests {
                     moreComing: false
                 )
             ],
-            successfulSaveRecordIDs: [client.recordID(for: first.syncIdentity)]
+            successfulSaveRecordIDs: [client.recordID(for: first.libraryIdentity)]
         )
         let coordinator = LibrarySyncCoordinator(
             store: store,
@@ -106,8 +106,8 @@ extension LibrarySyncCoordinatorTests {
         let remainingEntries = store.syncChangeRecorder.dirtyQueueStore.load().entries
         #expect(database.savedRecords.count == 2)
         #expect(remainingEntries.count == 1)
-        #expect(remainingEntries.first?.identity == second.syncIdentity)
-        #expect(store.syncChangeRecorder.dirtyQueueStore.load().entry(for: first.syncIdentity) == nil)
+        #expect(remainingEntries.first?.identity == second.libraryIdentity)
+        #expect(store.syncChangeRecorder.dirtyQueueStore.load().entry(for: first.libraryIdentity) == nil)
     }
 
     @Test @MainActor func partialExportFailureDequeuesAcceptedBatchesBeforeRetry() async throws {
@@ -125,7 +125,7 @@ extension LibrarySyncCoordinatorTests {
             dirtyEntries.append(
                 .upsert(
                     .init(
-                        identity: entry.syncIdentity,
+                        identity: entry.libraryIdentity,
                         dirtyAt: referenceDate(year: 2026, month: 5, day: 8)
                     ))
             )
@@ -164,12 +164,12 @@ extension LibrarySyncCoordinatorTests {
 
         let olderEntry = LibraryEntrySyncDirtyQueueEntry.upsert(
             .init(
-                identity: entry.syncIdentity,
+                identity: entry.libraryIdentity,
                 dirtyAt: referenceDate(year: 2026, month: 5, day: 8)
             ))
         let newerEntry = LibraryEntrySyncDirtyQueueEntry.upsert(
             .init(
-                identity: entry.syncIdentity,
+                identity: entry.libraryIdentity,
                 dirtyAt: referenceDate(year: 2026, month: 5, day: 9)
             ))
         try writeRawDirtyQueueEntries([olderEntry, newerEntry], in: store)
@@ -210,7 +210,7 @@ extension LibrarySyncCoordinatorTests {
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([
             .upsert(
                 .init(
-                    identity: newerEntry.syncIdentity,
+                    identity: newerEntry.libraryIdentity,
                     dirtyAt: referenceDate(year: 2026, month: 5, day: 9)
                 ))
         ])
@@ -229,7 +229,7 @@ extension LibrarySyncCoordinatorTests {
 
         let savedSnapshot = try savedSnapshot(from: try #require(database.savedRecords.first), client: client)
         #expect(database.savedRecords.count == 1)
-        #expect(savedSnapshot.identity == newerEntry.syncIdentity)
+        #expect(savedSnapshot.identity == newerEntry.libraryIdentity)
         #expect(savedSnapshot.notes == "Preferred local")
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
     }
@@ -243,7 +243,7 @@ extension LibrarySyncCoordinatorTests {
         entry.updateNotes("Before export", at: initialDirtyAt)
         try store.repository.newEntry(entry)
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([
-            .upsert(.init(identity: entry.syncIdentity, dirtyAt: initialDirtyAt))
+            .upsert(.init(identity: entry.libraryIdentity, dirtyAt: initialDirtyAt))
         ])
         store.rebuildSyncChangeTracking()
 
@@ -271,7 +271,7 @@ extension LibrarySyncCoordinatorTests {
         _ = await syncTask.value
 
         let remainingEntry = try #require(
-            store.syncChangeRecorder.dirtyQueueStore.load().entry(for: entry.syncIdentity))
+            store.syncChangeRecorder.dirtyQueueStore.load().entry(for: entry.libraryIdentity))
         guard case .upsert(let pendingUpsert) = remainingEntry else {
             Issue.record("Expected the newer same-identity upsert to remain queued.")
             return

@@ -6,6 +6,7 @@
 //
 
 import CloudKit
+import DataProvider
 import Foundation
 import os
 
@@ -104,7 +105,7 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
     ///   `CloudLibrarySyncImportError.missingChangeToken`.
     public func fetchChanges(
         namespace: CloudLibrarySyncChangeTokenStore.Namespace,
-        localSnapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot]
+        localSnapshotsByIdentity: [LibraryEntryIdentity: LibraryEntrySyncSnapshot]
     ) async throws -> CloudLibrarySyncImportBatch {
         let token = changeTokenStore.token(for: Self.zoneID, namespace: namespace)
         do {
@@ -143,12 +144,12 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
     /// flow through explicit tombstone records.
     private func fetchChanges(
         namespace: CloudLibrarySyncChangeTokenStore.Namespace,
-        localSnapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot],
+        localSnapshotsByIdentity: [LibraryEntryIdentity: LibraryEntrySyncSnapshot],
         startingToken: CKServerChangeToken?
     ) async throws -> CloudLibrarySyncImportBatch {
         var currentToken = startingToken
         var finalToken: CKServerChangeToken?
-        var remoteChangesByID: [LibraryEntrySyncIdentity: LibraryEntrySyncRemoteChange] = [:]
+        var remoteChangesByID: [LibraryEntryIdentity: LibraryEntrySyncRemoteChange] = [:]
         var settingsSnapshot: LibrarySettingsSyncSnapshot?
         var ignoredDeletedRecordIDs: [CKRecord.ID] = []
         repeat {

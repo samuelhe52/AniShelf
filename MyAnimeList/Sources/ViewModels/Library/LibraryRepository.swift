@@ -86,32 +86,20 @@ final class LibraryRepository {
         dataProvider.dataHandler.modelContext.insert(entry)
     }
 
-    func existingEntry(tmdbID: Int) -> AnimeEntry? {
-        do {
-            return AnimeEntryDuplicateResolver.preferredEntry(
-                from: try matchingEntries(tmdbID: tmdbID)
-            )
-        } catch {
-            libraryStoreLogger.warning(
-                "Failed to fetch existing entry \(tmdbID, privacy: .public): \(error.localizedDescription)")
-            return nil
-        }
-    }
-
-    func existingEntry(identity: LibraryEntrySyncIdentity) -> AnimeEntry? {
+    func existingEntry(identity: LibraryEntryIdentity) -> AnimeEntry? {
         guard let tmdbID = identity.tmdbID else {
             libraryStoreLogger.warning(
-                "Failed to parse TMDb ID from sync entry \(identity.rawID, privacy: .public).")
+                "Failed to parse TMDb ID from library entry \(identity.rawID, privacy: .public).")
             return nil
         }
         do {
             return AnimeEntryDuplicateResolver.preferredEntry(
                 from: try matchingEntries(tmdbID: tmdbID)
-                    .filter { $0.syncIdentity == identity }
+                    .filter { $0.libraryIdentity == identity }
             )
         } catch {
             libraryStoreLogger.warning(
-                "Failed to fetch sync entry \(identity.rawID, privacy: .public): \(error.localizedDescription)")
+                "Failed to fetch library entry \(identity.rawID, privacy: .public): \(error.localizedDescription)")
             return nil
         }
     }
@@ -127,7 +115,7 @@ final class LibraryRepository {
         do {
             return AnimeEntryDuplicateResolver.preferredEntry(
                 from: try matchingEntries(tmdbID: tmdbID)
-                    .filter { $0.syncIdentity.rawID == identityRawID }
+                    .filter { $0.libraryIdentity.rawID == identityRawID }
             )
         } catch {
             libraryStoreLogger.warning(

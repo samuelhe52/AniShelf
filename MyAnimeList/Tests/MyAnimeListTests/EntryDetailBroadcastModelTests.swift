@@ -440,16 +440,16 @@ struct EntryDetailBroadcastModelTests {
         )
 
         store.synchronizePresentedDetail(
-            identity: entry.syncIdentity,
+            identity: entry.libraryIdentity,
             repository: repository,
-            resolveEntry: { $0 == entry.syncIdentity ? entry : nil }
+            resolveEntry: { $0 == entry.libraryIdentity ? entry : nil }
         )
         let originalBroadcast = try #require(store.presentedSession?.broadcast)
 
         store.synchronizePresentedDetail(
-            identity: entry.syncIdentity,
+            identity: entry.libraryIdentity,
             repository: repository,
-            resolveEntry: { $0 == entry.syncIdentity ? entry : nil }
+            resolveEntry: { $0 == entry.libraryIdentity ? entry : nil }
         )
 
         #expect(store.presentedSession?.broadcast === originalBroadcast)

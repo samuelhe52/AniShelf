@@ -13,13 +13,13 @@ struct LibraryGalleryView: View {
     @Environment(LibraryStore.self) private var store
     @Environment(LibraryEntryInteractionState.self) var interaction
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Binding var scrolledID: Int?
+    @Binding var scrolledID: LibraryEntryIdentity?
     let scrollRequest: LibraryScrollRequest?
     let detailActions: LibraryEntryDetailActions
-    @State private var localScrolledID: Int?
+    @State private var localScrolledID: LibraryEntryIdentity?
 
     init(
-        scrolledID: Binding<Int?>,
+        scrolledID: Binding<LibraryEntryIdentity?>,
         scrollRequest: LibraryScrollRequest?,
         detailActions: LibraryEntryDetailActions
     ) {
@@ -151,7 +151,7 @@ struct LibraryGalleryView: View {
 fileprivate struct AnimeEntryCardWrapper: View {
     var entry: AnimeEntry
     var snapshot: LibraryEntrySnapshot
-    @Binding var scrolledID: Int?
+    @Binding var scrolledID: LibraryEntryIdentity?
     let detailActions: LibraryEntryDetailActions
     let onToggleFavorite: (AnimeEntry) -> Void
 
