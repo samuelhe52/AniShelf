@@ -237,12 +237,13 @@ final class AnimeSharingViewModel {
 
     /// Builds a stable filename so repeat renders overwrite the same variant.
     private func fileName(for trigger: SharingCardRenderTrigger) -> String {
+        let identity = entry.libraryIdentity.rawID.replacingOccurrences(of: ":", with: "-")
         let posterIdentifier =
             trigger.posterURL?
             .deletingPathExtension()
             .lastPathComponent ?? "default"
         return
-            "poster_\(entry.tmdbID)_\(trigger.language)_\(posterIdentifier)_\(trigger.exportSize.rawValue).\(trigger.exportStyle.fileExtension)"
+            "poster_\(identity)_\(trigger.language)_\(posterIdentifier)_\(trigger.exportSize.rawValue).\(trigger.exportStyle.fileExtension)"
     }
 
     private func invalidateRenderedArtifact() {

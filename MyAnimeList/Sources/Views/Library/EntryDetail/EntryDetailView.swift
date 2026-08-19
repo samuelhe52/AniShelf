@@ -624,7 +624,7 @@ struct EntryDetailView: View {
             $0.dateUpdateSuggestion = session.entry.dateUpdateSuggestion(forTargetStatus: status)
         }
         if creditsCompletion {
-            appReview.record(.entryWatched(entryID: session.entry.tmdbID), scheduleRequest: false)
+            appReview.record(.entryWatched(entryID: session.entry.libraryIdentity), scheduleRequest: false)
             session.hasPendingWatchedReviewOpportunity = true
             if session.presentation.dateUpdateSuggestion == nil {
                 schedulePendingWatchedReviewOpportunity()

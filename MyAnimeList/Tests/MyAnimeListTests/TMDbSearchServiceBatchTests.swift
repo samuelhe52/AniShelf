@@ -13,6 +13,15 @@ import Testing
 @testable import MyAnimeList
 
 struct TMDbSearchServiceBatchTests {
+    @Test func entryMetadataIdentityIncludesEntryType() {
+        let movie = makeEntryMetadata("Movie", tmdbID: 42, type: .movie)
+        let series = makeEntryMetadata("Series", tmdbID: 42, type: .series)
+
+        #expect(movie.id == movie.libraryIdentity)
+        #expect(series.id == series.libraryIdentity)
+        #expect(movie.id != series.id)
+    }
+
     @Test func testBatchPromptsTrimWhitespaceDropEmptyLinesAndPreserveOrder() {
         let prompts = TMDbSearchService.batchPrompts(
             from: "\n  Frieren  \n\nSpirited Away\n  \nKiki's Delivery Service \n"

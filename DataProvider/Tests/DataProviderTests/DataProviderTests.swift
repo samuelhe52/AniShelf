@@ -3,6 +3,15 @@ import Testing
 
 @testable import DataProvider
 
+@Test func libraryIdentityLookupsDisambiguateTMDbIDCollisions() {
+    let movie = AnimeEntry(name: "Movie", type: .movie, tmdbID: 42)
+    let series = AnimeEntry(name: "Series", type: .series, tmdbID: 42)
+    let entries = [movie, series]
+
+    #expect(entries.entry(with: movie.libraryIdentity) === movie)
+    #expect(entries.entry(with: series.libraryIdentity) === series)
+}
+
 @Test @MainActor func dataProviderCreatesMissingStoreParentDirectory() throws {
     let rootDirectory = FileManager.default.temporaryDirectory
         .appendingPathComponent("AniShelfTests-missing-store-parent-\(UUID().uuidString)", isDirectory: true)

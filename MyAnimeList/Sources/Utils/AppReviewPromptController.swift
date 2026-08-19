@@ -5,13 +5,14 @@
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/7/11.
 //
 
+import DataProvider
 import Foundation
 import Observation
 
 enum ReviewEngagementAction: Equatable {
     case regularSearchAdd
-    case entryShare(entryID: Int)
-    case entryWatched(entryID: Int)
+    case entryShare(entryID: LibraryEntryIdentity)
+    case entryWatched(entryID: LibraryEntryIdentity)
     case multiSelectAction
     case batchSearchAdd
 
@@ -124,18 +125,18 @@ final class AppReviewPromptController {
 
     private func creditIfNeeded(_ action: ReviewEngagementAction) -> Bool {
         switch action {
-        case .entryShare(let entryID):
-            return insert(entryID, key: Key.sharedEntryIDs)
-        case .entryWatched(let entryID):
-            return insert(entryID, key: Key.watchedEntryIDs)
+        case .entryShare(let entryIdentity):
+            return insert(entryIdentity, key: Key.sharedEntryIDs)
+        case .entryWatched(let entryIdentity):
+            return insert(entryIdentity, key: Key.watchedEntryIDs)
         case .regularSearchAdd, .multiSelectAction, .batchSearchAdd:
             return true
         }
     }
 
-    private func insert(_ entryID: Int, key: String) -> Bool {
-        var identifiers = Set(defaults.array(forKey: key) as? [Int] ?? [])
-        guard identifiers.insert(entryID).inserted else { return false }
+    private func insert(_ entryIdentity: LibraryEntryIdentity, key: String) -> Bool {
+        var identifiers = Set(defaults.stringArray(forKey: key) ?? [])
+        guard identifiers.insert(entryIdentity.rawID).inserted else { return false }
         defaults.set(Array(identifiers), forKey: key)
         return true
     }

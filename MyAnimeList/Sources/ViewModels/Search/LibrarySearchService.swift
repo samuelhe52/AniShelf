@@ -63,14 +63,14 @@ class LibrarySearchService {
         let lowercasedQuery = query.lowercased()
 
         var results: [AnimeEntry] = []
-        var processedIDs = Set<Int>()
+        var processedIdentities = Set<LibraryEntryIdentity>()
 
         func addToResults(evaluate: (AnimeEntry) -> Bool) {
-            for entry in entries where !processedIDs.contains(entry.tmdbID) {
+            for entry in entries where !processedIdentities.contains(entry.libraryIdentity) {
                 guard entry.onDisplay else { continue }
                 if evaluate(entry) {
                     results.append(entry)
-                    processedIDs.insert(entry.tmdbID)
+                    processedIdentities.insert(entry.libraryIdentity)
                 }
             }
         }

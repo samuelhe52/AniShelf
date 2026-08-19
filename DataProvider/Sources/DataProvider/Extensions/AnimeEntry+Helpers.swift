@@ -118,10 +118,9 @@ extension AnimeEntry {
 }
 
 extension Collection where Element == AnimeEntry {
-    /// Get an anime entry with the given TMDB ID.
-    public func entryWithTMDbID(_ id: Int) -> AnimeEntry? {
-        guard id != 0 else { return nil }
-        return self.first { $0.tmdbID == id }
+    /// Gets an anime entry with the given stable library identity.
+    public func entry(with identity: LibraryEntryIdentity) -> AnimeEntry? {
+        first { $0.libraryIdentity == identity }
     }
 
     /// Get an anime entry with the given persistent identifier.
