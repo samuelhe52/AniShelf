@@ -331,14 +331,43 @@ actor EpisodeNotificationManager {
         return .enabled
     }
 
-    func disable(entryIdentityRawID: String) async {
-        subscriptions.removeValue(forKey: entryIdentityRawID)
+    @discardableResult
+    func disable(entryIdentityRawID: String) async -> Bool {
+        await removeSubscriptions(withEntryIdentityRawIDs: Set([entryIdentityRawID]))
+    }
+
+    @discardableResult
+    func disableSubscriptions(forSeriesTMDbID seriesTMDbID: Int) async -> Bool {
+        let matchingIDs = Set(
+            subscriptions.keys.filter { rawID in
+                guard let identity = LibraryEntryIdentity(rawID: rawID) else { return false }
+                switch identity.entryType {
+                case .series:
+                    return identity.tmdbID == seriesTMDbID
+                case .season:
+                    return identity.parentSeriesID == seriesTMDbID
+                case .movie:
+                    return false
+                }
+            }
+        )
+        return await removeSubscriptions(withEntryIdentityRawIDs: matchingIDs)
+    }
+
+    private func removeSubscriptions(
+        withEntryIdentityRawIDs requestedIDs: Set<String>
+    ) async -> Bool {
+        let removedIDs = requestedIDs.filter { subscriptions.removeValue(forKey: $0) != nil }
+        guard !removedIDs.isEmpty else {
+            return false
+        }
         persistSubscriptions()
         let identifiers = await notificationCenter.pendingRequests()
-            .filter { $0.subscriptionID == entryIdentityRawID }
+            .filter { removedIDs.contains($0.subscriptionID) }
             .map(\.identifier)
         await notificationCenter.removePendingRequests(withIdentifiers: identifiers)
         clearWarningWhenUnderLimit()
+        return true
     }
 
     func cancelAll() async {
@@ -351,11 +380,8 @@ actor EpisodeNotificationManager {
 
     @discardableResult
     func removeSubscriptions(notIn validEntryIdentityRawIDs: Set<String>) async -> Bool {
-        let staleIDs = subscriptions.keys.filter { !validEntryIdentityRawIDs.contains($0) }
-        for staleID in staleIDs {
-            await disable(entryIdentityRawID: staleID)
-        }
-        return !staleIDs.isEmpty
+        let staleIDs = Set(subscriptions.keys.filter { !validEntryIdentityRawIDs.contains($0) })
+        return await removeSubscriptions(withEntryIdentityRawIDs: staleIDs)
     }
 
     func setLeadTime(_ newValue: EpisodeNotificationLeadTime) async throws {
@@ -680,7 +706,16 @@ final class EpisodeNotificationCoordinator {
     }
 
     func disable(entryIdentityRawID: String) async {
-        await manager.disable(entryIdentityRawID: entryIdentityRawID)
+        guard await manager.disable(entryIdentityRawID: entryIdentityRawID) else {
+            return
+        }
+        _ = await refreshAll()
+    }
+
+    func disableSubscriptions(forSeriesTMDbID seriesTMDbID: Int) async {
+        guard await manager.disableSubscriptions(forSeriesTMDbID: seriesTMDbID) else {
+            return
+        }
         _ = await refreshAll()
     }
 

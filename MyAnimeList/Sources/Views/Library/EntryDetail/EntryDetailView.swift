@@ -116,7 +116,16 @@ struct EntryDetailView: View {
                 EntryDetailBroadcastValidationSheet(
                     model: session.broadcast,
                     searchTitle: broadcastTitleFallbackName,
-                    displayTitle: session.model.displayTitle
+                    displayTitle: session.model.displayTitle,
+                    onMappingChanged: {
+                        guard session.entryIdentity.entryType != .movie,
+                            let seriesTMDbID = session.entryIdentity.parentSeriesID
+                                ?? session.entryIdentity.tmdbID
+                        else { return }
+                        await episodeNotifications.disableSubscriptions(
+                            forSeriesTMDbID: seriesTMDbID
+                        )
+                    }
                 )
                 .presentationBackground(Color(.systemGroupedBackground))
             case .changePoster:

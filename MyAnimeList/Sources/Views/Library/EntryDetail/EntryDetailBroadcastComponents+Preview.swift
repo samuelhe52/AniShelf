@@ -107,7 +107,8 @@ fileprivate struct EntryDetailBroadcastConfirmationPreview: View {
             EntryDetailBroadcastValidationSheet(
                 model: model,
                 searchTitle: searchTitle,
-                displayTitle: displayTitle
+                displayTitle: displayTitle,
+                onMappingChanged: {}
             )
             .presentationBackground(Color(.systemGroupedBackground))
         }

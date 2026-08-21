@@ -21,11 +21,13 @@ struct EntryDetailBroadcastValidationSheet: View {
     let model: EntryDetailBroadcastModel
     let searchTitle: String
     let displayTitle: String
+    let onMappingChanged: () async -> Void
 
     @State private var isConfirming = false
     @State private var isShowingSearch = false
     @State private var replacementCandidate: TVMazeShow?
     @State private var confirmingCandidate: TVMazeShow?
+    @State private var confirmedMappingChanged = false
 
     var body: some View {
         NavigationStack {
@@ -54,7 +56,12 @@ struct EntryDetailBroadcastValidationSheet: View {
         }
         .onChange(of: model.phase) { _, phase in
             if isConfirming, case .resolved = phase {
-                dismiss()
+                Task {
+                    if confirmedMappingChanged {
+                        await onMappingChanged()
+                    }
+                    dismiss()
+                }
             }
         }
     }
@@ -165,6 +172,7 @@ struct EntryDetailBroadcastValidationSheet: View {
                     if presentation == .candidate {
                         Button {
                             confirmingCandidate = show
+                            confirmedMappingChanged = model.resolvedShow?.id != show.id
                             isConfirming = true
                             model.confirm(candidate: show)
                         } label: {

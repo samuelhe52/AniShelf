@@ -298,6 +298,81 @@ struct EpisodeNotificationManagerTests {
         #expect((await manager.snapshot()).subscriptions.isEmpty)
     }
 
+    @Test func remappedSeriesDisablesEveryAssociatedSubscription() async throws {
+        let defaults = makeDefaults()
+        defer { removeDefaults(defaults) }
+        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let manager = makeManager(defaults: defaults, center: center) { _ in
+            makeEpisode(
+                season: 2,
+                number: 1,
+                airStamp: now.addingTimeInterval(86_400)
+            )
+        }
+        let series = LibraryEntryIdentity(entryType: .series, tmdbID: 100)
+        let seasonOne = LibraryEntryIdentity(
+            entryType: .season(seasonNumber: 1, parentSeriesID: 100),
+            tmdbID: 200
+        )
+        let seasonTwo = LibraryEntryIdentity(
+            entryType: .season(seasonNumber: 2, parentSeriesID: 100),
+            tmdbID: 201
+        )
+        let unrelatedSeries = LibraryEntryIdentity(entryType: .series, tmdbID: 101)
+
+        for (identity, title, seasonNumber) in [
+            (series, "Series", nil),
+            (seasonOne, "Season One", 1),
+            (seasonTwo, "Season Two", 2),
+            (unrelatedSeries, "Unrelated Series", nil)
+        ] {
+            _ = try await manager.enable(
+                entryIdentity: identity,
+                showID: 70,
+                displayTitle: title,
+                seasonNumber: seasonNumber
+            )
+        }
+
+        let didDisable = await manager.disableSubscriptions(forSeriesTMDbID: 100)
+
+        #expect(didDisable)
+        #expect((await manager.snapshot()).subscriptions.map(\.id) == [unrelatedSeries.rawID])
+        #expect(await center.allRequests().map(\.subscriptionID) == [unrelatedSeries.rawID])
+    }
+
+    @Test @MainActor func disablingMissingSubscriptionDoesNotRefreshExistingSubscriptions() async throws {
+        let defaults = makeDefaults()
+        defer { removeDefaults(defaults) }
+        let existingSubscription = EpisodeNotificationSubscription(
+            entryIdentityRawID: "series:100",
+            tvMazeShowID: 70,
+            displayTitle: "Existing Anime",
+            seasonNumber: nil
+        )
+        defaults.set(
+            try JSONEncoder().encode([existingSubscription]),
+            forKey: .episodeNotificationSubscriptions
+        )
+        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let provider = EpisodeProviderProbe(
+            nextEpisode: makeEpisode(
+                season: 1,
+                number: 1,
+                airStamp: now.addingTimeInterval(86_400)
+            )
+        )
+        let manager = makeManager(defaults: defaults, center: center) { showID in
+            try await provider.nextEpisode(showID: showID)
+        }
+        let coordinator = EpisodeNotificationCoordinator(manager: manager)
+
+        await coordinator.disable(entryIdentityRawID: "series:200")
+
+        #expect(await provider.requestCount() == 0)
+        #expect((await manager.snapshot()).subscriptions == [existingSubscription])
+    }
+
     @Test func nextEpisodeOnlySchedulingRespectsCapacityAndWarnsAboutOverflow() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
@@ -492,6 +567,7 @@ private actor EpisodeProviderProbe {
 
     private var storedNextEpisode: TVMazeNextEpisodeAiring?
     private var fails = false
+    private var requests = 0
 
     init(nextEpisode: TVMazeNextEpisodeAiring?) {
         storedNextEpisode = nextEpisode
@@ -506,8 +582,13 @@ private actor EpisodeProviderProbe {
     }
 
     func nextEpisode(showID: Int) throws -> TVMazeNextEpisodeAiring? {
+        requests += 1
         guard !fails else { throw Failure.unavailable }
         return storedNextEpisode
+    }
+
+    func requestCount() -> Int {
+        requests
     }
 }
 

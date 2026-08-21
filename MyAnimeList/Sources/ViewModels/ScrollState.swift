@@ -21,35 +21,8 @@ class ScrollState {
 
     init() {
         let persistedScrollPosition = UserDefaults.standard.string(forKey: .persistedScrolledID)
-            .flatMap(Self.identity(from:))
+            .flatMap(LibraryEntryIdentity.init(rawID:))
         self.scrolledID = persistedScrollPosition
         self.writer = DebouncedStringUserDefaultsWriter(forKey: .persistedScrolledID)
-    }
-
-    private static func identity(from rawID: String) -> LibraryEntryIdentity? {
-        let components = rawID.split(separator: ":")
-        guard let kind = components.first else { return nil }
-
-        switch kind {
-        case "movie", "series":
-            guard components.count == 2, let tmdbID = Int(components[1]) else { return nil }
-            let type: AnimeType = kind == "movie" ? .movie : .series
-            return LibraryEntryIdentity(entryType: type, tmdbID: tmdbID)
-        case "season":
-            guard components.count == 4,
-                let parentSeriesID = Int(components[1]),
-                let seasonNumber = Int(components[2]),
-                let tmdbID = Int(components[3])
-            else { return nil }
-            return LibraryEntryIdentity(
-                entryType: .season(
-                    seasonNumber: seasonNumber,
-                    parentSeriesID: parentSeriesID
-                ),
-                tmdbID: tmdbID
-            )
-        default:
-            return nil
-        }
     }
 }
