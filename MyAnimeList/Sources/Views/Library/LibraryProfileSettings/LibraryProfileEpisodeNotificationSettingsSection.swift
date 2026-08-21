@@ -6,9 +6,9 @@
 //
 
 import SwiftUI
-import UIKit
 
 struct LibraryProfileEpisodeNotificationSettingsSection: View {
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(EpisodeNotificationCoordinator.self) private var notifications
     @State private var showCancelAllConfirmation = false
 
@@ -21,29 +21,15 @@ struct LibraryProfileEpisodeNotificationSettingsSection: View {
                 tint: .orange
             )
 
-            LabeledContent("Permission", value: authorizationTitle)
-                .font(.subheadline)
-
-            LabeledContent("Subscriptions", value: "\(notifications.snapshot.subscriptions.count)")
-                .font(.subheadline)
-
-            LabeledContent("Pending Reminders", value: "\(notifications.snapshot.scheduledReminders.count)")
-                .font(.subheadline)
-
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Text("Notify")
                     .font(.subheadline.weight(.semibold))
                 Spacer(minLength: 12)
                 Menu {
-                    ForEach(EpisodeNotificationLeadTime.allCases, id: \.rawValue) { leadTime in
-                        Button {
-                            Task { await notifications.setLeadTime(leadTime) }
-                        } label: {
-                            if leadTime == notifications.snapshot.leadTime {
-                                Label(leadTime.localizedTitle, systemImage: "checkmark")
-                            } else {
-                                Text(leadTime.localizedTitle)
-                            }
+                    Picker("Notify", selection: leadTimeBinding) {
+                        ForEach(EpisodeNotificationLeadTime.allCases, id: \.rawValue) { leadTime in
+                            Text(leadTime.localizedResource)
+                                .tag(leadTime)
                         }
                     }
                 } label: {
@@ -55,11 +41,17 @@ struct LibraryProfileEpisodeNotificationSettingsSection: View {
                 .disabled(notifications.isRefreshing)
             }
 
-            if notifications.snapshot.authorizationStatus == .denied {
-                Button("Open Notification Settings", systemImage: "gear") {
-                    openSystemSettings()
-                }
-                .font(.subheadline.weight(.semibold))
+            HStack(spacing: 10) {
+                reminderCount(
+                    title: "Subscriptions",
+                    value: notifications.snapshot.subscriptions.count,
+                    systemImage: "bell.badge"
+                )
+                reminderCount(
+                    title: "Pending Reminders",
+                    value: notifications.snapshot.scheduledReminders.count,
+                    systemImage: "calendar.badge.clock"
+                )
             }
 
             if notifications.snapshot.warning != nil {
@@ -77,28 +69,31 @@ struct LibraryProfileEpisodeNotificationSettingsSection: View {
                     .foregroundStyle(.orange)
             }
 
-            HStack {
+            HStack(spacing: 10) {
                 Button("Refresh", systemImage: "arrow.clockwise") {
                     Task { _ = await notifications.refreshAll() }
                 }
+                .buttonStyle(LibraryProfileCommandButtonStyle(tint: .orange, filled: false))
                 .disabled(
                     notifications.isRefreshing
                         || notifications.snapshot.subscriptions.isEmpty
                         || !notifications.snapshot.authorizationStatus.allowsScheduling
                 )
 
-                Spacer()
-
                 Button("Cancel All", systemImage: "bell.slash", role: .destructive) {
                     showCancelAllConfirmation = true
                 }
+                .buttonStyle(LibraryProfileCommandButtonStyle(tint: .red, filled: false))
                 .disabled(notifications.snapshot.subscriptions.isEmpty)
             }
-            .font(.subheadline.weight(.semibold))
         }
         .padding(14)
         .libraryProfileInsetPanel(cornerRadius: 22, tint: .orange)
         .task { await notifications.reloadState() }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            Task { await notifications.reloadState() }
+        }
         .confirmationDialog(
             "Cancel All Episode Notifications?",
             isPresented: $showCancelAllConfirmation,
@@ -113,25 +108,49 @@ struct LibraryProfileEpisodeNotificationSettingsSection: View {
         }
     }
 
-    private var authorizationTitle: String {
-        switch notifications.snapshot.authorizationStatus {
-        case .notDetermined:
-            String(localized: "Not Requested")
-        case .denied:
-            String(localized: "Blocked")
-        case .authorized:
-            String(localized: "Allowed")
-        case .provisional:
-            String(localized: "Delivered Quietly")
-        case .ephemeral:
-            String(localized: "Temporarily Allowed")
+    private func reminderCount(
+        title: LocalizedStringResource,
+        value: Int,
+        systemImage: String
+    ) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.orange)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Text("\(value)")
+                    .font(.headline.weight(.bold))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 11)
+        .padding(.vertical, 9)
+        .background {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(.orange.opacity(0.07))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(.orange.opacity(0.12), lineWidth: 1)
         }
     }
 
-    private func openSystemSettings() {
-        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
-        UIApplication.shared.open(url)
+    private var leadTimeBinding: Binding<EpisodeNotificationLeadTime> {
+        Binding(
+            get: { notifications.snapshot.leadTime },
+            set: { leadTime in
+                Task { await notifications.setLeadTime(leadTime) }
+            }
+        )
     }
+
 }
 
 extension EpisodeNotificationLeadTime {
@@ -148,9 +167,5 @@ extension EpisodeNotificationLeadTime {
         case .oneHour:
             "1 hour before"
         }
-    }
-
-    var localizedTitle: String {
-        String(localized: localizedResource)
     }
 }
