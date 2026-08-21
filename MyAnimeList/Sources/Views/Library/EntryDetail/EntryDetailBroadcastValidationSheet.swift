@@ -21,13 +21,12 @@ struct EntryDetailBroadcastValidationSheet: View {
     let model: EntryDetailBroadcastModel
     let searchTitle: String
     let displayTitle: String
-    let onMappingChanged: () async -> Void
+    let onConfirmedMappingChange: () async -> Void
 
     @State private var isConfirming = false
     @State private var isShowingSearch = false
     @State private var replacementCandidate: TVMazeShow?
     @State private var confirmingCandidate: TVMazeShow?
-    @State private var confirmedMappingChanged = false
 
     var body: some View {
         NavigationStack {
@@ -56,12 +55,7 @@ struct EntryDetailBroadcastValidationSheet: View {
         }
         .onChange(of: model.phase) { _, phase in
             if isConfirming, case .resolved = phase {
-                Task {
-                    if confirmedMappingChanged {
-                        await onMappingChanged()
-                    }
-                    dismiss()
-                }
+                dismiss()
             }
         }
     }
@@ -150,7 +144,7 @@ struct EntryDetailBroadcastValidationSheet: View {
         } actions: {
             Button(EntryDetailL10n.tryAgain) {
                 guard let confirmingCandidate else { return }
-                model.confirm(candidate: confirmingCandidate)
+                confirm(confirmingCandidate)
             }
             .buttonStyle(.glassProminent)
         }
@@ -172,9 +166,7 @@ struct EntryDetailBroadcastValidationSheet: View {
                     if presentation == .candidate {
                         Button {
                             confirmingCandidate = show
-                            confirmedMappingChanged = model.resolvedShow?.id != show.id
-                            isConfirming = true
-                            model.confirm(candidate: show)
+                            confirm(show)
                         } label: {
                             Text(EntryDetailL10n.thisIsTheAnime)
                                 .bold()
@@ -202,6 +194,15 @@ struct EntryDetailBroadcastValidationSheet: View {
             .frame(maxWidth: .infinity)
         }
         .preferredNavigationBarScrollEdgeEffect()
+    }
+
+    private func confirm(_ candidate: TVMazeShow) {
+        let mappingChanged = model.resolvedShow?.id != candidate.id
+        isConfirming = true
+        model.confirm(
+            candidate: candidate,
+            onConfirmedMappingChange: mappingChanged ? onConfirmedMappingChange : nil
+        )
     }
 
     private func matchHeader(

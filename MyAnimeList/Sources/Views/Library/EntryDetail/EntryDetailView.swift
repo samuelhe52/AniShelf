@@ -117,7 +117,7 @@ struct EntryDetailView: View {
                     model: session.broadcast,
                     searchTitle: broadcastTitleFallbackName,
                     displayTitle: session.model.displayTitle,
-                    onMappingChanged: {
+                    onConfirmedMappingChange: {
                         guard session.entryIdentity.entryType != .movie,
                             let seriesTMDbID = session.entryIdentity.parentSeriesID
                                 ?? session.entryIdentity.tmdbID

@@ -477,7 +477,7 @@ struct EntryDetailBroadcastModelTests {
         #expect(await probe.savedMappings == [.init(tmdbSeriesID: 42, showID: 90)])
     }
 
-    @Test @MainActor func replacementSearchKeepsResolvedMappingUntilConfirmation() async throws {
+    @Test @MainActor func replacementSearchKeepsResolvedMappingUntilConfirmationSucceeds() async throws {
         let resolvedShow = makeBroadcastTestShow(id: 70)
         let replacement = makeBroadcastTestShow(id: 90)
         let expectedAvailability = BroadcastAvailability.tmdbExpected(
@@ -487,7 +487,8 @@ struct EntryDetailBroadcastModelTests {
             mappedShowID: resolvedShow.id,
             titleShowID: replacement.id,
             show: resolvedShow,
-            additionalShows: [replacement.id: replacement]
+            additionalShows: [replacement.id: replacement],
+            mappingSaveFailureCount: 1
         )
         let model = EntryDetailBroadcastModel(
             entryType: .series,
@@ -516,11 +517,69 @@ struct EntryDetailBroadcastModelTests {
         #expect(model.phase == .resolved(expectedAvailability))
         #expect(model.resolvedShow == resolvedShow)
 
-        model.confirm(candidate: selected)
+        let mappingChangeProbe = BroadcastMappingChangeProbe()
+        model.confirm(candidate: selected) {
+            await mappingChangeProbe.record()
+        }
+        await waitUntil { model.phase == .failed }
+
+        #expect(model.resolvedShow == resolvedShow)
+        #expect(await mappingChangeProbe.invocationCount == 0)
+
+        model.confirm(candidate: selected) {
+            await mappingChangeProbe.record()
+        }
         await waitUntil { model.phase == .resolved(expectedAvailability) }
 
         #expect(model.resolvedShow == replacement)
         #expect(await probe.savedMappings == [.init(tmdbSeriesID: 42, showID: 90)])
+        #expect(await mappingChangeProbe.invocationCount == 1)
+    }
+
+    @Test @MainActor func cancelingDuringConfirmedMappingChangeKeepsDisabledPhase() async throws {
+        let resolvedShow = makeBroadcastTestShow(id: 70)
+        let replacement = makeBroadcastTestShow(id: 90)
+        let probe = BroadcastResolutionProbe(
+            mappedShowID: resolvedShow.id,
+            show: resolvedShow,
+            additionalShows: [replacement.id: replacement]
+        )
+        let model = EntryDetailBroadcastModel(
+            entryType: .series,
+            tmdbID: 42,
+            eligibilityChecker: makeEligibilityChecker(schedule: eligibleSchedule),
+            resolver: makeBroadcastResolver(probe: probe),
+            now: { date(day: 12) },
+            calendar: broadcastTestCalendar
+        )
+        let mappingChangeProbe = BroadcastMappingChangeProbe()
+
+        model.update(
+            .init(
+                isEnabled: true,
+                entryType: .series,
+                seriesStatus: "Returning Series"
+            )
+        )
+        await waitUntil { model.resolvedShow == resolvedShow }
+
+        model.confirm(candidate: replacement) {
+            await mappingChangeProbe.waitForRelease()
+        }
+        await waitUntil { await mappingChangeProbe.isWaitingForRelease }
+
+        model.update(
+            .init(
+                isEnabled: false,
+                entryType: .series,
+                seriesStatus: "Returning Series"
+            )
+        )
+        await mappingChangeProbe.release()
+        await Task.yield()
+
+        #expect(model.phase == .disabled)
+        #expect(model.resolvedShow == nil)
     }
 
     @Test @MainActor func detailHostSynchronizationKeepsTheSameBroadcastModel() throws {
@@ -630,6 +689,7 @@ private actor BroadcastResolutionProbe {
     private let titleShowID: Int?
     private let shows: [Int: TVMazeShow]
     private let suspendsMappingLoad: Bool
+    private let mappingSaveFailureCount: Int
 
     private(set) var loadedMappingTMDbIDs: [Int] = []
     private(set) var lookedUpTVDBIDs: [Int] = []
@@ -637,6 +697,7 @@ private actor BroadcastResolutionProbe {
     private(set) var savedMappings: [Mapping] = []
     private(set) var didStartSuspendedLoad = false
     private(set) var didCancelSuspendedLoad = false
+    private var mappingSaveAttempts = 0
 
     init(
         mappedShowID: Int? = nil,
@@ -644,7 +705,8 @@ private actor BroadcastResolutionProbe {
         titleShowID: Int? = nil,
         show: TVMazeShow? = nil,
         additionalShows: [Int: TVMazeShow] = [:],
-        suspendsMappingLoad: Bool = false
+        suspendsMappingLoad: Bool = false,
+        mappingSaveFailureCount: Int = 0
     ) {
         self.mappedShowID = mappedShowID
         self.tvdbShowID = tvdbShowID
@@ -655,6 +717,7 @@ private actor BroadcastResolutionProbe {
         }
         self.shows = shows
         self.suspendsMappingLoad = suspendsMappingLoad
+        self.mappingSaveFailureCount = mappingSaveFailureCount
     }
 
     func loadMapping(for tmdbSeriesID: Int) async throws -> Int? {
@@ -686,15 +749,48 @@ private actor BroadcastResolutionProbe {
         return [show]
     }
 
-    func saveMapping(tmdbSeriesID: Int, showID: Int) {
+    func saveMapping(tmdbSeriesID: Int, showID: Int) throws {
+        mappingSaveAttempts += 1
+        guard mappingSaveAttempts > mappingSaveFailureCount else {
+            throw BroadcastResolutionProbeError.mappingSaveFailed
+        }
         savedMappings.append(.init(tmdbSeriesID: tmdbSeriesID, showID: showID))
+    }
+}
+
+fileprivate enum BroadcastResolutionProbeError: Error {
+    case mappingSaveFailed
+}
+
+private actor BroadcastMappingChangeProbe {
+    private(set) var invocationCount = 0
+    private var releaseContinuation: CheckedContinuation<Void, Never>?
+
+    func record() {
+        invocationCount += 1
+    }
+
+    var isWaitingForRelease: Bool {
+        releaseContinuation != nil
+    }
+
+    func waitForRelease() async {
+        invocationCount += 1
+        await withCheckedContinuation { continuation in
+            releaseContinuation = continuation
+        }
+    }
+
+    func release() {
+        releaseContinuation?.resume()
+        releaseContinuation = nil
     }
 }
 
 fileprivate func makeBroadcastResolver(probe: BroadcastResolutionProbe) -> TVMazeResolver {
     TVMazeResolver(
         loadMappedShowID: { try await probe.loadMapping(for: $0) },
-        saveMappedShowID: { await probe.saveMapping(tmdbSeriesID: $0, showID: $1) },
+        saveMappedShowID: { try await probe.saveMapping(tmdbSeriesID: $0, showID: $1) },
         lookupTVDBShowID: { await probe.lookupTVDBShowID(tvdbID: $0) },
         lookupIMDbShowID: { _ in nil },
         searchShows: { await probe.searchShows(title: $0) },
