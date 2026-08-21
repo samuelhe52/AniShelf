@@ -56,7 +56,7 @@ struct LibraryProfileEpisodeNotificationSettingsSection: View {
 
             if notifications.snapshot.warning != nil {
                 Label(
-                    "iOS could not schedule every next-episode reminder. AniShelf kept the reminders with the nearest airtimes.",
+                    notificationWarningMessage,
                     systemImage: "exclamationmark.triangle.fill"
                 )
                 .font(.caption)
@@ -149,6 +149,17 @@ struct LibraryProfileEpisodeNotificationSettingsSection: View {
                 Task { await notifications.setLeadTime(leadTime) }
             }
         )
+    }
+
+    private var notificationWarningMessage: LocalizedStringResource {
+        switch notifications.snapshot.warning {
+        case .queueLimit:
+            "iOS could not schedule every next-episode reminder. AniShelf kept the reminders with the nearest airtimes."
+        case .schedulingFailure:
+            "iOS rejected one or more episode reminders. Existing reminders were restored when possible."
+        case nil:
+            "Some episode reminders could not be scheduled."
+        }
     }
 
 }
