@@ -26,6 +26,13 @@ fileprivate struct EntryDetailBroadcastPolicyPreview: View {
                     Menu {
                         let broadcastContent = EntryDetailBroadcastMenuContent(
                             phase: .resolved(previewCase.availability),
+                            notificationContext: EntryDetailNotificationContext(
+                                entryIdentity: previewCase.entry.libraryIdentity,
+                                displayTitle: previewCase.entry.name,
+                                seasonNumber: previewCase.entry.type.seasonNumber,
+                                resolvedShow: previewCase.resolvedShow
+                            ),
+                            hasNotificationSubscription: false,
                             onPresentValidation: {},
                             onRetry: {}
                         )
@@ -130,6 +137,11 @@ fileprivate struct BroadcastPolicyPreviewCase: Identifiable {
     let entry: AnimeEntry
     let explanation: String
     let availability: BroadcastAvailability
+
+    var resolvedShow: TVMazeShow? {
+        guard case .tvMazeNextAiring(let show, _, _) = availability else { return nil }
+        return show
+    }
 
     static let fixtures: [Self] = [
         agreeingAirstamp,
@@ -380,6 +392,7 @@ fileprivate struct BroadcastPolicyPreviewCase: Identifiable {
 
 #Preview("Broadcast Availability Policy") {
     EntryDetailBroadcastPolicyPreview()
+        .environment(EpisodeNotificationCoordinator())
 }
 
 #Preview("Broadcast Confirmation Sheet") {

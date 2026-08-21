@@ -8513,16 +8513,40 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "新剧集" } }
       }
     },
+    "Next Notification" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "次回の通知" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "下次通知" } }
+      }
+    },
+    "No Upcoming Notification" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "今後の通知はありません" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "暂无即将发送的通知" } }
+      }
+    },
     "Not Requested" : {
       "localizations" : {
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "未リクエスト" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "尚未请求" } }
       }
     },
+    "Not Subscribed" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "未登録" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "未订阅" } }
+      }
+    },
     "Notification Limit Reached" : {
       "localizations" : {
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知上限に達しました" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已达到通知上限" } }
+      }
+    },
+    "Notifications Disabled" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知が無効です" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "通知已关闭" } }
       }
     },
     "Notify" : {
@@ -8567,6 +8591,18 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "部分订阅无法刷新。" } }
       }
     },
+    "Subscribe" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知を登録" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "订阅" } }
+      }
+    },
+    "Subscribed" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知登録済み" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已订阅" } }
+      }
+    },
     "Subscriptions" : {
       "localizations" : {
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知登録" } },
@@ -8577,6 +8613,12 @@
       "localizations" : {
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "一時的に許可" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "暂时允许" } }
+      }
+    },
+    "Unsubscribe" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知登録を解除" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消订阅" } }
       }
     },
     "Your original files were preserved" : {

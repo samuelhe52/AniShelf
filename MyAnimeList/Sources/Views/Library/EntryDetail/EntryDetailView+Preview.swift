@@ -47,4 +47,5 @@ fileprivate struct EntryDetailPreviewHost: View {
 #Preview {
     EntryDetailPreviewHost()
         .environment(AppReviewPromptController())
+        .environment(EpisodeNotificationCoordinator())
 }

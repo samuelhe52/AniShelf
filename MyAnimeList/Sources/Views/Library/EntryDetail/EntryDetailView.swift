@@ -13,6 +13,7 @@ import SwiftUI
 struct EntryDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppReviewPromptController.self) private var appReview
+    @Environment(EpisodeNotificationCoordinator.self) private var episodeNotifications
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
@@ -281,6 +282,15 @@ struct EntryDetailView: View {
             dropActionSystemImage: dropActionSystemImage,
             dropActionIsDestructive: session.entry.watchStatus != .dropped,
             broadcastPhase: session.broadcast.phase,
+            notificationContext: EntryDetailNotificationContext(
+                entryIdentity: session.entryIdentity,
+                displayTitle: session.model.displayTitle,
+                seasonNumber: session.entry.type.seasonNumber,
+                resolvedShow: session.broadcast.resolvedShow
+            ),
+            hasNotificationSubscription: episodeNotifications.snapshot.subscription(
+                for: session.entryIdentity.rawID
+            ) != nil,
             onShare: { updatePresentation { $0.activeSheet = .sharing } },
             onToggleFavorite: toggleFavorite,
             onChangePoster: { updatePresentation { $0.activeSheet = .changePoster } },
