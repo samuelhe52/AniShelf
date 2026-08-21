@@ -519,15 +519,16 @@ actor EpisodeNotificationManager {
         )
 
         do {
-            for request in replacementRequests {
-                try await notificationCenter.add(request)
+            for (candidate, request) in zip(candidates, replacementRequests) {
+                _ = try await schedule(request, whileSubscriptionRemains: candidate.subscription)
             }
         } catch {
             await notificationCenter.removePendingRequests(
                 withIdentifiers: replacementRequests.map(\.identifier)
             )
             for request in previousRequests where request.fireDate > now() {
-                try? await notificationCenter.add(request)
+                guard let subscription = currentSubscription(for: request) else { continue }
+                _ = try? await schedule(request, whileSubscriptionRemains: subscription)
             }
             throw error
         }
@@ -560,18 +561,42 @@ actor EpisodeNotificationManager {
         )
         do {
             for request in rebuilt {
-                try await notificationCenter.add(request)
+                guard let subscription = currentSubscription(for: request) else { continue }
+                _ = try await schedule(request, whileSubscriptionRemains: subscription)
             }
         } catch {
             await notificationCenter.removePendingRequests(
                 withIdentifiers: rebuilt.map(\.identifier)
             )
             for request in pendingRequests where request.fireDate > now() {
-                try? await notificationCenter.add(request)
+                guard let subscription = currentSubscription(for: request) else { continue }
+                _ = try? await schedule(request, whileSubscriptionRemains: subscription)
             }
             storedWarning = .schedulingFailure
             throw EpisodeNotificationManagerError.schedulingFailed
         }
+    }
+
+    @discardableResult
+    private func schedule(
+        _ request: EpisodeNotificationRequest,
+        whileSubscriptionRemains subscription: EpisodeNotificationSubscription
+    ) async throws -> Bool {
+        guard subscriptions[subscription.id] == subscription else { return false }
+        try await notificationCenter.add(request)
+        guard subscriptions[subscription.id] == subscription else {
+            await notificationCenter.removePendingRequests(withIdentifiers: [request.identifier])
+            return false
+        }
+        return true
+    }
+
+    private func currentSubscription(
+        for request: EpisodeNotificationRequest
+    ) -> EpisodeNotificationSubscription? {
+        guard let subscription = subscriptions[request.subscriptionID] else { return nil }
+        guard subscription.tvMazeShowID == request.tvMazeShowID else { return nil }
+        return subscription
     }
 
     private func makeRequest(_ candidate: Candidate) -> EpisodeNotificationRequest {
@@ -756,11 +781,8 @@ final class EpisodeNotificationCoordinator {
     }
 
     func pruneSubscriptions(validEntryIdentityRawIDs: Set<String>) async {
-        if await manager.removeSubscriptions(notIn: validEntryIdentityRawIDs) {
-            _ = await refreshAll()
-        } else {
-            await reloadState()
-        }
+        _ = await manager.removeSubscriptions(notIn: validEntryIdentityRawIDs)
+        await reloadState()
     }
 
     func receiveNotificationRoute(entryIdentityRawID: String) {

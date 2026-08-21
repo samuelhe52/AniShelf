@@ -34,20 +34,29 @@ struct MyAnimeListApp: App {
             bootstrapRecovery: startupBootstrap.recovery
         )
         let keyStorage = TMDbAPIKeyStorage()
+        let recoveryActivityGate = StartupRecoveryActivityGate(
+            isBlocked: startupRecovery != nil
+        )
+        let episodeNotifications = EpisodeNotificationCoordinator()
         let libraryStore = LibraryStore(
             dataProvider: startupBootstrap.provider,
             hasTMDbAPIKey: {
                 guard let key = keyStorage.key else { return false }
                 return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            },
+            libraryMembershipChangeHandler: {
+                [episodeNotifications, recoveryActivityGate] validEntryIdentityRawIDs in
+                guard recoveryActivityGate.allowsLibraryActivity else { return }
+                Task { @MainActor in
+                    await episodeNotifications.pruneSubscriptions(
+                        validEntryIdentityRawIDs: validEntryIdentityRawIDs
+                    )
+                }
             }
         )
         let whatsNew = WhatsNewController()
         let supportStore = SupportStore()
         let appReview = AppReviewPromptController()
-        let episodeNotifications = EpisodeNotificationCoordinator()
-        let recoveryActivityGate = StartupRecoveryActivityGate(
-            isBlocked: startupRecovery != nil
-        )
 
         _libraryStore = State(initialValue: libraryStore)
         _keyStorage = State(initialValue: keyStorage)
@@ -194,6 +203,7 @@ struct MyAnimeListApp: App {
         }
         recoveryActivityGate.isBlocked = false
         startupRecovery = nil
+        libraryStore.notifyLibraryMembershipChange()
         requestSync(trigger: .appLaunch)
         updateWhatsNewPresentation()
     }

@@ -35,6 +35,7 @@ class LibraryStore {
     @ObservationIgnored private var saveObserver: ModelContextSaveObserver?
     @ObservationIgnored private var deferredLibraryRefreshDepth = 0
     @ObservationIgnored private var needsDeferredLibraryRefresh = false
+    @ObservationIgnored private let libraryMembershipChangeHandler: ((Set<String>) -> Void)?
     private(set) var libraryRevision = 0
 
     // MARK: - State
@@ -114,7 +115,8 @@ class LibraryStore {
         hasTMDbAPIKey: @escaping @MainActor () -> Bool = {
             guard let key = TMDbAPIKeyStorage().retrieveKey() else { return false }
             return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        }
+        },
+        libraryMembershipChangeHandler: ((Set<String>) -> Void)? = nil
     ) {
         self.dataProvider = dataProvider
         let syncChangeRecorder = LibrarySyncChangeRecorder(dataProvider: dataProvider)
@@ -133,6 +135,7 @@ class LibraryStore {
         self.infoFetcher = .init()
         self.library = []
         self.libraryCloudSyncStatus = snapshot.cloudSyncStatus
+        self.libraryMembershipChangeHandler = libraryMembershipChangeHandler
         self.shouldResumeInterruptedCloudSyncBootstrap =
             snapshot.cloudSyncStatus.isEnabled && snapshot.cloudSyncStatus.bootstrapState == .running
         reloadPersistedPreferences()
@@ -143,6 +146,9 @@ class LibraryStore {
             setupCloudSyncedPreferencesMonitor()
         }
         try? refreshLibrary()
+        if library.isEmpty {
+            notifyLibraryMembershipChange()
+        }
         self.syncCoordinator = LibrarySyncCoordinator(store: self)
         setupLibrarySyncScheduling()
     }
@@ -199,8 +205,15 @@ class LibraryStore {
     func refreshLibrary() throws {
         libraryStoreLogger.debug("[\(Date().debugDescription)] Refreshing library...")
         let entries = try repository.visibleLibraryEntries()
+        let previousEntryIdentityRawIDs = libraryEntryIdentityRawIDs
         library = entries
         libraryRevision &+= 1
+        guard libraryEntryIdentityRawIDs != previousEntryIdentityRawIDs else { return }
+        notifyLibraryMembershipChange()
+    }
+
+    func notifyLibraryMembershipChange() {
+        libraryMembershipChangeHandler?(libraryEntryIdentityRawIDs)
     }
 
     func setupUpdateLibrary() {
@@ -220,6 +233,10 @@ class LibraryStore {
         } catch {
             libraryStoreLogger.error("Error refreshing library: \(error)")
         }
+    }
+
+    private var libraryEntryIdentityRawIDs: Set<String> {
+        Set(library.map { $0.libraryIdentity.rawID })
     }
 
     func performWithDeferredLibrarySaveRefresh<T>(_ operation: () async throws -> T) async rethrows -> T {

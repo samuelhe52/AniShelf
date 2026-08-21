@@ -19,6 +19,24 @@ fileprivate final class TestTMDbAPIKeyAvailability {
 }
 
 extension LibrarySyncCoordinatorTests {
+    @Test @MainActor func libraryMembershipHandlerReceivesInitialAndDeletedIdentitySets() throws {
+        var observedIdentitySets: [Set<String>] = []
+        let store = LibraryStore(
+            dataProvider: DataProvider(inMemory: true),
+            libraryMembershipChangeHandler: { validEntryIdentityRawIDs in
+                observedIdentitySets.append(validEntryIdentityRawIDs)
+            }
+        )
+        let entry = AnimeEntry(name: "Watched Locally", type: .movie, tmdbID: 854)
+        try store.repository.newEntry(entry)
+        try store.refreshLibrary()
+        let entryIdentityRawID = entry.libraryIdentity.rawID
+        #expect(store.deleteEntry(entry))
+        try store.refreshLibrary()
+
+        #expect(observedIdentitySets == [[], Set([entryIdentityRawID]), []])
+    }
+
     @Test @MainActor func ordinarySyncSkipsWhenCloudSyncDisabled() async throws {
         let store = makeStore(
             enabled: false,

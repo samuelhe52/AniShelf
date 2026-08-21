@@ -68,7 +68,6 @@ struct LibraryView: View {
             guard !newValue, store.groupStrategy == .score else { return }
             store.groupStrategy = .none
         }
-        .onAppear(perform: pruneEpisodeNotificationSubscriptions)
         .libraryDetailHostCoordination(
             store: store,
             interaction: interaction,
@@ -81,7 +80,6 @@ struct LibraryView: View {
         )
         .onChange(of: store.libraryRevision) {
             refreshSelectionDisplayItemsIfNeeded()
-            pruneEpisodeNotificationSubscriptions()
         }
         .onChange(of: store.filters) {
             refreshSelectionDisplayItemsIfNeeded()
@@ -419,15 +417,6 @@ struct LibraryView: View {
         isSearching = false
         showProfileSettings = false
         openDetails(entry)
-    }
-
-    private func pruneEpisodeNotificationSubscriptions() {
-        let validIDs = Set(store.library.map { $0.libraryIdentity.rawID })
-        Task {
-            await episodeNotifications.pruneSubscriptions(
-                validEntryIdentityRawIDs: validIDs
-            )
-        }
     }
 
     private var notificationWarningMessage: LocalizedStringResource {

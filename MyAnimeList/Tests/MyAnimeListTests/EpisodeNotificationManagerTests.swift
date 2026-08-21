@@ -463,6 +463,35 @@ struct EpisodeNotificationManagerTests {
         #expect(snapshot.warning == nil)
     }
 
+    @Test func cancelAllDuringRefreshDoesNotRestoreCapturedReminder() async throws {
+        let defaults = makeDefaults()
+        defer { removeDefaults(defaults) }
+        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let manager = makeManager(defaults: defaults, center: center) { _ in
+            makeEpisode(season: 1, number: 1, airStamp: now.addingTimeInterval(86_400))
+        }
+        let identity = LibraryEntryIdentity(entryType: .series, tmdbID: 100)
+
+        _ = try await manager.enable(
+            entryIdentity: identity,
+            showID: 70,
+            displayTitle: "Cancelable Anime",
+            seasonNumber: nil
+        )
+        await center.pauseNextAdd()
+
+        let refresh = Task {
+            try await manager.refreshAll()
+        }
+        await center.waitForPausedAdd()
+        await manager.cancelAll()
+        await center.resumePausedAdd()
+        _ = try await refresh.value
+
+        #expect((await manager.snapshot()).subscriptions.isEmpty)
+        #expect(await center.allRequests().isEmpty)
+    }
+
     @Test @MainActor func coordinatorCancelAllClearsRefreshFailure() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
@@ -536,6 +565,10 @@ private actor EpisodeNotificationCenterProbe: EpisodeNotificationCenter {
     private var requests: [String: EpisodeNotificationRequest] = [:]
     private var requestCount = 0
     private var addFailuresRemaining = 0
+    private var pausesNextAdd = false
+    private var isAddPaused = false
+    private var pausedAddWaiter: CheckedContinuation<Void, Never>?
+    private var pausedAddContinuation: CheckedContinuation<Void, Never>?
 
     init(
         authorizationStatus: EpisodeNotificationAuthorizationStatus,
@@ -562,7 +595,17 @@ private actor EpisodeNotificationCenterProbe: EpisodeNotificationCenter {
         requests.values.sorted { $0.fireDate < $1.fireDate }
     }
 
-    func add(_ request: EpisodeNotificationRequest) throws {
+    func add(_ request: EpisodeNotificationRequest) async throws {
+        if pausesNextAdd {
+            pausesNextAdd = false
+            isAddPaused = true
+            pausedAddWaiter?.resume()
+            pausedAddWaiter = nil
+            await withCheckedContinuation { continuation in
+                pausedAddContinuation = continuation
+            }
+            isAddPaused = false
+        }
         if addFailuresRemaining > 0 {
             addFailuresRemaining -= 1
             throw Failure.unavailable
@@ -586,6 +629,22 @@ private actor EpisodeNotificationCenterProbe: EpisodeNotificationCenter {
 
     func failNextAdds(_ count: Int) {
         addFailuresRemaining = count
+    }
+
+    func pauseNextAdd() {
+        pausesNextAdd = true
+    }
+
+    func waitForPausedAdd() async {
+        guard !isAddPaused else { return }
+        await withCheckedContinuation { continuation in
+            pausedAddWaiter = continuation
+        }
+    }
+
+    func resumePausedAdd() {
+        pausedAddContinuation?.resume()
+        pausedAddContinuation = nil
     }
 }
 
