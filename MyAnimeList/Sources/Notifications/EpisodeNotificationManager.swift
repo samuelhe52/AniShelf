@@ -395,6 +395,15 @@ actor EpisodeNotificationManager {
 
     @discardableResult
     func refreshAll() async throws -> EpisodeNotificationRefreshResult {
+        let currentSubscriptions = subscriptions.values.sorted { $0.id < $1.id }
+        let currentSubscriptionIDs = Set(currentSubscriptions.map(\.id))
+        let existingRequests = await notificationCenter.pendingRequests()
+        let orphanedRequestIdentifiers =
+            existingRequests
+            .filter { !currentSubscriptionIDs.contains($0.subscriptionID) }
+            .map(\.identifier)
+        await notificationCenter.removePendingRequests(withIdentifiers: orphanedRequestIdentifiers)
+
         guard await notificationCenter.authorizationStatus().allowsScheduling else {
             return EpisodeNotificationRefreshResult(
                 refreshedSubscriptionCount: 0,
@@ -403,7 +412,6 @@ actor EpisodeNotificationManager {
             )
         }
 
-        let currentSubscriptions = subscriptions.values.sorted { $0.id < $1.id }
         guard !currentSubscriptions.isEmpty else {
             storedWarning = nil
             return EpisodeNotificationRefreshResult(
@@ -413,7 +421,6 @@ actor EpisodeNotificationManager {
             )
         }
 
-        let existingRequests = await notificationCenter.pendingRequests()
         var nextEpisodesByShowID: [Int: TVMazeNextEpisodeAiring] = [:]
         var failedShowIDs = Set<Int>()
 

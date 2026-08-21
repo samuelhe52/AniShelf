@@ -463,6 +463,34 @@ struct EpisodeNotificationManagerTests {
         #expect(snapshot.warning == nil)
     }
 
+    @Test func refreshRemovesRequestsOrphanedByInterruptedUnsubscribe() async throws {
+        let defaults = makeDefaults()
+        defer { removeDefaults(defaults) }
+        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let identity = LibraryEntryIdentity(entryType: .series, tmdbID: 100)
+        let airStamp = now.addingTimeInterval(86_400)
+        let manager = makeManager(defaults: defaults, center: center) { _ in
+            makeEpisode(season: 1, number: 1, airStamp: airStamp)
+        }
+
+        _ = try await manager.enable(
+            entryIdentity: identity,
+            showID: 70,
+            displayTitle: "Interrupted Unsubscribe",
+            seasonNumber: nil
+        )
+        defaults.set(
+            try JSONEncoder().encode([EpisodeNotificationSubscription]()),
+            forKey: .episodeNotificationSubscriptions
+        )
+        let restoredManager = makeManager(defaults: defaults, center: center) { _ in nil }
+
+        let result = try await restoredManager.refreshAll()
+
+        #expect(result.refreshedSubscriptionCount == 0)
+        #expect(await center.allRequests().isEmpty)
+    }
+
     @Test func cancelAllDuringRefreshDoesNotRestoreCapturedReminder() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
