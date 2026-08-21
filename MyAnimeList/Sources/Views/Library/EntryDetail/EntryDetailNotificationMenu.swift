@@ -118,15 +118,18 @@ struct EntryDetailNotificationMenu: View {
     }
 
     private var unsubscribeButton: some View {
-        Button(role: .destructive) {
+        Button(
+            EntryDetailL10n.unsubscribe,
+            systemImage: "bell.slash",
+            role: .destructive
+        ) {
             Task {
                 await notifications.disable(
                     entryIdentityRawID: context.entryIdentity.rawID
                 )
             }
-        } label: {
-            Label(EntryDetailL10n.unsubscribe, systemImage: "bell.slash")
         }
+        .tint(.red)
         .disabled(notifications.isRefreshing)
         .menuActionDismissBehavior(.disabled)
     }
