@@ -76,7 +76,7 @@ fileprivate struct EntryDetailBroadcastConfirmationPreview: View {
         let eligibilityChecker = TMDbBroadcastEligibilityChecker { _ in details }
         let resolver = TVMazeResolver(
             loadMappedShowID: { _ in nil },
-            saveMappedShowID: { _, _ in },
+            saveMappedShowID: { _, _ in .inserted },
             lookupTVDBShowID: { _ in nil },
             lookupIMDbShowID: { _ in nil },
             searchShows: { _ in [candidate] },
@@ -107,8 +107,7 @@ fileprivate struct EntryDetailBroadcastConfirmationPreview: View {
             EntryDetailBroadcastValidationSheet(
                 model: model,
                 searchTitle: searchTitle,
-                displayTitle: displayTitle,
-                onConfirmedMappingChange: {}
+                displayTitle: displayTitle
             )
             .presentationBackground(Color(.systemGroupedBackground))
         }
@@ -393,7 +392,7 @@ fileprivate struct BroadcastPolicyPreviewCase: Identifiable {
 
 #Preview("Broadcast Availability Policy") {
     EntryDetailBroadcastPolicyPreview()
-        .environment(EpisodeNotificationCoordinator())
+        .environment(EpisodeNotificationCoordinator.shared)
 }
 
 #Preview("Broadcast Confirmation Sheet") {

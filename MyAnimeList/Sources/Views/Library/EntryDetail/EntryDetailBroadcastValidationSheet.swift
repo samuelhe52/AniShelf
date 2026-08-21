@@ -21,7 +21,6 @@ struct EntryDetailBroadcastValidationSheet: View {
     let model: EntryDetailBroadcastModel
     let searchTitle: String
     let displayTitle: String
-    let onConfirmedMappingChange: () async -> Void
 
     @State private var isConfirming = false
     @State private var isShowingSearch = false
@@ -197,12 +196,8 @@ struct EntryDetailBroadcastValidationSheet: View {
     }
 
     private func confirm(_ candidate: TVMazeShow) {
-        let mappingChanged = model.resolvedShow?.id != candidate.id
         isConfirming = true
-        model.confirm(
-            candidate: candidate,
-            onConfirmedMappingChange: mappingChanged ? onConfirmedMappingChange : nil
-        )
+        model.confirm(candidate: candidate)
     }
 
     private func matchHeader(

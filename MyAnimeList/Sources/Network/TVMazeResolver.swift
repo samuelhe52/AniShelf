@@ -26,7 +26,10 @@ struct TVMazeResolver: Sendable {
     private let loadMappedShowID: @Sendable (Int) async throws -> Int?
 
     /// Records a confirmed TVMaze show ID for a TMDb series ID.
-    private let saveMappedShowID: @Sendable (Int, Int) async throws -> Void
+    private let saveMappedShowID: @Sendable (Int, Int) async throws -> TVMazeConfirmedMappingWriteResult
+
+    /// Reports a persisted replacement after the mapping store commits it.
+    private let onConfirmedMappingReplacement: @Sendable (TVMazeConfirmedMappingReplacement) async -> Void
 
     /// Finds the TVMaze show ID associated with a TVDB ID.
     private let lookupTVDBShowID: @Sendable (Int) async throws -> Int?
@@ -42,9 +45,11 @@ struct TVMazeResolver: Sendable {
 
     // MARK: - Initialization
 
+    @MainActor
     init(
         tvMazeClient: TVMazeClient = TVMazeClient(),
-        mappingStore: TVMazeConfirmedMappingStore = .shared
+        mappingStore: TVMazeConfirmedMappingStore = .shared,
+        episodeNotifications: EpisodeNotificationCoordinator = .shared
     ) {
         self.init(
             loadMappedShowID: { tmdbSeriesID in
@@ -67,17 +72,31 @@ struct TVMazeResolver: Sendable {
             },
             fetchShow: { tvMazeID in
                 try await tvMazeClient.show(id: tvMazeID)
+            },
+            onConfirmedMappingReplacement: { [episodeNotifications] replacement in
+                await episodeNotifications.disableSubscriptions(
+                    forSeriesTMDbID: replacement.tmdbSeriesID,
+                    matchingTVMazeShowID: replacement.previousShowID
+                )
             }
         )
     }
 
     init(
         loadMappedShowID: @escaping @Sendable (Int) async throws -> Int?,
-        saveMappedShowID: @escaping @Sendable (Int, Int) async throws -> Void,
+        saveMappedShowID:
+            @escaping @Sendable (
+                Int,
+                Int
+            ) async throws -> TVMazeConfirmedMappingWriteResult,
         lookupTVDBShowID: @escaping @Sendable (Int) async throws -> Int?,
         lookupIMDbShowID: @escaping @Sendable (String) async throws -> Int?,
         searchShows: @escaping @Sendable (String) async throws -> [TVMazeShow],
-        fetchShow: @escaping @Sendable (Int) async throws -> TVMazeShow?
+        fetchShow: @escaping @Sendable (Int) async throws -> TVMazeShow?,
+        onConfirmedMappingReplacement:
+            @escaping @Sendable (
+                TVMazeConfirmedMappingReplacement
+            ) async -> Void = { _ in }
     ) {
         self.loadMappedShowID = loadMappedShowID
         self.saveMappedShowID = saveMappedShowID
@@ -85,6 +104,7 @@ struct TVMazeResolver: Sendable {
         self.lookupIMDbShowID = lookupIMDbShowID
         self.searchShows = searchShows
         self.fetchShow = fetchShow
+        self.onConfirmedMappingReplacement = onConfirmedMappingReplacement
     }
 
     // MARK: - Automatic Resolution
@@ -109,7 +129,7 @@ struct TVMazeResolver: Sendable {
             let showID = try await lookupTVDBShowID(tvdbID),
             let show = try await fetchShow(showID)
         {
-            try await saveMappedShowID(tmdbSeriesID, show.id)
+            try await persistMappedShowID(show.id, forTMDbSeriesID: tmdbSeriesID)
             return .resolved(show)
         }
 
@@ -117,7 +137,7 @@ struct TVMazeResolver: Sendable {
             let showID = try await lookupIMDbShowID(imdbID),
             let show = try await fetchShow(showID)
         {
-            try await saveMappedShowID(tmdbSeriesID, show.id)
+            try await persistMappedShowID(show.id, forTMDbSeriesID: tmdbSeriesID)
             return .resolved(show)
         }
 
@@ -161,8 +181,17 @@ struct TVMazeResolver: Sendable {
             return false
         }
 
-        try await saveMappedShowID(tmdbSeriesID, candidate.id)
+        try await persistMappedShowID(candidate.id, forTMDbSeriesID: tmdbSeriesID)
         return true
+    }
+
+    private func persistMappedShowID(
+        _ showID: Int,
+        forTMDbSeriesID tmdbSeriesID: Int
+    ) async throws {
+        let result = try await saveMappedShowID(tmdbSeriesID, showID)
+        guard case .replaced(let replacement) = result else { return }
+        await onConfirmedMappingReplacement(replacement)
     }
 
     // MARK: - Entry Identity

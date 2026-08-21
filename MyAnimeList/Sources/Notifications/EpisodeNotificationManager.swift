@@ -344,9 +344,17 @@ actor EpisodeNotificationManager {
     }
 
     @discardableResult
-    func disableSubscriptions(forSeriesTMDbID seriesTMDbID: Int) async -> Bool {
+    func disableSubscriptions(
+        forSeriesTMDbID seriesTMDbID: Int,
+        matchingTVMazeShowID: Int? = nil
+    ) async -> Bool {
         let matchingIDs = Set(
             subscriptions.keys.filter { rawID in
+                if let matchingTVMazeShowID,
+                    subscriptions[rawID]?.tvMazeShowID != matchingTVMazeShowID
+                {
+                    return false
+                }
                 guard let identity = LibraryEntryIdentity(rawID: rawID) else { return false }
                 switch identity.entryType {
                 case .series:
@@ -775,6 +783,10 @@ actor EpisodeNotificationManager {
 @MainActor
 @Observable
 final class EpisodeNotificationCoordinator {
+    static let shared = EpisodeNotificationCoordinator(
+        manager: EpisodeNotificationManager()
+    )
+
     private let manager: EpisodeNotificationManager
     private(set) var snapshot = EpisodeNotificationSnapshot()
     private(set) var isRefreshing = false
@@ -782,8 +794,14 @@ final class EpisodeNotificationCoordinator {
     var pendingRouteEntryIdentityRawID: String?
     var presentedWarning: EpisodeNotificationWarning?
 
-    init(manager: EpisodeNotificationManager = EpisodeNotificationManager()) {
+    private init(manager: EpisodeNotificationManager) {
         self.manager = manager
+    }
+
+    static func makeForTesting(
+        manager: EpisodeNotificationManager
+    ) -> EpisodeNotificationCoordinator {
+        EpisodeNotificationCoordinator(manager: manager)
     }
 
     func reloadState() async {
@@ -829,8 +847,16 @@ final class EpisodeNotificationCoordinator {
         _ = await refreshAll()
     }
 
-    func disableSubscriptions(forSeriesTMDbID seriesTMDbID: Int) async {
-        guard await manager.disableSubscriptions(forSeriesTMDbID: seriesTMDbID) else {
+    func disableSubscriptions(
+        forSeriesTMDbID seriesTMDbID: Int,
+        matchingTVMazeShowID: Int? = nil
+    ) async {
+        guard
+            await manager.disableSubscriptions(
+                forSeriesTMDbID: seriesTMDbID,
+                matchingTVMazeShowID: matchingTVMazeShowID
+            )
+        else {
             return
         }
         _ = await refreshAll()

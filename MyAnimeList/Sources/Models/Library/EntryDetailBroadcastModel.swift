@@ -312,10 +312,7 @@ final class EntryDetailBroadcastModel {
         confirm(candidate: candidate)
     }
 
-    func confirm(
-        candidate: TVMazeShow,
-        onConfirmedMappingChange: (() async -> Void)? = nil
-    ) {
+    func confirm(candidate: TVMazeShow) {
         guard gate == .eligible else { return }
 
         let resolutionID = UUID()
@@ -341,7 +338,6 @@ final class EntryDetailBroadcastModel {
                     return
                 }
 
-                await onConfirmedMappingChange?()
                 try Task.checkCancellation()
                 guard let self, self.resolutionID == resolutionID else { return }
 

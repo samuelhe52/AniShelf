@@ -7,6 +7,19 @@
 
 import Foundation
 
+struct TVMazeConfirmedMappingReplacement: Equatable, Sendable {
+    let tmdbSeriesID: Int
+    let previousShowID: Int
+    let newShowID: Int
+}
+
+enum TVMazeConfirmedMappingWriteResult: Equatable, Sendable {
+    case inserted
+    case unchanged
+    case replaced(TVMazeConfirmedMappingReplacement)
+    case rejected
+}
+
 /// Persists user-confirmed TMDb-series-to-TVMaze-show identity mappings.
 ///
 /// The actor serializes updates to the shared dictionary so concurrent resolutions do not
@@ -29,12 +42,28 @@ actor TVMazeConfirmedMappingStore {
         return mappings[String(tmdbSeriesID)]
     }
 
-    func confirm(showID: Int, forTMDbSeriesID tmdbSeriesID: Int) {
-        guard tmdbSeriesID > 0, showID > 0 else { return }
+    @discardableResult
+    func confirm(
+        showID: Int,
+        forTMDbSeriesID tmdbSeriesID: Int
+    ) -> TVMazeConfirmedMappingWriteResult {
+        guard tmdbSeriesID > 0, showID > 0 else { return .rejected }
 
         var mappings = mappings
+        let previousShowID = mappings[String(tmdbSeriesID)]
+        guard previousShowID != showID else { return .unchanged }
+
         mappings[String(tmdbSeriesID)] = showID
         defaults.set(mappings, forKey: Key.showIDsByTMDbSeriesID)
+
+        guard let previousShowID else { return .inserted }
+        return .replaced(
+            TVMazeConfirmedMappingReplacement(
+                tmdbSeriesID: tmdbSeriesID,
+                previousShowID: previousShowID,
+                newShowID: showID
+            )
+        )
     }
 
     private var mappings: [String: Int] {

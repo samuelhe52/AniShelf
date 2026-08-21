@@ -294,7 +294,7 @@ struct EpisodeNotificationManagerTests {
         #expect((await manager.snapshot()).subscriptions.isEmpty)
     }
 
-    @Test func remappedSeriesDisablesEveryAssociatedSubscription() async throws {
+    @Test func remappedSeriesDisablesOnlySubscriptionsUsingPreviousShow() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
         let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
@@ -314,27 +314,41 @@ struct EpisodeNotificationManagerTests {
             entryType: .season(seasonNumber: 2, parentSeriesID: 100),
             tmdbID: 201
         )
+        let currentSeason = LibraryEntryIdentity(
+            entryType: .season(seasonNumber: 3, parentSeriesID: 100),
+            tmdbID: 202
+        )
         let unrelatedSeries = LibraryEntryIdentity(entryType: .series, tmdbID: 101)
 
-        for (identity, title, seasonNumber) in [
-            (series, "Series", nil),
-            (seasonOne, "Season One", 1),
-            (seasonTwo, "Season Two", 2),
-            (unrelatedSeries, "Unrelated Series", nil)
+        for (identity, showID, title, seasonNumber) in [
+            (series, 70, "Series", nil),
+            (seasonOne, 70, "Season One", 1),
+            (seasonTwo, 70, "Season Two", 2),
+            (currentSeason, 90, "Current Season", 3),
+            (unrelatedSeries, 70, "Unrelated Series", nil)
         ] {
             _ = try await manager.enable(
                 entryIdentity: identity,
-                showID: 70,
+                showID: showID,
                 displayTitle: title,
                 seasonNumber: seasonNumber
             )
         }
 
-        let didDisable = await manager.disableSubscriptions(forSeriesTMDbID: 100)
+        let didDisable = await manager.disableSubscriptions(
+            forSeriesTMDbID: 100,
+            matchingTVMazeShowID: 70
+        )
 
         #expect(didDisable)
-        #expect((await manager.snapshot()).subscriptions.map(\.id) == [unrelatedSeries.rawID])
-        #expect(await center.allRequests().map(\.subscriptionID) == [unrelatedSeries.rawID])
+        #expect(
+            Set((await manager.snapshot()).subscriptions.map(\.id))
+                == Set([currentSeason.rawID, unrelatedSeries.rawID])
+        )
+        #expect(
+            Set(await center.allRequests().map(\.subscriptionID))
+                == Set([currentSeason.rawID, unrelatedSeries.rawID])
+        )
     }
 
     @Test @MainActor func disablingMissingSubscriptionDoesNotRefreshExistingSubscriptions() async throws {
@@ -361,7 +375,7 @@ struct EpisodeNotificationManagerTests {
         let manager = makeManager(defaults: defaults, center: center) { showID in
             try await provider.nextEpisode(showID: showID)
         }
-        let coordinator = EpisodeNotificationCoordinator(manager: manager)
+        let coordinator = EpisodeNotificationCoordinator.makeForTesting(manager: manager)
 
         await coordinator.disable(entryIdentityRawID: "series:200")
 
@@ -654,7 +668,7 @@ struct EpisodeNotificationManagerTests {
         let manager = makeManager(defaults: defaults, center: center) { showID in
             try await provider.nextEpisode(showID: showID)
         }
-        let coordinator = EpisodeNotificationCoordinator(manager: manager)
+        let coordinator = EpisodeNotificationCoordinator.makeForTesting(manager: manager)
 
         _ = try await manager.enable(
             entryIdentity: LibraryEntryIdentity(entryType: .series, tmdbID: 100),

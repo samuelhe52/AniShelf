@@ -490,11 +490,14 @@ struct EntryDetailBroadcastModelTests {
             additionalShows: [replacement.id: replacement],
             mappingSaveFailureCount: 1
         )
+        let mappingChangeProbe = BroadcastMappingChangeProbe()
         let model = EntryDetailBroadcastModel(
             entryType: .series,
             tmdbID: 42,
             eligibilityChecker: makeEligibilityChecker(schedule: eligibleSchedule),
-            resolver: makeBroadcastResolver(probe: probe),
+            resolver: makeBroadcastResolver(probe: probe) { _ in
+                await mappingChangeProbe.record()
+            },
             now: { date(day: 12) },
             calendar: broadcastTestCalendar
         )
@@ -517,18 +520,13 @@ struct EntryDetailBroadcastModelTests {
         #expect(model.phase == .resolved(expectedAvailability))
         #expect(model.resolvedShow == resolvedShow)
 
-        let mappingChangeProbe = BroadcastMappingChangeProbe()
-        model.confirm(candidate: selected) {
-            await mappingChangeProbe.record()
-        }
+        model.confirm(candidate: selected)
         await waitUntil { model.phase == .failed }
 
         #expect(model.resolvedShow == resolvedShow)
         #expect(await mappingChangeProbe.invocationCount == 0)
 
-        model.confirm(candidate: selected) {
-            await mappingChangeProbe.record()
-        }
+        model.confirm(candidate: selected)
         await waitUntil { model.phase == .resolved(expectedAvailability) }
 
         #expect(model.resolvedShow == replacement)
@@ -544,15 +542,17 @@ struct EntryDetailBroadcastModelTests {
             show: resolvedShow,
             additionalShows: [replacement.id: replacement]
         )
+        let mappingChangeProbe = BroadcastMappingChangeProbe()
         let model = EntryDetailBroadcastModel(
             entryType: .series,
             tmdbID: 42,
             eligibilityChecker: makeEligibilityChecker(schedule: eligibleSchedule),
-            resolver: makeBroadcastResolver(probe: probe),
+            resolver: makeBroadcastResolver(probe: probe) { _ in
+                await mappingChangeProbe.waitForRelease()
+            },
             now: { date(day: 12) },
             calendar: broadcastTestCalendar
         )
-        let mappingChangeProbe = BroadcastMappingChangeProbe()
 
         model.update(
             .init(
@@ -563,9 +563,7 @@ struct EntryDetailBroadcastModelTests {
         )
         await waitUntil { model.resolvedShow == resolvedShow }
 
-        model.confirm(candidate: replacement) {
-            await mappingChangeProbe.waitForRelease()
-        }
+        model.confirm(candidate: replacement)
         await waitUntil { await mappingChangeProbe.isWaitingForRelease }
 
         model.update(
@@ -591,15 +589,17 @@ struct EntryDetailBroadcastModelTests {
             additionalShows: [replacement.id: replacement],
             suspendsAfterMappingSave: true
         )
+        let mappingChangeProbe = BroadcastMappingChangeProbe()
         let model = EntryDetailBroadcastModel(
             entryType: .series,
             tmdbID: 42,
             eligibilityChecker: makeEligibilityChecker(schedule: eligibleSchedule),
-            resolver: makeBroadcastResolver(probe: probe),
+            resolver: makeBroadcastResolver(probe: probe) { _ in
+                await mappingChangeProbe.record()
+            },
             now: { date(day: 12) },
             calendar: broadcastTestCalendar
         )
-        let mappingChangeProbe = BroadcastMappingChangeProbe()
 
         model.update(
             .init(
@@ -610,9 +610,7 @@ struct EntryDetailBroadcastModelTests {
         )
         await waitUntil { model.resolvedShow == resolvedShow }
 
-        model.confirm(candidate: replacement) {
-            await mappingChangeProbe.record()
-        }
+        model.confirm(candidate: replacement)
         await waitUntil { await probe.isWaitingForMappingSaveRelease }
 
         model.update(
@@ -732,7 +730,7 @@ private actor BroadcastResolutionProbe {
         let showID: Int
     }
 
-    private let mappedShowID: Int?
+    private var mappedShowID: Int?
     private let tvdbShowID: Int?
     private let titleShowID: Int?
     private let shows: [Int: TVMazeShow]
@@ -805,17 +803,39 @@ private actor BroadcastResolutionProbe {
         mappingSaveReleaseContinuation != nil
     }
 
-    func saveMapping(tmdbSeriesID: Int, showID: Int) async throws {
+    func saveMapping(
+        tmdbSeriesID: Int,
+        showID: Int
+    ) async throws -> TVMazeConfirmedMappingWriteResult {
         mappingSaveAttempts += 1
         guard mappingSaveAttempts > mappingSaveFailureCount else {
             throw BroadcastResolutionProbeError.mappingSaveFailed
         }
-        savedMappings.append(.init(tmdbSeriesID: tmdbSeriesID, showID: showID))
-        guard suspendsAfterMappingSave else { return }
+        let previousShowID = mappedShowID
+        let result: TVMazeConfirmedMappingWriteResult
+        if previousShowID == showID {
+            result = .unchanged
+        } else {
+            mappedShowID = showID
+            savedMappings.append(.init(tmdbSeriesID: tmdbSeriesID, showID: showID))
+            if let previousShowID {
+                result = .replaced(
+                    .init(
+                        tmdbSeriesID: tmdbSeriesID,
+                        previousShowID: previousShowID,
+                        newShowID: showID
+                    )
+                )
+            } else {
+                result = .inserted
+            }
+        }
+        guard suspendsAfterMappingSave else { return result }
 
         await withCheckedContinuation { continuation in
             mappingSaveReleaseContinuation = continuation
         }
+        return result
     }
 
     func releaseMappingSave() {
@@ -853,14 +873,21 @@ private actor BroadcastMappingChangeProbe {
     }
 }
 
-fileprivate func makeBroadcastResolver(probe: BroadcastResolutionProbe) -> TVMazeResolver {
+fileprivate func makeBroadcastResolver(
+    probe: BroadcastResolutionProbe,
+    onConfirmedMappingReplacement:
+        @escaping @Sendable (
+            TVMazeConfirmedMappingReplacement
+        ) async -> Void = { _ in }
+) -> TVMazeResolver {
     TVMazeResolver(
         loadMappedShowID: { try await probe.loadMapping(for: $0) },
         saveMappedShowID: { try await probe.saveMapping(tmdbSeriesID: $0, showID: $1) },
         lookupTVDBShowID: { await probe.lookupTVDBShowID(tvdbID: $0) },
         lookupIMDbShowID: { _ in nil },
         searchShows: { await probe.searchShows(title: $0) },
-        fetchShow: { await probe.hydratedShow(id: $0) }
+        fetchShow: { await probe.hydratedShow(id: $0) },
+        onConfirmedMappingReplacement: onConfirmedMappingReplacement
     )
 }
 

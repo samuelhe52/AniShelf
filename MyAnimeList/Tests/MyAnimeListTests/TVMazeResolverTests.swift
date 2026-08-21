@@ -52,11 +52,15 @@ struct TVMazeResolverTests {
 
     @Test func automaticResolutionPersistsHydratedTVDBMatch() async throws {
         let expectedShow = makeTVMazeResolverTestShow(id: 70)
+        let replacementProbe = TVMazeMappingReplacementProbe()
         let probe = TVMazeResolverProbe(
             tvdbShowIDs: [30: 70],
             shows: [70: expectedShow]
         )
-        let resolver = makeTVMazeResolver(probe: probe)
+        let resolver = makeTVMazeResolver(
+            probe: probe,
+            replacementProbe: replacementProbe
+        )
 
         let result = try await resolver.resolve(
             entryType: .series,
@@ -67,6 +71,33 @@ struct TVMazeResolverTests {
         #expect(result == .resolved(expectedShow))
         #expect(await probe.lookedUpIMDbIDs.isEmpty)
         #expect(await probe.savedMappings == [TVMazeResolverProbe.Mapping(tmdbSeriesID: 10, showID: 70)])
+        #expect(await replacementProbe.replacements.isEmpty)
+    }
+
+    @Test func automaticResolutionReportsReplacementAfterSavedShowStopsHydrating() async throws {
+        let replacementShow = makeTVMazeResolverTestShow(id: 90)
+        let replacementProbe = TVMazeMappingReplacementProbe()
+        let probe = TVMazeResolverProbe(
+            mappedShowIDs: [10: 70],
+            tvdbShowIDs: [30: 90],
+            shows: [90: replacementShow]
+        )
+        let resolver = makeTVMazeResolver(
+            probe: probe,
+            replacementProbe: replacementProbe
+        )
+
+        let result = try await resolver.resolve(
+            entryType: .series,
+            tmdbID: 10,
+            externalIDs: TMDbSeriesExternalIDs(tvdbID: 30, imdbID: nil)
+        )
+
+        #expect(result == .resolved(replacementShow))
+        #expect(
+            await replacementProbe.replacements
+                == [.init(tmdbSeriesID: 10, previousShowID: 70, newShowID: 90)]
+        )
     }
 
     @Test func automaticIDMissRequestsUserAssistanceWithoutTitleSearch() async throws {
@@ -158,9 +189,23 @@ private actor TVMazeResolverProbe {
         mappedShowIDs[tmdbSeriesID]
     }
 
-    func saveMappedShowID(tmdbSeriesID: Int, showID: Int) {
+    func saveMappedShowID(
+        tmdbSeriesID: Int,
+        showID: Int
+    ) -> TVMazeConfirmedMappingWriteResult {
+        let previousShowID = mappedShowIDs[tmdbSeriesID]
+        guard previousShowID != showID else { return .unchanged }
+
         mappedShowIDs[tmdbSeriesID] = showID
         savedMappings.append(Mapping(tmdbSeriesID: tmdbSeriesID, showID: showID))
+        guard let previousShowID else { return .inserted }
+        return .replaced(
+            .init(
+                tmdbSeriesID: tmdbSeriesID,
+                previousShowID: previousShowID,
+                newShowID: showID
+            )
+        )
     }
 
     func lookupTVDBShowID(tvdbID: Int) -> Int? {
@@ -189,7 +234,18 @@ private actor TVMazeResolverProbe {
     }
 }
 
-fileprivate func makeTVMazeResolver(probe: TVMazeResolverProbe) -> TVMazeResolver {
+fileprivate actor TVMazeMappingReplacementProbe {
+    private(set) var replacements: [TVMazeConfirmedMappingReplacement] = []
+
+    func record(_ replacement: TVMazeConfirmedMappingReplacement) {
+        replacements.append(replacement)
+    }
+}
+
+fileprivate func makeTVMazeResolver(
+    probe: TVMazeResolverProbe,
+    replacementProbe: TVMazeMappingReplacementProbe? = nil
+) -> TVMazeResolver {
     TVMazeResolver(
         loadMappedShowID: { tmdbSeriesID in
             await probe.mappedShowID(tmdbSeriesID: tmdbSeriesID)
@@ -208,6 +264,9 @@ fileprivate func makeTVMazeResolver(probe: TVMazeResolverProbe) -> TVMazeResolve
         },
         fetchShow: { showID in
             await probe.show(id: showID)
+        },
+        onConfirmedMappingReplacement: { replacement in
+            await replacementProbe?.record(replacement)
         }
     )
 }

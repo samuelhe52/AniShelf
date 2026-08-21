@@ -532,5 +532,5 @@ struct LibraryView: View {
             DataProvider.forPreview.generateEntriesForPreview()
         }
         .environment(store)
-        .environment(EpisodeNotificationCoordinator())
+        .environment(EpisodeNotificationCoordinator.shared)
 }

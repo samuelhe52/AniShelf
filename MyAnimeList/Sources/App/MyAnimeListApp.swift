@@ -37,7 +37,7 @@ struct MyAnimeListApp: App {
         let recoveryActivityGate = StartupRecoveryActivityGate(
             isBlocked: startupRecovery != nil
         )
-        let episodeNotifications = EpisodeNotificationCoordinator()
+        let episodeNotifications = EpisodeNotificationCoordinator.shared
         let libraryStore = LibraryStore(
             dataProvider: startupBootstrap.provider,
             hasTMDbAPIKey: {
