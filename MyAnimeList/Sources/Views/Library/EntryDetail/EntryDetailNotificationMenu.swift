@@ -73,6 +73,8 @@ struct EntryDetailNotificationMenu: View {
                 systemImage: isSubscribed ? "checkmark.circle.fill" : "circle"
             )
         }
+        .tint(isSubscribed ? .green : .primary)
+        .disabled(!isSubscribed)
         .menuActionDismissBehavior(.disabled)
     }
 
@@ -87,6 +89,7 @@ struct EntryDetailNotificationMenu: View {
                 Text(EntryDetailL10n.noUpcomingNotification)
             }
         }
+        .disabled(!isSubscribed)
         .menuActionDismissBehavior(.disabled)
     }
 
