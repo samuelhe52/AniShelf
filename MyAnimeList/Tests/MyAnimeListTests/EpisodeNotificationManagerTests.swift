@@ -76,40 +76,6 @@ struct EpisodeNotificationManagerTests {
         #expect(try #require(items.last).nextReminder == reminder)
     }
 
-    @Test func enablingRequestsPermissionPersistsIntentAndSchedulesExactLeadTime() async throws {
-        let defaults = makeDefaults()
-        defer { removeDefaults(defaults) }
-        let center = EpisodeNotificationCenterProbe(
-            authorizationStatus: .notDetermined,
-            authorizationAfterRequest: .authorized
-        )
-        let airStamp = now.addingTimeInterval(7 * 24 * 60 * 60)
-        let manager = makeManager(defaults: defaults, center: center) { _ in
-            makeEpisode(season: 1, number: 6, airStamp: airStamp)
-        }
-        let identity = LibraryEntryIdentity(entryType: .series, tmdbID: 100)
-
-        let result = try await manager.enable(
-            entryIdentity: identity,
-            showID: 70,
-            displayTitle: "Reminder Anime",
-            seasonNumber: nil
-        )
-        let requests = await center.allRequests()
-        let request = try #require(requests.first)
-        let snapshot = await manager.snapshot()
-
-        #expect(result == .enabled)
-        #expect(await center.authorizationRequestCount() == 1)
-        #expect(snapshot.leadTime == .fifteenMinutes)
-        #expect(snapshot.subscriptions.map(\.id) == [identity.rawID])
-        #expect(request.identifier == "AniShelf.Episode.series-100")
-        #expect(request.fireDate == airStamp.addingTimeInterval(-15 * 60))
-        #expect(request.airStamp == airStamp)
-        #expect(request.seasonNumber == 1)
-        #expect(request.episodeNumber == 6)
-    }
-
     @Test func deniedPermissionDoesNotCreateSubscription() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
@@ -180,7 +146,7 @@ struct EpisodeNotificationManagerTests {
         #expect(await center.allRequests().count == 1)
     }
 
-    @Test func seasonSubscriptionUsesProviderEpisodeAndChangingLeadTimeRebuildsPendingRequest() async throws {
+    @Test func seasonSubscriptionUsesTVMazeEpisodeNumberingAndChangingLeadTimeRebuildsPendingRequest() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
         let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)

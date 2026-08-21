@@ -47,6 +47,7 @@ struct EpisodeNotificationSubscription: Codable, Equatable, Identifiable, Sendab
     let entryIdentityRawID: String
     let tvMazeShowID: Int
     let displayTitle: String
+    /// The TMDb season identity selected by the user. It does not override TVMaze episode numbering.
     let seasonNumber: Int?
 
     var id: String { entryIdentityRawID }
@@ -108,6 +109,8 @@ struct EpisodeNotificationRequest: Equatable, Sendable {
     let body: String
     let subscriptionID: String
     let tvMazeShowID: Int
+    /// TVMaze's season number for the scheduled episode; provider numbering is authoritative when
+    /// TMDb and TVMaze use different season numbering.
     let seasonNumber: Int?
     let episodeNumber: Int?
     let airStamp: Date
@@ -572,6 +575,8 @@ actor EpisodeNotificationManager {
         episode: TVMazeNextEpisodeAiring?
     ) -> Candidate? {
         guard let episode else { return nil }
+        // Keep TVMaze's season and episode numbers in the reminder. TMDb and TVMaze can use
+        // different season numbering for the same show, while the provider supplies the airing.
         let leadSeconds = TimeInterval(leadTime.rawValue * 60)
         let fireDate = episode.airStamp.addingTimeInterval(-leadSeconds)
         guard fireDate > now() else { return nil }
