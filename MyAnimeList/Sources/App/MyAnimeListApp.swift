@@ -44,15 +44,7 @@ struct MyAnimeListApp: App {
                 guard let key = keyStorage.key else { return false }
                 return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             },
-            libraryMembershipChangeHandler: {
-                [episodeNotifications, recoveryActivityGate] validEntryIdentityRawIDs in
-                guard recoveryActivityGate.allowsLibraryActivity else { return }
-                Task { @MainActor in
-                    await episodeNotifications.pruneSubscriptions(
-                        validEntryIdentityRawIDs: validEntryIdentityRawIDs
-                    )
-                }
-            }
+            episodeNotificationPruningEnabled: recoveryActivityGate.allowsLibraryActivity
         )
         let whatsNew = WhatsNewController()
         let supportStore = SupportStore()
@@ -203,7 +195,7 @@ struct MyAnimeListApp: App {
         }
         recoveryActivityGate.isBlocked = false
         startupRecovery = nil
-        libraryStore.notifyLibraryMembershipChange()
+        libraryStore.enableEpisodeNotificationPruning()
         requestSync(trigger: .appLaunch)
         updateWhatsNewPresentation()
     }

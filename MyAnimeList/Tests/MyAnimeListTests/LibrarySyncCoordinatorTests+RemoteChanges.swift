@@ -332,12 +332,7 @@ extension LibrarySyncCoordinatorTests {
     }
 
     @Test @MainActor func newerTombstoneSuppressesStaleLocalDirtyExport() async throws {
-        var observedIdentitySets: [Set<String>] = []
-        let store = makeSyncReadyStore(
-            libraryMembershipChangeHandler: { validEntryIdentityRawIDs in
-                observedIdentitySets.append(validEntryIdentityRawIDs)
-            }
-        )
+        let store = makeSyncReadyStore()
         let entry = AnimeEntry(
             name: "Fresh Tombstone",
             type: .series,
@@ -386,7 +381,6 @@ extension LibrarySyncCoordinatorTests {
 
         let stored = try #require(store.repository.existingEntry(identity: entry.libraryIdentity))
         #expect(!stored.onDisplay)
-        #expect(observedIdentitySets == [[], Set([entry.libraryIdentity.rawID]), []])
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entry(for: entry.libraryIdentity) == nil)
         #expect(database.savedRecords.isEmpty)
     }

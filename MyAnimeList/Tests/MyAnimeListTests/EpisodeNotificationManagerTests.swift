@@ -654,6 +654,41 @@ struct EpisodeNotificationManagerTests {
         #expect(await center.allRequests().isEmpty)
     }
 
+    @Test @MainActor func coordinatorPrunesSubscriptionsMissingFromVisibleLibrary() async throws {
+        let defaults = makeDefaults()
+        defer { removeDefaults(defaults) }
+        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let manager = makeManager(defaults: defaults, center: center) { _ in
+            makeEpisode(
+                season: 1,
+                number: 1,
+                airStamp: now.addingTimeInterval(86_400)
+            )
+        }
+        let coordinator = EpisodeNotificationCoordinator.makeForTesting(manager: manager)
+        let retainedIdentity = LibraryEntryIdentity(entryType: .series, tmdbID: 100)
+        let missingIdentity = LibraryEntryIdentity(entryType: .series, tmdbID: 200)
+
+        for (identity, showID, title) in [
+            (retainedIdentity, 70, "Retained Anime"),
+            (missingIdentity, 80, "Missing Anime")
+        ] {
+            _ = try await manager.enable(
+                entryIdentity: identity,
+                showID: showID,
+                displayTitle: title,
+                seasonNumber: nil
+            )
+        }
+
+        await coordinator.pruneSubscriptions(
+            validEntryIdentityRawIDs: Set([retainedIdentity.rawID])
+        )
+
+        #expect(Set((await manager.snapshot()).subscriptions.map(\.id)) == Set([retainedIdentity.rawID]))
+        #expect(Set(await center.allRequests().map(\.subscriptionID)) == Set([retainedIdentity.rawID]))
+    }
+
     @Test @MainActor func coordinatorCancelAllClearsRefreshFailure() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }

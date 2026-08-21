@@ -9,6 +9,12 @@ import DataProvider
 import Foundation
 import Observation
 @preconcurrency import UserNotifications
+import os
+
+fileprivate let episodeNotificationLogger = Logger(
+    subsystem: .bundleIdentifier,
+    category: "EpisodeNotifications"
+)
 
 enum EpisodeNotificationAuthorizationStatus: String, Codable, Sendable {
     case notDetermined
@@ -340,7 +346,7 @@ actor EpisodeNotificationManager {
 
     @discardableResult
     func disable(entryIdentityRawID: String) async -> Bool {
-        await removeSubscriptions(withEntryIdentityRawIDs: Set([entryIdentityRawID]))
+        !(await removeSubscriptions(withEntryIdentityRawIDs: Set([entryIdentityRawID]))).isEmpty
     }
 
     @discardableResult
@@ -366,15 +372,15 @@ actor EpisodeNotificationManager {
                 }
             }
         )
-        return await removeSubscriptions(withEntryIdentityRawIDs: matchingIDs)
+        return !(await removeSubscriptions(withEntryIdentityRawIDs: matchingIDs)).isEmpty
     }
 
     private func removeSubscriptions(
         withEntryIdentityRawIDs requestedIDs: Set<String>
-    ) async -> Bool {
+    ) async -> Set<String> {
         let removedIDs = requestedIDs.filter { subscriptions.removeValue(forKey: $0) != nil }
         guard !removedIDs.isEmpty else {
-            return false
+            return []
         }
         persistSubscriptions()
         let identifiers = await notificationCenter.pendingRequests()
@@ -382,7 +388,15 @@ actor EpisodeNotificationManager {
             .map(\.identifier)
         await notificationCenter.removePendingRequests(withIdentifiers: identifiers)
         clearWarningWhenUnderLimit()
-        return true
+        episodeNotificationLogger.info(
+            "Removed \(removedIDs.count, privacy: .public) episode notification subscriptions and \(identifiers.count, privacy: .public) pending reminders."
+        )
+        for removedID in removedIDs.sorted() {
+            episodeNotificationLogger.debug(
+                "Removed episode notification subscription \(removedID, privacy: .private)."
+            )
+        }
+        return Set(removedIDs)
     }
 
     func cancelAll() async {
@@ -394,7 +408,7 @@ actor EpisodeNotificationManager {
     }
 
     @discardableResult
-    func removeSubscriptions(notIn validEntryIdentityRawIDs: Set<String>) async -> Bool {
+    func removeSubscriptions(notIn validEntryIdentityRawIDs: Set<String>) async -> Set<String> {
         let staleIDs = Set(subscriptions.keys.filter { !validEntryIdentityRawIDs.contains($0) })
         return await removeSubscriptions(withEntryIdentityRawIDs: staleIDs)
     }
@@ -902,7 +916,16 @@ final class EpisodeNotificationCoordinator {
     }
 
     func pruneSubscriptions(validEntryIdentityRawIDs: Set<String>) async {
-        _ = await manager.removeSubscriptions(notIn: validEntryIdentityRawIDs)
+        let removedIDs = await manager.removeSubscriptions(notIn: validEntryIdentityRawIDs)
+        if removedIDs.isEmpty {
+            episodeNotificationLogger.debug(
+                "Episode notification subscription reconciliation found no stale subscriptions among \(validEntryIdentityRawIDs.count, privacy: .public) visible library entries."
+            )
+        } else {
+            episodeNotificationLogger.info(
+                "Pruned \(removedIDs.count, privacy: .public) episode notification subscriptions missing from the visible library."
+            )
+        }
         await reloadState()
     }
 

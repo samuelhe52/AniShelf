@@ -17,14 +17,11 @@ enum HydrationFailure: Error {
 }
 
 @MainActor
-func makeSyncReadyStore(
-    libraryMembershipChangeHandler: ((Set<String>) -> Void)? = nil
-) -> LibraryStore {
+func makeSyncReadyStore() -> LibraryStore {
     makeStore(
         enabled: true,
         bootstrapState: .completed,
-        hasTMDbAPIKey: true,
-        libraryMembershipChangeHandler: libraryMembershipChangeHandler
+        hasTMDbAPIKey: true
     )
 }
 
@@ -32,8 +29,7 @@ func makeSyncReadyStore(
 func makeStore(
     enabled: Bool,
     bootstrapState: LibraryCloudSyncBootstrapState,
-    hasTMDbAPIKey: Bool,
-    libraryMembershipChangeHandler: ((Set<String>) -> Void)? = nil
+    hasTMDbAPIKey: Bool
 ) -> LibraryStore {
     let suiteName = "LibrarySyncCoordinatorTests.\(UUID().uuidString)"
     let defaults = UserDefaults(suiteName: suiteName)!
@@ -46,8 +42,7 @@ func makeStore(
     return LibraryStore(
         dataProvider: DataProvider(inMemory: true),
         preferences: preferences,
-        hasTMDbAPIKey: { hasTMDbAPIKey },
-        libraryMembershipChangeHandler: libraryMembershipChangeHandler
+        hasTMDbAPIKey: { hasTMDbAPIKey }
     )
 }
 

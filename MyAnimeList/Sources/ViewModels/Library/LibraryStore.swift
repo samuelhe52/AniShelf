@@ -35,7 +35,7 @@ class LibraryStore {
     @ObservationIgnored private var saveObserver: ModelContextSaveObserver?
     @ObservationIgnored private var deferredLibraryRefreshDepth = 0
     @ObservationIgnored private var needsDeferredLibraryRefresh = false
-    @ObservationIgnored private let libraryMembershipChangeHandler: ((Set<String>) -> Void)?
+    @ObservationIgnored private var episodeNotificationPruningEnabled: Bool
     private(set) var libraryRevision = 0
 
     // MARK: - State
@@ -116,7 +116,7 @@ class LibraryStore {
             guard let key = TMDbAPIKeyStorage().retrieveKey() else { return false }
             return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         },
-        libraryMembershipChangeHandler: ((Set<String>) -> Void)? = nil
+        episodeNotificationPruningEnabled: Bool = false
     ) {
         self.dataProvider = dataProvider
         let syncChangeRecorder = LibrarySyncChangeRecorder(dataProvider: dataProvider)
@@ -135,7 +135,7 @@ class LibraryStore {
         self.infoFetcher = .init()
         self.library = []
         self.libraryCloudSyncStatus = snapshot.cloudSyncStatus
-        self.libraryMembershipChangeHandler = libraryMembershipChangeHandler
+        self.episodeNotificationPruningEnabled = episodeNotificationPruningEnabled
         self.shouldResumeInterruptedCloudSyncBootstrap =
             snapshot.cloudSyncStatus.isEnabled && snapshot.cloudSyncStatus.bootstrapState == .running
         reloadPersistedPreferences()
@@ -147,9 +147,6 @@ class LibraryStore {
         }
         do {
             try refreshLibrary()
-            if library.isEmpty {
-                notifyLibraryMembershipChange()
-            }
         } catch {
             libraryStoreLogger.fault(
                 "Initial library fetch failed: \(String(describing: error), privacy: .public)"
@@ -210,16 +207,16 @@ class LibraryStore {
 
     func refreshLibrary() throws {
         libraryStoreLogger.debug("[\(Date().debugDescription)] Refreshing library...")
-        let entries = try repository.visibleLibraryEntries()
-        let previousEntryIdentityRawIDs = libraryEntryIdentityRawIDs
-        library = entries
+        library = try repository.visibleLibraryEntries()
         libraryRevision &+= 1
-        guard libraryEntryIdentityRawIDs != previousEntryIdentityRawIDs else { return }
-        notifyLibraryMembershipChange()
+        pruneEpisodeNotificationSubscriptions()
     }
 
-    func notifyLibraryMembershipChange() {
-        libraryMembershipChangeHandler?(libraryEntryIdentityRawIDs)
+    func enableEpisodeNotificationPruning() {
+        guard !episodeNotificationPruningEnabled else { return }
+        episodeNotificationPruningEnabled = true
+        libraryStoreLogger.info("Enabled episode notification subscription pruning.")
+        pruneEpisodeNotificationSubscriptions()
     }
 
     func setupUpdateLibrary() {
@@ -241,8 +238,32 @@ class LibraryStore {
         }
     }
 
-    private var libraryEntryIdentityRawIDs: Set<String> {
-        Set(library.map { $0.libraryIdentity.rawID })
+    private func pruneEpisodeNotificationSubscriptions() {
+        guard episodeNotificationPruningEnabled else {
+            libraryStoreLogger.debug(
+                "Skipped episode notification subscription pruning while library activity is blocked."
+            )
+            return
+        }
+        let validEntryIdentityRawIDs = Set(
+            library.lazy
+                .map { $0.libraryIdentity.rawID }
+        )
+        let pruningRevision = libraryRevision
+        libraryStoreLogger.debug(
+            "Requesting episode notification subscription reconciliation against \(validEntryIdentityRawIDs.count, privacy: .public) visible library entries at revision \(pruningRevision, privacy: .public)."
+        )
+        Task { @MainActor [weak self] in
+            guard let self, self.libraryRevision == pruningRevision else {
+                libraryStoreLogger.debug(
+                    "Skipped superseded episode notification subscription reconciliation for library revision \(pruningRevision, privacy: .public)."
+                )
+                return
+            }
+            await EpisodeNotificationCoordinator.shared.pruneSubscriptions(
+                validEntryIdentityRawIDs: validEntryIdentityRawIDs
+            )
+        }
     }
 
     func performWithDeferredLibrarySaveRefresh<T>(_ operation: () async throws -> T) async rethrows -> T {
