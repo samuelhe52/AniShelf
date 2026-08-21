@@ -1,7 +1,7 @@
 # AniShelf Broadcast Time Feature Plan
 
 Created: 2026-08-09
-Updated: 2026-08-16
+Updated: 2026-08-21
 
 ## Scope
 
@@ -14,9 +14,7 @@ setting-gated, and does not add broadcast data to the SwiftData schema.
 - Resolve eligible entries when their detail views open. Present successful
   results in an airtime section of the existing ellipsis menu, not in the main
   detail content. Keep the next-airing summary in the section header and reserve
-  section rows for actions. Until notification behavior is implemented, show a
-  disabled Notifications button with an empty action in resolved and
-  loading sections.
+  section rows for actions.
 - If identifier lookup fails, offer a button asking the user to help confirm a
   match. Tapping it opens the validation sheet and starts title fallback.
 - Show one hydrated candidate with enough metadata and next-airing information
@@ -188,8 +186,5 @@ not a fallback airtime provider.
 7. **Complete:** Add resolved-match review and full-result replacement search,
    preserving the existing mapping until a replacement is confirmed. Keep TMDb
    dates validation-only in confirmation and review sheets.
-
-## Deferred Work
-
-- Notification eligibility, scheduling, permissions, and presentation remain
-  deferred until the rest of the broadcast-time behavior is settled.
+8. **Complete:** Add episode-aware local notification permissions, scheduling,
+   cancellation, settings, and presentation.
