@@ -582,6 +582,54 @@ struct EntryDetailBroadcastModelTests {
         #expect(model.resolvedShow == nil)
     }
 
+    @Test @MainActor func cancelingAfterPersistedRemapStillInvalidatesSubscriptions() async throws {
+        let resolvedShow = makeBroadcastTestShow(id: 70)
+        let replacement = makeBroadcastTestShow(id: 90)
+        let probe = BroadcastResolutionProbe(
+            mappedShowID: resolvedShow.id,
+            show: resolvedShow,
+            additionalShows: [replacement.id: replacement],
+            suspendsAfterMappingSave: true
+        )
+        let model = EntryDetailBroadcastModel(
+            entryType: .series,
+            tmdbID: 42,
+            eligibilityChecker: makeEligibilityChecker(schedule: eligibleSchedule),
+            resolver: makeBroadcastResolver(probe: probe),
+            now: { date(day: 12) },
+            calendar: broadcastTestCalendar
+        )
+        let mappingChangeProbe = BroadcastMappingChangeProbe()
+
+        model.update(
+            .init(
+                isEnabled: true,
+                entryType: .series,
+                seriesStatus: "Returning Series"
+            )
+        )
+        await waitUntil { model.resolvedShow == resolvedShow }
+
+        model.confirm(candidate: replacement) {
+            await mappingChangeProbe.record()
+        }
+        await waitUntil { await probe.isWaitingForMappingSaveRelease }
+
+        model.update(
+            .init(
+                isEnabled: false,
+                entryType: .series,
+                seriesStatus: "Returning Series"
+            )
+        )
+        await probe.releaseMappingSave()
+        await waitUntil { await mappingChangeProbe.invocationCount == 1 }
+
+        #expect(await probe.savedMappings == [.init(tmdbSeriesID: 42, showID: replacement.id)])
+        #expect(model.phase == .disabled)
+        #expect(model.resolvedShow == nil)
+    }
+
     @Test @MainActor func detailHostSynchronizationKeepsTheSameBroadcastModel() throws {
         let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
         let entry = AnimeEntry(name: "Test Series", type: .series, tmdbID: 42)
@@ -689,6 +737,7 @@ private actor BroadcastResolutionProbe {
     private let titleShowID: Int?
     private let shows: [Int: TVMazeShow]
     private let suspendsMappingLoad: Bool
+    private let suspendsAfterMappingSave: Bool
     private let mappingSaveFailureCount: Int
 
     private(set) var loadedMappingTMDbIDs: [Int] = []
@@ -698,6 +747,7 @@ private actor BroadcastResolutionProbe {
     private(set) var didStartSuspendedLoad = false
     private(set) var didCancelSuspendedLoad = false
     private var mappingSaveAttempts = 0
+    private var mappingSaveReleaseContinuation: CheckedContinuation<Void, Never>?
 
     init(
         mappedShowID: Int? = nil,
@@ -706,6 +756,7 @@ private actor BroadcastResolutionProbe {
         show: TVMazeShow? = nil,
         additionalShows: [Int: TVMazeShow] = [:],
         suspendsMappingLoad: Bool = false,
+        suspendsAfterMappingSave: Bool = false,
         mappingSaveFailureCount: Int = 0
     ) {
         self.mappedShowID = mappedShowID
@@ -717,6 +768,7 @@ private actor BroadcastResolutionProbe {
         }
         self.shows = shows
         self.suspendsMappingLoad = suspendsMappingLoad
+        self.suspendsAfterMappingSave = suspendsAfterMappingSave
         self.mappingSaveFailureCount = mappingSaveFailureCount
     }
 
@@ -749,12 +801,26 @@ private actor BroadcastResolutionProbe {
         return [show]
     }
 
-    func saveMapping(tmdbSeriesID: Int, showID: Int) throws {
+    var isWaitingForMappingSaveRelease: Bool {
+        mappingSaveReleaseContinuation != nil
+    }
+
+    func saveMapping(tmdbSeriesID: Int, showID: Int) async throws {
         mappingSaveAttempts += 1
         guard mappingSaveAttempts > mappingSaveFailureCount else {
             throw BroadcastResolutionProbeError.mappingSaveFailed
         }
         savedMappings.append(.init(tmdbSeriesID: tmdbSeriesID, showID: showID))
+        guard suspendsAfterMappingSave else { return }
+
+        await withCheckedContinuation { continuation in
+            mappingSaveReleaseContinuation = continuation
+        }
+    }
+
+    func releaseMappingSave() {
+        mappingSaveReleaseContinuation?.resume()
+        mappingSaveReleaseContinuation = nil
     }
 }
 

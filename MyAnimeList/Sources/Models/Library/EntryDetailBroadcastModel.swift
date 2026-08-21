@@ -333,9 +333,9 @@ final class EntryDetailBroadcastModel {
                     entryType: entryType,
                     tmdbID: tmdbID
                 )
-                try Task.checkCancellation()
-                guard let self, self.resolutionID == resolutionID else { return }
                 guard didConfirm else {
+                    try Task.checkCancellation()
+                    guard let self, self.resolutionID == resolutionID else { return }
                     self.phase = .failed
                     self.finishResolution(resolutionID)
                     return
@@ -343,7 +343,7 @@ final class EntryDetailBroadcastModel {
 
                 await onConfirmedMappingChange?()
                 try Task.checkCancellation()
-                guard self.resolutionID == resolutionID else { return }
+                guard let self, self.resolutionID == resolutionID else { return }
 
                 self.resolvedShow = candidate
                 self.phase = .resolved(
