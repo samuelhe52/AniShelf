@@ -43,6 +43,39 @@ struct EpisodeNotificationManagerTests {
         #expect(content.body == "S01E06 airs in 15 minutes.")
     }
 
+    @Test func managementItemsRepresentSeriesAndSeasonSubscriptionsWithNextReminders() throws {
+        let series = EpisodeNotificationSubscription(
+            entryIdentityRawID: "series:100",
+            tvMazeShowID: 70,
+            displayTitle: "Alpha Anime",
+            seasonNumber: nil
+        )
+        let season = EpisodeNotificationSubscription(
+            entryIdentityRawID: "season:200:2:100",
+            tvMazeShowID: 71,
+            displayTitle: "Beta Anime",
+            seasonNumber: 2
+        )
+        let reminder = EpisodeScheduledReminder(
+            id: "AniShelf.Episode.season-200",
+            subscriptionID: season.id,
+            seasonNumber: 2,
+            episodeNumber: 1,
+            airStamp: now.addingTimeInterval(86_400),
+            fireDate: now.addingTimeInterval(85_500)
+        )
+        let snapshot = EpisodeNotificationSnapshot(
+            subscriptions: [series, season],
+            scheduledReminders: [reminder]
+        )
+
+        let items = snapshot.managementItems
+
+        #expect(items.map(\.subscription) == [series, season])
+        #expect(try #require(items.first).nextReminder == nil)
+        #expect(try #require(items.last).nextReminder == reminder)
+    }
+
     @Test func enablingRequestsPermissionPersistsIntentAndSchedulesExactLeadTime() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
@@ -197,6 +230,7 @@ struct EpisodeNotificationManagerTests {
             try await provider.nextEpisode(showID: showID)
         }
         let identity = LibraryEntryIdentity(entryType: .series, tmdbID: 100)
+        let otherIdentity = LibraryEntryIdentity(entryType: .series, tmdbID: 101)
 
         _ = try await manager.enable(
             entryIdentity: identity,
@@ -204,14 +238,28 @@ struct EpisodeNotificationManagerTests {
             displayTitle: "Reminder Anime",
             seasonNumber: nil
         )
+        _ = try await manager.enable(
+            entryIdentity: otherIdentity,
+            showID: 71,
+            displayTitle: "Other Anime",
+            seasonNumber: nil
+        )
         let original = await center.allRequests()
         await provider.setFails(true)
         let refreshResult = try await manager.refreshAll()
+        let preserved = await center.allRequests()
 
-        #expect(refreshResult.failedSubscriptionCount == 1)
-        #expect(await center.allRequests() == original)
+        #expect(refreshResult.failedSubscriptionCount == 2)
+        #expect(
+            preserved.sorted { $0.subscriptionID < $1.subscriptionID }
+                == original.sorted { $0.subscriptionID < $1.subscriptionID }
+        )
 
         await manager.disable(entryIdentityRawID: identity.rawID)
+        #expect(await center.allRequests().map(\.subscriptionID) == [otherIdentity.rawID])
+        #expect((await manager.snapshot()).subscriptions.map(\.id) == [otherIdentity.rawID])
+
+        await manager.disable(entryIdentityRawID: otherIdentity.rawID)
         #expect(await center.allRequests().isEmpty)
         #expect((await manager.snapshot()).subscriptions.isEmpty)
     }

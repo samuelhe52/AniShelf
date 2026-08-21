@@ -8507,6 +8507,12 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "保留通知" } }
       }
     },
+    "Manage Subscriptions" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知登録を管理" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "管理订阅" } }
+      }
+    },
     "New episode" : {
       "localizations" : {
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "新しいエピソード" } },
@@ -8517,6 +8523,18 @@
       "localizations" : {
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "次回の通知" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "下次通知" } }
+      }
+    },
+    "Next Reminder" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "次回のリマインダー" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "下次提醒" } }
+      }
+    },
+    "No Episode Subscriptions" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "エピソード通知の登録はありません" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "暂无剧集通知订阅" } }
       }
     },
     "No Upcoming Notification" : {
@@ -8573,6 +8591,18 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "待处理提醒" } }
       }
     },
+    "Removes this subscription and its pending reminder." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "この通知登録と保留中のリマインダーを削除します。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "移除此订阅及其待处理提醒。" } }
+      }
+    },
+    "Remove" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "解除" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "移除" } }
+      }
+    },
     "Schedule one-time reminders from verified TVMaze next-episode airtimes." : {
       "localizations" : {
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "TVMazeで確認された次回エピソードの放送時刻から1回限りの通知を設定します。" } },
@@ -8619,6 +8649,12 @@
       "localizations" : {
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知登録を解除" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消订阅" } }
+      }
+    },
+    "Unsubscribe from %@" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@の通知登録を解除" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消订阅 %@ 的通知" } }
       }
     },
     "Your original files were preserved" : {

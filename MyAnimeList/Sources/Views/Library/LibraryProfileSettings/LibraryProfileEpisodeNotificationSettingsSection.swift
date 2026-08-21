@@ -11,6 +11,7 @@ struct LibraryProfileEpisodeNotificationSettingsSection: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(EpisodeNotificationCoordinator.self) private var notifications
     @State private var showCancelAllConfirmation = false
+    @State private var showSubscriptionManagement = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -47,11 +48,7 @@ struct LibraryProfileEpisodeNotificationSettingsSection: View {
                     value: notifications.snapshot.subscriptions.count,
                     systemImage: "bell.badge"
                 )
-                reminderCount(
-                    title: "Pending Reminders",
-                    value: notifications.snapshot.scheduledReminders.count,
-                    systemImage: "calendar.badge.clock"
-                )
+                manageSubscriptionsButton
             }
 
             if notifications.snapshot.warning != nil {
@@ -105,6 +102,47 @@ struct LibraryProfileEpisodeNotificationSettingsSection: View {
             Button("Keep Notifications", role: .cancel) {}
         } message: {
             Text("Every episode subscription and pending reminder on this device will be removed.")
+        }
+    }
+
+    private var manageSubscriptionsButton: some View {
+        Button {
+            showSubscriptionManagement = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "list.bullet")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.orange)
+
+                Text("Manage Subscriptions")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.orange)
+            }
+            .frame(maxWidth: .infinity, minHeight: 37, alignment: .leading)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 9)
+            .background {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(.orange.opacity(0.07))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(.orange.opacity(0.12), lineWidth: 1)
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $showSubscriptionManagement) {
+            LibraryProfileEpisodeNotificationManagementPopover()
+                .presentationCompactAdaptation(.popover)
         }
     }
 
