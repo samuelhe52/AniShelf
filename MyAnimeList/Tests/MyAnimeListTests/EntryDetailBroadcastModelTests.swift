@@ -90,6 +90,24 @@ struct EntryDetailBroadcastModelTests {
             )
                 == .ineligible
         )
+
+        let recentlyAiredChecker = makeEligibilityChecker(
+            schedule: .init(
+                firstAirDate: calendarDate(day: 1),
+                nextEpisode: nil,
+                lastEpisode: .init(seasonNumber: 2, airDate: calendarDate(day: 11)),
+                seasonAirDates: [:]
+            )
+        )
+        #expect(
+            try await recentlyAiredChecker.check(
+                entryType: .series,
+                tmdbSeriesID: 42,
+                now: date(day: 21),
+                calendar: broadcastTestCalendar
+            )
+                == eligibleResult(day: 11, basis: .recentEpisode)
+        )
     }
 
     @Test func liveSeasonEligibilityRequiresItsOwnScheduledEpisodeOrFutureAirDate() async throws {
@@ -134,6 +152,71 @@ struct EntryDetailBroadcastModelTests {
                 calendar: broadcastTestCalendar
             )
                 == eligibleResult(day: 20, basis: .seasonPremiere)
+        )
+
+        let recentlyAiredChecker = makeEligibilityChecker(
+            schedule: .init(
+                firstAirDate: calendarDate(day: 1),
+                nextEpisode: nil,
+                lastEpisode: .init(seasonNumber: 3, airDate: calendarDate(day: 11)),
+                seasonAirDates: [3: calendarDate(day: 1)]
+            )
+        )
+        #expect(
+            try await recentlyAiredChecker.check(
+                entryType: .season(seasonNumber: 3, parentSeriesID: 42),
+                tmdbSeriesID: 42,
+                now: date(day: 21),
+                calendar: broadcastTestCalendar
+            )
+                == eligibleResult(day: 11, basis: .recentEpisode)
+        )
+        #expect(
+            try await recentlyAiredChecker.check(
+                entryType: .season(seasonNumber: 2, parentSeriesID: 42),
+                tmdbSeriesID: 42,
+                now: date(day: 21),
+                calendar: broadcastTestCalendar
+            )
+                == .ineligible
+        )
+    }
+
+    @Test func recentEpisodeGracePeriodIncludesBoundaryButRejectsOlderEpisodes() async throws {
+        let boundaryChecker = makeEligibilityChecker(
+            schedule: .init(
+                firstAirDate: calendarDate(day: 1),
+                nextEpisode: nil,
+                lastEpisode: .init(seasonNumber: 1, airDate: calendarDate(day: 3)),
+                seasonAirDates: [:]
+            )
+        )
+        #expect(
+            try await boundaryChecker.check(
+                entryType: .series,
+                tmdbSeriesID: 42,
+                now: date(day: 21),
+                calendar: broadcastTestCalendar
+            )
+                == eligibleResult(day: 3, basis: .recentEpisode)
+        )
+
+        let staleChecker = makeEligibilityChecker(
+            schedule: .init(
+                firstAirDate: calendarDate(day: 1),
+                nextEpisode: nil,
+                lastEpisode: .init(seasonNumber: 1, airDate: calendarDate(day: 2)),
+                seasonAirDates: [:]
+            )
+        )
+        #expect(
+            try await staleChecker.check(
+                entryType: .series,
+                tmdbSeriesID: 42,
+                now: date(day: 21),
+                calendar: broadcastTestCalendar
+            )
+                == .ineligible
         )
     }
 

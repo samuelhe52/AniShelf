@@ -67,7 +67,20 @@ struct TMDbNextEpisodeSchedule: Equatable, Sendable {
 struct TMDbSeriesBroadcastSchedule: Equatable, Sendable {
     let firstAirDate: TMDbCalendarDate?
     let nextEpisode: TMDbNextEpisodeSchedule?
+    let lastEpisode: TMDbNextEpisodeSchedule?
     let seasonAirDates: [Int: TMDbCalendarDate]
+
+    init(
+        firstAirDate: TMDbCalendarDate?,
+        nextEpisode: TMDbNextEpisodeSchedule?,
+        lastEpisode: TMDbNextEpisodeSchedule? = nil,
+        seasonAirDates: [Int: TMDbCalendarDate]
+    ) {
+        self.firstAirDate = firstAirDate
+        self.nextEpisode = nextEpisode
+        self.lastEpisode = lastEpisode
+        self.seasonAirDates = seasonAirDates
+    }
 }
 
 struct TMDbSeriesBroadcastDetails: Equatable, Sendable {
@@ -80,6 +93,7 @@ struct TMDbAiringEvidence: Equatable, Sendable {
         case nextEpisode
         case seriesPremiere
         case seasonPremiere
+        case recentEpisode
     }
 
     let airDate: TMDbCalendarDate
@@ -95,6 +109,10 @@ enum TMDbBroadcastEligibilityResult: Equatable, Sendable {
 }
 
 struct TMDbBroadcastEligibilityChecker: Sendable {
+    /// TMDb can briefly clear `next_episode_to_air` after an episode airs. Because its air
+    /// dates have no time component, round the proposed two-and-a-half-week grace period up.
+    static let recentEpisodeGracePeriodDays = 18
+
     private let fetchSeriesDetails: @Sendable (Int) async throws -> TMDbSeriesBroadcastDetails
 
     init(infoFetcher: InfoFetcher = InfoFetcher()) {
@@ -133,6 +151,23 @@ struct TMDbBroadcastEligibilityChecker: Sendable {
         let isTodayOrLater: (TMDbCalendarDate?) -> Bool = { date in
             date.map { $0 >= today } ?? false
         }
+        let recentEpisodeCutoff = calendar.date(
+            byAdding: .day,
+            value: -Self.recentEpisodeGracePeriodDays,
+            to: now
+        ).flatMap { cutoff -> TMDbCalendarDate? in
+            let components = calendar.dateComponents([.year, .month, .day], from: cutoff)
+            guard
+                let year = components.year,
+                let month = components.month,
+                let day = components.day
+            else { return nil }
+            return TMDbCalendarDate(year: year, month: month, day: day)
+        }
+        let isRecent: (TMDbCalendarDate?) -> Bool = { date in
+            guard let date, let recentEpisodeCutoff else { return false }
+            return date >= recentEpisodeCutoff && date <= today
+        }
 
         let airingEvidence: TMDbAiringEvidence?
         switch entryType {
@@ -146,6 +181,11 @@ struct TMDbBroadcastEligibilityChecker: Sendable {
                 airingEvidence = TMDbAiringEvidence(
                     airDate: airDate,
                     basis: .seriesPremiere
+                )
+            } else if let airDate = schedule.lastEpisode?.airDate, isRecent(airDate) {
+                airingEvidence = TMDbAiringEvidence(
+                    airDate: airDate,
+                    basis: .recentEpisode
                 )
             } else {
                 airingEvidence = nil
@@ -165,6 +205,14 @@ struct TMDbBroadcastEligibilityChecker: Sendable {
                 airingEvidence = TMDbAiringEvidence(
                     airDate: airDate,
                     basis: .seasonPremiere
+                )
+            } else if schedule.lastEpisode?.seasonNumber == seasonNumber,
+                let airDate = schedule.lastEpisode?.airDate,
+                isRecent(airDate)
+            {
+                airingEvidence = TMDbAiringEvidence(
+                    airDate: airDate,
+                    basis: .recentEpisode
                 )
             } else {
                 airingEvidence = nil
@@ -194,12 +242,14 @@ extension InfoFetcher {
 fileprivate struct TMDbSeriesBroadcastResponse: Decodable {
     let firstAirDate: String?
     let nextEpisodeToAir: TMDbNextEpisodeResponse?
+    let lastEpisodeToAir: TMDbNextEpisodeResponse?
     let seasons: [TMDbSeasonScheduleResponse]
     let externalIDs: TMDbSeriesExternalIDsResponse?
 
     private enum CodingKeys: String, CodingKey {
         case firstAirDate = "first_air_date"
         case nextEpisodeToAir = "next_episode_to_air"
+        case lastEpisodeToAir = "last_episode_to_air"
         case seasons
         case externalIDs = "external_ids"
     }
@@ -209,6 +259,12 @@ fileprivate struct TMDbSeriesBroadcastResponse: Decodable {
             schedule: TMDbSeriesBroadcastSchedule(
                 firstAirDate: TMDbCalendarDate(providerValue: firstAirDate),
                 nextEpisode: nextEpisodeToAir.map {
+                    TMDbNextEpisodeSchedule(
+                        seasonNumber: $0.seasonNumber,
+                        airDate: TMDbCalendarDate(providerValue: $0.airDate)
+                    )
+                },
+                lastEpisode: lastEpisodeToAir.map {
                     TMDbNextEpisodeSchedule(
                         seasonNumber: $0.seasonNumber,
                         airDate: TMDbCalendarDate(providerValue: $0.airDate)

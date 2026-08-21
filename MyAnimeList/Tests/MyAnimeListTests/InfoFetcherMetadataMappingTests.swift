@@ -26,6 +26,10 @@ struct InfoFetcherMetadataMappingTests {
                     "season_number": 2,
                     "air_date": "2026-08-13"
                 },
+                "last_episode_to_air": {
+                    "season_number": 2,
+                    "air_date": "2026-08-06"
+                },
                 "seasons": [
                     { "season_number": 1, "air_date": "2026-01-01" },
                     { "season_number": 2, "air_date": "2026-08-01" }
@@ -58,6 +62,11 @@ struct InfoFetcherMetadataMappingTests {
         #expect(
             details.schedule.nextEpisode?.airDate
                 == TMDbCalendarDate(year: 2026, month: 8, day: 13)
+        )
+        #expect(details.schedule.lastEpisode?.seasonNumber == 2)
+        #expect(
+            details.schedule.lastEpisode?.airDate
+                == TMDbCalendarDate(year: 2026, month: 8, day: 6)
         )
         #expect(details.schedule.seasonAirDates.keys.sorted() == [1, 2])
         #expect(requests.count == 1)
