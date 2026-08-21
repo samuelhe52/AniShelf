@@ -73,7 +73,7 @@ struct EntryDetailNotificationMenu: View {
                 systemImage: isSubscribed ? "checkmark.circle.fill" : "circle"
             )
         }
-        .disabled(true)
+        .menuActionDismissBehavior(.disabled)
     }
 
     private var nextNotificationStatus: some View {
@@ -87,7 +87,7 @@ struct EntryDetailNotificationMenu: View {
                 Text(EntryDetailL10n.noUpcomingNotification)
             }
         }
-        .disabled(true)
+        .menuActionDismissBehavior(.disabled)
     }
 
     private var openNotificationSettingsButton: some View {
