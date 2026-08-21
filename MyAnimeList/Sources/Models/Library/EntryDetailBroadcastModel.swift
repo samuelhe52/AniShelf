@@ -38,10 +38,15 @@ enum BroadcastAvailability: Equatable, Sendable {
         allowsTMDbFallback: Bool = true
     ) {
         guard let airing = show.nextEpisodeAiring else {
-            self =
-                allowsTMDbFallback
-                ? tmdbEvidence.map(Self.tmdbExpected) ?? .unavailable
-                : .unavailable
+            guard
+                allowsTMDbFallback,
+                let tmdbEvidence,
+                tmdbEvidence.basis != .recentEpisode
+            else {
+                self = .unavailable
+                return
+            }
+            self = .tmdbExpected(tmdbEvidence)
             return
         }
 

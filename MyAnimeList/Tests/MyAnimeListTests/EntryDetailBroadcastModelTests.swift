@@ -314,6 +314,15 @@ struct EntryDetailBroadcastModelTests {
         #expect(replacementAvailability == .unavailable)
     }
 
+    @Test func availabilityDoesNotUseRecentEpisodeAsExpectedAirtime() {
+        let availability = BroadcastAvailability(
+            resolvedShow: makeBroadcastTestShow(id: 70),
+            tmdbEvidence: airingEvidence(day: 11, basis: .recentEpisode)
+        )
+
+        #expect(availability == .unavailable)
+    }
+
     @Test func availabilityIsUnavailableWithoutEitherProviderDate() {
         let availability = BroadcastAvailability(
             resolvedShow: makeBroadcastTestShow(id: 70),

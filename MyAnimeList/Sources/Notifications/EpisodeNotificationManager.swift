@@ -499,9 +499,6 @@ actor EpisodeNotificationManager {
         episode: TVMazeNextEpisodeAiring?
     ) -> Candidate? {
         guard let episode else { return nil }
-        guard subscription.seasonNumber == nil || subscription.seasonNumber == episode.seasonNumber else {
-            return nil
-        }
         let leadSeconds = TimeInterval(leadTime.rawValue * 60)
         let fireDate = episode.airStamp.addingTimeInterval(-leadSeconds)
         guard fireDate > now() else { return nil }
@@ -721,6 +718,7 @@ final class EpisodeNotificationCoordinator {
 
     func cancelAll() async {
         await manager.cancelAll()
+        lastRefreshFailed = false
         await reloadState()
     }
 

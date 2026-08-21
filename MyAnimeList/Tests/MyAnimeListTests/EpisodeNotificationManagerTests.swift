@@ -180,7 +180,7 @@ struct EpisodeNotificationManagerTests {
         #expect(await center.allRequests().count == 1)
     }
 
-    @Test func seasonSubscriptionFiltersNextEpisodeAndChangingLeadTimeRebuildsPendingRequest() async throws {
+    @Test func seasonSubscriptionUsesProviderEpisodeAndChangingLeadTimeRebuildsPendingRequest() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
         let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
@@ -202,15 +202,11 @@ struct EpisodeNotificationManagerTests {
             displayTitle: "Season Two",
             seasonNumber: 2
         )
-        #expect(await center.allRequests().isEmpty)
-
-        await provider.setNextEpisode(
-            makeEpisode(season: 2, number: 1, airStamp: seasonTwoAirStamp)
-        )
-        _ = try await manager.refreshAll()
         try await manager.setLeadTime(.oneHour)
         let requests = await center.allRequests()
 
+        #expect(requests.first?.seasonNumber == 1)
+        #expect(requests.first?.episodeNumber == 12)
         #expect(requests.first?.fireDate == seasonTwoAirStamp.addingTimeInterval(-60 * 60))
         #expect((await manager.snapshot()).leadTime == .oneHour)
     }
@@ -465,6 +461,39 @@ struct EpisodeNotificationManagerTests {
         #expect(snapshot.subscriptions.isEmpty)
         #expect(snapshot.scheduledReminders.isEmpty)
         #expect(snapshot.warning == nil)
+    }
+
+    @Test @MainActor func coordinatorCancelAllClearsRefreshFailure() async throws {
+        let defaults = makeDefaults()
+        defer { removeDefaults(defaults) }
+        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let provider = EpisodeProviderProbe(
+            nextEpisode: makeEpisode(
+                season: 1,
+                number: 1,
+                airStamp: now.addingTimeInterval(86_400)
+            )
+        )
+        let manager = makeManager(defaults: defaults, center: center) { showID in
+            try await provider.nextEpisode(showID: showID)
+        }
+        let coordinator = EpisodeNotificationCoordinator(manager: manager)
+
+        _ = try await manager.enable(
+            entryIdentity: LibraryEntryIdentity(entryType: .series, tmdbID: 100),
+            showID: 70,
+            displayTitle: "Cancelable Anime",
+            seasonNumber: nil
+        )
+        await provider.setFails(true)
+
+        #expect(!(await coordinator.refreshAll()))
+        #expect(coordinator.lastRefreshFailed)
+
+        await coordinator.cancelAll()
+
+        #expect(!coordinator.lastRefreshFailed)
+        #expect(coordinator.snapshot.subscriptions.isEmpty)
     }
 
     private func makeManager(
