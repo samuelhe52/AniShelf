@@ -8399,6 +8399,186 @@
         }
       }
     },
+    "%@ airs in %lld minutes." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "%1$@は%2$lld分後に放送されます。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%1$@ 将在 %2$lld 分钟后播出。" } }
+      }
+    },
+    "%@ is airing now." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@は現在放送中です。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@ 正在播出。" } }
+      }
+    },
+    "1 hour before" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "1時間前" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "提前 1 小时" } }
+      }
+    },
+    "15 minutes before" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "15分前" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "提前 15 分钟" } }
+      }
+    },
+    "30 minutes before" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "30分前" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "提前 30 分钟" } }
+      }
+    },
+    "5 minutes before" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "5分前" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "提前 5 分钟" } }
+      }
+    },
+    "Allowed" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "許可済み" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已允许" } }
+      }
+    },
+    "At airtime" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "放送時刻" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "播出时" } }
+      }
+    },
+    "Blocked" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ブロック中" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已阻止" } }
+      }
+    },
+    "Cancel All" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "すべて解除" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "全部取消" } }
+      }
+    },
+    "Cancel All Episode Notifications?" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "すべてのエピソード通知を解除しますか？" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消所有剧集通知？" } }
+      }
+    },
+    "Delivered Quietly" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "静かに配信" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "静默送达" } }
+      }
+    },
+    "Episode Notifications" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "エピソード通知" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "剧集通知" } }
+      }
+    },
+    "Episode Notification Issue" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "エピソード通知の問題" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "剧集通知问题" } }
+      }
+    },
+    "Every episode subscription and pending reminder on this device will be removed." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "このデバイスのすべてのエピソード通知登録と保留中のリマインダーが削除されます。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "将移除此设备上的所有剧集订阅和待处理提醒。" } }
+      }
+    },
+    "iOS could not schedule every next-episode reminder. AniShelf kept the reminders with the nearest airtimes." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "iOSですべての次回エピソード通知を設定できなかったため、AniShelfは放送時刻が近い通知を保持しました。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "iOS 无法安排所有下一集提醒。AniShelf 已保留播出时间最近的提醒。" } }
+      }
+    },
+    "iOS rejected one or more episode reminders. Existing reminders were restored when possible." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "iOSが一部のエピソード通知を拒否しました。可能な場合は既存の通知を復元しました。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "iOS 拒绝了一个或多个剧集提醒。AniShelf 已尽可能恢复原有提醒。" } }
+      }
+    },
+    "Keep Notifications" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知を維持" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "保留通知" } }
+      }
+    },
+    "New episode" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "新しいエピソード" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "新剧集" } }
+      }
+    },
+    "Not Requested" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "未リクエスト" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "尚未请求" } }
+      }
+    },
+    "Notification Limit Reached" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知上限に達しました" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已达到通知上限" } }
+      }
+    },
+    "Notify" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知時刻" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "提醒时间" } }
+      }
+    },
+    "Open Notification Settings" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知設定を開く" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开通知设置" } }
+      }
+    },
+    "Permission" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "権限" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "权限" } }
+      }
+    },
+    "Pending Reminders" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "保留中の通知" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "待处理提醒" } }
+      }
+    },
+    "Schedule one-time reminders from verified TVMaze next-episode airtimes." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "TVMazeで確認された次回エピソードの放送時刻から1回限りの通知を設定します。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "根据 TVMaze 已验证的下一集播出时间安排单次提醒。" } }
+      }
+    },
+    "Some episode reminders could not be scheduled." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "一部のエピソード通知を設定できませんでした。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "部分剧集提醒无法安排。" } }
+      }
+    },
+    "Some subscriptions could not be refreshed." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "一部の通知登録を更新できませんでした。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "部分订阅无法刷新。" } }
+      }
+    },
+    "Subscriptions" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知登録" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "订阅" } }
+      }
+    },
+    "Temporarily Allowed" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "一時的に許可" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "暂时允许" } }
+      }
+    },
     "Your original files were preserved" : {
       "localizations" : {
         "ja" : {

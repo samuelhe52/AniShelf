@@ -19,6 +19,7 @@ struct MyAnimeListApp: App {
     @State var whatsNew: WhatsNewController
     @State var supportStore: SupportStore
     @State private var appReview: AppReviewPromptController
+    @State private var episodeNotifications: EpisodeNotificationCoordinator
     @State private var startupRecovery: PersistentStoreRecovery?
     private let recoveryActivityGate: StartupRecoveryActivityGate
     @Environment(\.scenePhase) private var scenePhase
@@ -43,6 +44,7 @@ struct MyAnimeListApp: App {
         let whatsNew = WhatsNewController()
         let supportStore = SupportStore()
         let appReview = AppReviewPromptController()
+        let episodeNotifications = EpisodeNotificationCoordinator()
         let recoveryActivityGate = StartupRecoveryActivityGate(
             isBlocked: startupRecovery != nil
         )
@@ -52,6 +54,7 @@ struct MyAnimeListApp: App {
         _whatsNew = State(initialValue: whatsNew)
         _supportStore = State(initialValue: supportStore)
         _appReview = State(initialValue: appReview)
+        _episodeNotifications = State(initialValue: episodeNotifications)
         _startupRecovery = State(initialValue: startupRecovery)
         self.recoveryActivityGate = recoveryActivityGate
         RecoveryExportManager.cleanupAllTemporaryExports()
@@ -68,6 +71,16 @@ struct MyAnimeListApp: App {
                 return .failed
             }
         }
+        LibrarySyncNotificationBridge.configureEpisodeNotificationHandlers(
+            refresh: { [episodeNotifications] in
+                await episodeNotifications.refreshAll()
+            },
+            response: { [episodeNotifications] entryIdentityRawID in
+                episodeNotifications.receiveNotificationRoute(
+                    entryIdentityRawID: entryIdentityRawID
+                )
+            }
+        )
     }
 
     private static func startupRecovery(
@@ -103,11 +116,13 @@ struct MyAnimeListApp: App {
             .environment(whatsNew)
             .environment(supportStore)
             .environment(appReview)
+            .environment(episodeNotifications)
             .onAppear {
                 keyStorage.retryInitialLookupIfNeeded()
                 if startupRecovery == nil {
                     requestSync(trigger: .appLaunch)
                     recordActiveLibraryDayIfUsable()
+                    refreshEpisodeNotifications()
                 }
             }
             .onChange(of: scenePhase) { _, newPhase in
@@ -115,6 +130,7 @@ struct MyAnimeListApp: App {
                     keyStorage.retryInitialLookupIfNeeded()
                     requestSync(trigger: .foreground)
                     recordActiveLibraryDayIfUsable()
+                    refreshEpisodeNotifications()
                 } else if newPhase == .background {
                     flushPendingLocalSync()
                 }
@@ -204,6 +220,13 @@ struct MyAnimeListApp: App {
     private func recordActiveLibraryDayIfUsable() {
         guard scenePhase == .active, startupRecovery == nil, hasTMDbAPIKey else { return }
         appReview.recordActiveLibraryDay()
+    }
+
+    private func refreshEpisodeNotifications() {
+        Task { @MainActor in
+            await episodeNotifications.reloadState()
+            _ = await episodeNotifications.refreshAll()
+        }
     }
 
     private var checkingTMDbAPIKeyResource: LocalizedStringResource {

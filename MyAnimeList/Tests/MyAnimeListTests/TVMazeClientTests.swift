@@ -35,6 +35,7 @@ struct TVMazeClientTests {
               },
               "_embedded": {
                 "nextepisode": {
+                  "id": 501,
                   "season": 1,
                   "number": 6,
                   "airdate": "2026-08-11",
@@ -69,6 +70,8 @@ struct TVMazeClientTests {
         #expect(show.providerLocalSchedule.dayOffsetFromBroadcastDay == 1)
         #expect(show.timeZone == TimeZone(identifier: "Asia/Tokyo"))
         #expect(show.fullImageURL == URL(string: "https://example.com/original.jpg"))
+        #expect(show.nextEpisodeAiring?.seasonNumber == 1)
+        #expect(show.nextEpisodeAiring?.episodeNumber == 6)
         #expect(
             show.nextEpisodeAiring?.airStamp
                 == ISO8601DateFormatter().date(from: "2026-08-11T16:30:00+00:00")
@@ -98,6 +101,46 @@ struct TVMazeClientTests {
         #expect(requests.compactMap(\.url?.path) == ["/lookup/shows", "/lookup/shows", "/lookup/shows"])
         #expect(requests[0].url.flatMap { queryValue(named: "thetvdb", in: $0) } == "424536")
         #expect(requests[1].url.flatMap { queryValue(named: "imdb", in: $0) } == "tt22248376")
+    }
+
+    @Test func showRejectsEmbeddedNextEpisodeWithoutVerifiedAirstamp() async throws {
+        let responseData = Data(
+            #"""
+            {
+              "id": 90814,
+              "name": "A Show",
+              "language": "Japanese",
+              "premiered": "2026-07-07",
+              "schedule": { "time": "01:30", "days": ["Tuesday"] },
+              "network": null,
+              "webChannel": null,
+              "image": null,
+              "_embedded": {
+                "nextepisode": {
+                  "id": 501,
+                  "season": 1,
+                  "number": 6,
+                  "airstamp": "not-a-date"
+                }
+              }
+            }
+            """#.utf8
+        )
+        let transport = RecordingTVMazeTransport(
+            responses: [TVMazeHTTPResponse(statusCode: 200, data: responseData)]
+        )
+        let client = TVMazeClient(
+            performRequest: { request in
+                try await transport.perform(request)
+            }
+        )
+
+        let show = try #require(await client.show(id: 90_814))
+        let requestURL = try #require(await transport.requests.first?.url)
+
+        #expect(requestURL.path == "/shows/90814")
+        #expect(queryValue(named: "embed", in: requestURL) == "nextepisode")
+        #expect(show.nextEpisodeAiring == nil)
     }
 
     @Test func titleSearchReturnsEveryCandidateInProviderRankOrder() async throws {

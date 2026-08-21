@@ -71,4 +71,37 @@ struct LibrarySyncNotificationBridgeTests {
 
         #expect(completionResult == .noData)
     }
+
+    @Test func episodeNotificationRouteAcceptsOnlyAniShelfEpisodeRequests() {
+        let payload: [AnyHashable: Any] = [
+            EpisodeNotificationPayloadKey.subscriptionID: "season:100:2:200"
+        ]
+
+        #expect(
+            LibrarySyncNotificationBridge.episodeNotificationRoute(
+                requestIdentifier: "AniShelf.Episode.season-100-2-200.501",
+                userInfo: payload
+            ) == "season:100:2:200"
+        )
+        #expect(
+            LibrarySyncNotificationBridge.episodeNotificationRoute(
+                requestIdentifier: "CloudKit.Remote",
+                userInfo: payload
+            ) == nil
+        )
+        #expect(
+            LibrarySyncNotificationBridge.episodeNotificationRoute(
+                requestIdentifier: "AniShelf.Episode.series-100.501",
+                userInfo: [:]
+            ) == nil
+        )
+    }
+
+    @Test func episodeNotificationBackgroundRefreshRequestsSixHourWindow() {
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        #expect(
+            LibrarySyncNotificationBridge.nextEpisodeNotificationRefreshDate(now: now)
+                == now.addingTimeInterval(6 * 60 * 60)
+        )
+    }
 }

@@ -22,8 +22,13 @@
 		<key>UISceneConfigurations</key>
 		<dict/>
 	</dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.samuelhe.MyAnimeList.episode-notification-refresh</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
+		<string>fetch</string>
 		<string>remote-notification</string>
 	</array>
 	<key>UTExportedTypeDeclarations</key>

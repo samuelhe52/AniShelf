@@ -23,6 +23,7 @@ struct LibraryView: View {
     @State private var detailSessionStore = EntryDetailSessionStore()
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(AppReviewPromptController.self) var appReview
+    @Environment(EpisodeNotificationCoordinator.self) private var episodeNotifications
 
     // UI state
     @State var isSearching = false
@@ -67,6 +68,7 @@ struct LibraryView: View {
             guard !newValue, store.groupStrategy == .score else { return }
             store.groupStrategy = .none
         }
+        .onAppear(perform: pruneEpisodeNotificationSubscriptions)
         .libraryDetailHostCoordination(
             store: store,
             interaction: interaction,
@@ -79,6 +81,7 @@ struct LibraryView: View {
         )
         .onChange(of: store.libraryRevision) {
             refreshSelectionDisplayItemsIfNeeded()
+            pruneEpisodeNotificationSubscriptions()
         }
         .onChange(of: store.filters) {
             refreshSelectionDisplayItemsIfNeeded()
@@ -94,6 +97,27 @@ struct LibraryView: View {
         }
         .onChange(of: store.hideDroppedByDefault) {
             refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(
+            of: episodeNotifications.pendingRouteEntryIdentityRawID,
+            initial: true
+        ) { _, entryIdentityRawID in
+            handleEpisodeNotificationRoute(entryIdentityRawID)
+        }
+        .alert(
+            notificationWarningTitle,
+            isPresented: Binding(
+                get: { episodeNotifications.presentedWarning != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        episodeNotifications.dismissPresentedWarning()
+                    }
+                }
+            )
+        ) {
+            Button("OK") { episodeNotifications.dismissPresentedWarning() }
+        } message: {
+            Text(notificationWarningMessage)
         }
     }
 
@@ -386,6 +410,46 @@ struct LibraryView: View {
         interaction.openDetails(for: entry)
     }
 
+    private func handleEpisodeNotificationRoute(_ entryIdentityRawID: String?) {
+        guard let entryIdentityRawID else { return }
+        defer { episodeNotifications.consumePendingRoute() }
+        guard let entry = store.repository.existingEntry(identityRawID: entryIdentityRawID) else {
+            return
+        }
+        isSearching = false
+        showProfileSettings = false
+        openDetails(entry)
+    }
+
+    private func pruneEpisodeNotificationSubscriptions() {
+        let validIDs = Set(store.library.map { $0.libraryIdentity.rawID })
+        Task {
+            await episodeNotifications.pruneSubscriptions(
+                validEntryIdentityRawIDs: validIDs
+            )
+        }
+    }
+
+    private var notificationWarningMessage: LocalizedStringResource {
+        switch episodeNotifications.presentedWarning {
+        case .queueLimit:
+            "iOS could not schedule every next-episode reminder. AniShelf kept the reminders with the nearest airtimes."
+        case .schedulingFailure:
+            "iOS rejected one or more episode reminders. Existing reminders were restored when possible."
+        case nil:
+            "Some episode reminders could not be scheduled."
+        }
+    }
+
+    private var notificationWarningTitle: LocalizedStringResource {
+        switch episodeNotifications.presentedWarning {
+        case .queueLimit:
+            "Notification Limit Reached"
+        case .schedulingFailure, nil:
+            "Episode Notification Issue"
+        }
+    }
+
     private func editDetails(_ entry: AnimeEntry) {
         prepareAndConfigureDetailHost(for: entry)
         interaction.setEditingEntry(entry)
@@ -479,4 +543,5 @@ struct LibraryView: View {
             DataProvider.forPreview.generateEntriesForPreview()
         }
         .environment(store)
+        .environment(EpisodeNotificationCoordinator())
 }

@@ -73,6 +73,15 @@ struct LibraryPreferenceDefaultsTests {
         #expect(!defaults.isBroadcastScheduleEnabled)
     }
 
+    @Test func testEpisodeNotificationPreferencesRemainDeviceLocal() {
+        #expect(!String.allPreferenceKeys.contains(.episodeNotificationSubscriptions))
+        #expect(!String.allPreferenceKeys.contains(.episodeNotificationLeadTimeMinutes))
+        #expect(!String.allPreferenceKeys.contains(.episodeNotificationWarning))
+        #expect(!String.cloudSyncedPreferenceKeys.contains(.episodeNotificationSubscriptions))
+        #expect(!String.cloudSyncedPreferenceKeys.contains(.episodeNotificationLeadTimeMinutes))
+        #expect(!String.cloudSyncedPreferenceKeys.contains(.episodeNotificationWarning))
+    }
+
     @Test func testSoftNavigationBarEdgesPreferenceDefaultsOn() {
         let suiteName = "MyAnimeListTests.SoftNavigationBarEdgesPreference"
         let defaults = UserDefaults(suiteName: suiteName)!
