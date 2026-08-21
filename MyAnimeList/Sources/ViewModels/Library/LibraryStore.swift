@@ -145,9 +145,15 @@ class LibraryStore {
         if !dataProvider.inMemory {
             setupCloudSyncedPreferencesMonitor()
         }
-        try? refreshLibrary()
-        if library.isEmpty {
-            notifyLibraryMembershipChange()
+        do {
+            try refreshLibrary()
+            if library.isEmpty {
+                notifyLibraryMembershipChange()
+            }
+        } catch {
+            libraryStoreLogger.fault(
+                "Initial library fetch failed: \(String(describing: error), privacy: .public)"
+            )
         }
         self.syncCoordinator = LibrarySyncCoordinator(store: self)
         setupLibrarySyncScheduling()
