@@ -13,8 +13,6 @@ import os
 @MainActor
 fileprivate enum LibrarySyncNotificationRouting {
     static var onSyncRequested: (() async -> UIBackgroundFetchResult)?
-    static var onEpisodeNotificationRefreshRequested: (() async -> Bool)?
-    static var onEpisodeNotificationResponse: ((String) -> Void)?
 }
 
 fileprivate let librarySyncNotificationLogger = Logger(
@@ -37,14 +35,6 @@ final class LibrarySyncNotificationBridge: NSObject, UIApplicationDelegate {
         _ handler: @escaping @MainActor () async -> UIBackgroundFetchResult
     ) {
         LibrarySyncNotificationRouting.onSyncRequested = handler
-    }
-
-    static func configureEpisodeNotificationHandlers(
-        refresh: @escaping @MainActor () async -> Bool,
-        response: @escaping @MainActor (String) -> Void
-    ) {
-        LibrarySyncNotificationRouting.onEpisodeNotificationRefreshRequested = refresh
-        LibrarySyncNotificationRouting.onEpisodeNotificationResponse = response
     }
 
     static func updateEpisodeNotificationBackgroundRefresh(hasSubscriptions: Bool) {
@@ -142,10 +132,7 @@ final class LibrarySyncNotificationBridge: NSObject, UIApplicationDelegate {
             Task { @MainActor in
                 Self.updateEpisodeNotificationBackgroundRefresh(hasSubscriptions: true)
                 let operation = Task { @MainActor in
-                    guard let handler = LibrarySyncNotificationRouting.onEpisodeNotificationRefreshRequested else {
-                        return false
-                    }
-                    return await handler()
+                    await EpisodeNotificationCoordinator.shared.refreshAll()
                 }
                 refreshTask.expirationHandler = {
                     operation.cancel()
@@ -189,7 +176,9 @@ extension LibrarySyncNotificationBridge: UNUserNotificationCenterDelegate {
             return
         }
         await MainActor.run {
-            LibrarySyncNotificationRouting.onEpisodeNotificationResponse?(entryIdentityRawID)
+            EpisodeNotificationCoordinator.shared.receiveNotificationRoute(
+                entryIdentityRawID: entryIdentityRawID
+            )
         }
     }
 }

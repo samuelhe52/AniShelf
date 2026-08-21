@@ -392,7 +392,6 @@ fileprivate struct BroadcastPolicyPreviewCase: Identifiable {
 
 #Preview("Broadcast Availability Policy") {
     EntryDetailBroadcastPolicyPreview()
-        .environment(EpisodeNotificationCoordinator.shared)
 }
 
 #Preview("Broadcast Confirmation Sheet") {

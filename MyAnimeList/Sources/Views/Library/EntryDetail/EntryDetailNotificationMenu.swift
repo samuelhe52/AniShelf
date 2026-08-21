@@ -18,7 +18,7 @@ struct EntryDetailNotificationContext {
 
 struct EntryDetailNotificationMenu: View {
     @Environment(\.openURL) private var openURL
-    @Environment(EpisodeNotificationCoordinator.self) private var notifications
+    private let notifications = EpisodeNotificationCoordinator.shared
 
     let context: EntryDetailNotificationContext
 

@@ -19,11 +19,12 @@ struct LibraryView: View {
     // MARK: - Stored Properties
 
     @Environment(LibraryStore.self) var store
-    @State var interaction = LibraryEntryInteractionState()
-    @State private var detailSessionStore = EntryDetailSessionStore()
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(AppReviewPromptController.self) var appReview
-    @Environment(EpisodeNotificationCoordinator.self) private var episodeNotifications
+    private let episodeNotifications = EpisodeNotificationCoordinator.shared
+
+    @State var interaction = LibraryEntryInteractionState()
+    @State private var detailSessionStore = EntryDetailSessionStore()
 
     // UI state
     @State var isSearching = false
@@ -532,5 +533,4 @@ struct LibraryView: View {
             DataProvider.forPreview.generateEntriesForPreview()
         }
         .environment(store)
-        .environment(EpisodeNotificationCoordinator.shared)
 }

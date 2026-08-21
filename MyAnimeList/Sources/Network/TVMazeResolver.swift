@@ -48,8 +48,7 @@ struct TVMazeResolver: Sendable {
     @MainActor
     init(
         tvMazeClient: TVMazeClient = TVMazeClient(),
-        mappingStore: TVMazeConfirmedMappingStore = .shared,
-        episodeNotifications: EpisodeNotificationCoordinator = .shared
+        mappingStore: TVMazeConfirmedMappingStore = .shared
     ) {
         self.init(
             loadMappedShowID: { tmdbSeriesID in
@@ -73,8 +72,8 @@ struct TVMazeResolver: Sendable {
             fetchShow: { tvMazeID in
                 try await tvMazeClient.show(id: tvMazeID)
             },
-            onConfirmedMappingReplacement: { [episodeNotifications] replacement in
-                await episodeNotifications.disableSubscriptions(
+            onConfirmedMappingReplacement: { replacement in
+                await EpisodeNotificationCoordinator.shared.disableSubscriptions(
                     forSeriesTMDbID: replacement.tmdbSeriesID,
                     matchingTVMazeShowID: replacement.previousShowID
                 )

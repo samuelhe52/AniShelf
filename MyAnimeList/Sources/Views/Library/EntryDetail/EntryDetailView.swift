@@ -13,7 +13,8 @@ import SwiftUI
 struct EntryDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppReviewPromptController.self) private var appReview
-    @Environment(EpisodeNotificationCoordinator.self) private var episodeNotifications
+    private let episodeNotifications = EpisodeNotificationCoordinator.shared
+
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
         Language.followsSystemPreference()

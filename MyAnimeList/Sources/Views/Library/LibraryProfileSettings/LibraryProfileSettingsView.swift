@@ -494,5 +494,4 @@ struct LibraryProfileSettingsView: View {
         .environment(store)
         .environment(SupportStore())
         .environment(WhatsNewController(currentVersion: "1.54"))
-        .environment(EpisodeNotificationCoordinator.shared)
 }

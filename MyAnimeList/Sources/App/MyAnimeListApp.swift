@@ -19,7 +19,6 @@ struct MyAnimeListApp: App {
     @State var whatsNew: WhatsNewController
     @State var supportStore: SupportStore
     @State private var appReview: AppReviewPromptController
-    @State private var episodeNotifications: EpisodeNotificationCoordinator
     @State private var startupRecovery: PersistentStoreRecovery?
     private let recoveryActivityGate: StartupRecoveryActivityGate
     @Environment(\.scenePhase) private var scenePhase
@@ -37,7 +36,6 @@ struct MyAnimeListApp: App {
         let recoveryActivityGate = StartupRecoveryActivityGate(
             isBlocked: startupRecovery != nil
         )
-        let episodeNotifications = EpisodeNotificationCoordinator.shared
         let libraryStore = LibraryStore(
             dataProvider: startupBootstrap.provider,
             hasTMDbAPIKey: {
@@ -55,7 +53,6 @@ struct MyAnimeListApp: App {
         _whatsNew = State(initialValue: whatsNew)
         _supportStore = State(initialValue: supportStore)
         _appReview = State(initialValue: appReview)
-        _episodeNotifications = State(initialValue: episodeNotifications)
         _startupRecovery = State(initialValue: startupRecovery)
         self.recoveryActivityGate = recoveryActivityGate
         RecoveryExportManager.cleanupAllTemporaryExports()
@@ -72,16 +69,6 @@ struct MyAnimeListApp: App {
                 return .failed
             }
         }
-        LibrarySyncNotificationBridge.configureEpisodeNotificationHandlers(
-            refresh: { [episodeNotifications] in
-                await episodeNotifications.refreshAll()
-            },
-            response: { [episodeNotifications] entryIdentityRawID in
-                episodeNotifications.receiveNotificationRoute(
-                    entryIdentityRawID: entryIdentityRawID
-                )
-            }
-        )
     }
 
     private static func startupRecovery(
@@ -117,7 +104,6 @@ struct MyAnimeListApp: App {
             .environment(whatsNew)
             .environment(supportStore)
             .environment(appReview)
-            .environment(episodeNotifications)
             .onAppear {
                 keyStorage.retryInitialLookupIfNeeded()
                 if startupRecovery == nil {
@@ -226,8 +212,8 @@ struct MyAnimeListApp: App {
 
     private func refreshEpisodeNotifications() {
         Task { @MainActor in
-            await episodeNotifications.reloadState()
-            _ = await episodeNotifications.refreshAll()
+            await EpisodeNotificationCoordinator.shared.reloadState()
+            _ = await EpisodeNotificationCoordinator.shared.refreshAll()
         }
     }
 

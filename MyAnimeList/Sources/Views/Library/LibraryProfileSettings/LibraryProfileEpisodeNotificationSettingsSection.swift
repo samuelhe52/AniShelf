@@ -9,7 +9,8 @@ import SwiftUI
 
 struct LibraryProfileEpisodeNotificationSettingsSection: View {
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(EpisodeNotificationCoordinator.self) private var notifications
+    private let notifications = EpisodeNotificationCoordinator.shared
+
     @State private var showCancelAllConfirmation = false
     @State private var showSubscriptionManagement = false
 

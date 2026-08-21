@@ -26,7 +26,7 @@ extension EpisodeNotificationSnapshot {
 }
 
 struct LibraryProfileEpisodeNotificationManagementPopover: View {
-    @Environment(EpisodeNotificationCoordinator.self) private var notifications
+    private let notifications = EpisodeNotificationCoordinator.shared
 
     @State private var isUnsubscribing: Bool = false
 
