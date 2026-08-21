@@ -400,8 +400,118 @@ struct EpisodeNotificationManagerTests {
         #expect(requests.count == EpisodeNotificationManager.maximumPendingRequestCount)
         #expect(grouped.count == EpisodeNotificationManager.maximumPendingRequestCount)
         #expect(grouped.values.allSatisfy { $0.count == 1 })
+        #expect(requests.map(\.tvMazeShowID) == Array(1...64))
         #expect(result.warning == .queueLimit)
         #expect((await manager.snapshot()).warning == .queueLimit)
+    }
+
+    @Test func refreshBoundsConcurrentProviderRequests() async throws {
+        let defaults = makeDefaults()
+        defer { removeDefaults(defaults) }
+        let subscriptions = (1...12).map { index in
+            EpisodeNotificationSubscription(
+                entryIdentityRawID: "series:\(index)",
+                tvMazeShowID: index,
+                displayTitle: "Anime \(index)",
+                seasonNumber: nil
+            )
+        }
+        defaults.set(
+            try JSONEncoder().encode(subscriptions),
+            forKey: .episodeNotificationSubscriptions
+        )
+        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let provider = ConcurrentEpisodeProviderProbe(now: now)
+        let manager = makeManager(defaults: defaults, center: center) { showID in
+            try await provider.nextEpisode(showID: showID)
+        }
+
+        let result = try await manager.refreshAll()
+
+        #expect(result.refreshedSubscriptionCount == subscriptions.count)
+        #expect(
+            await provider.maximumConcurrentRequestCount()
+                == EpisodeNotificationManager.maximumConcurrentProviderRequestCount
+        )
+    }
+
+    @Test func cancellationKeepsCompletedSubscriptionRefreshes() async throws {
+        let defaults = makeDefaults()
+        defer { removeDefaults(defaults) }
+        let fastSubscription = EpisodeNotificationSubscription(
+            entryIdentityRawID: "series:100",
+            tvMazeShowID: 70,
+            displayTitle: "Fast Anime",
+            seasonNumber: nil
+        )
+        let slowSubscription = EpisodeNotificationSubscription(
+            entryIdentityRawID: "series:101",
+            tvMazeShowID: 71,
+            displayTitle: "Slow Anime",
+            seasonNumber: nil
+        )
+        defaults.set(
+            try JSONEncoder().encode([fastSubscription, slowSubscription]),
+            forKey: .episodeNotificationSubscriptions
+        )
+        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        try await center.add(
+            makeRequest(
+                for: fastSubscription,
+                episode: makeEpisode(
+                    season: 1,
+                    number: 1,
+                    airStamp: now.addingTimeInterval(86_400)
+                )
+            )
+        )
+        try await center.add(
+            makeRequest(
+                for: slowSubscription,
+                episode: makeEpisode(
+                    season: 1,
+                    number: 1,
+                    airStamp: now.addingTimeInterval(86_400)
+                )
+            )
+        )
+        let manager = makeManager(defaults: defaults, center: center) { showID in
+            if showID == fastSubscription.tvMazeShowID {
+                return makeEpisode(
+                    season: 1,
+                    number: 2,
+                    airStamp: now.addingTimeInterval(172_800)
+                )
+            }
+            try await Task.sleep(for: .seconds(60))
+            return makeEpisode(
+                season: 1,
+                number: 2,
+                airStamp: now.addingTimeInterval(172_800)
+            )
+        }
+
+        let refresh = Task {
+            try await manager.refreshAll()
+        }
+        let didCommitFastRefresh = await waitUntil {
+            await center.allRequests().contains {
+                $0.subscriptionID == fastSubscription.id && $0.episodeNumber == 2
+            }
+        }
+        #expect(didCommitFastRefresh)
+
+        refresh.cancel()
+        do {
+            _ = try await refresh.value
+            Issue.record("Expected the refresh to be cancelled")
+        } catch is CancellationError {
+            // Expected.
+        }
+
+        let requests = await center.allRequests()
+        #expect(requests.first { $0.subscriptionID == fastSubscription.id }?.episodeNumber == 2)
+        #expect(requests.first { $0.subscriptionID == slowSubscription.id }?.episodeNumber == 1)
     }
 
     @Test func schedulingFailureRestoresPreviousPendingRequests() async throws {
@@ -495,8 +605,15 @@ struct EpisodeNotificationManagerTests {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
         let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
-        let manager = makeManager(defaults: defaults, center: center) { _ in
-            makeEpisode(season: 1, number: 1, airStamp: now.addingTimeInterval(86_400))
+        let provider = EpisodeProviderProbe(
+            nextEpisode: makeEpisode(
+                season: 1,
+                number: 1,
+                airStamp: now.addingTimeInterval(86_400)
+            )
+        )
+        let manager = makeManager(defaults: defaults, center: center) { showID in
+            try await provider.nextEpisode(showID: showID)
         }
         let identity = LibraryEntryIdentity(entryType: .series, tmdbID: 100)
 
@@ -505,6 +622,9 @@ struct EpisodeNotificationManagerTests {
             showID: 70,
             displayTitle: "Cancelable Anime",
             seasonNumber: nil
+        )
+        await provider.setNextEpisode(
+            makeEpisode(season: 1, number: 2, airStamp: now.addingTimeInterval(172_800))
         )
         await center.pauseNextAdd()
 
@@ -579,6 +699,33 @@ struct EpisodeNotificationManagerTests {
             return
         }
         defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    private func makeRequest(
+        for subscription: EpisodeNotificationSubscription,
+        episode: TVMazeNextEpisodeAiring
+    ) -> EpisodeNotificationRequest {
+        EpisodeNotificationRequest(
+            identifier: "AniShelf.Episode.\(subscription.id.replacingOccurrences(of: ":", with: "-"))",
+            title: subscription.displayTitle,
+            body: "Test reminder",
+            subscriptionID: subscription.id,
+            tvMazeShowID: subscription.tvMazeShowID,
+            seasonNumber: episode.seasonNumber,
+            episodeNumber: episode.episodeNumber,
+            airStamp: episode.airStamp,
+            fireDate: episode.airStamp.addingTimeInterval(-15 * 60)
+        )
+    }
+
+    private func waitUntil(
+        _ condition: @escaping @Sendable () async -> Bool
+    ) async -> Bool {
+        for _ in 0..<500 {
+            if await condition() { return true }
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        return false
     }
 }
 
@@ -705,6 +852,33 @@ private actor EpisodeProviderProbe {
 
     func requestCount() -> Int {
         requests
+    }
+}
+
+private actor ConcurrentEpisodeProviderProbe {
+    private let now: Date
+    private var activeRequestCount = 0
+    private var maximumActiveRequestCount = 0
+
+    init(now: Date) {
+        self.now = now
+    }
+
+    func nextEpisode(showID: Int) async throws -> TVMazeNextEpisodeAiring? {
+        activeRequestCount += 1
+        maximumActiveRequestCount = max(maximumActiveRequestCount, activeRequestCount)
+        defer { activeRequestCount -= 1 }
+
+        try await Task.sleep(for: .milliseconds(50))
+        return makeEpisode(
+            season: 1,
+            number: 1,
+            airStamp: now.addingTimeInterval(86_400 + TimeInterval(showID))
+        )
+    }
+
+    func maximumConcurrentRequestCount() -> Int {
+        maximumActiveRequestCount
     }
 }
 

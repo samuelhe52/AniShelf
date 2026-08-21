@@ -248,6 +248,7 @@ enum EpisodeNotificationPayloadKey {
 actor EpisodeNotificationManager {
     static let requestIdentifierPrefix = "AniShelf.Episode."
     static let maximumPendingRequestCount = 64
+    static let maximumConcurrentProviderRequestCount = 6
 
     private struct Candidate: Equatable, Sendable {
         let subscription: EpisodeNotificationSubscription
@@ -257,6 +258,12 @@ actor EpisodeNotificationManager {
         var identifier: String {
             EpisodeNotificationManager.requestIdentifier(subscriptionID: subscription.id)
         }
+    }
+
+    private struct ProviderRefreshResult: Sendable {
+        let showID: Int
+        let episode: TVMazeNextEpisodeAiring?
+        let failed: Bool
     }
 
     private let defaults: UserDefaults
@@ -421,61 +428,98 @@ actor EpisodeNotificationManager {
             )
         }
 
-        var nextEpisodesByShowID: [Int: TVMazeNextEpisodeAiring] = [:]
-        var failedShowIDs = Set<Int>()
-
-        for showID in Set(currentSubscriptions.map(\.tvMazeShowID)).sorted() {
-            do {
-                nextEpisodesByShowID[showID] = try await fetchNextEpisode(showID)
-            } catch is CancellationError {
-                throw CancellationError()
-            } catch {
-                failedShowIDs.insert(showID)
-            }
-        }
-
-        let failedSubscriptionIDs = Set(
-            currentSubscriptions
-                .filter {
-                    subscriptions[$0.id] == $0
-                        && failedShowIDs.contains($0.tvMazeShowID)
-                }
-                .map(\.id)
-        )
-        let successfulSubscriptions = currentSubscriptions.filter {
-            subscriptions[$0.id] == $0
-                && !failedShowIDs.contains($0.tvMazeShowID)
-        }
-        let retainedRequests = existingRequests.filter {
-            failedSubscriptionIDs.contains($0.subscriptionID) && $0.fireDate > now()
-        }
-        let candidateLimit = max(0, Self.maximumPendingRequestCount - retainedRequests.count)
-        let candidates = successfulSubscriptions.compactMap { subscription in
-            candidate(
-                for: subscription,
-                episode: nextEpisodesByShowID[subscription.tvMazeShowID]
-            )
-        }
-        let selectedCandidates = Array(candidates.sorted(by: Self.candidateOrdering).prefix(candidateLimit))
-        let overflowed = selectedCandidates.count < candidates.count
+        let showIDs = Set(currentSubscriptions.map(\.tvMazeShowID)).sorted()
+        let fetchNextEpisode = fetchNextEpisode
+        var refreshedSubscriptions: [String: EpisodeNotificationSubscription] = [:]
+        var failedSubscriptions: [String: EpisodeNotificationSubscription] = [:]
+        var refreshedCandidates: [String: Candidate] = [:]
+        var overflowed = false
 
         do {
-            try await replaceRequests(
-                for: Set(successfulSubscriptions.map(\.id)),
-                with: selectedCandidates,
-                preserving: existingRequests
-            )
+            try await withThrowingTaskGroup(of: ProviderRefreshResult.self) { group in
+                var showIDIterator = showIDs.makeIterator()
+
+                for _ in 0..<min(Self.maximumConcurrentProviderRequestCount, showIDs.count) {
+                    guard let showID = showIDIterator.next() else { break }
+                    group.addTask {
+                        try await Self.providerRefreshResult(
+                            for: showID,
+                            fetchNextEpisode: fetchNextEpisode
+                        )
+                    }
+                }
+
+                while let result = try await group.next() {
+                    try Task.checkCancellation()
+                    let matchingSubscriptions = currentSubscriptions.filter {
+                        $0.tvMazeShowID == result.showID && subscriptions[$0.id] == $0
+                    }
+
+                    if result.failed {
+                        for subscription in matchingSubscriptions {
+                            failedSubscriptions[subscription.id] = subscription
+                        }
+                    } else {
+                        for subscription in matchingSubscriptions {
+                            refreshedSubscriptions[subscription.id] = subscription
+                            if let candidate = candidate(for: subscription, episode: result.episode) {
+                                refreshedCandidates[subscription.id] = candidate
+                            } else {
+                                refreshedCandidates.removeValue(forKey: subscription.id)
+                            }
+                        }
+                        overflowed = try await reconcileRequests(
+                            refreshedSubscriptions: refreshedSubscriptions,
+                            candidates: refreshedCandidates
+                        )
+                        storedWarning = overflowed ? .queueLimit : nil
+                    }
+
+                    if let showID = showIDIterator.next() {
+                        group.addTask {
+                            try await Self.providerRefreshResult(
+                                for: showID,
+                                fetchNextEpisode: fetchNextEpisode
+                            )
+                        }
+                    }
+                }
+            }
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             storedWarning = .schedulingFailure
             throw EpisodeNotificationManagerError.schedulingFailed
         }
 
+        let refreshedSubscriptionCount = refreshedSubscriptions.values.count {
+            subscriptions[$0.id] == $0
+        }
+        let failedSubscriptionCount = failedSubscriptions.values.count {
+            subscriptions[$0.id] == $0
+        }
+
         storedWarning = overflowed ? .queueLimit : nil
         return EpisodeNotificationRefreshResult(
-            refreshedSubscriptionCount: successfulSubscriptions.count,
-            failedSubscriptionCount: failedSubscriptionIDs.count,
+            refreshedSubscriptionCount: refreshedSubscriptionCount,
+            failedSubscriptionCount: failedSubscriptionCount,
             warning: storedWarning
         )
+    }
+
+    private static func providerRefreshResult(
+        for showID: Int,
+        fetchNextEpisode: @Sendable (Int) async throws -> TVMazeNextEpisodeAiring?
+    ) async throws -> ProviderRefreshResult {
+        do {
+            let episode = try await fetchNextEpisode(showID)
+            try Task.checkCancellation()
+            return ProviderRefreshResult(showID: showID, episode: episode, failed: false)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            return ProviderRefreshResult(showID: showID, episode: nil, failed: true)
+        }
     }
 
     private var leadTime: EpisodeNotificationLeadTime {
@@ -512,28 +556,69 @@ actor EpisodeNotificationManager {
         return Candidate(subscription: subscription, episode: episode, fireDate: fireDate)
     }
 
+    private func reconcileRequests(
+        refreshedSubscriptions: [String: EpisodeNotificationSubscription],
+        candidates: [String: Candidate]
+    ) async throws -> Bool {
+        let activeRefreshedSubscriptionIDs = Set(
+            refreshedSubscriptions.values
+                .filter { subscriptions[$0.id] == $0 }
+                .map(\.id)
+        )
+        let existingRequests = await notificationCenter.pendingRequests()
+        let retainedRequests = existingRequests.filter {
+            !activeRefreshedSubscriptionIDs.contains($0.subscriptionID)
+                && $0.fireDate > now()
+                && currentSubscription(for: $0) != nil
+        }
+        let replacementRequests = candidates.values
+            .filter { subscriptions[$0.subscription.id] == $0.subscription }
+            .map(makeRequest)
+        let requestedQueue = (retainedRequests + replacementRequests)
+            .sorted(by: Self.requestOrdering)
+        let selectedRequests = Array(requestedQueue.prefix(Self.maximumPendingRequestCount))
+
+        try await replaceRequests(with: selectedRequests, preserving: existingRequests)
+        return selectedRequests.count < requestedQueue.count
+    }
+
     private func replaceRequests(
-        for subscriptionIDs: Set<String>,
-        with candidates: [Candidate],
+        with desiredRequests: [EpisodeNotificationRequest],
         preserving existingRequests: [EpisodeNotificationRequest]
     ) async throws {
-        let previousRequests = existingRequests.filter {
-            subscriptionIDs.contains($0.subscriptionID)
+        let desiredRequestsByID = Dictionary(
+            uniqueKeysWithValues: desiredRequests.map { ($0.identifier, $0) }
+        )
+        let existingRequestsByID = Dictionary(
+            uniqueKeysWithValues: existingRequests.map { ($0.identifier, $0) }
+        )
+        let removedRequests = existingRequests.filter {
+            desiredRequestsByID[$0.identifier] == nil
         }
-        let replacementRequests = candidates.map(makeRequest)
+        let replacementRequests = desiredRequests.filter {
+            existingRequestsByID[$0.identifier] != $0
+        }
+        let previousReplacementRequests = replacementRequests.compactMap {
+            existingRequestsByID[$0.identifier]
+        }
+        var scheduledRequestIdentifiers: [String] = []
+
         await notificationCenter.removePendingRequests(
-            withIdentifiers: previousRequests.map(\.identifier)
+            withIdentifiers: removedRequests.map(\.identifier)
         )
 
         do {
-            for (candidate, request) in zip(candidates, replacementRequests) {
-                _ = try await schedule(request, whileSubscriptionRemains: candidate.subscription)
+            for request in replacementRequests {
+                guard let subscription = currentSubscription(for: request) else { continue }
+                if try await schedule(request, whileSubscriptionRemains: subscription) {
+                    scheduledRequestIdentifiers.append(request.identifier)
+                }
             }
         } catch {
             await notificationCenter.removePendingRequests(
-                withIdentifiers: replacementRequests.map(\.identifier)
+                withIdentifiers: scheduledRequestIdentifiers
             )
-            for request in previousRequests where request.fireDate > now() {
+            for request in removedRequests + previousReplacementRequests where request.fireDate > now() {
                 guard let subscription = currentSubscription(for: request) else { continue }
                 _ = try? await schedule(request, whileSubscriptionRemains: subscription)
             }
@@ -649,9 +734,12 @@ actor EpisodeNotificationManager {
         )
     }
 
-    private static func candidateOrdering(_ lhs: Candidate, _ rhs: Candidate) -> Bool {
+    private static func requestOrdering(
+        _ lhs: EpisodeNotificationRequest,
+        _ rhs: EpisodeNotificationRequest
+    ) -> Bool {
         if lhs.fireDate != rhs.fireDate { return lhs.fireDate < rhs.fireDate }
-        return lhs.subscription.id < rhs.subscription.id
+        return lhs.subscriptionID < rhs.subscriptionID
     }
 
     private static func requestIdentifier(subscriptionID: String) -> String {
