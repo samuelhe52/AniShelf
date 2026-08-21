@@ -359,8 +359,8 @@ actor EpisodeNotificationManager {
     }
 
     func setLeadTime(_ newValue: EpisodeNotificationLeadTime) async throws {
+        try await rebuildPendingRequests(for: newValue)
         defaults.set(newValue.rawValue, forKey: .episodeNotificationLeadTimeMinutes)
-        try await rebuildPendingRequestsForLeadTime()
         let refreshResult = try await refreshAll()
         if refreshResult.failedSubscriptionCount > 0 {
             throw EpisodeNotificationManagerError.refreshFailed
@@ -510,7 +510,7 @@ actor EpisodeNotificationManager {
         }
     }
 
-    private func rebuildPendingRequestsForLeadTime() async throws {
+    private func rebuildPendingRequests(for leadTime: EpisodeNotificationLeadTime) async throws {
         let pendingRequests = await notificationCenter.pendingRequests()
         let leadSeconds = TimeInterval(leadTime.rawValue * 60)
         let rebuilt = pendingRequests.compactMap { request -> EpisodeNotificationRequest? in

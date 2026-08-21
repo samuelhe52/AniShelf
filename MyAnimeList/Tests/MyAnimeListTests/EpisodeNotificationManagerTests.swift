@@ -215,6 +215,40 @@ struct EpisodeNotificationManagerTests {
         #expect((await manager.snapshot()).leadTime == .oneHour)
     }
 
+    @Test func failedLeadTimeRebuildPreservesPreviousLeadTimeAndPendingRequest() async throws {
+        let defaults = makeDefaults()
+        defer { removeDefaults(defaults) }
+        defaults.set(
+            EpisodeNotificationLeadTime.fiveMinutes.rawValue,
+            forKey: .episodeNotificationLeadTimeMinutes
+        )
+        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let airStamp = now.addingTimeInterval(86_400)
+        let manager = makeManager(defaults: defaults, center: center) { _ in
+            makeEpisode(season: 1, number: 1, airStamp: airStamp)
+        }
+
+        _ = try await manager.enable(
+            entryIdentity: LibraryEntryIdentity(entryType: .series, tmdbID: 100),
+            showID: 70,
+            displayTitle: "Rollback Anime",
+            seasonNumber: nil
+        )
+        let previousRequests = await center.allRequests()
+        await center.failNextAdds(1)
+
+        await #expect(throws: EpisodeNotificationManagerError.self) {
+            try await manager.setLeadTime(.oneHour)
+        }
+
+        #expect(await center.allRequests() == previousRequests)
+        #expect((await manager.snapshot()).leadTime == .fiveMinutes)
+        #expect(
+            defaults.integer(forKey: .episodeNotificationLeadTimeMinutes)
+                == EpisodeNotificationLeadTime.fiveMinutes.rawValue
+        )
+    }
+
     @Test func failedRefreshPreservesExistingRequestsAndDisableCancelsOnlyItsSubscription() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
