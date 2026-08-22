@@ -74,53 +74,67 @@ struct LibraryProfileEpisodeNotificationManagementPopover: View {
     }
 
     private func subscriptionRow(_ item: EpisodeNotificationManagementItem) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.subscription.displayTitle)
                     .font(.headline)
                     .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 if let seasonNumber = item.subscription.seasonNumber {
                     Text("Season \(seasonNumber)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-            }
-
-            HStack(alignment: .bottom, spacing: 12) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Label("Next Reminder", systemImage: "calendar.badge.clock")
+                HStack(alignment: .center, spacing: 9) {
+                    Image(systemName: "calendar.badge.clock")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.orange)
+                        .frame(width: 28, height: 28)
+                        .background {
+                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                .fill(.orange.opacity(0.10))
+                        }
 
-                    if let nextReminder = item.nextReminder {
-                        Text(
-                            verbatim: nextReminder.fireDate.formatted(
-                                date: .abbreviated,
-                                time: .shortened
-                            )
-                        )
-                        .font(.subheadline)
-                    } else {
-                        Text("No Upcoming Notification")
-                            .font(.subheadline)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Next Reminder")
+                            .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
+
+                        if let nextReminder = item.nextReminder {
+                            Text(
+                                verbatim: nextReminder.fireDate.formatted(
+                                    date: .abbreviated,
+                                    time: .shortened
+                                )
+                            )
+                            .font(.subheadline)
+                            .lineLimit(1)
+                        } else {
+                            Text("No Upcoming Notification")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
                     }
                 }
-
-                Spacer(minLength: 0)
-
-                Button(role: .destructive) {
-                    unsubscribe(item.subscription)
-                } label: {
-                    Label("Remove", systemImage: "bell.slash")
-                        .foregroundStyle(.red)
-                }
-                .buttonStyle(.bordered)
-                .tint(.red)
-                .accessibilityLabel(Text("Unsubscribe from \(item.subscription.displayTitle)"))
-                .accessibilityHint(Text("Removes this subscription and its pending reminder."))
+                .padding(.top, 7)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button(role: .destructive) {
+                unsubscribe(item.subscription)
+            } label: {
+                Label("Remove", systemImage: "bell.slash")
+                    .foregroundStyle(.red)
+                    .lineLimit(1)
+            }
+            .buttonStyle(.bordered)
+            .tint(.red)
+            .frame(width: 96)
+            .accessibilityLabel(Text("Unsubscribe from \(item.subscription.displayTitle)"))
+            .accessibilityHint(Text("Removes this subscription and its pending reminder."))
         }
     }
 

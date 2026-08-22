@@ -9,10 +9,12 @@ import SwiftUI
 
 struct LibraryProfileEpisodeNotificationSettingsSection: View {
     @Environment(\.scenePhase) private var scenePhase
+    private static let minimumRefreshFeedbackDuration = Duration.milliseconds(650)
     private let notifications = EpisodeNotificationCoordinator.shared
 
     @State private var showCancelAllConfirmation = false
     @State private var showSubscriptionManagement = false
+    @State private var isRefreshFeedbackVisible = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -43,14 +45,7 @@ struct LibraryProfileEpisodeNotificationSettingsSection: View {
                 .disabled(notifications.isRefreshing)
             }
 
-            HStack(spacing: 10) {
-                reminderCount(
-                    title: "Subscriptions",
-                    value: notifications.snapshot.subscriptions.count,
-                    systemImage: "bell.badge"
-                )
-                manageSubscriptionsButton
-            }
+            subscriptionsManagementButton
 
             if notifications.snapshot.warning != nil {
                 Label(
@@ -69,11 +64,12 @@ struct LibraryProfileEpisodeNotificationSettingsSection: View {
 
             HStack(spacing: 10) {
                 Button("Refresh", systemImage: "arrow.clockwise") {
-                    Task { _ = await notifications.refreshAll() }
+                    refreshNotifications()
                 }
                 .buttonStyle(LibraryProfileCommandButtonStyle(tint: .orange, filled: false))
                 .disabled(
                     notifications.isRefreshing
+                        || isRefreshFeedbackVisible
                         || notifications.snapshot.subscriptions.isEmpty
                         || !notifications.snapshot.authorizationStatus.allowsScheduling
                 )
@@ -106,22 +102,49 @@ struct LibraryProfileEpisodeNotificationSettingsSection: View {
         }
     }
 
-    private var manageSubscriptionsButton: some View {
+    private func refreshNotifications() {
+        isRefreshFeedbackVisible = true
+        Task { @MainActor in
+            let clock = ContinuousClock()
+            let deadline = clock.now.advanced(by: Self.minimumRefreshFeedbackDuration)
+
+            _ = await notifications.refreshAll()
+
+            if clock.now < deadline {
+                try? await clock.sleep(until: deadline)
+            }
+            isRefreshFeedbackVisible = false
+        }
+    }
+
+    private var subscriptionsManagementButton: some View {
         Button {
             showSubscriptionManagement = true
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: "list.bullet")
+                Image(systemName: "bell.badge")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.orange)
 
-                Text("Manage Subscriptions")
-                    .font(.caption.weight(.semibold))
+                Text("Subscriptions")
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
                     .lineLimit(2)
 
-                Spacer(minLength: 0)
+                Spacer(minLength: 8)
+
+                Text("\(notifications.snapshot.subscriptions.count)")
+                    .font(.footnote.weight(.bold))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background {
+                        Capsule(style: .continuous)
+                            .fill(.orange.opacity(0.12))
+                    }
 
                 Image(systemName: "chevron.right")
                     .font(.caption2.weight(.semibold))
@@ -141,43 +164,11 @@ struct LibraryProfileEpisodeNotificationSettingsSection: View {
             .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(Text("Manage Subscriptions"))
+        .accessibilityValue(Text("\(notifications.snapshot.subscriptions.count)"))
         .popover(isPresented: $showSubscriptionManagement) {
             LibraryProfileEpisodeNotificationManagementPopover()
                 .presentationCompactAdaptation(.popover)
-        }
-    }
-
-    private func reminderCount(
-        title: LocalizedStringResource,
-        value: Int,
-        systemImage: String
-    ) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: systemImage)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.orange)
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                Text("\(value)")
-                    .font(.headline.weight(.bold))
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 11)
-        .padding(.vertical, 9)
-        .background {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(.orange.opacity(0.07))
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(.orange.opacity(0.12), lineWidth: 1)
         }
     }
 
