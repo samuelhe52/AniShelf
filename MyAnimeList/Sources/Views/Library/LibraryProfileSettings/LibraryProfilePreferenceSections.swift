@@ -127,7 +127,7 @@ struct LibraryProfilePreferencesSection: View {
             } label: {
                 LibraryProfileSelectionCapsule(
                     title: defaultNewEntryWatchStatus.localizedStringResource,
-                    tint: defaultNewEntryWatchStatus.defaultPickerTintColor
+                    tint: .mint
                 )
             }
         }

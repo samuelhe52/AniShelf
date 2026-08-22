@@ -9,7 +9,7 @@ import SwiftUI
 
 struct LibraryProfileEpisodeNotificationSettingsSection: View {
     @Environment(\.scenePhase) private var scenePhase
-    private static let minimumRefreshFeedbackDuration = Duration.milliseconds(650)
+    private static let minimumRefreshFeedbackDuration = Duration.milliseconds(600)
     private let notifications = EpisodeNotificationCoordinator.shared
 
     @State private var showCancelAllConfirmation = false
@@ -66,7 +66,7 @@ struct LibraryProfileEpisodeNotificationSettingsSection: View {
                 Button("Refresh", systemImage: "arrow.clockwise") {
                     refreshNotifications()
                 }
-                .buttonStyle(LibraryProfileCommandButtonStyle(tint: .orange, filled: false))
+                .buttonStyle(LibraryProfileCommandButtonStyle(tint: .cyan, filled: false))
                 .disabled(
                     notifications.isRefreshing
                         || isRefreshFeedbackVisible
