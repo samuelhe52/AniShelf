@@ -5,7 +5,6 @@
 - Use the Makefile for routine tasks: `make clean`, `make refresh-packages`, `make format`, `make lint`, `make build`, `make test-sim`, and `make run-sim`.
 - Use `make test-sim` for broad simulator-based validation. Use `make run-sim` when validating app runtime or UI behavior, unless the user explicitly asks for device-based verification.
 - Use `make run-device` for build, install, and launch on a connected iPhone only when the user explicitly asks for device-based verification.
-- If visual feedback is needed for a device run, use `make run-device`, then use Computer Use to open iPhone Mirroring or Quicktime and inspect the launched app there. Default to Quicktime, unless the user dictates otherwise.
 - Prefer the smallest relevant build or test command before broad verification.
 - If the user asks to perform a change in a new worktree, create that worktree under ../AniShelf-worktrees/.
 - Do not use any of the `openspec` workflows unless the user explicitly requests it.

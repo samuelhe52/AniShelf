@@ -59,9 +59,6 @@ struct LibraryProfileEpisodeNotificationManagementPopover: View {
             } else {
                 List(items) { item in
                     subscriptionRow(item)
-                        .listRowInsets(
-                            EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16)
-                        )
                         .transition(.opacity)
                 }
                 .listStyle(.plain)
@@ -69,7 +66,7 @@ struct LibraryProfileEpisodeNotificationManagementPopover: View {
             }
         }
         // Keep the presented popover from resizing while rows transition out.
-        .frame(height: 320)
+        .frame(height: 360)
         .animation(.default, value: items)
     }
 
@@ -109,7 +106,7 @@ struct LibraryProfileEpisodeNotificationManagementPopover: View {
                                     time: .shortened
                                 )
                             )
-                            .font(.subheadline)
+                            .font(.footnote)
                             .lineLimit(1)
                         } else {
                             Text("No Upcoming Notification")
@@ -126,13 +123,10 @@ struct LibraryProfileEpisodeNotificationManagementPopover: View {
             Button(role: .destructive) {
                 unsubscribe(item.subscription)
             } label: {
-                Label("Remove", systemImage: "bell.slash")
-                    .foregroundStyle(.red)
-                    .lineLimit(1)
+                Image(systemName: "bell.slash")
             }
-            .buttonStyle(.bordered)
-            .tint(.red)
-            .frame(width: 96)
+            .buttonStyle(.glassProminent)
+            .buttonBorderShape(.circle)
             .accessibilityLabel(Text("Unsubscribe from \(item.subscription.displayTitle)"))
             .accessibilityHint(Text("Removes this subscription and its pending reminder."))
         }
