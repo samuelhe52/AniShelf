@@ -38,6 +38,9 @@ func makeStore(
     var status = LibraryCloudSyncStatus.defaultValue
     status.isEnabled = enabled
     status.bootstrapState = bootstrapState
+    if bootstrapState == .completed {
+        status.lastCompletedScope = makeSyncScope()
+    }
     preferences.saveCloudSyncStatus(status)
     return LibraryStore(
         dataProvider: DataProvider(inMemory: true),
@@ -193,6 +196,12 @@ func makeNamespace() -> CloudLibrarySyncChangeTokenStore.Namespace {
         containerIdentifier: CloudLibrarySyncClient.defaultContainerIdentifier,
         accountIdentifier: "test-account"
     )
+}
+
+func makeSyncScope(
+    namespace: CloudLibrarySyncChangeTokenStore.Namespace = makeNamespace()
+) -> LibraryCloudSyncScope {
+    LibraryCloudSyncScope(namespace: namespace)
 }
 
 func makeToken() -> CKServerChangeToken {

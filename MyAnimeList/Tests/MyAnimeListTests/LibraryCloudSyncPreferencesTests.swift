@@ -39,11 +39,13 @@ struct LibraryCloudSyncPreferencesTests {
         let preferences = LibraryPreferences(defaults: defaults)
         var status = LibraryCloudSyncStatus.defaultValue
         status.currentPhase = .remoteFetch
+        status.lastCompletedScope = makeSyncScope()
 
         preferences.saveCloudSyncStatus(status)
 
         #expect(defaults.string(forKey: .libraryCloudSyncCurrentPhase) == "syncing")
         #expect(preferences.load().cloudSyncStatus.currentPhase == .syncing)
+        #expect(preferences.load().cloudSyncStatus.lastCompletedScope == makeSyncScope())
 
         defaults.set("prepareZoneSubscription", forKey: .libraryCloudSyncCurrentPhase)
         #expect(preferences.load().cloudSyncStatus.currentPhase == .preparing)

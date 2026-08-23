@@ -59,6 +59,7 @@ extension String {
         "LibraryCloudSyncLastReconciledCloudSyncedSettingsUpdatedAt"
     static let libraryCloudSyncLastFailureReason = "LibraryCloudSyncLastFailureReason"
     static let libraryCloudSyncDegradedReason = "LibraryCloudSyncDegradedReason"
+    static let libraryCloudSyncLastCompletedScope = "LibraryCloudSyncLastCompletedScope"
     static let libraryCloudSyncedDefaultsUpdatedAt = "LibraryCloudSyncedDefaultsUpdatedAt"
     static let useTMDbRelayServer = "UseTMDbRelayServer"
     static let lastSeenWhatsNewVersion = "LastSeenWhatsNewVersion"

@@ -6084,6 +6084,54 @@
         }
       }
     },
+    "Rebuild" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再構築"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重建"
+          }
+        }
+      }
+    },
+    "Rebuild iCloud Sync" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud同期を再構築"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重建 iCloud 同步"
+          }
+        }
+      }
+    },
+    "Rebuild iCloud Sync?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud同期を再構築しますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重建 iCloud 同步？"
+          }
+        }
+      }
+    },
     "Reduced disk usage. Existing users can optionally clear cache and reload metadata from Settings to reclaim more storage." : {
       "localizations" : {
         "ja" : {
@@ -6096,6 +6144,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "优化了磁盘占用。现有用户可按需在设置中清空缓存并重新加载元数据，以进一步减小占用空间。"
+          }
+        }
+      }
+    },
+    "Refetch and reconcile your iCloud library with your local library." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloudライブラリを再取得し、ローカルライブラリと同期し直します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新获取 iCloud 资料库，并与本地资料库重新同步。"
+          }
+        }
+      }
+    },
+    "Refetch and reconcile your iCloud library with your local library. This may resolve some iCloud sync issues." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloudライブラリを再取得し、ローカルライブラリと同期し直します。これにより、一部のiCloud同期の問題が解決する場合があります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新获取 iCloud 资料库，并与本地资料库重新同步。这可能会解决一些 iCloud 同步问题。"
           }
         }
       }
@@ -9314,6 +9394,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在新密钥保存前，现有密钥仍然有效。"
+          }
+        }
+      }
+    },
+    "Your iCloud account changed while iCloud Sync was starting. Try again to rebuild sync for the new account." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud同期の開始中にiCloudアカウントが変更されました。新しいアカウント用に同期を再構築するには、もう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud 同步启动时，你的 iCloud 账户发生了变化。请重试，以便为新账户重建同步。"
           }
         }
       }

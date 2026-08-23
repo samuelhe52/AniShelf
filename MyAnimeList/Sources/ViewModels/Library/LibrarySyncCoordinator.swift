@@ -184,6 +184,41 @@ final class LibrarySyncCoordinator {
             return .skipped(blockedReason)
         }
 
+        var scopeRequiringBootstrap: LibraryCloudSyncScope?
+        do {
+            scopeRequiringBootstrap = try await currentScopeRequiringBootstrap(store: store)
+        } catch {
+            // Continue through the normal pipeline so the existing phase and
+            // failure reporting path records the namespace-resolution error.
+        }
+
+        guard !Task.isCancelled else { return .skipped(.disabled) }
+        if let queuedResult = await syncGate.waitForRunningPass() {
+            librarySyncCoordinatorLogger.info(
+                "Queued iCloud library sync for \(trigger.rawValue, privacy: .public) because another sync started during scope resolution."
+            )
+            return queuedResult
+        }
+        if let blockedReason = store.libraryCloudSyncPolicyBlockReason() {
+            store.recordLibraryCloudSyncSkipped(
+                trigger: trigger,
+                reason: blockedReason,
+                at: dateProvider()
+            )
+            librarySyncCoordinatorLogger.info(
+                "Skipped iCloud library sync for \(trigger.rawValue, privacy: .public) because policy changed during scope resolution: \(blockedReason.rawValue, privacy: .public)."
+            )
+            return .skipped(blockedReason)
+        }
+        if let scopeRequiringBootstrap,
+            store.libraryCloudSyncStatus.lastCompletedScope != scopeRequiringBootstrap
+        {
+            librarySyncCoordinatorLogger.info(
+                "Starting iCloud library bootstrap because the active sync scope differs from the last completed scope."
+            )
+            return await store.bootstrapLibraryCloudSyncEnablement()
+        }
+
         syncGate.begin()
         librarySyncCoordinatorLogger.info(
             "Starting iCloud library sync triggered by \(trigger.rawValue, privacy: .public)."
@@ -315,6 +350,35 @@ final class LibrarySyncCoordinator {
             store.updateLibraryCloudKitAvailability(error.libraryCloudKitAvailability)
             throw error
         }
+    }
+
+    private func currentScopeRequiringBootstrap(store: LibraryStore) async throws
+        -> LibraryCloudSyncScope?
+    {
+        guard let namespace = try await resolveNamespace(reportingTo: store) else {
+            return nil
+        }
+        let currentScope = LibraryCloudSyncScope(namespace: namespace)
+        if store.libraryCloudSyncStatus.lastCompletedScope == currentScope {
+            return nil
+        }
+
+        if store.libraryCloudSyncStatus.lastCompletedScope == nil,
+            changeTokenStore.token(
+                for: CloudLibrarySyncClient.recordZoneID,
+                namespace: namespace
+            ) != nil
+        {
+            store.updateLibraryCloudSyncStatus { status in
+                status.lastCompletedScope = currentScope
+            }
+            librarySyncCoordinatorLogger.info(
+                "Adopted the current iCloud sync scope from compatible legacy completed state."
+            )
+            return nil
+        }
+
+        return currentScope
     }
 
     /// Throws the bootstrap-specific cancellation sentinel.

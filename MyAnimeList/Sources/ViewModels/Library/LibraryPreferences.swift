@@ -95,6 +95,7 @@ struct LibraryPreferences {
         )
         saveOptional(status.lastFailureReason, forKey: .libraryCloudSyncLastFailureReason)
         saveOptional(status.degradedReason, forKey: .libraryCloudSyncDegradedReason)
+        saveCodable(status.lastCompletedScope, forKey: .libraryCloudSyncLastCompletedScope)
         saveCodable(status.pendingConflictSummary, forKey: .libraryCloudSyncConflictSummary)
         saveCodable(status.retryState, forKey: .libraryCloudSyncRetryState)
     }
@@ -214,6 +215,10 @@ struct LibraryPreferences {
             as? Date
         status.lastFailureReason = defaults.string(forKey: .libraryCloudSyncLastFailureReason)
         status.degradedReason = defaults.string(forKey: .libraryCloudSyncDegradedReason)
+        status.lastCompletedScope = loadCodable(
+            LibraryCloudSyncScope.self,
+            forKey: .libraryCloudSyncLastCompletedScope
+        )
         return status
     }
 

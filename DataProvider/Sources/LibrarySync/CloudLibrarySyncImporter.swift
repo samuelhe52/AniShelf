@@ -131,6 +131,22 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
         }
     }
 
+    /// Fetches the complete current zone without consulting a persisted token.
+    ///
+    /// Bootstrap uses this path when the active account or remote scope changes,
+    /// so an older token for that scope cannot turn reconciliation into an
+    /// incremental fetch.
+    public func fetchChangesFromBeginning(
+        namespace: CloudLibrarySyncChangeTokenStore.Namespace,
+        localSnapshotsByIdentity: [LibraryEntryIdentity: LibraryEntrySyncSnapshot]
+    ) async throws -> CloudLibrarySyncImportBatch {
+        try await fetchChanges(
+            namespace: namespace,
+            localSnapshotsByIdentity: localSnapshotsByIdentity,
+            startingToken: nil
+        )
+    }
+
     /// Persists the server change token for a successfully applied batch.
     public func commit(_ batch: CloudLibrarySyncImportBatch) {
         changeTokenStore.setToken(batch.changeToken, for: batch.zoneID, namespace: batch.namespace)

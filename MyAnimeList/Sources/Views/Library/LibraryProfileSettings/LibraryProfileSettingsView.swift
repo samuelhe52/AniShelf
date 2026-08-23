@@ -235,6 +235,7 @@ struct LibraryProfileSettingsView: View {
             onEnableLibraryCloudSync: { await actions.enableLibraryCloudSync() },
             onDisableLibraryCloudSync: { actions.disableLibraryCloudSync() },
             onRetryLibraryCloudSync: { await actions.retryLibraryCloudSync() },
+            onRebuildLibraryCloudSync: { await actions.rebuildLibraryCloudSync() },
             onResolveLibraryCloudSyncConflicts: { preference in
                 await actions.resolveLibraryCloudSyncConflicts(preference: preference)
             },

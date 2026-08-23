@@ -126,13 +126,26 @@ extension LibrarySyncCoordinator {
             pass.markBootstrapFailed()
             return nil
         }
+        if !pass.completedBootstrap,
+            store.libraryCloudSyncStatus.lastCompletedScope
+                != LibraryCloudSyncScope(namespace: namespace)
+        {
+            throw LibraryCloudSyncScopeChangedDuringSync()
+        }
 
         let preImportSnapshots = try localSnapshotsByIdentity(for: store)
         let importBatch = try await pass.run(.remoteFetch, state: state, store: store) {
-            try await importer.fetchChanges(
-                namespace: namespace,
-                localSnapshotsByIdentity: preImportSnapshots
-            )
+            if pass.completedBootstrap {
+                try await importer.fetchChangesFromBeginning(
+                    namespace: namespace,
+                    localSnapshotsByIdentity: preImportSnapshots
+                )
+            } else {
+                try await importer.fetchChanges(
+                    namespace: namespace,
+                    localSnapshotsByIdentity: preImportSnapshots
+                )
+            }
         }
         return .init(
             namespace: namespace,
@@ -211,6 +224,12 @@ extension LibrarySyncCoordinator {
         store.recordLibraryCloudSyncSuccess(
             trigger: pass.trigger,
             completedBootstrap: pass.completedBootstrap,
+            completedScope: pass.completedBootstrap
+                ? LibraryCloudSyncScope(
+                    namespace: importBatch.namespace,
+                    zoneID: importBatch.zoneID
+                )
+                : nil,
             reconciledCloudSyncedSettingsUpdatedAt: reconciledCloudSyncedSettingsUpdatedAt,
             at: dateProvider()
         )
@@ -239,6 +258,15 @@ extension LibrarySyncCoordinator {
             "iCloud library sync triggered by \(pass.trigger.rawValue, privacy: .public) failed during \(state.currentPhase?.rawValue ?? "unknown", privacy: .public): \(error.localizedDescription, privacy: .private)"
         )
         return result
+    }
+}
+
+fileprivate struct LibraryCloudSyncScopeChangedDuringSync: LocalizedError {
+    var errorDescription: String? {
+        String(
+            localized:
+                "Your iCloud account changed while iCloud Sync was starting. Try again to rebuild sync for the new account."
+        )
     }
 }
 
