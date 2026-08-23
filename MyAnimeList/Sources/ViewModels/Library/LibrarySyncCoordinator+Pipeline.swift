@@ -275,6 +275,7 @@ final class SyncGate {
     private var isSyncing = false
     private var syncRequestedWhileRunning = false
     private var waiters: [CheckedContinuation<LibrarySyncCoordinator.SyncResult, Never>] = []
+    private var idleWaiters: [CheckedContinuation<Void, Never>] = []
 
     func waitForRunningPass() async -> LibrarySyncCoordinator.SyncResult? {
         guard isSyncing else { return nil }
@@ -289,6 +290,13 @@ final class SyncGate {
         isSyncing = true
     }
 
+    func waitUntilIdle() async {
+        guard isSyncing else { return }
+        await withCheckedContinuation { continuation in
+            idleWaiters.append(continuation)
+        }
+    }
+
     func consumeRerunRequest() -> Bool {
         defer { syncRequestedWhileRunning = false }
         return syncRequestedWhileRunning
@@ -296,6 +304,11 @@ final class SyncGate {
 
     func finish(_ result: LibrarySyncCoordinator.SyncResult, parkingWaiters: Bool = false) {
         isSyncing = false
+        let pendingIdleWaiters = idleWaiters
+        idleWaiters.removeAll()
+        for waiter in pendingIdleWaiters {
+            waiter.resume()
+        }
         guard !parkingWaiters else { return }
         let pendingWaiters = waiters
         waiters.removeAll()

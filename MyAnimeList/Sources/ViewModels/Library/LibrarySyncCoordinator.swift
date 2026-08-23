@@ -326,6 +326,10 @@ final class LibrarySyncCoordinator {
         syncGate.cancelAll()
     }
 
+    func waitUntilAllSyncFinishes() async {
+        await syncGate.waitUntilIdle()
+    }
+
     func checkOrdinarySyncCancellation(
         _ cancellationGeneration: Int,
         store: LibraryStore

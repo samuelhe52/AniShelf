@@ -385,6 +385,60 @@ extension LibrarySyncCoordinatorTests {
         #expect(store.libraryCloudSyncStatus.lastCompletedScope == makeSyncScope(namespace: namespace))
     }
 
+    @Test @MainActor func manualRebuildWaitsForCanceledOrdinarySyncBeforeBootstrapping() async throws {
+        let store = makeSyncReadyStore()
+        let namespace = makeNamespace()
+        let tokenDefaults = UserDefaults(
+            suiteName: "LibrarySyncCoordinatorTests.InFlightManualRebuild.\(UUID().uuidString)"
+        )!
+        let tokenStore = CloudLibrarySyncChangeTokenStore(userDefaults: tokenDefaults)
+        tokenStore.setToken(
+            makeToken(),
+            for: CloudLibrarySyncClient.recordZoneID,
+            namespace: namespace
+        )
+        let database = FakeCloudLibrarySyncDatabase(
+            changes: [makeEmptyChangeBatch(), makeEmptyChangeBatch()]
+        )
+        database.suspendNextFetch = true
+        store.configureLibrarySyncCoordinator(
+            client: CloudLibrarySyncClient(),
+            database: database,
+            changeTokenStore: tokenStore,
+            namespaceProvider: { namespace }
+        )
+
+        let ordinarySyncTask = Task {
+            await store.performLibrarySyncResult(trigger: .foreground)
+        }
+        while !database.isFetchSuspended {
+            try await Task.sleep(nanoseconds: 1_000_000)
+        }
+
+        var rebuildStarted = false
+        let rebuildTask = Task {
+            rebuildStarted = true
+            return await store.rebuildLibraryCloudSync()
+        }
+        while !rebuildStarted {
+            await Task.yield()
+        }
+
+        #expect(tokenStore.token(for: CloudLibrarySyncClient.recordZoneID, namespace: namespace) != nil)
+        #expect(database.fetchedChangeTokens.count == 1)
+
+        database.resumeSuspendedFetch()
+        _ = await ordinarySyncTask.value
+        let rebuilt = await rebuildTask.value
+
+        #expect(rebuilt)
+        #expect(database.fetchedChangeTokens.count == 2)
+        #expect(database.fetchedChangeTokens[0] != nil)
+        #expect(database.fetchedChangeTokens[1] == nil)
+        #expect(store.libraryCloudSyncStatus.bootstrapState == .completed)
+        #expect(store.libraryCloudSyncStatus.lastCompletedScope == makeSyncScope(namespace: namespace))
+    }
+
     @Test @MainActor func disablingLibraryCloudSyncCancelsInFlightOrdinarySyncBeforeExport()
         async throws
     {

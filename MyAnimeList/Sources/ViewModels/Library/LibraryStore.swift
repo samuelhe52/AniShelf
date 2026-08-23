@@ -459,6 +459,7 @@ class LibraryStore {
     func rebuildLibraryCloudSync() async -> Bool {
         cancelAllLibraryCloudSyncWork()
         syncScheduler?.resetRetryBackoff()
+        await syncCoordinator?.waitUntilAllSyncFinishes()
         resetLibraryCloudSyncChangeTokens()
         shouldResumeInterruptedCloudSyncBootstrap = false
         updateLibraryCloudSyncStatus { status in
