@@ -26,13 +26,13 @@ fileprivate struct EntryDetailBroadcastPolicyPreview: View {
                     Menu {
                         let broadcastContent = EntryDetailBroadcastMenuContent(
                             phase: .resolved(previewCase.availability),
-                            notificationContext: EntryDetailNotificationContext(
+                            airingReminderContext: EntryDetailAiringReminderContext(
                                 entryIdentity: previewCase.entry.libraryIdentity,
                                 displayTitle: previewCase.entry.name,
                                 seasonNumber: previewCase.entry.type.seasonNumber,
                                 resolvedShow: previewCase.resolvedShow
                             ),
-                            hasNotificationSubscription: false,
+                            hasAiringReminder: false,
                             onPresentValidation: {},
                             onRetry: {}
                         )

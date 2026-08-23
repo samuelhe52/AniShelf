@@ -1,5 +1,5 @@
 //
-//  LibraryProfileEpisodeNotificationManagementPopover.swift
+//  LibraryProfileAiringReminderManagementPopover.swift
 //  AniShelf
 //
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/8/21.
@@ -7,17 +7,17 @@
 
 import SwiftUI
 
-struct EpisodeNotificationManagementItem: Equatable, Identifiable, Sendable {
-    let subscription: EpisodeNotificationSubscription
-    let nextReminder: EpisodeScheduledReminder?
+struct AiringReminderManagementItem: Equatable, Identifiable, Sendable {
+    let subscription: AiringReminderSubscription
+    let nextReminder: ScheduledAiringReminder?
 
     var id: String { subscription.id }
 }
 
-extension EpisodeNotificationSnapshot {
-    var managementItems: [EpisodeNotificationManagementItem] {
+extension AiringReminderSnapshot {
+    var managementItems: [AiringReminderManagementItem] {
         subscriptions.map { subscription in
-            EpisodeNotificationManagementItem(
+            AiringReminderManagementItem(
                 subscription: subscription,
                 nextReminder: reminders(for: subscription.id).first
             )
@@ -25,14 +25,14 @@ extension EpisodeNotificationSnapshot {
     }
 }
 
-struct LibraryProfileEpisodeNotificationManagementPopover: View {
-    private let notifications = EpisodeNotificationCoordinator.shared
+struct LibraryProfileAiringReminderManagementPopover: View {
+    private let airingReminders = AiringReminderCoordinator.shared
 
-    @State private var isUnsubscribing: Bool = false
+    @State private var isRemovingReminder: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
-            Label("Manage Subscriptions", systemImage: "bell.badge")
+            Label("Manage Reminders", systemImage: "bell.badge")
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
@@ -43,22 +43,22 @@ struct LibraryProfileEpisodeNotificationManagementPopover: View {
             content
         }
         .frame(minWidth: 320, idealWidth: 420, maxWidth: 420)
-        .task { await notifications.reloadState() }
+        .task { await airingReminders.reloadState() }
     }
 
     private var content: some View {
-        let items = notifications.snapshot.managementItems
+        let items = airingReminders.snapshot.managementItems
 
         return ZStack {
             if items.isEmpty {
                 ContentUnavailableView(
-                    "No Episode Subscriptions",
+                    "No Reminders Set",
                     systemImage: "bell.slash"
                 )
                 .transition(.opacity)
             } else {
                 List(items) { item in
-                    subscriptionRow(item)
+                    reminderRow(item)
                         .transition(.opacity)
                 }
                 .listStyle(.plain)
@@ -70,7 +70,7 @@ struct LibraryProfileEpisodeNotificationManagementPopover: View {
         .animation(.default, value: items)
     }
 
-    private func subscriptionRow(_ item: EpisodeNotificationManagementItem) -> some View {
+    private func reminderRow(_ item: AiringReminderManagementItem) -> some View {
         HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.subscription.displayTitle)
@@ -95,13 +95,13 @@ struct LibraryProfileEpisodeNotificationManagementPopover: View {
                         }
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Next Reminder")
+                        Text("Next Episode")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
 
                         if let nextReminder = item.nextReminder {
                             Text(
-                                verbatim: nextReminder.fireDate.formatted(
+                                verbatim: nextReminder.airStamp.formatted(
                                     date: .abbreviated,
                                     time: .shortened
                                 )
@@ -109,7 +109,7 @@ struct LibraryProfileEpisodeNotificationManagementPopover: View {
                             .font(.footnote)
                             .lineLimit(1)
                         } else {
-                            Text("No Upcoming Notification")
+                            Text("No Reminder")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
@@ -121,23 +121,33 @@ struct LibraryProfileEpisodeNotificationManagementPopover: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             Button(role: .destructive) {
-                unsubscribe(item.subscription)
+                removeReminder(item.subscription)
             } label: {
                 Image(systemName: "bell.slash")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.red.opacity(0.78))
+                    .frame(width: 34, height: 34)
+                    .background {
+                        Circle()
+                            .fill(.red.opacity(0.10))
+                    }
+                    .overlay {
+                        Circle()
+                            .stroke(.white.opacity(0.22), lineWidth: 1)
+                    }
             }
-            .buttonStyle(.glassProminent)
-            .buttonBorderShape(.circle)
-            .accessibilityLabel(Text("Unsubscribe from \(item.subscription.displayTitle)"))
-            .accessibilityHint(Text("Removes this subscription and its pending reminder."))
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Remove reminder for \(item.subscription.displayTitle)"))
+            .accessibilityHint(Text("Removes this reminder."))
         }
     }
 
-    private func unsubscribe(_ subscription: EpisodeNotificationSubscription) {
-        guard !isUnsubscribing else { return }
-        isUnsubscribing = true
+    private func removeReminder(_ subscription: AiringReminderSubscription) {
+        guard !isRemovingReminder else { return }
+        isRemovingReminder = true
         Task {
-            await notifications.disable(entryIdentityRawID: subscription.id)
-            isUnsubscribing = false
+            await airingReminders.disable(entryIdentityRawID: subscription.id)
+            isRemovingReminder = false
         }
     }
 }

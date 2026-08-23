@@ -10,13 +10,13 @@ import SwiftUI
 
 struct EntryDetailBroadcastMenuContent: View {
     let phase: EntryDetailBroadcastModel.Phase
-    let notificationContext: EntryDetailNotificationContext
-    let hasNotificationSubscription: Bool
+    let airingReminderContext: EntryDetailAiringReminderContext
+    let hasAiringReminder: Bool
     let onPresentValidation: () -> Void
     let onRetry: () -> Void
 
     var isVisible: Bool {
-        phase != .disabled || hasNotificationSubscription
+        phase != .disabled || hasAiringReminder
     }
 
     @ViewBuilder
@@ -24,22 +24,22 @@ struct EntryDetailBroadcastMenuContent: View {
         if phase != .disabled {
             airtimeSection(header: sectionHeader) {
                 primaryButton
-                notificationMenu
+                airingReminderMenu
             }
-        } else if hasNotificationSubscription {
-            notificationMenu
+        } else if hasAiringReminder {
+            airingReminderMenu
         }
     }
 
     @ViewBuilder
-    private var notificationMenu: some View {
+    private var airingReminderMenu: some View {
         if case .resolved = phase {
-            EntryDetailNotificationMenu(context: notificationContext)
+            EntryDetailAiringReminderMenu(context: airingReminderContext)
         } else {
             Button(action: {}) {
                 Label(
                     EntryDetailL10n.notifications,
-                    systemImage: hasNotificationSubscription ? "bell.badge.fill" : "bell"
+                    systemImage: hasAiringReminder ? "bell.badge.fill" : "bell"
                 )
             }
             .disabled(true)

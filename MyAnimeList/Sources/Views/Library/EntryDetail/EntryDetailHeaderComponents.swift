@@ -181,8 +181,8 @@ struct EntryDetailQuickActionsRow: View {
     let dropActionSystemImage: String
     let dropActionIsDestructive: Bool
     let broadcastPhase: EntryDetailBroadcastModel.Phase
-    let notificationContext: EntryDetailNotificationContext
-    let hasNotificationSubscription: Bool
+    let airingReminderContext: EntryDetailAiringReminderContext
+    let hasAiringReminder: Bool
     let onShare: () -> Void
     let onToggleFavorite: () -> Void
     let onChangePoster: () -> Void
@@ -222,8 +222,8 @@ struct EntryDetailQuickActionsRow: View {
             Menu {
                 let broadcastMenuContent = EntryDetailBroadcastMenuContent(
                     phase: broadcastPhase,
-                    notificationContext: notificationContext,
-                    hasNotificationSubscription: hasNotificationSubscription,
+                    airingReminderContext: airingReminderContext,
+                    hasAiringReminder: hasAiringReminder,
                     onPresentValidation: onPresentBroadcastValidation,
                     onRetry: onRetryBroadcast
                 )

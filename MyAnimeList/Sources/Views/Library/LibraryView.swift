@@ -21,7 +21,7 @@ struct LibraryView: View {
     @Environment(LibraryStore.self) var store
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(AppReviewPromptController.self) var appReview
-    private let episodeNotifications = EpisodeNotificationCoordinator.shared
+    private let airingReminders = AiringReminderCoordinator.shared
 
     @State var interaction = LibraryEntryInteractionState()
     @State private var detailSessionStore = EntryDetailSessionStore()
@@ -98,25 +98,25 @@ struct LibraryView: View {
             refreshSelectionDisplayItemsIfNeeded()
         }
         .onChange(
-            of: episodeNotifications.pendingRouteEntryIdentityRawID,
+            of: airingReminders.pendingRouteEntryIdentityRawID,
             initial: true
         ) { _, entryIdentityRawID in
-            handleEpisodeNotificationRoute(entryIdentityRawID)
+            handleAiringReminderRoute(entryIdentityRawID)
         }
         .alert(
-            notificationWarningTitle,
+            airingReminderWarningTitle,
             isPresented: Binding(
-                get: { episodeNotifications.presentedWarning != nil },
+                get: { airingReminders.presentedWarning != nil },
                 set: { isPresented in
                     if !isPresented {
-                        episodeNotifications.dismissPresentedWarning()
+                        airingReminders.dismissPresentedWarning()
                     }
                 }
             )
         ) {
-            Button("OK") { episodeNotifications.dismissPresentedWarning() }
+            Button("OK") { airingReminders.dismissPresentedWarning() }
         } message: {
-            Text(notificationWarningMessage)
+            Text(airingReminderWarningMessage)
         }
     }
 
@@ -409,9 +409,9 @@ struct LibraryView: View {
         interaction.openDetails(for: entry)
     }
 
-    private func handleEpisodeNotificationRoute(_ entryIdentityRawID: String?) {
+    private func handleAiringReminderRoute(_ entryIdentityRawID: String?) {
         guard let entryIdentityRawID else { return }
-        defer { episodeNotifications.consumePendingRoute() }
+        defer { airingReminders.consumePendingRoute() }
         guard let entry = store.repository.existingEntry(identityRawID: entryIdentityRawID) else {
             return
         }
@@ -420,24 +420,14 @@ struct LibraryView: View {
         openDetails(entry)
     }
 
-    private var notificationWarningMessage: LocalizedStringResource {
-        switch episodeNotifications.presentedWarning {
-        case .queueLimit:
-            "iOS could not schedule every next-episode reminder. AniShelf kept the reminders with the nearest airtimes."
-        case .schedulingFailure:
-            "iOS rejected one or more episode reminders. Existing reminders were restored when possible."
-        case nil:
-            "Some episode reminders could not be scheduled."
-        }
+    private var airingReminderWarningMessage: LocalizedStringResource {
+        airingReminders.presentedWarning?.localizedMessage
+            ?? "Some reminders could not be scheduled."
     }
 
-    private var notificationWarningTitle: LocalizedStringResource {
-        switch episodeNotifications.presentedWarning {
-        case .queueLimit:
-            "Notification Limit Reached"
-        case .schedulingFailure, nil:
-            "Episode Notification Issue"
-        }
+    private var airingReminderWarningTitle: LocalizedStringResource {
+        airingReminders.presentedWarning?.localizedTitle
+            ?? "Reminder Scheduling Issue"
     }
 
     private func editDetails(_ entry: AnimeEntry) {

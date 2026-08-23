@@ -73,13 +73,13 @@ struct LibraryPreferenceDefaultsTests {
         #expect(!defaults.isBroadcastScheduleEnabled)
     }
 
-    @Test func testEpisodeNotificationPreferencesRemainDeviceLocal() {
-        #expect(!String.allPreferenceKeys.contains(.episodeNotificationSubscriptions))
-        #expect(!String.allPreferenceKeys.contains(.episodeNotificationLeadTimeMinutes))
-        #expect(!String.allPreferenceKeys.contains(.episodeNotificationWarning))
-        #expect(!String.cloudSyncedPreferenceKeys.contains(.episodeNotificationSubscriptions))
-        #expect(!String.cloudSyncedPreferenceKeys.contains(.episodeNotificationLeadTimeMinutes))
-        #expect(!String.cloudSyncedPreferenceKeys.contains(.episodeNotificationWarning))
+    @Test func testAiringReminderPreferencesRemainDeviceLocal() {
+        #expect(!String.allPreferenceKeys.contains(.airingReminderSubscriptions))
+        #expect(!String.allPreferenceKeys.contains(.airingReminderLeadTimeMinutes))
+        #expect(!String.allPreferenceKeys.contains(.airingReminderWarning))
+        #expect(!String.cloudSyncedPreferenceKeys.contains(.airingReminderSubscriptions))
+        #expect(!String.cloudSyncedPreferenceKeys.contains(.airingReminderLeadTimeMinutes))
+        #expect(!String.cloudSyncedPreferenceKeys.contains(.airingReminderWarning))
     }
 
     @Test func testSoftNavigationBarEdgesPreferenceDefaultsOn() {

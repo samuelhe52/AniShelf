@@ -1,5 +1,5 @@
 //
-//  LibraryProfileEpisodeNotificationSettingsSection.swift
+//  LibraryProfileAiringReminderSettingsSection.swift
 //  AniShelf
 //
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/8/21.
@@ -7,108 +7,108 @@
 
 import SwiftUI
 
-struct LibraryProfileEpisodeNotificationSettingsSection: View {
+struct LibraryProfileAiringReminderSettingsSection: View {
     @Environment(\.scenePhase) private var scenePhase
     private static let minimumRefreshFeedbackDuration = Duration.milliseconds(600)
-    private let notifications = EpisodeNotificationCoordinator.shared
+    private let airingReminders = AiringReminderCoordinator.shared
 
-    @State private var showCancelAllConfirmation = false
-    @State private var showSubscriptionManagement = false
+    @State private var showRemoveAllConfirmation = false
+    @State private var showReminderManagement = false
     @State private var isRefreshFeedbackVisible = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             LibraryProfileSettingHeader(
-                title: "Episode Notifications",
-                subtitle: "Schedule one-time reminders from verified TVMaze next-episode airtimes.",
+                title: "Airing Reminders",
+                subtitle: "Get reminders for upcoming episodes.",
                 systemImage: "bell.badge.fill",
                 tint: .orange
             )
 
             HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text("Notify")
+                Text("Remind Me")
                     .font(.subheadline.weight(.semibold))
                 Spacer(minLength: 12)
                 Menu {
-                    Picker("Notify", selection: leadTimeBinding) {
-                        ForEach(EpisodeNotificationLeadTime.allCases, id: \.rawValue) { leadTime in
+                    Picker("Remind Me", selection: leadTimeBinding) {
+                        ForEach(AiringReminderLeadTime.allCases, id: \.rawValue) { leadTime in
                             Text(leadTime.localizedResource)
                                 .tag(leadTime)
                         }
                     }
                 } label: {
                     LibraryProfileSelectionCapsule(
-                        title: notifications.snapshot.leadTime.localizedResource,
+                        title: airingReminders.snapshot.leadTime.localizedResource,
                         tint: .orange
                     )
                 }
-                .disabled(notifications.isRefreshing)
+                .disabled(airingReminders.isRefreshing)
             }
 
-            subscriptionsManagementButton
+            remindersManagementButton
 
-            if notifications.snapshot.warning != nil {
+            if let warning = airingReminders.snapshot.warning {
                 Label(
-                    notificationWarningMessage,
+                    warning.localizedMessage,
                     systemImage: "exclamationmark.triangle.fill"
                 )
                 .font(.caption)
                 .foregroundStyle(.orange)
             }
 
-            if notifications.lastRefreshFailed {
-                Label("Some subscriptions could not be refreshed.", systemImage: "wifi.exclamationmark")
+            if airingReminders.lastRefreshFailed {
+                Label("Some reminders could not be refreshed.", systemImage: "wifi.exclamationmark")
                     .font(.caption)
                     .foregroundStyle(.orange)
             }
 
             HStack(spacing: 10) {
                 Button("Refresh", systemImage: "arrow.clockwise") {
-                    refreshNotifications()
+                    refreshAiringReminders()
                 }
                 .buttonStyle(LibraryProfileCommandButtonStyle(tint: .cyan, filled: false))
                 .disabled(
-                    notifications.isRefreshing
+                    airingReminders.isRefreshing
                         || isRefreshFeedbackVisible
-                        || notifications.snapshot.subscriptions.isEmpty
-                        || !notifications.snapshot.authorizationStatus.allowsScheduling
+                        || airingReminders.snapshot.subscriptions.isEmpty
+                        || !airingReminders.snapshot.authorizationStatus.allowsScheduling
                 )
 
-                Button("Cancel All", systemImage: "bell.slash", role: .destructive) {
-                    showCancelAllConfirmation = true
+                Button("Remove All", systemImage: "bell.slash", role: .destructive) {
+                    showRemoveAllConfirmation = true
                 }
                 .buttonStyle(LibraryProfileCommandButtonStyle(tint: .red, filled: false))
-                .disabled(notifications.snapshot.subscriptions.isEmpty)
+                .disabled(airingReminders.snapshot.subscriptions.isEmpty)
             }
         }
         .padding(14)
         .libraryProfileInsetPanel(cornerRadius: 22, tint: .orange)
-        .task { await notifications.reloadState() }
+        .task { await airingReminders.reloadState() }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
-            Task { await notifications.reloadState() }
+            Task { await airingReminders.reloadState() }
         }
         .confirmationDialog(
-            "Cancel All Episode Notifications?",
-            isPresented: $showCancelAllConfirmation,
+            "Remove All Airing Reminders?",
+            isPresented: $showRemoveAllConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Cancel All", role: .destructive) {
-                Task { await notifications.cancelAll() }
+            Button("Remove All", role: .destructive) {
+                Task { await airingReminders.cancelAll() }
             }
-            Button("Keep Notifications", role: .cancel) {}
+            Button("Keep Reminders", role: .cancel) {}
         } message: {
-            Text("Every episode subscription and pending reminder on this device will be removed.")
+            Text("Every reminder on this device will be removed.")
         }
     }
 
-    private func refreshNotifications() {
+    private func refreshAiringReminders() {
         isRefreshFeedbackVisible = true
         Task { @MainActor in
             let clock = ContinuousClock()
             let deadline = clock.now.advanced(by: Self.minimumRefreshFeedbackDuration)
 
-            _ = await notifications.refreshAll()
+            _ = await airingReminders.refreshAll()
 
             if clock.now < deadline {
                 try? await clock.sleep(until: deadline)
@@ -117,16 +117,16 @@ struct LibraryProfileEpisodeNotificationSettingsSection: View {
         }
     }
 
-    private var subscriptionsManagementButton: some View {
+    private var remindersManagementButton: some View {
         Button {
-            showSubscriptionManagement = true
+            showReminderManagement = true
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "bell.badge")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.orange)
 
-                Text("Subscriptions")
+                Text("Reminders")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
@@ -134,7 +134,7 @@ struct LibraryProfileEpisodeNotificationSettingsSection: View {
 
                 Spacer(minLength: 8)
 
-                Text("\(notifications.snapshot.subscriptions.count)")
+                Text("\(airingReminders.snapshot.subscriptions.count)")
                     .font(.footnote.weight(.bold))
                     .monospacedDigit()
                     .contentTransition(.numericText())
@@ -164,37 +164,25 @@ struct LibraryProfileEpisodeNotificationSettingsSection: View {
             .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text("Manage Subscriptions"))
-        .accessibilityValue(Text("\(notifications.snapshot.subscriptions.count)"))
-        .popover(isPresented: $showSubscriptionManagement) {
-            LibraryProfileEpisodeNotificationManagementPopover()
+        .accessibilityLabel(Text("Manage Reminders"))
+        .accessibilityValue(Text("\(airingReminders.snapshot.subscriptions.count)"))
+        .popover(isPresented: $showReminderManagement) {
+            LibraryProfileAiringReminderManagementPopover()
                 .presentationCompactAdaptation(.popover)
         }
     }
 
-    private var leadTimeBinding: Binding<EpisodeNotificationLeadTime> {
+    private var leadTimeBinding: Binding<AiringReminderLeadTime> {
         Binding(
-            get: { notifications.snapshot.leadTime },
+            get: { airingReminders.snapshot.leadTime },
             set: { leadTime in
-                Task { await notifications.setLeadTime(leadTime) }
+                Task { await airingReminders.setLeadTime(leadTime) }
             }
         )
     }
-
-    private var notificationWarningMessage: LocalizedStringResource {
-        switch notifications.snapshot.warning {
-        case .queueLimit:
-            "iOS could not schedule every next-episode reminder. AniShelf kept the reminders with the nearest airtimes."
-        case .schedulingFailure:
-            "iOS rejected one or more episode reminders. Existing reminders were restored when possible."
-        case nil:
-            "Some episode reminders could not be scheduled."
-        }
-    }
-
 }
 
-extension EpisodeNotificationLeadTime {
+extension AiringReminderLeadTime {
     var localizedResource: LocalizedStringResource {
         switch self {
         case .atAirtime:

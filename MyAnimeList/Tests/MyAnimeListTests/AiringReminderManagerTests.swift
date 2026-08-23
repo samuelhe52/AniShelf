@@ -1,5 +1,5 @@
 //
-//  EpisodeNotificationManagerTests.swift
+//  AiringReminderManagerTests.swift
 //  AniShelf
 //
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/8/21.
@@ -12,20 +12,20 @@ import UserNotifications
 
 @testable import MyAnimeList
 
-struct EpisodeNotificationManagerTests {
+struct AiringReminderManagerTests {
     private let now = Date(timeIntervalSince1970: 1_776_945_600)
 
     @Test func systemTriggerUsesAbsoluteOneShotDate() throws {
         let fireDate = Date(timeIntervalSince1970: 2_000_000_000)
-        let trigger = SystemEpisodeNotificationCenter.calendarTrigger(for: fireDate)
+        let trigger = SystemAiringReminderCenter.calendarTrigger(for: fireDate)
 
         #expect(!trigger.repeats)
         #expect(try #require(trigger.nextTriggerDate()) == fireDate)
     }
 
     @Test func systemNotificationContentUsesAnimeTitleAndNumberedEpisodeBody() {
-        let request = EpisodeNotificationRequest(
-            identifier: "AniShelf.Episode.series-100",
+        let request = AiringReminderRequest(
+            identifier: "AniShelf.AiringReminder.series-100",
             title: "Reminder Anime",
             body: "S01E06 airs in 15 minutes.",
             subscriptionID: "series:100",
@@ -36,7 +36,7 @@ struct EpisodeNotificationManagerTests {
             fireDate: now.addingTimeInterval(85_500)
         )
 
-        let content = SystemEpisodeNotificationCenter.notificationContent(for: request)
+        let content = SystemAiringReminderCenter.notificationContent(for: request)
 
         #expect(content.title == "Reminder Anime")
         #expect(content.subtitle.isEmpty)
@@ -44,27 +44,27 @@ struct EpisodeNotificationManagerTests {
     }
 
     @Test func managementItemsRepresentSeriesAndSeasonSubscriptionsWithNextReminders() throws {
-        let series = EpisodeNotificationSubscription(
+        let series = AiringReminderSubscription(
             entryIdentityRawID: "series:100",
             tvMazeShowID: 70,
             displayTitle: "Alpha Anime",
             seasonNumber: nil
         )
-        let season = EpisodeNotificationSubscription(
+        let season = AiringReminderSubscription(
             entryIdentityRawID: "season:200:2:100",
             tvMazeShowID: 71,
             displayTitle: "Beta Anime",
             seasonNumber: 2
         )
-        let reminder = EpisodeScheduledReminder(
-            id: "AniShelf.Episode.season-200",
+        let reminder = ScheduledAiringReminder(
+            id: "AniShelf.AiringReminder.season-200",
             subscriptionID: season.id,
             seasonNumber: 2,
             episodeNumber: 1,
             airStamp: now.addingTimeInterval(86_400),
             fireDate: now.addingTimeInterval(85_500)
         )
-        let snapshot = EpisodeNotificationSnapshot(
+        let snapshot = AiringReminderSnapshot(
             subscriptions: [series, season],
             scheduledReminders: [reminder]
         )
@@ -79,7 +79,7 @@ struct EpisodeNotificationManagerTests {
     @Test func deniedPermissionDoesNotCreateSubscription() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
-        let center = EpisodeNotificationCenterProbe(
+        let center = AiringReminderCenterProbe(
             authorizationStatus: .notDetermined,
             authorizationAfterRequest: .denied
         )
@@ -100,13 +100,13 @@ struct EpisodeNotificationManagerTests {
     @Test func authorizationRequestFailureDoesNotCreateSubscription() async {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
-        let center = EpisodeNotificationCenterProbe(
+        let center = AiringReminderCenterProbe(
             authorizationStatus: .notDetermined,
             authorizationRequestFails: true
         )
         let manager = makeManager(defaults: defaults, center: center) { _ in nil }
 
-        await #expect(throws: EpisodeNotificationCenterProbe.Failure.self) {
+        await #expect(throws: AiringReminderCenterProbe.Failure.self) {
             try await manager.enable(
                 entryIdentity: LibraryEntryIdentity(entryType: .series, tmdbID: 100),
                 showID: 70,
@@ -119,17 +119,17 @@ struct EpisodeNotificationManagerTests {
 
     @Test(
         arguments: [
-            EpisodeNotificationAuthorizationStatus.authorized,
+            AiringReminderAuthorizationStatus.authorized,
             .provisional,
             .ephemeral
         ]
     )
     func everyAllowedAuthorizationSchedulesWithoutPrompt(
-        authorizationStatus: EpisodeNotificationAuthorizationStatus
+        authorizationStatus: AiringReminderAuthorizationStatus
     ) async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
-        let center = EpisodeNotificationCenterProbe(authorizationStatus: authorizationStatus)
+        let center = AiringReminderCenterProbe(authorizationStatus: authorizationStatus)
         let manager = makeManager(defaults: defaults, center: center) { _ in
             makeEpisode(season: 1, number: 1, airStamp: now.addingTimeInterval(86_400))
         }
@@ -149,7 +149,7 @@ struct EpisodeNotificationManagerTests {
     @Test func seasonSubscriptionUsesTVMazeEpisodeNumberingAndChangingLeadTimeRebuildsPendingRequest() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
-        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let center = AiringReminderCenterProbe(authorizationStatus: .authorized)
         let seasonTwoAirStamp = now.addingTimeInterval(6 * 24 * 60 * 60)
         let provider = EpisodeProviderProbe(
             nextEpisode: makeEpisode(season: 1, number: 12, airStamp: seasonTwoAirStamp)
@@ -181,10 +181,10 @@ struct EpisodeNotificationManagerTests {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
         defaults.set(
-            EpisodeNotificationLeadTime.fiveMinutes.rawValue,
-            forKey: .episodeNotificationLeadTimeMinutes
+            AiringReminderLeadTime.fiveMinutes.rawValue,
+            forKey: .airingReminderLeadTimeMinutes
         )
-        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let center = AiringReminderCenterProbe(authorizationStatus: .authorized)
         let airStamp = now.addingTimeInterval(86_400)
         let manager = makeManager(defaults: defaults, center: center) { _ in
             makeEpisode(season: 1, number: 1, airStamp: airStamp)
@@ -199,22 +199,22 @@ struct EpisodeNotificationManagerTests {
         let previousRequests = await center.allRequests()
         await center.failNextAdds(1)
 
-        await #expect(throws: EpisodeNotificationManagerError.self) {
+        await #expect(throws: AiringReminderManagerError.self) {
             try await manager.setLeadTime(.oneHour)
         }
 
         #expect(await center.allRequests() == previousRequests)
         #expect((await manager.snapshot()).leadTime == .fiveMinutes)
         #expect(
-            defaults.integer(forKey: .episodeNotificationLeadTimeMinutes)
-                == EpisodeNotificationLeadTime.fiveMinutes.rawValue
+            defaults.integer(forKey: .airingReminderLeadTimeMinutes)
+                == AiringReminderLeadTime.fiveMinutes.rawValue
         )
     }
 
     @Test func failedRefreshPreservesExistingRequestsAndDisableCancelsOnlyItsSubscription() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
-        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let center = AiringReminderCenterProbe(authorizationStatus: .authorized)
         let provider = EpisodeProviderProbe(
             nextEpisode: makeEpisode(
                 season: 1,
@@ -263,7 +263,7 @@ struct EpisodeNotificationManagerTests {
     @Test func remappedSeriesDisablesOnlySubscriptionsUsingPreviousShow() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
-        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let center = AiringReminderCenterProbe(authorizationStatus: .authorized)
         let manager = makeManager(defaults: defaults, center: center) { _ in
             makeEpisode(
                 season: 2,
@@ -320,7 +320,7 @@ struct EpisodeNotificationManagerTests {
     @Test @MainActor func disablingMissingSubscriptionDoesNotRefreshExistingSubscriptions() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
-        let existingSubscription = EpisodeNotificationSubscription(
+        let existingSubscription = AiringReminderSubscription(
             entryIdentityRawID: "series:100",
             tvMazeShowID: 70,
             displayTitle: "Existing Anime",
@@ -328,9 +328,9 @@ struct EpisodeNotificationManagerTests {
         )
         defaults.set(
             try JSONEncoder().encode([existingSubscription]),
-            forKey: .episodeNotificationSubscriptions
+            forKey: .airingReminderSubscriptions
         )
-        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let center = AiringReminderCenterProbe(authorizationStatus: .authorized)
         let provider = EpisodeProviderProbe(
             nextEpisode: makeEpisode(
                 season: 1,
@@ -341,7 +341,7 @@ struct EpisodeNotificationManagerTests {
         let manager = makeManager(defaults: defaults, center: center) { showID in
             try await provider.nextEpisode(showID: showID)
         }
-        let coordinator = EpisodeNotificationCoordinator.makeForTesting(manager: manager)
+        let coordinator = AiringReminderCoordinator.makeForTesting(manager: manager)
 
         await coordinator.disable(entryIdentityRawID: "series:200")
 
@@ -353,7 +353,7 @@ struct EpisodeNotificationManagerTests {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
         let subscriptions = (1...70).map { index in
-            EpisodeNotificationSubscription(
+            AiringReminderSubscription(
                 entryIdentityRawID: "series:\(index)",
                 tvMazeShowID: index,
                 displayTitle: "Anime \(index)",
@@ -362,9 +362,9 @@ struct EpisodeNotificationManagerTests {
         }
         defaults.set(
             try JSONEncoder().encode(subscriptions),
-            forKey: .episodeNotificationSubscriptions
+            forKey: .airingReminderSubscriptions
         )
-        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let center = AiringReminderCenterProbe(authorizationStatus: .authorized)
         let manager = makeManager(defaults: defaults, center: center) { showID in
             makeEpisode(
                 season: 1,
@@ -377,8 +377,8 @@ struct EpisodeNotificationManagerTests {
         let requests = await center.allRequests()
         let grouped = Dictionary(grouping: requests, by: \.subscriptionID)
 
-        #expect(requests.count == EpisodeNotificationManager.maximumPendingRequestCount)
-        #expect(grouped.count == EpisodeNotificationManager.maximumPendingRequestCount)
+        #expect(requests.count == AiringReminderManager.maximumPendingRequestCount)
+        #expect(grouped.count == AiringReminderManager.maximumPendingRequestCount)
         #expect(grouped.values.allSatisfy { $0.count == 1 })
         #expect(requests.map(\.tvMazeShowID) == Array(1...64))
         #expect(result.warning == .queueLimit)
@@ -389,7 +389,7 @@ struct EpisodeNotificationManagerTests {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
         let subscriptions = (1...12).map { index in
-            EpisodeNotificationSubscription(
+            AiringReminderSubscription(
                 entryIdentityRawID: "series:\(index)",
                 tvMazeShowID: index,
                 displayTitle: "Anime \(index)",
@@ -398,9 +398,9 @@ struct EpisodeNotificationManagerTests {
         }
         defaults.set(
             try JSONEncoder().encode(subscriptions),
-            forKey: .episodeNotificationSubscriptions
+            forKey: .airingReminderSubscriptions
         )
-        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let center = AiringReminderCenterProbe(authorizationStatus: .authorized)
         let provider = ConcurrentEpisodeProviderProbe(now: now)
         let manager = makeManager(defaults: defaults, center: center) { showID in
             try await provider.nextEpisode(showID: showID)
@@ -411,20 +411,20 @@ struct EpisodeNotificationManagerTests {
         #expect(result.refreshedSubscriptionCount == subscriptions.count)
         #expect(
             await provider.maximumConcurrentRequestCount()
-                == EpisodeNotificationManager.maximumConcurrentProviderRequestCount
+                == AiringReminderManager.maximumConcurrentProviderRequestCount
         )
     }
 
     @Test func cancellationKeepsCompletedSubscriptionRefreshes() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
-        let fastSubscription = EpisodeNotificationSubscription(
+        let fastSubscription = AiringReminderSubscription(
             entryIdentityRawID: "series:100",
             tvMazeShowID: 70,
             displayTitle: "Fast Anime",
             seasonNumber: nil
         )
-        let slowSubscription = EpisodeNotificationSubscription(
+        let slowSubscription = AiringReminderSubscription(
             entryIdentityRawID: "series:101",
             tvMazeShowID: 71,
             displayTitle: "Slow Anime",
@@ -432,9 +432,9 @@ struct EpisodeNotificationManagerTests {
         )
         defaults.set(
             try JSONEncoder().encode([fastSubscription, slowSubscription]),
-            forKey: .episodeNotificationSubscriptions
+            forKey: .airingReminderSubscriptions
         )
-        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let center = AiringReminderCenterProbe(authorizationStatus: .authorized)
         try await center.add(
             makeRequest(
                 for: fastSubscription,
@@ -497,7 +497,7 @@ struct EpisodeNotificationManagerTests {
     @Test func schedulingFailureRestoresPreviousPendingRequests() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
-        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let center = AiringReminderCenterProbe(authorizationStatus: .authorized)
         let provider = EpisodeProviderProbe(
             nextEpisode: makeEpisode(
                 season: 1,
@@ -521,7 +521,7 @@ struct EpisodeNotificationManagerTests {
         )
         await center.failNextAdds(1)
 
-        await #expect(throws: EpisodeNotificationManagerError.self) {
+        await #expect(throws: AiringReminderManagerError.self) {
             try await manager.refreshAll()
         }
 
@@ -532,7 +532,7 @@ struct EpisodeNotificationManagerTests {
     @Test func cancelAllClearsSubscriptionsRequestsAndWarning() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
-        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let center = AiringReminderCenterProbe(authorizationStatus: .authorized)
         let manager = makeManager(defaults: defaults, center: center) { _ in
             makeEpisode(season: 1, number: 1, airStamp: now.addingTimeInterval(86_400))
         }
@@ -543,7 +543,7 @@ struct EpisodeNotificationManagerTests {
             displayTitle: "Cancelable Anime",
             seasonNumber: nil
         )
-        defaults.set(EpisodeNotificationWarning.queueLimit.rawValue, forKey: .episodeNotificationWarning)
+        defaults.set(AiringReminderWarning.queueLimit.rawValue, forKey: .airingReminderWarning)
 
         await manager.cancelAll()
         let snapshot = await manager.snapshot()
@@ -556,7 +556,7 @@ struct EpisodeNotificationManagerTests {
     @Test func refreshRemovesRequestsOrphanedByInterruptedUnsubscribe() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
-        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let center = AiringReminderCenterProbe(authorizationStatus: .authorized)
         let identity = LibraryEntryIdentity(entryType: .series, tmdbID: 100)
         let airStamp = now.addingTimeInterval(86_400)
         let manager = makeManager(defaults: defaults, center: center) { _ in
@@ -570,8 +570,8 @@ struct EpisodeNotificationManagerTests {
             seasonNumber: nil
         )
         defaults.set(
-            try JSONEncoder().encode([EpisodeNotificationSubscription]()),
-            forKey: .episodeNotificationSubscriptions
+            try JSONEncoder().encode([AiringReminderSubscription]()),
+            forKey: .airingReminderSubscriptions
         )
         let restoredManager = makeManager(defaults: defaults, center: center) { _ in nil }
 
@@ -584,7 +584,7 @@ struct EpisodeNotificationManagerTests {
     @Test func cancelAllDuringRefreshDoesNotRestoreCapturedReminder() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
-        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let center = AiringReminderCenterProbe(authorizationStatus: .authorized)
         let provider = EpisodeProviderProbe(
             nextEpisode: makeEpisode(
                 season: 1,
@@ -623,7 +623,7 @@ struct EpisodeNotificationManagerTests {
     @Test @MainActor func coordinatorPrunesSubscriptionsMissingFromVisibleLibrary() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
-        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let center = AiringReminderCenterProbe(authorizationStatus: .authorized)
         let manager = makeManager(defaults: defaults, center: center) { _ in
             makeEpisode(
                 season: 1,
@@ -631,7 +631,7 @@ struct EpisodeNotificationManagerTests {
                 airStamp: now.addingTimeInterval(86_400)
             )
         }
-        let coordinator = EpisodeNotificationCoordinator.makeForTesting(manager: manager)
+        let coordinator = AiringReminderCoordinator.makeForTesting(manager: manager)
         let retainedIdentity = LibraryEntryIdentity(entryType: .series, tmdbID: 100)
         let missingIdentity = LibraryEntryIdentity(entryType: .series, tmdbID: 200)
 
@@ -658,7 +658,7 @@ struct EpisodeNotificationManagerTests {
     @Test @MainActor func coordinatorCancelAllClearsRefreshFailure() async throws {
         let defaults = makeDefaults()
         defer { removeDefaults(defaults) }
-        let center = EpisodeNotificationCenterProbe(authorizationStatus: .authorized)
+        let center = AiringReminderCenterProbe(authorizationStatus: .authorized)
         let provider = EpisodeProviderProbe(
             nextEpisode: makeEpisode(
                 season: 1,
@@ -669,7 +669,7 @@ struct EpisodeNotificationManagerTests {
         let manager = makeManager(defaults: defaults, center: center) { showID in
             try await provider.nextEpisode(showID: showID)
         }
-        let coordinator = EpisodeNotificationCoordinator.makeForTesting(manager: manager)
+        let coordinator = AiringReminderCoordinator.makeForTesting(manager: manager)
 
         _ = try await manager.enable(
             entryIdentity: LibraryEntryIdentity(entryType: .series, tmdbID: 100),
@@ -690,10 +690,10 @@ struct EpisodeNotificationManagerTests {
 
     private func makeManager(
         defaults: UserDefaults,
-        center: EpisodeNotificationCenterProbe,
+        center: AiringReminderCenterProbe,
         fetchNextEpisode: @escaping @Sendable (Int) async throws -> TVMazeNextEpisodeAiring?
-    ) -> EpisodeNotificationManager {
-        EpisodeNotificationManager(
+    ) -> AiringReminderManager {
+        AiringReminderManager(
             defaults: defaults,
             notificationCenter: center,
             now: { now },
@@ -702,26 +702,26 @@ struct EpisodeNotificationManagerTests {
     }
 
     private func makeDefaults() -> UserDefaults {
-        let suiteName = "EpisodeNotificationManagerTests.\(UUID().uuidString)"
+        let suiteName = "AiringReminderManagerTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
-        defaults.set(suiteName, forKey: "EpisodeNotificationManagerTests.SuiteName")
+        defaults.set(suiteName, forKey: "AiringReminderManagerTests.SuiteName")
         return defaults
     }
 
     private func removeDefaults(_ defaults: UserDefaults) {
-        guard let suiteName = defaults.string(forKey: "EpisodeNotificationManagerTests.SuiteName") else {
+        guard let suiteName = defaults.string(forKey: "AiringReminderManagerTests.SuiteName") else {
             return
         }
         defaults.removePersistentDomain(forName: suiteName)
     }
 
     private func makeRequest(
-        for subscription: EpisodeNotificationSubscription,
+        for subscription: AiringReminderSubscription,
         episode: TVMazeNextEpisodeAiring
-    ) -> EpisodeNotificationRequest {
-        EpisodeNotificationRequest(
-            identifier: "AniShelf.Episode.\(subscription.id.replacingOccurrences(of: ":", with: "-"))",
+    ) -> AiringReminderRequest {
+        AiringReminderRequest(
+            identifier: "AniShelf.AiringReminder.\(subscription.id.replacingOccurrences(of: ":", with: "-"))",
             title: subscription.displayTitle,
             body: "Test reminder",
             subscriptionID: subscription.id,
@@ -744,15 +744,15 @@ struct EpisodeNotificationManagerTests {
     }
 }
 
-private actor EpisodeNotificationCenterProbe: EpisodeNotificationCenter {
+private actor AiringReminderCenterProbe: AiringReminderCenter {
     enum Failure: Error {
         case unavailable
     }
 
-    private var status: EpisodeNotificationAuthorizationStatus
-    private let authorizationAfterRequest: EpisodeNotificationAuthorizationStatus
+    private var status: AiringReminderAuthorizationStatus
+    private let authorizationAfterRequest: AiringReminderAuthorizationStatus
     private let authorizationRequestFails: Bool
-    private var requests: [String: EpisodeNotificationRequest] = [:]
+    private var requests: [String: AiringReminderRequest] = [:]
     private var requestCount = 0
     private var addFailuresRemaining = 0
     private var pausesNextAdd = false
@@ -761,8 +761,8 @@ private actor EpisodeNotificationCenterProbe: EpisodeNotificationCenter {
     private var pausedAddContinuation: CheckedContinuation<Void, Never>?
 
     init(
-        authorizationStatus: EpisodeNotificationAuthorizationStatus,
-        authorizationAfterRequest: EpisodeNotificationAuthorizationStatus? = nil,
+        authorizationStatus: AiringReminderAuthorizationStatus,
+        authorizationAfterRequest: AiringReminderAuthorizationStatus? = nil,
         authorizationRequestFails: Bool = false
     ) {
         status = authorizationStatus
@@ -770,7 +770,7 @@ private actor EpisodeNotificationCenterProbe: EpisodeNotificationCenter {
         self.authorizationRequestFails = authorizationRequestFails
     }
 
-    func authorizationStatus() -> EpisodeNotificationAuthorizationStatus {
+    func authorizationStatus() -> AiringReminderAuthorizationStatus {
         status
     }
 
@@ -781,11 +781,11 @@ private actor EpisodeNotificationCenterProbe: EpisodeNotificationCenter {
         return status.allowsScheduling
     }
 
-    func pendingRequests() -> [EpisodeNotificationRequest] {
+    func pendingRequests() -> [AiringReminderRequest] {
         requests.values.sorted { $0.fireDate < $1.fireDate }
     }
 
-    func add(_ request: EpisodeNotificationRequest) async throws {
+    func add(_ request: AiringReminderRequest) async throws {
         if pausesNextAdd {
             pausesNextAdd = false
             isAddPaused = true
@@ -809,7 +809,7 @@ private actor EpisodeNotificationCenterProbe: EpisodeNotificationCenter {
         }
     }
 
-    func allRequests() -> [EpisodeNotificationRequest] {
+    func allRequests() -> [AiringReminderRequest] {
         requests.values.sorted { $0.fireDate < $1.fireDate }
     }
 

@@ -73,7 +73,7 @@ struct TVMazeResolver: Sendable {
                 try await tvMazeClient.show(id: tvMazeID)
             },
             onConfirmedMappingReplacement: { replacement in
-                await EpisodeNotificationCoordinator.shared.disableSubscriptions(
+                await AiringReminderCoordinator.shared.disableSubscriptions(
                     forSeriesTMDbID: replacement.tmdbSeriesID,
                     matchingTVMazeShowID: replacement.previousShowID
                 )

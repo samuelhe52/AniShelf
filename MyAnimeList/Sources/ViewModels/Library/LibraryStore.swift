@@ -35,7 +35,7 @@ class LibraryStore {
     @ObservationIgnored private var saveObserver: ModelContextSaveObserver?
     @ObservationIgnored private var deferredLibraryRefreshDepth = 0
     @ObservationIgnored private var needsDeferredLibraryRefresh = false
-    @ObservationIgnored private var episodeNotificationPruningEnabled: Bool
+    @ObservationIgnored private var airingReminderPruningEnabled: Bool
     private(set) var libraryRevision = 0
 
     // MARK: - State
@@ -116,7 +116,7 @@ class LibraryStore {
             guard let key = TMDbAPIKeyStorage().retrieveKey() else { return false }
             return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         },
-        episodeNotificationPruningEnabled: Bool = false
+        airingReminderPruningEnabled: Bool = false
     ) {
         self.dataProvider = dataProvider
         let syncChangeRecorder = LibrarySyncChangeRecorder(dataProvider: dataProvider)
@@ -135,7 +135,7 @@ class LibraryStore {
         self.infoFetcher = .init()
         self.library = []
         self.libraryCloudSyncStatus = snapshot.cloudSyncStatus
-        self.episodeNotificationPruningEnabled = episodeNotificationPruningEnabled
+        self.airingReminderPruningEnabled = airingReminderPruningEnabled
         self.shouldResumeInterruptedCloudSyncBootstrap =
             snapshot.cloudSyncStatus.isEnabled && snapshot.cloudSyncStatus.bootstrapState == .running
         reloadPersistedPreferences()
@@ -209,14 +209,14 @@ class LibraryStore {
         libraryStoreLogger.debug("[\(Date().debugDescription)] Refreshing library...")
         library = try repository.visibleLibraryEntries()
         libraryRevision &+= 1
-        pruneEpisodeNotificationSubscriptions()
+        pruneAiringReminderSubscriptions()
     }
 
-    func enableEpisodeNotificationPruning() {
-        guard !episodeNotificationPruningEnabled else { return }
-        episodeNotificationPruningEnabled = true
-        libraryStoreLogger.info("Enabled episode notification subscription pruning.")
-        pruneEpisodeNotificationSubscriptions()
+    func enableAiringReminderPruning() {
+        guard !airingReminderPruningEnabled else { return }
+        airingReminderPruningEnabled = true
+        libraryStoreLogger.info("Enabled airing reminder subscription pruning.")
+        pruneAiringReminderSubscriptions()
     }
 
     func setupUpdateLibrary() {
@@ -238,10 +238,10 @@ class LibraryStore {
         }
     }
 
-    private func pruneEpisodeNotificationSubscriptions() {
-        guard episodeNotificationPruningEnabled else {
+    private func pruneAiringReminderSubscriptions() {
+        guard airingReminderPruningEnabled else {
             libraryStoreLogger.debug(
-                "Skipped episode notification subscription pruning while library activity is blocked."
+                "Skipped airing reminder subscription pruning while library activity is blocked."
             )
             return
         }
@@ -251,16 +251,16 @@ class LibraryStore {
         )
         let pruningRevision = libraryRevision
         libraryStoreLogger.debug(
-            "Requesting episode notification subscription reconciliation against \(validEntryIdentityRawIDs.count, privacy: .public) visible library entries at revision \(pruningRevision, privacy: .public)."
+            "Requesting airing reminder subscription reconciliation against \(validEntryIdentityRawIDs.count, privacy: .public) visible library entries at revision \(pruningRevision, privacy: .public)."
         )
         Task { @MainActor [weak self] in
             guard let self, self.libraryRevision == pruningRevision else {
                 libraryStoreLogger.debug(
-                    "Skipped superseded episode notification subscription reconciliation for library revision \(pruningRevision, privacy: .public)."
+                    "Skipped superseded airing reminder subscription reconciliation for library revision \(pruningRevision, privacy: .public)."
                 )
                 return
             }
-            await EpisodeNotificationCoordinator.shared.pruneSubscriptions(
+            await AiringReminderCoordinator.shared.pruneSubscriptions(
                 validEntryIdentityRawIDs: validEntryIdentityRawIDs
             )
         }

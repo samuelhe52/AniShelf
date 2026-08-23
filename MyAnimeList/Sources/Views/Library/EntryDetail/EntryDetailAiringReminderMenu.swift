@@ -1,5 +1,5 @@
 //
-//  EntryDetailNotificationMenu.swift
+//  EntryDetailAiringReminderMenu.swift
 //  AniShelf
 //
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/8/21.
@@ -9,43 +9,43 @@ import DataProvider
 import SwiftUI
 import UIKit
 
-struct EntryDetailNotificationContext {
+struct EntryDetailAiringReminderContext {
     let entryIdentity: LibraryEntryIdentity
     let displayTitle: String
     let seasonNumber: Int?
     let resolvedShow: TVMazeShow?
 }
 
-struct EntryDetailNotificationMenu: View {
+struct EntryDetailAiringReminderMenu: View {
     @Environment(\.openURL) private var openURL
-    private let notifications = EpisodeNotificationCoordinator.shared
+    private let airingReminders = AiringReminderCoordinator.shared
 
-    let context: EntryDetailNotificationContext
+    let context: EntryDetailAiringReminderContext
 
-    private var isSubscribed: Bool {
+    private var hasReminder: Bool {
         subscription != nil
     }
 
-    private var subscription: EpisodeNotificationSubscription? {
-        notifications.snapshot.subscription(
+    private var subscription: AiringReminderSubscription? {
+        airingReminders.snapshot.subscription(
             for: context.entryIdentity.rawID
         )
     }
 
-    private var nextReminder: EpisodeScheduledReminder? {
-        notifications.snapshot.reminders(
+    private var nextReminder: ScheduledAiringReminder? {
+        airingReminders.snapshot.reminders(
             for: context.entryIdentity.rawID
         ).first
     }
 
     private var notificationPermissionIsDenied: Bool {
-        notifications.snapshot.authorizationStatus == .denied
+        airingReminders.snapshot.authorizationStatus == .denied
     }
 
     var body: some View {
         Menu {
             subscriptionStatus
-            nextNotificationStatus
+            nextEpisodeStatus
 
             if notificationPermissionIsDenied {
                 openNotificationSettingsButton
@@ -53,15 +53,15 @@ struct EntryDetailNotificationMenu: View {
 
             Divider()
 
-            if isSubscribed {
-                unsubscribeButton
+            if hasReminder {
+                removeReminderButton
             } else {
-                subscribeButton
+                setReminderButton
             }
         } label: {
             Label(
                 EntryDetailL10n.notifications,
-                systemImage: isSubscribed ? "bell.badge.fill" : "bell"
+                systemImage: hasReminder ? "bell.badge.fill" : "bell"
             )
         }
     }
@@ -69,27 +69,27 @@ struct EntryDetailNotificationMenu: View {
     private var subscriptionStatus: some View {
         Button(action: {}) {
             Label(
-                isSubscribed ? EntryDetailL10n.subscribed : EntryDetailL10n.notSubscribed,
-                systemImage: isSubscribed ? "checkmark.circle.fill" : "circle"
+                hasReminder ? EntryDetailL10n.active : EntryDetailL10n.inactive,
+                systemImage: hasReminder ? "checkmark.circle.fill" : "circle"
             )
         }
-        .tint(isSubscribed ? .green : .primary)
-        .disabled(!isSubscribed)
+        .tint(hasReminder ? .green : .primary)
+        .disabled(!hasReminder)
         .menuActionDismissBehavior(.disabled)
     }
 
-    private var nextNotificationStatus: some View {
+    private var nextEpisodeStatus: some View {
         Button(action: {}) {
-            Label(EntryDetailL10n.nextNotification, systemImage: "calendar.badge.clock")
+            Label(EntryDetailL10n.next, systemImage: "calendar.badge.clock")
             if notificationPermissionIsDenied {
                 Text(EntryDetailL10n.notificationsDisabled)
             } else if let nextReminder {
-                Text(verbatim: nextReminder.fireDate.formatted(date: .abbreviated, time: .shortened))
+                Text(verbatim: nextReminder.airStamp.formatted(date: .abbreviated, time: .shortened))
             } else {
-                Text(EntryDetailL10n.noUpcomingNotification)
+                Text(EntryDetailL10n.notSet)
             }
         }
-        .disabled(!isSubscribed)
+        .disabled(!hasReminder)
         .menuActionDismissBehavior(.disabled)
     }
 
@@ -102,11 +102,11 @@ struct EntryDetailNotificationMenu: View {
         }
     }
 
-    private var subscribeButton: some View {
+    private var setReminderButton: some View {
         Button {
             guard let resolvedShow = context.resolvedShow else { return }
             Task {
-                _ = await notifications.enable(
+                _ = await airingReminders.enable(
                     entryIdentity: context.entryIdentity,
                     showID: resolvedShow.id,
                     displayTitle: context.displayTitle,
@@ -114,26 +114,26 @@ struct EntryDetailNotificationMenu: View {
                 )
             }
         } label: {
-            Label(EntryDetailL10n.subscribe, systemImage: "bell.badge")
+            Label(EntryDetailL10n.enable, systemImage: "bell.badge")
         }
-        .disabled(context.resolvedShow == nil || notifications.isRefreshing)
+        .disabled(context.resolvedShow == nil || airingReminders.isRefreshing)
         .menuActionDismissBehavior(.disabled)
     }
 
-    private var unsubscribeButton: some View {
+    private var removeReminderButton: some View {
         Button(
-            EntryDetailL10n.unsubscribe,
+            EntryDetailL10n.disable,
             systemImage: "bell.slash",
             role: .destructive
         ) {
             Task {
-                await notifications.disable(
+                await airingReminders.disable(
                     entryIdentityRawID: context.entryIdentity.rawID
                 )
             }
         }
         .tint(.red)
-        .disabled(notifications.isRefreshing)
+        .disabled(airingReminders.isRefreshing)
         .menuActionDismissBehavior(.disabled)
     }
 }

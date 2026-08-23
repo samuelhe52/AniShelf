@@ -72,35 +72,35 @@ struct LibrarySyncNotificationBridgeTests {
         #expect(completionResult == .noData)
     }
 
-    @Test func episodeNotificationRouteAcceptsOnlyAniShelfEpisodeRequests() {
+    @Test func airingReminderRouteAcceptsOnlyAniShelfAiringReminderRequests() {
         let payload: [AnyHashable: Any] = [
-            EpisodeNotificationPayloadKey.subscriptionID: "season:100:2:200"
+            AiringReminderPayloadKey.subscriptionID: "season:100:2:200"
         ]
 
         #expect(
-            LibrarySyncNotificationBridge.episodeNotificationRoute(
-                requestIdentifier: "AniShelf.Episode.season-100-2-200.501",
+            LibrarySyncNotificationBridge.airingReminderRoute(
+                requestIdentifier: "AniShelf.AiringReminder.season-100-2-200.501",
                 userInfo: payload
             ) == "season:100:2:200"
         )
         #expect(
-            LibrarySyncNotificationBridge.episodeNotificationRoute(
+            LibrarySyncNotificationBridge.airingReminderRoute(
                 requestIdentifier: "CloudKit.Remote",
                 userInfo: payload
             ) == nil
         )
         #expect(
-            LibrarySyncNotificationBridge.episodeNotificationRoute(
-                requestIdentifier: "AniShelf.Episode.series-100.501",
+            LibrarySyncNotificationBridge.airingReminderRoute(
+                requestIdentifier: "AniShelf.AiringReminder.series-100.501",
                 userInfo: [:]
             ) == nil
         )
     }
 
-    @Test func episodeNotificationBackgroundRefreshRequestsSixHourWindow() {
+    @Test func airingReminderBackgroundRefreshRequestsSixHourWindow() {
         let now = Date(timeIntervalSince1970: 2_000_000_000)
         #expect(
-            LibrarySyncNotificationBridge.nextEpisodeNotificationRefreshDate(now: now)
+            LibrarySyncNotificationBridge.nextAiringReminderRefreshDate(now: now)
                 == now.addingTimeInterval(6 * 60 * 60)
         )
     }

@@ -103,7 +103,7 @@ struct LibraryProfileSettingsCard: View {
     private var settingsSections: some View {
         languageSettingsSection
         preferencesSection
-        episodeNotificationSettingsSection
+        airingReminderSettingsSection
         interfaceSettingsSection
         tmdbConnectionSection
         iCloudSyncSection
@@ -132,8 +132,8 @@ struct LibraryProfileSettingsCard: View {
         LibraryProfileInterfaceSettingsSection()
     }
 
-    private var episodeNotificationSettingsSection: some View {
-        LibraryProfileEpisodeNotificationSettingsSection()
+    private var airingReminderSettingsSection: some View {
+        LibraryProfileAiringReminderSettingsSection()
     }
 
     private var tmdbConnectionSection: some View {
@@ -182,7 +182,7 @@ struct LibraryProfileSettingsCard: View {
             VStack(spacing: 20) {
                 languageSettingsSection
                 preferencesSection
-                episodeNotificationSettingsSection
+                airingReminderSettingsSection
                 interfaceSettingsSection
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)

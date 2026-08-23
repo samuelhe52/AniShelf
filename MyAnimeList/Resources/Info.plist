@@ -24,7 +24,7 @@
 	</dict>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>com.samuelhe.MyAnimeList.episode-notification-refresh</string>
+		<string>com.samuelhe.MyAnimeList.airing-reminder-refresh</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>

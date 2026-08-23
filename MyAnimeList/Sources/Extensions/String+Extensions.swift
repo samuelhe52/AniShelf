@@ -27,10 +27,10 @@ extension String {
     static let libraryScoringEnabled = "LibraryScoringEnabled"
     static let episodeProgressTrackingEnabled = "EpisodeProgressTrackingEnabled"
     static let broadcastScheduleEnabled = "BroadcastScheduleEnabled"
-    // Device-local notification state. Keep these out of backup and CloudKit allowlists.
-    static let episodeNotificationSubscriptions = "EpisodeNotificationSubscriptions"
-    static let episodeNotificationLeadTimeMinutes = "EpisodeNotificationLeadTimeMinutes"
-    static let episodeNotificationWarning = "EpisodeNotificationWarning"
+    // Device-local airing reminder state. Keep these out of backup and CloudKit allowlists.
+    static let airingReminderSubscriptions = "AiringReminderSubscriptions"
+    static let airingReminderLeadTimeMinutes = "AiringReminderLeadTimeMinutes"
+    static let airingReminderWarning = "AiringReminderWarning"
     static let libraryPosterProgressBarOverlayEnabled = "LibraryPosterProgressBarOverlayEnabled"
     static let libraryHideDroppedByDefault = "LibraryHideDroppedByDefault"
     static let libraryDefaultWatchStatus = "LibraryDefaultWatchStatus"

@@ -42,7 +42,7 @@ struct MyAnimeListApp: App {
                 guard let key = keyStorage.key else { return false }
                 return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             },
-            episodeNotificationPruningEnabled: recoveryActivityGate.allowsLibraryActivity
+            airingReminderPruningEnabled: recoveryActivityGate.allowsLibraryActivity
         )
         let whatsNew = WhatsNewController()
         let supportStore = SupportStore()
@@ -109,7 +109,7 @@ struct MyAnimeListApp: App {
                 if startupRecovery == nil {
                     requestSync(trigger: .appLaunch)
                     recordActiveLibraryDayIfUsable()
-                    refreshEpisodeNotifications()
+                    refreshAiringReminders()
                 }
             }
             .onChange(of: scenePhase) { _, newPhase in
@@ -117,7 +117,7 @@ struct MyAnimeListApp: App {
                     keyStorage.retryInitialLookupIfNeeded()
                     requestSync(trigger: .foreground)
                     recordActiveLibraryDayIfUsable()
-                    refreshEpisodeNotifications()
+                    refreshAiringReminders()
                 } else if newPhase == .background {
                     flushPendingLocalSync()
                 }
@@ -181,7 +181,7 @@ struct MyAnimeListApp: App {
         }
         recoveryActivityGate.isBlocked = false
         startupRecovery = nil
-        libraryStore.enableEpisodeNotificationPruning()
+        libraryStore.enableAiringReminderPruning()
         requestSync(trigger: .appLaunch)
         updateWhatsNewPresentation()
     }
@@ -210,10 +210,10 @@ struct MyAnimeListApp: App {
         appReview.recordActiveLibraryDay()
     }
 
-    private func refreshEpisodeNotifications() {
+    private func refreshAiringReminders() {
         Task { @MainActor in
-            await EpisodeNotificationCoordinator.shared.reloadState()
-            _ = await EpisodeNotificationCoordinator.shared.refreshAll()
+            await AiringReminderCoordinator.shared.reloadState()
+            _ = await AiringReminderCoordinator.shared.refreshAll()
         }
     }
 

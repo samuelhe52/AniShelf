@@ -13,7 +13,7 @@ import SwiftUI
 struct EntryDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppReviewPromptController.self) private var appReview
-    private let episodeNotifications = EpisodeNotificationCoordinator.shared
+    private let airingReminders = AiringReminderCoordinator.shared
 
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
@@ -283,13 +283,13 @@ struct EntryDetailView: View {
             dropActionSystemImage: dropActionSystemImage,
             dropActionIsDestructive: session.entry.watchStatus != .dropped,
             broadcastPhase: session.broadcast.phase,
-            notificationContext: EntryDetailNotificationContext(
+            airingReminderContext: EntryDetailAiringReminderContext(
                 entryIdentity: session.entryIdentity,
                 displayTitle: session.model.displayTitle,
                 seasonNumber: session.entry.type.seasonNumber,
                 resolvedShow: session.broadcast.resolvedShow
             ),
-            hasNotificationSubscription: episodeNotifications.snapshot.subscription(
+            hasAiringReminder: airingReminders.snapshot.subscription(
                 for: session.entryIdentity.rawID
             ) != nil,
             onShare: { updatePresentation { $0.activeSheet = .sharing } },

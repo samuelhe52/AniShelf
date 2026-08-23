@@ -23,8 +23,8 @@ fileprivate let librarySyncNotificationLogger = Logger(
 /// Bridges CloudKit remote notifications into the async library sync trigger.
 @MainActor
 final class LibrarySyncNotificationBridge: NSObject, UIApplicationDelegate {
-    static let episodeNotificationRefreshTaskIdentifier =
-        "com.samuelhe.MyAnimeList.episode-notification-refresh"
+    static let airingReminderRefreshTaskIdentifier =
+        "com.samuelhe.MyAnimeList.airing-reminder-refresh"
 
     var onSyncRequested: (() async -> UIBackgroundFetchResult)? {
         get { LibrarySyncNotificationRouting.onSyncRequested }
@@ -37,38 +37,38 @@ final class LibrarySyncNotificationBridge: NSObject, UIApplicationDelegate {
         LibrarySyncNotificationRouting.onSyncRequested = handler
     }
 
-    static func updateEpisodeNotificationBackgroundRefresh(hasSubscriptions: Bool) {
+    static func updateAiringReminderBackgroundRefresh(hasSubscriptions: Bool) {
         let scheduler = BGTaskScheduler.shared
-        scheduler.cancel(taskRequestWithIdentifier: episodeNotificationRefreshTaskIdentifier)
+        scheduler.cancel(taskRequestWithIdentifier: airingReminderRefreshTaskIdentifier)
         guard hasSubscriptions else { return }
 
         let request = BGAppRefreshTaskRequest(
-            identifier: episodeNotificationRefreshTaskIdentifier
+            identifier: airingReminderRefreshTaskIdentifier
         )
-        request.earliestBeginDate = nextEpisodeNotificationRefreshDate()
+        request.earliestBeginDate = nextAiringReminderRefreshDate()
         do {
             try scheduler.submit(request)
         } catch {
             librarySyncNotificationLogger.error(
-                "Failed to schedule episode notification refresh: \(error.localizedDescription, privacy: .public)"
+                "Failed to schedule airing reminder refresh: \(error.localizedDescription, privacy: .public)"
             )
         }
     }
 
-    nonisolated static func nextEpisodeNotificationRefreshDate(
+    nonisolated static func nextAiringReminderRefreshDate(
         now: Date = .now
     ) -> Date {
         now.addingTimeInterval(6 * 60 * 60)
     }
 
-    nonisolated static func episodeNotificationRoute(
+    nonisolated static func airingReminderRoute(
         requestIdentifier: String,
         userInfo: [AnyHashable: Any]
     ) -> String? {
-        guard requestIdentifier.hasPrefix(EpisodeNotificationManager.requestIdentifierPrefix) else {
+        guard requestIdentifier.hasPrefix(AiringReminderManager.requestIdentifierPrefix) else {
             return nil
         }
-        return userInfo[EpisodeNotificationPayloadKey.subscriptionID] as? String
+        return userInfo[AiringReminderPayloadKey.subscriptionID] as? String
     }
 
     func application(
@@ -76,7 +76,7 @@ final class LibrarySyncNotificationBridge: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
-        registerEpisodeNotificationBackgroundRefresh()
+        registerAiringReminderBackgroundRefresh()
         application.registerForRemoteNotifications()
         return true
     }
@@ -120,9 +120,9 @@ final class LibrarySyncNotificationBridge: NSObject, UIApplicationDelegate {
         }
     }
 
-    private func registerEpisodeNotificationBackgroundRefresh() {
+    private func registerAiringReminderBackgroundRefresh() {
         let didRegister = BGTaskScheduler.shared.register(
-            forTaskWithIdentifier: Self.episodeNotificationRefreshTaskIdentifier,
+            forTaskWithIdentifier: Self.airingReminderRefreshTaskIdentifier,
             using: nil
         ) { task in
             guard let refreshTask = task as? BGAppRefreshTask else {
@@ -130,9 +130,9 @@ final class LibrarySyncNotificationBridge: NSObject, UIApplicationDelegate {
                 return
             }
             Task { @MainActor in
-                Self.updateEpisodeNotificationBackgroundRefresh(hasSubscriptions: true)
+                Self.updateAiringReminderBackgroundRefresh(hasSubscriptions: true)
                 let operation = Task { @MainActor in
-                    await EpisodeNotificationCoordinator.shared.refreshAll()
+                    await AiringReminderCoordinator.shared.refreshAll()
                 }
                 refreshTask.expirationHandler = {
                     operation.cancel()
@@ -142,7 +142,7 @@ final class LibrarySyncNotificationBridge: NSObject, UIApplicationDelegate {
         }
         if !didRegister {
             librarySyncNotificationLogger.error(
-                "Failed to register episode notification background refresh handler."
+                "Failed to register airing reminder background refresh handler."
             )
         }
     }
@@ -155,7 +155,7 @@ extension LibrarySyncNotificationBridge: UNUserNotificationCenterDelegate {
     ) async -> UNNotificationPresentationOptions {
         guard
             notification.request.identifier.hasPrefix(
-                EpisodeNotificationManager.requestIdentifierPrefix
+                AiringReminderManager.requestIdentifierPrefix
             )
         else {
             return []
@@ -168,7 +168,7 @@ extension LibrarySyncNotificationBridge: UNUserNotificationCenterDelegate {
         didReceive response: UNNotificationResponse
     ) async {
         guard
-            let entryIdentityRawID = Self.episodeNotificationRoute(
+            let entryIdentityRawID = Self.airingReminderRoute(
                 requestIdentifier: response.notification.request.identifier,
                 userInfo: response.notification.request.content.userInfo
             )
@@ -176,7 +176,7 @@ extension LibrarySyncNotificationBridge: UNUserNotificationCenterDelegate {
             return
         }
         await MainActor.run {
-            EpisodeNotificationCoordinator.shared.receiveNotificationRoute(
+            AiringReminderCoordinator.shared.receiveNotificationRoute(
                 entryIdentityRawID: entryIdentityRawID
             )
         }
