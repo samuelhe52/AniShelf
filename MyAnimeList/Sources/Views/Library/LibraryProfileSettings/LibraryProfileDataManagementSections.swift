@@ -18,9 +18,7 @@ struct LibraryProfileICloudSyncSection: View {
     let cloudSyncIsBusy: Bool
     let cloudSyncStatusTitleColor: Color
     let cloudSyncManualRetryDisabled: Bool
-    let cloudSyncRebuildDisabled: Bool
     let onRetryLibraryCloudSync: () -> Void
-    let onRequestRebuildLibraryCloudSync: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -40,28 +38,12 @@ struct LibraryProfileICloudSyncSection: View {
             .disabled(cloudSyncToggleDisabled)
 
             if libraryCloudSyncStatus.isEnabled {
-                VStack(alignment: .leading, spacing: 10) {
-                    cloudSyncStatusRow
-                    rebuildCloudSyncButton
-                }
+                cloudSyncStatusRow
             }
         }
         .animation(.default, value: cloudSyncIsBusy)
         .padding(14)
         .libraryProfileInsetPanel(cornerRadius: 22, tint: .indigo)
-    }
-
-    private var rebuildCloudSyncButton: some View {
-        Button(action: onRequestRebuildLibraryCloudSync) {
-            Label("Rebuild iCloud Sync", systemImage: "arrow.triangle.2.circlepath.icloud")
-                .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(LibraryProfileCommandButtonStyle(tint: .indigo, filled: false))
-        .disabled(cloudSyncRebuildDisabled)
-        .opacity(cloudSyncRebuildDisabled ? 0.52 : 1)
-        .accessibilityHint(
-            Text("Refetch and reconcile your iCloud library with your local library.")
-        )
     }
 
     private var cloudSyncStatusRow: some View {
@@ -206,6 +188,9 @@ struct LibraryProfileMaintenanceActionsSection: View {
     let onCheckMetadataCacheSize: () -> Void
     let onRefreshInfos: () -> Void
     let onPrefetchImages: () -> Void
+    let showRebuildLibraryCloudSync: Bool
+    let rebuildLibraryCloudSyncDisabled: Bool
+    let onRequestRebuildLibraryCloudSync: () -> Void
     let onShowSupport: () -> Void
     let whatsNewVersion: String?
     let onShowWhatsNew: () -> Void
@@ -246,6 +231,18 @@ struct LibraryProfileMaintenanceActionsSection: View {
                 action: onPrefetchImages
             )
             LibraryProfileActionDivider()
+            if showRebuildLibraryCloudSync {
+                LibraryProfileActionRow(
+                    title: "Rebuild iCloud Sync",
+                    subtitle: "Refetch and reconcile your iCloud library with your local library.",
+                    systemImage: "arrow.triangle.2.circlepath.icloud",
+                    tint: LibraryProfileMaintenancePalette.accent,
+                    action: onRequestRebuildLibraryCloudSync
+                )
+                .disabled(rebuildLibraryCloudSyncDisabled)
+                .opacity(rebuildLibraryCloudSyncDisabled ? 0.52 : 1)
+                LibraryProfileActionDivider()
+            }
             if let whatsNewVersion {
                 LibraryProfileActionRow(
                     title: "What's New",

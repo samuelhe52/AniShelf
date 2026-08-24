@@ -159,9 +159,7 @@ struct LibraryProfileSettingsCard: View {
             cloudSyncIsBusy: cloudSyncIsBusy,
             cloudSyncStatusTitleColor: cloudSyncStatusTitleColor,
             cloudSyncManualRetryDisabled: cloudSyncManualRetryDisabled,
-            cloudSyncRebuildDisabled: cloudSyncIsBusy,
-            onRetryLibraryCloudSync: retryLibraryCloudSync,
-            onRequestRebuildLibraryCloudSync: requestRebuildLibraryCloudSync
+            onRetryLibraryCloudSync: retryLibraryCloudSync
         )
     }
 
@@ -181,6 +179,9 @@ struct LibraryProfileSettingsCard: View {
             onCheckMetadataCacheSize: onCheckMetadataCacheSize,
             onRefreshInfos: onRefreshInfos,
             onPrefetchImages: onPrefetchImages,
+            showRebuildLibraryCloudSync: libraryCloudSyncStatus.isEnabled,
+            rebuildLibraryCloudSyncDisabled: cloudSyncIsBusy,
+            onRequestRebuildLibraryCloudSync: requestRebuildLibraryCloudSync,
             onShowSupport: onShowSupport,
             whatsNewVersion: whatsNewVersion,
             onShowWhatsNew: onShowWhatsNew,
