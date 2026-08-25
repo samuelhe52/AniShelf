@@ -26,6 +26,8 @@ extension LibrarySyncCoordinator {
         var appliedChangesCount = 0
         var hydratedEntriesCount = 0
         var applicationPlans: [ApplicationPlan] = []
+        var plannedEntriesByIdentity: [LibraryEntryIdentity: AnimeEntry] = [:]
+        var entriesToInsert: [AnimeEntry] = []
         let dirtyEntriesByIdentity = Self.coalescedDirtyEntriesByIdentity(
             store.syncChangeRecorder.dirtyQueueStore.load().entries
         )
@@ -38,7 +40,12 @@ extension LibrarySyncCoordinator {
                     )
                     continue
                 }
-                let applicationTarget = try await entryForApplying(snapshot, store: store)
+                let applicationTarget = try await entryForApplying(
+                    snapshot,
+                    store: store,
+                    plannedEntriesByIdentity: &plannedEntriesByIdentity,
+                    entriesToInsert: &entriesToInsert
+                )
                 guard let applicationTarget else { continue }
                 appliedChangesCount += 1
                 if applicationTarget.isInitialMaterialization {
@@ -63,12 +70,20 @@ extension LibrarySyncCoordinator {
                     ))
             }
         }
+        guard !applicationPlans.isEmpty else {
+            return (appliedChangesCount, hydratedEntriesCount)
+        }
+        try Task.checkCancellation()
         try store.syncChangeRecorder.withSuppressedRecording {
+            for entry in entriesToInsert {
+                store.repository.insert(entry)
+            }
             for plan in applicationPlans {
                 try withAnimation {
                     switch plan.change {
                     case .snapshot(let snapshot):
                         if plan.target.isInitialMaterialization {
+                            plan.target.entry.parentSeriesEntry = plan.target.parentSeriesEntry
                             try plan.target.entry.applyInitialSyncSnapshot(snapshot)
                         } else {
                             try plan.target.entry.applySyncSnapshot(snapshot)
@@ -100,16 +115,58 @@ extension LibrarySyncCoordinator {
     /// Returns the local entry to update, hydrating a new one when needed.
     private func entryForApplying(
         _ snapshot: LibraryEntrySyncSnapshot,
-        store: LibraryStore
+        store: LibraryStore,
+        plannedEntriesByIdentity: inout [LibraryEntryIdentity: AnimeEntry],
+        entriesToInsert: inout [AnimeEntry]
     ) async throws -> ApplicationTarget? {
         if let entry = store.repository.existingEntry(identity: snapshot.identity) {
             return .init(entry: entry, isInitialMaterialization: false)
         }
 
-        return .init(
-            entry: try await hydrateMissingEntry(snapshot, store),
-            isInitialMaterialization: true
+        let entry: AnimeEntry
+        if let plannedEntry = plannedEntriesByIdentity[snapshot.identity] {
+            entry = plannedEntry
+        } else {
+            entry = try await hydrateMissingEntry(snapshot, store)
+            plannedEntriesByIdentity[snapshot.identity] = entry
+            entriesToInsert.append(entry)
+        }
+        let parentSeriesEntry = try await parentSeriesEntryForApplying(
+            snapshot,
+            store: store,
+            plannedEntriesByIdentity: &plannedEntriesByIdentity,
+            entriesToInsert: &entriesToInsert
         )
+        return .init(
+            entry: entry,
+            isInitialMaterialization: true,
+            parentSeriesEntry: parentSeriesEntry
+        )
+    }
+
+    private func parentSeriesEntryForApplying(
+        _ snapshot: LibraryEntrySyncSnapshot,
+        store: LibraryStore,
+        plannedEntriesByIdentity: inout [LibraryEntryIdentity: AnimeEntry],
+        entriesToInsert: inout [AnimeEntry]
+    ) async throws -> AnimeEntry? {
+        guard let parentSeriesID = snapshot.parentSeriesID else { return nil }
+        let parentIdentity = LibraryEntryIdentity(entryType: .series, tmdbID: parentSeriesID)
+        if let existingParent = store.repository.existingEntry(identity: parentIdentity) {
+            return existingParent
+        }
+        if let plannedParent = plannedEntriesByIdentity[parentIdentity] {
+            return plannedParent
+        }
+
+        let parentSeriesEntry = try await AnimeEntry.generateParentSeriesEntryForSeason(
+            parentSeriesID: parentSeriesID,
+            fetcher: store.infoFetcher,
+            infoLanguage: store.language
+        )
+        plannedEntriesByIdentity[parentIdentity] = parentSeriesEntry
+        entriesToInsert.append(parentSeriesEntry)
+        return parentSeriesEntry
     }
 
 
@@ -126,24 +183,6 @@ extension LibrarySyncCoordinator {
         let entry = AnimeEntry(fromInfo: latestInfo.0)
         entry.dateSaved = snapshot.dateSaved
         entry.replaceDetail(from: latestInfo.1)
-
-        if let parentSeriesID = snapshot.parentSeriesID {
-            if let parentSeriesEntry = store.repository.existingEntry(
-                identity: .init(entryType: .series, tmdbID: parentSeriesID)
-            ) {
-                entry.parentSeriesEntry = parentSeriesEntry
-            } else {
-                let parentSeriesEntry = try await AnimeEntry.generateParentSeriesEntryForSeason(
-                    parentSeriesID: parentSeriesID,
-                    fetcher: store.infoFetcher,
-                    infoLanguage: store.language
-                )
-                store.repository.insert(parentSeriesEntry)
-                entry.parentSeriesEntry = parentSeriesEntry
-            }
-        }
-
-        store.repository.insert(entry)
         return entry
     }
 }
@@ -151,6 +190,7 @@ extension LibrarySyncCoordinator {
 fileprivate struct ApplicationTarget {
     let entry: AnimeEntry
     let isInitialMaterialization: Bool
+    var parentSeriesEntry: AnimeEntry? = nil
 }
 
 fileprivate struct ApplicationPlan {

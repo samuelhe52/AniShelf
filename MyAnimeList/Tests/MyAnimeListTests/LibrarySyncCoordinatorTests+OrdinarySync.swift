@@ -333,6 +333,35 @@ extension LibrarySyncCoordinatorTests {
         #expect(database.fetchedChangeTokens.count == 2)
     }
 
+    @Test @MainActor func backgroundProtectionIncludesNamespaceResolution() async throws {
+        let store = makeSyncReadyStore()
+        let namespaceResolution = SuspendedFirstNamespaceResolution(namespace: makeNamespace())
+        let database = FakeCloudLibrarySyncDatabase(changes: [makeEmptyChangeBatch()])
+        store.configureLibrarySyncCoordinator(
+            client: CloudLibrarySyncClient(),
+            database: database,
+            namespaceProvider: { await namespaceResolution.resolve() }
+        )
+
+        #expect(!store.needsBackgroundLibrarySyncProtection)
+
+        let syncTask = Task {
+            await store.performLibrarySyncResult(trigger: .foreground)
+        }
+        while !namespaceResolution.isSuspended {
+            try await Task.sleep(nanoseconds: 1_000_000)
+        }
+
+        #expect(store.libraryCloudSyncStatus.currentPhase == nil)
+        #expect(store.needsBackgroundLibrarySyncProtection)
+
+        namespaceResolution.resume()
+        let result = await syncTask.value
+
+        #expect(result == .success)
+        #expect(!store.needsBackgroundLibrarySyncProtection)
+    }
+
     @Test @MainActor func manualRebuildClearsScopeAndTokenWithoutClearingDirtyQueue() async throws {
         let store = makeSyncReadyStore()
         let entry = AnimeEntry(
@@ -483,5 +512,39 @@ extension LibrarySyncCoordinatorTests {
         #expect(store.libraryCloudSyncStatus.currentPhase == nil)
         #expect(store.libraryCloudSyncStatus.lastResult == .skipped)
         #expect(database.savedRecords.isEmpty)
+    }
+
+    @Test @MainActor func backgroundExpirationClearsInFlightOrdinarySyncStatus() async throws {
+        let store = makeSyncReadyStore()
+        let database = FakeCloudLibrarySyncDatabase(changes: [makeEmptyChangeBatch()])
+        database.suspendNextFetch = true
+        store.configureLibrarySyncCoordinator(
+            client: CloudLibrarySyncClient(),
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        let syncTask = Task {
+            await store.performLibrarySyncResult(trigger: .foreground)
+        }
+        while !database.isFetchSuspended {
+            try await Task.sleep(nanoseconds: 1_000_000)
+        }
+
+        #expect(store.libraryCloudSyncStatus.currentPhase == .syncing)
+        store.cancelLibrarySyncForBackgroundExpiration()
+
+        #expect(store.libraryCloudSyncStatus.isEnabled)
+        #expect(store.libraryCloudSyncStatus.bootstrapState == .completed)
+        #expect(store.libraryCloudSyncStatus.currentPhase == nil)
+        #expect(store.libraryCloudSyncStatus.lastResult == nil)
+        #expect(!store.libraryCloudSyncStatus.isSyncInProgress)
+
+        database.resumeSuspendedFetch()
+        let result = await syncTask.value
+
+        #expect(result == .success)
+        #expect(store.libraryCloudSyncStatus.currentPhase == nil)
+        #expect(store.libraryCloudSyncStatus.lastResult == nil)
     }
 }

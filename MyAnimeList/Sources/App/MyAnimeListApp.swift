@@ -20,6 +20,7 @@ struct MyAnimeListApp: App {
     @State var supportStore: SupportStore
     @State private var appReview: AppReviewPromptController
     @State private var startupRecovery: PersistentStoreRecovery?
+    @State private var backgroundSyncExecution: LibrarySyncBackgroundExecutionController
     private let recoveryActivityGate: StartupRecoveryActivityGate
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.requestReview) private var requestReview
@@ -54,6 +55,9 @@ struct MyAnimeListApp: App {
         _supportStore = State(initialValue: supportStore)
         _appReview = State(initialValue: appReview)
         _startupRecovery = State(initialValue: startupRecovery)
+        _backgroundSyncExecution = State(
+            initialValue: LibrarySyncBackgroundExecutionController()
+        )
         self.recoveryActivityGate = recoveryActivityGate
         RecoveryExportManager.cleanupAllTemporaryExports()
 
@@ -193,7 +197,15 @@ struct MyAnimeListApp: App {
 
     private func flushPendingLocalSync() {
         guard recoveryActivityGate.allowsLibraryActivity else { return }
-        libraryStore.flushPendingLocalLibrarySync()
+        guard libraryStore.needsBackgroundLibrarySyncProtection else { return }
+        backgroundSyncExecution.run(
+            onExpiration: {
+                libraryStore.cancelLibrarySyncForBackgroundExpiration()
+            },
+            operation: {
+                _ = await libraryStore.flushPendingLocalLibrarySyncAndWait()
+            }
+        )
     }
 
     private var hasTMDbAPIKey: Bool {

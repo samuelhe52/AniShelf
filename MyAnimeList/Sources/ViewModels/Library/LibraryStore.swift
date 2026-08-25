@@ -324,8 +324,22 @@ class LibraryStore {
         }
     }
 
-    func flushPendingLocalLibrarySync() {
-        syncScheduler?.flushPendingLocalSync()
+    func flushPendingLocalLibrarySyncAndWait() async -> LibrarySyncScheduler.FlushOutcome {
+        let outcome = await syncScheduler?.flushPendingLocalSyncAndWait() ?? .noPendingWork
+        await syncCoordinator?.waitUntilAllSyncFinishes()
+        return outcome
+    }
+
+    var needsBackgroundLibrarySyncProtection: Bool {
+        hasPendingLocalLibrarySyncWork()
+            || syncCoordinator?.hasActiveSyncRequest == true
+            || libraryCloudSyncStatus.isSyncInProgress
+    }
+
+    func cancelLibrarySyncForBackgroundExpiration() {
+        cancelOrdinaryLibrarySyncTasks()
+        syncCoordinator?.cancelAllSync()
+        recordLibraryCloudSyncCancellation()
     }
 
     @discardableResult
@@ -600,6 +614,16 @@ class LibraryStore {
             status.lastTrigger = trigger.rawValue
             status.lastAttemptDate = date
             status.lastFailureReason = reason.rawValue
+        }
+    }
+
+    func recordLibraryCloudSyncCancellation() {
+        shouldResumeInterruptedCloudSyncBootstrap = false
+        updateLibraryCloudSyncStatus { status in
+            if status.bootstrapState == .running {
+                status.bootstrapState = .notStarted
+            }
+            status.currentPhase = nil
         }
     }
 

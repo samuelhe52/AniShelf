@@ -80,14 +80,12 @@ extension LibrarySyncCoordinatorTests {
             client: client,
             database: database,
             namespaceProvider: { namespace },
-            hydrateMissingEntry: { snapshot, store in
-                let entry = AnimeEntry(
+            hydrateMissingEntry: { snapshot, _ in
+                AnimeEntry(
                     name: "Hydrated Placeholder",
                     type: snapshot.entryType,
                     tmdbID: snapshot.tmdbID
                 )
-                store.repository.insert(entry)
-                return entry
             }
         )
 
@@ -127,14 +125,12 @@ extension LibrarySyncCoordinatorTests {
             client: client,
             database: database,
             namespaceProvider: { namespace },
-            hydrateMissingEntry: { snapshot, store in
-                let entry = AnimeEntry(
+            hydrateMissingEntry: { snapshot, _ in
+                AnimeEntry(
                     name: "Hydrated Defaults",
                     type: snapshot.entryType,
                     tmdbID: snapshot.tmdbID
                 )
-                store.repository.insert(entry)
-                return entry
             }
         )
 
@@ -183,18 +179,16 @@ extension LibrarySyncCoordinatorTests {
             client: client,
             database: database,
             namespaceProvider: { namespace },
-            hydrateMissingEntry: { snapshot, store in
+            hydrateMissingEntry: { snapshot, _ in
                 isHydrationSuspended = true
                 await withCheckedContinuation { continuation in
                     hydrationContinuation = continuation
                 }
-                let entry = AnimeEntry(
+                return AnimeEntry(
                     name: "Hydrated Placeholder",
                     type: snapshot.entryType,
                     tmdbID: snapshot.tmdbID
                 )
-                store.repository.insert(entry)
-                return entry
             }
         )
 
@@ -223,6 +217,67 @@ extension LibrarySyncCoordinatorTests {
                     && snapshot.notes == "User edit during hydration"
             })
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
+    }
+
+    @Test @MainActor func cancellationDoesNotLeaveHydratedPendingInserts() async throws {
+        let store = makeSyncReadyStore()
+        let client = CloudLibrarySyncClient()
+        let firstIdentity = LibraryEntryIdentity(entryType: .movie, tmdbID: 712)
+        let secondIdentity = LibraryEntryIdentity(entryType: .movie, tmdbID: 713)
+        let database = FakeCloudLibrarySyncDatabase(changes: [
+            try makeChangeBatch(
+                client: client,
+                snapshots: [
+                    makeSnapshot(identity: firstIdentity, tmdbID: 712, entryType: .movie),
+                    makeSnapshot(identity: secondIdentity, tmdbID: 713, entryType: .movie)
+                ]
+            )
+        ])
+        var hydrationCount = 0
+        var hydrationContinuation: CheckedContinuation<Void, Never>?
+        var isSecondHydrationSuspended = false
+        let coordinator = LibrarySyncCoordinator(
+            store: store,
+            client: client,
+            database: database,
+            namespaceProvider: { makeNamespace() },
+            hydrateMissingEntry: { snapshot, _ in
+                hydrationCount += 1
+                let entry = AnimeEntry(
+                    name: "Detached Hydration",
+                    type: snapshot.entryType,
+                    tmdbID: snapshot.tmdbID
+                )
+                if hydrationCount == 2 {
+                    isSecondHydrationSuspended = true
+                    await withCheckedContinuation { continuation in
+                        hydrationContinuation = continuation
+                    }
+                }
+                return entry
+            }
+        )
+
+        let syncTask = Task {
+            await coordinator.syncResult(trigger: .manualRetry)
+        }
+        while !isSecondHydrationSuspended {
+            await Task.yield()
+        }
+
+        #expect(store.repository.existingEntry(identity: firstIdentity) == nil)
+        #expect(store.repository.existingEntry(identity: secondIdentity) == nil)
+
+        syncTask.cancel()
+        hydrationContinuation?.resume()
+        let result = await syncTask.value
+
+        let unrelated = AnimeEntry(name: "Later local save", type: .movie, tmdbID: 714)
+        try store.repository.newEntry(unrelated)
+
+        #expect(result == .success)
+        #expect(store.repository.existingEntry(identity: firstIdentity) == nil)
+        #expect(store.repository.existingEntry(identity: secondIdentity) == nil)
     }
 
     @Test @MainActor func pendingLocalDeletePreventsStaleRemoteSnapshotHydration() async throws {

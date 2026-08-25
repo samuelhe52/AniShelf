@@ -104,4 +104,84 @@ struct LibrarySyncNotificationBridgeTests {
                 == now.addingTimeInterval(6 * 60 * 60)
         )
     }
+
+    @Test func backgroundSyncExecutionEndsAfterOperationCompletes() async throws {
+        let identifier = UIBackgroundTaskIdentifier(rawValue: 42)
+        var beginCount = 0
+        var endedIdentifiers: [UIBackgroundTaskIdentifier] = []
+        var operationStarted = false
+        var operationContinuation: CheckedContinuation<Void, Never>?
+        let controller = LibrarySyncBackgroundExecutionController(
+            beginBackgroundTask: { _, _ in
+                beginCount += 1
+                return identifier
+            },
+            endBackgroundTask: { endedIdentifiers.append($0) }
+        )
+
+        controller.run(
+            onExpiration: {},
+            operation: {
+                operationStarted = true
+                await withCheckedContinuation { continuation in
+                    operationContinuation = continuation
+                }
+            }
+        )
+        while !operationStarted {
+            await Task.yield()
+        }
+
+        #expect(beginCount == 1)
+        #expect(endedIdentifiers.isEmpty)
+
+        operationContinuation?.resume()
+        for _ in 0..<10 where endedIdentifiers.isEmpty {
+            await Task.yield()
+        }
+
+        #expect(endedIdentifiers == [identifier])
+    }
+
+    @Test func backgroundSyncExecutionExpirationCancelsAndEndsOperation() async throws {
+        let identifier = UIBackgroundTaskIdentifier(rawValue: 43)
+        var expirationHandler: LibrarySyncBackgroundExecutionController.ExpirationHandler?
+        var expirationActionCount = 0
+        var endedIdentifiers: [UIBackgroundTaskIdentifier] = []
+        var operationStarted = false
+        var operationObservedCancellation = false
+        let controller = LibrarySyncBackgroundExecutionController(
+            beginBackgroundTask: { _, handler in
+                expirationHandler = handler
+                return identifier
+            },
+            endBackgroundTask: { endedIdentifiers.append($0) }
+        )
+
+        controller.run(
+            onExpiration: {
+                expirationActionCount += 1
+            },
+            operation: {
+                operationStarted = true
+                do {
+                    try await Task.sleep(nanoseconds: 1_000_000_000)
+                } catch {
+                    operationObservedCancellation = Task.isCancelled
+                }
+            }
+        )
+        while !operationStarted {
+            await Task.yield()
+        }
+
+        expirationHandler?()
+        for _ in 0..<10 where !operationObservedCancellation {
+            await Task.yield()
+        }
+
+        #expect(expirationActionCount == 1)
+        #expect(operationObservedCancellation)
+        #expect(endedIdentifiers == [identifier])
+    }
 }

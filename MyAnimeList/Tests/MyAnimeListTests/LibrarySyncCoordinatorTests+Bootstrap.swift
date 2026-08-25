@@ -271,4 +271,44 @@ extension LibrarySyncCoordinatorTests {
         #expect(store.libraryCloudSyncStatus.lastFailureReason == nil)
         #expect(database.savedRecords.isEmpty)
     }
+
+    @Test @MainActor func backgroundExpirationMakesBootstrapRetryableInSameProcess() async throws {
+        let store = makeStore(
+            enabled: false,
+            bootstrapState: .notStarted,
+            hasTMDbAPIKey: true
+        )
+        let database = FakeCloudLibrarySyncDatabase(
+            changes: [makeEmptyChangeBatch(), makeEmptyChangeBatch()]
+        )
+        database.suspendNextFetch = true
+        store.configureLibrarySyncCoordinator(
+            client: CloudLibrarySyncClient(),
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        let bootstrapTask = Task {
+            await store.bootstrapLibraryCloudSyncEnablement()
+        }
+        while !database.isFetchSuspended {
+            try await Task.sleep(nanoseconds: 1_000_000)
+        }
+
+        store.cancelLibrarySyncForBackgroundExpiration()
+
+        #expect(store.libraryCloudSyncStatus.isEnabled)
+        #expect(store.libraryCloudSyncStatus.bootstrapState == .notStarted)
+        #expect(store.libraryCloudSyncStatus.currentPhase == nil)
+        #expect(store.libraryCloudSyncStatus.lastResult == nil)
+        #expect(!store.libraryCloudSyncStatus.isSyncInProgress)
+
+        database.resumeSuspendedFetch()
+        let cancelledResult = await bootstrapTask.value
+        let retryResult = await store.performLibrarySyncResult(trigger: .foreground)
+
+        #expect(cancelledResult == .skipped(.disabled))
+        #expect(retryResult == .success)
+        #expect(store.libraryCloudSyncStatus.bootstrapState == .completed)
+    }
 }

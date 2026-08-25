@@ -226,14 +226,12 @@ struct LibraryBackupRestoreTests {
             database: database,
             changeTokenStore: tokenStore,
             namespaceProvider: { namespace },
-            hydrateMissingEntry: { snapshot, store in
-                let entry = AnimeEntry(
+            hydrateMissingEntry: { snapshot, _ in
+                AnimeEntry(
                     name: "Recovered Placeholder",
                     type: snapshot.entryType,
                     tmdbID: snapshot.tmdbID
                 )
-                store.repository.insert(entry)
-                return entry
             }
         )
 

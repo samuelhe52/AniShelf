@@ -169,6 +169,102 @@ extension LibrarySyncCoordinatorTests {
         #expect(degradedReason != nil)
     }
 
+    @Test @MainActor func localSyncSchedulerAwaitableFlushWaitsForSyncCompletion() async throws {
+        var hasPendingLocalWork = true
+        var syncStarted = false
+        var syncContinuation: CheckedContinuation<Void, Never>?
+        let scheduler = LibrarySyncScheduler(
+            localDebounceInterval: 0,
+            hasPendingLocalWork: {
+                hasPendingLocalWork
+            },
+            sync: { _ in
+                syncStarted = true
+                await withCheckedContinuation { continuation in
+                    syncContinuation = continuation
+                }
+                hasPendingLocalWork = false
+                return .success
+            }
+        )
+
+        let flushTask = Task {
+            await scheduler.flushPendingLocalSyncAndWait()
+        }
+        while !syncStarted {
+            await Task.yield()
+        }
+
+        #expect(!flushTask.isCancelled)
+
+        syncContinuation?.resume()
+        let outcome = await flushTask.value
+
+        #expect(outcome == .completed(.success))
+    }
+
+    @Test @MainActor func localSyncSchedulerAwaitableFlushDefersExistingBackoff() async throws {
+        var syncCount = 0
+        let scheduler = LibrarySyncScheduler(
+            localDebounceInterval: 0,
+            failureRetryIntervals: [1],
+            hasPendingLocalWork: {
+                true
+            },
+            sync: { _ in
+                syncCount += 1
+                return .retryableFailure
+            }
+        )
+
+        scheduler.schedulePendingLocalSync()
+        while syncCount == 0 {
+            await Task.yield()
+        }
+        while scheduler.retryState.nextRetryAllowedAt == nil {
+            await Task.yield()
+        }
+
+        let outcome = await scheduler.flushPendingLocalSyncAndWait()
+
+        #expect(outcome == .deferredByRetryBackoff)
+        #expect(syncCount == 1)
+    }
+
+    @Test @MainActor func localSyncSchedulerAwaitableFlushPropagatesCancellation() async throws {
+        var syncStarted = false
+        var syncObservedCancellation = false
+        let scheduler = LibrarySyncScheduler(
+            localDebounceInterval: 0,
+            hasPendingLocalWork: {
+                true
+            },
+            sync: { _ in
+                syncStarted = true
+                do {
+                    try await Task.sleep(nanoseconds: 1_000_000_000)
+                } catch {
+                    syncObservedCancellation = Task.isCancelled
+                }
+                return .retryableFailure
+            }
+        )
+
+        let flushTask = Task {
+            await scheduler.flushPendingLocalSyncAndWait()
+        }
+        while !syncStarted {
+            await Task.yield()
+        }
+
+        flushTask.cancel()
+        let outcome = await flushTask.value
+
+        #expect(outcome == .cancelled)
+        #expect(syncObservedCancellation)
+        #expect(scheduler.retryState.failureRetryAttempt == 0)
+    }
+
     @Test @MainActor func localSyncSchedulerResetCancelsInFlightSyncHandling() async throws {
         var syncCount = 0
         var syncStarted = false
@@ -191,15 +287,18 @@ extension LibrarySyncCoordinatorTests {
             retryStateDidChange: { retryStates.append($0) }
         )
 
-        scheduler.flushPendingLocalSync()
+        let flushTask = Task {
+            await scheduler.flushPendingLocalSyncAndWait()
+        }
         while !syncStarted {
             try await Task.sleep(nanoseconds: 1_000_000)
         }
 
         scheduler.resetRetryBackoff()
         syncContinuation?.resume()
-        try await Task.sleep(nanoseconds: 50_000_000)
+        let outcome = await flushTask.value
 
+        #expect(outcome == .cancelled)
         #expect(syncCount == 1)
         #expect(retryStates.last?.failureRetryAttempt == 0)
         #expect(retryStates.last?.automaticRetriesExhausted == false)
