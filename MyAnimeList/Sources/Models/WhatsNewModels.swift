@@ -356,6 +356,26 @@ enum WhatsNewRegistry {
                     kind: .openURL(projectURL)
                 )
             ]
+        ),
+        "1.99": .init(
+            version: "1.99",
+            summary:
+                "This release adds broadcast airtimes and episode reminders, and improves iCloud Sync reliability.",
+            highlights: [
+                "View broadcast airtimes for eligible anime.",
+                "Set reminders for each new episode as it airs.",
+                "Improved iCloud Sync reliability and added Rebuild iCloud Sync in Settings to resolve certain persistent issues.",
+                "Fixed a bug that could cause a crash at launch."
+            ],
+            primaryAction: nil,
+            secondaryActions: [
+                .init(
+                    id: "project-github",
+                    title: "AniShelf on GitHub",
+                    systemImage: "arrow.up.right.square",
+                    kind: .openURL(projectURL)
+                )
+            ]
         )
     ]
 

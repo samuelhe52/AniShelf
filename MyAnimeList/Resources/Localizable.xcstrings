@@ -3490,6 +3490,22 @@
         }
       }
     },
+    "Fixed a bug that could cause a crash at launch." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "起動時にクラッシュする可能性があった不具合を修正しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修复了一个可能导致启动时崩溃的 Bug"
+          }
+        }
+      }
+    },
     "Fixed a problem where info refresh could hang the app." : {
       "localizations" : {
         "ja" : {
@@ -3970,6 +3986,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "改进了启动时的 TMDb API 密钥处理，避免出现不必要的设置提示。"
+          }
+        }
+      }
+    },
+    "Improved iCloud Sync reliability and added Rebuild iCloud Sync in Settings to resolve certain persistent issues." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud同期の安定性を向上し、設定に「iCloud同期を再構築」を追加して、一部の解決しにくい問題に対処できるようにしました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提升 iCloud 同步稳定性，并在设置中新增“重建 iCloud 同步”以解决某些顽固问题"
           }
         }
       }
@@ -7268,6 +7300,22 @@
         }
       }
     },
+    "Set reminders for each new episode as it airs." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新作アニメの各話の放送に合わせてリマインダーを設定できるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "支持为新番每集播出设置提醒"
+          }
+        }
+      }
+    },
     "Settings" : {
       "localizations" : {
         "ja" : {
@@ -8116,6 +8164,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此版本新增了更周到的评价提示，并提升了 TMDb 图片与设置的可靠性。"
+          }
+        }
+      }
+    },
+    "This release adds broadcast airtimes and episode reminders, and improves iCloud Sync reliability." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このリリースでは、アニメの放送時刻と各話の放送リマインダーを追加し、iCloud同期の安定性を改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本次更新新增动画播出时间与新番每集播出提醒，并提升了 iCloud 同步稳定性。"
           }
         }
       }
@@ -9116,6 +9180,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "显示形式"
+          }
+        }
+      }
+    },
+    "View broadcast airtimes for eligible anime." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "対象のアニメの放送時刻を確認できるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "支持查看符合条件动画的播出时间"
           }
         }
       }
