@@ -38,6 +38,9 @@ func makeStore(
     var status = LibraryCloudSyncStatus.defaultValue
     status.isEnabled = enabled
     status.bootstrapState = bootstrapState
+    if bootstrapState == .completed {
+        status.lastCompletedScope = makeSyncScope()
+    }
     preferences.saveCloudSyncStatus(status)
     return LibraryStore(
         dataProvider: DataProvider(inMemory: true),
@@ -50,7 +53,7 @@ struct ClocklessTrackingConflictFixture {
     let store: LibraryStore
     let client: CloudLibrarySyncClient
     let database: FakeCloudLibrarySyncDatabase
-    let identity: LibraryEntrySyncIdentity
+    let identity: LibraryEntryIdentity
 }
 
 @MainActor
@@ -80,7 +83,7 @@ func makeClocklessTrackingConflictFixture(
 
     let client = CloudLibrarySyncClient()
     var remoteSnapshot = makeSnapshot(
-        identity: entry.syncIdentity,
+        identity: entry.libraryIdentity,
         tmdbID: entry.tmdbID,
         notes: "Remote notes",
         trackingUpdatedAt: nil
@@ -100,7 +103,7 @@ func makeClocklessTrackingConflictFixture(
         store: store,
         client: client,
         database: database,
-        identity: entry.syncIdentity
+        identity: entry.libraryIdentity
     )
 }
 
@@ -195,6 +198,12 @@ func makeNamespace() -> CloudLibrarySyncChangeTokenStore.Namespace {
     )
 }
 
+func makeSyncScope(
+    namespace: CloudLibrarySyncChangeTokenStore.Namespace = makeNamespace()
+) -> LibraryCloudSyncScope {
+    LibraryCloudSyncScope(namespace: namespace)
+}
+
 func makeToken() -> CKServerChangeToken {
     class_createInstance(CKServerChangeToken.self, 0) as! CKServerChangeToken
 }
@@ -253,7 +262,7 @@ func savedSnapshot(
 }
 
 func makeSnapshot(
-    identity: LibraryEntrySyncIdentity,
+    identity: LibraryEntryIdentity,
     tmdbID: Int,
     entryType: AnimeType = .series,
     notes: String = "",

@@ -3,6 +3,30 @@ import Testing
 
 @testable import DataProvider
 
+@Test func libraryIdentityLookupsDisambiguateTMDbIDCollisions() {
+    let movie = AnimeEntry(name: "Movie", type: .movie, tmdbID: 42)
+    let series = AnimeEntry(name: "Series", type: .series, tmdbID: 42)
+    let entries = [movie, series]
+
+    #expect(entries.entry(with: movie.libraryIdentity) === movie)
+    #expect(entries.entry(with: series.libraryIdentity) === series)
+}
+
+@Test func libraryIdentityReconstructsTypeFromRawID() throws {
+    let movie = try #require(LibraryEntryIdentity(rawID: "movie:11"))
+    let series = try #require(LibraryEntryIdentity(rawID: "series:22"))
+    let season = try #require(LibraryEntryIdentity(rawID: "season:22:3:33"))
+
+    #expect(movie.entryType == .movie)
+    #expect(movie.parentSeriesID == nil)
+    #expect(series.entryType == .series)
+    #expect(series.parentSeriesID == nil)
+    #expect(season.entryType == .season(seasonNumber: 3, parentSeriesID: 22))
+    #expect(season.parentSeriesID == 22)
+    #expect(season.tmdbID == 33)
+    #expect(LibraryEntryIdentity(rawID: "season:22:3") == nil)
+}
+
 @Test @MainActor func dataProviderCreatesMissingStoreParentDirectory() throws {
     let rootDirectory = FileManager.default.temporaryDirectory
         .appendingPathComponent("AniShelfTests-missing-store-parent-\(UUID().uuidString)", isDirectory: true)

@@ -5,7 +5,9 @@
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/5/31.
 //
 
+import BackgroundTasks
 import UIKit
+import UserNotifications
 import os
 
 @MainActor
@@ -21,6 +23,9 @@ fileprivate let librarySyncNotificationLogger = Logger(
 /// Bridges CloudKit remote notifications into the async library sync trigger.
 @MainActor
 final class LibrarySyncNotificationBridge: NSObject, UIApplicationDelegate {
+    static let airingReminderRefreshTaskIdentifier =
+        "com.samuelhe.MyAnimeList.airing-reminder-refresh"
+
     var onSyncRequested: (() async -> UIBackgroundFetchResult)? {
         get { LibrarySyncNotificationRouting.onSyncRequested }
         set { LibrarySyncNotificationRouting.onSyncRequested = newValue }
@@ -32,10 +37,46 @@ final class LibrarySyncNotificationBridge: NSObject, UIApplicationDelegate {
         LibrarySyncNotificationRouting.onSyncRequested = handler
     }
 
+    static func updateAiringReminderBackgroundRefresh(hasSubscriptions: Bool) {
+        let scheduler = BGTaskScheduler.shared
+        scheduler.cancel(taskRequestWithIdentifier: airingReminderRefreshTaskIdentifier)
+        guard hasSubscriptions else { return }
+
+        let request = BGAppRefreshTaskRequest(
+            identifier: airingReminderRefreshTaskIdentifier
+        )
+        request.earliestBeginDate = nextAiringReminderRefreshDate()
+        do {
+            try scheduler.submit(request)
+        } catch {
+            librarySyncNotificationLogger.error(
+                "Failed to schedule airing reminder refresh: \(error.localizedDescription, privacy: .public)"
+            )
+        }
+    }
+
+    nonisolated static func nextAiringReminderRefreshDate(
+        now: Date = .now
+    ) -> Date {
+        now.addingTimeInterval(6 * 60 * 60)
+    }
+
+    nonisolated static func airingReminderRoute(
+        requestIdentifier: String,
+        userInfo: [AnyHashable: Any]
+    ) -> String? {
+        guard requestIdentifier.hasPrefix(AiringReminderManager.requestIdentifierPrefix) else {
+            return nil
+        }
+        return userInfo[AiringReminderPayloadKey.subscriptionID] as? String
+    }
+
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        UNUserNotificationCenter.current().delegate = self
+        registerAiringReminderBackgroundRefresh()
         application.registerForRemoteNotifications()
         return true
     }
@@ -76,6 +117,68 @@ final class LibrarySyncNotificationBridge: NSObject, UIApplicationDelegate {
                 return
             }
             completionHandler(await onSyncRequested())
+        }
+    }
+
+    private func registerAiringReminderBackgroundRefresh() {
+        let didRegister = BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: Self.airingReminderRefreshTaskIdentifier,
+            using: nil
+        ) { task in
+            guard let refreshTask = task as? BGAppRefreshTask else {
+                task.setTaskCompleted(success: false)
+                return
+            }
+            Task { @MainActor in
+                Self.updateAiringReminderBackgroundRefresh(hasSubscriptions: true)
+                let operation = Task { @MainActor in
+                    await AiringReminderCoordinator.shared.refreshAll()
+                }
+                refreshTask.expirationHandler = {
+                    operation.cancel()
+                }
+                refreshTask.setTaskCompleted(success: await operation.value)
+            }
+        }
+        if !didRegister {
+            librarySyncNotificationLogger.error(
+                "Failed to register airing reminder background refresh handler."
+            )
+        }
+    }
+}
+
+extension LibrarySyncNotificationBridge: UNUserNotificationCenterDelegate {
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        guard
+            notification.request.identifier.hasPrefix(
+                AiringReminderManager.requestIdentifierPrefix
+            )
+        else {
+            return []
+        }
+        return [.banner, .list, .sound]
+    }
+
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        guard
+            let entryIdentityRawID = Self.airingReminderRoute(
+                requestIdentifier: response.notification.request.identifier,
+                userInfo: response.notification.request.content.userInfo
+            )
+        else {
+            return
+        }
+        await MainActor.run {
+            AiringReminderCoordinator.shared.receiveNotificationRoute(
+                entryIdentityRawID: entryIdentityRawID
+            )
         }
     }
 }

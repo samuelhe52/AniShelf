@@ -21,9 +21,9 @@ struct LibraryEntrySyncTests {
             tmdbID: 33
         )
 
-        #expect(movie.syncIdentity.rawID == "movie:11")
-        #expect(series.syncIdentity.rawID == "series:22")
-        #expect(season.syncIdentity.rawID == "season:22:3:33")
+        #expect(movie.libraryIdentity.rawID == "movie:11")
+        #expect(series.libraryIdentity.rawID == "series:22")
+        #expect(season.libraryIdentity.rawID == "season:22:3:33")
     }
 
     @Test func snapshotApplyRoundTripsUserFieldsAndPreservesMetadata() throws {
@@ -96,7 +96,7 @@ struct LibraryEntrySyncTests {
         local.notes = "Keep local"
 
         let remote = LibraryEntrySyncSnapshot(
-            identity: local.syncIdentity,
+            identity: local.libraryIdentity,
             tmdbID: local.tmdbID,
             parentSeriesID: nil,
             seasonNumber: nil,
@@ -387,7 +387,7 @@ struct LibraryEntrySyncTests {
         #expect(local.customPosterPath == "/custom.jpg")
 
         let snapshot = LibraryEntrySyncSnapshot(
-            identity: local.syncIdentity,
+            identity: local.libraryIdentity,
             tmdbID: local.tmdbID,
             parentSeriesID: nil,
             seasonNumber: nil,
@@ -437,7 +437,7 @@ struct LibraryEntrySyncTests {
         progress: [LibraryEntrySyncSnapshot.EpisodeProgress] = []
     ) -> LibraryEntrySyncSnapshot {
         LibraryEntrySyncSnapshot(
-            identity: LibraryEntrySyncIdentity(entryType: .series, tmdbID: tmdbID),
+            identity: LibraryEntryIdentity(entryType: .series, tmdbID: tmdbID),
             tmdbID: tmdbID,
             parentSeriesID: nil,
             seasonNumber: nil,

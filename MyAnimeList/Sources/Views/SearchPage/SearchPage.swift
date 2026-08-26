@@ -41,20 +41,20 @@ struct SearchPage: View {
     @State private var isShowingBatchAddEntryAlert = false
 
     // Callbacks for TMDb search interactions
-    private let onDuplicateTapped: (Int) -> Void
-    private let checkDuplicate: (Int) -> Bool
+    private let onDuplicateTapped: (LibraryEntryIdentity) -> Void
+    private let checkDuplicate: (LibraryEntryIdentity) -> Bool
     private let processTMDbSearchResults: (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void
-    private let jumpToEntryInLibrary: (Int) -> Void
+    private let jumpToEntryInLibrary: (LibraryEntryIdentity) -> Void
 
     // View models owned by SearchPage
     @State private var tmdbSearchService = TMDbSearchService()
     @State private var librarySearchService = LibrarySearchService()
 
     init(
-        onDuplicateTapped: @escaping (_ tappedID: Int) -> Void,
-        checkDuplicate: @escaping (_ tmdbID: Int) -> Bool,
+        onDuplicateTapped: @escaping (_ tappedID: LibraryEntryIdentity) -> Void,
+        checkDuplicate: @escaping (_ identity: LibraryEntryIdentity) -> Bool,
         processTMDbSearchResults: @escaping (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void,
-        jumpToEntryInLibrary: @escaping (Int) -> Void = { _ in }
+        jumpToEntryInLibrary: @escaping (LibraryEntryIdentity) -> Void = { _ in }
     ) {
         self.onDuplicateTapped = onDuplicateTapped
         self.checkDuplicate = checkDuplicate

@@ -35,6 +35,7 @@ class LibraryStore {
     @ObservationIgnored private var saveObserver: ModelContextSaveObserver?
     @ObservationIgnored private var deferredLibraryRefreshDepth = 0
     @ObservationIgnored private var needsDeferredLibraryRefresh = false
+    @ObservationIgnored private var airingReminderPruningEnabled: Bool
     private(set) var libraryRevision = 0
 
     // MARK: - State
@@ -114,7 +115,8 @@ class LibraryStore {
         hasTMDbAPIKey: @escaping @MainActor () -> Bool = {
             guard let key = TMDbAPIKeyStorage().retrieveKey() else { return false }
             return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        }
+        },
+        airingReminderPruningEnabled: Bool = false
     ) {
         self.dataProvider = dataProvider
         let syncChangeRecorder = LibrarySyncChangeRecorder(dataProvider: dataProvider)
@@ -133,6 +135,7 @@ class LibraryStore {
         self.infoFetcher = .init()
         self.library = []
         self.libraryCloudSyncStatus = snapshot.cloudSyncStatus
+        self.airingReminderPruningEnabled = airingReminderPruningEnabled
         self.shouldResumeInterruptedCloudSyncBootstrap =
             snapshot.cloudSyncStatus.isEnabled && snapshot.cloudSyncStatus.bootstrapState == .running
         reloadPersistedPreferences()
@@ -142,7 +145,13 @@ class LibraryStore {
         if !dataProvider.inMemory {
             setupCloudSyncedPreferencesMonitor()
         }
-        try? refreshLibrary()
+        do {
+            try refreshLibrary()
+        } catch {
+            libraryStoreLogger.fault(
+                "Initial library fetch failed: \(String(describing: error), privacy: .public)"
+            )
+        }
         self.syncCoordinator = LibrarySyncCoordinator(store: self)
         setupLibrarySyncScheduling()
     }
@@ -198,9 +207,16 @@ class LibraryStore {
 
     func refreshLibrary() throws {
         libraryStoreLogger.debug("[\(Date().debugDescription)] Refreshing library...")
-        let entries = try repository.visibleLibraryEntries()
-        library = entries
+        library = try repository.visibleLibraryEntries()
         libraryRevision &+= 1
+        pruneAiringReminderSubscriptions()
+    }
+
+    func enableAiringReminderPruning() {
+        guard !airingReminderPruningEnabled else { return }
+        airingReminderPruningEnabled = true
+        libraryStoreLogger.info("Enabled airing reminder subscription pruning.")
+        pruneAiringReminderSubscriptions()
     }
 
     func setupUpdateLibrary() {
@@ -219,6 +235,34 @@ class LibraryStore {
             try refreshLibrary()
         } catch {
             libraryStoreLogger.error("Error refreshing library: \(error)")
+        }
+    }
+
+    private func pruneAiringReminderSubscriptions() {
+        guard airingReminderPruningEnabled else {
+            libraryStoreLogger.debug(
+                "Skipped airing reminder subscription pruning while library activity is blocked."
+            )
+            return
+        }
+        let validEntryIdentityRawIDs = Set(
+            library.lazy
+                .map { $0.libraryIdentity.rawID }
+        )
+        let pruningRevision = libraryRevision
+        libraryStoreLogger.debug(
+            "Requesting airing reminder subscription reconciliation against \(validEntryIdentityRawIDs.count, privacy: .public) visible library entries at revision \(pruningRevision, privacy: .public)."
+        )
+        Task { @MainActor [weak self] in
+            guard let self, self.libraryRevision == pruningRevision else {
+                libraryStoreLogger.debug(
+                    "Skipped superseded airing reminder subscription reconciliation for library revision \(pruningRevision, privacy: .public)."
+                )
+                return
+            }
+            await AiringReminderCoordinator.shared.pruneSubscriptions(
+                validEntryIdentityRawIDs: validEntryIdentityRawIDs
+            )
         }
     }
 
@@ -280,8 +324,22 @@ class LibraryStore {
         }
     }
 
-    func flushPendingLocalLibrarySync() {
-        syncScheduler?.flushPendingLocalSync()
+    func flushPendingLocalLibrarySyncAndWait() async -> LibrarySyncScheduler.FlushOutcome {
+        let outcome = await syncScheduler?.flushPendingLocalSyncAndWait() ?? .noPendingWork
+        await syncCoordinator?.waitUntilAllSyncFinishes()
+        return outcome
+    }
+
+    var needsBackgroundLibrarySyncProtection: Bool {
+        hasPendingLocalLibrarySyncWork()
+            || syncCoordinator?.hasActiveSyncRequest == true
+            || libraryCloudSyncStatus.isSyncInProgress
+    }
+
+    func cancelLibrarySyncForBackgroundExpiration() {
+        cancelOrdinaryLibrarySyncTasks()
+        syncCoordinator?.cancelAllSync()
+        recordLibraryCloudSyncCancellation()
     }
 
     @discardableResult
@@ -333,10 +391,11 @@ class LibraryStore {
         await bootstrapLibraryCloudSyncEnablement().succeeded
     }
 
-    private func bootstrapLibraryCloudSyncEnablement() async -> LibrarySyncCoordinator.SyncResult {
+    func bootstrapLibraryCloudSyncEnablement() async -> LibrarySyncCoordinator.SyncResult {
         updateLibraryCloudSyncStatus { status in
             status.isEnabled = true
             status.bootstrapState = .running
+            status.lastCompletedScope = nil
             status.pendingConflictSummary = nil
             status.currentPhase = nil
             status.lastFailureReason = nil
@@ -410,6 +469,32 @@ class LibraryStore {
         syncCoordinator.removeAllChangeTokens()
     }
 
+    @discardableResult
+    func rebuildLibraryCloudSync() async -> Bool {
+        cancelAllLibraryCloudSyncWork()
+        syncScheduler?.resetRetryBackoff()
+        await syncCoordinator?.waitUntilAllSyncFinishes()
+        resetLibraryCloudSyncChangeTokens()
+        shouldResumeInterruptedCloudSyncBootstrap = false
+        updateLibraryCloudSyncStatus { status in
+            status.isEnabled = true
+            status.bootstrapState = .notStarted
+            status.cloudKitAvailability = .unknown
+            status.pendingConflictSummary = nil
+            status.retryState = .idle
+            status.currentPhase = nil
+            status.lastResult = nil
+            status.lastTrigger = nil
+            status.lastAttemptDate = nil
+            status.lastSuccessfulSyncDate = nil
+            status.lastReconciledCloudSyncedSettingsUpdatedAt = nil
+            status.lastFailureReason = nil
+            status.degradedReason = nil
+            status.lastCompletedScope = nil
+        }
+        return await bootstrapLibraryCloudSyncEnablement().succeeded
+    }
+
     /// Resets persisted sync metadata that belonged to a replaced local store.
     ///
     /// Store replacement invalidates any queued local CloudKit mutations and any
@@ -446,6 +531,7 @@ class LibraryStore {
             status.lastResult = nil
             status.lastFailureReason = nil
             status.degradedReason = nil
+            status.lastCompletedScope = nil
         }
     }
 
@@ -461,6 +547,7 @@ class LibraryStore {
             status.lastResult = .skipped
             status.lastFailureReason = nil
             status.degradedReason = nil
+            status.lastCompletedScope = nil
             if resetRetryState {
                 status.retryState = .idle
             }
@@ -530,15 +617,27 @@ class LibraryStore {
         }
     }
 
+    func recordLibraryCloudSyncCancellation() {
+        shouldResumeInterruptedCloudSyncBootstrap = false
+        updateLibraryCloudSyncStatus { status in
+            if status.bootstrapState == .running {
+                status.bootstrapState = .notStarted
+            }
+            status.currentPhase = nil
+        }
+    }
+
     func recordLibraryCloudSyncSuccess(
         trigger: LibrarySyncCoordinator.Trigger,
         completedBootstrap: Bool,
+        completedScope: LibraryCloudSyncScope?,
         reconciledCloudSyncedSettingsUpdatedAt: Date?,
         at date: Date = .now
     ) {
         updateLibraryCloudSyncStatus { status in
             if completedBootstrap {
                 status.bootstrapState = .completed
+                status.lastCompletedScope = completedScope
             }
             status.currentPhase = nil
             status.lastResult = .success
@@ -732,10 +831,6 @@ class LibraryStore {
     }
 
     // MARK: - Shared Helpers
-
-    func existingEntry(tmdbID: Int) -> AnimeEntry? {
-        repository.existingEntry(tmdbID: tmdbID)
-    }
 
     func applyNewEntryDefaults(to entry: AnimeEntry) {
         let now = Date.now

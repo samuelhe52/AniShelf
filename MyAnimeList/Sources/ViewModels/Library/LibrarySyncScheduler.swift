@@ -16,6 +16,13 @@ fileprivate let librarySyncSchedulerLogger = Logger(
 /// Coalesces local sync work before asking CloudKit to sync.
 @MainActor
 final class LibrarySyncScheduler {
+    enum FlushOutcome: Equatable {
+        case noPendingWork
+        case deferredByRetryBackoff
+        case completed(LibrarySyncCoordinator.SyncResult)
+        case cancelled
+    }
+
     private let localDebounceInterval: TimeInterval
     private let failureRetryIntervals: [TimeInterval]
     private let maximumRetryAttemptsAtFinalInterval: Int
@@ -24,7 +31,7 @@ final class LibrarySyncScheduler {
     private let retryStateDidChange: @MainActor (LibraryCloudSyncRetryState) -> Void
     private let degradedStateDidChange: @MainActor (String) -> Void
 
-    private var scheduledTask: Task<Void, Never>?
+    private var scheduledTask: Task<LibrarySyncCoordinator.SyncResult?, Never>?
     private var scheduledTaskID: UUID?
     private var nextRetryAllowedAt: Date?
     private var failureRetryAttempt = 0
@@ -65,10 +72,24 @@ final class LibrarySyncScheduler {
         schedule(after: delayRespectingFailureBackoff(localDebounceInterval))
     }
 
-    /// Runs local sync work as soon as possible, if there is any.
-    func flushPendingLocalSync() {
-        guard hasPendingLocalWork() else { return }
-        schedule(after: delayRespectingFailureBackoff(0))
+    /// Runs one local sync attempt immediately and waits for it to finish.
+    ///
+    /// A retry that is already subject to backoff stays scheduled for later rather
+    /// than keeping a caller alive while waiting for the retry window.
+    func flushPendingLocalSyncAndWait() async -> FlushOutcome {
+        guard hasPendingLocalWork() else { return .noPendingWork }
+        guard delayRespectingFailureBackoff(0) <= 0 else {
+            return .deferredByRetryBackoff
+        }
+
+        let task = schedule(after: 0)
+        let result = await withTaskCancellationHandler {
+            await task.value
+        } onCancel: {
+            task.cancel()
+        }
+        guard !Task.isCancelled, let result else { return .cancelled }
+        return .completed(result)
     }
 
     func resetRetryBackoff() {
@@ -78,8 +99,8 @@ final class LibrarySyncScheduler {
         resetFailureBackoff()
     }
 
-    private func runScheduledSync(taskID: UUID) async {
-        guard scheduledTaskID == taskID, !Task.isCancelled else { return }
+    private func runScheduledSync(taskID: UUID) async -> LibrarySyncCoordinator.SyncResult? {
+        guard scheduledTaskID == taskID, !Task.isCancelled else { return nil }
         defer {
             if scheduledTaskID == taskID {
                 scheduledTask = nil
@@ -88,11 +109,11 @@ final class LibrarySyncScheduler {
         }
         guard hasPendingLocalWork() else {
             resetFailureBackoff()
-            return
+            return nil
         }
 
         let result = await sync(.localChange)
-        guard !Task.isCancelled, scheduledTaskID == taskID else { return }
+        guard !Task.isCancelled, scheduledTaskID == taskID else { return nil }
         switch result {
         case .success:
             resetFailureBackoff()
@@ -111,6 +132,7 @@ final class LibrarySyncScheduler {
                 "Skipped automatic iCloud library sync retry after a non-retryable local-change sync failure."
             )
         }
+        return result
     }
 
     private func scheduleFailureRetryIfNeeded() {
@@ -156,16 +178,19 @@ final class LibrarySyncScheduler {
         return max(preferredDelay, nextRetryAllowedAt.timeIntervalSinceNow)
     }
 
-    private func schedule(after interval: TimeInterval) {
+    @discardableResult
+    private func schedule(after interval: TimeInterval) -> Task<LibrarySyncCoordinator.SyncResult?, Never> {
         scheduledTask?.cancel()
         let clampedInterval = max(0, interval)
         let taskID = UUID()
         scheduledTaskID = taskID
-        scheduledTask = Task { [weak self] in
+        let task = Task<LibrarySyncCoordinator.SyncResult?, Never> { [weak self] in
             try? await Task.sleep(nanoseconds: Self.nanoseconds(for: clampedInterval))
-            guard !Task.isCancelled else { return }
-            await self?.runScheduledSync(taskID: taskID)
+            guard !Task.isCancelled else { return nil }
+            return await self?.runScheduledSync(taskID: taskID)
         }
+        scheduledTask = task
+        return task
     }
 
     private static func nanoseconds(for interval: TimeInterval) -> UInt64 {

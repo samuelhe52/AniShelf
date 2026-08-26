@@ -97,15 +97,15 @@ struct LibraryProfileBackdrop: View {
     }
 
     private var primaryOrbOpacity: Double {
-        colorScheme == .dark ? 0.90 : 0.84
+        colorScheme == .dark ? 0.30 : 0.22
     }
 
     private var secondaryOrbOpacity: Double {
-        colorScheme == .dark ? 0.86 : 0.82
+        colorScheme == .dark ? 0.28 : 0.20
     }
 
     private var tertiaryOrbOpacity: Double {
-        colorScheme == .dark ? 0.80 : 0.78
+        colorScheme == .dark ? 0.26 : 0.20
     }
 
     private var orbBlendMode: BlendMode {
@@ -113,7 +113,7 @@ struct LibraryProfileBackdrop: View {
     }
 
     private var backdropVeilColor: Color {
-        colorScheme == .dark ? .black.opacity(0.16) : .white.opacity(0.18)
+        colorScheme == .dark ? .black.opacity(0.20) : .white.opacity(0.34)
     }
 }
 

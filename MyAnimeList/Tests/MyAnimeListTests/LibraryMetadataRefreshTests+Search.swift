@@ -14,6 +14,16 @@ import Testing
 @testable import MyAnimeList
 
 extension LibraryMetadataRefreshTests {
+    @Test @MainActor func testLibrarySearchServiceKeepsCrossTypeTMDbCollisions() {
+        let movie = AnimeEntry(name: "Collision Movie", type: .movie, tmdbID: 500_003)
+        let series = AnimeEntry(name: "Collision Series", type: .series, tmdbID: 500_003)
+        let service = LibrarySearchService(entriesProvider: { [movie, series] })
+
+        service.updateResults(query: "collision")
+
+        #expect(Set(service.results.map(\.libraryIdentity)) == Set([movie.libraryIdentity, series.libraryIdentity]))
+    }
+
     @Test @MainActor func testLibrarySearchServiceUsesCurrentLibraryStoreEntries() throws {
         let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
         store.newEntryFromEntryMetadata(

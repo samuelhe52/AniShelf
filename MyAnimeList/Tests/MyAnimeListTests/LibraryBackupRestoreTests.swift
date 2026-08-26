@@ -180,7 +180,7 @@ struct LibraryBackupRestoreTests {
 
     @Test @MainActor func testStartupRecoveryRebootsEnabledCloudSyncWithFreshMetadata() async throws {
         let store = makeSyncReadyStore()
-        let staleDeleteIdentity = LibraryEntrySyncIdentity(entryType: .movie, tmdbID: 910_001)
+        let staleDeleteIdentity = LibraryEntryIdentity(entryType: .movie, tmdbID: 910_001)
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([
             .delete(
                 .init(
@@ -212,7 +212,7 @@ struct LibraryBackupRestoreTests {
         tokenDefaults.set(Data([0x01, 0x02, 0x03]), forKey: tokenKey)
 
         let client = CloudLibrarySyncClient()
-        let remoteIdentity = LibraryEntrySyncIdentity(entryType: .movie, tmdbID: 910_002)
+        let remoteIdentity = LibraryEntryIdentity(entryType: .movie, tmdbID: 910_002)
         let remoteSnapshot = makeSnapshot(
             identity: remoteIdentity,
             tmdbID: 910_002,
@@ -226,14 +226,12 @@ struct LibraryBackupRestoreTests {
             database: database,
             changeTokenStore: tokenStore,
             namespaceProvider: { namespace },
-            hydrateMissingEntry: { snapshot, store in
-                let entry = AnimeEntry(
+            hydrateMissingEntry: { snapshot, _ in
+                AnimeEntry(
                     name: "Recovered Placeholder",
                     type: snapshot.entryType,
                     tmdbID: snapshot.tmdbID
                 )
-                store.repository.insert(entry)
-                return entry
             }
         )
 

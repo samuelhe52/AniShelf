@@ -22,9 +22,9 @@ struct LibraryToolbar: ToolbarContent {
     let exitMultiSelection: () -> Void
     let applyBatchAction: (LibraryBatchAction) -> Void
     let openProfileSettings: () -> Void
-    let checkDuplicate: (Int) -> Bool
+    let checkDuplicate: (LibraryEntryIdentity) -> Bool
     let processTMDbSearchResults: (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void
-    let jumpToEntryInLibrary: (Int) -> Void
+    let jumpToEntryInLibrary: (LibraryEntryIdentity) -> Void
 
     @ToolbarContentBuilder
     var body: some ToolbarContent {

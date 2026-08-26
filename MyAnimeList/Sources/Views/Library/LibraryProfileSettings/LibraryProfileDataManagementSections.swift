@@ -38,9 +38,7 @@ struct LibraryProfileICloudSyncSection: View {
             .disabled(cloudSyncToggleDisabled)
 
             if libraryCloudSyncStatus.isEnabled {
-                VStack(alignment: .leading, spacing: 10) {
-                    cloudSyncStatusRow
-                }
+                cloudSyncStatusRow
             }
         }
         .animation(.default, value: cloudSyncIsBusy)
@@ -145,7 +143,7 @@ struct LibraryProfileBackupExportSection: View {
         LazyShareLink(prepareData: createBackupItems) {
             Label("Backup", systemImage: "archivebox")
         }
-        .buttonStyle(LibraryProfileCommandButtonStyle(tint: .blue, filled: false))
+        .buttonStyle(LibraryProfileCommandButtonStyle(tint: .cyan, filled: false))
     }
 
     private var restoreButton: some View {
@@ -181,7 +179,7 @@ struct LibraryProfileBackupExportSection: View {
         } label: {
             Label("Export as...", systemImage: "square.and.arrow.up.on.square")
         }
-        .buttonStyle(LibraryProfileCommandButtonStyle(tint: .teal, filled: false))
+        .buttonStyle(LibraryProfileCommandButtonStyle(tint: .orange, filled: false))
     }
 }
 
@@ -190,6 +188,9 @@ struct LibraryProfileMaintenanceActionsSection: View {
     let onCheckMetadataCacheSize: () -> Void
     let onRefreshInfos: () -> Void
     let onPrefetchImages: () -> Void
+    let showRebuildLibraryCloudSync: Bool
+    let rebuildLibraryCloudSyncDisabled: Bool
+    let onRequestRebuildLibraryCloudSync: () -> Void
     let onShowSupport: () -> Void
     let whatsNewVersion: String?
     let onShowWhatsNew: () -> Void
@@ -202,7 +203,7 @@ struct LibraryProfileMaintenanceActionsSection: View {
                 title: "Change API Key",
                 subtitle: "Update the TMDb key used for metadata.",
                 systemImage: "person.badge.key",
-                tint: LibraryProfileMaintenancePalette.apiKey,
+                tint: LibraryProfileMaintenancePalette.accent,
                 action: onChangeAPIKey
             )
             LibraryProfileActionDivider()
@@ -210,7 +211,7 @@ struct LibraryProfileMaintenanceActionsSection: View {
                 title: "Check Metadata Cache Size",
                 subtitle: "Review image and metadata cache usage.",
                 systemImage: "archivebox",
-                tint: LibraryProfileMaintenancePalette.cache,
+                tint: LibraryProfileMaintenancePalette.accent,
                 action: onCheckMetadataCacheSize
             )
             LibraryProfileActionDivider()
@@ -218,7 +219,7 @@ struct LibraryProfileMaintenanceActionsSection: View {
                 title: "Refresh Infos",
                 subtitle: "Fetch latest TMDb metadata for every entry.",
                 systemImage: "arrow.clockwise",
-                tint: LibraryProfileMaintenancePalette.refresh,
+                tint: LibraryProfileMaintenancePalette.accent,
                 action: onRefreshInfos
             )
             LibraryProfileActionDivider()
@@ -226,16 +227,28 @@ struct LibraryProfileMaintenanceActionsSection: View {
                 title: "Prefetch Images",
                 subtitle: "Cache posters and artwork without refreshing metadata.",
                 systemImage: "photo.stack",
-                tint: LibraryProfileMaintenancePalette.prefetch,
+                tint: LibraryProfileMaintenancePalette.accent,
                 action: onPrefetchImages
             )
             LibraryProfileActionDivider()
+            if showRebuildLibraryCloudSync {
+                LibraryProfileActionRow(
+                    title: "Rebuild iCloud Sync",
+                    subtitle: "Refetch and reconcile your iCloud library with your local library.",
+                    systemImage: "arrow.triangle.2.circlepath.icloud",
+                    tint: LibraryProfileMaintenancePalette.accent,
+                    action: onRequestRebuildLibraryCloudSync
+                )
+                .disabled(rebuildLibraryCloudSyncDisabled)
+                .opacity(rebuildLibraryCloudSyncDisabled ? 0.52 : 1)
+                LibraryProfileActionDivider()
+            }
             if let whatsNewVersion {
                 LibraryProfileActionRow(
                     title: "What's New",
                     subtitle: whatsNewSubtitleResource(for: whatsNewVersion),
                     systemImage: "sparkles.rectangle.stack",
-                    tint: LibraryProfileMaintenancePalette.whatsNew,
+                    tint: LibraryProfileMaintenancePalette.accent,
                     action: onShowWhatsNew
                 )
                 LibraryProfileActionDivider()
@@ -244,7 +257,7 @@ struct LibraryProfileMaintenanceActionsSection: View {
                 title: "Support AniShelf",
                 subtitle: "Optional tip jar. No features are unlocked.",
                 systemImage: "heart.circle",
-                tint: LibraryProfileMaintenancePalette.support,
+                tint: LibraryProfileMaintenancePalette.accent,
                 action: onShowSupport
             )
             LibraryProfileActionDivider()
@@ -252,7 +265,7 @@ struct LibraryProfileMaintenanceActionsSection: View {
                 title: "About AniShelf",
                 subtitle: "Version, links, and credits.",
                 systemImage: "info.circle",
-                tint: LibraryProfileMaintenancePalette.about,
+                tint: LibraryProfileMaintenancePalette.accent,
                 action: onShowAbout
             )
             LibraryProfileActionDivider()

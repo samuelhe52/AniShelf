@@ -23,7 +23,7 @@ struct CloudLibrarySyncImporterExporterTests {
         let tokenStore = CloudLibrarySyncChangeTokenStore(userDefaults: userDefaults)
         let firstToken = try makeToken()
         let finalToken = try makeToken()
-        let identity = LibraryEntrySyncIdentity(entryType: .series, tmdbID: 901)
+        let identity = LibraryEntryIdentity(entryType: .series, tmdbID: 901)
         let olderSnapshot = makeSnapshot(
             identity: identity,
             tmdbID: 901,
@@ -85,7 +85,7 @@ struct CloudLibrarySyncImporterExporterTests {
         let finalToken = try makeToken()
         tokenStore.setToken(expiredToken, for: CloudLibrarySyncClient.recordZoneID, namespace: namespace)
 
-        let identity = LibraryEntrySyncIdentity(entryType: .movie, tmdbID: 902)
+        let identity = LibraryEntryIdentity(entryType: .movie, tmdbID: 902)
         let database = FakeCloudLibrarySyncDatabase(
             changes: [
                 .init(
@@ -132,7 +132,7 @@ struct CloudLibrarySyncImporterExporterTests {
         defer { userDefaults.removePersistentDomain(forName: suiteName) }
         let tokenStore = CloudLibrarySyncChangeTokenStore(userDefaults: userDefaults)
         let finalToken = try makeToken()
-        let identity = LibraryEntrySyncIdentity(entryType: .series, tmdbID: 903)
+        let identity = LibraryEntryIdentity(entryType: .series, tmdbID: 903)
         let tombstone = LibraryEntrySyncTombstone(
             identity: identity,
             tmdbID: 903,
@@ -198,7 +198,7 @@ struct CloudLibrarySyncImporterExporterTests {
         let userDefaults = try #require(UserDefaults(suiteName: suiteName))
         defer { userDefaults.removePersistentDomain(forName: suiteName) }
         let tokenStore = CloudLibrarySyncChangeTokenStore(userDefaults: userDefaults)
-        let entryIdentity = LibraryEntrySyncIdentity(entryType: .movie, tmdbID: 904)
+        let entryIdentity = LibraryEntryIdentity(entryType: .movie, tmdbID: 904)
         let entrySnapshot = makeSnapshot(identity: entryIdentity, tmdbID: 904, entryType: .movie)
         let settingsSnapshot = LibrarySettingsSyncSnapshot(
             updatedAt: referenceDate(year: 2026, month: 6, day: 5),
@@ -240,22 +240,22 @@ struct CloudLibrarySyncImporterExporterTests {
         )
         let database = FakeCloudLibrarySyncDatabase(
             changes: [],
-            successfulSaveRecordIDs: [client.recordID(for: first.syncIdentity)]
+            successfulSaveRecordIDs: [client.recordID(for: first.libraryIdentity)]
         )
         let exporter = CloudLibrarySyncExporter(client: client, database: database)
 
         let result = try await exporter.export(
             entries: [
-                .upsert(.init(identity: first.syncIdentity, dirtyAt: referenceDate(year: 2026, month: 5, day: 8))),
+                .upsert(.init(identity: first.libraryIdentity, dirtyAt: referenceDate(year: 2026, month: 5, day: 8))),
                 .delete(.init(tombstone: tombstone))
             ],
-            localSnapshotsByIdentity: [first.syncIdentity: firstSnapshot]
+            localSnapshotsByIdentity: [first.libraryIdentity: firstSnapshot]
         )
 
-        #expect(result.exportedIdentities == [first.syncIdentity])
+        #expect(result.exportedIdentities == [first.libraryIdentity])
         #expect(database.savedRecords.count == 2)
         let savedTombstoneRecord = try #require(
-            database.savedRecords.first { $0.recordID == client.recordID(for: second.syncIdentity) }
+            database.savedRecords.first { $0.recordID == client.recordID(for: second.libraryIdentity) }
         )
         let savedTombstoneChange = try client.remoteChange(from: savedTombstoneRecord)
         #expect(savedTombstoneChange == .tombstone(tombstone))
@@ -352,7 +352,7 @@ struct CloudLibrarySyncImporterExporterTests {
     }
 
     @Test func exporterIncludesOptionalSettingsSnapshot() async throws {
-        let identity = LibraryEntrySyncIdentity(entryType: .series, tmdbID: 907)
+        let identity = LibraryEntryIdentity(entryType: .series, tmdbID: 907)
         let snapshot = makeSnapshot(identity: identity, tmdbID: 907)
         let settingsSnapshot = LibrarySettingsSyncSnapshot(
             updatedAt: referenceDate(year: 2026, month: 6, day: 5),
@@ -459,16 +459,16 @@ fileprivate func makeExportPayload(
     startingTMDbID: Int = 10_000
 ) -> (
     entries: [LibraryEntrySyncDirtyQueueEntry],
-    snapshots: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot],
-    identities: [LibraryEntrySyncIdentity]
+    snapshots: [LibraryEntryIdentity: LibraryEntrySyncSnapshot],
+    identities: [LibraryEntryIdentity]
 ) {
     var entries: [LibraryEntrySyncDirtyQueueEntry] = []
-    var snapshots: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot] = [:]
-    var identities: [LibraryEntrySyncIdentity] = []
+    var snapshots: [LibraryEntryIdentity: LibraryEntrySyncSnapshot] = [:]
+    var identities: [LibraryEntryIdentity] = []
 
     for offset in 0..<count {
         let tmdbID = startingTMDbID + offset
-        let identity = LibraryEntrySyncIdentity(entryType: .series, tmdbID: tmdbID)
+        let identity = LibraryEntryIdentity(entryType: .series, tmdbID: tmdbID)
         entries.append(
             .upsert(.init(identity: identity, dirtyAt: referenceDate(year: 2026, month: 6, day: 12)))
         )
@@ -480,7 +480,7 @@ fileprivate func makeExportPayload(
 }
 
 fileprivate func makeSnapshot(
-    identity: LibraryEntrySyncIdentity,
+    identity: LibraryEntryIdentity,
     tmdbID: Int,
     entryType: AnimeType = .series,
     trackingUpdatedAt: Date? = referenceDate(year: 2026, month: 5, day: 1),

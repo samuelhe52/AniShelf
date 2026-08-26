@@ -12,24 +12,26 @@ import SwiftUI
 struct LibraryScrollRequest: Equatable {
     // Keep repeated explicit requests to the same entry observable.
     let token = UUID()
-    let entryID: Int?
+    let entryID: LibraryEntryIdentity?
 }
 
 struct LibraryView: View {
     // MARK: - Stored Properties
 
     @Environment(LibraryStore.self) var store
-    @State var interaction = LibraryEntryInteractionState()
-    @State private var detailSessionStore = EntryDetailSessionStore()
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(AppReviewPromptController.self) var appReview
+    private let airingReminders = AiringReminderCoordinator.shared
+
+    @State var interaction = LibraryEntryInteractionState()
+    @State private var detailSessionStore = EntryDetailSessionStore()
 
     // UI state
     @State var isSearching = false
     @State private var showProfileSettings = false
     @State var scrollState = ScrollState()
     @State var newEntriesAddedToggle = false
-    @State var highlightedEntryID: Int?
+    @State var highlightedEntryID: LibraryEntryIdentity?
     @State var scrollRequest: LibraryScrollRequest?
     @State private var isShowingBatchDeleteConfirmation = false
     @State private var inspectorDetailWorkspaceState = LibraryInspectorDetailWorkspaceState()
@@ -37,7 +39,7 @@ struct LibraryView: View {
     // Multi-selection snapshot: decouples selection rendering from live store
     // recomputation so toggling items stays cheap. See LibraryView+MultiSelection.
     @State var selectionDisplayItems: [LibraryEntryDisplayItem]?
-    @State var selectionEntriesByID: [Int: AnimeEntry] = [:]
+    @State var selectionEntriesByID: [LibraryEntryIdentity: AnimeEntry] = [:]
 
     // Persistent UI preference
     @AppStorage(.libraryViewStyle) var libraryViewStyle: LibraryViewStyle = .gallery
@@ -94,6 +96,27 @@ struct LibraryView: View {
         }
         .onChange(of: store.hideDroppedByDefault) {
             refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(
+            of: airingReminders.pendingRouteEntryIdentityRawID,
+            initial: true
+        ) { _, entryIdentityRawID in
+            handleAiringReminderRoute(entryIdentityRawID)
+        }
+        .alert(
+            airingReminderWarningTitle,
+            isPresented: Binding(
+                get: { airingReminders.presentedWarning != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        airingReminders.dismissPresentedWarning()
+                    }
+                }
+            )
+        ) {
+            Button("OK") { airingReminders.dismissPresentedWarning() }
+        } message: {
+            Text(airingReminderWarningMessage)
         }
     }
 
@@ -246,7 +269,7 @@ struct LibraryView: View {
                     exitMultiSelection: exitMultiSelection,
                     applyBatchAction: applyBatchAction,
                     openProfileSettings: openProfileSettings,
-                    checkDuplicate: { store.libraryOnDisplay.map(\.tmdbID).contains($0) },
+                    checkDuplicate: { store.libraryOnDisplay.map(\.libraryIdentity).contains($0) },
                     processTMDbSearchResults: processTMDbSearchResults,
                     jumpToEntryInLibrary: jumpToEntryInLibrary
                 )
@@ -386,6 +409,27 @@ struct LibraryView: View {
         interaction.openDetails(for: entry)
     }
 
+    private func handleAiringReminderRoute(_ entryIdentityRawID: String?) {
+        guard let entryIdentityRawID else { return }
+        defer { airingReminders.consumePendingRoute() }
+        guard let entry = store.repository.existingEntry(identityRawID: entryIdentityRawID) else {
+            return
+        }
+        isSearching = false
+        showProfileSettings = false
+        openDetails(entry)
+    }
+
+    private var airingReminderWarningMessage: LocalizedStringResource {
+        airingReminders.presentedWarning?.localizedMessage
+            ?? "Some reminders could not be scheduled."
+    }
+
+    private var airingReminderWarningTitle: LocalizedStringResource {
+        airingReminders.presentedWarning?.localizedTitle
+            ?? "Reminder Scheduling Issue"
+    }
+
     private func editDetails(_ entry: AnimeEntry) {
         prepareAndConfigureDetailHost(for: entry)
         interaction.setEditingEntry(entry)
@@ -407,7 +451,7 @@ struct LibraryView: View {
     }
 
     private func detailEditingRequestID(
-        for identity: LibraryEntrySyncIdentity,
+        for identity: LibraryEntryIdentity,
         hostPresentationID: UUID
     ) -> UUID? {
         guard interaction.detailEditRequest?.entryIdentity == identity,
@@ -416,7 +460,7 @@ struct LibraryView: View {
         return interaction.detailEditRequest?.id
     }
 
-    func requestLibraryScroll(to entryID: Int?) {
+    func requestLibraryScroll(to entryID: LibraryEntryIdentity?) {
         scrollState.scrolledID = entryID
         scrollRequest = LibraryScrollRequest(entryID: entryID)
     }
@@ -435,7 +479,7 @@ struct LibraryView: View {
 
     private func libraryViewPage<Content: View>(
         id: LibraryViewStyle,
-        layoutIDs: [Int],
+        layoutIDs: [LibraryEntryIdentity],
         @ViewBuilder content: () -> Content
     ) -> some View {
         content()

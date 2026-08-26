@@ -59,10 +59,10 @@ struct LibrarySortingAndDeletionTests {
             let second = makeEntry(name: "Second", tmdbID: 2, day: 2)
             let third = makeEntry(name: "Third", tmdbID: 3, day: 3)
             let store = try makeStore(with: [first, second, third])
-            var scrolledID: Int?
+            var scrolledID: LibraryEntryIdentity?
 
             #expect(store.deleteEntry(second) { scrolledID = $0 })
-            #expect(scrolledID == first.tmdbID)
+            #expect(scrolledID == first.libraryIdentity)
         }
 
         do {
@@ -70,10 +70,10 @@ struct LibrarySortingAndDeletionTests {
             let second = makeEntry(name: "Second", tmdbID: 2, day: 2)
             let third = makeEntry(name: "Third", tmdbID: 3, day: 3)
             let store = try makeStore(with: [first, second, third])
-            var scrolledID: Int?
+            var scrolledID: LibraryEntryIdentity?
 
             #expect(store.deleteEntry(first) { scrolledID = $0 })
-            #expect(scrolledID == second.tmdbID)
+            #expect(scrolledID == second.libraryIdentity)
         }
 
         do {
@@ -81,16 +81,16 @@ struct LibrarySortingAndDeletionTests {
             let second = makeEntry(name: "Second", tmdbID: 2, day: 2)
             let third = makeEntry(name: "Third", tmdbID: 3, day: 3)
             let store = try makeStore(with: [first, second, third])
-            var scrolledID: Int?
+            var scrolledID: LibraryEntryIdentity?
 
             #expect(store.deleteEntry(third) { scrolledID = $0 })
-            #expect(scrolledID == second.tmdbID)
+            #expect(scrolledID == second.libraryIdentity)
         }
 
         do {
             let solo = makeEntry(name: "Solo", tmdbID: 10, day: 10)
             let store = try makeStore(with: [solo])
-            var scrolledID: Int? = solo.tmdbID
+            var scrolledID: LibraryEntryIdentity? = solo.libraryIdentity
 
             #expect(store.deleteEntry(solo) { scrolledID = $0 })
             #expect(scrolledID == nil)

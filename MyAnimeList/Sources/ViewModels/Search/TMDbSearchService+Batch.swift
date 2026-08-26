@@ -257,7 +257,7 @@ extension TMDbSearchService {
                 if case .series = info.type, structuredSeasonResultIDs.contains(info.tmdbID) {
                     continue
                 }
-                guard !checkDuplicate(info.tmdbID) else { continue }
+                guard !isDuplicate(.init(tmdbID: info.tmdbID, type: info.type)) else { continue }
                 registerBatchSelection(info: info)
             }
         }
@@ -270,7 +270,13 @@ extension TMDbSearchService {
             setSeriesSelectionState(state, forSeriesID: preselection.series.tmdbID, context: .batch)
             unregisterBatchSelection(info: preselection.series)
 
-            guard !checkDuplicate(preselection.selectedSeason.tmdbID) else { continue }
+            guard
+                !isDuplicate(
+                    .init(
+                        tmdbID: preselection.selectedSeason.tmdbID,
+                        type: preselection.selectedSeason.type
+                    ))
+            else { continue }
             registerBatchSelection(info: preselection.selectedSeason)
         }
     }

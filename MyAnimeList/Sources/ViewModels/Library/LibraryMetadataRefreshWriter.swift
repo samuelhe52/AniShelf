@@ -115,7 +115,13 @@ struct LibraryMetadataRefreshWriter: Sendable {
 
                 guard let childEntry = fetchedChildEntry else { continue }
 
-                if childEntry.parentSeriesEntry?.tmdbID == parentUpdate.parentSeriesID {
+                guard childEntry.type.parentSeriesID == parentUpdate.parentSeriesID else {
+                    continue
+                }
+
+                if childEntry.parentSeriesEntry?.libraryIdentity
+                    == LibraryEntryIdentity(entryType: .series, tmdbID: parentUpdate.parentSeriesID)
+                {
                     continue
                 }
 
@@ -126,7 +132,9 @@ struct LibraryMetadataRefreshWriter: Sendable {
                 ) {
                     parentEntry = existingParent
                 } else if let parentInfo = parentUpdate.parentInfo,
-                    let parentDetail = parentUpdate.parentDetail
+                    let parentDetail = parentUpdate.parentDetail,
+                    parentInfo.type == .series,
+                    parentInfo.tmdbID == parentUpdate.parentSeriesID
                 {
                     let insertedParent = AnimeEntry(fromInfo: parentInfo)
                     insertedParent.setDisplayState(false)
@@ -181,7 +189,9 @@ struct LibraryMetadataRefreshWriter: Sendable {
             }
         )
         return AnimeEntryDuplicateResolver.preferredEntry(
-            from: try modelContext.fetch(descriptor)
+            from: try modelContext.fetch(descriptor).filter {
+                $0.libraryIdentity == LibraryEntryIdentity(entryType: .series, tmdbID: tmdbID)
+            }
         )
     }
 }

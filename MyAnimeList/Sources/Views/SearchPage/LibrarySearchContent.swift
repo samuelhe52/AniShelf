@@ -48,11 +48,11 @@ struct LibrarySearchContent: View {
                 description: Text("Try a different search term"))
         } else {
             List {
-                ForEach(librarySearchService.results, id: \.tmdbID) { result in
+                ForEach(librarySearchService.results, id: \.libraryIdentity) { result in
                     AnimeEntryListRow(
                         entry: result,
                         onTap: {
-                            librarySearchService.jumpToEntryInLibrary(result.tmdbID)
+                            librarySearchService.jumpToEntryInLibrary(result.libraryIdentity)
                         }
                     )
                     .listRowBackground(Color.clear)

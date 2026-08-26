@@ -4,7 +4,7 @@ import Foundation
 fileprivate enum DeletionScrollTarget: Equatable {
     case preserveCurrent
     case clear
-    case entry(Int)
+    case entry(LibraryEntryIdentity)
 }
 
 extension LibraryStore {
@@ -13,7 +13,9 @@ extension LibraryStore {
         tmdbID id: Int,
         type: AnimeType
     ) async throws -> AnimeEntry? {
-        if let existingEntry = repository.existingEntry(tmdbID: id) {
+        if let existingEntry = repository.existingEntry(
+            identity: .init(entryType: type, tmdbID: id)
+        ) {
             if !existingEntry.onDisplay {
                 try await hydrateExistingEntry(existingEntry, type: type)
                 return existingEntry
@@ -36,7 +38,9 @@ extension LibraryStore {
         applyNewEntryDefaults(to: entry)
         entry.replaceDetail(from: latestInfo.1)
         if let parentSeriesID = entry.parentSeriesID {
-            if let parentSeriesEntry = repository.existingEntry(tmdbID: parentSeriesID) {
+            if let parentSeriesEntry = repository.existingEntry(
+                identity: .init(entryType: .series, tmdbID: parentSeriesID)
+            ) {
                 entry.parentSeriesEntry = parentSeriesEntry
             } else {
                 let parentSeriesEntry =
@@ -55,7 +59,7 @@ extension LibraryStore {
     func hydrateExistingEntry(_ entry: AnimeEntry, type: AnimeType) async throws {
         let tmdbID = entry.tmdbID
         let latestInfo = try await infoFetcher.latestInfo(
-            entryType: type,
+            entryType: entry.type,
             tmdbID: tmdbID,
             language: language
         )
@@ -141,7 +145,10 @@ extension LibraryStore {
     }
 
     @discardableResult
-    func deleteEntry(_ entry: AnimeEntry, updateScrolledID: (Int?) -> Void) -> Bool {
+    func deleteEntry(
+        _ entry: AnimeEntry,
+        updateScrolledID: (LibraryEntryIdentity?) -> Void
+    ) -> Bool {
         let scrollTarget = deletionScrollTarget(for: entry)
 
         guard deleteEntry(entry) else { return false }
@@ -174,13 +181,13 @@ extension LibraryStore {
         }
 
         if index > 0 {
-            return .entry(entries[index - 1].tmdbID)
+            return .entry(entries[index - 1].libraryIdentity)
         }
 
         let nextIndex = index + 1
         guard nextIndex < entries.endIndex else {
             return .clear
         }
-        return .entry(entries[nextIndex].tmdbID)
+        return .entry(entries[nextIndex].libraryIdentity)
     }
 }

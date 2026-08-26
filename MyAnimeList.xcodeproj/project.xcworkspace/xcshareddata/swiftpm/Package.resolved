@@ -51,8 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/adamayoung/TMDb",
       "state" : {
-        "branch" : "main",
-        "revision" : "86b53db22cea42992f88f37751f079749674941b"
+        "revision" : "b6aa28c270005fbb3d9b2c75213e3bf5f7bd8b33",
+        "version" : "19.0.0"
       }
     },
     {

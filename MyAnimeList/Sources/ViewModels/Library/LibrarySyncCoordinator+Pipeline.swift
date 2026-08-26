@@ -50,7 +50,7 @@ extension LibrarySyncCoordinator {
 
     struct ImportHead {
         let namespace: CloudLibrarySyncChangeTokenStore.Namespace
-        let preImportSnapshots: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot]
+        let preImportSnapshots: [LibraryEntryIdentity: LibraryEntrySyncSnapshot]
         let importBatch: CloudLibrarySyncImportBatch
     }
 
@@ -126,13 +126,26 @@ extension LibrarySyncCoordinator {
             pass.markBootstrapFailed()
             return nil
         }
+        if !pass.completedBootstrap,
+            store.libraryCloudSyncStatus.lastCompletedScope
+                != LibraryCloudSyncScope(namespace: namespace)
+        {
+            throw LibraryCloudSyncScopeChangedDuringSync()
+        }
 
         let preImportSnapshots = try localSnapshotsByIdentity(for: store)
         let importBatch = try await pass.run(.remoteFetch, state: state, store: store) {
-            try await importer.fetchChanges(
-                namespace: namespace,
-                localSnapshotsByIdentity: preImportSnapshots
-            )
+            if pass.completedBootstrap {
+                try await importer.fetchChangesFromBeginning(
+                    namespace: namespace,
+                    localSnapshotsByIdentity: preImportSnapshots
+                )
+            } else {
+                try await importer.fetchChanges(
+                    namespace: namespace,
+                    localSnapshotsByIdentity: preImportSnapshots
+                )
+            }
         }
         return .init(
             namespace: namespace,
@@ -146,7 +159,7 @@ extension LibrarySyncCoordinator {
         state: SyncPipelineState,
         store: LibraryStore,
         importBatch: CloudLibrarySyncImportBatch,
-        forcedDomainsByIdentity: [LibraryEntrySyncIdentity: Set<LibraryCloudSyncConflictDomain>] = [:]
+        forcedDomainsByIdentity: [LibraryEntryIdentity: Set<LibraryCloudSyncConflictDomain>] = [:]
     ) async throws -> SyncResult {
         _ = try await pass.run(.hydrationApply, state: state, store: store) {
             try await applyImportedChanges(
@@ -211,6 +224,12 @@ extension LibrarySyncCoordinator {
         store.recordLibraryCloudSyncSuccess(
             trigger: pass.trigger,
             completedBootstrap: pass.completedBootstrap,
+            completedScope: pass.completedBootstrap
+                ? LibraryCloudSyncScope(
+                    namespace: importBatch.namespace,
+                    zoneID: importBatch.zoneID
+                )
+                : nil,
             reconciledCloudSyncedSettingsUpdatedAt: reconciledCloudSyncedSettingsUpdatedAt,
             at: dateProvider()
         )
@@ -242,11 +261,21 @@ extension LibrarySyncCoordinator {
     }
 }
 
+fileprivate struct LibraryCloudSyncScopeChangedDuringSync: LocalizedError {
+    var errorDescription: String? {
+        String(
+            localized:
+                "Your iCloud account changed while iCloud Sync was starting. Try again to rebuild sync for the new account."
+        )
+    }
+}
+
 @MainActor
 final class SyncGate {
     private var isSyncing = false
     private var syncRequestedWhileRunning = false
     private var waiters: [CheckedContinuation<LibrarySyncCoordinator.SyncResult, Never>] = []
+    private var idleWaiters: [CheckedContinuation<Void, Never>] = []
 
     func waitForRunningPass() async -> LibrarySyncCoordinator.SyncResult? {
         guard isSyncing else { return nil }
@@ -261,6 +290,13 @@ final class SyncGate {
         isSyncing = true
     }
 
+    func waitUntilIdle() async {
+        guard isSyncing else { return }
+        await withCheckedContinuation { continuation in
+            idleWaiters.append(continuation)
+        }
+    }
+
     func consumeRerunRequest() -> Bool {
         defer { syncRequestedWhileRunning = false }
         return syncRequestedWhileRunning
@@ -268,6 +304,11 @@ final class SyncGate {
 
     func finish(_ result: LibrarySyncCoordinator.SyncResult, parkingWaiters: Bool = false) {
         isSyncing = false
+        let pendingIdleWaiters = idleWaiters
+        idleWaiters.removeAll()
+        for waiter in pendingIdleWaiters {
+            waiter.resume()
+        }
         guard !parkingWaiters else { return }
         let pendingWaiters = waiters
         waiters.removeAll()

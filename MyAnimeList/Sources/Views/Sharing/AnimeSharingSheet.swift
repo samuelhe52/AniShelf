@@ -68,7 +68,7 @@ struct AnimeSharingSheet: View {
                             TapGesture().onEnded {
                                 didActivateShare = true
                                 appReview.record(
-                                    .entryShare(entryID: viewModel.entry.tmdbID),
+                                    .entryShare(entryID: viewModel.entry.libraryIdentity),
                                     scheduleRequest: false
                                 )
                             }

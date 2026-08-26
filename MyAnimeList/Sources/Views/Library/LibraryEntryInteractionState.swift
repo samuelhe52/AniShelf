@@ -12,10 +12,10 @@ import SwiftUI
 import UIKit
 
 enum LibraryEntryWorkflow: Equatable, Sendable {
-    case posterSelection(LibraryEntrySyncIdentity)
-    case sharing(LibraryEntrySyncIdentity)
+    case posterSelection(LibraryEntryIdentity)
+    case sharing(LibraryEntryIdentity)
 
-    var entryIdentity: LibraryEntrySyncIdentity {
+    var entryIdentity: LibraryEntryIdentity {
         switch self {
         case .posterSelection(let identity),
             .sharing(let identity):
@@ -60,25 +60,25 @@ struct LibraryEntryDetailHostPolicy: Equatable, Sendable {
 
 struct LibraryEntryDetailEditRequest: Equatable, Sendable {
     let id = UUID()
-    let entryIdentity: LibraryEntrySyncIdentity
+    let entryIdentity: LibraryEntryIdentity
     var hostPresentationID: UUID?
 }
 
 struct LibraryEntryPasteRequest: Identifiable, Equatable {
     let id = UUID()
-    let entryIdentity: LibraryEntrySyncIdentity
+    let entryIdentity: LibraryEntryIdentity
     let userInfo: UserEntryInfo
 }
 
 struct LibraryEntryDetailPresentation: Identifiable, Equatable, Sendable {
     let id = UUID()
-    let entryIdentity: LibraryEntrySyncIdentity
+    let entryIdentity: LibraryEntryIdentity
 }
 
 struct LibraryEntryDetailHostPresentation: Identifiable, Equatable, Sendable {
     let id = UUID()
     var detailPresentationID: UUID
-    var entryIdentity: LibraryEntrySyncIdentity
+    var entryIdentity: LibraryEntryIdentity
     let host: LibraryEntryDetailHost
     var isHostPresented = true
 }
@@ -103,12 +103,12 @@ enum LibraryEntrySheetRoute: Identifiable, Equatable, Sendable {
 @Observable
 @MainActor
 final class LibraryEntryInteractionState {
-    var focusedEntryID: LibraryEntrySyncIdentity?
+    var focusedEntryID: LibraryEntryIdentity?
     private(set) var detailEditRequest: LibraryEntryDetailEditRequest?
-    var deletingEntryID: LibraryEntrySyncIdentity?
+    var deletingEntryID: LibraryEntryIdentity?
     private(set) var pendingPasteRequest: LibraryEntryPasteRequest?
     var isMultiSelecting: Bool = false
-    var selectedEntryIDs: Set<Int> = []
+    var selectedEntryIDs: Set<LibraryEntryIdentity> = []
     private(set) var desiredDetailHost: LibraryEntryDetailHost
     private(set) var detailPresentation: LibraryEntryDetailPresentation?
     private(set) var detailHostPresentation: LibraryEntryDetailHostPresentation?
@@ -120,7 +120,7 @@ final class LibraryEntryInteractionState {
         desiredDetailHost = initialDetailHost
     }
 
-    var presentedDetailEntryID: LibraryEntrySyncIdentity? {
+    var presentedDetailEntryID: LibraryEntryIdentity? {
         detailPresentation?.entryIdentity
     }
 
@@ -163,25 +163,25 @@ final class LibraryEntryInteractionState {
     }
 
     func focus(_ entry: AnimeEntry) {
-        focusedEntryID = entry.syncIdentity
+        focusedEntryID = entry.libraryIdentity
     }
 
     func openDetails(for entry: AnimeEntry) {
         isDetailDormantUntilInspector = false
-        if detailEditRequest?.entryIdentity != entry.syncIdentity {
+        if detailEditRequest?.entryIdentity != entry.libraryIdentity {
             detailEditRequest = nil
         }
         focus(entry)
-        let presentation = LibraryEntryDetailPresentation(entryIdentity: entry.syncIdentity)
+        let presentation = LibraryEntryDetailPresentation(entryIdentity: entry.libraryIdentity)
         detailPresentation = presentation
 
         if detailHostPresentation?.isHostPresented == true {
             detailHostPresentation?.detailPresentationID = presentation.id
-            detailHostPresentation?.entryIdentity = entry.syncIdentity
+            detailHostPresentation?.entryIdentity = entry.libraryIdentity
         } else {
             detailHostPresentation = LibraryEntryDetailHostPresentation(
                 detailPresentationID: presentation.id,
-                entryIdentity: entry.syncIdentity,
+                entryIdentity: entry.libraryIdentity,
                 host: desiredDetailHost
             )
         }
@@ -316,7 +316,7 @@ final class LibraryEntryInteractionState {
         selectedEntryIDs.removeAll()
     }
 
-    func toggleSelection(for entryID: Int) {
+    func toggleSelection(for entryID: LibraryEntryIdentity) {
         if selectedEntryIDs.contains(entryID) {
             selectedEntryIDs.remove(entryID)
         } else {
@@ -324,16 +324,16 @@ final class LibraryEntryInteractionState {
         }
     }
 
-    func isSelected(_ entryID: Int) -> Bool {
+    func isSelected(_ entryID: LibraryEntryIdentity) -> Bool {
         selectedEntryIDs.contains(entryID)
     }
 
     func prepareDeletion(for entry: AnimeEntry) {
-        deletingEntryID = entry.syncIdentity
+        deletingEntryID = entry.libraryIdentity
     }
 
     func confirmDeletion(
-        resolveEntry: (LibraryEntrySyncIdentity) -> AnimeEntry?,
+        resolveEntry: (LibraryEntryIdentity) -> AnimeEntry?,
         deleteEntry: (AnimeEntry) -> Void
     ) {
         guard let identity = deletingEntryID,
@@ -351,7 +351,7 @@ final class LibraryEntryInteractionState {
     func setEditingEntry(_ entry: AnimeEntry) {
         openDetails(for: entry)
         detailEditRequest = LibraryEntryDetailEditRequest(
-            entryIdentity: entry.syncIdentity,
+            entryIdentity: entry.libraryIdentity,
             hostPresentationID: detailHostPresentation?.id
         )
     }
@@ -381,7 +381,7 @@ final class LibraryEntryInteractionState {
             ToastCenter.global.pasted = true
         } else {
             pendingPasteRequest = LibraryEntryPasteRequest(
-                entryIdentity: entry.syncIdentity,
+                entryIdentity: entry.libraryIdentity,
                 userInfo: userInfo
             )
         }
@@ -389,7 +389,7 @@ final class LibraryEntryInteractionState {
 
     func confirmPaste(
         requestID: UUID,
-        resolveEntry: (LibraryEntrySyncIdentity) -> AnimeEntry?
+        resolveEntry: (LibraryEntryIdentity) -> AnimeEntry?
     ) {
         guard let request = pendingPasteRequest,
             request.id == requestID
@@ -406,11 +406,17 @@ final class LibraryEntryInteractionState {
         pendingPasteRequest = nil
     }
 
-    func highlightBinding(for entry: AnimeEntry, highlightedEntryID: Binding<Int?>) -> Binding<Bool> {
-        highlightBinding(for: entry.tmdbID, highlightedEntryID: highlightedEntryID)
+    func highlightBinding(
+        for entry: AnimeEntry,
+        highlightedEntryID: Binding<LibraryEntryIdentity?>
+    ) -> Binding<Bool> {
+        highlightBinding(for: entry.libraryIdentity, highlightedEntryID: highlightedEntryID)
     }
 
-    func highlightBinding(for entryID: Int, highlightedEntryID: Binding<Int?>) -> Binding<Bool> {
+    func highlightBinding(
+        for entryID: LibraryEntryIdentity,
+        highlightedEntryID: Binding<LibraryEntryIdentity?>
+    ) -> Binding<Bool> {
         Binding(
             get: { highlightedEntryID.wrappedValue == entryID },
             set: { if !$0 { highlightedEntryID.wrappedValue = nil } }
@@ -452,7 +458,7 @@ extension LibraryEntryInteractionState {
 
     func shareButton(for entry: AnimeEntry) -> some View {
         Button("Share", systemImage: "square.and.arrow.up") {
-            self.presentWorkflow(.sharing(entry.syncIdentity))
+            self.presentWorkflow(.sharing(entry.libraryIdentity))
         }
     }
 
@@ -471,7 +477,7 @@ extension LibraryEntryInteractionState {
 
     func switchPosterButton(for entry: AnimeEntry) -> some View {
         Button("Switch Poster", systemImage: "photo.badge.magnifyingglass") {
-            self.presentWorkflow(.posterSelection(entry.syncIdentity))
+            self.presentWorkflow(.posterSelection(entry.libraryIdentity))
         }
     }
 
@@ -530,7 +536,7 @@ extension View {
     func libraryEntryInteractionOverlays(
         state: LibraryEntryInteractionState,
         deleteEntry: @escaping (AnimeEntry) -> Void,
-        resolveEntry: @escaping (LibraryEntrySyncIdentity) -> AnimeEntry?
+        resolveEntry: @escaping (LibraryEntryIdentity) -> AnimeEntry?
     ) -> some View {
         let presentedPasteRequest = state.pendingPasteRequest
 

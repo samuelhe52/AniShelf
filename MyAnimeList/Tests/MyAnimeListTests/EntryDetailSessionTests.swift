@@ -48,9 +48,9 @@ struct EntryDetailSessionTests {
         let store = EntryDetailSessionStore()
 
         store.synchronizePresentedDetail(
-            identity: entry.syncIdentity,
+            identity: entry.libraryIdentity,
             repository: repository,
-            resolveEntry: { $0 == entry.syncIdentity ? entry : nil }
+            resolveEntry: { $0 == entry.libraryIdentity ? entry : nil }
         )
         let originalSession = try #require(store.presentedSession)
         originalSession.scrollPosition.scrollTo(y: 312)
@@ -60,9 +60,9 @@ struct EntryDetailSessionTests {
         entry.notes = "Unsaved replacement"
 
         store.synchronizePresentedDetail(
-            identity: entry.syncIdentity,
+            identity: entry.libraryIdentity,
             repository: repository,
-            resolveEntry: { $0 == entry.syncIdentity ? entry : nil }
+            resolveEntry: { $0 == entry.libraryIdentity ? entry : nil }
         )
         let reusedSession = try #require(store.presentedSession)
 
@@ -88,7 +88,7 @@ struct EntryDetailSessionTests {
         store.synchronizePresentedDetail(
             identity: state.presentedDetailEntryID,
             repository: repository,
-            resolveEntry: { $0 == entry.syncIdentity ? entry : nil }
+            resolveEntry: { $0 == entry.libraryIdentity ? entry : nil }
         )
         let originalSession = try #require(store.presentedSession)
         originalSession.scrollPosition.scrollTo(y: 312)
@@ -104,7 +104,7 @@ struct EntryDetailSessionTests {
         store.synchronizePresentedDetail(
             identity: state.presentedDetailEntryID,
             repository: repository,
-            resolveEntry: { $0 == entry.syncIdentity ? entry : nil }
+            resolveEntry: { $0 == entry.libraryIdentity ? entry : nil }
         )
 
         let sheetPresentation = try #require(state.detailSheetPresentation)
@@ -120,7 +120,7 @@ struct EntryDetailSessionTests {
         store.synchronizePresentedDetail(
             identity: state.presentedDetailEntryID,
             repository: repository,
-            resolveEntry: { $0 == entry.syncIdentity ? entry : nil }
+            resolveEntry: { $0 == entry.libraryIdentity ? entry : nil }
         )
 
         let representedInspector = try #require(state.inspectorPresentation)
@@ -181,25 +181,25 @@ struct EntryDetailSessionTests {
         let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
         let firstEntry = AnimeEntry.template(id: 1)
         let secondEntry = AnimeEntry.template(id: 2)
-        let entries = [firstEntry.syncIdentity: firstEntry, secondEntry.syncIdentity: secondEntry]
+        let entries = [firstEntry.libraryIdentity: firstEntry, secondEntry.libraryIdentity: secondEntry]
         let store = EntryDetailSessionStore()
 
         store.synchronizePresentedDetail(
-            identity: firstEntry.syncIdentity,
+            identity: firstEntry.libraryIdentity,
             repository: repository,
             resolveEntry: { entries[$0] }
         )
         let firstSession = try #require(store.presentedSession)
 
         store.synchronizePresentedDetail(
-            identity: secondEntry.syncIdentity,
+            identity: secondEntry.libraryIdentity,
             repository: repository,
             resolveEntry: { entries[$0] }
         )
         let secondSession = try #require(store.presentedSession)
 
         #expect(secondSession !== firstSession)
-        #expect(secondSession.entryIdentity == secondEntry.syncIdentity)
+        #expect(secondSession.entryIdentity == secondEntry.libraryIdentity)
 
         store.synchronizePresentedDetail(
             identity: nil,
@@ -216,16 +216,16 @@ struct EntryDetailSessionTests {
         let store = EntryDetailSessionStore()
 
         store.synchronizePresentedDetail(
-            identity: originalEntry.syncIdentity,
+            identity: originalEntry.libraryIdentity,
             repository: repository,
-            resolveEntry: { $0 == originalEntry.syncIdentity ? originalEntry : nil }
+            resolveEntry: { $0 == originalEntry.libraryIdentity ? originalEntry : nil }
         )
         let originalSession = try #require(store.presentedSession)
 
         store.synchronizePresentedDetail(
-            identity: replacementEntry.syncIdentity,
+            identity: replacementEntry.libraryIdentity,
             repository: repository,
-            resolveEntry: { $0 == replacementEntry.syncIdentity ? replacementEntry : nil }
+            resolveEntry: { $0 == replacementEntry.libraryIdentity ? replacementEntry : nil }
         )
         let replacementSession = try #require(store.presentedSession)
 
@@ -240,13 +240,13 @@ struct EntryDetailSessionTests {
         let store = EntryDetailSessionStore()
 
         store.synchronizePresentedDetail(
-            identity: entry.syncIdentity,
+            identity: entry.libraryIdentity,
             repository: repository,
-            resolveEntry: { $0 == entry.syncIdentity ? entry : nil }
+            resolveEntry: { $0 == entry.libraryIdentity ? entry : nil }
         )
 
         let didResolve = store.synchronizePresentedDetail(
-            identity: entry.syncIdentity,
+            identity: entry.libraryIdentity,
             repository: repository,
             resolveEntry: { _ in nil }
         )

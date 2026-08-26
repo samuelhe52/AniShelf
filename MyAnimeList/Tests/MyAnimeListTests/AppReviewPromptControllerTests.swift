@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 
+@testable import DataProvider
 @testable import MyAnimeList
 
 @MainActor
@@ -38,21 +39,21 @@ struct AppReviewPromptControllerTests {
         let scoreHarness = Harness()
         recordFiveDays(scoreHarness)
         scoreHarness.controller.record(.regularSearchAdd)
-        scoreHarness.controller.record(.entryShare(entryID: 1))
+        scoreHarness.controller.record(.entryShare(entryID: movieIdentity(1)))
         scoreHarness.controller.record(.multiSelectAction)
         #expect(scoreHarness.controller.score == 6)
         #expect(scoreHarness.controller.qualifyingActionCount == 3)
         #expect(!scoreHarness.controller.isEligible)
 
-        scoreHarness.controller.record(.entryShare(entryID: 2))
+        scoreHarness.controller.record(.entryShare(entryID: movieIdentity(2)))
         #expect(scoreHarness.controller.score == 8)
         #expect(scoreHarness.controller.isEligible)
 
         let actionHarness = Harness()
         recordFiveDays(actionHarness)
-        actionHarness.controller.record(.entryWatched(entryID: 1))
+        actionHarness.controller.record(.entryWatched(entryID: movieIdentity(1)))
         actionHarness.controller.record(.batchSearchAdd)
-        actionHarness.controller.record(.entryWatched(entryID: 1))
+        actionHarness.controller.record(.entryWatched(entryID: movieIdentity(1)))
         #expect(actionHarness.controller.score == 6)
         #expect(actionHarness.controller.qualifyingActionCount == 2)
         #expect(!actionHarness.controller.isEligible)
@@ -61,10 +62,10 @@ struct AppReviewPromptControllerTests {
     @Test func actionsUseExactWeightsSuccessOnlyAndDeduplicatePerCycle() {
         let harness = Harness()
         harness.controller.record(.regularSearchAdd)
-        harness.controller.record(.entryShare(entryID: 10))
-        harness.controller.record(.entryShare(entryID: 10))
-        harness.controller.record(.entryWatched(entryID: 10))
-        harness.controller.record(.entryWatched(entryID: 10))
+        harness.controller.record(.entryShare(entryID: movieIdentity(10)))
+        harness.controller.record(.entryShare(entryID: movieIdentity(10)))
+        harness.controller.record(.entryWatched(entryID: movieIdentity(10)))
+        harness.controller.record(.entryWatched(entryID: movieIdentity(10)))
         harness.controller.record(.multiSelectAction)
         harness.controller.record(.batchSearchAdd)
         harness.controller.record(.batchSearchAdd, succeeded: false)
@@ -94,8 +95,8 @@ struct AppReviewPromptControllerTests {
         #expect(harness.controller.prepareForRequest())
 
         harness.clock.date = harness.controller.lastRequestDate!.addingTimeInterval(90 * .day)
-        harness.controller.record(.entryShare(entryID: 1))
-        harness.controller.record(.entryWatched(entryID: 2))
+        harness.controller.record(.entryShare(entryID: movieIdentity(1)))
+        harness.controller.record(.entryWatched(entryID: movieIdentity(2)))
         harness.controller.record(.multiSelectAction)
         for offset in 0..<4 {
             harness.clock.date = harness.controller.lastRequestDate!.addingTimeInterval(
@@ -123,10 +124,23 @@ struct AppReviewPromptControllerTests {
         #expect(harness.controller.lastRequestDate != nil)
     }
 
+    @Test func typedEntryIdentitiesDoNotCollideAcrossEntryTypes() {
+        let harness = Harness()
+        let movie = LibraryEntryIdentity(entryType: .movie, tmdbID: 42)
+        let series = LibraryEntryIdentity(entryType: .series, tmdbID: 42)
+
+        harness.controller.record(.entryShare(entryID: movie))
+        harness.controller.record(.entryShare(entryID: series))
+        harness.controller.record(.entryShare(entryID: movie))
+
+        #expect(harness.controller.score == 4)
+        #expect(harness.controller.qualifyingActionCount == 2)
+    }
+
     private func qualifyEngagement(_ harness: Harness) {
         recordFiveDays(harness)
-        harness.controller.record(.entryShare(entryID: 1))
-        harness.controller.record(.entryWatched(entryID: 2))
+        harness.controller.record(.entryShare(entryID: movieIdentity(1)))
+        harness.controller.record(.entryWatched(entryID: movieIdentity(2)))
         harness.controller.record(.multiSelectAction)
     }
 
@@ -136,6 +150,10 @@ struct AppReviewPromptControllerTests {
             harness.controller.recordActiveLibraryDay()
         }
         harness.clock.date = harness.start.addingTimeInterval(7 * .day)
+    }
+
+    private func movieIdentity(_ tmdbID: Int) -> LibraryEntryIdentity {
+        LibraryEntryIdentity(entryType: .movie, tmdbID: tmdbID)
     }
 }
 

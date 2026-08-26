@@ -17,6 +17,7 @@ struct LibraryProfileSettingsCard: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var cloudSyncActionInFlight = false
     @State private var showCloudSyncConflictAlert = false
+    @State private var showRebuildCloudSyncAlert = false
     @State private var showRestoreUnavailableAlert = false
 
     @Binding var followsSystemLanguage: Bool
@@ -36,6 +37,7 @@ struct LibraryProfileSettingsCard: View {
     let onEnableLibraryCloudSync: () async -> Bool
     let onDisableLibraryCloudSync: () -> Void
     let onRetryLibraryCloudSync: () async -> Bool
+    let onRebuildLibraryCloudSync: () async -> Bool
     let onResolveLibraryCloudSyncConflicts: (LibraryCloudSyncConflictPreference) async -> Bool
     let onCancelLibraryCloudSyncEnablement: () -> Void
     let onChangeAPIKey: () -> Void
@@ -66,6 +68,14 @@ struct LibraryProfileSettingsCard: View {
             } message: {
                 Text(
                     "Turn off iCloud Sync before restoring a backup. You can turn it on again after restore."
+                )
+            }
+            .alert("Rebuild iCloud Sync?", isPresented: $showRebuildCloudSyncAlert) {
+                Button("Rebuild", action: rebuildLibraryCloudSync)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(
+                    "Refetch and reconcile your iCloud library with your local library. This may resolve some iCloud sync issues."
                 )
             }
             .onAppear(perform: updateCloudSyncConflictAlertPresentation)
@@ -103,6 +113,7 @@ struct LibraryProfileSettingsCard: View {
     private var settingsSections: some View {
         languageSettingsSection
         preferencesSection
+        airingReminderSettingsSection
         interfaceSettingsSection
         tmdbConnectionSection
         iCloudSyncSection
@@ -129,6 +140,10 @@ struct LibraryProfileSettingsCard: View {
 
     private var interfaceSettingsSection: some View {
         LibraryProfileInterfaceSettingsSection()
+    }
+
+    private var airingReminderSettingsSection: some View {
+        LibraryProfileAiringReminderSettingsSection()
     }
 
     private var tmdbConnectionSection: some View {
@@ -164,6 +179,9 @@ struct LibraryProfileSettingsCard: View {
             onCheckMetadataCacheSize: onCheckMetadataCacheSize,
             onRefreshInfos: onRefreshInfos,
             onPrefetchImages: onPrefetchImages,
+            showRebuildLibraryCloudSync: libraryCloudSyncStatus.isEnabled,
+            rebuildLibraryCloudSyncDisabled: cloudSyncIsBusy,
+            onRequestRebuildLibraryCloudSync: requestRebuildLibraryCloudSync,
             onShowSupport: onShowSupport,
             whatsNewVersion: whatsNewVersion,
             onShowWhatsNew: onShowWhatsNew,
@@ -177,6 +195,7 @@ struct LibraryProfileSettingsCard: View {
             VStack(spacing: 20) {
                 languageSettingsSection
                 preferencesSection
+                airingReminderSettingsSection
                 interfaceSettingsSection
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -264,6 +283,21 @@ struct LibraryProfileSettingsCard: View {
         cloudSyncActionInFlight = true
         Task {
             _ = await onRetryLibraryCloudSync()
+            cloudSyncActionInFlight = false
+        }
+    }
+
+    private func requestRebuildLibraryCloudSync() {
+        guard !cloudSyncIsBusy else { return }
+        showCloudSyncConflictAlert = false
+        showRebuildCloudSyncAlert = true
+    }
+
+    private func rebuildLibraryCloudSync() {
+        guard !cloudSyncIsBusy else { return }
+        cloudSyncActionInFlight = true
+        Task {
+            _ = await onRebuildLibraryCloudSync()
             cloudSyncActionInFlight = false
         }
     }

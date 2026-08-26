@@ -13,6 +13,15 @@ import Testing
 @testable import MyAnimeList
 
 struct TMDbSearchServiceBatchTests {
+    @Test func entryMetadataIdentityIncludesEntryType() {
+        let movie = makeEntryMetadata("Movie", tmdbID: 42, type: .movie)
+        let series = makeEntryMetadata("Series", tmdbID: 42, type: .series)
+
+        #expect(movie.id == movie.libraryIdentity)
+        #expect(series.id == series.libraryIdentity)
+        #expect(movie.id != series.id)
+    }
+
     @Test func testBatchPromptsTrimWhitespaceDropEmptyLinesAndPreserveOrder() {
         let prompts = TMDbSearchService.batchPrompts(
             from: "\n  Frieren  \n\nSpirited Away\n  \nKiki's Delivery Service \n"
@@ -297,10 +306,13 @@ struct TMDbSearchServiceBatchTests {
 
     @MainActor
     @Test func testBatchSearchDirectMovieFailureBecomesBatchError() async {
+        let expectedError = TMDbError.unauthorised(
+            TMDbErrorContext(statusMessage: "Invalid API key")
+        )
         let service = TMDbSearchService(
             client: makeClient(
                 directMovieErrorsByID: [
-                    4935: TMDbError.unauthorised("Invalid API key")
+                    4935: expectedError
                 ]
             )
         )
@@ -311,7 +323,7 @@ struct TMDbSearchServiceBatchTests {
             Issue.record("Expected batchStatus to be .error")
             return
         }
-        #expect((error as? TMDbError) == .unauthorised("Invalid API key"))
+        #expect((error as? TMDbError) == expectedError)
         #expect(service.batchResults.isEmpty)
         #expect(service.batchRegisteredCount == 0)
     }
@@ -433,7 +445,7 @@ struct TMDbSearchServiceBatchTests {
                     "Ghost in the Shell": [duplicateMovie]
                 ]
             ),
-            checkDuplicate: { $0 == 301 }
+            checkDuplicate: { $0 == LibraryEntryIdentity(entryType: .movie, tmdbID: 301) }
         )
 
         await service.performBatchSearch(input: "Ghost in the Shell", language: .english)
@@ -442,6 +454,24 @@ struct TMDbSearchServiceBatchTests {
         #expect(service.batchResults[0].movie?.tmdbID == 301)
         #expect(service.batchRegisteredCount == 0)
         #expect(!service.isBatchSelected(info: duplicateMovie))
+    }
+
+    @MainActor
+    @Test func testBatchSearchDoesNotTreatAnotherEntryTypeAsDuplicate() async {
+        let movie = makeEntryMetadata("Ghost in the Shell", tmdbID: 301, type: .movie)
+        let service = TMDbSearchService(
+            client: makeClient(
+                moviesByPrompt: [
+                    "Ghost in the Shell": [movie]
+                ]
+            ),
+            checkDuplicate: { $0 == LibraryEntryIdentity(entryType: .series, tmdbID: 301) }
+        )
+
+        await service.performBatchSearch(input: "Ghost in the Shell", language: .english)
+
+        #expect(service.batchRegisteredCount == 1)
+        #expect(service.isBatchSelected(info: movie))
     }
 
     @MainActor

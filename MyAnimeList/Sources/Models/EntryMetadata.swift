@@ -29,7 +29,9 @@ struct EntryMetadata: Equatable, Identifiable, Hashable, Sendable {
     /// The type of anime (movie, TV series, season, etc.).
     var type: AnimeType
 
-    var id: Int { tmdbID }
+    var id: LibraryEntryIdentity {
+        LibraryEntryIdentity(entryType: type, tmdbID: tmdbID)
+    }
 
     var posterURL: URL? {
         TMDbImageURLResolver.current.url(for: posterPath, role: .poster)

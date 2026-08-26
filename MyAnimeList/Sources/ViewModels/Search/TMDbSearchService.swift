@@ -37,17 +37,21 @@ class TMDbSearchService {
     @ObservationIgnored private var latestRequest: SearchRequest?
     @ObservationIgnored var latestBatchRequestID: UUID?
     @ObservationIgnored var batchPromptCacheKey: [String] = []
-    @ObservationIgnored var checkDuplicate: (Int) -> Bool
+    @ObservationIgnored var checkDuplicate: (LibraryEntryIdentity) -> Bool
     @ObservationIgnored var processResults: (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void
 
     init(
         client: TMDbSearchClient = .live(),
-        checkDuplicate: @escaping (Int) -> Bool = { _ in false },
+        checkDuplicate: @escaping (LibraryEntryIdentity) -> Bool = { _ in false },
         processResults: @escaping (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void = { _, _ in }
     ) {
         self.client = client
         self.checkDuplicate = checkDuplicate
         self.processResults = processResults
+    }
+
+    func isDuplicate(_ result: SearchResult) -> Bool {
+        checkDuplicate(result.libraryIdentity)
     }
 
     /// Submit the final results.

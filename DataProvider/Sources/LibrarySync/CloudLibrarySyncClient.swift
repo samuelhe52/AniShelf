@@ -19,7 +19,7 @@ fileprivate let cloudLibrarySyncLogger = Logger(
 ///
 /// `CloudLibrarySyncClient` owns the stable CloudKit schema constants and the
 /// validation rules that keep record names, entry types, and season identifiers
-/// aligned with `LibraryEntrySyncIdentity`.
+/// aligned with `LibraryEntryIdentity`.
 public struct CloudLibrarySyncClient: @unchecked Sendable {
     public static let defaultContainerIdentifier = "iCloud.com.samuelhe.MyAnimeList"
     public static let zoneName = "AniShelfLibrary"
@@ -54,7 +54,7 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
     }
 
     /// Returns the CloudKit record ID for a sync identity in AniShelf's library zone.
-    public func recordID(for identity: LibraryEntrySyncIdentity) -> CKRecord.ID {
+    public func recordID(for identity: LibraryEntryIdentity) -> CKRecord.ID {
         CKRecord.ID(recordName: identity.rawID, zoneID: Self.recordZoneID)
     }
 
@@ -541,14 +541,14 @@ extension CloudLibrarySyncClient {
         tmdbID: Int,
         parentSeriesID: Int?,
         seasonNumber: Int?
-    ) throws -> LibraryEntrySyncIdentity {
+    ) throws -> LibraryEntryIdentity {
         let entryType = try entryType(
             recordName: recordName,
             entryTypeValue: entryTypeValue,
             parentSeriesID: parentSeriesID,
             seasonNumber: seasonNumber
         )
-        let identity = LibraryEntrySyncIdentity(entryType: entryType, tmdbID: tmdbID)
+        let identity = LibraryEntryIdentity(entryType: entryType, tmdbID: tmdbID)
         guard identity.rawID == recordName else {
             throw CloudLibrarySyncDecodeError.invalidIdentityCombination(recordName: recordName)
         }

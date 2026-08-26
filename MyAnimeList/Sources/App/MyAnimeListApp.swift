@@ -20,6 +20,7 @@ struct MyAnimeListApp: App {
     @State var supportStore: SupportStore
     @State private var appReview: AppReviewPromptController
     @State private var startupRecovery: PersistentStoreRecovery?
+    @State private var backgroundSyncExecution: LibrarySyncBackgroundExecutionController
     private let recoveryActivityGate: StartupRecoveryActivityGate
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.requestReview) private var requestReview
@@ -33,19 +34,20 @@ struct MyAnimeListApp: App {
             bootstrapRecovery: startupBootstrap.recovery
         )
         let keyStorage = TMDbAPIKeyStorage()
+        let recoveryActivityGate = StartupRecoveryActivityGate(
+            isBlocked: startupRecovery != nil
+        )
         let libraryStore = LibraryStore(
             dataProvider: startupBootstrap.provider,
             hasTMDbAPIKey: {
                 guard let key = keyStorage.key else { return false }
                 return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            }
+            },
+            airingReminderPruningEnabled: recoveryActivityGate.allowsLibraryActivity
         )
         let whatsNew = WhatsNewController()
         let supportStore = SupportStore()
         let appReview = AppReviewPromptController()
-        let recoveryActivityGate = StartupRecoveryActivityGate(
-            isBlocked: startupRecovery != nil
-        )
 
         _libraryStore = State(initialValue: libraryStore)
         _keyStorage = State(initialValue: keyStorage)
@@ -53,6 +55,9 @@ struct MyAnimeListApp: App {
         _supportStore = State(initialValue: supportStore)
         _appReview = State(initialValue: appReview)
         _startupRecovery = State(initialValue: startupRecovery)
+        _backgroundSyncExecution = State(
+            initialValue: LibrarySyncBackgroundExecutionController()
+        )
         self.recoveryActivityGate = recoveryActivityGate
         RecoveryExportManager.cleanupAllTemporaryExports()
 
@@ -108,6 +113,7 @@ struct MyAnimeListApp: App {
                 if startupRecovery == nil {
                     requestSync(trigger: .appLaunch)
                     recordActiveLibraryDayIfUsable()
+                    refreshAiringReminders()
                 }
             }
             .onChange(of: scenePhase) { _, newPhase in
@@ -115,6 +121,7 @@ struct MyAnimeListApp: App {
                     keyStorage.retryInitialLookupIfNeeded()
                     requestSync(trigger: .foreground)
                     recordActiveLibraryDayIfUsable()
+                    refreshAiringReminders()
                 } else if newPhase == .background {
                     flushPendingLocalSync()
                 }
@@ -178,6 +185,7 @@ struct MyAnimeListApp: App {
         }
         recoveryActivityGate.isBlocked = false
         startupRecovery = nil
+        libraryStore.enableAiringReminderPruning()
         requestSync(trigger: .appLaunch)
         updateWhatsNewPresentation()
     }
@@ -189,7 +197,15 @@ struct MyAnimeListApp: App {
 
     private func flushPendingLocalSync() {
         guard recoveryActivityGate.allowsLibraryActivity else { return }
-        libraryStore.flushPendingLocalLibrarySync()
+        guard libraryStore.needsBackgroundLibrarySyncProtection else { return }
+        backgroundSyncExecution.run(
+            onExpiration: {
+                libraryStore.cancelLibrarySyncForBackgroundExpiration()
+            },
+            operation: {
+                _ = await libraryStore.flushPendingLocalLibrarySyncAndWait()
+            }
+        )
     }
 
     private var hasTMDbAPIKey: Bool {
@@ -204,6 +220,13 @@ struct MyAnimeListApp: App {
     private func recordActiveLibraryDayIfUsable() {
         guard scenePhase == .active, startupRecovery == nil, hasTMDbAPIKey else { return }
         appReview.recordActiveLibraryDay()
+    }
+
+    private func refreshAiringReminders() {
+        Task { @MainActor in
+            await AiringReminderCoordinator.shared.reloadState()
+            _ = await AiringReminderCoordinator.shared.refreshAll()
+        }
     }
 
     private var checkingTMDbAPIKeyResource: LocalizedStringResource {

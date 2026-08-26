@@ -12,14 +12,14 @@ import SwiftUI
 @Observable @MainActor
 class LibrarySearchService {
     @ObservationIgnored var entriesProvider: @MainActor () -> [AnimeEntry] = { [] }
-    var jumpToEntryInLibrary: (Int) -> Void
+    var jumpToEntryInLibrary: (LibraryEntryIdentity) -> Void
 
     private(set) var results: [AnimeEntry] = []
     private(set) var status: Status = .loaded
 
     init(
         entriesProvider: @escaping @MainActor () -> [AnimeEntry] = { [] },
-        jumpToEntryInLibrary: @escaping (Int) -> Void = { _ in }
+        jumpToEntryInLibrary: @escaping (LibraryEntryIdentity) -> Void = { _ in }
     ) {
         self.entriesProvider = entriesProvider
         self.jumpToEntryInLibrary = jumpToEntryInLibrary
@@ -63,14 +63,14 @@ class LibrarySearchService {
         let lowercasedQuery = query.lowercased()
 
         var results: [AnimeEntry] = []
-        var processedIDs = Set<Int>()
+        var processedIdentities = Set<LibraryEntryIdentity>()
 
         func addToResults(evaluate: (AnimeEntry) -> Bool) {
-            for entry in entries where !processedIDs.contains(entry.tmdbID) {
+            for entry in entries where !processedIdentities.contains(entry.libraryIdentity) {
                 guard entry.onDisplay else { continue }
                 if evaluate(entry) {
                     results.append(entry)
-                    processedIDs.insert(entry.tmdbID)
+                    processedIdentities.insert(entry.libraryIdentity)
                 }
             }
         }

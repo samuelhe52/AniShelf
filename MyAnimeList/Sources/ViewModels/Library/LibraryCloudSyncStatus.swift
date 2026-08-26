@@ -5,7 +5,31 @@
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/6/3.
 //
 
+import CloudKit
 import Foundation
+import LibrarySync
+
+struct LibraryCloudSyncScope: Codable, Equatable, Hashable {
+    static let privateDatabaseScope = "private"
+
+    var containerIdentifier: String
+    var accountIdentifier: String
+    var databaseScope: String
+    var zoneOwnerName: String
+    var zoneName: String
+
+    init(
+        namespace: CloudLibrarySyncChangeTokenStore.Namespace,
+        databaseScope: String = Self.privateDatabaseScope,
+        zoneID: CKRecordZone.ID = CloudLibrarySyncClient.recordZoneID
+    ) {
+        self.containerIdentifier = namespace.containerIdentifier
+        self.accountIdentifier = namespace.accountIdentifier
+        self.databaseScope = databaseScope
+        self.zoneOwnerName = zoneID.ownerName
+        self.zoneName = zoneID.zoneName
+    }
+}
 
 enum LibraryCloudSyncBootstrapState: String, Codable, Equatable {
     case notStarted
@@ -154,6 +178,7 @@ struct LibraryCloudSyncStatus: Equatable {
     var lastReconciledCloudSyncedSettingsUpdatedAt: Date?
     var lastFailureReason: String?
     var degradedReason: String?
+    var lastCompletedScope: LibraryCloudSyncScope?
 
     static let defaultValue = LibraryCloudSyncStatus(
         isEnabled: false,
@@ -168,7 +193,8 @@ struct LibraryCloudSyncStatus: Equatable {
         lastSuccessfulSyncDate: nil,
         lastReconciledCloudSyncedSettingsUpdatedAt: nil,
         lastFailureReason: nil,
-        degradedReason: nil
+        degradedReason: nil,
+        lastCompletedScope: nil
     )
 
     /// Whether a sync operation is active or has unfinished persisted work.

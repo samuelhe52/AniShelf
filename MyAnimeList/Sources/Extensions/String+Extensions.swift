@@ -26,6 +26,11 @@ extension String {
     static let showProductionCompanyInsteadOfRuntime = "ShowProductionCompanyInsteadOfRuntime"
     static let libraryScoringEnabled = "LibraryScoringEnabled"
     static let episodeProgressTrackingEnabled = "EpisodeProgressTrackingEnabled"
+    static let broadcastScheduleEnabled = "BroadcastScheduleEnabled"
+    // Device-local airing reminder state. Keep these out of backup and CloudKit allowlists.
+    static let airingReminderSubscriptions = "AiringReminderSubscriptions"
+    static let airingReminderLeadTimeMinutes = "AiringReminderLeadTimeMinutes"
+    static let airingReminderWarning = "AiringReminderWarning"
     static let libraryPosterProgressBarOverlayEnabled = "LibraryPosterProgressBarOverlayEnabled"
     static let libraryHideDroppedByDefault = "LibraryHideDroppedByDefault"
     static let libraryDefaultWatchStatus = "LibraryDefaultWatchStatus"
@@ -54,6 +59,7 @@ extension String {
         "LibraryCloudSyncLastReconciledCloudSyncedSettingsUpdatedAt"
     static let libraryCloudSyncLastFailureReason = "LibraryCloudSyncLastFailureReason"
     static let libraryCloudSyncDegradedReason = "LibraryCloudSyncDegradedReason"
+    static let libraryCloudSyncLastCompletedScope = "LibraryCloudSyncLastCompletedScope"
     static let libraryCloudSyncedDefaultsUpdatedAt = "LibraryCloudSyncedDefaultsUpdatedAt"
     static let useTMDbRelayServer = "UseTMDbRelayServer"
     static let lastSeenWhatsNewVersion = "LastSeenWhatsNewVersion"
@@ -74,6 +80,7 @@ extension String {
         .showProductionCompanyInsteadOfRuntime,
         .libraryScoringEnabled,
         .episodeProgressTrackingEnabled,
+        .broadcastScheduleEnabled,
         .libraryPosterProgressBarOverlayEnabled,
         .libraryHideDroppedByDefault,
         .libraryDefaultWatchStatus,
@@ -98,6 +105,7 @@ extension String {
         .showProductionCompanyInsteadOfRuntime,
         .libraryScoringEnabled,
         .episodeProgressTrackingEnabled,
+        .broadcastScheduleEnabled,
         .libraryPosterProgressBarOverlayEnabled,
         .libraryHideDroppedByDefault,
         .libraryDefaultWatchStatus,

@@ -16,9 +16,9 @@ struct LibraryListView: View {
 
     let detailActions: LibraryEntryDetailActions
     let displayItems: [LibraryEntryDisplayItem]
-    @Binding var scrolledID: Int?
+    @Binding var scrolledID: LibraryEntryIdentity?
     let scrollRequest: LibraryScrollRequest?
-    @Binding var highlightedEntryID: Int?
+    @Binding var highlightedEntryID: LibraryEntryIdentity?
 
     var body: some View {
         @Bindable var interaction = interaction

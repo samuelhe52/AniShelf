@@ -5,7 +5,6 @@
 - Use the Makefile for routine tasks: `make clean`, `make refresh-packages`, `make format`, `make lint`, `make build`, `make test-sim`, and `make run-sim`.
 - Use `make test-sim` for broad simulator-based validation. Use `make run-sim` when validating app runtime or UI behavior, unless the user explicitly asks for device-based verification.
 - Use `make run-device` for build, install, and launch on a connected iPhone only when the user explicitly asks for device-based verification.
-- If visual feedback is needed for a device run, use `make run-device`, then use Computer Use to open iPhone Mirroring or Quicktime and inspect the launched app there. Default to Quicktime, unless the user dictates otherwise.
 - Prefer the smallest relevant build or test command before broad verification.
 - If the user asks to perform a change in a new worktree, create that worktree under ../AniShelf-worktrees/.
 - Do not use any of the `openspec` workflows unless the user explicitly requests it.
@@ -42,16 +41,7 @@
 
 ## Releases
 
-- Start from an up-to-date `main` and review all changes since the latest release tag. Preserve unrelated working-tree changes.
-- Run the normal format and lint checks, relevant tests, and a Release build. Check the localization catalogs for missing translations.
-- Confirm that the target version has an appropriate What's New entry and that the app version is updated correctly.
-- Check whether `README.md` and `docs/anishelf_overview.md` need changes. Update them only with user permission.
-- With permission, create a preflight commit containing release preparation other than the Xcode project version change, then create the release commit containing the version change. These commits may be combined when the user requests it.
-- With permission, create an annotated `vX.Y` tag on the release commit and verify its target.
-- With permission, push `main`, then open a `main` to `release` pull request. Start an independent reviewer subagent to review the exact pull request diff without modifying it.
-- Address review findings and rerun affected validation before merging.
-- With permission, merge the pull request without squash or rebase so the tagged release commit is preserved.
-- With permission, push the release tag.
+- Follow [`docs/workflows/release.md`](docs/workflows/release.md) for every release.
 
 ## Additional Notes
 

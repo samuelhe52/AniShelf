@@ -19,7 +19,7 @@ struct LibraryEntrySyncDirtyQueueStoreTests {
         }
 
         let store = LibraryEntrySyncDirtyQueueStore(url: url)
-        let identity = LibraryEntrySyncIdentity(entryType: .series, tmdbID: 42)
+        let identity = LibraryEntryIdentity(entryType: .series, tmdbID: 42)
         let firstUpsert = LibraryEntrySyncPendingUpsert(
             identity: identity,
             dirtyAt: referenceDate(year: 2026, month: 5, day: 1)
@@ -104,7 +104,7 @@ struct LibraryEntrySyncDirtyQueueStoreTests {
 
         let tombstone = LibraryEntrySyncTombstone(entry: entry, deletedAt: deletedAt)
 
-        #expect(tombstone.identity == entry.syncIdentity)
+        #expect(tombstone.identity == entry.libraryIdentity)
         #expect(tombstone.tmdbID == 200)
         #expect(tombstone.parentSeriesID == 100)
         #expect(tombstone.seasonNumber == 2)
@@ -124,7 +124,7 @@ struct LibraryEntrySyncDirtyQueueStoreTests {
         try await withThrowingTaskGroup(of: Void.self) { group in
             for index in 0..<identityCount {
                 group.addTask {
-                    let identity = LibraryEntrySyncIdentity(entryType: .series, tmdbID: index)
+                    let identity = LibraryEntryIdentity(entryType: .series, tmdbID: index)
                     let dirtyAt = referenceDate(year: 2026, month: 5, day: (index % 28) + 1)
                     try store.setPendingUpsert(
                         .init(identity: identity, dirtyAt: dirtyAt)
@@ -137,7 +137,7 @@ struct LibraryEntrySyncDirtyQueueStoreTests {
         let queue = store.load()
         #expect(queue.entries.count == identityCount)
         for index in 0..<identityCount {
-            let identity = LibraryEntrySyncIdentity(entryType: .series, tmdbID: index)
+            let identity = LibraryEntryIdentity(entryType: .series, tmdbID: index)
             #expect(queue.entry(for: identity) != nil)
         }
     }

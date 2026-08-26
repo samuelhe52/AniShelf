@@ -50,7 +50,7 @@ extension InfoFetcher {
         do {
             let translations = try await tmdbClient.movies.translations(forMovie: tmdbID)
             return translationDictionaries(from: translations)
-        } catch let error as TMDbError {
+        } catch {
             return try await fallbackTranslationDictionaries(
                 after: error,
                 path: "/movie/\(tmdbID)/translations",
@@ -65,7 +65,7 @@ extension InfoFetcher {
         do {
             let translations = try await tmdbClient.tvSeries.translations(forTVSeries: tmdbID)
             return translationDictionaries(from: translations)
-        } catch let error as TMDbError {
+        } catch {
             return try await fallbackTranslationDictionaries(
                 after: error,
                 path: "/tv/\(tmdbID)/translations",
@@ -85,7 +85,7 @@ extension InfoFetcher {
                 inTVSeries: parentSeriesID
             )
             return translationDictionaries(from: translations)
-        } catch let error as TMDbError {
+        } catch {
             return try await fallbackTranslationDictionaries(
                 after: error,
                 path: "/tv/\(parentSeriesID)/season/\(seasonNumber)/translations",
@@ -176,7 +176,7 @@ extension InfoFetcher {
             // (for example `tv/35610` in `zh-TW`), but the upstream package models
             // those values as non-optional strings. Re-decode this endpoint
             // permissively so one sparse translation does not block entry creation.
-            let data = try await translationResponseData(path: path)
+            let data = try await tmdbResponseData(path: path)
             return try decodeLenientTranslationDictionaries(
                 from: data,
                 dataType: dataType,

@@ -55,6 +55,7 @@
 				Resources/Info.plist,
 				Tests/MyAnimeListTests/AnimeSharingTests.swift,
 				Tests/MyAnimeListTests/AppReviewPromptControllerTests.swift,
+				Tests/MyAnimeListTests/EntryDetailBroadcastModelTests.swift,
 				Tests/MyAnimeListTests/EntryDetailSessionTests.swift,
 				Tests/MyAnimeListTests/EntryDetailViewModelTests.swift,
 				"Tests/MyAnimeListTests/EntryDetailViewModelTests+EpisodePresentation.swift",
@@ -63,6 +64,7 @@
 				"Tests/MyAnimeListTests/EntryDetailViewModelTests+SeasonEpisodes.swift",
 				"Tests/MyAnimeListTests/EntryDetailViewModelTests+Staff.swift",
 				Tests/MyAnimeListTests/EntryDetailViewModelTestSupport.swift,
+				Tests/MyAnimeListTests/AiringReminderManagerTests.swift,
 				Tests/MyAnimeListTests/InfoFetcherLiveFetchTests.swift,
 				Tests/MyAnimeListTests/InfoFetcherMetadataMappingTests.swift,
 				Tests/MyAnimeListTests/LibraryBackupRestoreTests.swift,
@@ -101,6 +103,10 @@
 				"Tests/MyAnimeListTests/TMDbImageAndTranslationTests+SVG.swift",
 				"Tests/MyAnimeListTests/TMDbImageAndTranslationTests+Translations.swift",
 				Tests/MyAnimeListTests/TMDbSearchServiceBatchTests.swift,
+				Tests/MyAnimeListTests/TVMazeClientTests.swift,
+				Tests/MyAnimeListTests/TVMazeConfirmedMappingStoreTests.swift,
+				Tests/MyAnimeListTests/TVMazeModelsTests.swift,
+				Tests/MyAnimeListTests/TVMazeResolverTests.swift,
 				Tests/MyAnimeListTests/UserEntryInfoAndLibraryStatsTests.swift,
 				Tests/MyAnimeListTests/WhatsNewAndRefreshTests.swift,
 				Tests/MyAnimeListUITests/MyAnimeListUITests.swift,
@@ -113,6 +119,7 @@
 			membershipExceptions = (
 				Tests/MyAnimeListTests/AnimeSharingTests.swift,
 				Tests/MyAnimeListTests/AppReviewPromptControllerTests.swift,
+				Tests/MyAnimeListTests/EntryDetailBroadcastModelTests.swift,
 				Tests/MyAnimeListTests/EntryDetailSessionTests.swift,
 				Tests/MyAnimeListTests/EntryDetailViewModelTests.swift,
 				"Tests/MyAnimeListTests/EntryDetailViewModelTests+EpisodePresentation.swift",
@@ -121,6 +128,7 @@
 				"Tests/MyAnimeListTests/EntryDetailViewModelTests+SeasonEpisodes.swift",
 				"Tests/MyAnimeListTests/EntryDetailViewModelTests+Staff.swift",
 				Tests/MyAnimeListTests/EntryDetailViewModelTestSupport.swift,
+				Tests/MyAnimeListTests/AiringReminderManagerTests.swift,
 				Tests/MyAnimeListTests/InfoFetcherLiveFetchTests.swift,
 				Tests/MyAnimeListTests/InfoFetcherMetadataMappingTests.swift,
 				Tests/MyAnimeListTests/LibraryBackupRestoreTests.swift,
@@ -159,6 +167,10 @@
 				"Tests/MyAnimeListTests/TMDbImageAndTranslationTests+SVG.swift",
 				"Tests/MyAnimeListTests/TMDbImageAndTranslationTests+Translations.swift",
 				Tests/MyAnimeListTests/TMDbSearchServiceBatchTests.swift,
+				Tests/MyAnimeListTests/TVMazeClientTests.swift,
+				Tests/MyAnimeListTests/TVMazeConfirmedMappingStoreTests.swift,
+				Tests/MyAnimeListTests/TVMazeModelsTests.swift,
+				Tests/MyAnimeListTests/TVMazeResolverTests.swift,
 				Tests/MyAnimeListTests/UserEntryInfoAndLibraryStatsTests.swift,
 				Tests/MyAnimeListTests/WhatsNewAndRefreshTests.swift,
 			);
@@ -602,7 +614,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.98;
+				MARKETING_VERSION = 1.99;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelhe.MyAnimeList;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -643,7 +655,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.98;
+				MARKETING_VERSION = 1.99;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelhe.MyAnimeList;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -801,8 +813,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/adamayoung/TMDb";
 			requirement = {
-				branch = main;
-				kind = branch;
+				kind = upToNextMajorVersion;
+				minimumVersion = 19.0.0;
 			};
 		};
 		9FB6FEEF2D8FCE5A00B423D0 /* XCRemoteSwiftPackageReference "Kingfisher" */ = {

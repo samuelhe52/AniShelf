@@ -25,7 +25,7 @@ extension EntryDetailViewModelTests {
                 httpClient: httpClient,
                 configuration: .default
             ),
-            fetchTranslationResponseData: { _ in Data() }
+            fetchTMDbResponseData: { _ in Data() }
         )
         let viewModel = EntryDetailViewModel(repository: repository, infoFetcher: fetcher)
         let entry = AnimeEntry(
@@ -57,7 +57,7 @@ extension EntryDetailViewModelTests {
                 httpClient: httpClient,
                 configuration: .default
             ),
-            fetchTranslationResponseData: { _ in Data() }
+            fetchTMDbResponseData: { _ in Data() }
         )
         let viewModel = EntryDetailViewModel(repository: repository, infoFetcher: fetcher)
         let entry = AnimeEntry(

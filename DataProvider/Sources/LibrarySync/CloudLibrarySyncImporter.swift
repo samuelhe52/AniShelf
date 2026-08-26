@@ -6,6 +6,7 @@
 //
 
 import CloudKit
+import DataProvider
 import Foundation
 import os
 
@@ -104,7 +105,7 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
     ///   `CloudLibrarySyncImportError.missingChangeToken`.
     public func fetchChanges(
         namespace: CloudLibrarySyncChangeTokenStore.Namespace,
-        localSnapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot]
+        localSnapshotsByIdentity: [LibraryEntryIdentity: LibraryEntrySyncSnapshot]
     ) async throws -> CloudLibrarySyncImportBatch {
         let token = changeTokenStore.token(for: Self.zoneID, namespace: namespace)
         do {
@@ -130,6 +131,22 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
         }
     }
 
+    /// Fetches the complete current zone without consulting a persisted token.
+    ///
+    /// Bootstrap uses this path when the active account or remote scope changes,
+    /// so an older token for that scope cannot turn reconciliation into an
+    /// incremental fetch.
+    public func fetchChangesFromBeginning(
+        namespace: CloudLibrarySyncChangeTokenStore.Namespace,
+        localSnapshotsByIdentity: [LibraryEntryIdentity: LibraryEntrySyncSnapshot]
+    ) async throws -> CloudLibrarySyncImportBatch {
+        try await fetchChanges(
+            namespace: namespace,
+            localSnapshotsByIdentity: localSnapshotsByIdentity,
+            startingToken: nil
+        )
+    }
+
     /// Persists the server change token for a successfully applied batch.
     public func commit(_ batch: CloudLibrarySyncImportBatch) {
         changeTokenStore.setToken(batch.changeToken, for: batch.zoneID, namespace: batch.namespace)
@@ -143,12 +160,12 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
     /// flow through explicit tombstone records.
     private func fetchChanges(
         namespace: CloudLibrarySyncChangeTokenStore.Namespace,
-        localSnapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot],
+        localSnapshotsByIdentity: [LibraryEntryIdentity: LibraryEntrySyncSnapshot],
         startingToken: CKServerChangeToken?
     ) async throws -> CloudLibrarySyncImportBatch {
         var currentToken = startingToken
         var finalToken: CKServerChangeToken?
-        var remoteChangesByID: [LibraryEntrySyncIdentity: LibraryEntrySyncRemoteChange] = [:]
+        var remoteChangesByID: [LibraryEntryIdentity: LibraryEntrySyncRemoteChange] = [:]
         var settingsSnapshot: LibrarySettingsSyncSnapshot?
         var ignoredDeletedRecordIDs: [CKRecord.ID] = []
         repeat {

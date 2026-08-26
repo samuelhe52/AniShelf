@@ -6,7 +6,7 @@ struct LibraryEntryDisplayItem: Identifiable {
     let entry: AnimeEntry
     let snapshot: LibraryEntrySnapshot
 
-    var id: Int { snapshot.id }
+    var id: LibraryEntryIdentity { snapshot.id }
 
     init(entry: AnimeEntry) {
         self.entry = entry
@@ -15,7 +15,7 @@ struct LibraryEntryDisplayItem: Identifiable {
 }
 
 struct LibraryEntrySnapshot: Identifiable, Equatable {
-    let id: Int
+    let id: LibraryEntryIdentity
     private let posterPath: String?
     let title: String
     let overview: String?
@@ -32,7 +32,7 @@ struct LibraryEntrySnapshot: Identifiable, Equatable {
     init(entry: AnimeEntry) {
         let episodeProgress = Self.episodeProgressDisplay(for: entry)
 
-        id = entry.tmdbID
+        id = entry.libraryIdentity
         posterPath = entry.selectedPosterPath
         title = entry.displayName
         overview = Self.cleanOverview(entry.displayOverview)

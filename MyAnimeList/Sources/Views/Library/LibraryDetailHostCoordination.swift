@@ -77,10 +77,10 @@ struct LibraryDetailHostCoordination: ViewModifier {
         repository: LibraryRepository
     ) {
         detailSessionStore.synchronizePresentedDetail(
-            identity: entry.syncIdentity,
+            identity: entry.libraryIdentity,
             repository: repository,
             resolveEntry: { identity in
-                identity == entry.syncIdentity
+                identity == entry.libraryIdentity
                     ? entry : repository.existingEntry(identity: identity)
             }
         )
@@ -112,7 +112,7 @@ struct LibraryDetailHostCoordination: ViewModifier {
         )
     }
 
-    private func synchronizePresentedDetail(_ identity: LibraryEntrySyncIdentity?) {
+    private func synchronizePresentedDetail(_ identity: LibraryEntryIdentity?) {
         let didResolveDetail = detailSessionStore.synchronizePresentedDetail(
             identity: identity,
             repository: store.repository,

@@ -70,9 +70,14 @@ final class LibrarySyncCoordinator {
     let dateProvider: @MainActor @Sendable () -> Date
 
     private let syncGate = SyncGate()
+    private var activeSyncRequestCount = 0
     private var ordinarySyncCancellationGeneration = 0
     private var activeFirstEnableBootstrapIDs = Set<UUID>()
     private var canceledFirstEnableBootstrapIDs = Set<UUID>()
+
+    var hasActiveSyncRequest: Bool {
+        activeSyncRequestCount > 0
+    }
 
     typealias SyncPhase = LibraryCloudSyncPhase
 
@@ -89,7 +94,9 @@ final class LibrarySyncCoordinator {
     ///     tests and otherwise resolves the current iCloud account through the
     ///     client.
     ///   - hydrateMissingEntry: Entry hydration hook used when remote state
-    ///     refers to an entry the local store does not currently have.
+    ///     refers to an entry the local store does not currently have. The hook
+    ///     must return a detached entry; the coordinator inserts it only after
+    ///     hydration planning passes its cancellation boundary.
     ///   - dateProvider: Clock injection for status timestamps and tests.
     init(
         store: LibraryStore,
@@ -159,6 +166,9 @@ final class LibrarySyncCoordinator {
     /// Runs one coalesced sync pass and preserves failure classification for
     /// local dirty-queue retry scheduling.
     func syncResult(trigger: Trigger) async -> SyncResult {
+        activeSyncRequestCount += 1
+        defer { activeSyncRequestCount -= 1 }
+
         guard !Task.isCancelled else { return .skipped(.disabled) }
         guard let store else {
             librarySyncCoordinatorLogger.warning(
@@ -182,6 +192,41 @@ final class LibrarySyncCoordinator {
                 "Skipped iCloud library sync for \(trigger.rawValue, privacy: .public) because policy blocked ordinary sync: \(blockedReason.rawValue, privacy: .public)."
             )
             return .skipped(blockedReason)
+        }
+
+        var scopeRequiringBootstrap: LibraryCloudSyncScope?
+        do {
+            scopeRequiringBootstrap = try await currentScopeRequiringBootstrap(store: store)
+        } catch {
+            // Continue through the normal pipeline so the existing phase and
+            // failure reporting path records the namespace-resolution error.
+        }
+
+        guard !Task.isCancelled else { return .skipped(.disabled) }
+        if let queuedResult = await syncGate.waitForRunningPass() {
+            librarySyncCoordinatorLogger.info(
+                "Queued iCloud library sync for \(trigger.rawValue, privacy: .public) because another sync started during scope resolution."
+            )
+            return queuedResult
+        }
+        if let blockedReason = store.libraryCloudSyncPolicyBlockReason() {
+            store.recordLibraryCloudSyncSkipped(
+                trigger: trigger,
+                reason: blockedReason,
+                at: dateProvider()
+            )
+            librarySyncCoordinatorLogger.info(
+                "Skipped iCloud library sync for \(trigger.rawValue, privacy: .public) because policy changed during scope resolution: \(blockedReason.rawValue, privacy: .public)."
+            )
+            return .skipped(blockedReason)
+        }
+        if let scopeRequiringBootstrap,
+            store.libraryCloudSyncStatus.lastCompletedScope != scopeRequiringBootstrap
+        {
+            librarySyncCoordinatorLogger.info(
+                "Starting iCloud library bootstrap because the active sync scope differs from the last completed scope."
+            )
+            return await store.bootstrapLibraryCloudSyncEnablement()
         }
 
         syncGate.begin()
@@ -235,6 +280,7 @@ final class LibrarySyncCoordinator {
             )
             return result
         } catch is CancellationError {
+            store.recordLibraryCloudSyncCancellation()
             librarySyncCoordinatorLogger.info(
                 "Cancelled iCloud library sync triggered by \(trigger.rawValue, privacy: .public)."
             )
@@ -253,6 +299,9 @@ final class LibrarySyncCoordinator {
     func bootstrapFirstEnablement(
         preference: LibraryCloudSyncConflictPreference?
     ) async -> SyncResult {
+        activeSyncRequestCount += 1
+        defer { activeSyncRequestCount -= 1 }
+
         let bootstrapID = UUID()
         if let queuedResult = await syncGate.waitForRunningPass() {
             librarySyncCoordinatorLogger.info(
@@ -291,6 +340,10 @@ final class LibrarySyncCoordinator {
         syncGate.cancelAll()
     }
 
+    func waitUntilAllSyncFinishes() async {
+        await syncGate.waitUntilIdle()
+    }
+
     func checkOrdinarySyncCancellation(
         _ cancellationGeneration: Int,
         store: LibraryStore
@@ -315,6 +368,35 @@ final class LibrarySyncCoordinator {
             store.updateLibraryCloudKitAvailability(error.libraryCloudKitAvailability)
             throw error
         }
+    }
+
+    private func currentScopeRequiringBootstrap(store: LibraryStore) async throws
+        -> LibraryCloudSyncScope?
+    {
+        guard let namespace = try await resolveNamespace(reportingTo: store) else {
+            return nil
+        }
+        let currentScope = LibraryCloudSyncScope(namespace: namespace)
+        if store.libraryCloudSyncStatus.lastCompletedScope == currentScope {
+            return nil
+        }
+
+        if store.libraryCloudSyncStatus.lastCompletedScope == nil,
+            changeTokenStore.token(
+                for: CloudLibrarySyncClient.recordZoneID,
+                namespace: namespace
+            ) != nil
+        {
+            store.updateLibraryCloudSyncStatus { status in
+                status.lastCompletedScope = currentScope
+            }
+            librarySyncCoordinatorLogger.info(
+                "Adopted the current iCloud sync scope from compatible legacy completed state."
+            )
+            return nil
+        }
+
+        return currentScope
     }
 
     /// Throws the bootstrap-specific cancellation sentinel.
@@ -517,6 +599,13 @@ final class LibrarySyncCoordinator {
             )
             return result
         } catch is FirstEnableBootstrapCancellation {
+            store.recordLibraryCloudSyncCancellation()
+            librarySyncCoordinatorLogger.info(
+                "Cancelled iCloud library first-enable bootstrap."
+            )
+            return .skipped(.disabled)
+        } catch is CancellationError {
+            store.recordLibraryCloudSyncCancellation()
             librarySyncCoordinatorLogger.info(
                 "Cancelled iCloud library first-enable bootstrap."
             )

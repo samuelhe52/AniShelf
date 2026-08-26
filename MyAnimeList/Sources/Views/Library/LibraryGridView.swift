@@ -16,9 +16,9 @@ struct LibraryGridView: View {
     @Environment(LibraryEntryInteractionState.self) var interaction
     let detailActions: LibraryEntryDetailActions
     let displayItems: [LibraryEntryDisplayItem]
-    @Binding var scrolledID: Int?
+    @Binding var scrolledID: LibraryEntryIdentity?
     let scrollRequest: LibraryScrollRequest?
-    @Binding var highlightedEntryID: Int?
+    @Binding var highlightedEntryID: LibraryEntryIdentity?
     private let columns = [GridItem(.adaptive(minimum: 104, maximum: 132), spacing: 10)]
 
     var body: some View {
@@ -119,7 +119,7 @@ struct LibraryGridView: View {
             )
     }
 
-    private func toggleSelection(for id: Int) {
+    private func toggleSelection(for id: LibraryEntryIdentity) {
         interaction.toggleSelection(for: id)
     }
 

@@ -11,6 +11,16 @@ import Foundation
 struct SearchResult: Hashable, Sendable {
     var tmdbID: Int
     var type: AnimeType
+
+    var libraryIdentity: LibraryEntryIdentity {
+        LibraryEntryIdentity(entryType: type, tmdbID: tmdbID)
+    }
+}
+
+extension EntryMetadata {
+    var libraryIdentity: LibraryEntryIdentity {
+        LibraryEntryIdentity(entryType: type, tmdbID: tmdbID)
+    }
 }
 
 struct TMDbBatchPromptResult: Identifiable, Equatable, Hashable, Sendable {

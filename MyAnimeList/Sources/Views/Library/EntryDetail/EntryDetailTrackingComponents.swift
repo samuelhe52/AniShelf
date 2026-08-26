@@ -211,7 +211,7 @@ fileprivate struct EntryDetailTrackingEditor: View {
                     entry: entry,
                     onCompletionPromptRequested: onEpisodeProgressCompletionSuggested
                 )
-                .id(entry.syncIdentity.rawID)
+                .id(entry.libraryIdentity.rawID)
             }
 
             Divider()

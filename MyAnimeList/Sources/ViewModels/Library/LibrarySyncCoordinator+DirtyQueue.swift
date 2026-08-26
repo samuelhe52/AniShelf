@@ -12,7 +12,7 @@ import os
 
 extension LibrarySyncCoordinator {
     func seedDirtyQueue(
-        with snapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot],
+        with snapshotsByIdentity: [LibraryEntryIdentity: LibraryEntrySyncSnapshot],
         at date: Date,
         in store: LibraryStore
     ) throws {
@@ -34,7 +34,7 @@ extension LibrarySyncCoordinator {
     }
 
     func removeExportedDirtyEntries(
-        _ exportedIdentities: Set<LibraryEntrySyncIdentity>,
+        _ exportedIdentities: Set<LibraryEntryIdentity>,
         from dirtyEntries: [LibraryEntrySyncDirtyQueueEntry],
         in store: LibraryStore
     ) throws {
@@ -68,7 +68,7 @@ extension LibrarySyncCoordinator {
     }
 
     private func removeExportedDuplicateDirtyEntries(
-        for identity: LibraryEntrySyncIdentity,
+        for identity: LibraryEntryIdentity,
         matching observedEntries: [LibraryEntrySyncDirtyQueueEntry],
         selectedEntry: LibraryEntrySyncDirtyQueueEntry,
         in store: LibraryStore
@@ -93,7 +93,7 @@ extension LibrarySyncCoordinator {
 
     func export(
         entries: [LibraryEntrySyncDirtyQueueEntry],
-        localSnapshotsByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot],
+        localSnapshotsByIdentity: [LibraryEntryIdentity: LibraryEntrySyncSnapshot],
         settingsSnapshot: LibrarySettingsSyncSnapshot?,
         observedDirtyEntries: [LibraryEntrySyncDirtyQueueEntry],
         store: LibraryStore
@@ -190,13 +190,13 @@ extension LibrarySyncCoordinator {
     /// Builds the current local snapshot map used by importer and exporter.
     func localSnapshotsByIdentity(
         for store: LibraryStore
-    ) throws -> [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot] {
+    ) throws -> [LibraryEntryIdentity: LibraryEntrySyncSnapshot] {
         let entries = try store.dataProvider.getAllModels(ofType: AnimeEntry.self)
-        var entriesByIdentity: [LibraryEntrySyncIdentity: AnimeEntry] = [:]
-        var duplicateCountsByIdentity: [LibraryEntrySyncIdentity: Int] = [:]
+        var entriesByIdentity: [LibraryEntryIdentity: AnimeEntry] = [:]
+        var duplicateCountsByIdentity: [LibraryEntryIdentity: Int] = [:]
 
         for entry in entries {
-            let identity = entry.syncIdentity
+            let identity = entry.libraryIdentity
             guard let existingEntry = entriesByIdentity[identity] else {
                 entriesByIdentity[identity] = entry
                 duplicateCountsByIdentity[identity] = 1
@@ -215,7 +215,7 @@ extension LibrarySyncCoordinator {
             )
         }
 
-        return entriesByIdentity.reduce(into: [LibraryEntrySyncIdentity: LibraryEntrySyncSnapshot]()) {
+        return entriesByIdentity.reduce(into: [LibraryEntryIdentity: LibraryEntrySyncSnapshot]()) {
             snapshotsByIdentity, pair in
             snapshotsByIdentity[pair.key] = LibraryEntrySyncSnapshot(entry: pair.value)
         }
@@ -223,9 +223,9 @@ extension LibrarySyncCoordinator {
 
     static func coalescedDirtyEntriesByIdentity(
         _ dirtyEntries: [LibraryEntrySyncDirtyQueueEntry]
-    ) -> [LibraryEntrySyncIdentity: LibraryEntrySyncDirtyQueueEntry] {
-        var entriesByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncDirtyQueueEntry] = [:]
-        var duplicateCountsByIdentity: [LibraryEntrySyncIdentity: Int] = [:]
+    ) -> [LibraryEntryIdentity: LibraryEntrySyncDirtyQueueEntry] {
+        var entriesByIdentity: [LibraryEntryIdentity: LibraryEntrySyncDirtyQueueEntry] = [:]
+        var duplicateCountsByIdentity: [LibraryEntryIdentity: Int] = [:]
 
         for entry in dirtyEntries {
             let identity = entry.identity
@@ -247,9 +247,9 @@ extension LibrarySyncCoordinator {
     }
     static func coalescedRemoteChangesByIdentity(
         _ remoteChanges: [LibraryEntrySyncRemoteChange]
-    ) throws -> [LibraryEntrySyncIdentity: LibraryEntrySyncRemoteChange] {
-        var changesByIdentity: [LibraryEntrySyncIdentity: LibraryEntrySyncRemoteChange] = [:]
-        var duplicateCountsByIdentity: [LibraryEntrySyncIdentity: Int] = [:]
+    ) throws -> [LibraryEntryIdentity: LibraryEntrySyncRemoteChange] {
+        var changesByIdentity: [LibraryEntryIdentity: LibraryEntrySyncRemoteChange] = [:]
+        var duplicateCountsByIdentity: [LibraryEntryIdentity: Int] = [:]
 
         for remoteChange in remoteChanges {
             let identity = remoteChange.identity
