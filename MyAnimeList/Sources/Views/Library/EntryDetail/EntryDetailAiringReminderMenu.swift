@@ -80,7 +80,7 @@ struct EntryDetailAiringReminderMenu: View {
 
     private var nextEpisodeStatus: some View {
         Button(action: {}) {
-            Label(EntryDetailL10n.next, systemImage: "calendar.badge.clock")
+            Label(EntryDetailL10n.nextEpisode, systemImage: "calendar.badge.clock")
             if notificationPermissionIsDenied {
                 Text(EntryDetailL10n.notificationsDisabled)
             } else if let nextReminder {

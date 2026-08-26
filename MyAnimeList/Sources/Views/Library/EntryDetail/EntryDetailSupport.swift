@@ -94,7 +94,7 @@ enum EntryDetailL10n {
     static let notifications: LocalizedStringResource = "Notifications"
     static let active: LocalizedStringResource = "Active"
     static let inactive: LocalizedStringResource = "Inactive"
-    static let next: LocalizedStringResource = "Next"
+    static let nextEpisode: LocalizedStringResource = "Next Episode"
     static let notSet: LocalizedStringResource = "Not Set"
     static let notificationsDisabled: LocalizedStringResource = "Notifications Disabled"
     static let openNotificationSettings: LocalizedStringResource = "Open Notification Settings"
