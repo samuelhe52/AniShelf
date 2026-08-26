@@ -143,6 +143,28 @@ struct LibrarySyncNotificationBridgeTests {
         #expect(endedIdentifiers == [identifier])
     }
 
+    @Test func backgroundSyncExecutionFailedAcquisitionCancelsWithoutRunningOperation() {
+        var expirationActionCount = 0
+        var endedIdentifiers: [UIBackgroundTaskIdentifier] = []
+        var operationStarted = false
+        let controller = LibrarySyncBackgroundExecutionController(
+            beginBackgroundTask: { _, _ in .invalid },
+            endBackgroundTask: { endedIdentifiers.append($0) }
+        )
+
+        controller.run(
+            onExpiration: {
+                expirationActionCount += 1
+            },
+            operation: {
+                operationStarted = true
+            }
+        )
+        #expect(expirationActionCount == 1)
+        #expect(!operationStarted)
+        #expect(endedIdentifiers.isEmpty)
+    }
+
     @Test func backgroundSyncExecutionExpirationCancelsAndEndsOperation() async throws {
         let identifier = UIBackgroundTaskIdentifier(rawValue: 43)
         var expirationHandler: LibrarySyncBackgroundExecutionController.ExpirationHandler?
@@ -176,8 +198,8 @@ struct LibrarySyncNotificationBridgeTests {
         }
 
         expirationHandler?()
-        for _ in 0..<10 where !operationObservedCancellation {
-            await Task.yield()
+        for _ in 0..<100 where !operationObservedCancellation {
+            try await Task.sleep(nanoseconds: 1_000_000)
         }
 
         #expect(expirationActionCount == 1)

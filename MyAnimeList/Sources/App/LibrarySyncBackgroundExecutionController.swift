@@ -49,7 +49,10 @@ final class LibrarySyncBackgroundExecutionController {
         let identifier = beginBackgroundTask("Finish iCloud Library Sync") { [weak self] in
             self?.expire()
         }
-        guard identifier != .invalid else { return }
+        guard identifier != .invalid else {
+            onExpiration()
+            return
+        }
 
         backgroundTaskIdentifier = identifier
         expirationAction = onExpiration
