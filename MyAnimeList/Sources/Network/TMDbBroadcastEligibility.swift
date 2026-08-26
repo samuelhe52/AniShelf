@@ -109,8 +109,10 @@ enum TMDbBroadcastEligibilityResult: Equatable, Sendable {
 }
 
 struct TMDbBroadcastEligibilityChecker: Sendable {
-    /// TMDb can briefly clear `next_episode_to_air` after an episode airs. Because its air
-    /// dates have no time component, round the proposed two-and-a-half-week grace period up.
+    /// TMDb can briefly clear `next_episode_to_air` after an episode airs.
+    ///
+    /// Because its air dates have no time component, round the proposed two-and-a-half-week
+    /// grace period up.
     static let recentEpisodeGracePeriodDays = 18
 
     private let fetchSeriesDetails: @Sendable (Int) async throws -> TMDbSeriesBroadcastDetails
