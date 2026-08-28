@@ -121,9 +121,11 @@ final class LibrarySyncNotificationBridge: NSObject, UIApplicationDelegate {
     }
 
     private func registerAiringReminderBackgroundRefresh() {
+        // This callback inherits MainActor isolation from the app delegate. Request the main
+        // queue explicitly because nil makes BackgroundTasks invoke it on a background queue.
         let didRegister = BGTaskScheduler.shared.register(
             forTaskWithIdentifier: Self.airingReminderRefreshTaskIdentifier,
-            using: nil
+            using: .main
         ) { task in
             guard let refreshTask = task as? BGAppRefreshTask else {
                 task.setTaskCompleted(success: false)
@@ -134,7 +136,7 @@ final class LibrarySyncNotificationBridge: NSObject, UIApplicationDelegate {
                 let operation = Task { @MainActor in
                     await AiringReminderCoordinator.shared.refreshAll()
                 }
-                refreshTask.expirationHandler = {
+                refreshTask.expirationHandler = { @Sendable in
                     operation.cancel()
                 }
                 refreshTask.setTaskCompleted(success: await operation.value)

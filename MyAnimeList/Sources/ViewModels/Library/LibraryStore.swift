@@ -783,6 +783,7 @@ class LibraryStore {
     func setupTMDbAPIConfigurationChangeMonitor() {
         NotificationCenter.default
             .publisher(for: .tmdbAPIConfigurationDidChange)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.infoFetcher = .init()
             }
