@@ -189,7 +189,7 @@ extension LibrarySyncCoordinatorTests {
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
     }
 
-    @Test @MainActor func duplicateLocalSnapshotsChooseRepositoryPreferredWinner() async throws {
+    @Test @MainActor func duplicateLocalSnapshotsBlockExportUntilRepair() async throws {
         let store = makeSyncReadyStore()
         let olderEntry = AnimeEntry(
             name: "Older Duplicate",
@@ -225,12 +225,72 @@ extension LibrarySyncCoordinatorTests {
             namespaceProvider: { makeNamespace() }
         )
 
-        await coordinator.sync(trigger: .manualRetry)
+        let blockedResult = await coordinator.syncResult(trigger: .manualRetry)
+
+        #expect(blockedResult == .skipped(.duplicateRepairRequired))
+        #expect(database.savedRecords.isEmpty)
+        #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.count == 1)
+
+        try await store.resolveDuplicateEntryGroup(
+            newerEntry.libraryIdentity,
+            keeping: newerEntry
+        )
+        let repairedResult = await coordinator.syncResult(trigger: .manualRetry)
 
         let savedSnapshot = try savedSnapshot(from: try #require(database.savedRecords.first), client: client)
+        #expect(repairedResult == .success)
         #expect(database.savedRecords.count == 1)
         #expect(savedSnapshot.identity == newerEntry.libraryIdentity)
         #expect(savedSnapshot.notes == "Preferred local")
+        #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
+    }
+
+    @Test @MainActor func finalDuplicateRepairResumesInterruptedBootstrap() async throws {
+        let store = makeStore(
+            enabled: true,
+            bootstrapState: .running,
+            hasTMDbAPIKey: true
+        )
+        let olderEntry = AnimeEntry(
+            name: "Older Interrupted Duplicate",
+            type: .movie,
+            tmdbID: 715,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 1)
+        )
+        let newerEntry = AnimeEntry(
+            name: "Newer Interrupted Duplicate",
+            type: .movie,
+            tmdbID: 715,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 3)
+        )
+        newerEntry.notes = "Keep after repair"
+        try store.repository.newEntry(olderEntry)
+        try store.repository.newEntry(newerEntry)
+        try store.refreshLibrary()
+
+        let client = CloudLibrarySyncClient()
+        let database = FakeCloudLibrarySyncDatabase(changes: [makeEmptyChangeBatch()])
+        store.configureLibrarySyncCoordinator(
+            client: client,
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        try await store.resolveDuplicateEntryGroup(
+            newerEntry.libraryIdentity,
+            keeping: newerEntry
+        )
+
+        let savedSnapshot = try savedSnapshot(
+            from: try #require(database.savedRecords.first),
+            client: client
+        )
+        #expect(store.libraryCloudSyncStatus.bootstrapState == .completed)
+        #expect(store.libraryCloudSyncStatus.lastResult == .success)
+        #expect(database.ensureZoneCallCount == 1)
+        #expect(database.savedRecords.count == 1)
+        #expect(savedSnapshot.identity == newerEntry.libraryIdentity)
+        #expect(savedSnapshot.notes == "Keep after repair")
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
     }
 

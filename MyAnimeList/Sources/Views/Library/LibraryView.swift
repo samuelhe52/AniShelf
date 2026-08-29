@@ -118,6 +118,18 @@ struct LibraryView: View {
         } message: {
             Text(airingReminderWarningMessage)
         }
+        .sheet(isPresented: duplicateRepairPresented) {
+            LibraryDuplicateRepairSheet(store: store)
+                .presentationDetents([.large])
+                .presentationSizing(.page)
+        }
+    }
+
+    private var duplicateRepairPresented: Binding<Bool> {
+        Binding(
+            get: { store.requiresDuplicateRepair },
+            set: { _ in }
+        )
     }
 
     private var libraryNavigation: some View {

@@ -9,9 +9,103 @@ import Foundation
 import Testing
 
 @testable import DataProvider
+@testable import LibrarySync
 @testable import MyAnimeList
 
 struct LibrarySortingAndDeletionTests {
+    @Test @MainActor func testRefreshLibraryCanonicalizesVisibleDuplicateIdentities() throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let olderEntry = AnimeEntry(
+            name: "Duplicate Movie",
+            type: .movie,
+            tmdbID: 500_001,
+            dateSaved: referenceDate(year: 2026, month: 1, day: 1)
+        )
+        let newerEntry = AnimeEntry(
+            name: "Duplicate Movie",
+            type: .movie,
+            tmdbID: 500_001,
+            dateSaved: referenceDate(year: 2026, month: 1, day: 2)
+        )
+
+        try store.repository.newEntry(olderEntry)
+        try store.repository.newEntry(newerEntry)
+        try store.refreshLibrary()
+
+        #expect(store.requiresDuplicateRepair)
+        #expect(store.library.count == 1)
+        #expect(store.library.first === newerEntry)
+        #expect(store.libraryDisplayItems.map(\.id) == [newerEntry.libraryIdentity])
+        #expect(store.duplicateEntryGroups.count == 1)
+        #expect(store.duplicateEntryGroups.first?.entries.count == 2)
+        #expect(store.duplicateEntryGroups.first?.recommendedEntry === newerEntry)
+        #expect(store.libraryCloudSyncPolicyBlockReason() == .duplicateRepairRequired)
+    }
+
+    @Test @MainActor func testDuplicateRepairKeepsSelectedEntryWithoutQueuingTombstone()
+        async throws
+    {
+        let defaults = UserDefaults(suiteName: #function)!
+        defer { defaults.removePersistentDomain(forName: #function) }
+
+        let store = LibraryStore(
+            dataProvider: DataProvider(inMemory: true),
+            preferences: LibraryPreferences(defaults: defaults)
+        )
+        store.updateLibraryCloudSyncStatus { status in
+            status.isEnabled = true
+            status.bootstrapState = .completed
+        }
+
+        let keeper = AnimeEntry(
+            name: "Series to Keep",
+            type: .series,
+            tmdbID: 500_002,
+            dateSaved: referenceDate(year: 2026, month: 1, day: 1)
+        )
+        let discarded = AnimeEntry(
+            name: "Series to Remove",
+            type: .series,
+            tmdbID: 500_002,
+            dateSaved: referenceDate(year: 2026, month: 1, day: 2)
+        )
+        let childSeason = AnimeEntry(
+            name: "Child Season",
+            type: .season(seasonNumber: 1, parentSeriesID: 500_002),
+            tmdbID: 500_003
+        )
+        childSeason.parentSeriesEntry = discarded
+
+        try store.repository.newEntry(keeper)
+        try store.repository.newEntry(discarded)
+        try store.repository.newEntry(childSeason)
+        try store.refreshLibrary()
+
+        let identity = keeper.libraryIdentity
+        try store.syncChangeRecorder.dirtyQueueStore.setPendingDelete(
+            .init(tombstone: .init(entry: discarded))
+        )
+
+        try await store.resolveDuplicateEntryGroup(identity, keeping: keeper)
+
+        let storedEntries = try store.dataProvider.getAllModels(ofType: AnimeEntry.self)
+        #expect(storedEntries.filter { $0.libraryIdentity == identity }.count == 1)
+        #expect(storedEntries.contains { $0 === keeper })
+        #expect(childSeason.parentSeriesEntry === keeper)
+        #expect(!store.requiresDuplicateRepair)
+        #expect(store.library.contains { $0 === keeper })
+
+        let queuedEntries = store.syncChangeRecorder.dirtyQueueStore.load().entries
+        let repairedIdentityWork = queuedEntries.filter { $0.identity == identity }
+        #expect(repairedIdentityWork.count == 1)
+        #expect(
+            repairedIdentityWork.allSatisfy {
+                if case .upsert = $0 { return true }
+                return false
+            }
+        )
+    }
+
     @Test @MainActor func testDeletionScrollTargetFallbacks() throws {
         let sortStrategyKey = String.librarySortStrategy
         let sortReversedKey = String.librarySortReversed

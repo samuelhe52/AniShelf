@@ -351,6 +351,9 @@ final class LibrarySyncCoordinator {
         guard cancellationGeneration == ordinarySyncCancellationGeneration else {
             throw CancellationError()
         }
+        if store.requiresDuplicateRepair {
+            throw CancellationError()
+        }
         if store.libraryCloudSyncPolicyBlockReason() == .disabled {
             throw CancellationError()
         }

@@ -129,6 +129,7 @@ enum LibraryCloudSyncPolicyBlockReason: String, Codable, Equatable {
     case disabled
     case bootstrapIncomplete
     case missingTMDbAPIKey
+    case duplicateRepairRequired
 }
 
 struct LibraryCloudSyncConflictSummary: Codable, Equatable {

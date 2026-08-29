@@ -16,6 +16,7 @@ struct AnimeEntryListRow: View {
     var entry: AnimeEntry
     var snapshot: LibraryEntrySnapshot
     var tapGesturesEnabled: Bool = true
+    var favoriteButtonEnabled: Bool = true
     var onTap: (() -> Void)? = nil
     var onOpenDetails: (() -> Void)? = nil
     var onToggleFavorite: (AnimeEntry) -> Void = { _ in }
@@ -31,6 +32,7 @@ struct AnimeEntryListRow: View {
         entry: AnimeEntry,
         snapshot: LibraryEntrySnapshot? = nil,
         tapGesturesEnabled: Bool = true,
+        favoriteButtonEnabled: Bool = true,
         onTap: (() -> Void)? = nil,
         onOpenDetails: (() -> Void)? = nil,
         onToggleFavorite: @escaping (AnimeEntry) -> Void = { _ in }
@@ -38,6 +40,7 @@ struct AnimeEntryListRow: View {
         self.entry = entry
         self.snapshot = snapshot ?? LibraryEntrySnapshot(entry: entry)
         self.tapGesturesEnabled = tapGesturesEnabled
+        self.favoriteButtonEnabled = favoriteButtonEnabled
         self.onTap = onTap
         self.onOpenDetails = onOpenDetails
         self.onToggleFavorite = onToggleFavorite
@@ -204,6 +207,7 @@ struct AnimeEntryListRow: View {
             }
             .contentShape(.rect)
         }
+        .disabled(!favoriteButtonEnabled)
     }
 
     private var primaryMetadata: [String] {

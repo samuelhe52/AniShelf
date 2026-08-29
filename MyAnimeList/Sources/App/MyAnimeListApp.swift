@@ -63,6 +63,7 @@ struct MyAnimeListApp: App {
 
         LibrarySyncNotificationBridge.configureSyncHandler { [libraryStore, recoveryActivityGate] in
             guard recoveryActivityGate.allowsLibraryActivity else { return .noData }
+            guard !libraryStore.requiresDuplicateRepair else { return .noData }
             let result = await libraryStore.performLibrarySyncResult(trigger: .cloudNotification)
             switch result {
             case .success:
@@ -192,11 +193,13 @@ struct MyAnimeListApp: App {
 
     private func requestSync(trigger: LibrarySyncCoordinator.Trigger) {
         guard startupRecovery == nil else { return }
+        guard !libraryStore.requiresDuplicateRepair else { return }
         libraryStore.syncLibrary(trigger: trigger)
     }
 
     private func flushPendingLocalSync() {
         guard recoveryActivityGate.allowsLibraryActivity else { return }
+        guard !libraryStore.requiresDuplicateRepair else { return }
         guard libraryStore.needsBackgroundLibrarySyncProtection else { return }
         backgroundSyncExecution.run(
             onExpiration: {
@@ -219,6 +222,7 @@ struct MyAnimeListApp: App {
 
     private func recordActiveLibraryDayIfUsable() {
         guard scenePhase == .active, startupRecovery == nil, hasTMDbAPIKey else { return }
+        guard !libraryStore.requiresDuplicateRepair else { return }
         appReview.recordActiveLibraryDay()
     }
 
