@@ -41,6 +41,7 @@ class LibraryStore {
     // MARK: - State
 
     private(set) var library: [AnimeEntry]
+    private(set) var duplicateEntryGroups: [LibraryDuplicateEntryGroup] = []
     @ObservationIgnored var infoFetcher: InfoFetcher
     var language: Language = .resolvedAnimeInfoLanguage()
     private(set) var libraryCloudSyncStatus: LibraryCloudSyncStatus
@@ -107,6 +108,10 @@ class LibraryStore {
 
     var libraryDisplayItems: [LibraryEntryDisplayItem] {
         libraryOnDisplay.map(LibraryEntryDisplayItem.init)
+    }
+
+    var requiresDuplicateRepair: Bool {
+        !duplicateEntryGroups.isEmpty
     }
 
     init(
@@ -207,8 +212,31 @@ class LibraryStore {
 
     func refreshLibrary() throws {
         libraryStoreLogger.debug("[\(Date().debugDescription)] Refreshing library...")
-        library = try repository.visibleLibraryEntries()
+        let visibleEntries = try repository.visibleLibraryEntries()
+        let entriesByIdentity = Dictionary(grouping: visibleEntries, by: \.libraryIdentity)
+        let previouslyRequiredDuplicateRepair = requiresDuplicateRepair
+
+        duplicateEntryGroups = entriesByIdentity.values.compactMap { entries in
+            guard entries.count > 1 else { return nil }
+            return LibraryDuplicateEntryGroup(entries: entries)
+        }
+        .sorted { $0.identity.rawID < $1.identity.rawID }
+
+        library = entriesByIdentity.values.compactMap {
+            AnimeEntryDuplicateResolver.preferredEntry(from: $0)
+        }
         libraryRevision &+= 1
+
+        if requiresDuplicateRepair {
+            for group in duplicateEntryGroups {
+                libraryStoreLogger.fault(
+                    "Found \(group.entries.count, privacy: .public) visible library rows for identity \(group.identity.rawID, privacy: .private); showing the preferred row until repair completes."
+                )
+            }
+            if !previouslyRequiredDuplicateRepair {
+                cancelAllLibraryCloudSyncWork()
+            }
+        }
         pruneAiringReminderSubscriptions()
     }
 
@@ -305,6 +333,11 @@ class LibraryStore {
         syncChangeRecorder.rebuildBaseline()
     }
 
+    func cancelLibrarySyncAndWaitForDuplicateRepair() async {
+        cancelAllLibraryCloudSyncWork()
+        await syncCoordinator?.waitUntilAllSyncFinishes()
+    }
+
     /// Runs an async write scope without treating its SwiftData saves as local sync edits.
     ///
     /// Callers can wrap arbitrary async store mutations here, including work that saves through
@@ -350,6 +383,9 @@ class LibraryStore {
     func performLibrarySyncResult(trigger: LibrarySyncCoordinator.Trigger) async
         -> LibrarySyncCoordinator.SyncResult
     {
+        guard !requiresDuplicateRepair else {
+            return .skipped(.duplicateRepairRequired)
+        }
         guard let syncCoordinator else { return .permanentFailure }
         guard !Task.isCancelled else { return .skipped(.disabled) }
         let shouldBootstrapDefaultEnablement =
@@ -578,7 +614,10 @@ class LibraryStore {
     }
 
     func libraryCloudSyncPolicyBlockReason() -> LibraryCloudSyncPolicyBlockReason? {
-        cloudSyncStateController.policyBlockReason(for: libraryCloudSyncStatus)
+        guard !requiresDuplicateRepair else {
+            return .duplicateRepairRequired
+        }
+        return cloudSyncStateController.policyBlockReason(for: libraryCloudSyncStatus)
     }
 
     func updateLibraryCloudSyncStatus(_ update: (inout LibraryCloudSyncStatus) -> Void) {

@@ -79,7 +79,10 @@ extension LibraryView {
         interaction.selectedEntryIDs.formIntersection(displayedIDs)
         selectionDisplayItems = items
         selectionEntriesByID = Dictionary(
-            uniqueKeysWithValues: items.map { ($0.id, $0.entry) }
+            items.map { ($0.id, $0.entry) },
+            uniquingKeysWith: { existing, candidate in
+                AnimeEntryDuplicateResolver.prefers(candidate, existing) ? candidate : existing
+            }
         )
     }
 }

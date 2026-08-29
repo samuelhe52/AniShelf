@@ -53,6 +53,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Resources/Info.plist,
+				Tests/MyAnimeListTests/AiringReminderManagerTests.swift,
 				Tests/MyAnimeListTests/AnimeSharingTests.swift,
 				Tests/MyAnimeListTests/AppReviewPromptControllerTests.swift,
 				Tests/MyAnimeListTests/EntryDetailBroadcastModelTests.swift,
@@ -64,7 +65,6 @@
 				"Tests/MyAnimeListTests/EntryDetailViewModelTests+SeasonEpisodes.swift",
 				"Tests/MyAnimeListTests/EntryDetailViewModelTests+Staff.swift",
 				Tests/MyAnimeListTests/EntryDetailViewModelTestSupport.swift,
-				Tests/MyAnimeListTests/AiringReminderManagerTests.swift,
 				Tests/MyAnimeListTests/InfoFetcherLiveFetchTests.swift,
 				Tests/MyAnimeListTests/InfoFetcherMetadataMappingTests.swift,
 				Tests/MyAnimeListTests/LibraryBackupRestoreTests.swift,
@@ -117,6 +117,7 @@
 		9F93FC182DE1FD800071FB56 /* Exceptions for "MyAnimeList" folder in "MyAnimeListTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Tests/MyAnimeListTests/AiringReminderManagerTests.swift,
 				Tests/MyAnimeListTests/AnimeSharingTests.swift,
 				Tests/MyAnimeListTests/AppReviewPromptControllerTests.swift,
 				Tests/MyAnimeListTests/EntryDetailBroadcastModelTests.swift,
@@ -128,7 +129,6 @@
 				"Tests/MyAnimeListTests/EntryDetailViewModelTests+SeasonEpisodes.swift",
 				"Tests/MyAnimeListTests/EntryDetailViewModelTests+Staff.swift",
 				Tests/MyAnimeListTests/EntryDetailViewModelTestSupport.swift,
-				Tests/MyAnimeListTests/AiringReminderManagerTests.swift,
 				Tests/MyAnimeListTests/InfoFetcherLiveFetchTests.swift,
 				Tests/MyAnimeListTests/InfoFetcherMetadataMappingTests.swift,
 				Tests/MyAnimeListTests/LibraryBackupRestoreTests.swift,
