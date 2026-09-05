@@ -106,6 +106,52 @@ struct LibrarySortingAndDeletionTests {
         )
     }
 
+    @Test @MainActor func testBatchDeletionRefreshesOnceAndKeepsUnselectedEntries() throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let entries = (1...3).map { AnimeEntry(name: "Entry \($0)", type: .movie, tmdbID: 510_000 + $0) }
+        for entry in entries {
+            try store.repository.newEntry(entry)
+        }
+        let deletedIDs = Set(entries.prefix(2).map(\.libraryIdentity))
+        let revision = store.libraryRevision
+
+        #expect(store.deleteEntries(Array(entries.prefix(2))))
+
+        #expect(store.libraryRevision == revision + 1)
+        #expect(store.library.map(\.libraryIdentity) == [entries[2].libraryIdentity])
+        let tombstoneIDs = Set(
+            store.syncChangeRecorder.dirtyQueueStore.load().entries.compactMap { entry in
+                if case .delete(let pending) = entry { return pending.identity }
+                return nil
+            })
+        #expect(tombstoneIDs == deletedIDs)
+    }
+
+    @Test @MainActor func testBatchDeletionRollsBackModelsAndQueueOnSaveFailure() throws {
+        struct SaveFailure: Error {}
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let entries = (1...2).map { AnimeEntry(name: "Entry \($0)", type: .movie, tmdbID: 520_000 + $0) }
+        for entry in entries {
+            try store.repository.newEntry(entry)
+        }
+        let initialQueue = store.syncChangeRecorder.dirtyQueueStore.load()
+        var saves = 0
+        let repository = LibraryRepository(
+            dataProvider: store.dataProvider,
+            syncChangeRecorder: store.syncChangeRecorder,
+            transactionSaver: { _ in
+                saves += 1
+                throw SaveFailure()
+            }
+        )
+
+        #expect(throws: SaveFailure.self) { try repository.deleteEntries(entries) }
+
+        #expect(saves == 1)
+        #expect(try repository.visibleLibraryEntries().count == 2)
+        #expect(store.syncChangeRecorder.dirtyQueueStore.load() == initialQueue)
+    }
+
     @Test @MainActor func testDeletionScrollTargetFallbacks() throws {
         let sortStrategyKey = String.librarySortStrategy
         let sortReversedKey = String.librarySortReversed

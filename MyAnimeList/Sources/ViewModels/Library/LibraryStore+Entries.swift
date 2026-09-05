@@ -145,6 +145,20 @@ extension LibraryStore {
     }
 
     @discardableResult
+    func deleteEntries(_ entries: [AnimeEntry]) -> Bool {
+        let cachedImageURLs = Set(entries.flatMap { LibraryImageCacheService.relatedImageURLs(for: $0) })
+        do {
+            try repository.deleteEntries(entries)
+            LibraryImageCacheService.removeCachedImages(for: cachedImageURLs)
+            return true
+        } catch {
+            libraryStoreLogger.error("Failed to delete entries: \(error)")
+            ToastCenter.global.completionState = .failed(message: error.localizedDescription)
+            return false
+        }
+    }
+
+    @discardableResult
     func deleteEntry(
         _ entry: AnimeEntry,
         updateScrolledID: (LibraryEntryIdentity?) -> Void

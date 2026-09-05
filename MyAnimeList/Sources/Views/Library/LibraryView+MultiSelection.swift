@@ -45,9 +45,7 @@ extension LibraryView {
         }
         let scrollTarget = remainingEntries.first?.libraryIdentity
 
-        for entry in entries {
-            _ = store.deleteEntry(entry)
-        }
+        guard store.deleteEntries(entries) else { return }
 
         requestLibraryScroll(to: scrollTarget)
         exitMultiSelection()

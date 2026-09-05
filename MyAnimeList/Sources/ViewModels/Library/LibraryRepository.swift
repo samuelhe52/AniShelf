@@ -40,6 +40,27 @@ final class LibraryRepository {
         }
     }
 
+    func deleteEntries(_ entries: [AnimeEntry]) throws {
+        guard !entries.isEmpty else { return }
+        for entry in entries {
+            entry.resolveLibraryDisplayFaultsBeforeDeletion()
+        }
+        let deleteTokens = try syncChangeRecorder?.recordDeletions(for: entries)
+        let context = dataProvider.dataHandler.modelContext
+        do {
+            for entry in entries {
+                context.delete(entry)
+            }
+            try transactionSaver(context)
+        } catch {
+            context.rollback()
+            if let deleteTokens {
+                try? syncChangeRecorder?.restoreDeleteRecords(deleteTokens)
+            }
+            throw error
+        }
+    }
+
     func replaceEntry(_ entry: AnimeEntry, inserting replacements: [AnimeEntry]) throws {
         entry.resolveLibraryDisplayFaultsBeforeDeletion()
         var deleteToken: LibrarySyncChangeRecorder.PendingDeleteRestoreToken?
