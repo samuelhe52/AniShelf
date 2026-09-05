@@ -325,6 +325,41 @@ struct MigrationTests {
         )
         orphanParentB.onDisplay = false
 
+        visibleSeries.detail = SchemaV2_7_3.AnimeEntryDetail(language: "en", title: "Keep detail")
+        hiddenParentA.detail = SchemaV2_7_3.AnimeEntryDetail(
+            language: "en", title: "Discard detail",
+            staff: [
+                SchemaV2_7_3.AnimeEntryStaff(
+                    id: 1, name: "Discard staff", role: "Director",
+                    jobs: [SchemaV2_7_3.AnimeEntryStaffJob(creditID: "discard", job: "Director", episodeCount: 1)]
+                )
+            ]
+        )
+        // Keep visible duplicates, but prefer the visible parent with detail.
+        let otherVisibleSeries = SchemaV2_7_3.AnimeEntry(
+            name: "Other visible series", type: .series, tmdbID: 209867, usingCustomPoster: true
+        )
+        // With no visible parent, existing child references outrank detail and recency.
+        let unreferencedHidden = SchemaV2_7_3.AnimeEntry(
+            name: "Unreferenced hidden", type: .series, tmdbID: 800001,
+            detail: SchemaV2_7_3.AnimeEntryDetail(language: "en", title: "Discard unreferenced detail")
+        )
+        unreferencedHidden.onDisplay = false
+        let referencedHidden = SchemaV2_7_3.AnimeEntry(
+            name: "Referenced hidden", type: .series, tmdbID: 800001,
+            dateSaved: referenceDate(year: 2020, month: 1, day: 1)
+        )
+        referencedHidden.onDisplay = false
+        let linkedSeason = SchemaV2_7_3.AnimeEntry(
+            name: "Linked season", type: .season(seasonNumber: 1, parentSeriesID: 800001), tmdbID: 800002
+        )
+        linkedSeason.parentSeriesEntry = referencedHidden
+        let unlinkedSeason = SchemaV2_7_3.AnimeEntry(
+            name: "Unlinked season", type: .season(seasonNumber: 2, parentSeriesID: 800001), tmdbID: 800003
+        )
+        let movie = SchemaV2_7_3.AnimeEntry(name: "Movie", type: .movie, tmdbID: 800004)
+        movie.parentSeriesEntry = orphanParentA
+
         for entry in [
             visibleSeries,
             hiddenParentA,
@@ -332,28 +367,52 @@ struct MigrationTests {
             seasonOne,
             seasonTwo,
             orphanParentA,
-            orphanParentB
+            orphanParentB,
+            otherVisibleSeries,
+            unreferencedHidden,
+            referencedHidden,
+            linkedSeason,
+            unlinkedSeason,
+            movie
         ] {
             legacyContainer.mainContext.insert(entry)
         }
         try legacyContainer.mainContext.save()
 
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let retainedIDs = try Set(
+            [
+                visibleSeries, seasonOne, seasonTwo, otherVisibleSeries, referencedHidden, linkedSeason, unlinkedSeason,
+                movie
+            ]
+            .map { try encoder.encode($0.persistentModelID) }
+        )
+
         let migratedProvider = DataProvider(url: storeURL)
         let migratedEntries = try migratedProvider.getAllModels(ofType: AnimeEntry.self)
 
         let migratedVisibleSeries = try #require(
-            migratedEntries.first(where: { $0.tmdbID == 209867 && $0.type == .series && $0.onDisplay })
+            migratedEntries.first(where: { $0.name == "Frieren" })
         )
         let migratedSeasons = migratedEntries.filter {
             guard case .season(_, let parentSeriesID) = $0.type else { return false }
             return parentSeriesID == 209867
         }
 
-        #expect(migratedEntries.count == 3)
+        #expect(migratedEntries.count == 8)
+        #expect(try Set(migratedEntries.map { try encoder.encode($0.persistentModelID) }) == retainedIDs)
         #expect(migratedEntries.contains(where: { $0.tmdbID == 209867 && !$0.onDisplay }) == false)
         #expect(migratedEntries.contains(where: { $0.tmdbID == 999001 }) == false)
         #expect(migratedSeasons.count == 2)
         #expect(migratedSeasons.allSatisfy { $0.parentSeriesEntry?.id == migratedVisibleSeries.id })
+        let hiddenSeasons = migratedEntries.filter { $0.type.parentSeriesID == 800001 }
+        #expect(hiddenSeasons.count == 2)
+        #expect(hiddenSeasons.allSatisfy { $0.parentSeriesEntry?.name == "Referenced hidden" })
+        #expect(migratedEntries.first(where: { $0.tmdbID == 800004 })?.parentSeriesEntry == nil)
+        #expect(try migratedProvider.getAllModels(ofType: AnimeEntryDetail.self).map(\.title) == ["Keep detail"])
+        #expect(try migratedProvider.getAllModels(ofType: AnimeEntryStaff.self).isEmpty)
+        #expect(try migratedProvider.getAllModels(ofType: AnimeEntryStaffJob.self).isEmpty)
     }
 
     @Test @MainActor func detailAndScoreMigrationFromV273PreservesJobs() throws {
@@ -434,11 +493,30 @@ struct MigrationTests {
         legacyContainer.mainContext.insert(legacyEntry)
         try legacyContainer.mainContext.save()
 
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let entryID = try encoder.encode(legacyEntry.persistentModelID)
+        let detailID = try encoder.encode(legacyDetail.persistentModelID)
+        let characterIDs = try Set(legacyDetail.characters.map { try encoder.encode($0.persistentModelID) })
+        let staffIDs = try Set(legacyDetail.staff.map { try encoder.encode($0.persistentModelID) })
+        let jobIDs = try Set(legacyDetail.staff.flatMap(\.jobs).map { try encoder.encode($0.persistentModelID) })
+        let seasonIDs = try Set(legacyDetail.seasons.map { try encoder.encode($0.persistentModelID) })
+        let episodeIDs = try Set(legacyDetail.episodes.map { try encoder.encode($0.persistentModelID) })
+
         let migratedProvider = DataProvider(url: storeURL)
         let migratedEntries = try migratedProvider.getAllModels(ofType: AnimeEntry.self)
         let migratedEntry = try #require(migratedEntries.first(where: { $0.tmdbID == 700001 }))
         let migratedDetail = try #require(migratedEntry.detail)
         let migratedStaff = try #require(migratedDetail.orderedStaff.first)
+
+        #expect(try encoder.encode(migratedEntry.persistentModelID) == entryID)
+        #expect(try encoder.encode(migratedDetail.persistentModelID) == detailID)
+        #expect(try Set(migratedDetail.characters.map { try encoder.encode($0.persistentModelID) }) == characterIDs)
+        #expect(try Set(migratedDetail.staff.map { try encoder.encode($0.persistentModelID) }) == staffIDs)
+        #expect(
+            try Set(migratedDetail.staff.flatMap(\.jobs).map { try encoder.encode($0.persistentModelID) }) == jobIDs)
+        #expect(try Set(migratedDetail.seasons.map { try encoder.encode($0.persistentModelID) }) == seasonIDs)
+        #expect(try Set(migratedDetail.episodes.map { try encoder.encode($0.persistentModelID) }) == episodeIDs)
 
         #expect(migratedEntry.score == 4)
         #expect(migratedEntry.watchStatus == .dropped)
