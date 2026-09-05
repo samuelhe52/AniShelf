@@ -17,11 +17,6 @@ extension LibraryView {
         interaction.selectedEntryIDs.compactMap { selectionEntriesByID[$0] }
     }
 
-    var allFavorite: Bool {
-        let entries = selectedEntries
-        return !entries.isEmpty && entries.allSatisfy(\.favorite)
-    }
-
     func applyBatchAction(_ action: LibraryBatchAction) {
         let entries = selectedEntries
         guard !entries.isEmpty else { return }
@@ -63,6 +58,7 @@ extension LibraryView {
             interaction.exitMultiSelection()
         }
         selectionDisplayItems = nil
+        selectionLayoutIDs = nil
         selectionEntriesByID.removeAll(keepingCapacity: true)
     }
 
@@ -73,9 +69,11 @@ extension LibraryView {
 
     private func updateSelectionDisplayItems() {
         let items = store.libraryDisplayItems
-        let displayedIDs = Set(items.map(\.id))
+        let layoutIDs = items.map(\.id)
+        let displayedIDs = Set(layoutIDs)
         interaction.selectedEntryIDs.formIntersection(displayedIDs)
         selectionDisplayItems = items
+        selectionLayoutIDs = layoutIDs
         selectionEntriesByID = Dictionary(
             items.map { ($0.id, $0.entry) },
             uniquingKeysWith: { existing, candidate in

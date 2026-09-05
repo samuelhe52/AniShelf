@@ -14,13 +14,13 @@ struct LibraryToolbar: ToolbarContent {
     let interaction: LibraryEntryInteractionState
     @Binding var libraryViewStyle: LibraryView.LibraryViewStyle
     let scoringEnabled: Bool
-    @Binding var isShowingBatchDeleteConfirmation: Bool
     @Binding var isSearching: Bool
-    let allFavorite: Bool
+    let selectionEntriesByID: [LibraryEntryIdentity: AnimeEntry]
     let supportsMultiSelection: Bool
     let enterMultiSelection: () -> Void
     let exitMultiSelection: () -> Void
     let applyBatchAction: (LibraryBatchAction) -> Void
+    let deleteSelectedEntries: () -> Void
     let openProfileSettings: () -> Void
     let checkDuplicate: (LibraryEntryIdentity) -> Bool
     let processTMDbSearchResults: (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void
@@ -35,11 +35,7 @@ struct LibraryToolbar: ToolbarContent {
     @ToolbarContentBuilder
     private var topBarContent: some ToolbarContent {
         ToolbarItem(placement: .principal) {
-            LibraryNavigationTitleCapsule(
-                count:
-                    interaction.isMultiSelecting
-                    ? interaction.selectedEntryCount : store.libraryOnDisplay.count
-            )
+            LibraryToolbarTitle(store: store, interaction: interaction)
         }
         if supportsMultiSelection && !interaction.isMultiSelecting {
             // Counterbalances the trailing controls so the principal title sits visually left of center.
@@ -79,35 +75,22 @@ struct LibraryToolbar: ToolbarContent {
     private var bottomBarContent: some ToolbarContent {
         if interaction.isMultiSelecting {
             ToolbarItem(placement: .bottomBar) {
-                Button("Delete", systemImage: "trash", role: .destructive) {
-                    isShowingBatchDeleteConfirmation = true
-                }
-                .disabled(interaction.selectedEntryIDs.isEmpty)
-                .tint(.red)
+                LibrarySelectionDeleteButton(interaction: interaction, deleteSelectedEntries: deleteSelectedEntries)
             }
             ToolbarItemGroup(placement: .status) {
-                Menu("Mark Status", systemImage: "checklist") {
-                    ForEach(AnimeEntry.WatchStatus.allCases, id: \.self) { status in
-                        Button {
-                            applyBatchAction(.watchStatus(status))
-                        } label: {
-                            Label(status.localizedStringResource, systemImage: status.batchActionSystemImage)
-                        }
-                    }
-                }
-                .disabled(interaction.selectedEntryIDs.isEmpty)
-
-                Button(
-                    allFavorite ? "Unfavorite" : "Favorite",
-                    systemImage: allFavorite ? "heart.slash.fill" : "heart.fill"
-                ) {
-                    applyBatchAction(.favorite(allFavorite ? false : true))
-                }
-                .disabled(interaction.selectedEntryIDs.isEmpty)
-                .animation(.snappy(duration: 0.3), value: allFavorite)
+                LibrarySelectionStatusMenu(interaction: interaction, applyBatchAction: applyBatchAction)
+                LibrarySelectionFavoriteButton(
+                    interaction: interaction,
+                    entriesByID: selectionEntriesByID,
+                    applyBatchAction: applyBatchAction
+                )
             }
             ToolbarItem(placement: .bottomBar) {
-                batchActionsMenu
+                LibrarySelectionActionsMenu(
+                    interaction: interaction,
+                    scoringEnabled: scoringEnabled,
+                    applyBatchAction: applyBatchAction
+                )
             }
         } else {
             ToolbarItem(placement: .bottomBar) {
@@ -131,8 +114,90 @@ struct LibraryToolbar: ToolbarContent {
             }
         }
     }
+}
 
-    private var batchActionsMenu: some View {
+// Keep selection reads in view bodies so taps update the controls independently
+// of the library's display projection and layout animation.
+fileprivate struct LibraryToolbarTitle: View {
+    let store: LibraryStore
+    let interaction: LibraryEntryInteractionState
+
+    var body: some View {
+        LibraryNavigationTitleCapsule(
+            count: interaction.isMultiSelecting ? interaction.selectedEntryCount : store.libraryOnDisplay.count
+        )
+    }
+}
+
+fileprivate struct LibrarySelectionDeleteButton: View {
+    let interaction: LibraryEntryInteractionState
+    let deleteSelectedEntries: () -> Void
+    @State private var isShowingConfirmation = false
+
+    var body: some View {
+        Button("Delete", systemImage: "trash", role: .destructive) {
+            isShowingConfirmation = true
+        }
+        .disabled(interaction.selectedEntryIDs.isEmpty)
+        .tint(.red)
+        .alert(LocalizedStringResource("Delete Selected Anime?"), isPresented: $isShowingConfirmation) {
+            Button("Delete", role: .destructive, action: deleteSelectedEntries)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(
+                LocalizedStringResource(
+                    "This will delete \(interaction.selectedEntryCount) selected anime from your library."))
+        }
+    }
+}
+
+fileprivate struct LibrarySelectionStatusMenu: View {
+    let interaction: LibraryEntryInteractionState
+    let applyBatchAction: (LibraryBatchAction) -> Void
+
+    var body: some View {
+        Menu("Mark Status", systemImage: "checklist") {
+            ForEach(AnimeEntry.WatchStatus.allCases, id: \.self) { status in
+                Button {
+                    applyBatchAction(.watchStatus(status))
+                } label: {
+                    Label(status.localizedStringResource, systemImage: status.batchActionSystemImage)
+                }
+            }
+        }
+        .disabled(interaction.selectedEntryIDs.isEmpty)
+    }
+}
+
+fileprivate struct LibrarySelectionFavoriteButton: View {
+    let interaction: LibraryEntryInteractionState
+    let entriesByID: [LibraryEntryIdentity: AnimeEntry]
+    let applyBatchAction: (LibraryBatchAction) -> Void
+
+    private var allFavorite: Bool {
+        !interaction.selectedEntryIDs.isEmpty
+            && interaction.selectedEntryIDs.allSatisfy { entriesByID[$0]?.favorite == true }
+    }
+
+    var body: some View {
+        let allFavorite = allFavorite
+        Button(
+            allFavorite ? "Unfavorite" : "Favorite",
+            systemImage: allFavorite ? "heart.slash.fill" : "heart.fill"
+        ) {
+            applyBatchAction(.favorite(!allFavorite))
+        }
+        .disabled(interaction.selectedEntryIDs.isEmpty)
+        .animation(.snappy(duration: 0.3), value: allFavorite)
+    }
+}
+
+fileprivate struct LibrarySelectionActionsMenu: View {
+    let interaction: LibraryEntryInteractionState
+    let scoringEnabled: Bool
+    let applyBatchAction: (LibraryBatchAction) -> Void
+
+    var body: some View {
         Menu {
             Button("Track Dates", systemImage: "calendar.badge.checkmark") {
                 applyBatchAction(.dateTracking(true))

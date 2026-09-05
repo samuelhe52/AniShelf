@@ -33,12 +33,12 @@ struct LibraryView: View {
     @State var newEntriesAddedToggle = false
     @State var highlightedEntryID: LibraryEntryIdentity?
     @State var scrollRequest: LibraryScrollRequest?
-    @State private var isShowingBatchDeleteConfirmation = false
     @State private var inspectorDetailWorkspaceState = LibraryInspectorDetailWorkspaceState()
 
     // Multi-selection snapshot: decouples selection rendering from live store
     // recomputation so toggling items stays cheap. See LibraryView+MultiSelection.
     @State var selectionDisplayItems: [LibraryEntryDisplayItem]?
+    @State var selectionLayoutIDs: [LibraryEntryIdentity]?
     @State var selectionEntriesByID: [LibraryEntryIdentity: AnimeEntry] = [:]
 
     // Persistent UI preference
@@ -273,13 +273,13 @@ struct LibraryView: View {
                     interaction: interaction,
                     libraryViewStyle: libraryViewStyleBinding,
                     scoringEnabled: scoringEnabled,
-                    isShowingBatchDeleteConfirmation: $isShowingBatchDeleteConfirmation,
                     isSearching: $isSearching,
-                    allFavorite: allFavorite,
+                    selectionEntriesByID: selectionEntriesByID,
                     supportsMultiSelection: supportsMultiSelection,
                     enterMultiSelection: enterMultiSelection,
                     exitMultiSelection: exitMultiSelection,
                     applyBatchAction: applyBatchAction,
+                    deleteSelectedEntries: deleteSelectedEntries,
                     openProfileSettings: openProfileSettings,
                     checkDuplicate: { store.libraryOnDisplay.map(\.libraryIdentity).contains($0) },
                     processTMDbSearchResults: processTMDbSearchResults,
@@ -290,21 +290,9 @@ struct LibraryView: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .animation(libraryViewStyleAnimation, value: libraryViewStyle)
-            .animation(.default, value: interaction.selectedEntryIDs.isEmpty)
             .sensoryFeedback(.success, trigger: newEntriesAddedToggle)
             .allowsHitTesting(!showProfileSettings)
             .accessibilityHidden(showProfileSettings)
-            .alert(
-                batchDeleteConfirmationTitle,
-                isPresented: $isShowingBatchDeleteConfirmation
-            ) {
-                Button("Delete", role: .destructive) {
-                    deleteSelectedEntries()
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text(batchDeleteConfirmationMessage)
-            }
         }
     }
 
@@ -313,7 +301,7 @@ struct LibraryView: View {
     @ViewBuilder
     private var libraryView: some View {
         let displayItems = selectionDisplayItems ?? store.libraryDisplayItems
-        let layoutIDs = displayItems.map(\.id)
+        let layoutIDs = selectionLayoutIDs ?? displayItems.map(\.id)
         let detailActions = LibraryEntryDetailActions(
             open: openDetails,
             edit: editDetails
@@ -353,14 +341,6 @@ struct LibraryView: View {
                 .safeAreaPadding(.bottom, 20)
             }
         }
-    }
-
-    private var batchDeleteConfirmationTitle: LocalizedStringResource {
-        "Delete Selected Anime?"
-    }
-
-    private var batchDeleteConfirmationMessage: LocalizedStringResource {
-        "This will delete \(interaction.selectedEntryCount) selected anime from your library."
     }
 
     private var libraryViewStyleBinding: Binding<LibraryViewStyle> {
