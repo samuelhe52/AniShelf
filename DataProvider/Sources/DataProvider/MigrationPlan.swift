@@ -280,33 +280,20 @@ extension MigrationStage {
     }
 
     static func migrateV279ToV280() -> MigrationStage {
-        let snapshots = MigrationState<[AnimeEntryMigrationDTO]>([])
+        let imagePaths = MigrationState(ImagePathMigrationSnapshotV2_7_9.empty)
 
         return MigrationStage.custom(
             fromVersion: SchemaV2_7_9.self,
             toVersion: SchemaV2_8_0.self,
             willMigrate: { context in
-                snapshots.set(
-                    try Self.captureAndDeleteEntries(in: context) {
-                        (index: Int, entry: SchemaV2_7_9.AnimeEntry) in
-                        entry.migrationDTO(index: index)
-                    })
+                imagePaths.set(try SchemaV2_7_9.imagePathMigrationSnapshot(in: context))
             },
             didMigrate: { context in
-                try Self.rebuildEntries(
-                    from: snapshots.get(),
-                    in: context,
-                    makeEntry: { snapshot in
-                        SchemaV2_8_0.AnimeEntry(
-                            migrationDTO: snapshot,
-                            detail: snapshot.detail.map(SchemaV2_8_0.AnimeEntryDetail.init(from:)),
-                            watchStatus: .init(snapshot.watchStatus)
-                        )
-                    },
-                    setParent: { entry, parentEntry in
-                        entry.parentSeriesEntry = parentEntry
-                    }
+                try SchemaV2_8_0.applyImagePathMigrationSnapshot(
+                    imagePaths.get(),
+                    in: context
                 )
+                imagePaths.set(.empty)
             }
         )
     }
