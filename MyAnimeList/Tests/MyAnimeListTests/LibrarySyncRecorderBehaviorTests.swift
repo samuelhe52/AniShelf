@@ -74,6 +74,42 @@ struct LibrarySyncRecorderBehaviorTests {
         }
     }
 
+    @Test @MainActor func testLibrarySyncRecorderBatchesChangedEntriesFromOneSave() throws {
+        let queueURL = makeTemporaryQueueURL(name: "batch-upsert")
+        defer { try? FileManager.default.removeItem(at: queueURL.deletingLastPathComponent()) }
+        let dataProvider = DataProvider(inMemory: true)
+        let entries = (1...3).map { AnimeEntry(name: "Batch \($0)", type: .movie, tmdbID: 210_000 + $0) }
+        for entry in entries {
+            entry.markCreatedForLibrary(at: referenceDate(year: 2026, month: 5, day: 29))
+            try dataProvider.dataHandler.newEntry(entry)
+        }
+        var writeCount = 0
+        let dirtyQueueStore = LibraryEntrySyncDirtyQueueStore(url: queueURL) { queue in
+            writeCount += 1
+            try persistQueue(queue, to: queueURL)
+        }
+        let recorder = LibrarySyncChangeRecorder(dataProvider: dataProvider, dirtyQueueStore: dirtyQueueStore)
+        var changeCount = 0
+        recorder.onDirtyQueueChanged = { changeCount += 1 }
+        for entry in entries.prefix(2) {
+            entry.updateFavorite(true, at: referenceDate(year: 2026, month: 5, day: 30))
+        }
+        entries[2].name = "Metadata only"
+
+        try dataProvider.dataHandler.modelContext.save()
+
+        #expect(writeCount == 1)
+        #expect(changeCount == 1)
+        #expect(Set(dirtyQueueStore.load().entries.map(\.identity)) == Set(entries.prefix(2).map(\.libraryIdentity)))
+        recorder.processSaveNotification(
+            Notification(
+                name: ModelContext.didSave,
+                userInfo: [ModelContext.NotificationKey.updatedIdentifiers.rawValue: Set(entries.map(\.id))]
+            ))
+        #expect(writeCount == 1)
+        #expect(changeCount == 1)
+    }
+
     @Test @MainActor func testLibrarySyncRecorderKeepsBaselineWhenUpsertWriteFails() throws {
         let queueURL = makeTemporaryQueueURL(name: "upsert-write-failure")
         defer { try? FileManager.default.removeItem(at: queueURL.deletingLastPathComponent()) }
@@ -103,11 +139,14 @@ struct LibrarySyncRecorderBehaviorTests {
         entry.markCreatedForLibrary(at: referenceDate(year: 2026, month: 5, day: 30))
         try dataProvider.dataHandler.newEntry(entry)
 
+        let second = AnimeEntry(name: "Second Failed Entry", type: .movie, tmdbID: 200_003)
+        second.markCreatedForLibrary(at: referenceDate(year: 2026, month: 5, day: 30))
+        try dataProvider.dataHandler.newEntry(second)
         let notification = Notification(
             name: ModelContext.didSave,
             object: nil,
             userInfo: [
-                ModelContext.NotificationKey.insertedIdentifiers.rawValue: Set([entry.id])
+                ModelContext.NotificationKey.insertedIdentifiers.rawValue: Set([entry.id, second.id])
             ]
         )
 
@@ -119,8 +158,7 @@ struct LibrarySyncRecorderBehaviorTests {
         recorder.processSaveNotification(notification)
 
         let queue = recorder.dirtyQueueStore.load()
-        #expect(queue.entries.count == 1)
-        #expect(queue.entries.first?.identity == entry.libraryIdentity)
+        #expect(Set(queue.entries.map(\.identity)) == Set([entry.libraryIdentity, second.libraryIdentity]))
         #expect(dirtyQueueChangeCount == 1)
     }
 

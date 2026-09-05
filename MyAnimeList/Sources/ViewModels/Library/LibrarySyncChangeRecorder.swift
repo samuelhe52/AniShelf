@@ -246,6 +246,8 @@ final class LibrarySyncChangeRecorder {
         }
 
         let observedIdentifiers = insertedIdentifiers.union(updatedIdentifiers)
+        var pendingUpserts: [LibraryEntrySyncPendingUpsert] = []
+        var pendingBaselines: [PersistentIdentifier: ClockBaseline] = [:]
 
         for identifier in observedIdentifiers {
             guard let entry = dataProvider.dataHandler[identifier, as: AnimeEntry.self] else {
@@ -273,25 +275,23 @@ final class LibrarySyncChangeRecorder {
                 continue
             }
 
-            do {
-                try dirtyQueueStore.setPendingUpsert(
-                    .init(identity: entry.libraryIdentity, dirtyAt: dirtyAt)
-                )
-                syncRecorderLogger.info(
-                    "Queued iCloud sync upsert for \(entry.libraryIdentity.rawID, privacy: .private) at \(dirtyAt, privacy: .public)."
-                )
-                onDirtyQueueChanged?()
-                lastSeenClocksByIdentifier[identifier] = currentBaseline
-            } catch {
-                if let previousBaseline {
-                    lastSeenClocksByIdentifier[identifier] = previousBaseline
-                } else {
-                    lastSeenClocksByIdentifier.removeValue(forKey: identifier)
-                }
-                syncRecorderLogger.error(
-                    "Failed to queue an iCloud sync upsert for \(entry.libraryIdentity.rawID, privacy: .private): \(error.localizedDescription, privacy: .private)"
-                )
-            }
+            pendingUpserts.append(.init(identity: entry.libraryIdentity, dirtyAt: dirtyAt))
+            pendingBaselines[identifier] = currentBaseline
+        }
+
+        guard !pendingUpserts.isEmpty else { return }
+        do {
+            try dirtyQueueStore.setPendingUpserts(pendingUpserts)
+            lastSeenClocksByIdentifier.merge(pendingBaselines) { _, current in current }
+            syncRecorderLogger.info(
+                "Queued \(pendingUpserts.count, privacy: .public) iCloud sync upserts from one save."
+            )
+            onDirtyQueueChanged?()
+        } catch {
+            // Keep every previous baseline so the whole batch remains retryable.
+            syncRecorderLogger.error(
+                "Failed to queue \(pendingUpserts.count, privacy: .public) iCloud sync upserts: \(error.localizedDescription, privacy: .private)"
+            )
         }
     }
 

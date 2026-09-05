@@ -291,6 +291,27 @@ public final class LibraryEntrySyncDirtyQueueStore: @unchecked Sendable {
         }
     }
 
+    /// Merges one save's upserts under the queue lock and writes at most once.
+    ///
+    /// Existing newer upserts are retained; deletes are replaced for recreated entries.
+    public func setPendingUpserts(_ pendingUpserts: [LibraryEntrySyncPendingUpsert]) throws {
+        guard !pendingUpserts.isEmpty else { return }
+        try withLock {
+            let queue = loadUnlocked()
+            var entriesByID = Dictionary(
+                queue.entries.map { ($0.identity, $0) }, uniquingKeysWith: { _, latest in latest })
+            for upsert in pendingUpserts {
+                if case .upsert(let previous) = entriesByID[upsert.identity], previous.dirtyAt >= upsert.dirtyAt {
+                    continue
+                }
+                entriesByID[upsert.identity] = .upsert(upsert)
+            }
+            let rewrittenQueue = LibraryEntrySyncDirtyQueue(entries: Array(entriesByID.values))
+            guard queue != rewrittenQueue else { return }
+            try writeQueueUnlocked(rewrittenQueue)
+        }
+    }
+
     @discardableResult
     /// Stores a delete tombstone unless an equal or newer tombstone is queued.
     ///

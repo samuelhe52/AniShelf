@@ -56,6 +56,47 @@ struct LibraryEntrySyncDirtyQueueStoreTests {
         #expect(finalQueue.entry(for: identity) == .delete(delete))
     }
 
+    @Test func batchUpsertsPreserveClocksAndUnrelatedDeletesWithOneWrite() throws {
+        let url = makeTemporaryQueueURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let first = LibraryEntryIdentity(entryType: .movie, tmdbID: 1)
+        let recreated = AnimeEntry(name: "Recreated", type: .movie, tmdbID: 2)
+        let retained = AnimeEntry(name: "Deleted", type: .movie, tmdbID: 3)
+        let older = referenceDate(year: 2026, month: 5, day: 1)
+        let newer = referenceDate(year: 2026, month: 5, day: 2)
+        let retainedDelete = LibraryEntrySyncDirtyQueueEntry.delete(.init(tombstone: .init(entry: retained)))
+        let initial = LibraryEntrySyncDirtyQueue(entries: [
+            .upsert(.init(identity: first, dirtyAt: newer)),
+            .delete(.init(tombstone: .init(entry: recreated))),
+            retainedDelete
+        ])
+        try JSONEncoder().encode(initial).write(to: url, options: .atomic)
+        var writes = 0
+        let store = LibraryEntrySyncDirtyQueueStore(url: url) { queue in
+            writes += 1
+            try JSONEncoder().encode(queue).write(to: url, options: .atomic)
+        }
+        let batch: [LibraryEntrySyncPendingUpsert] = [
+            .init(identity: first, dirtyAt: older),
+            .init(identity: recreated.libraryIdentity, dirtyAt: newer),
+            .init(identity: recreated.libraryIdentity, dirtyAt: older)
+        ]
+
+        try store.setPendingUpserts(batch)
+
+        #expect(writes == 1)
+        let queue = store.load()
+        #expect(queue.entries.count == 3)
+        #expect(queue.entry(for: first) == .upsert(.init(identity: first, dirtyAt: newer)))
+        #expect(
+            queue.entry(for: recreated.libraryIdentity)
+                == .upsert(.init(identity: recreated.libraryIdentity, dirtyAt: newer)))
+        #expect(queue.entry(for: retained.libraryIdentity) == retainedDelete)
+        try store.setPendingUpserts(batch)
+        try store.setPendingUpserts([])
+        #expect(writes == 1)
+    }
+
     @Test func malformedQueueFileFailsSafe() throws {
         let url = makeTemporaryQueueURL()
         defer {
@@ -126,9 +167,11 @@ struct LibraryEntrySyncDirtyQueueStoreTests {
                 group.addTask {
                     let identity = LibraryEntryIdentity(entryType: .series, tmdbID: index)
                     let dirtyAt = referenceDate(year: 2026, month: 5, day: (index % 28) + 1)
-                    try store.setPendingUpsert(
-                        .init(identity: identity, dirtyAt: dirtyAt)
-                    )
+                    if index.isMultiple(of: 2) {
+                        try store.setPendingUpserts([.init(identity: identity, dirtyAt: dirtyAt)])
+                    } else {
+                        try store.setPendingUpsert(.init(identity: identity, dirtyAt: dirtyAt))
+                    }
                 }
             }
             try await group.waitForAll()
