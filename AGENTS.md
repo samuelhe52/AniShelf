@@ -41,7 +41,7 @@
 
 ## Releases
 
-- Follow [`docs/workflows/release.md`](docs/workflows/release.md) for every release.
+- Use the project-specific [`anishelf-release`](.codex/skills/anishelf-release/SKILL.md) skill for every source-control release. The skill ends at verified Git publication; the maintainer handles post-push app distribution.
 
 ## Additional Notes
 
