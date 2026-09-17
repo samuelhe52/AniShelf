@@ -83,6 +83,9 @@ extension LibraryCloudSyncStatus {
         guard isFailureDisplay, let lastFailureReason, !lastFailureReason.isEmpty else {
             return nil
         }
+        if let lastFailurePhase {
+            return String(localized: "Failed during \(lastFailurePhase.rawValue): \(lastFailureReason)")
+        }
         return lastFailureReason
     }
 

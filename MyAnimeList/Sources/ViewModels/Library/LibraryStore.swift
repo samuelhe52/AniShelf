@@ -427,13 +427,14 @@ class LibraryStore {
         await bootstrapLibraryCloudSyncEnablement().succeeded
     }
 
-    func bootstrapLibraryCloudSyncEnablement() async -> LibrarySyncCoordinator.SyncResult {
+    func bootstrapLibraryCloudSyncEnablement(isUserRetry: Bool = false) async -> LibrarySyncCoordinator.SyncResult {
         updateLibraryCloudSyncStatus { status in
             status.isEnabled = true
             status.bootstrapState = .running
             status.lastCompletedScope = nil
             status.pendingConflictSummary = nil
             status.currentPhase = nil
+            status.lastFailurePhase = nil
             status.lastFailureReason = nil
             status.degradedReason = nil
             status.lastResult = nil
@@ -464,7 +465,7 @@ class LibraryStore {
             }
             return .permanentFailure
         }
-        return await syncCoordinator.bootstrapFirstEnablement(preference: nil)
+        return await syncCoordinator.bootstrapFirstEnablement(preference: nil, isUserRetry: isUserRetry)
     }
 
     @discardableResult
@@ -524,11 +525,12 @@ class LibraryStore {
             status.lastAttemptDate = nil
             status.lastSuccessfulSyncDate = nil
             status.lastReconciledCloudSyncedSettingsUpdatedAt = nil
+            status.lastFailurePhase = nil
             status.lastFailureReason = nil
             status.degradedReason = nil
             status.lastCompletedScope = nil
         }
-        return await bootstrapLibraryCloudSyncEnablement().succeeded
+        return await bootstrapLibraryCloudSyncEnablement(isUserRetry: true).succeeded
     }
 
     /// Resets persisted sync metadata that belonged to a replaced local store.
@@ -557,6 +559,7 @@ class LibraryStore {
             return
         }
 
+        updateLibraryCloudSyncStatus { $0.restoration = nil }
         shouldResumeInterruptedCloudSyncBootstrap = true
         updateLibraryCloudSyncStatus { status in
             status.isEnabled = true
@@ -565,6 +568,7 @@ class LibraryStore {
             status.retryState = .idle
             status.currentPhase = nil
             status.lastResult = nil
+            status.lastFailurePhase = nil
             status.lastFailureReason = nil
             status.degradedReason = nil
             status.lastCompletedScope = nil
@@ -577,10 +581,12 @@ class LibraryStore {
         }
         updateLibraryCloudSyncStatus { status in
             status.isEnabled = false
+            status.restoration = nil
             status.bootstrapState = .notStarted
             status.pendingConflictSummary = nil
             status.currentPhase = nil
             status.lastResult = .skipped
+            status.lastFailurePhase = nil
             status.lastFailureReason = nil
             status.degradedReason = nil
             status.lastCompletedScope = nil
@@ -608,7 +614,7 @@ class LibraryStore {
             libraryCloudSyncStatus.bootstrapState == .failed
                 || libraryCloudSyncStatus.bootstrapState == .notStarted
         {
-            return await enableLibraryCloudSync()
+            return await bootstrapLibraryCloudSyncEnablement(isUserRetry: true).succeeded
         }
         return await performLibrarySync(trigger: .manualRetry)
     }
@@ -637,6 +643,7 @@ class LibraryStore {
             status.lastResult = nil
             status.lastTrigger = trigger.rawValue
             status.lastAttemptDate = date
+            status.lastFailurePhase = nil
             status.lastFailureReason = nil
             status.degradedReason = nil
         }
@@ -647,8 +654,12 @@ class LibraryStore {
         reason: LibraryCloudSyncPolicyBlockReason,
         at date: Date = .now
     ) {
+        // A blocked retry is not a new bootstrap attempt. Keep the original
+        // failure, operation, and timestamp available for diagnosis.
+        guard libraryCloudSyncStatus.bootstrapState != .failed else { return }
         updateLibraryCloudSyncStatus { status in
             status.currentPhase = nil
+            status.lastFailurePhase = nil
             status.lastResult = .skipped
             status.lastTrigger = trigger.rawValue
             status.lastAttemptDate = date
@@ -675,6 +686,7 @@ class LibraryStore {
     ) {
         updateLibraryCloudSyncStatus { status in
             if completedBootstrap {
+                status.restoration = nil
                 status.bootstrapState = .completed
                 status.lastCompletedScope = completedScope
             }
@@ -685,6 +697,7 @@ class LibraryStore {
             status.lastSuccessfulSyncDate = date
             status.lastReconciledCloudSyncedSettingsUpdatedAt =
                 reconciledCloudSyncedSettingsUpdatedAt
+            status.lastFailurePhase = nil
             status.lastFailureReason = nil
             status.degradedReason = nil
             status.pendingConflictSummary = nil
@@ -693,7 +706,7 @@ class LibraryStore {
 
     func recordLibraryCloudSyncFailure(
         trigger: LibrarySyncCoordinator.Trigger,
-        phase _: LibraryCloudSyncPhase?,
+        phase: LibraryCloudSyncOperation?,
         result: LibraryCloudSyncResultClass,
         reason: String,
         degradedReason: String? = nil,
@@ -704,6 +717,7 @@ class LibraryStore {
             status.lastResult = result
             status.lastTrigger = trigger.rawValue
             status.lastAttemptDate = date
+            status.lastFailurePhase = phase
             status.lastFailureReason = reason
             if let degradedReason {
                 status.degradedReason = degradedReason
@@ -722,6 +736,7 @@ class LibraryStore {
             status.lastResult = .conflictChoiceRequired
             status.lastTrigger = LibrarySyncCoordinator.Trigger.firstEnableBootstrap.rawValue
             status.lastAttemptDate = date
+            status.lastFailurePhase = nil
             status.lastFailureReason = nil
         }
     }

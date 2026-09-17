@@ -145,6 +145,10 @@ final class LibraryProfileSettingsActions {
         await store.rebuildLibraryCloudSync()
     }
 
+    func discardFailedRestorationEntry(_ failure: LibraryRestorationFailure) async -> Bool {
+        await store.discardFailedRestorationEntry(failure)
+    }
+
     private static func resetCloudSyncChangeTokens(for store: LibraryStore) {
         store.resetLibraryCloudSyncChangeTokens()
     }

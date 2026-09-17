@@ -23,9 +23,13 @@ extension LibrarySyncCoordinator {
         }
 
         for snapshot in snapshotsByIdentity.values {
+            let existing = entriesByID[snapshot.identity.rawID]
+            if case .delete = existing { continue }
+            var dirtyAt = bootstrapDirtyClock(for: snapshot) ?? date
+            if case .upsert(let pending) = existing { dirtyAt = max(dirtyAt, pending.dirtyAt) }
             let pendingUpsert = LibraryEntrySyncPendingUpsert(
                 identity: snapshot.identity,
-                dirtyAt: bootstrapDirtyClock(for: snapshot) ?? date
+                dirtyAt: dirtyAt
             )
             entriesByID[snapshot.identity.rawID] = .upsert(pendingUpsert)
         }

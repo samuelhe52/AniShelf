@@ -37,6 +37,7 @@ struct LibraryProfileSettingsCard: View {
     let onEnableLibraryCloudSync: () async -> Bool
     let onDisableLibraryCloudSync: () -> Void
     let onRetryLibraryCloudSync: () async -> Bool
+    let onDiscardFailedRestorationEntry: (LibraryRestorationFailure) async -> Bool
     let onRebuildLibraryCloudSync: () async -> Bool
     let onResolveLibraryCloudSyncConflicts: (LibraryCloudSyncConflictPreference) async -> Bool
     let onCancelLibraryCloudSyncEnablement: () -> Void
@@ -159,7 +160,15 @@ struct LibraryProfileSettingsCard: View {
             cloudSyncIsBusy: cloudSyncIsBusy,
             cloudSyncStatusTitleColor: cloudSyncStatusTitleColor,
             cloudSyncManualRetryDisabled: cloudSyncManualRetryDisabled,
-            onRetryLibraryCloudSync: retryLibraryCloudSync
+            onRetryLibraryCloudSync: retryLibraryCloudSync,
+            onDiscardFailedRestorationEntry: { failure in
+                guard !cloudSyncIsBusy else { return }
+                cloudSyncActionInFlight = true
+                Task {
+                    _ = await onDiscardFailedRestorationEntry(failure)
+                    cloudSyncActionInFlight = false
+                }
+            }
         )
     }
 

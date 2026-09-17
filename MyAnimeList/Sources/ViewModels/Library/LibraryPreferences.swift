@@ -93,6 +93,8 @@ struct LibraryPreferences {
             status.lastReconciledCloudSyncedSettingsUpdatedAt,
             forKey: .libraryCloudSyncLastReconciledCloudSyncedSettingsUpdatedAt
         )
+        saveCodable(status.restoration, forKey: .libraryCloudSyncRestoration)
+        saveOptional(status.lastFailurePhase?.rawValue, forKey: .libraryCloudSyncLastFailurePhase)
         saveOptional(status.lastFailureReason, forKey: .libraryCloudSyncLastFailureReason)
         saveOptional(status.degradedReason, forKey: .libraryCloudSyncDegradedReason)
         saveCodable(status.lastCompletedScope, forKey: .libraryCloudSyncLastCompletedScope)
@@ -213,6 +215,9 @@ struct LibraryPreferences {
         status.lastReconciledCloudSyncedSettingsUpdatedAt =
             defaults.object(forKey: .libraryCloudSyncLastReconciledCloudSyncedSettingsUpdatedAt)
             as? Date
+        status.restoration = loadCodable(LibraryRestorationState.self, forKey: .libraryCloudSyncRestoration)
+        status.lastFailurePhase = defaults.string(forKey: .libraryCloudSyncLastFailurePhase)
+            .flatMap(LibraryCloudSyncOperation.init(rawValue:))
         status.lastFailureReason = defaults.string(forKey: .libraryCloudSyncLastFailureReason)
         status.degradedReason = defaults.string(forKey: .libraryCloudSyncDegradedReason)
         status.lastCompletedScope = loadCodable(

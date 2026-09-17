@@ -28,7 +28,7 @@ extension LibrarySyncCoordinator {
             state.currentPhase = phase
             store.recordLibraryCloudSyncPhase(
                 trigger: trigger,
-                phase: phase,
+                phase: phase.progressPhase,
                 at: state.dateProvider()
             )
             let value = try await operation()
@@ -133,6 +133,16 @@ extension LibrarySyncCoordinator {
             throw LibraryCloudSyncScopeChangedDuringSync()
         }
 
+        if pass.completedBootstrap {
+            let scope = LibraryCloudSyncScope(namespace: namespace)
+            if store.libraryCloudSyncStatus.restoration?.scope != scope {
+                store.updateLibraryCloudSyncStatus { $0.restoration = .init(scope: scope) }
+            }
+            try await pass.run(.export, state: state, store: store) {
+                try await exportRestorationDiscards(in: store, checkCancellation: pass.checkCancellation)
+            }
+        }
+
         let preImportSnapshots = try localSnapshotsByIdentity(for: store)
         let importBatch = try await pass.run(.remoteFetch, state: state, store: store) {
             if pass.completedBootstrap {
@@ -159,13 +169,17 @@ extension LibrarySyncCoordinator {
         state: SyncPipelineState,
         store: LibraryStore,
         importBatch: CloudLibrarySyncImportBatch,
-        forcedDomainsByIdentity: [LibraryEntryIdentity: Set<LibraryCloudSyncConflictDomain>] = [:]
+        forcedDomainsByIdentity: [LibraryEntryIdentity: Set<LibraryCloudSyncConflictDomain>] = [:],
+        isUserRetry: Bool = false
     ) async throws -> SyncResult {
         _ = try await pass.run(.hydrationApply, state: state, store: store) {
             try await applyImportedChanges(
                 importBatch,
                 to: store,
-                forcedDomainsByIdentity: forcedDomainsByIdentity
+                forcedDomainsByIdentity: forcedDomainsByIdentity,
+                isBootstrap: pass.completedBootstrap,
+                isUserRetry: isUserRetry,
+                checkCancellation: pass.checkCancellation
             )
         }
         applyImportedSettingsIfNeeded(importBatch.settingsSnapshot, to: store)

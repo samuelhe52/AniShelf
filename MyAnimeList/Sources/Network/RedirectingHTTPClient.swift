@@ -89,7 +89,7 @@ struct RedirectingHTTPClient: HTTPClient {
 extension RedirectingHTTPClient {
     static let relayAware: Self = .init(
         fromHost: "api.themoviedb.org",
-        toHost: "tmdb-api.konakona52.com",
+        toHost: "tmdb-api.konakona.dev",
         isEnabled: { UserDefaults.standard.usesTMDbRelayServer }
     )
 }

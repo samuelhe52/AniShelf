@@ -95,6 +95,7 @@ struct TMDbAPIKeyValidator {
         guard !key.isEmpty else { return false }
         let hosts = [
             "api.themoviedb.org",
+            "tmdb-api.konakona.dev",
             "tmdb-api.konakona52.com"
         ]
 

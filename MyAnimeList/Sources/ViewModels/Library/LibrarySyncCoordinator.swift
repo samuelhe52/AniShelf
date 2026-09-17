@@ -79,7 +79,7 @@ final class LibrarySyncCoordinator {
         activeSyncRequestCount > 0
     }
 
-    typealias SyncPhase = LibraryCloudSyncPhase
+    typealias SyncPhase = LibraryCloudSyncOperation
 
     /// Creates the coordinator and wires the sync pipeline dependencies.
     ///
@@ -297,7 +297,8 @@ final class LibrarySyncCoordinator {
     /// existing local library into the dirty queue before continuing through the
     /// normal import-before-export pass.
     func bootstrapFirstEnablement(
-        preference: LibraryCloudSyncConflictPreference?
+        preference: LibraryCloudSyncConflictPreference?,
+        isUserRetry: Bool = false
     ) async -> SyncResult {
         activeSyncRequestCount += 1
         defer { activeSyncRequestCount -= 1 }
@@ -314,7 +315,8 @@ final class LibrarySyncCoordinator {
         activeFirstEnableBootstrapIDs.insert(bootstrapID)
         var result = await runFirstEnableBootstrap(
             preference: preference,
-            bootstrapID: bootstrapID
+            bootstrapID: bootstrapID,
+            isUserRetry: isUserRetry
         )
         activeFirstEnableBootstrapIDs.remove(bootstrapID)
         canceledFirstEnableBootstrapIDs.remove(bootstrapID)
@@ -501,7 +503,8 @@ final class LibrarySyncCoordinator {
 
     private func runFirstEnableBootstrap(
         preference: LibraryCloudSyncConflictPreference?,
-        bootstrapID: UUID
+        bootstrapID: UUID,
+        isUserRetry: Bool
     ) async -> SyncResult {
         guard let store else {
             librarySyncCoordinatorLogger.warning(
@@ -518,6 +521,7 @@ final class LibrarySyncCoordinator {
             }
             status.currentPhase = nil
             status.lastResult = nil
+            status.lastFailurePhase = nil
             status.lastFailureReason = nil
         }
 
@@ -562,9 +566,12 @@ final class LibrarySyncCoordinator {
             try pass.checkCancellation()
 
             let decisionSnapshots = try localSnapshotsByIdentity(for: store)
+            let remoteChangesByIdentity = try Self.coalescedRemoteChangesByIdentity(fetchedBatch.remoteChanges)
             try await pass.run(.dirtyQueueSeeding, state: state, store: store) {
                 try seedDirtyQueue(
-                    with: decisionSnapshots,
+                    with: decisionSnapshots.filter { identity, snapshot in
+                        remoteChangesByIdentity[identity] != .snapshot(snapshot)
+                    },
                     at: dateProvider(),
                     in: store
                 )
@@ -595,7 +602,8 @@ final class LibrarySyncCoordinator {
                 importBatch: importBatch,
                 forcedDomainsByIdentity: preference == .preferCloud
                     ? ambiguousConflicts.domainsByIdentity
-                    : [:]
+                    : [:],
+                isUserRetry: isUserRetry
             )
             librarySyncCoordinatorLogger.info(
                 "Finished iCloud library first-enable bootstrap."
@@ -627,6 +635,9 @@ struct LocalSettingsSnapshotState {
 
 extension Error {
     var isPermanentLibrarySyncFailure: Bool {
+        if let hydrationError = self as? LibrarySyncHydrationError {
+            return hydrationError.underlyingError.isPermanentLibrarySyncFailure
+        }
         if self is DisabledCloudLibrarySyncDatabase.DisabledError {
             return true
         }

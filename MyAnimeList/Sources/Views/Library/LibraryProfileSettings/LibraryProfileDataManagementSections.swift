@@ -10,6 +10,7 @@ import SwiftUI
 
 struct LibraryProfileICloudSyncSection: View {
     @Environment(\.colorScheme) private var colorScheme
+    @State private var showRestorationDetails = false
 
     let libraryCloudSyncStatus: LibraryCloudSyncStatus
     let cloudSyncToggleBinding: Binding<Bool>
@@ -19,6 +20,7 @@ struct LibraryProfileICloudSyncSection: View {
     let cloudSyncStatusTitleColor: Color
     let cloudSyncManualRetryDisabled: Bool
     let onRetryLibraryCloudSync: () -> Void
+    let onDiscardFailedRestorationEntry: (LibraryRestorationFailure) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -39,25 +41,63 @@ struct LibraryProfileICloudSyncSection: View {
 
             if libraryCloudSyncStatus.isEnabled {
                 cloudSyncStatusRow
+
             }
         }
         .animation(.default, value: cloudSyncIsBusy)
         .padding(14)
         .libraryProfileInsetPanel(cornerRadius: 22, tint: .indigo)
+
+    }
+
+    private var restorationInfoButton: some View {
+        Button {
+            showRestorationDetails = true
+        } label: {
+            Image(systemName: "info.circle")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(4)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(LocalizedStringResource("Review entries")))
+        .popover(isPresented: $showRestorationDetails) {
+            LibraryRestorationDetailsPopover(
+                failures: libraryCloudSyncStatus.restoration?.failures ?? [],
+                failureReason: libraryCloudSyncStatus.failureReasonDisplay,
+                cloudSyncIsBusy: cloudSyncIsBusy,
+                onDiscard: onDiscardFailedRestorationEntry
+            )
+            .presentationCompactAdaptation(.popover)
+        }
     }
 
     private var cloudSyncStatusRow: some View {
         HStack(alignment: .top, spacing: 14) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text(libraryCloudSyncStatus.statusDisplay.title)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(cloudSyncStatusTitleColor)
 
-                Text(libraryCloudSyncStatus.detailDisplayResource)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if let restoration = libraryCloudSyncStatus.restoration {
+                    HStack(spacing: 2) {
+                        Text("Restored \(restoration.restoredEntries) of \(restoration.totalEntries) entries.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        if !restoration.failures.isEmpty {
+                            restorationInfoButton
+                        }
+                    }
+                } else {
+                    Text(libraryCloudSyncStatus.detailDisplayResource)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
-                if let failureReason = libraryCloudSyncStatus.failureReasonDisplay {
+                if libraryCloudSyncStatus.restoration?.failures.isEmpty != false,
+                    let failureReason = libraryCloudSyncStatus.failureReasonDisplay
+                {
                     Text(failureReason)
                         .font(.caption)
                         .foregroundStyle(.red)
@@ -89,6 +129,96 @@ struct LibraryProfileICloudSyncSection: View {
         }
         .padding(.top, 4)
         .padding(.vertical, 1)
+    }
+}
+
+fileprivate struct LibraryRestorationDetailsPopover: View {
+    let failures: [LibraryRestorationFailure]
+    let failureReason: String?
+    let cloudSyncIsBusy: Bool
+    let onDiscard: (LibraryRestorationFailure) -> Void
+
+    @State private var discardCandidate: LibraryRestorationFailure?
+    @State private var showDiscardConfirmation = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(LocalizedStringResource("Entries needing retry"))
+                    .font(.callout.weight(.semibold))
+                if let failureReason {
+                    Text(failureReason)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(failures) { failure in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Link(destination: tmdbURL(for: failure)) {
+                            HStack(spacing: 4) {
+                                Text(entryTypeTitle(for: failure))
+                                Text(verbatim: "· TMDb \(failure.snapshot.tmdbID)")
+                                Image(systemName: "arrow.up.right")
+                                    .font(.caption2.weight(.semibold))
+                            }
+                            .font(.caption.weight(.semibold))
+                        }
+                        Text(failure.reason).font(.caption).foregroundStyle(.secondary)
+                        if failure.discardDate != nil {
+                            Text("Deletion pending. Retry to finish.").font(.caption)
+                        } else if failure.canDiscard(at: .now) {
+                            Button("Discard from iCloud…", role: .destructive) {
+                                discardCandidate = failure
+                                showDiscardConfirmation = true
+                            }
+                            .font(.caption.weight(.semibold))
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.red)
+                            .disabled(cloudSyncIsBusy)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .alert("Discard Entry from iCloud?", isPresented: $showDiscardConfirmation) {
+                Button("Discard from iCloud", role: .destructive) {
+                    if let discardCandidate { onDiscard(discardCandidate) }
+                    discardCandidate = nil
+                }
+                Button("Cancel", role: .cancel) { discardCandidate = nil }
+            } message: {
+                Text(
+                    "This deletes \(discardCandidate?.id ?? "") and its saved tracking data from your iCloud library. The deletion will sync to your other devices."
+                )
+            }
+        }
+        .frame(width: 300)
+        .frame(maxHeight: 360)
+    }
+
+    private func tmdbURL(for failure: LibraryRestorationFailure) -> URL {
+        let path: String
+        switch failure.snapshot.entryType {
+        case .movie:
+            path = "movie/\(failure.snapshot.tmdbID)"
+        case .series:
+            path = "tv/\(failure.snapshot.tmdbID)"
+        case .season(let seasonNumber, let parentSeriesID):
+            path = "tv/\(parentSeriesID)/season/\(seasonNumber)"
+        }
+        return URL(string: "https://www.themoviedb.org/\(path)")!
+    }
+
+    private func entryTypeTitle(for failure: LibraryRestorationFailure) -> LocalizedStringResource {
+        switch failure.snapshot.entryType {
+        case .movie:
+            "Movie"
+        case .series:
+            "TV Series"
+        case .season(let seasonNumber, parentSeriesID: _):
+            "Season \(seasonNumber)"
+        }
     }
 }
 

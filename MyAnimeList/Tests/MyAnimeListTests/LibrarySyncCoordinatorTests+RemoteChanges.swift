@@ -469,7 +469,14 @@ extension LibrarySyncCoordinatorTests {
         #expect(mergedSnapshot.trackingUpdatedAt == referenceDate(year: 2026, month: 5, day: 9))
     }
 
-    @Test @MainActor func failedHydrationLeavesTokenUncommitted() async throws {
+    enum HydrationFailureKind: CaseIterable {
+        case network
+        case permission
+        case cancellation
+    }
+
+    @Test(arguments: HydrationFailureKind.allCases)
+    @MainActor func bootstrapHydrationRetainsFailureContextAndCancellation(kind: HydrationFailureKind) async throws {
         let store = makeSyncReadyStore()
         let client = CloudLibrarySyncClient()
         let namespace = makeNamespace()
@@ -490,6 +497,10 @@ extension LibrarySyncCoordinatorTests {
         ])
         let tokenStore = CloudLibrarySyncChangeTokenStore(
             userDefaults: UserDefaults(suiteName: "LibrarySyncCoordinatorTests.\(UUID().uuidString)")!)
+        let underlyingError: NSError =
+            kind == .permission
+            ? CKError(.permissionFailure) as NSError
+            : URLError(.notConnectedToInternet) as NSError
         let coordinator = LibrarySyncCoordinator(
             store: store,
             client: client,
@@ -497,13 +508,38 @@ extension LibrarySyncCoordinatorTests {
             changeTokenStore: tokenStore,
             namespaceProvider: { namespace },
             hydrateMissingEntry: { _, _ in
-                throw HydrationFailure.unavailable
+                if kind == .cancellation { throw CancellationError() }
+                throw underlyingError
             }
         )
 
-        await coordinator.sync(trigger: .manualRetry)
-
+        let result = await coordinator.bootstrapFirstEnablement(preference: nil)
         #expect(tokenStore.token(for: CloudLibrarySyncClient.recordZoneID, namespace: namespace) == nil)
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
+        #expect(store.library.isEmpty)
+        #expect(store.repository.existingEntry(identity: identity) == nil)
+        #expect(database.savedRecords.isEmpty)
+        if kind == .cancellation {
+            #expect(result == .skipped(.disabled))
+            #expect(store.libraryCloudSyncStatus.bootstrapState == .notStarted)
+            #expect(store.libraryCloudSyncStatus.lastFailureReason == nil)
+            #expect(store.libraryCloudSyncStatus.lastFailurePhase == nil)
+            return
+        }
+        #expect(result == (kind == .permission ? .permanentFailure : .retryableFailure))
+        let failure = store.libraryCloudSyncStatus
+        #expect(failure.bootstrapState == .failed)
+        #expect(failure.lastFailurePhase == .hydrationApply)
+        #expect(!failure.isSyncInProgress)
+        let reason = try #require(failure.lastFailureReason)
+        #expect(reason.contains(identity.rawID))
+        #expect(reason.contains(underlyingError.localizedDescription))
+        #expect(reason.contains("\(underlyingError.domain):\(underlyingError.code)"))
+        #expect(failure.failureReasonDisplay?.contains("hydrationApply") == true)
+
+        let skipped = await coordinator.syncResult(trigger: .foreground)
+        #expect(skipped == .skipped(.bootstrapIncomplete))
+        #expect(store.libraryCloudSyncStatus == failure)
+        #expect(store.preferences.load().cloudSyncStatus == failure)
     }
 }

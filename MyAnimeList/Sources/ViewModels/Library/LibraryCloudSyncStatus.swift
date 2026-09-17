@@ -109,6 +109,32 @@ enum LibraryCloudSyncPhase: Codable, Equatable, RawRepresentable {
     }
 }
 
+/// Exact pipeline operation retained for failure diagnostics, separate from UI progress.
+enum LibraryCloudSyncOperation: String, Codable, Equatable {
+    case prepareZoneSubscription
+    case namespaceResolution
+    case remoteFetch
+    case conflictDetection
+    case dirtyQueueSeeding
+    case hydrationApply
+    case tokenCommit
+    case libraryRefresh
+    case dirtyQueueReconciliation
+    case export
+
+    var progressPhase: LibraryCloudSyncPhase {
+        switch self {
+        case .prepareZoneSubscription, .namespaceResolution:
+            .preparing
+        case .remoteFetch, .conflictDetection, .dirtyQueueSeeding, .hydrationApply,
+            .tokenCommit, .libraryRefresh, .dirtyQueueReconciliation:
+            .syncing
+        case .export:
+            .exporting
+        }
+    }
+}
+
 enum LibraryCloudSyncResultClass: String, Codable, Equatable {
     case success
     case skipped
@@ -177,6 +203,8 @@ struct LibraryCloudSyncStatus: Equatable {
     var lastAttemptDate: Date?
     var lastSuccessfulSyncDate: Date?
     var lastReconciledCloudSyncedSettingsUpdatedAt: Date?
+    var restoration: LibraryRestorationState?
+    var lastFailurePhase: LibraryCloudSyncOperation?
     var lastFailureReason: String?
     var degradedReason: String?
     var lastCompletedScope: LibraryCloudSyncScope?
@@ -193,6 +221,8 @@ struct LibraryCloudSyncStatus: Equatable {
         lastAttemptDate: nil,
         lastSuccessfulSyncDate: nil,
         lastReconciledCloudSyncedSettingsUpdatedAt: nil,
+        restoration: nil,
+        lastFailurePhase: nil,
         lastFailureReason: nil,
         degradedReason: nil,
         lastCompletedScope: nil
