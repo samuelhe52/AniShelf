@@ -175,6 +175,9 @@
         }
       }
     },
+    "%lld entries. Two entries deliberately fail every metadata restoration attempt. Use Retry three times to expose their discard actions." : {
+
+    },
     "%lld episodes" : {
       "localizations" : {
         "ja" : {
@@ -337,22 +340,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld/5"
-          }
-        }
-      }
-    },
-    "Review entries" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "項目を確認"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "查看条目"
           }
         }
       }
@@ -2571,6 +2558,22 @@
         }
       }
     },
+    "Could not restore metadata for %@: %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ のメタデータを復元できませんでした: %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法恢复 %1$@ 的元数据：%2$@"
+          }
+        }
+      }
+    },
     "Couldn’t Find a Match" : {
       "localizations" : {
         "ja" : {
@@ -2599,22 +2602,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法载入播出时间"
-          }
-        }
-      }
-    },
-    "Could not restore metadata for %@: %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ のメタデータを復元できませんでした: %2$@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法恢复 %1$@ 的元数据：%2$@"
           }
         }
       }
@@ -2961,22 +2948,6 @@
         }
       }
     },
-    "Discard Entry from iCloud?" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud から項目を削除しますか？"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "从 iCloud 删除此条目？"
-          }
-        }
-      }
-    },
     "Discard all changes?" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3006,6 +2977,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "放弃更改"
+          }
+        }
+      }
+    },
+    "Discard Entry from iCloud?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud から項目を削除しますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从 iCloud 删除此条目？"
           }
         }
       }
@@ -4341,6 +4328,22 @@
         }
       }
     },
+    "iCloud has not confirmed the deletion. Retry to finish discarding this entry." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud で削除が確認されていません。再試行して、この項目の削除を完了してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud 尚未确认删除。请重试以完成此条目的删除。"
+          }
+        }
+      }
+    },
     "iCloud Library Sync" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4373,6 +4376,9 @@
           }
         }
       }
+    },
+    "iCloud Sync Preview" : {
+
     },
     "If you use a VPN or another network proxy, turning off Use TMDb Proxy in Settings may help." : {
       "localizations" : {
@@ -4486,6 +4492,12 @@
         }
       }
     },
+    "Inject restoration failures" : {
+
+    },
+    "Injected failures are off. The next Retry will restore the two pending entries and complete bootstrap." : {
+
+    },
     "Interface" : {
       "localizations" : {
         "ja" : {
@@ -4498,22 +4510,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "界面"
-          }
-        }
-      }
-    },
-    "iCloud has not confirmed the deletion. Retry to finish discarding this entry." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud で削除が確認されていません。再試行して、この項目の削除を完了してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud 尚未确认删除。请重试以完成此条目的删除。"
           }
         }
       }
@@ -7492,6 +7488,22 @@
         }
       }
     },
+    "Review entries" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "項目を確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看条目"
+          }
+        }
+      }
+    },
     "Review image and metadata cache usage." : {
       "localizations" : {
         "ja" : {
@@ -8585,6 +8597,9 @@
         }
       }
     },
+    "Synthetic iCloud Library" : {
+
+    },
     "Tab-Separated Values (.tsv)" : {
       "localizations" : {
         "ja" : {
@@ -8809,22 +8824,6 @@
         }
       }
     },
-    "This Is the Anime" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このアニメです"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "就是这部动画"
-          }
-        }
-      }
-    },
     "This deletes %@ and its saved tracking data from your iCloud library. The deletion will sync to your other devices." : {
       "localizations" : {
         "ja" : {
@@ -8837,6 +8836,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "这会从 iCloud 片库中删除 %@ 及其保存的观看记录。删除操作将同步到你的其他设备。"
+          }
+        }
+      }
+    },
+    "This Is the Anime" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このアニメです"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "就是这部动画"
           }
         }
       }
