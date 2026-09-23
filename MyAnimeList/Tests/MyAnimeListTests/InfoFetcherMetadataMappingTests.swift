@@ -31,9 +31,10 @@ struct InfoFetcherMetadataMappingTests {
                     "air_date": "2026-08-06"
                 },
                 "seasons": [
-                    { "season_number": 1, "air_date": "2026-01-01" },
-                    { "season_number": 2, "air_date": "2026-08-01" }
+                    { "season_number": 1, "air_date": "2026-01-01", "episode_count": 12 },
+                    { "season_number": 2, "air_date": "2026-08-01", "episode_count": 24 }
                 ],
+                "number_of_episodes": 36,
                 "external_ids": {
                     "imdb_id": "tt22248376",
                     "tvdb_id": 424536
@@ -69,6 +70,8 @@ struct InfoFetcherMetadataMappingTests {
                 == TMDbCalendarDate(year: 2026, month: 8, day: 6)
         )
         #expect(details.schedule.seasonAirDates.keys.sorted() == [1, 2])
+        #expect(details.episodeCount == 36)
+        #expect(details.seasonEpisodeCounts == [1: 12, 2: 24])
         #expect(requests.count == 1)
         #expect(requests.first?.url.queryValue(named: "api_key") == "test-key")
         #expect(

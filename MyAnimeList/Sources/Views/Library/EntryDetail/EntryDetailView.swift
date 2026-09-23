@@ -210,6 +210,7 @@ struct EntryDetailView: View {
                 for: session.entry,
                 language: currentLanguage
             )
+            await session.refreshEpisodeCountsIfEligible(language: currentLanguage)
         }
         .task(id: broadcastActivationTaskID) {
             session.broadcast.update(broadcastActivationTaskID.activation)

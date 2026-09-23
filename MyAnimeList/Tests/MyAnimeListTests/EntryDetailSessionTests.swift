@@ -6,11 +6,146 @@
 //
 
 import DataProvider
+import Foundation
 import Testing
 
 @testable import MyAnimeList
 
 struct EntryDetailSessionTests {
+    @Test @MainActor func airingSeriesRefreshesPersistedSeasonCountWithoutRepeatingTheRequest()
+        async throws
+    {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let entry = AnimeEntry(
+            name: "Series",
+            type: .series,
+            tmdbID: 42,
+            detail: AnimeEntryDetail(
+                language: Language.english.rawValue,
+                title: "Series",
+                status: "Planned",
+                episodeCount: 1,
+                seasons: [AnimeEntrySeasonSummary(id: 43, seasonNumber: 3, title: "Season 3", episodeCount: 1)]
+            )
+        )
+        try repository.newEntry(entry)
+        let requests = BroadcastDetailRequestCounter()
+        let checker = TMDbBroadcastEligibilityChecker { _ in
+            await requests.record()
+            return TMDbSeriesBroadcastDetails(
+                schedule: .init(
+                    firstAirDate: TMDbCalendarDate(year: 2020, month: 1, day: 1),
+                    nextEpisode: .init(
+                        seasonNumber: 3,
+                        airDate: TMDbCalendarDate(year: 2999, month: 1, day: 1)
+                    ),
+                    seasonAirDates: [:]
+                ),
+                externalIDs: .init(tvdbID: nil, imdbID: nil),
+                episodeCount: 24,
+                seasonEpisodeCounts: [3: 24]
+            )
+        }
+        let resolver = TVMazeResolver(
+            loadMappedShowID: { _ in nil },
+            saveMappedShowID: { _, _ in .rejected },
+            lookupTVDBShowID: { _ in nil },
+            lookupIMDbShowID: { _ in nil },
+            searchShows: { _ in [] },
+            fetchShow: { _ in nil }
+        )
+        let session = EntryDetailSession(
+            entry: entry,
+            repository: repository,
+            broadcastEligibilityChecker: checker,
+            broadcastResolver: resolver
+        )
+
+        session.broadcast.update(
+            .init(isEnabled: true, entryType: entry.type, seriesStatus: entry.detail?.status)
+        )
+        await session.refreshEpisodeCountsIfEligible(language: .english)
+        await session.refreshEpisodeCountsIfEligible(language: .english)
+
+        #expect(entry.episodeProgressSummary(forSeason: 3).episodeCount == 24)
+        #expect(entry.detail?.episodeCount == 24)
+        #expect(session.model.statCards.first(where: { $0.kind == .episodes })?.value == "24")
+        #expect(await requests.count == 1)
+    }
+
+    @Test @MainActor func airingSeasonRefreshesItsProgressLimit() async throws {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let entry = AnimeEntry(
+            name: "Season 3",
+            type: .season(seasonNumber: 3, parentSeriesID: 42),
+            tmdbID: 43,
+            detail: AnimeEntryDetail(
+                language: Language.english.rawValue,
+                title: "Season 3",
+                status: "Planned",
+                episodeCount: 1
+            )
+        )
+        try repository.newEntry(entry)
+        let checker = TMDbBroadcastEligibilityChecker { _ in
+            TMDbSeriesBroadcastDetails(
+                schedule: .init(
+                    firstAirDate: TMDbCalendarDate(year: 2020, month: 1, day: 1),
+                    nextEpisode: nil,
+                    seasonAirDates: [3: TMDbCalendarDate(year: 2999, month: 1, day: 1)]
+                ),
+                externalIDs: .init(tvdbID: nil, imdbID: nil),
+                seasonEpisodeCounts: [3: 24]
+            )
+        }
+        let session = EntryDetailSession(
+            entry: entry,
+            repository: repository,
+            broadcastEligibilityChecker: checker
+        )
+
+        await session.refreshEpisodeCountsIfEligible(language: .english)
+
+        #expect(entry.episodeProgressSummary(forSeason: 3).episodeCount == 24)
+        #expect(session.model.statCards.first(where: { $0.kind == .episodes })?.value == "24")
+    }
+
+    @Test @MainActor func ineligibleStatusSkipsTheRequestAndNetworkFailurePreservesCount()
+        async throws
+    {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let entry = AnimeEntry(
+            name: "Season",
+            type: .season(seasonNumber: 3, parentSeriesID: 42),
+            tmdbID: 43,
+            detail: AnimeEntryDetail(
+                language: Language.english.rawValue,
+                title: "Season",
+                status: "Ended",
+                episodeCount: 1
+            )
+        )
+        try repository.newEntry(entry)
+        let requests = BroadcastDetailRequestCounter()
+        let checker = TMDbBroadcastEligibilityChecker { _ in
+            await requests.record()
+            throw URLError(.notConnectedToInternet)
+        }
+        let session = EntryDetailSession(
+            entry: entry,
+            repository: repository,
+            broadcastEligibilityChecker: checker
+        )
+
+        await session.refreshEpisodeCountsIfEligible(language: .english)
+        #expect(await requests.count == 0)
+
+        entry.detail?.status = "Returning Series"
+        await session.refreshEpisodeCountsIfEligible(language: .english)
+        #expect(await requests.count == 1)
+        #expect(entry.episodeProgressSummary(forSeason: 3).episodeCount == 1)
+    }
+
     @Test @MainActor func detailHostMigratesAfterNestedSheetDismissesWithoutRestoringIt() throws {
         let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
         let entry = AnimeEntry.template(id: 42)
@@ -272,4 +407,10 @@ struct EntryDetailSessionTests {
         #expect(presentation.episodeProgressCompletionPrompt == .seriesWatched)
         #expect(presentation.dateUpdateSuggestion == .setFinishDateToNow)
     }
+}
+
+private actor BroadcastDetailRequestCounter {
+    private(set) var count = 0
+
+    func record() { count += 1 }
 }

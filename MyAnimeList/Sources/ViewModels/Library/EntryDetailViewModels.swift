@@ -282,6 +282,11 @@ final class EntryDetailViewModel {
         }
     }
 
+    func refreshDisplayedDetail(for entry: AnimeEntry, language: Language) {
+        guard let detail = entry.detail, detail.language == language.rawValue else { return }
+        apply(detail: detail, entry: entry, language: language)
+    }
+
     func hasSiblingSeasonEntry(for entry: AnimeEntry) -> Bool {
         guard case .season(_, let parentSeriesID) = entry.type else { return false }
 

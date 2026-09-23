@@ -110,6 +110,31 @@ struct EntryDetailBroadcastModelTests {
         )
     }
 
+    @Test func expiredBroadcastDetailsAreFetchedAgain() async throws {
+        let source = ChangingBroadcastDetails()
+        let checker = TMDbBroadcastEligibilityChecker(
+            fetchSeriesDetails: { _ in await source.fetch() },
+            cacheLifetime: 0
+        )
+
+        let first = try await checker.checkWithDetails(
+            entryType: .series,
+            tmdbSeriesID: 42,
+            now: date(day: 12),
+            calendar: broadcastTestCalendar
+        )
+        let second = try await checker.checkWithDetails(
+            entryType: .series,
+            tmdbSeriesID: 42,
+            now: date(day: 12),
+            calendar: broadcastTestCalendar
+        )
+
+        #expect(first.details?.episodeCount == 1)
+        #expect(second.details?.episodeCount == 24)
+        #expect(await source.requestCount == 2)
+    }
+
     @Test func liveSeasonEligibilityRequiresItsOwnScheduledEpisodeOrFutureAirDate() async throws {
         let matchingEpisodeChecker = makeEligibilityChecker(
             schedule: .init(
@@ -602,6 +627,26 @@ struct EntryDetailBroadcastModelTests {
         )
 
         #expect(store.presentedSession?.broadcast === originalBroadcast)
+    }
+}
+
+fileprivate actor ChangingBroadcastDetails {
+    private(set) var requestCount = 0
+
+    func fetch() -> TMDbSeriesBroadcastDetails {
+        requestCount += 1
+        return TMDbSeriesBroadcastDetails(
+            schedule: .init(
+                firstAirDate: TMDbCalendarDate(year: 2020, month: 1, day: 1),
+                nextEpisode: .init(
+                    seasonNumber: 3,
+                    airDate: TMDbCalendarDate(year: 2999, month: 1, day: 1)
+                ),
+                seasonAirDates: [:]
+            ),
+            externalIDs: .init(tvdbID: nil, imdbID: nil),
+            episodeCount: requestCount == 1 ? 1 : 24
+        )
     }
 }
 

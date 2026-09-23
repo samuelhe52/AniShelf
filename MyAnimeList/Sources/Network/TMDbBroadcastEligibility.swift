@@ -86,6 +86,20 @@ struct TMDbSeriesBroadcastSchedule: Equatable, Sendable {
 struct TMDbSeriesBroadcastDetails: Equatable, Sendable {
     let schedule: TMDbSeriesBroadcastSchedule
     let externalIDs: TMDbSeriesExternalIDs
+    let episodeCount: Int?
+    let seasonEpisodeCounts: [Int: Int]
+
+    init(
+        schedule: TMDbSeriesBroadcastSchedule,
+        externalIDs: TMDbSeriesExternalIDs,
+        episodeCount: Int? = nil,
+        seasonEpisodeCounts: [Int: Int] = [:]
+    ) {
+        self.schedule = schedule
+        self.externalIDs = externalIDs
+        self.episodeCount = episodeCount
+        self.seasonEpisodeCounts = seasonEpisodeCounts
+    }
 }
 
 struct TMDbAiringEvidence: Equatable, Sendable {
@@ -116,8 +130,16 @@ struct TMDbBroadcastEligibilityChecker: Sendable {
     static let recentEpisodeGracePeriodDays = 18
 
     private let fetchSeriesDetails: @Sendable (Int) async throws -> TMDbSeriesBroadcastDetails
+    private let cache: TMDbBroadcastDetailsCache
+    private let cacheLifetime: TimeInterval
 
-    init(infoFetcher: InfoFetcher = InfoFetcher()) {
+    init() {
+        self.init { tmdbSeriesID in
+            try await InfoFetcher().tvSeriesBroadcastDetails(tmdbID: tmdbSeriesID)
+        }
+    }
+
+    init(infoFetcher: InfoFetcher) {
         self.init { tmdbSeriesID in
             try await infoFetcher.tvSeriesBroadcastDetails(tmdbID: tmdbSeriesID)
         }
@@ -126,9 +148,16 @@ struct TMDbBroadcastEligibilityChecker: Sendable {
     init(
         fetchSeriesDetails:
             @escaping @Sendable (Int) async throws
-            -> TMDbSeriesBroadcastDetails
+            -> TMDbSeriesBroadcastDetails,
+        cacheLifetime: TimeInterval = 60
     ) {
         self.fetchSeriesDetails = fetchSeriesDetails
+        self.cacheLifetime = cacheLifetime
+        self.cache = TMDbBroadcastDetailsCache(lifetime: cacheLifetime)
+    }
+
+    func forDetailSession() -> Self {
+        Self(fetchSeriesDetails: fetchSeriesDetails, cacheLifetime: cacheLifetime)
     }
 
     func check(
@@ -137,9 +166,23 @@ struct TMDbBroadcastEligibilityChecker: Sendable {
         now: Date = .now,
         calendar: Calendar = .autoupdatingCurrent
     ) async throws -> TMDbBroadcastEligibilityResult {
-        guard entryType != .movie else { return .ineligible }
+        try await checkWithDetails(
+            entryType: entryType,
+            tmdbSeriesID: tmdbSeriesID,
+            now: now,
+            calendar: calendar
+        ).result
+    }
 
-        let details = try await fetchSeriesDetails(tmdbSeriesID)
+    func checkWithDetails(
+        entryType: AnimeType,
+        tmdbSeriesID: Int,
+        now: Date = .now,
+        calendar: Calendar = .autoupdatingCurrent
+    ) async throws -> (result: TMDbBroadcastEligibilityResult, details: TMDbSeriesBroadcastDetails?) {
+        guard entryType != .movie else { return (.ineligible, nil) }
+
+        let details = try await cache.details(for: tmdbSeriesID, fetch: fetchSeriesDetails)
         let schedule = details.schedule
         let todayComponents = calendar.dateComponents([.year, .month, .day], from: now)
         guard
@@ -147,7 +190,7 @@ struct TMDbBroadcastEligibilityChecker: Sendable {
             let month = todayComponents.month,
             let day = todayComponents.day
         else {
-            return .ineligible
+            return (.ineligible, details)
         }
         let today = TMDbCalendarDate(year: year, month: month, day: day)
         let isTodayOrLater: (TMDbCalendarDate?) -> Bool = { date in
@@ -223,11 +266,58 @@ struct TMDbBroadcastEligibilityChecker: Sendable {
             airingEvidence = nil
         }
 
-        guard let airingEvidence else { return .ineligible }
-        return .eligible(
-            externalIDs: details.externalIDs,
-            airingEvidence: airingEvidence
+        guard let airingEvidence else { return (.ineligible, details) }
+        return (
+            .eligible(externalIDs: details.externalIDs, airingEvidence: airingEvidence),
+            details
         )
+    }
+}
+
+private actor TMDbBroadcastDetailsCache {
+    private struct InFlight {
+        let id: UUID
+        let task: Task<TMDbSeriesBroadcastDetails, Error>
+    }
+
+    private let lifetime: TimeInterval
+    private var cached: [Int: (details: TMDbSeriesBroadcastDetails, fetchedAt: Date)] = [:]
+    private var inFlight: [Int: InFlight] = [:]
+
+    init(lifetime: TimeInterval) {
+        self.lifetime = lifetime
+    }
+
+    func details(
+        for tmdbSeriesID: Int,
+        fetch: @escaping @Sendable (Int) async throws -> TMDbSeriesBroadcastDetails
+    ) async throws -> TMDbSeriesBroadcastDetails {
+        if let cached = cached[tmdbSeriesID],
+            Date().timeIntervalSince(cached.fetchedAt) < lifetime
+        {
+            return cached.details
+        }
+
+        let request: InFlight
+        if let existing = inFlight[tmdbSeriesID] {
+            request = existing
+        } else {
+            request = InFlight(id: UUID(), task: Task { try await fetch(tmdbSeriesID) })
+            inFlight[tmdbSeriesID] = request
+        }
+        do {
+            let details = try await request.task.value
+            if inFlight[tmdbSeriesID]?.id == request.id {
+                inFlight[tmdbSeriesID] = nil
+                cached[tmdbSeriesID] = (details, Date())
+            }
+            return details
+        } catch {
+            if inFlight[tmdbSeriesID]?.id == request.id {
+                inFlight[tmdbSeriesID] = nil
+            }
+            throw error
+        }
     }
 }
 
@@ -247,6 +337,7 @@ fileprivate struct TMDbSeriesBroadcastResponse: Decodable {
     let lastEpisodeToAir: TMDbNextEpisodeResponse?
     let seasons: [TMDbSeasonScheduleResponse]
     let externalIDs: TMDbSeriesExternalIDsResponse?
+    let episodeCount: Int?
 
     private enum CodingKeys: String, CodingKey {
         case firstAirDate = "first_air_date"
@@ -254,6 +345,7 @@ fileprivate struct TMDbSeriesBroadcastResponse: Decodable {
         case lastEpisodeToAir = "last_episode_to_air"
         case seasons
         case externalIDs = "external_ids"
+        case episodeCount = "number_of_episodes"
     }
 
     var value: TMDbSeriesBroadcastDetails {
@@ -285,6 +377,12 @@ fileprivate struct TMDbSeriesBroadcastResponse: Decodable {
                 imdbID: externalIDs?.imdbID?
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                     .nilIfEmpty
+            ),
+            episodeCount: episodeCount,
+            seasonEpisodeCounts: Dictionary(
+                uniqueKeysWithValues: seasons.compactMap { season in
+                    season.episodeCount.map { (season.seasonNumber, $0) }
+                }
             )
         )
     }
@@ -304,10 +402,12 @@ fileprivate struct TMDbNextEpisodeResponse: Decodable {
 fileprivate struct TMDbSeasonScheduleResponse: Decodable {
     let seasonNumber: Int
     let airDate: String?
+    let episodeCount: Int?
 
     private enum CodingKeys: String, CodingKey {
         case seasonNumber = "season_number"
         case airDate = "air_date"
+        case episodeCount = "episode_count"
     }
 }
 
