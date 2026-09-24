@@ -36,6 +36,13 @@ struct EntryDetailView: View {
     @State private var conversionTaskID: UUID?
 
     private var currentLanguage: Language { followsSystemLanguage ? .current : preferredLanguage }
+    private var hasEpisodesSection: Bool {
+        switch session.entry.type {
+        case .series: !session.model.seasonCards.isEmpty
+        case .season: !session.model.episodeCards.isEmpty
+        case .movie: false
+        }
+    }
     private let scrollCoordinateSpaceName = "EntryDetailScroll"
     private let heroHeight: CGFloat = 420
 
@@ -317,6 +324,7 @@ struct EntryDetailView: View {
                 productionCompanies: session.model.productionCompanies,
                 entryType: session.entry.type,
                 showProductionCompanyInsteadOfRuntime: showProductionCompanyInsteadOfRuntime,
+                canJumpToEpisodes: hasEpisodesSection,
                 onJumpToEpisodes: {
                     withAnimation(.spring(response: 0.6, dampingFraction: 0.86)) {
                         proxy.scrollTo(EntryDetailScrollTarget.episodesSection, anchor: .top)
@@ -369,9 +377,10 @@ struct EntryDetailView: View {
                             seriesTMDbID: session.entry.tmdbID,
                             language: currentLanguage,
                             watchStatus: session.entry.watchStatus,
-                            episodeProgressSummary: session.entry.episodeProgressSummary(
-                                forSeason: season.seasonNumber
-                            ),
+                            episodeProgressSummary: episodeProgressTrackingEnabled
+                                ? session.entry.episodeProgressSummary(
+                                    forSeason: season.seasonNumber
+                                ) : nil,
                             collapseByDefault: session.model.collapseSeriesSeasonsByDefault,
                             sectionTitle: season.id == session.model.seasonCards.first?.id
                                 ? EntryDetailL10n.episodes
@@ -398,14 +407,15 @@ struct EntryDetailView: View {
                                     seasonNumber: session.entry.type.seasonNumber ?? 0,
                                     language: currentLanguage
                                 ),
-                                isWatched: EntryDetailEpisodePresentation.isEpisodeWatched(
-                                    episode.episodeNumber,
-                                    inSeason: session.entry.type.seasonNumber ?? 0,
-                                    watchStatus: session.entry.watchStatus,
-                                    summary: session.entry.episodeProgressSummary(
-                                        forSeason: session.entry.type.seasonNumber ?? 0
+                                isWatched: episodeProgressTrackingEnabled
+                                    && EntryDetailEpisodePresentation.isEpisodeWatched(
+                                        episode.episodeNumber,
+                                        inSeason: session.entry.type.seasonNumber ?? 0,
+                                        watchStatus: session.entry.watchStatus,
+                                        summary: session.entry.episodeProgressSummary(
+                                            forSeason: session.entry.type.seasonNumber ?? 0
+                                        )
                                     )
-                                )
                             )
                         }
                     }
