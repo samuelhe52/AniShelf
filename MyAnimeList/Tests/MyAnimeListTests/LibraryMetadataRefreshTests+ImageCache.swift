@@ -183,4 +183,27 @@ extension LibraryMetadataRefreshTests {
         )
     }
 
+    @Test @MainActor func testLibraryImageCacheCollectsPreviouslySelectedPosterURLs() throws {
+        let entry = AnimeEntry(
+            name: "Custom Poster Cache Test",
+            type: .movie,
+            posterPath: "/default.jpg",
+            customPosterPath: "/custom.jpg",
+            tmdbID: 5,
+            usingCustomPoster: true
+        )
+
+        #expect(
+            LibraryImageCacheService.relatedImageURLs(for: entry)
+                == Set([
+                    URL(string: "https://image.tmdb.org/t/p/original/default.jpg")!,
+                    URL(string: "https://image.tmdb.org/t/p/w342/default.jpg")!,
+                    URL(string: "https://image.tmdb.org/t/p/w500/default.jpg")!,
+                    URL(string: "https://image.tmdb.org/t/p/original/custom.jpg")!,
+                    URL(string: "https://image.tmdb.org/t/p/w342/custom.jpg")!,
+                    URL(string: "https://image.tmdb.org/t/p/w500/custom.jpg")!
+                ])
+        )
+    }
+
 }

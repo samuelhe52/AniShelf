@@ -238,15 +238,27 @@ enum LibraryImageCacheService {
     }
 
     static func relatedImageURLs(for entry: AnimeEntry) -> Set<URL> {
-        // Include the original poster URL plus every sized rendition the list/grid/gallery views
-        // request, so deletion evicts the same keys the prefetch warmed.
-        var urls = Set([entry.posterURL, entry.backdropURL].compactMap(\.self))
-        urls.formUnion(
-            TMDbPosterDisplayType.allCases.compactMap { entry.posterURL(for: $0) }
-        )
+        // Either stored poster may have been displayed before the user changed their selection.
+        // Include each original URL and every sized list/grid/gallery rendition.
+        var urls = Set([entry.backdropURL].compactMap(\.self))
+        for posterPath in Set([entry.posterPath, entry.customPosterPath].compactMap(\.self)) {
+            if let originalURL = TMDbImageURLResolver.current.url(for: posterPath, role: .poster) {
+                urls.insert(originalURL)
+            }
+            urls.formUnion(
+                TMDbPosterDisplayType.allCases.compactMap { displayType in
+                    TMDbImageURLResolver.current.url(
+                        for: posterPath,
+                        role: .poster,
+                        idealWidth: displayType.idealWidth
+                    )
+                }
+            )
+        }
 
         if let detail = entry.detail {
             urls.formUnion([detail.heroImageURL, detail.logoImageURL].compactMap(\.self))
+            // Production company logos can be shared across entries, so retain their cached images.
             urls.formUnion(detail.characters.compactMap(\.profileURL))
             urls.formUnion(detail.staff.compactMap(\.profileURL))
             urls.formUnion(detail.seasons.compactMap(\.posterURL))
