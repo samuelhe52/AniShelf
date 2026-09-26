@@ -1,8 +1,20 @@
-# AniShelf 📺
+<div align="center">
+  <img src="docs/images/anishelf-icon.webp" alt="AniShelf app icon" width="160" />
 
-A native iOS app for tracking and managing your anime library.
+  <h1>AniShelf</h1>
 
-[中文](README.zh-CN.md) · [使用教程](docs/anishelf_overview.md)
+  <p>A native iOS app for tracking and managing your anime library.</p>
+
+  <p>
+    <img src="https://img.shields.io/badge/platform-iOS%2026%2B-34C759" alt="iOS 26 or later" />
+    <img src="https://img.shields.io/badge/license-Apache%202.0-blue" alt="Apache License 2.0" />
+    <a href="https://apps.apple.com/us/app/anishelf/id6759359144"><img src="https://img.shields.io/badge/App%20Store-Download%20now-007AFF?logo=apple&logoColor=white" alt="Download AniShelf on the App Store" /></a>
+  </p>
+
+  <p><a href="README.zh-CN.md">中文</a> · <a href="docs/anishelf_overview.md">使用教程</a> · <a href="https://testflight.apple.com/join/ns3sR38X">TestFlight Beta</a></p>
+</div>
+
+---
 
 ## 📸 Screenshots
 
