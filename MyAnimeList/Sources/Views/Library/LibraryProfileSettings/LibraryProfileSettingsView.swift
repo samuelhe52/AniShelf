@@ -15,6 +15,7 @@ struct LibraryProfileSettingsView: View {
     @Environment(LibraryStore.self) private var store
     @Environment(WhatsNewController.self) private var whatsNew
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.windowSceneIdentifier) private var windowSceneIdentifier
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
@@ -235,7 +236,7 @@ struct LibraryProfileSettingsView: View {
             onEnableLibraryCloudSync: { await actions.enableLibraryCloudSync() },
             onDisableLibraryCloudSync: { actions.disableLibraryCloudSync() },
             onRetryLibraryCloudSync: { await actions.retryLibraryCloudSync() },
-            onDiscardFailedRestorationEntry: { await actions.discardFailedRestorationEntry($0) },
+            onDiscardFailedEntry: { await actions.discardFailedCloudSyncEntry($0) },
             onRebuildLibraryCloudSync: { await actions.rebuildLibraryCloudSync() },
             onResolveLibraryCloudSyncConflicts: { preference in
                 await actions.resolveLibraryCloudSyncConflicts(preference: preference)
@@ -425,7 +426,7 @@ struct LibraryProfileSettingsView: View {
     }
 
     private func presentWhatsNewSheet() {
-        whatsNew.presentCurrentEntry()
+        whatsNew.presentCurrentEntry(inSceneIdentifier: windowSceneIdentifier)
     }
 
     private func createBackupItems() -> [Any]? {
@@ -440,7 +441,7 @@ struct LibraryProfileSettingsView: View {
     private func exportLibrary(as format: LibraryExportFormat) {
         do {
             let exportURL = try actions.createLibraryExport(format: format)
-            ShareSheetPresenter.present(items: [exportURL])
+            ShareSheetPresenter.present(items: [exportURL], sceneIdentifier: windowSceneIdentifier)
         } catch {
             presentExportError(error)
         }

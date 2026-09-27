@@ -894,6 +894,25 @@ struct AiringReminderManagerTests {
         #expect(coordinator.snapshot.subscriptions.isEmpty)
     }
 
+    @Test @MainActor func notificationRouteIsClaimedOnlyByTargetSceneUnlessItDisconnected() {
+        let defaults = makeDefaults()
+        defer { removeDefaults(defaults) }
+        let center = AiringReminderCenterProbe(authorizationStatus: .authorized)
+        let coordinator = AiringReminderCoordinator.makeForTesting(
+            manager: makeManager(defaults: defaults, center: center) { _ in nil }
+        )
+        let connected: (String) -> Bool = { $0 == "target" }
+
+        coordinator.receiveNotificationRoute(entryIdentityRawID: "entry", targetSceneIdentifier: "target")
+        #expect(coordinator.claimPendingRoute(forSceneIdentifier: nil, isSceneConnected: connected) == nil)
+        #expect(coordinator.claimPendingRoute(forSceneIdentifier: "other", isSceneConnected: connected) == nil)
+        #expect(coordinator.claimPendingRoute(forSceneIdentifier: "target", isSceneConnected: connected) == "entry")
+        #expect(coordinator.claimPendingRoute(forSceneIdentifier: "target", isSceneConnected: connected) == nil)
+
+        coordinator.receiveNotificationRoute(entryIdentityRawID: "entry", targetSceneIdentifier: "closed")
+        #expect(coordinator.claimPendingRoute(forSceneIdentifier: "other", isSceneConnected: connected) == "entry")
+    }
+
     private func makeManager(
         defaults: UserDefaults,
         center: AiringReminderCenterProbe,

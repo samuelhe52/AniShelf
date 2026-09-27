@@ -9,8 +9,12 @@ import UIKit
 
 @MainActor
 enum ShareSheetPresenter {
-    static func present(items: [Any]) {
-        guard let presenter = activePresentationViewController() else { return }
+    /// Presents in the window of `sceneIdentifier`, normally read from `\.windowSceneIdentifier`.
+    ///
+    /// Every foreground scene has its own key window, so only the invoking scene identifies the
+    /// right window. If that scene disconnected meanwhile, nothing is presented.
+    static func present(items: [Any], sceneIdentifier: String?) {
+        guard let presenter = presentationViewController(sceneIdentifier: sceneIdentifier) else { return }
 
         let activityViewController = UIActivityViewController(
             activityItems: items,
@@ -31,16 +35,18 @@ enum ShareSheetPresenter {
         presenter.present(activityViewController, animated: true)
     }
 
-    private static func activePresentationViewController() -> UIViewController? {
-        let activeScenes = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .filter { $0.activationState == .foregroundActive }
+    private static func presentationViewController(sceneIdentifier: String?) -> UIViewController? {
+        let windowScenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        let scene: UIWindowScene?
+        if let sceneIdentifier {
+            scene = windowScenes.first { $0.session.persistentIdentifier == sceneIdentifier }
+        } else {
+            // Unresolved identifier: only unambiguous with a single foreground window.
+            let activeScenes = windowScenes.filter { $0.activationState == .foregroundActive }
+            scene = activeScenes.count == 1 ? activeScenes.first : nil
+        }
 
-        let window =
-            activeScenes
-            .flatMap(\.windows)
-            .first(where: \.isKeyWindow)
-            ?? activeScenes.flatMap(\.windows).first(where: { !$0.isHidden })
+        let window = scene?.keyWindow ?? scene?.windows.first(where: { !$0.isHidden })
 
         guard let rootViewController = window?.rootViewController else { return nil }
         return topViewController(from: rootViewController)

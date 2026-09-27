@@ -14,6 +14,145 @@ import Testing
 @testable import MyAnimeList
 
 extension LibrarySyncCoordinatorTests {
+    @Test @MainActor func sharedScheduledFailureCountsAsOneRetryAttempt() async throws {
+        let gate = SyncGate()
+        var syncStarted = false
+        var resumeSync: CheckedContinuation<Void, Never>?
+        let scheduler = LibrarySyncScheduler(
+            localDebounceInterval: 0,
+            failureRetryIntervals: [1],
+            hasPendingLocalWork: { true },
+            syncOutcome: { _ in
+                gate.begin(kind: .ordinary, ownerHandlesResult: true)
+                syncStarted = true
+                await withCheckedContinuation { resumeSync = $0 }
+                gate.finish(.retryableFailure)
+                return .init(.retryableFailure)
+            }
+        )
+
+        scheduler.schedulePendingLocalSync()
+        while !syncStarted { await Task.yield() }
+        let foreground = Task { await gate.waitForRunningPass() }
+        while !gate.consumeRerunRequest() { await Task.yield() }
+        resumeSync?.resume()
+        let shared = try #require(await foreground.value)
+        while scheduler.retryState.failureRetryAttempt == 0 { await Task.yield() }
+        #expect(shared.wasCoalesced)
+        #expect(!shared.shouldHandleResult)
+        if shared.shouldHandleResult {
+            scheduler.recordExternalSyncResult(shared.result)
+        }
+        #expect(scheduler.retryState.failureRetryAttempt == 1)
+        scheduler.resetRetryBackoff()
+    }
+
+    @Test @MainActor func replacedScheduledPassKeepsSharedFailureRetrying() async throws {
+        let gate = SyncGate()
+        var resumeOwner: CheckedContinuation<Void, Never>?
+        var replacementWaiting = false
+        let scheduler = LibrarySyncScheduler(
+            localDebounceInterval: 0,
+            failureRetryIntervals: [5],
+            hasPendingLocalWork: { true },
+            syncOutcome: { _ in
+                guard resumeOwner == nil else {
+                    replacementWaiting = true
+                    return await gate.waitForRunningPass() ?? .init(.skipped(.disabled))
+                }
+                gate.begin(kind: .ordinary, ownerHandlesResult: true)
+                await withCheckedContinuation { resumeOwner = $0 }
+                gate.finish(.retryableFailure)
+                return .init(.retryableFailure)
+            }
+        )
+
+        scheduler.schedulePendingLocalSync()
+        while resumeOwner == nil { await Task.yield() }
+        // A local edit replaces the running pass, and the replacement waits on it.
+        scheduler.schedulePendingLocalSync()
+        while !replacementWaiting { await Task.yield() }
+        resumeOwner?.resume()
+        for _ in 0..<100 { await Task.yield() }
+
+        #expect(scheduler.retryState.failureRetryAttempt == 1)
+        #expect(scheduler.retryState.nextRetryAllowedAt != nil)
+        scheduler.resetRetryBackoff()
+    }
+
+    @Test @MainActor func bootstrapFailureAssignsOneQueuedRetryOwner() async throws {
+        let gate = SyncGate()
+        gate.begin(kind: .bootstrap, ownerHandlesResult: false)
+        let first = Task { await gate.waitForRunningPass() }
+        while !gate.consumeRerunRequest() { await Task.yield() }
+        let second = Task { await gate.waitForRunningPass() }
+        while !gate.consumeRerunRequest() { await Task.yield() }
+
+        gate.finish(.retryableFailure)
+        let firstOutcome = try #require(await first.value)
+        let secondOutcome = try #require(await second.value)
+        #expect(firstOutcome.wasCoalesced)
+        #expect(firstOutcome.shouldHandleResult)
+        #expect(secondOutcome.wasCoalesced)
+        #expect(!secondOutcome.shouldHandleResult)
+    }
+
+    @Test @MainActor func skippedForegroundPassPreservesScheduledLocalRetry() async throws {
+        var syncCount = 0
+        let scheduler = LibrarySyncScheduler(
+            failureRetryIntervals: [0.12],
+            hasPendingLocalWork: { true },
+            sync: { _ in
+                syncCount += 1
+                return .success
+            }
+        )
+
+        scheduler.recordExternalSyncResult(.retryableFailure)
+        scheduler.recordExternalSyncResult(.skipped(.disabled))
+        #expect(scheduler.retryState.failureRetryAttempt == 1)
+        try await Task.sleep(nanoseconds: 160_000_000)
+        #expect(syncCount == 1)
+        #expect(scheduler.retryState == .idle)
+    }
+
+    @Test @MainActor func remoteOnlyFailureRetriesAfterCloudKitMinimumDelay() async throws {
+        var syncCount = 0
+        let scheduler = LibrarySyncScheduler(
+            failureRetryIntervals: [0.01],
+            hasPendingLocalWork: { false },
+            minimumRetryDelay: { 0.15 },
+            sync: { _ in
+                syncCount += 1
+                return .success
+            }
+        )
+
+        scheduler.recordExternalSyncResult(.retryableFailure)
+        #expect(scheduler.retryState.failureRetryAttempt == 1)
+        try await Task.sleep(nanoseconds: 50_000_000)
+        #expect(syncCount == 0)
+        try await Task.sleep(nanoseconds: 150_000_000)
+        #expect(syncCount == 1)
+        #expect(scheduler.retryState == .idle)
+    }
+
+    @Test @MainActor func cloudKitQuotaNeedsUserActionAndRateLimitCarriesRetryHint() {
+        let quota = CKError(.quotaExceeded)
+        let rateLimited = CKError(.requestRateLimited, userInfo: [CKErrorRetryAfterKey: 30.0])
+
+        #expect(quota.isPermanentLibrarySyncFailure)
+        #expect(quota.librarySyncDegradedReason != nil)
+        #expect(!rateLimited.isPermanentLibrarySyncFailure)
+        #expect(rateLimited.librarySyncRetryAfterSeconds == 30)
+        let recordID = CKRecord.ID(recordName: "partial", zoneID: CloudLibrarySyncClient.recordZoneID)
+        let partial = CloudLibrarySyncPartialSaveFailure(
+            savedRecordIDs: [], failedErrorsByID: [recordID: rateLimited]
+        )
+        #expect(partial.librarySyncRetryAfterSeconds == 30)
+        #expect(!partial.isPermanentLibrarySyncFailure)
+    }
+
     @Test @MainActor func localSyncSchedulerDebouncesLocalChanges() async throws {
         var syncCount = 0
         var hasPendingLocalWork = true
@@ -108,6 +247,34 @@ extension LibrarySyncCoordinatorTests {
         try await Task.sleep(nanoseconds: 50_000_000)
 
         #expect(syncCount == 5)
+    }
+
+    @Test @MainActor func successfulPassWithPendingEntriesRetriesQuietlyWithinLimit() async throws {
+        var syncCount = 0
+        var retryStates: [LibraryCloudSyncRetryState] = []
+        var degradedReason: String?
+        let scheduler = LibrarySyncScheduler(
+            failureRetryIntervals: [0.01, 0.02],
+            maximumRetryAttemptsAtFinalInterval: 1,
+            hasPendingLocalWork: { false },
+            hasPendingItemRetryWork: { true },
+            sync: { _ in
+                syncCount += 1
+                return .success
+            },
+            retryStateDidChange: { retryStates.append($0) },
+            degradedStateDidChange: { degradedReason = $0 }
+        )
+
+        scheduler.recordExternalSyncResult(.success)
+        for _ in 0..<100 where syncCount < 2 {
+            try await Task.sleep(nanoseconds: 1_000_000)
+        }
+        try await Task.sleep(nanoseconds: 50_000_000)
+
+        #expect(syncCount == 2)
+        #expect(retryStates.allSatisfy { $0 == .idle })
+        #expect(degradedReason == nil)
     }
 
     @Test @MainActor func localSyncSchedulerResetRestartsFailureRetryPolicy() async throws {

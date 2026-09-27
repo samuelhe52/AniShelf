@@ -165,10 +165,10 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         self.seasonNumber = seasonNumber
         self.entryType = entryType
         self.onDisplay = onDisplay
-        self.dateSaved = dateSaved
+        self.dateSaved = LibrarySyncTimestamp.normalized(dateSaved)
         self.watchStatus = watchStatus
-        self.dateStarted = dateStarted
-        self.dateFinished = dateFinished
+        self.dateStarted = dateStarted.map(LibrarySyncTimestamp.normalized)
+        self.dateFinished = dateFinished.map(LibrarySyncTimestamp.normalized)
         self.isDateTrackingEnabled = isDateTrackingEnabled
         self.score = normalizedSyncScore(score)
         self.favorite = favorite
@@ -176,8 +176,8 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         self.usingCustomPoster = usingCustomPoster
         self.customPosterPath = usingCustomPoster ? TMDbImagePath.storagePath(from: customPosterPath) : nil
         self.episodeProgresses = Self.normalizedEpisodeProgresses(episodeProgresses)
-        self.libraryUpdatedAt = libraryUpdatedAt
-        self.trackingUpdatedAt = trackingUpdatedAt
+        self.libraryUpdatedAt = libraryUpdatedAt.map(LibrarySyncTimestamp.normalized)
+        self.trackingUpdatedAt = trackingUpdatedAt.map(LibrarySyncTimestamp.normalized)
     }
 
     public init(
@@ -327,32 +327,126 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             throw MergeError.identityMismatch(local: identity, remote: other.identity)
         }
 
-        var merged = self
-        if Self.isNewer(other.libraryUpdatedAt, than: merged.libraryUpdatedAt) {
-            merged.onDisplay = other.onDisplay
-            merged.dateSaved = other.dateSaved
-            merged.libraryUpdatedAt = other.libraryUpdatedAt
+        var merged = normalizedForComparison()
+        let candidate = other.normalizedForComparison()
+        let takeLibrary = try Self.prefers(
+            candidate.libraryUpdatedAt,
+            over: merged.libraryUpdatedAt,
+            candidateValues: { try Self.canonicalLibraryValues(candidate) },
+            existingValues: { try Self.canonicalLibraryValues(merged) }
+        )
+        if takeLibrary {
+            merged.onDisplay = candidate.onDisplay
+            merged.dateSaved = candidate.dateSaved
+            merged.libraryUpdatedAt = candidate.libraryUpdatedAt
         }
 
-        if Self.isNewer(other.trackingUpdatedAt, than: merged.trackingUpdatedAt) {
-            merged.watchStatus = other.watchStatus
-            merged.dateStarted = other.dateStarted
-            merged.dateFinished = other.dateFinished
-            merged.isDateTrackingEnabled = other.isDateTrackingEnabled
-            merged.score = other.score
-            merged.favorite = other.favorite
-            merged.notes = other.notes
-            merged.usingCustomPoster = other.usingCustomPoster
-            merged.customPosterPath = other.usingCustomPoster ? other.customPosterPath : nil
-            merged.trackingUpdatedAt = other.trackingUpdatedAt
+        let takeTracking = try Self.prefers(
+            candidate.trackingUpdatedAt,
+            over: merged.trackingUpdatedAt,
+            candidateValues: { try Self.canonicalTrackingValues(candidate) },
+            existingValues: { try Self.canonicalTrackingValues(merged) }
+        )
+        if takeTracking {
+            merged.watchStatus = candidate.watchStatus
+            merged.dateStarted = candidate.dateStarted
+            merged.dateFinished = candidate.dateFinished
+            merged.isDateTrackingEnabled = candidate.isDateTrackingEnabled
+            merged.score = candidate.score
+            merged.favorite = candidate.favorite
+            merged.notes = candidate.notes
+            merged.usingCustomPoster = candidate.usingCustomPoster
+            merged.customPosterPath = candidate.usingCustomPoster ? candidate.customPosterPath : nil
+            merged.trackingUpdatedAt = candidate.trackingUpdatedAt
         }
 
         merged.episodeProgresses = Self.mergedEpisodeProgresses(
             merged.episodeProgresses,
-            other.episodeProgresses
+            candidate.episodeProgresses
         )
 
         return merged
+    }
+
+    private static func prefers(
+        _ candidateClock: Date?,
+        over existingClock: Date?,
+        candidateValues: () throws -> Data,
+        existingValues: () throws -> Data
+    ) throws -> Bool {
+        if isNewer(candidateClock, than: existingClock) { return true }
+        if isNewer(existingClock, than: candidateClock) { return false }
+        return try existingValues().lexicographicallyPrecedes(candidateValues())
+    }
+
+    /// Compares the user fields that are written to CloudKit, without the
+    /// locally decoded schema version or sub-millisecond Date differences.
+    public func hasSameWireState(as other: LibraryEntrySyncSnapshot) -> Bool {
+        var lhs = normalizedForComparison()
+        var rhs = other.normalizedForComparison()
+        lhs.schemaVersion = 0
+        rhs.schemaVersion = 0
+        return lhs == rhs
+    }
+
+    private func normalizedForComparison() -> LibraryEntrySyncSnapshot {
+        var copy = self
+        copy.dateSaved = LibrarySyncTimestamp.normalized(dateSaved)
+        copy.dateStarted = dateStarted.map(LibrarySyncTimestamp.normalized)
+        copy.dateFinished = dateFinished.map(LibrarySyncTimestamp.normalized)
+        copy.libraryUpdatedAt = libraryUpdatedAt.map(LibrarySyncTimestamp.normalized)
+        copy.trackingUpdatedAt = trackingUpdatedAt.map(LibrarySyncTimestamp.normalized)
+        copy.episodeProgresses = episodeProgresses.map {
+            .init(
+                seasonNumber: $0.seasonNumber,
+                watchedThroughEpisode: $0.watchedThroughEpisode,
+                updatedAt: LibrarySyncTimestamp.normalized($0.updatedAt)
+            )
+        }
+        return copy
+    }
+
+    private static func canonicalLibraryValues(_ snapshot: LibraryEntrySyncSnapshot) throws -> Data {
+        try canonicalData(LibraryValues(onDisplay: snapshot.onDisplay, dateSaved: snapshot.dateSaved))
+    }
+
+    private static func canonicalTrackingValues(_ snapshot: LibraryEntrySyncSnapshot) throws -> Data {
+        try canonicalData(
+            TrackingValues(
+                watchStatus: snapshot.watchStatus,
+                dateStarted: snapshot.dateStarted,
+                dateFinished: snapshot.dateFinished,
+                isDateTrackingEnabled: snapshot.isDateTrackingEnabled,
+                score: snapshot.score,
+                favorite: snapshot.favorite,
+                notes: snapshot.notes,
+                usingCustomPoster: snapshot.usingCustomPoster,
+                customPosterPath: snapshot.customPosterPath
+            )
+        )
+    }
+
+    private static func canonicalData<T: Encodable>(_ value: T) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return try encoder.encode(value)
+    }
+
+    private struct LibraryValues: Encodable {
+        var onDisplay: Bool
+        var dateSaved: Date
+    }
+
+    private struct TrackingValues: Encodable {
+        var watchStatus: AnimeEntry.WatchStatus
+        var dateStarted: Date?
+        var dateFinished: Date?
+        var isDateTrackingEnabled: Bool
+        var score: Int?
+        var favorite: Bool
+        var notes: String
+        var usingCustomPoster: Bool
+        var customPosterPath: String?
     }
 
     fileprivate static func isNewer(_ candidate: Date?, than existing: Date?) -> Bool {
@@ -404,8 +498,15 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     private static func normalizedEpisodeProgresses(
         _ progresses: [EpisodeProgress]
     ) -> [EpisodeProgress] {
-        Dictionary(
-            grouping: progresses.filter { $0.seasonNumber > 0 && $0.watchedThroughEpisode > 0 },
+        let normalized = progresses.map {
+            EpisodeProgress(
+                seasonNumber: $0.seasonNumber,
+                watchedThroughEpisode: $0.watchedThroughEpisode,
+                updatedAt: LibrarySyncTimestamp.normalized($0.updatedAt)
+            )
+        }
+        return Dictionary(
+            grouping: normalized.filter { $0.seasonNumber > 0 && $0.watchedThroughEpisode > 0 },
             by: \.seasonNumber
         )
         .values
@@ -446,31 +547,28 @@ extension AnimeEntry {
             )
         }
 
-        if LibraryEntrySyncSnapshot.isNewer(snapshot.libraryUpdatedAt, than: libraryUpdatedAt) {
-            onDisplay = snapshot.onDisplay
-            dateSaved = snapshot.dateSaved
-            libraryUpdatedAt = snapshot.libraryUpdatedAt
+        // Re-merge against the current row. Hydration can suspend an import
+        // after its first merge, while the user continues editing this entry.
+        let merged = try LibraryEntrySyncSnapshot(entry: self).merged(with: snapshot)
+        onDisplay = merged.onDisplay
+        dateSaved = merged.dateSaved
+        libraryUpdatedAt = merged.libraryUpdatedAt
+        watchStatus = merged.watchStatus
+        dateStarted = merged.dateStarted
+        dateFinished = merged.dateFinished
+        isDateTrackingEnabled = merged.isDateTrackingEnabled
+        score = normalizedSyncScore(merged.score)
+        favorite = merged.favorite
+        notes = merged.notes
+        let wasUsingCustomPoster = usingCustomPoster
+        usingCustomPoster = merged.usingCustomPoster
+        if merged.usingCustomPoster {
+            customPosterPath = merged.customPosterPath
+        } else if wasUsingCustomPoster {
+            customPosterPath = nil
         }
-
-        if LibraryEntrySyncSnapshot.isNewer(snapshot.trackingUpdatedAt, than: trackingUpdatedAt) {
-            watchStatus = snapshot.watchStatus
-            dateStarted = snapshot.dateStarted
-            dateFinished = snapshot.dateFinished
-            isDateTrackingEnabled = snapshot.isDateTrackingEnabled
-            score = normalizedSyncScore(snapshot.score)
-            favorite = snapshot.favorite
-            notes = snapshot.notes
-            let wasUsingCustomPoster = usingCustomPoster
-            usingCustomPoster = snapshot.usingCustomPoster
-            if snapshot.usingCustomPoster {
-                customPosterPath = snapshot.customPosterPath
-            } else if wasUsingCustomPoster {
-                customPosterPath = nil
-            }
-            trackingUpdatedAt = snapshot.trackingUpdatedAt
-        }
-
-        applySyncEpisodeProgresses(snapshot.episodeProgresses, now: now)
+        trackingUpdatedAt = merged.trackingUpdatedAt
+        applySyncEpisodeProgresses(merged.episodeProgresses, now: now)
     }
 
     /// Applies a remote snapshot to a newly hydrated local entry.
@@ -537,7 +635,10 @@ extension AnimeEntry {
         ]
         .compactMap(\.self)
         .max() {
-            guard deletedAt > latestLocalClock else { return }
+            guard
+                LibrarySyncTimestamp.milliseconds(deletedAt)
+                    > LibrarySyncTimestamp.milliseconds(latestLocalClock)
+            else { return }
         }
         onDisplay = false
     }
@@ -553,8 +654,10 @@ extension AnimeEntry {
         for progress in progresses where progress.watchedThroughEpisode > 0 {
             if let localProgress = episodeProgress(forSeason: progress.seasonNumber) {
                 guard
-                    progress.updatedAt > localProgress.updatedAt
-                        || (progress.updatedAt == localProgress.updatedAt
+                    LibrarySyncTimestamp.milliseconds(progress.updatedAt)
+                        > LibrarySyncTimestamp.milliseconds(localProgress.updatedAt)
+                        || (LibrarySyncTimestamp.milliseconds(progress.updatedAt)
+                            == LibrarySyncTimestamp.milliseconds(localProgress.updatedAt)
                             && progress.watchedThroughEpisode > localProgress.watchedThroughEpisode)
                 else {
                     continue

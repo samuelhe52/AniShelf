@@ -86,13 +86,19 @@ protocol SupportTransactionFinishing {
     func finish() async
 }
 
+/// Scene-bound StoreKit purchase, normally the SwiftUI `\.purchase` environment action.
+///
+/// Plain `Product.purchase()` lets StoreKit pick the window for its confirmation sheet, which can
+/// be the wrong one when several AniShelf windows are open.
+typealias SupportPurchaseAction = @MainActor (Product) async throws -> Product.PurchaseResult
+
 @MainActor
 protocol SupportStoreProduct {
     var id: String { get }
     var displayName: String { get }
     var displayPrice: String { get }
 
-    func purchase() async throws -> SupportPurchaseResult
+    func purchase(using action: SupportPurchaseAction) async throws -> SupportPurchaseResult
 }
 
 enum SupportPurchaseResult {
@@ -160,7 +166,7 @@ final class SupportStore {
         }
     }
 
-    func purchase(id: String) async -> SupportPurchaseOutcome {
+    func purchase(id: String, using action: SupportPurchaseAction) async -> SupportPurchaseOutcome {
         guard let product = productsByID[id] else {
             return .failed(String(localized: "Unable to find this support option right now."))
         }
@@ -169,7 +175,7 @@ final class SupportStore {
         defer { purchasingProductID = nil }
 
         do {
-            let result = try await product.purchase()
+            let result = try await product.purchase(using: action)
             switch result {
             case .success(let transaction):
                 await transaction.finish()
@@ -218,8 +224,8 @@ fileprivate struct AppStoreSupportProduct: SupportStoreProduct {
     var displayName: String { product.displayName }
     var displayPrice: String { product.displayPrice }
 
-    func purchase() async throws -> SupportPurchaseResult {
-        let result = try await product.purchase()
+    func purchase(using action: SupportPurchaseAction) async throws -> SupportPurchaseResult {
+        let result = try await action(product)
 
         switch result {
         case .success(let verification):

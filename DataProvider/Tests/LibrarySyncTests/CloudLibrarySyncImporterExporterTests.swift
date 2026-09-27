@@ -70,7 +70,7 @@ struct CloudLibrarySyncImporterExporterTests {
         #expect(database.requestedTokens.count == 2)
         #expect(tokenStore.token(for: CloudLibrarySyncClient.recordZoneID, namespace: namespace) == nil)
 
-        importer.commit(batch)
+        try importer.commit(batch)
 
         #expect(tokenStore.token(for: CloudLibrarySyncClient.recordZoneID, namespace: namespace) != nil)
     }
@@ -192,6 +192,31 @@ struct CloudLibrarySyncImporterExporterTests {
         }
     }
 
+    @Test func librarySettingsRecordKeepsUnknownJSONValues() throws {
+        let record = try client.record(
+            from: .init(
+                updatedAt: referenceDate(year: 2026, month: 6, day: 5),
+                payload: ["Known": .bool(true)]
+            ))
+        let payloadJSON =
+            #"{"Known":true,"FutureNumber":42.5,"FutureObject":{"enabled":false,"items":[1,null]},"FutureArray":[1,"x"]}"#
+        record["payload"] = Data(payloadJSON.utf8)
+
+        let snapshot = try client.settingsSnapshot(from: record)
+        let futureNumber = try #require(Decimal(string: "42.5"))
+
+        #expect(snapshot.payload["Known"] == .bool(true))
+        #expect(snapshot.payload["FutureNumber"] == .unknown(.number(futureNumber)))
+        #expect(
+            snapshot.payload["FutureObject"]
+                == .unknown(
+                    .object([
+                        "enabled": .bool(false), "items": .array([.number(1), .null])
+                    ])))
+        #expect(snapshot.payload["FutureArray"] == .unknown(.array([.number(1), .string("x")])))
+        #expect(try client.settingsSnapshot(from: client.record(from: snapshot)) == snapshot)
+    }
+
     @Test func importerDecodesMixedEntryAndSettingsBatch() async throws {
         let namespace = makeNamespace()
         let suiteName = "CloudLibrarySyncImporterExporterTests.\(UUID().uuidString)"
@@ -204,7 +229,21 @@ struct CloudLibrarySyncImporterExporterTests {
             updatedAt: referenceDate(year: 2026, month: 6, day: 5),
             payload: ["UseTMDbRelayServer": .bool(true)]
         )
+        // A later page carries the newer server version even when the writing
+        // device's clock was behind.
+        let replacedSettingsSnapshot = LibrarySettingsSyncSnapshot(
+            updatedAt: referenceDate(year: 2026, month: 6, day: 7),
+            payload: ["UseTMDbRelayServer": .bool(false)]
+        )
         let database = FakeCloudLibrarySyncDatabase(changes: [
+            .init(
+                modifiedRecordsByID: [
+                    client.librarySettingsRecordID: try client.record(from: replacedSettingsSnapshot)
+                ],
+                deletedRecordIDs: [],
+                changeToken: try makeToken(),
+                moreComing: true
+            ),
             .init(
                 modifiedRecordsByID: [
                     client.recordID(for: entryIdentity): try client.record(from: entrySnapshot),
@@ -244,15 +283,17 @@ struct CloudLibrarySyncImporterExporterTests {
         )
         let exporter = CloudLibrarySyncExporter(client: client, database: database)
 
+        // An unconfirmed save stays queued for retry without failing the export.
         let result = try await exporter.export(
             entries: [
-                .upsert(.init(identity: first.libraryIdentity, dirtyAt: referenceDate(year: 2026, month: 5, day: 8))),
+                .upsert(
+                    .init(identity: first.libraryIdentity, dirtyAt: referenceDate(year: 2026, month: 5, day: 8))),
                 .delete(.init(tombstone: tombstone))
             ],
             localSnapshotsByIdentity: [first.libraryIdentity: firstSnapshot]
         )
-
         #expect(result.exportedIdentities == [first.libraryIdentity])
+        #expect(result.rejectedIdentities == [second.libraryIdentity])
         #expect(database.savedRecords.count == 2)
         let savedTombstoneRecord = try #require(
             database.savedRecords.first { $0.recordID == client.recordID(for: second.libraryIdentity) }
@@ -288,27 +329,6 @@ struct CloudLibrarySyncImporterExporterTests {
         #expect(database.savedRecords.count == 575)
         #expect(result.exportedIdentities == Set(payload.identities))
         #expect(result.settingsExported)
-    }
-
-    @Test func exporterBatchedPartialSuccessReportsOnlyAcceptedRecords() async throws {
-        let payload = makeExportPayload(count: 401, startingTMDbID: 20_000)
-        let rejectedIdentity = try #require(payload.identities.last)
-        let acceptedRecordIDs = payload.identities
-            .filter { $0 != rejectedIdentity }
-            .map(client.recordID(for:))
-        let database = FakeCloudLibrarySyncDatabase(
-            changes: [],
-            successfulSaveRecordIDs: acceptedRecordIDs
-        )
-        let exporter = CloudLibrarySyncExporter(client: client, database: database)
-
-        let result = try await exporter.export(
-            entries: payload.entries,
-            localSnapshotsByIdentity: payload.snapshots
-        )
-
-        #expect(database.saveBatchSizes == [350, 51])
-        #expect(result.exportedIdentities == Set(payload.identities.filter { $0 != rejectedIdentity }))
     }
 
     @Test func exporterRecursivelySplitsBatchesWhenCloudKitLimitChanges() async throws {
@@ -351,6 +371,70 @@ struct CloudLibrarySyncImporterExporterTests {
         }
     }
 
+    @Test func exporterContinuesPastRecordRejectedByCloudKit() async throws {
+        let payload = makeExportPayload(count: 360, startingTMDbID: 42_000)
+        let rejected = try #require(payload.identities.first)
+        let database = FakeCloudLibrarySyncDatabase(
+            changes: [],
+            rejectedSaveRecordIDs: [client.recordID(for: rejected)]
+        )
+        let exporter = CloudLibrarySyncExporter(client: client, database: database)
+
+        let result = try await exporter.export(
+            entries: payload.entries,
+            localSnapshotsByIdentity: payload.snapshots
+        )
+
+        #expect(database.saveBatchSizes == [350, 10])
+        #expect(result.exportedIdentities == Set(payload.identities).subtracting([rejected]))
+        #expect(result.rejectedIdentities == [rejected])
+    }
+
+    @Test func exporterKeepsAcceptedIDsAndRetryHintFromPartialSave() async throws {
+        let payload = makeExportPayload(count: 2, startingTMDbID: 45_000)
+        let accepted = try #require(payload.identities.first)
+        let failed = try #require(payload.identities.last)
+        let partialFailure = CloudLibrarySyncPartialSaveFailure(
+            savedRecordIDs: [client.recordID(for: accepted)],
+            failedErrorsByID: [
+                client.recordID(for: failed): CKError(
+                    .requestRateLimited,
+                    userInfo: [CKErrorRetryAfterKey: 42.0]
+                )
+            ]
+        )
+        let database = FakeCloudLibrarySyncDatabase(
+            changes: [], saveErrorsByCallIndex: [1: partialFailure]
+        )
+        let exporter = CloudLibrarySyncExporter(client: client, database: database)
+
+        do {
+            _ = try await exporter.export(
+                entries: payload.entries,
+                localSnapshotsByIdentity: payload.snapshots
+            )
+            Issue.record("Expected the partial CloudKit failure to retain retry information.")
+        } catch let failure as CloudLibrarySyncExportFailure {
+            #expect(failure.partialResult.exportedIdentities == [accepted])
+            #expect((failure.underlyingError as? CloudLibrarySyncPartialSaveFailure)?.retryAfterSeconds == 42)
+        }
+    }
+
+    @Test func mixedQuotaAndTransientSaveFailuresRemainRetryable() {
+        let quotaID = client.recordID(for: .init(entryType: .series, tmdbID: 45_010))
+        let busyID = client.recordID(for: .init(entryType: .series, tmdbID: 45_011))
+        let failure = CloudLibrarySyncPartialSaveFailure(
+            savedRecordIDs: [],
+            failedErrorsByID: [
+                quotaID: CKError(.quotaExceeded),
+                busyID: CKError(.zoneBusy, userInfo: [CKErrorRetryAfterKey: 30.0])
+            ]
+        )
+
+        #expect(!failure.isQuotaExceeded)
+        #expect(failure.retryAfterSeconds == 30)
+    }
+
     @Test func exporterIncludesOptionalSettingsSnapshot() async throws {
         let identity = LibraryEntryIdentity(entryType: .series, tmdbID: 907)
         let snapshot = makeSnapshot(identity: identity, tmdbID: 907)
@@ -374,6 +458,153 @@ struct CloudLibrarySyncImporterExporterTests {
         )
         #expect(try client.settingsSnapshot(from: savedSettingsRecord) == settingsSnapshot)
     }
+
+    @Test func importerQuarantinesBadRecordsAndExporterPreservesThem() async throws {
+        let suiteName = "CloudLibrarySyncQuarantine.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let tokenStore = CloudLibrarySyncChangeTokenStore(userDefaults: defaults)
+        let quarantineURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("CloudLibrarySyncQuarantine.\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: quarantineURL) }
+        let quarantineStore = CloudLibrarySyncQuarantineStore(url: quarantineURL)
+        let goodIdentity = LibraryEntryIdentity(entryType: .series, tmdbID: 1001)
+        let badIdentity = LibraryEntryIdentity(entryType: .series, tmdbID: 1002)
+        let good = makeSnapshot(identity: goodIdentity, tmdbID: 1001)
+        let bad = makeSnapshot(identity: badIdentity, tmdbID: 1002)
+        let badRecord = try client.record(from: bad)
+        badRecord["schemaVersion"] = LibraryEntrySyncSnapshot.currentSchemaVersion + 1
+        let settings = LibrarySettingsSyncSnapshot(
+            updatedAt: referenceDate(year: 2026, month: 6, day: 5),
+            payload: ["UseTMDbRelayServer": .bool(true)]
+        )
+        let badSettings = try client.record(from: settings)
+        badSettings["schemaVersion"] = LibrarySettingsSyncSnapshot.currentSchemaVersion + 1
+        let database = FakeCloudLibrarySyncDatabase(changes: [
+            .init(
+                modifiedRecordsByID: [
+                    client.recordID(for: goodIdentity): try client.record(from: good),
+                    client.recordID(for: badIdentity): badRecord,
+                    client.librarySettingsRecordID: badSettings
+                ],
+                deletedRecordIDs: [],
+                changeToken: try makeToken(),
+                moreComing: false
+            )
+        ])
+        let importer = CloudLibrarySyncImporter(
+            client: client, database: database,
+            changeTokenStore: tokenStore, quarantineStore: quarantineStore
+        )
+        let namespace = makeNamespace()
+        let batch = try await importer.fetchChanges(namespace: namespace, localSnapshotsByIdentity: [:])
+        #expect(batch.changes == [.snapshot(good)])
+        #expect(batch.quarantinedRecordIDs == [client.recordID(for: badIdentity), client.librarySettingsRecordID])
+        #expect(tokenStore.token(for: CloudLibrarySyncClient.recordZoneID, namespace: namespace) == nil)
+        #expect(
+            try quarantineStore.entries(namespace: namespace, zoneID: CloudLibrarySyncClient.recordZoneID).isEmpty)
+        try importer.commit(batch)
+        #expect(
+            try quarantineStore.entries(namespace: namespace, zoneID: CloudLibrarySyncClient.recordZoneID).count == 2)
+        #expect(tokenStore.token(for: CloudLibrarySyncClient.recordZoneID, namespace: namespace) != nil)
+
+        let exporter = CloudLibrarySyncExporter(client: client, database: database)
+        let result = try await exporter.export(
+            entries: [
+                .upsert(.init(identity: goodIdentity, dirtyAt: good.dateSaved)),
+                .upsert(.init(identity: badIdentity, dirtyAt: bad.dateSaved))
+            ],
+            localSnapshotsByIdentity: [goodIdentity: good, badIdentity: bad],
+            settingsSnapshot: settings,
+            blockedRecordIDs: batch.quarantinedRecordIDs
+        )
+        #expect(result.exportedIdentities == [goodIdentity])
+        #expect(!result.settingsExported)
+        #expect(database.savedRecords.map(\.recordID) == [client.recordID(for: goodIdentity)])
+
+        let otherNamespace = CloudLibrarySyncChangeTokenStore.Namespace(
+            containerIdentifier: namespace.containerIdentifier,
+            accountIdentifier: "other-account"
+        )
+        #expect(
+            try quarantineStore.entries(namespace: otherNamespace, zoneID: CloudLibrarySyncClient.recordZoneID).isEmpty)
+    }
+
+    @Test func newAppVersionRefetchesQuarantinedRecordByID() async throws {
+        let suiteName = "CloudLibrarySyncUpgrade.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let tokenStore = CloudLibrarySyncChangeTokenStore(userDefaults: defaults)
+        let quarantineURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("CloudLibrarySyncUpgrade.\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: quarantineURL) }
+        let quarantineStore = CloudLibrarySyncQuarantineStore(url: quarantineURL)
+        let identity = LibraryEntryIdentity(entryType: .series, tmdbID: 1011)
+        let snapshot = makeSnapshot(identity: identity, tmdbID: 1011)
+        let recordID = client.recordID(for: identity)
+        let unreadableRecord = try client.record(from: snapshot)
+        unreadableRecord["schemaVersion"] = LibraryEntrySyncSnapshot.currentSchemaVersion + 1
+        let firstDatabase = FakeCloudLibrarySyncDatabase(changes: [
+            .init(
+                modifiedRecordsByID: [recordID: unreadableRecord],
+                deletedRecordIDs: [],
+                changeToken: try makeToken(),
+                moreComing: false
+            )
+        ])
+        let firstImporter = CloudLibrarySyncImporter(
+            client: client, database: firstDatabase,
+            changeTokenStore: tokenStore, quarantineStore: quarantineStore,
+            appVersion: "1"
+        )
+        let namespace = makeNamespace()
+        let first = try await firstImporter.fetchChanges(namespace: namespace, localSnapshotsByIdentity: [:])
+        try firstImporter.commit(first)
+        #expect(first.quarantinedRecordIDs == [recordID])
+
+        let recoveredRecord = try client.record(from: snapshot)
+        let secondDatabase = FakeCloudLibrarySyncDatabase(
+            changes: [
+                .init(
+                    modifiedRecordsByID: [:], deletedRecordIDs: [],
+                    changeToken: try makeToken(), moreComing: false
+                )
+            ],
+            fetchedRecordsByID: [recordID: recoveredRecord]
+        )
+        let upgradedImporter = CloudLibrarySyncImporter(
+            client: client, database: secondDatabase,
+            changeTokenStore: tokenStore, quarantineStore: quarantineStore,
+            appVersion: "2"
+        )
+        let recovered = try await upgradedImporter.fetchChanges(
+            namespace: namespace, localSnapshotsByIdentity: [:]
+        )
+        #expect(secondDatabase.requestedRecordIDs == [[recordID]])
+        #expect(recovered.changes == [.snapshot(snapshot)])
+        #expect(recovered.quarantinedRecordIDs.isEmpty)
+        #expect(try quarantineStore.entries(namespace: namespace, zoneID: CloudLibrarySyncClient.recordZoneID).count == 1)
+
+        // Local application can fail before commit. The next pass must fetch
+        // the recovered record by ID again even though zone changes are empty.
+        let retryDatabase = FakeCloudLibrarySyncDatabase(
+            changes: [
+                .init(modifiedRecordsByID: [:], deletedRecordIDs: [],
+                      changeToken: try makeToken(), moreComing: false)
+            ],
+            fetchedRecordsByID: [recordID: recoveredRecord]
+        )
+        let retryImporter = CloudLibrarySyncImporter(
+            client: client, database: retryDatabase,
+            changeTokenStore: tokenStore, quarantineStore: quarantineStore,
+            appVersion: "2"
+        )
+        let retried = try await retryImporter.fetchChanges(namespace: namespace, localSnapshotsByIdentity: [:])
+        #expect(retryDatabase.requestedRecordIDs == [[recordID]])
+        #expect(retried.changes == [.snapshot(snapshot)])
+        try retryImporter.commit(retried)
+        #expect(try quarantineStore.entries(namespace: namespace, zoneID: CloudLibrarySyncClient.recordZoneID).isEmpty)
+    }
 }
 
 fileprivate final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, @unchecked Sendable {
@@ -382,6 +613,8 @@ fileprivate final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, 
     private let successfulSaveRecordIDs: [CKRecord.ID]?
     private let maxSaveBatchSizeBeforeLimitExceeded: Int?
     private let saveErrorsByCallIndex: [Int: any Error]
+    private let rejectedSaveRecordIDs: Set<CKRecord.ID>
+    private let fetchedRecordsByID: [CKRecord.ID: CKRecord]
     private var didThrowFirstFetchError = false
     private var saveCallCount = 0
 
@@ -389,19 +622,24 @@ fileprivate final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, 
     var savedRecords: [CKRecord] = []
     var saveBatchSizes: [Int] = []
     var ensureCallCount = 0
+    var requestedRecordIDs: [[CKRecord.ID]] = []
 
     init(
         changes: [CloudLibrarySyncZoneChangeBatch],
         firstFetchError: Error? = nil,
         successfulSaveRecordIDs: [CKRecord.ID]? = nil,
         maxSaveBatchSizeBeforeLimitExceeded: Int? = nil,
-        saveErrorsByCallIndex: [Int: any Error] = [:]
+        saveErrorsByCallIndex: [Int: any Error] = [:],
+        rejectedSaveRecordIDs: Set<CKRecord.ID> = [],
+        fetchedRecordsByID: [CKRecord.ID: CKRecord] = [:]
     ) {
         self.changes = changes
         self.firstFetchError = firstFetchError
         self.successfulSaveRecordIDs = successfulSaveRecordIDs
         self.maxSaveBatchSizeBeforeLimitExceeded = maxSaveBatchSizeBeforeLimitExceeded
         self.saveErrorsByCallIndex = saveErrorsByCallIndex
+        self.rejectedSaveRecordIDs = rejectedSaveRecordIDs
+        self.fetchedRecordsByID = fetchedRecordsByID
     }
 
     func ensureZoneAndSubscription(
@@ -434,12 +672,28 @@ fileprivate final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, 
         {
             throw CKError(.limitExceeded)
         }
+        let rejectedRecords = records.filter { rejectedSaveRecordIDs.contains($0.recordID) }
+        if !rejectedRecords.isEmpty {
+            let acceptedRecords = records.filter { !rejectedSaveRecordIDs.contains($0.recordID) }
+            savedRecords.append(contentsOf: acceptedRecords)
+            throw CloudLibrarySyncPartialSaveFailure(
+                savedRecordIDs: acceptedRecords.map(\.recordID),
+                failedErrorsByID: Dictionary(
+                    uniqueKeysWithValues: rejectedRecords.map { ($0.recordID, CKError(.invalidArguments)) }
+                )
+            )
+        }
         savedRecords.append(contentsOf: records)
         guard let successfulSaveRecordIDs else {
             return records.map(\.recordID)
         }
         let successfulSaveRecordIDSet = Set(successfulSaveRecordIDs)
         return records.map(\.recordID).filter { successfulSaveRecordIDSet.contains($0) }
+    }
+
+    func fetchRecords(ids: [CKRecord.ID]) async throws -> [CKRecord.ID: CKRecord] {
+        requestedRecordIDs.append(ids)
+        return fetchedRecordsByID.filter { ids.contains($0.key) }
     }
 }
 

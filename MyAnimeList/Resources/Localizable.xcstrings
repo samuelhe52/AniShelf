@@ -17,6 +17,142 @@
         }
       }
     },
+    "%lld changes not uploaded" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld change not uploaded"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld changes not uploaded"
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 件の変更が未アップロード"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 项更改未上传"
+          }
+        }
+      }
+    },
+    "%lld entries not loaded" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld entry not loaded"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld entries not loaded"
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 件の項目を読み込めません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 个条目未加载"
+          }
+        }
+      }
+    },
+    "%lld sync issues" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld sync issue"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld sync issues"
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同期の問題 %lld 件"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 个同步问题"
+          }
+        }
+      }
+    },
+    "%lld unreadable records" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld unreadable record"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld unreadable records"
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "読み取れないレコード %lld 件"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 条记录无法读取"
+          }
+        }
+      }
+    },
     "* For security reasons, your TMDb API Key will not be exported." : {
       "localizations" : {
         "ja" : {
@@ -340,6 +476,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld/5"
+          }
+        }
+      }
+    },
+    "AniShelf couldn't read these records. They may have been saved by a newer version of the app. They stay untouched in iCloud, and this device won't overwrite them. Updating AniShelf may resolve this." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf はこれらのレコードを読み取れませんでした。新しいバージョンのアプリで保存された可能性があります。iCloud 上のデータはそのまま残り、このデバイスが上書きすることはありません。AniShelf をアップデートすると解決する場合があります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf 无法读取这些记录，它们可能由更新版本的 App 保存。这些记录会原样保留在 iCloud 中，此设备不会覆盖它们。更新 AniShelf 可能会解决此问题。"
+          }
+        }
+      }
+    },
+    "Sync Issues" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同期の問題"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同步问题"
           }
         }
       }
@@ -1354,6 +1522,22 @@
         }
       }
     },
+    "Another duplicate repair is still in progress. Try again when it finishes." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別の重複修復がまだ進行中です。完了してからもう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "另一项重复修复仍在进行中。请在其完成后重试。"
+          }
+        }
+      }
+    },
     "Another season entry for this series is already in your library. Converting this season to a series can leave both the series and the sibling season entries in the library." : {
       "localizations" : {
         "ja" : {
@@ -2267,6 +2451,9 @@
           }
         }
       }
+    },
+    "Completed Sync" : {
+
     },
     "Confirm" : {
       "localizations" : {
@@ -3257,6 +3444,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "需要重试的条目"
+          }
+        }
+      }
+    },
+    "Entries TMDb no longer lists can be discarded from iCloud. Others retry automatically." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb に掲載されなくなった項目は iCloud から削除できます。その他の項目は自動的に再試行されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TMDb 上已不存在的条目可以从 iCloud 删除。其他条目会自动重试。"
           }
         }
       }
@@ -4312,6 +4515,9 @@
         }
       }
     },
+    "Hold deletions until Retry" : {
+
+    },
     "Hours" : {
       "localizations" : {
         "ja" : {
@@ -4324,6 +4530,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "小时"
+          }
+        }
+      }
+    },
+    "iCloud didn't accept these changes. They stay saved on this device, and AniShelf tries uploading them again on later syncs." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud がこれらの変更を受け付けませんでした。変更はこのデバイスに保存されたままで、AniShelf は以降の同期で再度アップロードを試みます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud 未接受这些更改。它们仍保存在此设备上，AniShelf 会在之后的同步中再次尝试上传。"
           }
         }
       }
@@ -4379,6 +4601,22 @@
     },
     "iCloud Sync Preview" : {
 
+    },
+    "iCloud storage is full. Free up space or upgrade your iCloud storage, then retry sync." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloudのストレージがいっぱいです。空き容量を増やすかストレージプランをアップグレードしてから、同期を再試行してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud 储存空间已满。请释放空间或升级储存空间方案，然后重试同步。"
+          }
+        }
+      }
     },
     "If you use a VPN or another network proxy, turning off Use TMDb Proxy in Settings may help." : {
       "localizations" : {
@@ -4492,7 +4730,10 @@
         }
       }
     },
-    "Inject restoration failures" : {
+    "Inject failures" : {
+
+    },
+    "Injected failures are off. The next Retry will load the pending entries and clear the other notices." : {
 
     },
     "Injected failures are off. The next Retry will restore the two pending entries and complete bootstrap." : {
@@ -7360,6 +7601,9 @@
         }
       }
     },
+    "Restoration" : {
+
+    },
     "Restore" : {
       "localizations" : {
         "ja" : {
@@ -7647,6 +7891,9 @@
           }
         }
       }
+    },
+    "Scenario" : {
+
     },
     "Schedule" : {
       "localizations" : {
@@ -8547,6 +8794,9 @@
           }
         }
       }
+    },
+    "Sync succeeded, but two entries couldn't be loaded, two changes weren't uploaded, and one record is unreadable. The entry TMDb no longer lists can be discarded right away." : {
+
     },
     "Synced" : {
       "localizations" : {
@@ -10290,6 +10540,86 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iCloud 同步启动时，你的 iCloud 账户发生了变化。请重试，以便为新账户重建同步。"
+          }
+        }
+      }
+    },
+    "This release adds multiple windows on iPad and Mac, fixes a macOS 27 search crash, and improves iCloud Sync and episode tracking." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このアップデートでは、iPad と Mac での複数ウインドウに対応し、macOS 27 で検索時にクラッシュする問題を修正するとともに、iCloud 同期と視聴進捗を改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本次更新支持在 iPad 和 Mac 上使用多窗口，修复 macOS 27 搜索崩溃问题，并改进 iCloud 同步与追番进度。"
+          }
+        }
+      }
+    },
+    "Open multiple AniShelf windows on iPad and Mac, and search and browse your library independently in each window." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPad と Mac で複数の AniShelf ウインドウを開き、各ウインドウで個別に検索したりライブラリを閲覧したりできます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "支持在 iPad 和 Mac 上打开多个 AniShelf 窗口，在各窗口中分别搜索和浏览资料库。"
+          }
+        }
+      }
+    },
+    "Fixed a crash when tapping the search field on macOS 27." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS 27 で検索欄をタップするとアプリがクラッシュする問題を修正しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修复了 MacOS 27 上点击搜索框 App 即崩溃的问题"
+          }
+        }
+      }
+    },
+    "Improved iCloud Sync stability." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud 同期の安定性を改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "改进了 iCloud 同步的稳定性"
+          }
+        }
+      }
+    },
+    "Fixed automatic episode count updates for airing anime and improved some watch progress displays." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "放送中の作品の話数が自動更新されない問題を修正し、視聴進捗の表示を一部改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修复了新番集数自动同步，优化部分观看进度显示问题。"
           }
         }
       }

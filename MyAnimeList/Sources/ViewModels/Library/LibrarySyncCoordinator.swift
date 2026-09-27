@@ -61,6 +61,22 @@ final class LibrarySyncCoordinator {
         }
     }
 
+    struct SyncOutcome {
+        let result: SyncResult
+        let wasCoalesced: Bool
+        let shouldHandleResult: Bool
+
+        init(
+            _ result: SyncResult,
+            wasCoalesced: Bool = false,
+            shouldHandleResult: Bool = true
+        ) {
+            self.result = result
+            self.wasCoalesced = wasCoalesced
+            self.shouldHandleResult = shouldHandleResult
+        }
+    }
+
     weak var store: LibraryStore?
     let importer: CloudLibrarySyncImporter
     let exporter: CloudLibrarySyncExporter
@@ -90,6 +106,7 @@ final class LibrarySyncCoordinator {
     ///   - database: Optional CloudKit database adapter. When omitted, the
     ///     coordinator uses the client's private database if available.
     ///   - changeTokenStore: Storage for zone change tokens.
+    ///   - quarantineStore: Durable records that this build cannot decode.
     ///   - namespaceProvider: Async namespace resolver. This is injected for
     ///     tests and otherwise resolves the current iCloud account through the
     ///     client.
@@ -103,6 +120,7 @@ final class LibrarySyncCoordinator {
         client: CloudLibrarySyncClient? = nil,
         database: CloudLibrarySyncDatabase? = nil,
         changeTokenStore: CloudLibrarySyncChangeTokenStore = .init(),
+        quarantineStore: CloudLibrarySyncQuarantineStore = .init(),
         namespaceProvider: (@MainActor () async throws -> CloudLibrarySyncChangeTokenStore.Namespace?)? = nil,
         hydrateMissingEntry: @escaping @MainActor (LibraryEntrySyncSnapshot, LibraryStore) async throws -> AnimeEntry =
             LibrarySyncCoordinator.hydrateMissingEntry,
@@ -130,7 +148,8 @@ final class LibrarySyncCoordinator {
             self.importer = CloudLibrarySyncImporter(
                 client: resolvedClient,
                 database: resolvedDatabase,
-                changeTokenStore: changeTokenStore
+                changeTokenStore: changeTokenStore,
+                quarantineStore: quarantineStore
             )
             self.exporter = CloudLibrarySyncExporter(
                 client: resolvedClient,
@@ -141,7 +160,8 @@ final class LibrarySyncCoordinator {
             self.importer = CloudLibrarySyncImporter(
                 client: resolvedClient,
                 database: disabledDatabase,
-                changeTokenStore: changeTokenStore
+                changeTokenStore: changeTokenStore,
+                quarantineStore: quarantineStore
             )
             self.exporter = CloudLibrarySyncExporter(
                 client: resolvedClient,
@@ -166,15 +186,19 @@ final class LibrarySyncCoordinator {
     /// Runs one coalesced sync pass and preserves failure classification for
     /// local dirty-queue retry scheduling.
     func syncResult(trigger: Trigger) async -> SyncResult {
+        await syncOutcome(trigger: trigger).result
+    }
+
+    func syncOutcome(trigger: Trigger) async -> SyncOutcome {
         activeSyncRequestCount += 1
         defer { activeSyncRequestCount -= 1 }
 
-        guard !Task.isCancelled else { return .skipped(.disabled) }
+        guard !Task.isCancelled else { return .init(.skipped(.disabled)) }
         guard let store else {
             librarySyncCoordinatorLogger.warning(
                 "Skipped iCloud library sync for \(trigger.rawValue, privacy: .public) because the library store was unavailable."
             )
-            return .permanentFailure
+            return .init(.permanentFailure)
         }
         if let queuedResult = await syncGate.waitForRunningPass() {
             librarySyncCoordinatorLogger.info(
@@ -191,7 +215,7 @@ final class LibrarySyncCoordinator {
             librarySyncCoordinatorLogger.info(
                 "Skipped iCloud library sync for \(trigger.rawValue, privacy: .public) because policy blocked ordinary sync: \(blockedReason.rawValue, privacy: .public)."
             )
-            return .skipped(blockedReason)
+            return .init(.skipped(blockedReason))
         }
 
         var scopeRequiringBootstrap: LibraryCloudSyncScope?
@@ -202,7 +226,7 @@ final class LibrarySyncCoordinator {
             // failure reporting path records the namespace-resolution error.
         }
 
-        guard !Task.isCancelled else { return .skipped(.disabled) }
+        guard !Task.isCancelled else { return .init(.skipped(.disabled)) }
         if let queuedResult = await syncGate.waitForRunningPass() {
             librarySyncCoordinatorLogger.info(
                 "Queued iCloud library sync for \(trigger.rawValue, privacy: .public) because another sync started during scope resolution."
@@ -218,7 +242,7 @@ final class LibrarySyncCoordinator {
             librarySyncCoordinatorLogger.info(
                 "Skipped iCloud library sync for \(trigger.rawValue, privacy: .public) because policy changed during scope resolution: \(blockedReason.rawValue, privacy: .public)."
             )
-            return .skipped(blockedReason)
+            return .init(.skipped(blockedReason))
         }
         if let scopeRequiringBootstrap,
             store.libraryCloudSyncStatus.lastCompletedScope != scopeRequiringBootstrap
@@ -226,10 +250,10 @@ final class LibrarySyncCoordinator {
             librarySyncCoordinatorLogger.info(
                 "Starting iCloud library bootstrap because the active sync scope differs from the last completed scope."
             )
-            return await store.bootstrapLibraryCloudSyncEnablement()
+            return await store.bootstrapLibraryCloudSyncEnablementOutcome(canHandleResult: true)
         }
 
-        syncGate.begin()
+        syncGate.begin(kind: .ordinary, ownerHandlesResult: true)
         librarySyncCoordinatorLogger.info(
             "Starting iCloud library sync triggered by \(trigger.rawValue, privacy: .public)."
         )
@@ -245,7 +269,7 @@ final class LibrarySyncCoordinator {
         } while syncGate.consumeRerunRequest()
 
         syncGate.finish(result)
-        return result
+        return .init(result)
     }
 
     /// Executes the ordered sync phases once.
@@ -300,18 +324,28 @@ final class LibrarySyncCoordinator {
         preference: LibraryCloudSyncConflictPreference?,
         isUserRetry: Bool = false
     ) async -> SyncResult {
+        await bootstrapFirstEnablementOutcome(
+            preference: preference, isUserRetry: isUserRetry
+        ).result
+    }
+
+    func bootstrapFirstEnablementOutcome(
+        preference: LibraryCloudSyncConflictPreference?,
+        isUserRetry: Bool = false,
+        canHandleResult: Bool = false
+    ) async -> SyncOutcome {
         activeSyncRequestCount += 1
         defer { activeSyncRequestCount -= 1 }
 
         let bootstrapID = UUID()
-        if let queuedResult = await syncGate.waitForRunningPass() {
+        if let queuedResult = await syncGate.waitForRunningPass(canHandleResult: canHandleResult) {
             librarySyncCoordinatorLogger.info(
                 "Queued iCloud library first-enable bootstrap while another sync was already running."
             )
             return queuedResult
         }
 
-        syncGate.begin()
+        syncGate.begin(kind: .bootstrap, ownerHandlesResult: canHandleResult)
         activeFirstEnableBootstrapIDs.insert(bootstrapID)
         var result = await runFirstEnableBootstrap(
             preference: preference,
@@ -333,7 +367,7 @@ final class LibrarySyncCoordinator {
         // A queued ordinary sync must remain parked until the caller resolves
         // the bootstrap conflict and starts the next bootstrap pass.
         syncGate.finish(result, parkingWaiters: result == .conflictChoiceRequired)
-        return result
+        return .init(result, shouldHandleResult: canHandleResult)
     }
 
     func cancelAllSync() {
@@ -424,6 +458,7 @@ final class LibrarySyncCoordinator {
         to store: LibraryStore
     ) {
         guard let remoteSnapshot else { return }
+        store.preferences.noteCloudSyncedSettingsTypes(remoteSnapshot)
         let localUpdatedAt = store.preferences.cloudSyncedDefaultsUpdatedAt() ?? .distantPast
         guard remoteSnapshot.updatedAt > localUpdatedAt else {
             librarySyncCoordinatorLogger.debug(
@@ -449,6 +484,14 @@ final class LibrarySyncCoordinator {
         remoteSnapshot: LibrarySettingsSyncSnapshot?,
         store: LibraryStore
     ) -> LibrarySettingsSyncSnapshot? {
+        // Export constructs a new payload from this build's known defaults. Until
+        // unknown values can be retained across passes, uploading would erase them.
+        guard !store.preferences.hasUnknownCloudSyncedSettingsValues else {
+            librarySyncCoordinatorLogger.warning(
+                "Skipped iCloud settings export because an imported snapshot has unknown value types."
+            )
+            return nil
+        }
         guard let localUpdatedAt = localState.updatedAt else {
             guard remoteSnapshot == nil, !localState.snapshot.payload.isEmpty else { return nil }
             let updatedAt = dateProvider()
@@ -487,6 +530,9 @@ final class LibrarySyncCoordinator {
         exportedSnapshot: LibrarySettingsSyncSnapshot?,
         settingsExported: Bool
     ) -> Date? {
+        if store.preferences.hasUnknownCloudSyncedSettingsValues {
+            return store.libraryCloudSyncStatus.lastReconciledCloudSyncedSettingsUpdatedAt
+        }
         if let exportedSnapshot, settingsExported {
             return exportedSnapshot.updatedAt
         }
@@ -530,6 +576,14 @@ final class LibrarySyncCoordinator {
         do {
             guard let head = try await runImportHead(pass: pass, state: state, store: store) else {
                 return .permanentFailure
+            }
+            // The full fetch is authoritative for this scope. A bootstrap
+            // request can join an ordinary pass at the gate, so only replace
+            // the old settings block after this fetch actually completes.
+            if let settingsSnapshot = head.importBatch.settingsSnapshot {
+                store.preferences.noteCloudSyncedSettingsTypes(settingsSnapshot)
+            } else {
+                store.preferences.clearUnknownCloudSyncedSettingsTypes()
             }
             let preImportSnapshots = head.preImportSnapshots
             let fetchedBatch = head.importBatch
@@ -635,6 +689,12 @@ struct LocalSettingsSnapshotState {
 
 extension Error {
     var isPermanentLibrarySyncFailure: Bool {
+        if let exportFailure = self as? CloudLibrarySyncExportFailure {
+            return exportFailure.underlyingError.isPermanentLibrarySyncFailure
+        }
+        if let partialFailure = self as? CloudLibrarySyncPartialSaveFailure {
+            return partialFailure.accountError != nil || partialFailure.isQuotaExceeded
+        }
         if let hydrationError = self as? LibrarySyncHydrationError {
             return hydrationError.underlyingError.isPermanentLibrarySyncFailure
         }
@@ -643,14 +703,74 @@ extension Error {
         }
         guard let ckError = self as? CKError else { return false }
         switch ckError.code {
-        case .notAuthenticated, .permissionFailure:
+        case .notAuthenticated, .permissionFailure, .quotaExceeded:
             return true
         default:
             return false
         }
     }
 
-    fileprivate var libraryCloudKitAvailability: LibraryCloudKitAvailability {
+    var librarySyncRetryAfterSeconds: TimeInterval? {
+        if let exportFailure = self as? CloudLibrarySyncExportFailure {
+            return exportFailure.underlyingError.librarySyncRetryAfterSeconds
+        }
+        if let partialFailure = self as? CloudLibrarySyncPartialSaveFailure {
+            return partialFailure.retryAfterSeconds
+        }
+        if let hydrationError = self as? LibrarySyncHydrationError {
+            return hydrationError.underlyingError.librarySyncRetryAfterSeconds
+        }
+        guard let ckError = self as? CKError else { return nil }
+        return ckError.retryAfterSeconds
+    }
+
+    var librarySyncFailureReason: String {
+        if let exportFailure = self as? CloudLibrarySyncExportFailure {
+            return exportFailure.underlyingError.librarySyncFailureReason
+        }
+        if let partialFailure = self as? CloudLibrarySyncPartialSaveFailure,
+            partialFailure.isQuotaExceeded
+        {
+            return String(
+                localized: "iCloud storage is full. Free up space or upgrade your iCloud storage, then retry sync."
+            )
+        }
+        if let hydrationError = self as? LibrarySyncHydrationError {
+            return hydrationError.localizedDescription
+        }
+        guard let ckError = self as? CKError, ckError.code == .quotaExceeded else {
+            return localizedDescription
+        }
+        return String(
+            localized: "iCloud storage is full. Free up space or upgrade your iCloud storage, then retry sync."
+        )
+    }
+
+    var librarySyncDegradedReason: String? {
+        if let exportFailure = self as? CloudLibrarySyncExportFailure {
+            return exportFailure.underlyingError.librarySyncDegradedReason
+        }
+        if let partialFailure = self as? CloudLibrarySyncPartialSaveFailure,
+            partialFailure.isQuotaExceeded
+        {
+            return librarySyncFailureReason
+        }
+        if let hydrationError = self as? LibrarySyncHydrationError {
+            return hydrationError.underlyingError.librarySyncDegradedReason
+        }
+        guard let ckError = self as? CKError, ckError.code == .quotaExceeded else { return nil }
+        return librarySyncFailureReason
+    }
+
+    var libraryCloudKitAvailability: LibraryCloudKitAvailability {
+        if let exportFailure = self as? CloudLibrarySyncExportFailure {
+            return exportFailure.underlyingError.libraryCloudKitAvailability
+        }
+        if let partialFailure = self as? CloudLibrarySyncPartialSaveFailure,
+            let accountError = partialFailure.accountError
+        {
+            return accountError.libraryCloudKitAvailability
+        }
         guard let ckError = self as? CKError else {
             return .couldNotDetermine
         }
@@ -681,6 +801,10 @@ fileprivate struct DisabledCloudLibrarySyncDatabase: CloudLibrarySyncDatabase {
         in zoneID: CKRecordZone.ID,
         since changeToken: CKServerChangeToken?
     ) async throws -> CloudLibrarySyncZoneChangeBatch {
+        throw DisabledError.unavailable
+    }
+
+    func fetchRecords(ids: [CKRecord.ID]) async throws -> [CKRecord.ID: CKRecord] {
         throw DisabledError.unavailable
     }
 

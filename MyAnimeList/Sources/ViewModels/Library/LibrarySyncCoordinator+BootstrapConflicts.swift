@@ -40,15 +40,9 @@ extension LibrarySyncCoordinator {
             return resolvedChange
         }
 
-        return .init(
-            changes: changes,
-            remoteChanges: batch.remoteChanges,
-            settingsSnapshot: batch.settingsSnapshot,
-            ignoredDeletedRecordIDs: batch.ignoredDeletedRecordIDs,
-            changeToken: batch.changeToken,
-            namespace: batch.namespace,
-            zoneID: batch.zoneID
-        )
+        var resolved = batch
+        resolved.changes = changes
+        return resolved
     }
 
     private func resolvedChange(

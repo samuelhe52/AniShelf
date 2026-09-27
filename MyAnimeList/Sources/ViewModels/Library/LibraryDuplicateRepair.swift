@@ -33,9 +33,12 @@ struct LibraryDuplicateEntryGroup: Identifiable {
 enum LibraryDuplicateRepairError: LocalizedError {
     case groupNoLongerExists
     case selectedEntryNoLongerExists
+    case repairInProgress
 
     var errorDescription: String? {
         switch self {
+        case .repairInProgress:
+            String(localized: "Another duplicate repair is still in progress. Try again when it finishes.")
         case .groupNoLongerExists:
             String(
                 localized:
@@ -53,6 +56,14 @@ extension LibraryStore {
         keeping selectedEntry: AnimeEntry,
         at repairDate: Date = .now
     ) async throws {
+        // Another window may already be resolving; overlapping resolutions of one group can
+        // each delete the other's chosen survivor across the sync wait below.
+        guard !isResolvingDuplicateEntryGroup else {
+            throw LibraryDuplicateRepairError.repairInProgress
+        }
+        isResolvingDuplicateEntryGroup = true
+        defer { isResolvingDuplicateEntryGroup = false }
+
         guard let group = duplicateEntryGroups.first(where: { $0.identity == identity }) else {
             throw LibraryDuplicateRepairError.groupNoLongerExists
         }

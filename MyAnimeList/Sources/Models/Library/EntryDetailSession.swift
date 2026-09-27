@@ -9,6 +9,12 @@ import DataProvider
 import LibrarySync
 import Observation
 import SwiftUI
+import os
+
+fileprivate let episodeCountRefreshLogger = Logger(
+    subsystem: .bundleIdentifier,
+    category: "EpisodeCountRefresh"
+)
 
 enum EntryDetailSheet: Identifiable, Equatable {
     case broadcastValidation
@@ -49,6 +55,7 @@ final class EntryDetailSession {
     let model: EntryDetailViewModel
     let broadcast: EntryDetailBroadcastModel
     private let repository: LibraryRepository
+    private let broadcastEligibilityChecker: TMDbBroadcastEligibilityChecker
 
     var presentation = EntryDetailPresentationState()
     var isEditingDetails = false
@@ -78,6 +85,8 @@ final class EntryDetailSession {
         self.entry = entry
         self.entryIdentity = entry.libraryIdentity
         self.repository = repository
+        let broadcastEligibilityChecker = broadcastEligibilityChecker.forDetailSession()
+        self.broadcastEligibilityChecker = broadcastEligibilityChecker
         self.model = EntryDetailViewModel(repository: repository)
         self.broadcast = EntryDetailBroadcastModel(
             entryType: entry.type,
@@ -107,6 +116,65 @@ final class EntryDetailSession {
 
     func toggleFavorite() {
         repository.toggleFavorite(entry)
+    }
+
+    func refreshEpisodeCountsIfEligible(language: Language) async {
+        guard !Task.isCancelled else { return }
+        guard
+            EntryDetailBroadcastModel.passesPreliminaryGate(
+                entryType: entry.type,
+                seriesStatus: entry.detail?.status
+            )
+        else { return }
+
+        let seriesID = entry.type.parentSeriesID ?? entry.tmdbID
+        do {
+            let checked = try await broadcastEligibilityChecker.checkWithDetails(
+                entryType: entry.type,
+                tmdbSeriesID: seriesID
+            )
+            guard !Task.isCancelled, case .eligible = checked.result,
+                let details = checked.details,
+                let detail = entry.detail
+            else { return }
+
+            var previousCounts: [(AnimeEntrySeasonSummary, Int?)] = []
+            let previousEpisodeCount = detail.episodeCount
+            switch entry.type {
+            case .series:
+                if let count = details.episodeCount, count > 0 {
+                    detail.episodeCount = count
+                }
+                for season in detail.seasons {
+                    guard let count = details.seasonEpisodeCounts[season.seasonNumber], count > 0,
+                        season.episodeCount != count
+                    else { continue }
+                    previousCounts.append((season, season.episodeCount))
+                    season.episodeCount = count
+                }
+            case .season(let seasonNumber, _):
+                if let count = details.seasonEpisodeCounts[seasonNumber], count > 0 {
+                    detail.episodeCount = count
+                }
+            case .movie:
+                return
+            }
+
+            guard detail.episodeCount != previousEpisodeCount || !previousCounts.isEmpty else { return }
+            do {
+                try repository.save()
+                model.refreshDisplayedDetail(for: entry, language: language)
+            } catch {
+                detail.episodeCount = previousEpisodeCount
+                for (season, count) in previousCounts { season.episodeCount = count }
+                throw error
+            }
+        } catch {
+            guard !Task.isCancelled else { return }
+            episodeCountRefreshLogger.error(
+                "Failed to refresh episode counts for TMDb \(seriesID, privacy: .public): \(error.localizedDescription)"
+            )
+        }
     }
 
     func updatePresentation(

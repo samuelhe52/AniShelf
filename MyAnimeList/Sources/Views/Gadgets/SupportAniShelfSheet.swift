@@ -5,11 +5,13 @@
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/5/30.
 //
 
+import StoreKit
 import SwiftUI
 
 struct SupportAniShelfSheet: View {
     @Environment(SupportStore.self) private var supportStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.purchase) private var purchaseAction
 
     @State private var purchaseErrorMessage: String?
     @State private var purchaseSucceeded = false
@@ -274,7 +276,7 @@ struct SupportAniShelfSheet: View {
         purchaseErrorMessage = nil
 
         Task { @MainActor in
-            let outcome = await supportStore.purchase(id: product.id)
+            let outcome = await supportStore.purchase(id: product.id) { try await purchaseAction($0) }
             handlePurchaseOutcome(outcome)
         }
     }

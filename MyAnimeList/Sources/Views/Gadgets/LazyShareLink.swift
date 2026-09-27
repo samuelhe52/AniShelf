@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct LazyShareLink<LabelView: View>: View {
+    @Environment(\.windowSceneIdentifier) private var windowSceneIdentifier
     let label: () -> LabelView
     let prepareData: () -> [Any]?
 
@@ -33,6 +34,6 @@ struct LazyShareLink<LabelView: View>: View {
         guard let data = prepareData() else {
             return
         }
-        ShareSheetPresenter.present(items: data)
+        ShareSheetPresenter.present(items: data, sceneIdentifier: windowSceneIdentifier)
     }
 }

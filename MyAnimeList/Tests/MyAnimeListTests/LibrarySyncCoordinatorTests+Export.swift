@@ -14,6 +14,48 @@ import Testing
 @testable import MyAnimeList
 
 extension LibrarySyncCoordinatorTests {
+    @Test(arguments: [false, true])
+    @MainActor func partialSaveAccountErrorIsPermanentAndUpdatesAvailability(
+        permissionFailure: Bool
+    ) async throws {
+        let store = makeSyncReadyStore()
+        let entry = AnimeEntry(name: "Account Failure", type: .movie, tmdbID: 725)
+        entry.markCreatedForLibrary(at: referenceDate(year: 2026, month: 5, day: 1))
+        try store.repository.newEntry(entry)
+        try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([
+            .upsert(.init(identity: entry.libraryIdentity, dirtyAt: .now))
+        ])
+        store.rebuildSyncChangeTracking()
+
+        let client = CloudLibrarySyncClient()
+        let accountError = CKError(permissionFailure ? .permissionFailure : .notAuthenticated)
+        let unrelatedID = CKRecord.ID(
+            recordName: "unrelated", zoneID: CloudLibrarySyncClient.recordZoneID
+        )
+        let partial = CloudLibrarySyncPartialSaveFailure(
+            savedRecordIDs: [],
+            failedErrorsByID: [
+                client.recordID(for: entry.libraryIdentity): accountError,
+                unrelatedID: CKError(.networkFailure)
+            ]
+        )
+        let database = FakeCloudLibrarySyncDatabase(
+            changes: [makeEmptyChangeBatch()], saveErrorsByCallIndex: [1: partial]
+        )
+        let coordinator = LibrarySyncCoordinator(
+            store: store, client: client, database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        #expect(await coordinator.syncResult(trigger: .manualRetry) == .permanentFailure)
+        #expect(store.libraryCloudSyncStatus.lastResult == .permanentFailure)
+        #expect(
+            store.libraryCloudSyncStatus.cloudKitAvailability
+                == (permissionFailure ? .restricted : .noAccount)
+        )
+        #expect(store.syncChangeRecorder.dirtyQueueStore.load().entry(for: entry.libraryIdentity) != nil)
+    }
+
     @Test @MainActor
     func cancellationImmediatelyAfterExportDequeuesConfirmedDirtyEntriesWithoutRecordingSuccess() async throws {
         let store = makeSyncReadyStore()
@@ -101,13 +143,16 @@ extension LibrarySyncCoordinatorTests {
             namespaceProvider: { makeNamespace() }
         )
 
-        await coordinator.sync(trigger: .manualRetry)
+        // A record CloudKit rejects stays queued without failing the pass.
+        #expect(await coordinator.syncResult(trigger: .manualRetry) == .success)
 
         let remainingEntries = store.syncChangeRecorder.dirtyQueueStore.load().entries
         #expect(database.savedRecords.count == 2)
         #expect(remainingEntries.count == 1)
         #expect(remainingEntries.first?.identity == second.libraryIdentity)
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entry(for: first.libraryIdentity) == nil)
+        #expect(store.libraryCloudSyncStatus.rejectedUploadCount == 1)
+        #expect(store.hasPendingLibrarySyncItemRetryWork())
     }
 
     @Test @MainActor func partialExportFailureDequeuesAcceptedBatchesBeforeRetry() async throws {

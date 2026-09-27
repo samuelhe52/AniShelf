@@ -22,8 +22,8 @@ struct MyAnimeListApp: App {
     @State private var startupRecovery: PersistentStoreRecovery?
     @State private var backgroundSyncExecution: LibrarySyncBackgroundExecutionController
     private let recoveryActivityGate: StartupRecoveryActivityGate
+    private let lifecycleEventGate = AppLifecycleEventGate()
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.requestReview) private var requestReview
     @AppStorage(.preferredAnimeInfoLanguage) var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
@@ -110,6 +110,7 @@ struct MyAnimeListApp: App {
             .environment(supportStore)
             .environment(appReview)
             .onAppear {
+                guard lifecycleEventGate.shouldHandleLaunch() else { return }
                 keyStorage.retryInitialLookupIfNeeded()
                 if startupRecovery == nil {
                     requestSync(trigger: .appLaunch)
@@ -118,6 +119,8 @@ struct MyAnimeListApp: App {
                 }
             }
             .onChange(of: scenePhase) { _, newPhase in
+                // scenePhase here is the app-level phase; every window delivers each transition.
+                guard lifecycleEventGate.shouldHandlePhaseChange(to: newPhase) else { return }
                 if newPhase == .active {
                     keyStorage.retryInitialLookupIfNeeded()
                     requestSync(trigger: .foreground)
@@ -127,51 +130,20 @@ struct MyAnimeListApp: App {
                     flushPendingLocalSync()
                 }
             }
-            .sheet(item: presentedWhatsNewEntry) { entry in
-                NavigationStack {
-                    WhatsNewRootSheet(
-                        entry: entry,
-                        pastEntries: whatsNew.presentationSource == .settings
-                            ? WhatsNewRegistry.pastEntries(before: entry.version)
-                            : [],
-                        settingsActions: .init(store: libraryStore),
-                        onDismiss: { whatsNew.dismissPresentedEntry() }
-                    )
-                }
-                .presentationDetents([.large])
-                .presentationSizing(.page)
-            }
+            .modifier(WhatsNewPresenter(whatsNew: whatsNew, libraryStore: libraryStore))
             .onAppear(perform: updateWhatsNewPresentation)
-            .onChange(of: keyStorage.key) { _, _ in
+            .onChange(of: keyStorage.key) { _, newKey in
+                guard lifecycleEventGate.shouldHandleKeyChange(to: newKey) else { return }
                 updateWhatsNewPresentation()
                 recordActiveLibraryDayIfUsable()
                 if hasTMDbAPIKey {
                     requestSync(trigger: .foreground)
                 }
             }
-            .task(id: reviewPresentationTaskID) {
-                guard appReview.scheduledRequestToken != nil, scenePhase == .active else { return }
-                try? await Task.sleep(for: .seconds(2))
-                guard !Task.isCancelled, scenePhase == .active, appReview.prepareForRequest() else {
-                    return
-                }
-                requestReview()
-            }
+            .modifier(AppReviewPromptPresenter(appReview: appReview))
             .globalToasts()
+            .providesWindowSceneIdentifier()
         }
-    }
-
-    private var presentedWhatsNewEntry: Binding<WhatsNewEntry?> {
-        Binding(
-            get: { whatsNew.presentedEntry },
-            set: { newValue in
-                if let newValue {
-                    whatsNew.presentedEntry = newValue
-                } else {
-                    whatsNew.dismissPresentedEntry()
-                }
-            }
-        )
     }
 
     private func updateWhatsNewPresentation() {
@@ -216,10 +188,6 @@ struct MyAnimeListApp: App {
         return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private var reviewPresentationTaskID: String {
-        "\(appReview.scheduledRequestToken?.uuidString ?? "none")-\(scenePhase)"
-    }
-
     private func recordActiveLibraryDayIfUsable() {
         guard scenePhase == .active, startupRecovery == nil, hasTMDbAPIKey else { return }
         guard !libraryStore.requiresDuplicateRepair else { return }
@@ -248,6 +216,72 @@ final class StartupRecoveryActivityGate {
 
     init(isBlocked: Bool) {
         self.isBlocked = isBlocked
+    }
+}
+
+/// Shows What's New only in the window that claimed it; other windows' bindings stay `nil`.
+fileprivate struct WhatsNewPresenter: ViewModifier {
+    let whatsNew: WhatsNewController
+    let libraryStore: LibraryStore
+    @Environment(\.windowSceneIdentifier) private var windowSceneIdentifier
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: whatsNew.presentedEntry?.version, initial: true) { claimIfNeeded() }
+            .onChange(of: windowSceneIdentifier) { claimIfNeeded() }
+            .sheet(item: presentedEntry) { entry in
+                NavigationStack {
+                    WhatsNewRootSheet(
+                        entry: entry,
+                        pastEntries: whatsNew.presentationSource == .settings
+                            ? WhatsNewRegistry.pastEntries(before: entry.version)
+                            : [],
+                        settingsActions: .init(store: libraryStore),
+                        onDismiss: { whatsNew.dismissPresentedEntry() }
+                    )
+                }
+                .presentationDetents([.large])
+                .presentationSizing(.page)
+            }
+    }
+
+    private var presentedEntry: Binding<WhatsNewEntry?> {
+        Binding(
+            get: { whatsNew.presentedEntry(forSceneIdentifier: windowSceneIdentifier) },
+            set: { newValue in
+                if newValue == nil {
+                    whatsNew.dismissPresentedEntry()
+                }
+            }
+        )
+    }
+
+    private func claimIfNeeded() {
+        whatsNew.claimPresentation(forSceneIdentifier: windowSceneIdentifier)
+    }
+}
+
+/// Requests reviews from a window's own environment so StoreKit presents in that window.
+fileprivate struct AppReviewPromptPresenter: ViewModifier {
+    let appReview: AppReviewPromptController
+    @Environment(\.requestReview) private var requestReview
+    @Environment(\.scenePhase) private var scenePhase
+
+    func body(content: Content) -> some View {
+        content
+            .task(id: taskID) {
+                guard appReview.scheduledRequestToken != nil, scenePhase == .active else { return }
+                try? await Task.sleep(for: .seconds(2))
+                // prepareForRequest consumes the token, so only one active window requests.
+                guard !Task.isCancelled, scenePhase == .active, appReview.prepareForRequest() else {
+                    return
+                }
+                requestReview()
+            }
+    }
+
+    private var taskID: String {
+        "\(appReview.scheduledRequestToken?.uuidString ?? "none")-\(scenePhase)"
     }
 }
 

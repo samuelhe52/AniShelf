@@ -166,10 +166,15 @@ extension AnimeEntry {
         let currentEpisode = episodeProgress(forSeason: seasonNumber)?.watchedThroughEpisode ?? 0
         guard currentEpisode != episode else { return false }
 
+        let progressClock = LibrarySyncTimestamp.next(
+            date,
+            after: episodeProgress(forSeason: seasonNumber)?.updatedAt
+        )
+
         applyEpisodeProgressSnapshot(
             seasonNumber: seasonNumber,
             watchedThroughEpisode: episode,
-            updatedAt: date
+            updatedAt: progressClock
         )
         markTrackingModified(at: date)
         return true

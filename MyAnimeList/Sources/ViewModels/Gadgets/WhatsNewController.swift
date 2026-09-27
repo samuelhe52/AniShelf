@@ -24,6 +24,8 @@ final class WhatsNewController {
     let currentEntry: WhatsNewEntry?
     var presentedEntry: WhatsNewEntry?
     private(set) var presentationSource: WhatsNewPresentationSource?
+    /// Window scene showing `presentedEntry`; `nil` until a window claims an automatic presentation.
+    private(set) var presentingSceneIdentifier: String?
 
     init(
         defaults: UserDefaults = .standard,
@@ -49,16 +51,31 @@ final class WhatsNewController {
         presentedEntry = currentEntry
     }
 
-    func presentCurrentEntry() {
+    func presentCurrentEntry(inSceneIdentifier sceneIdentifier: String?) {
         guard let currentEntry else { return }
         presentationSource = .settings
         presentedEntry = currentEntry
+        presentingSceneIdentifier = sceneIdentifier
+    }
+
+    /// Lets the first window with a known scene take an unclaimed presentation, so only one shows it.
+    func claimPresentation(forSceneIdentifier sceneIdentifier: String?) {
+        guard presentedEntry != nil, presentingSceneIdentifier == nil, let sceneIdentifier else {
+            return
+        }
+        presentingSceneIdentifier = sceneIdentifier
+    }
+
+    func presentedEntry(forSceneIdentifier sceneIdentifier: String?) -> WhatsNewEntry? {
+        guard let sceneIdentifier, sceneIdentifier == presentingSceneIdentifier else { return nil }
+        return presentedEntry
     }
 
     func dismissPresentedEntry(markSeen: Bool = true) {
         let dismissedEntry = presentedEntry
         presentedEntry = nil
         presentationSource = nil
+        presentingSceneIdentifier = nil
 
         if markSeen, let dismissedEntry {
             defaults.set(dismissedEntry.version, forKey: .lastSeenWhatsNewVersion)

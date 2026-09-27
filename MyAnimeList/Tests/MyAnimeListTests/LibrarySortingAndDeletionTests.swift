@@ -86,8 +86,20 @@ struct LibrarySortingAndDeletionTests {
             .init(tombstone: .init(entry: discarded))
         )
 
+        // A resolution already running in another window must block this one, not race it.
+        store.isResolvingDuplicateEntryGroup = true
+        await #expect(throws: LibraryDuplicateRepairError.repairInProgress) {
+            try await store.resolveDuplicateEntryGroup(identity, keeping: discarded)
+        }
+        #expect(
+            try store.dataProvider.getAllModels(ofType: AnimeEntry.self)
+                .filter { $0.libraryIdentity == identity }.count == 2
+        )
+        store.isResolvingDuplicateEntryGroup = false
+
         try await store.resolveDuplicateEntryGroup(identity, keeping: keeper)
 
+        #expect(!store.isResolvingDuplicateEntryGroup)
         let storedEntries = try store.dataProvider.getAllModels(ofType: AnimeEntry.self)
         #expect(storedEntries.filter { $0.libraryIdentity == identity }.count == 1)
         #expect(storedEntries.contains { $0 === keeper })

@@ -396,6 +396,26 @@ enum WhatsNewRegistry {
                     kind: .openURL(projectURL)
                 )
             ]
+        ),
+        "1.101.0": .init(
+            version: "1.101.0",
+            summary:
+                "This release adds multiple windows on iPad and Mac, fixes a macOS 27 search crash, and improves iCloud Sync and episode tracking.",
+            highlights: [
+                "Open multiple AniShelf windows on iPad and Mac, and search and browse your library independently in each window.",
+                "Fixed a crash when tapping the search field on macOS 27.",
+                "Improved iCloud Sync stability.",
+                "Fixed automatic episode count updates for airing anime and improved some watch progress displays."
+            ],
+            primaryAction: nil,
+            secondaryActions: [
+                .init(
+                    id: "project-github",
+                    title: "AniShelf on GitHub",
+                    systemImage: "arrow.up.right.square",
+                    kind: .openURL(projectURL)
+                )
+            ]
         )
     ]
 

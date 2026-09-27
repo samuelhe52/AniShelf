@@ -9,6 +9,7 @@ import DataProvider
 import Foundation
 import LibrarySync
 import SwiftUI
+import TMDb
 import os
 
 extension LibrarySyncCoordinator {
@@ -24,10 +25,30 @@ extension LibrarySyncCoordinator {
         forcedDomainsByIdentity: [LibraryEntryIdentity: Set<LibraryCloudSyncConflictDomain>] = [:],
         isBootstrap: Bool = false,
         isUserRetry: Bool = false,
+        replaysPermanentFailures: Bool = false,
         checkCancellation: () throws -> Void = {}
     ) async throws -> (appliedChangesCount: Int, hydratedEntriesCount: Int) {
+        let scope = LibraryCloudSyncScope(namespace: batch.namespace, zoneID: batch.zoneID)
+        var applicableBatch = batch
+        if !isBootstrap,
+            let pending = store.libraryCloudSyncStatus.pendingReconstructions.first(where: { $0.scope == scope })
+        {
+            let incomingIDs = Set(batch.changes.map(\.identity))
+            // Discarded failures wait for their deletion, and permanent ones only
+            // retry when the user asks, so neither calls TMDb on every pass.
+            let replayChanges = pending.failures
+                .filter { failure in
+                    !incomingIDs.contains(failure.snapshot.identity)
+                        && failure.discardDate == nil
+                        && (failure.isPermanent != true || replaysPermanentFailures)
+                }
+                .map { failure -> LibraryEntrySyncRemoteChange in
+                    .snapshot(failure.snapshot)
+                }
+            applicableBatch.changes = replayChanges + batch.changes
+        }
         let remoteSnapshots = Dictionary(
-            uniqueKeysWithValues: batch.changes.compactMap { change in
+            uniqueKeysWithValues: applicableBatch.changes.compactMap { change in
                 if case .snapshot(let snapshot) = change { return (snapshot.identity, snapshot) }
                 return nil
             })
@@ -41,16 +62,31 @@ extension LibrarySyncCoordinator {
         var firstFailure: LibrarySyncHydrationError?
         var applied = 0
         var hydrated = 0
-        let batchSize = isBootstrap ? 16 : max(1, batch.changes.count)
-        for start in stride(from: 0, to: batch.changes.count, by: batchSize) {
-            var chunk = batch
-            chunk.changes = Array(batch.changes[start..<min(start + batchSize, batch.changes.count)])
+        let batchSize = isBootstrap ? 16 : max(1, applicableBatch.changes.count)
+        for start in stride(from: 0, to: applicableBatch.changes.count, by: batchSize) {
+            var chunk = applicableBatch
+            chunk.changes = Array(
+                applicableBatch.changes[start..<min(start + batchSize, applicableBatch.changes.count)])
             var failedCount = 0
             let result = try await applyImportChunk(
                 chunk, to: store, forcedDomainsByIdentity: forcedDomainsByIdentity,
                 remoteSnapshots: remoteSnapshots, checkCancellation: checkCancellation
             ) { snapshot, error in
-                guard isBootstrap else { throw error }
+                if !isBootstrap {
+                    store.updateLibraryCloudSyncStatus { status in
+                        if let index = status.pendingReconstructions.firstIndex(where: { $0.scope == scope }) {
+                            status.pendingReconstructions[index].recordFailure(
+                                snapshot: snapshot, error: error, at: dateProvider()
+                            )
+                        } else {
+                            var pending = LibraryPendingReconstructionState(scope: scope)
+                            pending.recordFailure(snapshot: snapshot, error: error, at: dateProvider())
+                            status.pendingReconstructions.append(pending)
+                        }
+                    }
+                    failedCount += 1
+                    return
+                }
                 failedCount += 1
                 firstFailure = firstFailure ?? error
                 store.updateLibraryCloudSyncStatus { status in
@@ -204,6 +240,15 @@ extension LibrarySyncCoordinator {
         try store.refreshLibrary()
         store.updateLibraryCloudSyncStatus { status in
             status.restoration?.failures.removeAll { completedIdentities.contains($0.snapshot.identity) }
+            let scope = LibraryCloudSyncScope(namespace: batch.namespace, zoneID: batch.zoneID)
+            if let index = status.pendingReconstructions.firstIndex(where: { $0.scope == scope }) {
+                status.pendingReconstructions[index].failures.removeAll {
+                    completedIdentities.contains($0.snapshot.identity)
+                }
+                if status.pendingReconstructions[index].failures.isEmpty {
+                    status.pendingReconstructions.remove(at: index)
+                }
+            }
         }
         return (appliedChangesCount, hydratedEntriesCount)
     }
@@ -318,6 +363,13 @@ extension LibrarySyncCoordinator {
 struct LibrarySyncHydrationError: LocalizedError {
     let identity: LibraryEntryIdentity
     let underlyingError: Error
+
+    var isPermanentReconstructionFailure: Bool {
+        if let tmdbError = underlyingError as? TMDbError, case .notFound = tmdbError {
+            return true
+        }
+        return underlyingError.isPermanentLibrarySyncFailure
+    }
 
     var errorDescription: String? {
         let error = underlyingError as NSError

@@ -55,6 +55,7 @@
 				Resources/Info.plist,
 				Tests/MyAnimeListTests/AiringReminderManagerTests.swift,
 				Tests/MyAnimeListTests/AnimeSharingTests.swift,
+				Tests/MyAnimeListTests/AppLifecycleEventGateTests.swift,
 				Tests/MyAnimeListTests/AppReviewPromptControllerTests.swift,
 				Tests/MyAnimeListTests/EntryDetailBroadcastModelTests.swift,
 				Tests/MyAnimeListTests/EntryDetailSessionTests.swift,
@@ -120,6 +121,7 @@
 			membershipExceptions = (
 				Tests/MyAnimeListTests/AiringReminderManagerTests.swift,
 				Tests/MyAnimeListTests/AnimeSharingTests.swift,
+				Tests/MyAnimeListTests/AppLifecycleEventGateTests.swift,
 				Tests/MyAnimeListTests/AppReviewPromptControllerTests.swift,
 				Tests/MyAnimeListTests/EntryDetailBroadcastModelTests.swift,
 				Tests/MyAnimeListTests/EntryDetailSessionTests.swift,
@@ -606,6 +608,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save posters and Anime Sharing Cards into Photos. ";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -616,7 +619,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.100.2;
+				MARKETING_VERSION = 1.101.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelhe.MyAnimeList;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -647,6 +650,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save posters and Anime Sharing Cards into Photos. ";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -657,7 +661,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.100.2;
+				MARKETING_VERSION = 1.101.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelhe.MyAnimeList;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;

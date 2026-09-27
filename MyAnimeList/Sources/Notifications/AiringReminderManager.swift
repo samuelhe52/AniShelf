@@ -908,6 +908,13 @@ actor AiringReminderManager {
     }
 }
 
+struct AiringReminderNotificationRoute: Equatable {
+    let entryIdentityRawID: String
+    /// Persistent identifier of the scene the system activated for the notification response.
+    /// `nil` lets whichever library window claims the route first open it.
+    let targetSceneIdentifier: String?
+}
+
 @MainActor
 @Observable
 final class AiringReminderCoordinator {
@@ -919,7 +926,7 @@ final class AiringReminderCoordinator {
     private(set) var snapshot = AiringReminderSnapshot()
     private(set) var isRefreshing = false
     private(set) var lastRefreshFailed = false
-    var pendingRouteEntryIdentityRawID: String?
+    private(set) var pendingRoute: AiringReminderNotificationRoute?
     var presentedWarning: AiringReminderWarning?
 
     private init(manager: AiringReminderManager) {
@@ -1068,12 +1075,28 @@ final class AiringReminderCoordinator {
         await reloadState()
     }
 
-    func receiveNotificationRoute(entryIdentityRawID: String) {
-        pendingRouteEntryIdentityRawID = entryIdentityRawID
+    func receiveNotificationRoute(entryIdentityRawID: String, targetSceneIdentifier: String?) {
+        pendingRoute = AiringReminderNotificationRoute(
+            entryIdentityRawID: entryIdentityRawID,
+            targetSceneIdentifier: targetSceneIdentifier
+        )
     }
 
-    func consumePendingRoute() {
-        pendingRouteEntryIdentityRawID = nil
+    /// Consumes the pending route when it belongs to the given scene, so exactly one window opens it.
+    ///
+    /// A route whose target scene has disconnected falls back to any window.
+    func claimPendingRoute(
+        forSceneIdentifier sceneIdentifier: String?,
+        isSceneConnected: (String) -> Bool
+    ) -> String? {
+        guard let pendingRoute else { return nil }
+        if let targetSceneIdentifier = pendingRoute.targetSceneIdentifier,
+            isSceneConnected(targetSceneIdentifier)
+        {
+            guard sceneIdentifier == targetSceneIdentifier else { return nil }
+        }
+        self.pendingRoute = nil
+        return pendingRoute.entryIdentityRawID
     }
 
     func dismissPresentedWarning() {

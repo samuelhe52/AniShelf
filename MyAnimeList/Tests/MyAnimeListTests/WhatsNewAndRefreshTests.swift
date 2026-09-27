@@ -120,11 +120,18 @@ struct WhatsNewAndRefreshTests {
         )
 
         controller.presentIfNeeded(allowsAutoPresentation: true)
+        // An automatic presentation shows only in the first window that claims it.
+        #expect(controller.presentedEntry(forSceneIdentifier: "window-a") == nil)
+        controller.claimPresentation(forSceneIdentifier: "window-a")
+        controller.claimPresentation(forSceneIdentifier: "window-b")
+        #expect(controller.presentedEntry(forSceneIdentifier: "window-a")?.version == entry.version)
+        #expect(controller.presentedEntry(forSceneIdentifier: "window-b") == nil)
         controller.dismissPresentedEntry()
-        controller.presentCurrentEntry()
+        controller.presentCurrentEntry(inSceneIdentifier: "window-b")
 
         #expect(controller.currentEntry?.version == entry.version)
-        #expect(controller.presentedEntry?.version == entry.version)
+        #expect(controller.presentedEntry(forSceneIdentifier: "window-b")?.version == entry.version)
+        #expect(controller.presentedEntry(forSceneIdentifier: "window-a") == nil)
         #expect(controller.presentationSource == .settings)
     }
 

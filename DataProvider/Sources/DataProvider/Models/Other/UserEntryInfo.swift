@@ -250,22 +250,43 @@ extension UserEntryInfo: CustomStringConvertible {
     }
 }
 
+/// Millisecond sync timestamps stay stable across CloudKit Date round trips.
+public enum LibrarySyncTimestamp {
+    public static func milliseconds(_ date: Date) -> Int64 {
+        // The small bias keeps a Date rebuilt from an exact millisecond from
+        // falling into the preceding tick because of Double representation.
+        Int64((date.timeIntervalSince1970 * 1_000 + 0.001).rounded(.down))
+    }
+
+    public static func normalized(_ date: Date) -> Date {
+        Date(timeIntervalSince1970: Double(milliseconds(date)) / 1_000)
+    }
+
+    public static func next(_ proposed: Date, after previous: Date?) -> Date {
+        let proposedMilliseconds = milliseconds(proposed)
+        let nextMilliseconds =
+            previous.map { max(proposedMilliseconds, milliseconds($0) + 1) }
+            ?? proposedMilliseconds
+        return Date(timeIntervalSince1970: Double(nextMilliseconds) / 1_000)
+    }
+}
+
 extension AnimeEntry {
     public static let validScoreRange = 1...5
 
     /// Advances the library-domain sync clock without touching tracking state.
     public func markLibraryModified(at date: Date = .now) {
-        libraryUpdatedAt = date
+        libraryUpdatedAt = LibrarySyncTimestamp.next(date, after: libraryUpdatedAt)
     }
 
     /// Advances the tracking-domain sync clock without mutating user fields.
     public func markTrackingModified(at date: Date = .now) {
-        trackingUpdatedAt = date
+        trackingUpdatedAt = LibrarySyncTimestamp.next(date, after: trackingUpdatedAt)
     }
 
     /// Seeds the library-domain sync clock for a newly saved entry.
     public func markCreatedForLibrary(at date: Date = .now) {
-        libraryUpdatedAt = date
+        libraryUpdatedAt = LibrarySyncTimestamp.next(date, after: libraryUpdatedAt)
     }
 
     /// Low-level display setter that does not advance `libraryUpdatedAt`.

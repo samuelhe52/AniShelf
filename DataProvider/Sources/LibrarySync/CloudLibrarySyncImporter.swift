@@ -21,9 +21,13 @@ public struct CloudLibrarySyncImportBatch {
     public var remoteChanges: [LibraryEntrySyncRemoteChange]
     public var settingsSnapshot: LibrarySettingsSyncSnapshot?
     public var ignoredDeletedRecordIDs: [CKRecord.ID]
+    public var quarantinedRecordIDs: Set<CKRecord.ID>
     public var changeToken: CKServerChangeToken
     public var namespace: CloudLibrarySyncChangeTokenStore.Namespace
     public var zoneID: CKRecordZone.ID
+    var quarantineDecodedRecordIDs: Set<CKRecord.ID> = []
+    var quarantineDeletedRecordIDs: Set<CKRecord.ID> = []
+    var quarantineFailures: [CloudLibrarySyncQuarantineStore.Entry] = []
 
     /// Creates an import batch ready for application to the local store.
     ///
@@ -37,6 +41,7 @@ public struct CloudLibrarySyncImportBatch {
     ///   - ignoredDeletedRecordIDs: Raw CloudKit record deletions. AniShelf
     ///     applies tombstone records instead of raw deletes, so these are kept
     ///     for logging and diagnostics.
+    ///   - quarantinedRecordIDs: Records this build must not overwrite.
     ///   - changeToken: Server change token to commit after local application
     ///     succeeds.
     ///   - namespace: Container/account namespace for the token.
@@ -46,6 +51,7 @@ public struct CloudLibrarySyncImportBatch {
         remoteChanges: [LibraryEntrySyncRemoteChange],
         settingsSnapshot: LibrarySettingsSyncSnapshot?,
         ignoredDeletedRecordIDs: [CKRecord.ID],
+        quarantinedRecordIDs: Set<CKRecord.ID> = [],
         changeToken: CKServerChangeToken,
         namespace: CloudLibrarySyncChangeTokenStore.Namespace,
         zoneID: CKRecordZone.ID
@@ -54,6 +60,7 @@ public struct CloudLibrarySyncImportBatch {
         self.remoteChanges = remoteChanges
         self.settingsSnapshot = settingsSnapshot
         self.ignoredDeletedRecordIDs = ignoredDeletedRecordIDs
+        self.quarantinedRecordIDs = quarantinedRecordIDs
         self.changeToken = changeToken
         self.namespace = namespace
         self.zoneID = zoneID
@@ -65,6 +72,8 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
     private let client: CloudLibrarySyncClient
     private let database: CloudLibrarySyncDatabase
     private let changeTokenStore: CloudLibrarySyncChangeTokenStore
+    private let quarantineStore: CloudLibrarySyncQuarantineStore
+    private let appVersion: String
 
     /// Creates an importer for a client/database/token-store combination.
     ///
@@ -72,14 +81,26 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
     ///   - client: Encoder/decoder for the library sync record schema.
     ///   - database: Database adapter used to prepare the zone and fetch changes.
     ///   - changeTokenStore: Store for per-container/per-account zone tokens.
+    ///   - quarantineStore: Durable store for undecodable records.
+    ///   - appVersion: Version used to retry quarantined records after an upgrade.
     public init(
         client: CloudLibrarySyncClient,
         database: CloudLibrarySyncDatabase,
-        changeTokenStore: CloudLibrarySyncChangeTokenStore = .init()
+        changeTokenStore: CloudLibrarySyncChangeTokenStore = .init(),
+        quarantineStore: CloudLibrarySyncQuarantineStore = .init(),
+        appVersion: String? = nil
     ) {
         self.client = client
         self.database = database
         self.changeTokenStore = changeTokenStore
+        self.quarantineStore = quarantineStore
+        self.appVersion = appVersion ?? Self.runningAppVersion
+    }
+
+    public func quarantinedRecordIDs(
+        namespace: CloudLibrarySyncChangeTokenStore.Namespace
+    ) throws -> Set<CKRecord.ID> {
+        Set(try quarantineStore.entries(namespace: namespace, zoneID: Self.zoneID).map(\.recordID))
     }
 
     /// Ensures the remote zone and silent subscription are available.
@@ -148,7 +169,14 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
     }
 
     /// Persists the server change token for a successfully applied batch.
-    public func commit(_ batch: CloudLibrarySyncImportBatch) {
+    public func commit(_ batch: CloudLibrarySyncImportBatch) throws {
+        _ = try quarantineStore.reconcile(
+            namespace: batch.namespace,
+            zoneID: batch.zoneID,
+            decodedRecordIDs: batch.quarantineDecodedRecordIDs,
+            deletedRecordIDs: batch.quarantineDeletedRecordIDs,
+            failures: batch.quarantineFailures
+        )
         changeTokenStore.setToken(batch.changeToken, for: batch.zoneID, namespace: batch.namespace)
     }
 
@@ -163,34 +191,66 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
         localSnapshotsByIdentity: [LibraryEntryIdentity: LibraryEntrySyncSnapshot],
         startingToken: CKServerChangeToken?
     ) async throws -> CloudLibrarySyncImportBatch {
+        let existingQuarantined = try quarantineStore.entries(namespace: namespace, zoneID: Self.zoneID)
+        let retryRecordIDs = existingQuarantined
+            .filter { $0.attemptedAppVersion != appVersion }
+            .map(\.recordID)
+        let retriedRecords: [CKRecord.ID: CKRecord] =
+            retryRecordIDs.isEmpty
+            ? [:] : try await database.fetchRecords(ids: retryRecordIDs)
+        let missingRetriedRecordIDs = Set(retryRecordIDs).subtracting(retriedRecords.keys)
         var currentToken = startingToken
         var finalToken: CKServerChangeToken?
         var remoteChangesByID: [LibraryEntryIdentity: LibraryEntrySyncRemoteChange] = [:]
         var settingsSnapshot: LibrarySettingsSyncSnapshot?
         var ignoredDeletedRecordIDs: [CKRecord.ID] = []
+        var decodedRecordIDs: Set<CKRecord.ID> = []
+        var failedRecords: [CKRecord.ID: CloudLibrarySyncQuarantineStore.Entry] = [:]
+        var remainingRetriedRecords = Array(retriedRecords.values)
         repeat {
             let batch = try await database.fetchRecordZoneChanges(
                 in: Self.zoneID,
                 since: currentToken
             )
-            for record in batch.modifiedRecordsByID.values {
-                let decodedChange = try client.zoneRecordChange(from: record)
-                switch decodedChange {
-                case .entry(let change):
-                    if let existing = remoteChangesByID[change.identity] {
-                        remoteChangesByID[change.identity] = try existing.merged(with: change)
-                    } else {
-                        remoteChangesByID[change.identity] = change
-                    }
-                case .settings(let snapshot):
-                    if let existing = settingsSnapshot {
-                        settingsSnapshot = existing.updatedAt >= snapshot.updatedAt ? existing : snapshot
-                    } else {
+            for record in remainingRetriedRecords + Array(batch.modifiedRecordsByID.values) {
+                do {
+                    let decodedChange = try client.zoneRecordChange(from: record)
+                    failedRecords.removeValue(forKey: record.recordID)
+                    decodedRecordIDs.insert(record.recordID)
+                    switch decodedChange {
+                    case .entry(let change):
+                        if let existing = remoteChangesByID[change.identity] {
+                            remoteChangesByID[change.identity] = try existing.merged(with: change)
+                        } else {
+                            remoteChangesByID[change.identity] = change
+                        }
+                    case .settings(let snapshot):
+                        // Later pages carry later server versions of the single
+                        // settings record, whatever the writing device's clock said.
                         settingsSnapshot = snapshot
+                    }
+                } catch let error as CloudLibrarySyncDecodeError {
+                    decodedRecordIDs.remove(record.recordID)
+                    failedRecords[record.recordID] = .init(
+                        record: record,
+                        namespace: namespace,
+                        reason: error.localizedDescription,
+                        attemptedAppVersion: appVersion
+                    )
+                    remoteChangesByID = remoteChangesByID.filter { $0.key.rawID != record.recordID.recordName }
+                    if record.recordID == client.librarySettingsRecordID {
+                        settingsSnapshot = nil
                     }
                 }
             }
+            remainingRetriedRecords.removeAll()
             ignoredDeletedRecordIDs.append(contentsOf: batch.deletedRecordIDs)
+            for recordID in batch.deletedRecordIDs {
+                failedRecords.removeValue(forKey: recordID)
+                decodedRecordIDs.remove(recordID)
+                remoteChangesByID = remoteChangesByID.filter { $0.key.rawID != recordID.recordName }
+                if recordID == client.librarySettingsRecordID { settingsSnapshot = nil }
+            }
             currentToken = batch.changeToken
             finalToken = batch.changeToken
 
@@ -213,19 +273,36 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
             throw CloudLibrarySyncImportError.missingChangeToken
         }
 
-        return .init(
+        let deletedRecordIDs = Set(ignoredDeletedRecordIDs).union(missingRetriedRecordIDs)
+        let resolvedRecordIDs = decodedRecordIDs.union(deletedRecordIDs)
+        let quarantinedRecordIDs = Set(existingQuarantined.map(\.recordID))
+            .subtracting(resolvedRecordIDs)
+            .union(failedRecords.keys)
+        var result = CloudLibrarySyncImportBatch(
             changes: resolvedChanges,
             remoteChanges: remoteChanges,
             settingsSnapshot: settingsSnapshot,
             ignoredDeletedRecordIDs: ignoredDeletedRecordIDs,
+            quarantinedRecordIDs: quarantinedRecordIDs,
             changeToken: finalToken,
             namespace: namespace,
             zoneID: Self.zoneID
         )
+        result.quarantineDecodedRecordIDs = decodedRecordIDs
+        result.quarantineDeletedRecordIDs = deletedRecordIDs
+        result.quarantineFailures = Array(failedRecords.values)
+        return result
     }
 
     private static var zoneID: CKRecordZone.ID {
         CloudLibrarySyncClient.recordZoneID
+    }
+
+    private static var runningAppVersion: String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let version = info["CFBundleShortVersionString"] as? String ?? "unknown"
+        let build = info["CFBundleVersion"] as? String ?? "unknown"
+        return "\(version).\(build)"
     }
 }
 

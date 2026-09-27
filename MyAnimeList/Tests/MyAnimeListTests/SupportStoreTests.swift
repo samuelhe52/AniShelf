@@ -41,7 +41,7 @@ struct SupportStoreTests {
         )
 
         await store.loadProducts()
-        let outcome = await store.purchase(id: SupportTipTier.small.productID)
+        let outcome = await store.purchase(id: SupportTipTier.small.productID, using: unusedPurchaseAction)
 
         #expect(outcome == .success)
         #expect(transaction.finishCallCount == 1)
@@ -62,7 +62,10 @@ struct SupportStoreTests {
             )
         )
         await cancelledStore.loadProducts()
-        #expect(await cancelledStore.purchase(id: SupportTipTier.small.productID) == .userCancelled)
+        #expect(
+            await cancelledStore.purchase(id: SupportTipTier.small.productID, using: unusedPurchaseAction)
+                == .userCancelled
+        )
 
         let pendingStore = SupportStore(
             provider: MockSupportProvider(
@@ -78,7 +81,10 @@ struct SupportStoreTests {
             )
         )
         await pendingStore.loadProducts()
-        #expect(await pendingStore.purchase(id: SupportTipTier.small.productID) == .pending)
+        #expect(
+            await pendingStore.purchase(id: SupportTipTier.small.productID, using: unusedPurchaseAction)
+                == .pending
+        )
 
         let failingStore = SupportStore(
             provider: MockSupportProvider(
@@ -95,13 +101,18 @@ struct SupportStoreTests {
         )
         await failingStore.loadProducts()
         #expect(
-            await failingStore.purchase(id: SupportTipTier.small.productID)
+            await failingStore.purchase(id: SupportTipTier.small.productID, using: unusedPurchaseAction)
                 == .failed(MockSupportError.purchaseFailed.localizedDescription)
         )
     }
 
 }
 
+
+/// Mock products resolve purchases themselves and never reach StoreKit.
+fileprivate let unusedPurchaseAction: SupportPurchaseAction = { _ in
+    fatalError("Mock support products must not invoke StoreKit purchases.")
+}
 
 fileprivate struct MockSupportProvider: SupportStoreProviding {
     let products: [MockSupportProduct]
@@ -123,7 +134,7 @@ fileprivate struct MockSupportProduct: SupportStoreProduct {
     var purchaseResult: SupportPurchaseResult = .pending
     var error: Error?
 
-    func purchase() async throws -> SupportPurchaseResult {
+    func purchase(using action: SupportPurchaseAction) async throws -> SupportPurchaseResult {
         if let error {
             throw error
         }

@@ -58,7 +58,7 @@ public struct LibraryEntrySyncTombstone: Codable, Equatable, Sendable {
         self.parentSeriesID = parentSeriesID
         self.seasonNumber = seasonNumber
         self.entryType = entryType
-        self.deletedAt = deletedAt
+        self.deletedAt = LibrarySyncTimestamp.normalized(deletedAt)
     }
 }
 
@@ -98,13 +98,24 @@ public enum LibraryEntrySyncRemoteChange: Equatable, Sendable {
         case (.snapshot(let lhs), .snapshot(let rhs)):
             return .snapshot(try lhs.merged(with: rhs))
         case (.tombstone(let lhs), .tombstone(let rhs)):
-            return .tombstone(lhs.deletedAt >= rhs.deletedAt ? lhs : rhs)
+            var lhs = lhs
+            var rhs = rhs
+            lhs.deletedAt = LibrarySyncTimestamp.normalized(lhs.deletedAt)
+            rhs.deletedAt = LibrarySyncTimestamp.normalized(rhs.deletedAt)
+            let lhsClock = LibrarySyncTimestamp.milliseconds(lhs.deletedAt)
+            let rhsClock = LibrarySyncTimestamp.milliseconds(rhs.deletedAt)
+            if lhsClock == rhsClock {
+                return .tombstone(lhs.schemaVersion >= rhs.schemaVersion ? lhs : rhs)
+            }
+            return .tombstone(lhsClock > rhsClock ? lhs : rhs)
         case (.snapshot(let snapshot), .tombstone(let tombstone)):
             let snapshotClock = snapshot.latestUserStateClock ?? .distantPast
-            return tombstone.deletedAt > snapshotClock ? .tombstone(tombstone) : self
+            return LibrarySyncTimestamp.milliseconds(tombstone.deletedAt)
+                > LibrarySyncTimestamp.milliseconds(snapshotClock) ? .tombstone(tombstone) : self
         case (.tombstone(let tombstone), .snapshot(let snapshot)):
             let snapshotClock = snapshot.latestUserStateClock ?? .distantPast
-            return snapshotClock > tombstone.deletedAt ? other : self
+            return LibrarySyncTimestamp.milliseconds(snapshotClock)
+                >= LibrarySyncTimestamp.milliseconds(tombstone.deletedAt) ? other : self
         }
     }
 }

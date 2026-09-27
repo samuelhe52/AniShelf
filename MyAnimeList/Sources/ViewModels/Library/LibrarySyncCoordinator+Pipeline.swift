@@ -132,6 +132,18 @@ extension LibrarySyncCoordinator {
         {
             throw LibraryCloudSyncScopeChangedDuringSync()
         }
+        if !pass.completedBootstrap,
+            store.libraryCloudSyncStatus.currentPendingReconstructionFailures.contains(where: { $0.discardDate != nil })
+        {
+            // The scope check above confirms the active account supplied these failures.
+            try await pass.run(.export, state: state, store: store) {
+                try await exportPendingReconstructionDiscards(
+                    in: LibraryCloudSyncScope(namespace: namespace),
+                    store: store,
+                    checkCancellation: pass.checkCancellation
+                )
+            }
+        }
 
         if pass.completedBootstrap {
             let scope = LibraryCloudSyncScope(namespace: namespace)
@@ -157,6 +169,9 @@ extension LibrarySyncCoordinator {
                 )
             }
         }
+        store.updateLibraryCloudSyncStatus {
+            $0.quarantinedRecordCount = importBatch.quarantinedRecordIDs.count
+        }
         return .init(
             namespace: namespace,
             preImportSnapshots: preImportSnapshots,
@@ -179,6 +194,7 @@ extension LibrarySyncCoordinator {
                 forcedDomainsByIdentity: forcedDomainsByIdentity,
                 isBootstrap: pass.completedBootstrap,
                 isUserRetry: isUserRetry,
+                replaysPermanentFailures: pass.trigger == .manualRetry,
                 checkCancellation: pass.checkCancellation
             )
         }
@@ -186,16 +202,20 @@ extension LibrarySyncCoordinator {
         try pass.checkCancellation()
 
         try await pass.run(.tokenCommit, state: state, store: store) {
-            importer.commit(importBatch)
+            try importer.commit(importBatch)
         }
         try await pass.run(.libraryRefresh, state: state, store: store) {
             try refreshLibraryAfterImport(in: store)
         }
+        var postImportSnapshots = try localSnapshotsByIdentity(for: store)
         _ = try await pass.run(.dirtyQueueReconciliation, state: state, store: store) {
-            try reconcileDirtyQueue(with: importBatch, in: store)
+            try reconcileDirtyQueue(
+                with: importBatch,
+                localSnapshotsByIdentity: &postImportSnapshots,
+                in: store
+            )
         }
 
-        let postImportSnapshots = try localSnapshotsByIdentity(for: store)
         let dirtyEntries = store.syncChangeRecorder.dirtyQueueStore.load().entries
         let localSettingsState = localSettingsSnapshotState(for: store)
         let exportSettingsSnapshot = settingsSnapshotForExport(
@@ -213,6 +233,7 @@ extension LibrarySyncCoordinator {
                 entries: dirtyEntries,
                 localSnapshotsByIdentity: postImportSnapshots,
                 settingsSnapshot: exportSettingsSnapshot,
+                blockedRecordIDs: importBatch.quarantinedRecordIDs,
                 observedDirtyEntries: dirtyEntries,
                 store: store
             )
@@ -235,6 +256,12 @@ extension LibrarySyncCoordinator {
                 exportedSnapshot: exportSettingsSnapshot,
                 settingsExported: exportResult.settingsExported
             )
+        // Rejected uploads and failed reconstructions affect only their own
+        // entries. They stay pending for later passes and the scheduler's item
+        // retries, so they do not turn this pass into a failure.
+        store.updateLibraryCloudSyncStatus { status in
+            status.rejectedUploadCount = exportResult.rejectedChangeCount
+        }
         store.recordLibraryCloudSyncSuccess(
             trigger: pass.trigger,
             completedBootstrap: pass.completedBootstrap,
@@ -257,14 +284,19 @@ extension LibrarySyncCoordinator {
         store: LibraryStore
     ) -> SyncResult {
         let result: SyncResult = error.isPermanentLibrarySyncFailure ? .permanentFailure : .retryableFailure
+        let availability = error.libraryCloudKitAvailability
+        if availability == .noAccount || availability == .restricted {
+            store.updateLibraryCloudKitAvailability(availability)
+        }
         store.recordLibraryCloudSyncFailure(
             trigger: pass.trigger,
             phase: state.currentPhase,
             result: result.resultClass,
-            reason: error.localizedDescription,
+            reason: error.librarySyncFailureReason,
             degradedReason: result == .permanentFailure
-                ? pass.permanentFailureDegradedReason
+                ? (error.librarySyncDegradedReason ?? pass.permanentFailureDegradedReason)
                 : nil,
+            retryAfterSeconds: error.librarySyncRetryAfterSeconds,
             at: dateProvider()
         )
         pass.markBootstrapFailed()
@@ -286,22 +318,33 @@ fileprivate struct LibraryCloudSyncScopeChangedDuringSync: LocalizedError {
 
 @MainActor
 final class SyncGate {
+    enum PassKind { case ordinary, bootstrap }
+
+    private struct Waiter {
+        let continuation: CheckedContinuation<LibrarySyncCoordinator.SyncOutcome, Never>
+        let canHandleResult: Bool
+    }
+
     private var isSyncing = false
+    private var passKind: PassKind = .ordinary
+    private var passOwnerHandlesResult = true
     private var syncRequestedWhileRunning = false
-    private var waiters: [CheckedContinuation<LibrarySyncCoordinator.SyncResult, Never>] = []
+    private var waiters: [Waiter] = []
     private var idleWaiters: [CheckedContinuation<Void, Never>] = []
 
-    func waitForRunningPass() async -> LibrarySyncCoordinator.SyncResult? {
+    func waitForRunningPass(canHandleResult: Bool = true) async -> LibrarySyncCoordinator.SyncOutcome? {
         guard isSyncing else { return nil }
         syncRequestedWhileRunning = true
         return await withCheckedContinuation { continuation in
-            waiters.append(continuation)
+            waiters.append(.init(continuation: continuation, canHandleResult: canHandleResult))
         }
     }
 
-    func begin() {
+    func begin(kind: PassKind, ownerHandlesResult: Bool) {
         precondition(!isSyncing)
         isSyncing = true
+        passKind = kind
+        passOwnerHandlesResult = ownerHandlesResult
     }
 
     func waitUntilIdle() async {
@@ -326,8 +369,14 @@ final class SyncGate {
         guard !parkingWaiters else { return }
         let pendingWaiters = waiters
         waiters.removeAll()
+        var bootstrapRetryOwnerAssigned = passOwnerHandlesResult
         for waiter in pendingWaiters {
-            waiter.resume(returning: result)
+            let shouldHandleResult = passKind == .bootstrap
+                && waiter.canHandleResult && !bootstrapRetryOwnerAssigned
+            if shouldHandleResult { bootstrapRetryOwnerAssigned = true }
+            waiter.continuation.resume(returning: .init(
+                result, wasCoalesced: true, shouldHandleResult: shouldHandleResult
+            ))
         }
     }
 
@@ -336,7 +385,9 @@ final class SyncGate {
         let pendingWaiters = waiters
         waiters.removeAll()
         for waiter in pendingWaiters {
-            waiter.resume(returning: .skipped(.disabled))
+            waiter.continuation.resume(returning: .init(
+                .skipped(.disabled), wasCoalesced: true, shouldHandleResult: false
+            ))
         }
     }
 }

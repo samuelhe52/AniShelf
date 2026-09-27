@@ -11,7 +11,11 @@ import LibrarySync
 import Observation
 import SwiftUI
 
-#Preview("Discard Failed iCloud Entries") {
+/// One interactive preview for every iCloud sync notice.
+///
+/// Switch scenarios to see first-enable restoration failures, or a completed
+/// sync that left unloaded entries, rejected uploads, and unreadable records.
+#Preview("iCloud Sync") {
     LibraryProfileICloudSyncSectionPreviewHost()
 }
 
@@ -25,7 +29,9 @@ fileprivate struct LibraryProfileICloudSyncSectionPreviewHost: View {
                 VStack(alignment: .leading, spacing: 16) {
                     PreviewSyntheticLibrarySummary(
                         library: cloudSyncManager.library,
-                        failureInjectionEnabled: failureInjectionBinding
+                        scenario: scenarioBinding,
+                        failureInjectionEnabled: failureInjectionBinding,
+                        holdsDeletionsUntilRetry: holdsDeletionsBinding
                     )
 
                     LibraryProfileICloudSyncSection(
@@ -37,7 +43,7 @@ fileprivate struct LibraryProfileICloudSyncSectionPreviewHost: View {
                         cloudSyncStatusTitleColor: cloudSyncStatusTitleColor,
                         cloudSyncManualRetryDisabled: cloudSyncManager.isSyncing,
                         onRetryLibraryCloudSync: cloudSyncManager.retry,
-                        onDiscardFailedRestorationEntry: cloudSyncManager.discard
+                        onDiscardFailedEntry: cloudSyncManager.discard
                     )
                 }
                 .padding()
@@ -60,40 +66,80 @@ fileprivate struct LibraryProfileICloudSyncSectionPreviewHost: View {
         cloudSyncManager.status.isFailureDisplay ? .red : .secondary
     }
 
+    private var scenarioBinding: Binding<PreviewCloudSyncScenario> {
+        Binding(
+            get: { cloudSyncManager.scenario },
+            set: { cloudSyncManager.setScenario($0) }
+        )
+    }
+
     private var failureInjectionBinding: Binding<Bool> {
         Binding(
-            get: { cloudSyncManager.failureInjectionEnabled },
+            get: { cloudSyncManager.library.failureInjectionEnabled },
             set: { cloudSyncManager.setFailureInjectionEnabled($0) }
+        )
+    }
+
+    private var holdsDeletionsBinding: Binding<Bool> {
+        Binding(
+            get: { cloudSyncManager.holdsDeletionsUntilRetry },
+            set: { cloudSyncManager.holdsDeletionsUntilRetry = $0 }
         )
     }
 }
 
+fileprivate enum PreviewCloudSyncScenario: Hashable, CaseIterable {
+    /// First-enable bootstrap with entries that fail metadata restoration.
+    case restoration
+    /// A completed sync that left entries pending.
+    case completedSync
+}
+
 fileprivate struct PreviewSyntheticLibrarySummary: View {
     let library: PreviewSyntheticLibrary
+    @Binding var scenario: PreviewCloudSyncScenario
     @Binding var failureInjectionEnabled: Bool
+    @Binding var holdsDeletionsUntilRetry: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Synthetic iCloud Library")
                 .font(.headline)
-            Text(
-                failureInjectionEnabled
-                    ? "\(library.activeEntries.count) entries. Two entries deliberately fail every metadata restoration attempt. Use Retry three times to expose their discard actions."
-                    : "Injected failures are off. The next Retry will restore the two pending entries and complete bootstrap."
-            )
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            Picker("Scenario", selection: $scenario) {
+                Text("Restoration").tag(PreviewCloudSyncScenario.restoration)
+                Text("Completed Sync").tag(PreviewCloudSyncScenario.completedSync)
+            }
+            .pickerStyle(.segmented)
+            Text(scenarioDescription)
+                .font(.caption)
+                .foregroundStyle(.secondary)
             Text(library.activeEntries.map(\.identity.rawID).joined(separator: " · "))
                 .font(.caption2.monospaced())
                 .foregroundStyle(.tertiary)
                 .lineLimit(2)
 
-            Toggle("Inject restoration failures", isOn: $failureInjectionEnabled)
+            Toggle("Inject failures", isOn: $failureInjectionEnabled)
+                .font(.caption.weight(.semibold))
+                .tint(.orange)
+            Toggle("Hold deletions until Retry", isOn: $holdsDeletionsUntilRetry)
                 .font(.caption.weight(.semibold))
                 .tint(.orange)
         }
         .padding(14)
         .libraryProfileInsetPanel(cornerRadius: 22, tint: .gray)
+    }
+
+    private var scenarioDescription: LocalizedStringResource {
+        switch (scenario, failureInjectionEnabled) {
+        case (.restoration, true):
+            "\(library.activeEntries.count) entries. Two entries deliberately fail every metadata restoration attempt. Use Retry three times to expose their discard actions."
+        case (.restoration, false):
+            "Injected failures are off. The next Retry will restore the two pending entries and complete bootstrap."
+        case (.completedSync, true):
+            "Sync succeeded, but two entries couldn't be loaded, two changes weren't uploaded, and one record is unreadable. The entry TMDb no longer lists can be discarded right away."
+        case (.completedSync, false):
+            "Injected failures are off. The next Retry will load the pending entries and clear the other notices."
+        }
     }
 }
 
@@ -110,16 +156,19 @@ fileprivate final class PreviewCloudSyncManager {
     private(set) var library = PreviewSyntheticLibrary()
     private(set) var status: LibraryCloudSyncStatus
     private(set) var isSyncing = false
-
-    var failureInjectionEnabled: Bool {
-        library.failureInjectionEnabled
-    }
+    private(set) var scenario = PreviewCloudSyncScenario.restoration
+    /// Keeps a discard pending, as when iCloud has not confirmed the deletion yet.
+    var holdsDeletionsUntilRetry = false
 
     init() {
+        status = Self.initialStatus
+    }
+
+    private static var initialStatus: LibraryCloudSyncStatus {
         var status = LibraryCloudSyncStatus.defaultValue
         status.isEnabled = true
         status.cloudKitAvailability = .available
-        self.status = status
+        return status
     }
 
     func bootstrap() async {
@@ -131,14 +180,33 @@ fileprivate final class PreviewCloudSyncManager {
         Task { await synchronize(isUserRetry: true) }
     }
 
+    func setScenario(_ scenario: PreviewCloudSyncScenario) {
+        guard !isSyncing, scenario != self.scenario else { return }
+        self.scenario = scenario
+        library = PreviewSyntheticLibrary(failureInjectionEnabled: library.failureInjectionEnabled)
+        status = Self.initialStatus
+        Task { await bootstrap() }
+    }
+
     func setFailureInjectionEnabled(_ isEnabled: Bool) {
         library.setFailureInjectionEnabled(isEnabled)
     }
 
-    func discard(_ failure: LibraryRestorationFailure) {
-        guard failure.canDiscard(at: .now) else { return }
-        library.discardFromCloud(failure.snapshot.identity)
-        status.restoration?.failures.removeAll { $0.snapshot.identity == failure.snapshot.identity }
+    func discard(_ entry: LibraryCloudSyncFailedEntry) {
+        switch entry.source {
+        case .restoration(let failure):
+            guard failure.canDiscard(at: .now),
+                let index = status.restoration?.failures.firstIndex(of: failure)
+            else { return }
+            status.restoration?.failures[index].discardDate = .now
+        case .pendingReconstruction(let failure):
+            guard failure.canDiscard,
+                let pendingIndex = status.pendingReconstructions.firstIndex(where: { $0.scope == Self.scope }),
+                let index = status.pendingReconstructions[pendingIndex].failures.firstIndex(of: failure)
+            else { return }
+            status.pendingReconstructions[pendingIndex].failures[index].discardDate = .now
+        }
+        guard !holdsDeletionsUntilRetry else { return }
         Task { await synchronize(isUserRetry: false) }
     }
 
@@ -157,13 +225,31 @@ fileprivate final class PreviewCloudSyncManager {
         guard status.isEnabled, !isSyncing else { return }
 
         isSyncing = true
-        status.bootstrapState = .running
+        // Ordinary passes run only after bootstrap has completed.
+        status.bootstrapState = scenario == .restoration ? .running : .completed
         status.currentPhase = .hydrationApply
         status.lastResult = nil
         status.lastAttemptDate = .now
         try? await Task.sleep(for: .milliseconds(300))
 
+        switch scenario {
+        case .restoration:
+            restoreLibrary(isUserRetry: isUserRetry)
+        case .completedSync:
+            syncCompletedLibrary()
+        }
+        status.currentPhase = nil
+        status.lastAttemptDate = .now
+        isSyncing = false
+    }
+
+    private func restoreLibrary(isUserRetry: Bool) {
         var restoration = status.restoration ?? .init(scope: Self.scope)
+        // Each pass first sends the deletions the user asked for.
+        for failure in restoration.failures where failure.discardDate != nil {
+            library.discardFromCloud(failure.snapshot.identity)
+        }
+        restoration.failures.removeAll { $0.discardDate != nil }
         restoration.totalEntries = library.activeEntries.count
         for snapshot in library.activeEntries {
             if library.alwaysFailsToRestore(snapshot) {
@@ -189,14 +275,8 @@ fileprivate final class PreviewCloudSyncManager {
         }
         restoration.restoredEntries = library.restoredEntryIDs.count
 
-        status.currentPhase = nil
-        status.lastAttemptDate = .now
         if restoration.failures.isEmpty {
-            status.bootstrapState = .completed
-            status.lastResult = .success
-            status.lastSuccessfulSyncDate = .now
-            status.lastFailurePhase = nil
-            status.lastFailureReason = nil
+            recordSuccess()
             status.restoration = nil
         } else {
             status.bootstrapState = .failed
@@ -206,7 +286,50 @@ fileprivate final class PreviewCloudSyncManager {
                 "\(restoration.failures.count) synthetic entries could not be restored."
             status.restoration = restoration
         }
-        isSyncing = false
+    }
+
+    /// Mirrors an ordinary pass: entry-level problems stay pending while the
+    /// pass itself succeeds.
+    private func syncCompletedLibrary() {
+        let previousFailures =
+            status.pendingReconstructions.first { $0.scope == Self.scope }?.failures ?? []
+        for failure in previousFailures where failure.discardDate != nil {
+            library.discardFromCloud(failure.snapshot.identity)
+        }
+
+        var pending = LibraryPendingReconstructionState(scope: Self.scope)
+        for snapshot in library.activeEntries where !library.restoredEntryIDs.contains(snapshot.identity) {
+            guard library.alwaysFailsToRestore(snapshot) else {
+                library.restore(snapshot)
+                continue
+            }
+            let isPermanent = snapshot.tmdbID == PreviewSyntheticLibrary.removedFromTMDbID
+            pending.failures.append(
+                .init(
+                    snapshot: snapshot,
+                    metadataIdentity: snapshot.identity,
+                    reason: isPermanent
+                        ? "The resource you requested could not be found."
+                        : "The network connection was lost.",
+                    lastAttempt: .now,
+                    isPermanent: isPermanent
+                )
+            )
+        }
+
+        status.pendingReconstructions = pending.failures.isEmpty ? [] : [pending]
+        status.rejectedUploadCount = library.failureInjectionEnabled ? 2 : 0
+        status.quarantinedRecordCount = library.failureInjectionEnabled ? 1 : 0
+        recordSuccess()
+    }
+
+    private func recordSuccess() {
+        status.bootstrapState = .completed
+        status.lastCompletedScope = Self.scope
+        status.lastResult = .success
+        status.lastSuccessfulSyncDate = .now
+        status.lastFailurePhase = nil
+        status.lastFailureReason = nil
     }
 }
 
@@ -214,7 +337,11 @@ fileprivate struct PreviewSyntheticLibrary {
     private(set) var cloudEntries: [LibraryEntrySyncSnapshot] = Self.entries
     private(set) var restoredEntryIDs: Set<LibraryEntryIdentity> = []
     private var discardedEntryIDs: Set<LibraryEntryIdentity> = []
-    private(set) var failureInjectionEnabled = true
+    private(set) var failureInjectionEnabled: Bool
+
+    init(failureInjectionEnabled: Bool = true) {
+        self.failureInjectionEnabled = failureInjectionEnabled
+    }
 
     var activeEntries: [LibraryEntrySyncSnapshot] {
         cloudEntries.filter { !discardedEntryIDs.contains($0.identity) }
@@ -237,7 +364,9 @@ fileprivate struct PreviewSyntheticLibrary {
         failureInjectionEnabled && Self.unavailableIDs.contains(snapshot.tmdbID)
     }
 
-    private static let unavailableIDs: Set<Int> = [10_003, 10_006]
+    /// The failing entry TMDb no longer lists, which can be discarded right away.
+    static let removedFromTMDbID = 10_003
+    private static let unavailableIDs: Set<Int> = [removedFromTMDbID, 10_006]
 
     private static let entries: [LibraryEntrySyncSnapshot] = (10_001...10_006).map {
         let identity = LibraryEntryIdentity(entryType: .series, tmdbID: $0)

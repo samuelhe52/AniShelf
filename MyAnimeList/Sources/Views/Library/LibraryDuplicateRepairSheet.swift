@@ -14,7 +14,7 @@ struct LibraryDuplicateRepairSheet: View {
 
     @State private var initialGroupCount: Int
     @State private var isShowingResolutionChoices = false
-    @State private var isResolving = false
+    @State private var isSubmittingResolution = false
     @State private var resolutionError: String?
 
     init(store: LibraryStore) {
@@ -180,11 +180,16 @@ struct LibraryDuplicateRepairSheet: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
     }
 
+    /// Includes resolutions started from this sheet in another window.
+    private var isResolving: Bool {
+        isSubmittingResolution || store.isResolvingDuplicateEntryGroup
+    }
+
     private func resolve(group: LibraryDuplicateEntryGroup, keeping entry: AnimeEntry) {
         guard !isResolving else { return }
-        isResolving = true
+        isSubmittingResolution = true
         Task { @MainActor in
-            defer { isResolving = false }
+            defer { isSubmittingResolution = false }
             do {
                 try await store.resolveDuplicateEntryGroup(group.identity, keeping: entry)
             } catch {

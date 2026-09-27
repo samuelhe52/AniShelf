@@ -1,8 +1,20 @@
-# AniShelf 📺
+<div align="center">
+  <img src="docs/images/anishelf-icon.webp" alt="AniShelf 应用图标" width="160" />
 
-一款原生 iOS 动漫收藏管理应用。
+  <h1>AniShelf</h1>
 
-[English](README.md) · [使用教程](docs/anishelf_overview.md)
+  <p>一款原生 iOS 动漫收藏管理应用。</p>
+
+  <p>
+    <img src="https://img.shields.io/badge/platform-iOS%2026%2B-34C759" alt="支持 iOS 26 及以上版本" />
+    <img src="https://img.shields.io/badge/license-Apache%202.0-blue" alt="Apache 2.0 许可证" />
+    <a href="https://apps.apple.com/us/app/anishelf/id6759359144"><img src="https://img.shields.io/badge/App%20Store-%E7%AB%8B%E5%8D%B3%E4%B8%8B%E8%BD%BD-007AFF?logo=apple&logoColor=white" alt="从 App Store 下载 AniShelf" /></a>
+  </p>
+
+  <p><a href="README.md">English</a> · <a href="docs/anishelf_overview.md">使用教程</a> · <a href="https://testflight.apple.com/join/ns3sR38X">TestFlight 测试版</a></p>
+</div>
+
+---
 
 ## 📸 截图
 

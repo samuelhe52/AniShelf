@@ -19,6 +19,7 @@ struct EntryDetailStatGrid: View {
     let productionCompanies: [EntryDetailProductionCompanyCard]
     let entryType: AnimeType
     let showProductionCompanyInsteadOfRuntime: Bool
+    let canJumpToEpisodes: Bool
     let onJumpToEpisodes: () -> Void
 
     var body: some View {
@@ -66,13 +67,18 @@ struct EntryDetailStatGrid: View {
         }
     }
 
+    @ViewBuilder
     private func episodesCard(_ card: EntryDetailStatCard) -> some View {
-        Button(action: onJumpToEpisodes) {
+        if canJumpToEpisodes {
+            Button(action: onJumpToEpisodes) {
+                DetailStatCard(card: card)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(verbatim: "\(card.value), \(String(localized: card.title))"))
+            .accessibilityHint(Text(EntryDetailL10n.jumpsToEpisodesSection))
+        } else {
             DetailStatCard(card: card)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(verbatim: "\(card.value), \(String(localized: card.title))"))
-        .accessibilityHint(Text(EntryDetailL10n.jumpsToEpisodesSection))
     }
 
     private func productionCard(_ card: EntryDetailStatCard) -> some View {

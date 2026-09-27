@@ -34,8 +34,13 @@ enum SearchSubmissionOrigin {
 /// Main search page that coordinates between TMDb and Library search modes.
 struct SearchPage: View {
     @Environment(LibraryStore.self) private var store
-    @AppStorage(.searchMode) private var mode: SearchMode = .tmdb
-    @AppStorage(.searchPageQuery) private var query: String = ""
+    @Environment(\.scenePhase) private var scenePhase
+    // Query and mode stay live per window so concurrent search pages don't mirror each other;
+    // the stored values only restore the last search when the page opens.
+    @AppStorage(.searchMode) private var persistedMode: SearchMode = .tmdb
+    @AppStorage(.searchPageQuery) private var persistedQuery: String = ""
+    @State private var mode: SearchMode
+    @State private var query: String
     @AppStorage(.searchTMDbLanguage) private var tmdbLanguage: Language = .english
     @State private var tmdbContentMode: TMDbContentMode = .search
     @State private var isShowingBatchAddEntryAlert = false
@@ -60,6 +65,12 @@ struct SearchPage: View {
         self.checkDuplicate = checkDuplicate
         self.processTMDbSearchResults = processTMDbSearchResults
         self.jumpToEntryInLibrary = jumpToEntryInLibrary
+        let defaults = UserDefaults.standard
+        _mode = State(
+            initialValue: defaults.string(forKey: .searchMode).flatMap(SearchMode.init(rawValue:))
+                ?? .tmdb
+        )
+        _query = State(initialValue: defaults.string(forKey: .searchPageQuery) ?? "")
     }
 
     var body: some View {
@@ -92,6 +103,13 @@ struct SearchPage: View {
             configureSearchServices()
             guard !query.isEmpty else { return }
             performSearch()
+        }
+        .onDisappear(perform: persistSearchState)
+        .onChange(of: scenePhase) { _, newPhase in
+            // onDisappear does not run if the app is terminated while the page is open.
+            if newPhase == .background {
+                persistSearchState()
+            }
         }
         .alert(batchAddEntryTitleResource, isPresented: $isShowingBatchAddEntryAlert) {
             Button {
@@ -183,6 +201,11 @@ struct SearchPage: View {
         case .library:
             librarySearchService.updateResults(query: query)
         }
+    }
+
+    private func persistSearchState() {
+        persistedMode = mode
+        persistedQuery = query
     }
 
     private func configureSearchServices() {

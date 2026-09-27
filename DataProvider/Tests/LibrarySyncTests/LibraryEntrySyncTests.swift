@@ -89,7 +89,31 @@ struct LibraryEntrySyncTests {
         #expect(snapshot.trackingUpdatedAt == referenceDate(year: 2026, month: 5, day: 4))
     }
 
-    @Test func nilClockSnapshotDoesNotOverwriteLocalTrackingFields() throws {
+    @Test func submillisecondDatesHaveStableWireStateAndLocalClocksAdvance() {
+        let base = referenceDate(year: 2026, month: 5, day: 4)
+        let entry = AnimeEntry(
+            name: "Precision", type: .series, tmdbID: 152,
+            dateSaved: base.addingTimeInterval(0.0008)
+        )
+        entry.dateStarted = base.addingTimeInterval(0.0008)
+        entry.dateFinished = base.addingTimeInterval(10.0008)
+        entry.markCreatedForLibrary(at: base.addingTimeInterval(0.0001))
+        entry.markLibraryModified(at: base.addingTimeInterval(0.0004))
+        entry.markTrackingModified(at: base.addingTimeInterval(0.0001))
+        let firstTrackingClock = entry.trackingUpdatedAt
+        entry.markTrackingModified(at: base.addingTimeInterval(0.0004))
+
+        let snapshot = LibraryEntrySyncSnapshot(entry: entry)
+        var roundTripped = snapshot
+        roundTripped.dateSaved = LibrarySyncTimestamp.normalized(snapshot.dateSaved)
+        roundTripped.dateStarted = snapshot.dateStarted.map(LibrarySyncTimestamp.normalized)
+        roundTripped.dateFinished = snapshot.dateFinished.map(LibrarySyncTimestamp.normalized)
+        #expect(snapshot.hasSameWireState(as: roundTripped))
+        #expect(entry.libraryUpdatedAt! > base.addingTimeInterval(0.0004))
+        #expect(entry.trackingUpdatedAt! > firstTrackingClock!)
+    }
+
+    @Test func nilClockSnapshotUsesCanonicalTrackingTieRule() throws {
         let local = AnimeEntry(name: "Local", type: .series, tmdbID: 175, score: 7)
         local.setWatchStatus(.watching)
         local.favorite = true
@@ -117,12 +141,10 @@ struct LibraryEntrySyncTests {
             trackingUpdatedAt: nil
         )
 
+        let expected = try LibraryEntrySyncSnapshot(entry: local).merged(with: remote)
         try local.applySyncSnapshot(remote)
 
-        #expect(local.watchStatus == .watching)
-        #expect(local.score == 7)
-        #expect(local.favorite)
-        #expect(local.notes == "Keep local")
+        #expect(LibraryEntrySyncSnapshot(entry: local).hasSameWireState(as: expected))
         #expect(local.trackingUpdatedAt == nil)
     }
 
@@ -180,6 +202,54 @@ struct LibraryEntrySyncTests {
         let remoteMerged = try remote.merged(with: local)
 
         #expect(localMerged == remoteMerged)
+    }
+
+    @Test func equalClockSnapshotsChooseTheSameTrackingAndLibraryGroups() throws {
+        var first = makeSnapshot(tmdbID: 302, notes: "Alpha")
+        first.onDisplay = false
+        var second = makeSnapshot(tmdbID: 302, notes: "Zulu")
+        second.dateSaved = first.dateSaved.addingTimeInterval(1)
+
+        let mergedFromFirst = try first.merged(with: second)
+        let mergedFromSecond = try second.merged(with: first)
+
+        #expect(mergedFromFirst == mergedFromSecond)
+    }
+
+    @Test func liveSnapshotWinsEqualClockTombstoneInEitherOrder() throws {
+        let snapshot = makeSnapshot(tmdbID: 303)
+        let tombstone = LibraryEntrySyncTombstone(
+            identity: snapshot.identity,
+            tmdbID: snapshot.tmdbID,
+            parentSeriesID: nil,
+            seasonNumber: nil,
+            entryType: .series,
+            deletedAt: snapshot.latestUserStateClock!
+        )
+
+        let fromSnapshot = try LibraryEntrySyncRemoteChange.snapshot(snapshot).merged(with: .tombstone(tombstone))
+        let fromTombstone = try LibraryEntrySyncRemoteChange.tombstone(tombstone).merged(with: .snapshot(snapshot))
+
+        #expect(fromSnapshot == .snapshot(snapshot))
+        #expect(fromTombstone == .snapshot(snapshot))
+    }
+
+    @Test func equalClockTombstonesWithSubmillisecondTimesCoalesceSymmetrically() throws {
+        let snapshot = makeSnapshot(tmdbID: 304)
+        let first = LibraryEntrySyncTombstone(
+            identity: snapshot.identity, tmdbID: 304, parentSeriesID: nil,
+            seasonNumber: nil, entryType: .series,
+            deletedAt: snapshot.dateSaved.addingTimeInterval(0.0001)
+        )
+        let second = LibraryEntrySyncTombstone(
+            identity: snapshot.identity, tmdbID: 304, parentSeriesID: nil,
+            seasonNumber: nil, entryType: .series,
+            deletedAt: snapshot.dateSaved.addingTimeInterval(0.0007)
+        )
+
+        let fromFirst = try LibraryEntrySyncRemoteChange.tombstone(first).merged(with: .tombstone(second))
+        let fromSecond = try LibraryEntrySyncRemoteChange.tombstone(second).merged(with: .tombstone(first))
+        #expect(fromFirst == fromSecond)
     }
 
     @Test func newerTrackingStateWinsOverStaleTrackingState() throws {

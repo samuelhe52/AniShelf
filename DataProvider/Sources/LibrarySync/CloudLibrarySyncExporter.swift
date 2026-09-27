@@ -16,14 +16,31 @@ fileprivate let cloudLibrarySyncExportLogger = Logger(
 )
 
 /// Result of pushing queued local changes to CloudKit.
+///
+/// Rejected records are ones CloudKit refused, or did not confirm, for reasons
+/// specific to each record. They stay queued locally for a later attempt.
 public struct CloudLibrarySyncExportResult: Sendable {
     public var exportedIdentities: Set<LibraryEntryIdentity>
     public var settingsExported: Bool
+    public var rejectedIdentities: Set<LibraryEntryIdentity>
+    public var settingsRejected: Bool
 
-    /// Creates the export result from the identities CloudKit accepted.
-    public init(exportedIdentities: Set<LibraryEntryIdentity>, settingsExported: Bool = false) {
+    /// Creates the export result from the identities CloudKit accepted and rejected.
+    public init(
+        exportedIdentities: Set<LibraryEntryIdentity>,
+        settingsExported: Bool = false,
+        rejectedIdentities: Set<LibraryEntryIdentity> = [],
+        settingsRejected: Bool = false
+    ) {
         self.exportedIdentities = exportedIdentities
         self.settingsExported = settingsExported
+        self.rejectedIdentities = rejectedIdentities
+        self.settingsRejected = settingsRejected
+    }
+
+    /// Number of queued changes CloudKit rejected, counting settings as one.
+    public var rejectedChangeCount: Int {
+        rejectedIdentities.count + (settingsRejected ? 1 : 0)
     }
 }
 
@@ -72,17 +89,22 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
     ///     upsert records. Delete entries use lean tombstone records.
     ///   - settingsSnapshot: Optional settings snapshot to export alongside the
     ///     library entry records.
-    /// - Returns: The subset of identities CloudKit reported as saved.
-    /// - Throws: Encoding or CloudKit errors that prevent the export attempt.
+    ///   - blockedRecordIDs: Quarantined records that this build must not overwrite.
+    /// - Returns: The identities CloudKit saved, and those it rejected one
+    ///   record at a time.
+    /// - Throws: Encoding errors, or CloudKit errors that affect the whole
+    ///   export, such as network, account, quota, or throttling failures.
     public func export(
         entries: [LibraryEntrySyncDirtyQueueEntry],
         localSnapshotsByIdentity: [LibraryEntryIdentity: LibraryEntrySyncSnapshot],
-        settingsSnapshot: LibrarySettingsSyncSnapshot? = nil
+        settingsSnapshot: LibrarySettingsSyncSnapshot? = nil,
+        blockedRecordIDs: Set<CKRecord.ID> = []
     ) async throws -> CloudLibrarySyncExportResult {
         let preparedRecords = try prepareRecords(
             for: entries,
             localSnapshotsByIdentity: localSnapshotsByIdentity,
-            settingsSnapshot: settingsSnapshot
+            settingsSnapshot: settingsSnapshot,
+            blockedRecordIDs: blockedRecordIDs
         )
         let recordsToSave =
             Array(preparedRecords.recordsByIdentity.values)
@@ -93,110 +115,156 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
             identitiesByRecordID[pair.value.recordID] = pair.key
         }
 
-        let savedRecordIDs: [CKRecord.ID]
+        let progress: SaveProgress
         do {
-            savedRecordIDs = try await saveRecords(recordsToSave)
+            progress = try await saveRecords(recordsToSave)
         } catch let failure as CloudLibrarySyncSaveProgressFailure {
             guard !failure.savedRecordIDs.isEmpty else {
                 throw failure.underlyingError
             }
             throw CloudLibrarySyncExportFailure(
                 partialResult: exportResult(
-                    savedRecordIDs: failure.savedRecordIDs,
+                    for: SaveProgress(savedRecordIDs: failure.savedRecordIDs),
                     identitiesByRecordID: identitiesByRecordID
                 ),
                 underlyingError: failure.underlyingError
             )
         }
-        let exportResult = exportResult(
-            savedRecordIDs: savedRecordIDs,
-            identitiesByRecordID: identitiesByRecordID
-        )
-        logPartialFailures(
-            savedRecordIDs: savedRecordIDs,
-            preparedRecordCount: preparedRecords.recordsByIdentity.count
-                + (preparedRecords.settingsRecord == nil ? 0 : 1)
-        )
-        return exportResult
+        logRejectedRecords(progress, preparedRecordCount: recordsToSave.count)
+        return exportResult(for: progress, identitiesByRecordID: identitiesByRecordID)
     }
 
     private func exportResult(
-        savedRecordIDs: [CKRecord.ID],
+        for progress: SaveProgress,
         identitiesByRecordID: [CKRecord.ID: LibraryEntryIdentity]
     ) -> CloudLibrarySyncExportResult {
-        let exportedIdentities = Set(
-            savedRecordIDs.compactMap { recordID in identitiesByRecordID[recordID] }
-        )
-
-        return .init(
-            exportedIdentities: exportedIdentities,
-            settingsExported: savedRecordIDs.contains(client.librarySettingsRecordID)
+        .init(
+            exportedIdentities: Set(progress.savedRecordIDs.compactMap { identitiesByRecordID[$0] }),
+            settingsExported: progress.savedRecordIDs.contains(client.librarySettingsRecordID),
+            rejectedIdentities: Set(progress.rejectedErrorsByID.keys.compactMap { identitiesByRecordID[$0] }),
+            settingsRejected: progress.rejectedErrorsByID[client.librarySettingsRecordID] != nil
         )
     }
 
-    private func logPartialFailures(
-        savedRecordIDs: [CKRecord.ID],
-        preparedRecordCount: Int
-    ) {
-        let partialFailureCount = max(0, preparedRecordCount - savedRecordIDs.count)
-        if partialFailureCount > 0 {
-            cloudLibrarySyncExportLogger.warning(
-                "Only \(savedRecordIDs.count, privacy: .public) of \(preparedRecordCount, privacy: .public) iCloud sync records were accepted by CloudKit."
-            )
-        }
+    private func logRejectedRecords(_ progress: SaveProgress, preparedRecordCount: Int) {
+        guard !progress.rejectedErrorsByID.isEmpty else { return }
+        let reasons = Set(progress.rejectedErrorsByID.values.map(\.cloudLibrarySyncLogDescription))
+            .sorted()
+            .joined(separator: ", ")
+        cloudLibrarySyncExportLogger.warning(
+            "CloudKit rejected \(progress.rejectedErrorsByID.count, privacy: .public) of \(preparedRecordCount, privacy: .public) iCloud sync records; they stay queued for retry: \(reasons, privacy: .public)"
+        )
     }
 
-    private func saveRecords(_ records: [CKRecord]) async throws -> [CKRecord.ID] {
-        guard !records.isEmpty else { return [] }
-
-        var savedRecordIDs: [CKRecord.ID] = []
+    private func saveRecords(_ records: [CKRecord]) async throws -> SaveProgress {
+        var progress = SaveProgress()
         var startIndex = records.startIndex
         while startIndex < records.endIndex {
             let endIndex = min(startIndex + Self.maxRecordsPerModifyRequest, records.endIndex)
             do {
-                savedRecordIDs.append(
-                    contentsOf: try await saveRecordBatch(Array(records[startIndex..<endIndex]))
-                )
+                progress.append(try await saveRecordBatch(Array(records[startIndex..<endIndex])))
             } catch let failure as CloudLibrarySyncSaveProgressFailure {
                 throw CloudLibrarySyncSaveProgressFailure(
-                    savedRecordIDs: savedRecordIDs + failure.savedRecordIDs,
+                    savedRecordIDs: progress.savedRecordIDs + failure.savedRecordIDs,
                     underlyingError: failure.underlyingError
                 )
             } catch {
-                guard !savedRecordIDs.isEmpty else { throw error }
+                guard !progress.savedRecordIDs.isEmpty else { throw error }
                 throw CloudLibrarySyncSaveProgressFailure(
-                    savedRecordIDs: savedRecordIDs,
+                    savedRecordIDs: progress.savedRecordIDs,
                     underlyingError: error
                 )
             }
             startIndex = endIndex
         }
-        return savedRecordIDs
+        return progress
     }
 
-    private func saveRecordBatch(_ records: [CKRecord]) async throws -> [CKRecord.ID] {
+    /// Saves one request's worth of records.
+    ///
+    /// Failures that concern single records are returned as rejections so the
+    /// remaining batches still run. Any other failure throws.
+    private func saveRecordBatch(_ records: [CKRecord]) async throws -> SaveProgress {
         do {
-            return try await database.save(records: records)
+            let requestedRecordIDs = Set(records.map(\.recordID))
+            let savedRecordIDs = Set(try await database.save(records: records))
+                .intersection(requestedRecordIDs)
+            return SaveProgress(records: records, savedRecordIDs: savedRecordIDs)
+        } catch let partialFailure as CloudLibrarySyncPartialSaveFailure {
+            guard partialFailure.isRecordScoped else {
+                throw CloudLibrarySyncSaveProgressFailure(
+                    savedRecordIDs: partialFailure.savedRecordIDs,
+                    underlyingError: partialFailure
+                )
+            }
+            return SaveProgress(
+                records: records,
+                savedRecordIDs: Set(partialFailure.savedRecordIDs),
+                rejectedErrorsByID: partialFailure.failedErrorsByID
+            )
         } catch {
-            guard error.isCloudLibrarySyncLimitExceeded, records.count > 1 else {
+            guard error.isCloudLibrarySyncLimitExceeded else {
                 throw error
+            }
+            guard records.count > 1 else {
+                // A single record over CloudKit's size limit cannot save as is,
+                // but it should not hold back the rest of the library.
+                return SaveProgress(
+                    records: records,
+                    savedRecordIDs: [],
+                    rejectedErrorsByID: [records[0].recordID: error]
+                )
             }
 
             let splitIndex = records.index(records.startIndex, offsetBy: records.count / 2)
-            let firstSavedRecordIDs = try await saveRecordBatch(Array(records[..<splitIndex]))
+            var progress = try await saveRecordBatch(Array(records[..<splitIndex]))
             do {
-                return firstSavedRecordIDs + (try await saveRecordBatch(Array(records[splitIndex...])))
+                progress.append(try await saveRecordBatch(Array(records[splitIndex...])))
+                return progress
             } catch let failure as CloudLibrarySyncSaveProgressFailure {
                 throw CloudLibrarySyncSaveProgressFailure(
-                    savedRecordIDs: firstSavedRecordIDs + failure.savedRecordIDs,
+                    savedRecordIDs: progress.savedRecordIDs + failure.savedRecordIDs,
                     underlyingError: failure.underlyingError
                 )
             } catch {
                 throw CloudLibrarySyncSaveProgressFailure(
-                    savedRecordIDs: firstSavedRecordIDs,
+                    savedRecordIDs: progress.savedRecordIDs,
                     underlyingError: error
                 )
             }
+        }
+    }
+
+    private struct SaveProgress {
+        var savedRecordIDs: [CKRecord.ID] = []
+        var rejectedErrorsByID: [CKRecord.ID: any Error] = [:]
+
+        init(savedRecordIDs: [CKRecord.ID] = []) {
+            self.savedRecordIDs = savedRecordIDs
+        }
+
+        /// Classifies every requested record as saved or rejected.
+        ///
+        /// A record CloudKit neither confirmed nor rejected counts as rejected,
+        /// since keeping it queued for another save is safer than dropping it.
+        init(
+            records: [CKRecord],
+            savedRecordIDs: Set<CKRecord.ID>,
+            rejectedErrorsByID: [CKRecord.ID: any Error] = [:]
+        ) {
+            for record in records {
+                if savedRecordIDs.contains(record.recordID) {
+                    self.savedRecordIDs.append(record.recordID)
+                } else {
+                    self.rejectedErrorsByID[record.recordID] =
+                        rejectedErrorsByID[record.recordID] ?? CloudLibrarySyncUnconfirmedSaveError()
+                }
+            }
+        }
+
+        mutating func append(_ other: SaveProgress) {
+            savedRecordIDs += other.savedRecordIDs
+            rejectedErrorsByID.merge(other.rejectedErrorsByID) { current, _ in current }
         }
     }
 
@@ -210,11 +278,12 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
     private func prepareRecords(
         for entries: [LibraryEntrySyncDirtyQueueEntry],
         localSnapshotsByIdentity: [LibraryEntryIdentity: LibraryEntrySyncSnapshot],
-        settingsSnapshot: LibrarySettingsSyncSnapshot?
+        settingsSnapshot: LibrarySettingsSyncSnapshot?,
+        blockedRecordIDs: Set<CKRecord.ID>
     ) throws -> PreparedRecords {
         var recordsByIdentity: [LibraryEntryIdentity: CKRecord] = [:]
 
-        for entry in entries {
+        for entry in entries where !blockedRecordIDs.contains(client.recordID(for: entry.identity)) {
             switch entry {
             case .upsert(let pendingUpsert):
                 guard let snapshot = localSnapshotsByIdentity[pendingUpsert.identity] else {
@@ -228,8 +297,15 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
 
         return .init(
             recordsByIdentity: recordsByIdentity,
-            settingsRecord: try settingsSnapshot.map(client.record(from:))
+            settingsRecord: blockedRecordIDs.contains(client.librarySettingsRecordID)
+                ? nil : try settingsSnapshot.map(client.record(from:))
         )
+    }
+}
+
+fileprivate struct CloudLibrarySyncUnconfirmedSaveError: LocalizedError {
+    var errorDescription: String? {
+        "CloudKit did not confirm every library sync record save."
     }
 }
 
@@ -242,5 +318,10 @@ extension Error {
     fileprivate var isCloudLibrarySyncLimitExceeded: Bool {
         guard let ckError = self as? CKError else { return false }
         return ckError.code == .limitExceeded
+    }
+
+    fileprivate var cloudLibrarySyncLogDescription: String {
+        let error = self as NSError
+        return "\(error.domain):\(error.code)"
     }
 }

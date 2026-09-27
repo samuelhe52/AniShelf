@@ -12,6 +12,7 @@ struct StartupRecoveryView: View {
     let recovery: PersistentStoreRecovery
     let onContinue: () -> Void
 
+    @Environment(\.windowSceneIdentifier) private var windowSceneIdentifier
     @State private var preparingExport: StartupRecoveryExportKind?
     @State private var exportError: LocalizedStringResource?
 
@@ -184,12 +185,14 @@ struct StartupRecoveryView: View {
 
     private func prepareExport(_ kind: StartupRecoveryExportKind) {
         preparingExport = kind
+        // Capture the invoking window before the await; focus may move while the export prepares.
+        let sceneIdentifier = windowSceneIdentifier
         Task {
             do {
                 let exportURL = try await Task.detached(priority: .userInitiated) {
                     try RecoveryExportManager.prepareExport(kind, for: recovery)
                 }.value
-                ShareSheetPresenter.present(items: [exportURL])
+                ShareSheetPresenter.present(items: [exportURL], sceneIdentifier: sceneIdentifier)
             } catch {
                 exportError = LocalizedStringResource(
                     "AniShelf could not prepare this export. Please try again."
