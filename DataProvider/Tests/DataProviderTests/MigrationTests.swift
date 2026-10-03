@@ -758,6 +758,36 @@ struct MigrationTests {
         #expect(migratedDetail.orderedProductionCompanies.isEmpty)
     }
 
+    @Test @MainActor func rewatchMigrationFromV281DefaultsRewatchState() throws {
+        let storeURL = temporaryStoreURL(name: "rewatch-migration-v281")
+        let legacySchema = Schema(versionedSchema: SchemaV2_8_1.self)
+        let legacyConfiguration = ModelConfiguration(schema: legacySchema, url: storeURL)
+        let legacyContainer = try ModelContainer(
+            for: legacySchema,
+            configurations: legacyConfiguration
+        )
+        let legacyEntry = SchemaV2_8_1.AnimeEntry(
+            name: "Legacy Movie",
+            type: .movie,
+            tmdbID: 808_200,
+            dateSaved: referenceDate(year: 2026, month: 9, day: 1),
+            score: 4
+        )
+        legacyEntry.watchStatus = .watched
+        legacyContainer.mainContext.insert(legacyEntry)
+        try legacyContainer.mainContext.save()
+
+        let migratedProvider = DataProvider(url: storeURL)
+        let migratedEntry = try #require(
+            try migratedProvider.getAllModels(ofType: AnimeEntry.self).first
+        )
+
+        #expect(migratedEntry.watchStatus == .watched)
+        #expect(migratedEntry.score == 4)
+        #expect(!migratedEntry.isRewatching)
+        #expect(migratedEntry.rewatchCount == 0)
+    }
+
     @Test @MainActor func imagePathMigrationFromV279PreservesUserState() throws {
         let storeURL = temporaryStoreURL(name: "image-path-migration-v279-user-state")
 

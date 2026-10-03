@@ -75,6 +75,8 @@ struct LibraryExportRecord: Codable, Equatable {
     let favorite: Bool
     let notes: String
     let usingCustomPoster: Bool
+    let isRewatching: Bool
+    let rewatchCount: Int
 
     fileprivate static let headerFields = [
         "title",
@@ -91,7 +93,9 @@ struct LibraryExportRecord: Codable, Equatable {
         "score",
         "favorite",
         "notes",
-        "using_custom_poster"
+        "using_custom_poster",
+        "is_rewatching",
+        "rewatch_count"
     ]
 
     init(entry: AnimeEntry) {
@@ -109,6 +113,8 @@ struct LibraryExportRecord: Codable, Equatable {
         favorite = entry.favorite
         notes = entry.notes
         usingCustomPoster = entry.usingCustomPoster
+        isRewatching = entry.isRewatching
+        rewatchCount = entry.rewatchCount
 
         switch entry.type {
         case .movie:
@@ -136,7 +142,9 @@ struct LibraryExportRecord: Codable, Equatable {
             score.map(String.init) ?? "",
             favorite ? "true" : "false",
             notes,
-            usingCustomPoster ? "true" : "false"
+            usingCustomPoster ? "true" : "false",
+            isRewatching ? "true" : "false",
+            String(rewatchCount)
         ]
     }
 
@@ -307,6 +315,8 @@ final class LibraryExportManager {
                 "Details URL: \(entry.detailsURL ?? "N/A")",
                 "Saved At: \(entry.dateSaved)",
                 "Watch Status: \(entry.watchStatus)",
+                "Rewatching: \(entry.isRewatching ? "true" : "false")",
+                "Rewatch Count: \(entry.rewatchCount)",
                 "Started At: \(entry.dateStarted ?? "N/A")",
                 "Finished At: \(entry.dateFinished ?? "N/A")",
                 "Score: \(entry.score.map(String.init) ?? "No score")",

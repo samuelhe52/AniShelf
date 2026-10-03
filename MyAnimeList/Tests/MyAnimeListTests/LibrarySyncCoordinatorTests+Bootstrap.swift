@@ -311,4 +311,81 @@ extension LibrarySyncCoordinatorTests {
         #expect(retryResult == .success)
         #expect(store.libraryCloudSyncStatus.bootstrapState == .completed)
     }
+
+    @Test @MainActor func reenableStartsFreshBootstrapAfterCanceledPassDrains() async throws {
+        let store = makeStore(enabled: true, bootstrapState: .notStarted, hasTMDbAPIKey: true)
+        let database = FakeCloudLibrarySyncDatabase(changes: [makeEmptyChangeBatch(), makeEmptyChangeBatch()])
+        database.suspendNextFetch = true
+        store.configureLibrarySyncCoordinator(
+            client: CloudLibrarySyncClient(), database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+        let initial = Task { await store.performLibrarySyncResult(trigger: .appLaunch) }
+        while !database.isFetchSuspended { await Task.yield() }
+        store.disableLibraryCloudSync()
+        let reenable = Task { await store.enableLibraryCloudSync() }
+        while !store.libraryCloudSyncStatus.isEnabled { await Task.yield() }
+        #expect(database.ensureZoneCallCount == 1)
+        database.resumeSuspendedFetch()
+        #expect(await initial.value == .skipped(.disabled))
+        #expect(await reenable.value)
+        #expect(database.ensureZoneCallCount == 2)
+        #expect(database.fetchedChangeTokens.count == 2)
+        #expect(database.fetchedChangeTokens.allSatisfy { $0 == nil })
+        #expect(store.libraryCloudSyncStatus.bootstrapState == .completed)
+    }
+
+    @Test @MainActor func disablingStalledPreparationReleasesBootstrapWithoutCallback() async throws {
+        let store = makeStore(enabled: true, bootstrapState: .notStarted, hasTMDbAPIKey: true)
+        let database = FakeCloudLibrarySyncDatabase(changes: [])
+        let operation = CKFetchRecordZonesOperation(recordZoneIDs: [])
+        let pending = CloudLibrarySyncOperation(operation)
+        let (started, signal) = AsyncStream<Void>.makeStream()
+        database.prepare = {
+            try await pending.run {
+                signal.yield(())
+                signal.finish()
+            }
+        }
+        store.configureLibrarySyncCoordinator(
+            client: CloudLibrarySyncClient(), database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+        let initial = Task { await store.performLibrarySyncResult(trigger: .appLaunch) }
+        for await _ in started { break }
+        store.disableLibraryCloudSync()
+        #expect(await initial.value == .skipped(.disabled))
+        #expect(operation.isCancelled)
+        #expect(!store.libraryCloudSyncStatus.isEnabled)
+        #expect(!store.libraryCloudSyncStatus.isSyncInProgress)
+        #expect(database.fetchedChangeTokens.isEmpty)
+    }
+
+    @Test @MainActor func preparationTimeoutLeavesRetryableSetupFailure() async throws {
+        let store = makeStore(enabled: true, bootstrapState: .notStarted, hasTMDbAPIKey: true)
+        let database = FakeCloudLibrarySyncDatabase(changes: [])
+        database.prepare = {
+            let operation = CKFetchRecordZonesOperation(recordZoneIDs: [])
+            let pending = CloudLibrarySyncOperation(operation)
+            try await pending.run(timeout: 0.01, start: {})
+        }
+        store.configureLibrarySyncCoordinator(
+            client: CloudLibrarySyncClient(), database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+        #expect(await store.performLibrarySyncResult(trigger: .appLaunch) == .retryableFailure)
+        #expect(store.libraryCloudSyncStatus.bootstrapState == .failed)
+        #expect(store.libraryCloudSyncStatus.lastFailurePhase == .prepareZoneSubscription)
+        #expect(!store.libraryCloudSyncStatus.isSyncInProgress)
+        database.prepare = nil
+        // Reconfigure only the fake remote data; retain the failed store status.
+        store.configureLibrarySyncCoordinator(
+            client: CloudLibrarySyncClient(),
+            database: FakeCloudLibrarySyncDatabase(changes: [makeEmptyChangeBatch()]),
+            namespaceProvider: { makeNamespace() }
+        )
+        #expect(await store.retryLibraryCloudSync())
+        #expect(store.libraryCloudSyncStatus.bootstrapState == .completed)
+    }
+
 }

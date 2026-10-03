@@ -204,27 +204,33 @@ public final class CloudLibrarySyncLiveDatabase: CloudLibrarySyncDatabase, @unch
 
     /// Creates the custom zone when CloudKit reports it as missing.
     private func ensureZone(_ zoneID: CKRecordZone.ID) async throws {
-        let results = try await database.recordZones(for: [zoneID])
-        switch results[zoneID] {
-        case .success:
-            return
-        case .failure(let error) where error.isCloudLibrarySyncMissingItem:
-            let saveResults = try await database.modifyRecordZones(
-                saving: [CKRecordZone(zoneID: zoneID)],
-                deleting: []
+        let operation = CKFetchRecordZonesOperation(recordZoneIDs: [zoneID])
+        let pending = CloudLibrarySyncOperation(operation)
+        operation.perRecordZoneResultBlock = { [weak pending] _, result in
+            pending?.finish(result.map { _ in () })
+        }
+        operation.fetchRecordZonesResultBlock = { [weak pending] result in
+            // A successful lookup must have supplied a per-zone result.
+            pending?.finish(result.flatMap { .failure(CKError(.unknownItem)) })
+        }
+        do {
+            try await pending.run { self.database.add(operation) }
+        } catch  where error.isCloudLibrarySyncMissingItem {
+            try Task.checkCancellation()
+            let save = CKModifyRecordZonesOperation(
+                recordZonesToSave: [CKRecordZone(zoneID: zoneID)], recordZoneIDsToDelete: nil
             )
-            if case .failure(let error)? = saveResults.saveResults[zoneID], !error.isCloudLibrarySyncAlreadyExists {
-                throw error
+            let pendingSave = CloudLibrarySyncOperation(save)
+            save.perRecordZoneSaveBlock = { [weak pendingSave] _, result in
+                pendingSave?.finish(result.map { _ in () })
             }
-        case .failure(let error)?:
-            throw error
-        case nil:
-            let saveResults = try await database.modifyRecordZones(
-                saving: [CKRecordZone(zoneID: zoneID)],
-                deleting: []
-            )
-            if case .failure(let error)? = saveResults.saveResults[zoneID], !error.isCloudLibrarySyncAlreadyExists {
-                throw error
+            save.modifyRecordZonesResultBlock = { [weak pendingSave] result in
+                pendingSave?.finish(result)
+            }
+            do {
+                try await pendingSave.run { self.database.add(save) }
+            } catch  where error.isCloudLibrarySyncAlreadyExists {
+                return
             }
         }
     }
@@ -234,15 +240,18 @@ public final class CloudLibrarySyncLiveDatabase: CloudLibrarySyncDatabase, @unch
         _ subscriptionID: CKSubscription.ID,
         zoneID: CKRecordZone.ID
     ) async throws {
-        let results = try await database.subscriptions(for: [subscriptionID])
-        switch results[subscriptionID] {
-        case .success:
-            return
-        case .failure(let error) where error.isCloudLibrarySyncMissingItem:
-            try await saveSubscription(subscriptionID, zoneID: zoneID)
-        case .failure(let error)?:
-            throw error
-        case nil:
+        try Task.checkCancellation()
+        let operation = CKFetchSubscriptionsOperation(subscriptionIDs: [subscriptionID])
+        let pending = CloudLibrarySyncOperation(operation)
+        operation.perSubscriptionResultBlock = { [weak pending] _, result in
+            pending?.finish(result.map { _ in () })
+        }
+        operation.fetchSubscriptionsResultBlock = { [weak pending] result in
+            pending?.finish(result.flatMap { .failure(CKError(.unknownItem)) })
+        }
+        do {
+            try await pending.run { self.database.add(operation) }
+        } catch  where error.isCloudLibrarySyncMissingItem {
             try await saveSubscription(subscriptionID, zoneID: zoneID)
         }
     }
@@ -260,14 +269,21 @@ public final class CloudLibrarySyncLiveDatabase: CloudLibrarySyncDatabase, @unch
         notificationInfo.shouldSendContentAvailable = true
         subscription.notificationInfo = notificationInfo
 
-        let saveResults = try await database.modifySubscriptions(
-            saving: [subscription],
-            deleting: []
+        try Task.checkCancellation()
+        let operation = CKModifySubscriptionsOperation(
+            subscriptionsToSave: [subscription], subscriptionIDsToDelete: nil
         )
-        if case .failure(let error)? = saveResults.saveResults[subscriptionID],
-            !error.isCloudLibrarySyncAlreadyExists
-        {
-            throw error
+        let pending = CloudLibrarySyncOperation(operation)
+        operation.perSubscriptionSaveBlock = { [weak pending] _, result in
+            pending?.finish(result.map { _ in () })
+        }
+        operation.modifySubscriptionsResultBlock = { [weak pending] result in
+            pending?.finish(result)
+        }
+        do {
+            try await pending.run { self.database.add(operation) }
+        } catch  where error.isCloudLibrarySyncAlreadyExists {
+            return
         }
     }
 }

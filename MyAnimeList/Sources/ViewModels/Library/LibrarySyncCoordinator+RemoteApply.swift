@@ -415,6 +415,8 @@ extension AnimeEntry {
             } else if wasUsingCustomPoster {
                 customPosterPath = nil
             }
+            isRewatching = snapshot.isRewatching
+            rewatchCount = snapshot.rewatchCount
             trackingUpdatedAt = snapshot.trackingUpdatedAt
         }
         if domains.contains(.episodeProgress) {

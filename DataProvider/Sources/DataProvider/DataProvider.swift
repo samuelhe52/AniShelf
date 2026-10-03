@@ -15,7 +15,7 @@ let dataProviderLogger = Logger(
 )
 
 /// The current schema version used by the data provider.
-public typealias CurrentSchema = SchemaV2_8_1
+public typealias CurrentSchema = SchemaV2_8_2
 
 /// The current anime entry type used by the data provider.
 public typealias AnimeEntry = CurrentSchema.AnimeEntry

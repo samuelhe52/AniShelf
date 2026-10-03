@@ -154,6 +154,10 @@ fileprivate struct EntryDetailTrackingEditor: View {
         entry.watchStatus == .dropped
     }
 
+    private var showsRewatchControls: Bool {
+        entry.watchStatus == .watching || entry.watchStatus == .watched || entry.rewatchCount > 0
+    }
+
     private var activeWatchStatusBinding: Binding<AnimeEntry.WatchStatus> {
         Binding(
             get: {
@@ -178,6 +182,10 @@ fileprivate struct EntryDetailTrackingEditor: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
 
+                    if showsRewatchControls {
+                        EntryRewatchControls(entry: entry)
+                    }
+
                     Spacer(minLength: 12)
 
                     Button {
@@ -193,7 +201,8 @@ fileprivate struct EntryDetailTrackingEditor: View {
                 }
                 AnimeEntryWatchedStatusPicker(
                     selection: activeWatchStatusBinding,
-                    isDisabled: isDateTrackingLocked
+                    isDisabled: isDateTrackingLocked,
+                    isRewatching: entry.isRewatching
                 )
                 .pickerStyle(.segmented)
 
@@ -240,6 +249,113 @@ fileprivate struct EntryDetailTrackingEditor: View {
             }
         }
         .animation(.default, value: entry.watchStatus)
+    }
+}
+
+fileprivate struct EntryRewatchControls: View {
+    @Bindable var entry: AnimeEntry
+    @State private var showingEditor = false
+
+    private static let rewatchCountRange = 0...999
+
+    private var badgeTint: Color {
+        entry.isRewatching ? .accentColor : .secondary
+    }
+
+    var body: some View {
+        Button {
+            showingEditor = true
+        } label: {
+            badge
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(entry.isRewatching ? EntryDetailL10n.rewatching : EntryDetailL10n.timesRewatched)
+        .accessibilityValue(accessibilityValue)
+        .popover(isPresented: $showingEditor) {
+            editor
+                .padding(16)
+                .presentationCompactAdaptation(.popover)
+        }
+    }
+
+    private var badge: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "repeat")
+            if entry.isRewatching {
+                Text(EntryDetailL10n.watchNumber(entry.rewatchCount + 1))
+                    .monospacedDigit()
+                    .contentTransition(.numericText(value: Double(entry.rewatchCount + 1)))
+            } else if entry.rewatchCount > 0 {
+                Text(verbatim: "×\(entry.rewatchCount.formatted())")
+                    .monospacedDigit()
+                    .contentTransition(.numericText(value: Double(entry.rewatchCount)))
+            }
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(badgeTint)
+        .lineLimit(1)
+        .fixedSize()
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background {
+            Capsule()
+                .fill(badgeTint.opacity(0.14))
+        }
+        .contentShape(Rectangle())
+    }
+
+    private var accessibilityValue: Text {
+        entry.isRewatching
+            ? Text(EntryDetailL10n.watchNumber(entry.rewatchCount + 1))
+            : Text(entry.rewatchCount, format: .number)
+    }
+
+    private var editor: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if entry.watchStatus == .watching {
+                Toggle(isOn: rewatchingBinding) {
+                    Text(EntryDetailL10n.rewatching)
+                        .font(.subheadline)
+                }
+            }
+
+            Stepper(value: rewatchCountBinding, in: Self.rewatchCountRange) {
+                HStack(spacing: 12) {
+                    Text(EntryDetailL10n.timesRewatched)
+                        .font(.subheadline)
+                    Spacer(minLength: 12)
+                    Text(entry.rewatchCount, format: .number)
+                        .font(.subheadline.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .contentTransition(.numericText(value: Double(entry.rewatchCount)))
+                }
+            }
+        }
+        .frame(idealWidth: 280, maxWidth: 320)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var rewatchingBinding: Binding<Bool> {
+        Binding(
+            get: { entry.isRewatching },
+            set: { isRewatching in
+                withAnimation(.default) {
+                    _ = entry.updateRewatching(isRewatching)
+                }
+            }
+        )
+    }
+
+    private var rewatchCountBinding: Binding<Int> {
+        Binding(
+            get: { entry.rewatchCount },
+            set: { count in
+                withAnimation(.default) {
+                    _ = entry.updateRewatchCount(count)
+                }
+            }
+        )
     }
 }
 

@@ -212,6 +212,19 @@ struct EntryDetailView: View {
         } message: { suggestion in
             Text(EntryDetailL10n.dateSuggestionMessage(for: suggestion))
         }
+        .alert(
+            EntryDetailL10n.rewatchPromptTitle,
+            isPresented: showRewatchPromptBinding
+        ) {
+            Button(EntryDetailL10n.startRewatch) {
+                resolveRewatchPrompt(isRewatching: true)
+            }
+            Button(EntryDetailL10n.notARewatch, role: .cancel) {
+                resolveRewatchPrompt(isRewatching: false)
+            }
+        } message: {
+            Text(rewatchPromptMessage)
+        }
         .task(id: "\(session.instanceID)-\(currentLanguage.rawValue)") {
             await session.model.load(
                 for: session.entry,
@@ -564,6 +577,19 @@ struct EntryDetailView: View {
         )
     }
 
+    private var showRewatchPromptBinding: Binding<Bool> {
+        Binding(
+            get: { session.presentation.showRewatchPrompt },
+            set: { isPresented in
+                if !isPresented {
+                    updatePresentation { presentation in
+                        presentation.showRewatchPrompt = false
+                    }
+                }
+            }
+        )
+    }
+
     private var isDateUpdateSuggestionPresented: Binding<Bool> {
         Binding(
             get: { session.presentation.dateUpdateSuggestion != nil },
@@ -635,12 +661,18 @@ struct EntryDetailView: View {
     private func requestWatchStatusChange(_ status: AnimeEntry.WatchStatus) {
         guard session.entry.watchStatus != status else { return }
 
+        let mayBeRewatch = session.entry.watchStatus == .watched && status == .watching
         let creditsCompletion =
             status == .watched
             && (session.entry.type == .series || session.entry.type == .movie)
 
         withAnimation(.default) {
             _ = session.entry.updateWatchStatus(status)
+        }
+        if mayBeRewatch {
+            // The date suggestion follows once the user answers the rewatch prompt.
+            updatePresentation { $0.showRewatchPrompt = true }
+            return
         }
         updatePresentation {
             $0.dateUpdateSuggestion = session.entry.dateUpdateSuggestion(forTargetStatus: status)
@@ -652,6 +684,24 @@ struct EntryDetailView: View {
                 schedulePendingWatchedReviewOpportunity()
             }
         }
+    }
+
+    private func resolveRewatchPrompt(isRewatching: Bool) {
+        if isRewatching {
+            withAnimation(.default) {
+                _ = session.entry.startRewatch()
+            }
+        }
+        updatePresentation {
+            $0.showRewatchPrompt = false
+            $0.dateUpdateSuggestion = session.entry.dateUpdateSuggestion(forTargetStatus: .watching)
+        }
+    }
+
+    private var rewatchPromptMessage: LocalizedStringResource {
+        session.entry.type == .movie
+            ? EntryDetailL10n.rewatchPromptMovieMessage
+            : EntryDetailL10n.rewatchPromptEpisodeMessage
     }
 
     private func schedulePendingWatchedReviewOpportunity() {

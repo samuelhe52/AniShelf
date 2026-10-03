@@ -619,7 +619,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.101.0;
+				MARKETING_VERSION = 1.102.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelhe.MyAnimeList;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -661,7 +661,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.101.0;
+				MARKETING_VERSION = 1.102.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelhe.MyAnimeList;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;

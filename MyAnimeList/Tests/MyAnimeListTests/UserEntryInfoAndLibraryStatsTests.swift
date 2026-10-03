@@ -120,6 +120,48 @@ struct UserEntryInfoAndLibraryStatsTests {
         #expect(!entry.userInfoHasChanges(comparedTo: originalUserInfo))
     }
 
+    @Test func testRewatchFieldsRoundTripAndLegacyDecode() throws {
+        let entry = AnimeEntry.template(id: 114)
+        let originalUserInfo = entry.userInfo
+        entry.setWatchStatus(.watching)
+        entry.isRewatching = true
+        entry.rewatchCount = 2
+
+        #expect(!entry.userInfo.isEmpty)
+        #expect(entry.userInfoHasChanges(comparedTo: originalUserInfo))
+
+        let encoded = try JSONEncoder().encode(entry.userInfo)
+        let decoded = try JSONDecoder().decode(UserEntryInfo.self, from: encoded)
+        let restored = AnimeEntry.template(id: 115)
+        restored.updateUserInfo(from: decoded)
+        #expect(restored.isRewatching)
+        #expect(restored.rewatchCount == 2)
+
+        var legacyJSON = try #require(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        legacyJSON["isRewatching"] = nil
+        legacyJSON["rewatchCount"] = nil
+        legacyJSON["watchStatus"] = try JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(AnimeEntry.WatchStatus.watched),
+            options: .fragmentsAllowed
+        )
+        let legacy = try JSONDecoder().decode(
+            UserEntryInfo.self,
+            from: JSONSerialization.data(withJSONObject: legacyJSON)
+        )
+        #expect(!legacy.isRewatching)
+        #expect(legacy.rewatchCount == 0)
+
+        // A rewatch marker is meaningless outside Watching and is dropped on decode.
+        legacyJSON["isRewatching"] = true
+        let normalized = try JSONDecoder().decode(
+            UserEntryInfo.self,
+            from: JSONSerialization.data(withJSONObject: legacyJSON)
+        )
+        #expect(!normalized.isRewatching)
+    }
+
     @Test func testEpisodeProgressRoundTripAndChangeDetection() throws {
         let entry = AnimeEntry(name: "Series", type: .series, tmdbID: 113)
         let originalUserInfo = entry.userInfo

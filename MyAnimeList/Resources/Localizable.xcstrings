@@ -185,6 +185,40 @@
         }
       }
     },
+    "%@ ×%lld" : {
+      "comment" : "Library status followed by the completed rewatch count, combined into one compact badge.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ×%lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ×%lld"
+          }
+        }
+      }
+    },
+    "%@, times rewatched: %lld" : {
+      "comment" : "Accessibility label for a combined library status and completed rewatch count badge.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@、再視聴回数：%lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@，重看次数：%lld"
+          }
+        }
+      }
+    },
     "%@ aired %lld minutes ago." : {
       "localizations" : {
         "ja" : {
@@ -480,6 +514,22 @@
         }
       }
     },
+    "Added website and privacy policy links to the About page in Settings." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定の「このアプリについて」ページに公式サイトとプライバシーポリシーへのリンクを追加しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置中“关于”页面新增官网和隐私政策入口。"
+          }
+        }
+      }
+    },
     "AniShelf couldn't read these records. They may have been saved by a newer version of the app. They stay untouched in iCloud, and this device won't overwrite them. Updating AniShelf may resolve this." : {
       "localizations" : {
         "ja" : {
@@ -496,6 +546,172 @@
         }
       }
     },
+    "Are You Rewatching?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再視聴しますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "是在重看吗？"
+          }
+        }
+      }
+    },
+    "Fixed episode progress resets being overwritten by older progress from other devices." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エピソード進捗をリセットした後、ほかのデバイスの古い進捗で上書きされる問題を修正しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修复分集进度重置后，可能被其他设备的旧进度覆盖的问题。"
+          }
+        }
+      }
+    },
+    "Fixed iCloud Sync getting stuck during preparation and improved recovery after turning sync off and on again." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud同期が準備中のまま進まなくなる問題を修正し、同期をオフにしてから再度オンにした際の復旧を改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修复 iCloud 同步卡在准备阶段的问题，并改善关闭后重新开启同步时的恢复。"
+          }
+        }
+      }
+    },
+    "Fixed missing information in season entries after deleting their series." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シリーズを削除した際に、対応するシーズンの情報が一部表示されなくなる問題を修正しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修复了删除系列时，对应的季度条目可能信息显示不全的问题。"
+          }
+        }
+      }
+    },
+    "Marking it watched again adds one to the rewatch count." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もう一度視聴済みにすると、再視聴回数が1回増えます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再次标为已看时，重看次数会加 1。"
+          }
+        }
+      }
+    },
+    "Not a Rewatch" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再視聴ではない"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不是重看"
+          }
+        }
+      }
+    },
+    "Privacy Policy" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy Policy"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プライバシーポリシー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐私政策"
+          }
+        }
+      }
+    },
+    "Rewatching" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再視聴中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重看中"
+          }
+        }
+      }
+    },
+    "Start Rewatch" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再視聴を始める"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始重看"
+          }
+        }
+      }
+    },
+    "Starting a rewatch clears episode progress. Marking it watched again adds one to the rewatch count." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再視聴を始めるとエピソード進捗がリセットされます。もう一度視聴済みにすると、再視聴回数が1回増えます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始重看会清除分集进度。再次标为已看时，重看次数会加 1。"
+          }
+        }
+      }
+    },
     "Sync Issues" : {
       "localizations" : {
         "ja" : {
@@ -508,6 +724,92 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "同步问题"
+          }
+        }
+      }
+    },
+    "This release adds rewatch tracking and improves iCloud Sync reliability." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今回のアップデートでは再視聴の記録機能を追加し、iCloud同期の信頼性を改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本次更新新增重看记录功能，并优化 iCloud 同步的可靠性。"
+          }
+        }
+      }
+    },
+    "Times Rewatched" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再視聴回数"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重看次数"
+          }
+        }
+      }
+    },
+    "Track each anime's rewatch status and completed rewatch count." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "各作品の再視聴の状態と、完了した再視聴の回数を記録できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "支持记录每部动画的重看状态与已完成的重看次数。"
+          }
+        }
+      }
+    },
+    "Watch #%lld" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld周目"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第%lld遍"
+          }
+        }
+      }
+    },
+    "Website" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Website"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公式サイト"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "官方网站"
           }
         }
       }

@@ -242,6 +242,43 @@ fileprivate enum TestStartupError: Error {
     #expect(entry.dateFinished == referenceDate(day: 7))
 }
 
+@Test func finishingOnlyAMarkedRewatchCountsAnotherRewatch() async throws {
+    let entry = AnimeEntry.template()
+    entry.updateWatchStatus(.watched)
+
+    entry.updateWatchStatus(.watching)
+    #expect(!entry.isRewatching)
+    entry.updateWatchStatus(.watched)
+    #expect(entry.rewatchCount == 0)
+
+    entry.updateWatchStatus(.watching)
+    #expect(entry.updateRewatching(true))
+    entry.updateWatchStatus(.watched)
+    #expect(entry.rewatchCount == 1)
+    #expect(!entry.isRewatching)
+
+    entry.updateWatchStatus(.watching)
+    entry.updateRewatching(true)
+    entry.updateWatchStatus(.dropped)
+    #expect(entry.rewatchCount == 1)
+    #expect(!entry.isRewatching)
+    #expect(!entry.updateRewatching(true))
+}
+
+@Test func startRewatchMarksEntryAndClearsEpisodeProgress() async throws {
+    let entry = AnimeEntry(name: "Series", type: .series, tmdbID: 7_001)
+    entry.applyEpisodeProgressSnapshot(seasonNumber: 1, watchedThroughEpisode: 12)
+    entry.applyEpisodeProgressSnapshot(seasonNumber: 2, watchedThroughEpisode: 10)
+    entry.updateWatchStatus(.watched)
+    #expect(!entry.startRewatch())
+
+    entry.updateWatchStatus(.watching)
+    #expect(entry.startRewatch())
+
+    #expect(entry.isRewatching)
+    #expect(entry.episodeProgressSummaries.isEmpty)
+}
+
 @Test func entryDetailOrdersPersistedChildrenByDisplayOrder() async throws {
     let detail = AnimeEntryDetail(
         language: "en-US",
@@ -467,7 +504,9 @@ fileprivate enum TestStartupError: Error {
     #expect(entry.episodeProgressSummary(forSeason: 1).watchedThroughEpisode == 10)
 
     entry.clearEpisodeProgress(seasonNumber: 1)
-    #expect(entry.episodeProgresses.isEmpty)
+    #expect(entry.episodeProgressSummaries.isEmpty)
+    // Clearing keeps a zero row so the reset clock can win later sync merges.
+    #expect(entry.episodeProgresses.map(\.watchedThroughEpisode) == [0])
 }
 
 @Test func userEntryInfoRoundTripPreservesEpisodeProgress() async throws {

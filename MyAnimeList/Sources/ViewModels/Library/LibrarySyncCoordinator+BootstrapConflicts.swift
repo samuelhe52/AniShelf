@@ -174,6 +174,8 @@ extension LibrarySyncCoordinator {
             target.notes = source.notes
             target.usingCustomPoster = source.usingCustomPoster
             target.customPosterPath = source.usingCustomPoster ? source.customPosterPath : nil
+            target.isRewatching = source.isRewatching
+            target.rewatchCount = source.rewatchCount
             target.trackingUpdatedAt = source.trackingUpdatedAt
         }
         if domains.contains(.episodeProgress) {
@@ -233,6 +235,8 @@ fileprivate func trackingValuesDiffer(
         || lhs.notes != rhs.notes
         || lhs.usingCustomPoster != rhs.usingCustomPoster
         || lhs.customPosterPath != rhs.customPosterPath
+        || lhs.isRewatching != rhs.isRewatching
+        || lhs.rewatchCount != rhs.rewatchCount
 }
 
 fileprivate func hasAuthoritativeLocalWork(

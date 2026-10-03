@@ -3,7 +3,7 @@
 ## Workflow
 
 - Use the Makefile for routine tasks: `make clean`, `make refresh-packages`, `make format`, `make lint`, `make build`, `make test-sim`, and `make run-sim`.
-- Use `make test-sim` for broad simulator-based validation. Use `make run-sim` when validating app runtime or UI behavior, unless the user explicitly asks for device-based verification.
+- Use `make test-sim` for broad simulator-based validation. Use `make run-sim` when validating app runtime or UI behavior rather than relying only on `make build`, unless the user explicitly asks for device-based verification.
 - Use `make run-device` for build, install, and launch on a connected iPhone only when the user explicitly asks for device-based verification.
 - Prefer the smallest relevant build or test command before broad verification.
 - If the user asks to perform a change in a new worktree, create that worktree under ../AniShelf-worktrees/.
@@ -27,10 +27,10 @@
 ## Testing
 
 - Unit tests live in `MyAnimeList/Tests/` and `DataProvider/Tests/`.
-- Run the smallest relevant test target first, then use `make test-sim` when broad validation is warranted. Use `make test` only when the user explicitly asks for physical-device testing or there is a specific device-only reason.
-- When developing new features or adding tests, run only the relevant tests first. For app tests, pass one or more whitespace-separated Xcode test identifiers with `APP_TEST_ONLY`, for example `make test-app-sim APP_TEST_ONLY='MyAnimeListTests/LibraryMetadataRefreshTests'` or `make test-app-sim APP_TEST_ONLY='MyAnimeListTests/LibraryExportManagerTests MyAnimeListTests/LibraryBackupRestoreTests'`. For DataProvider package tests, use Swift Testing's native filter syntax, for example `make test-dataprovider DATAPROVIDER_TEST_FILTER='LibrarySyncTests'` or `make test-dataprovider DATAPROVIDER_TEST_FILTER='LibrarySyncTests|MigrationTests'`. Only run the full suite when there is a good reason.
+- Use `make test` only when the user explicitly asks for physical-device testing or there is a specific device-only reason.
+- To run only the relevant tests: for app tests, pass one or more whitespace-separated Xcode test identifiers with `APP_TEST_ONLY`, for example `make test-app-sim APP_TEST_ONLY='MyAnimeListTests/LibraryMetadataRefreshTests'` or `make test-app-sim APP_TEST_ONLY='MyAnimeListTests/LibraryExportManagerTests MyAnimeListTests/LibraryBackupRestoreTests'`. For DataProvider package tests, use Swift Testing's native filter syntax, for example `make test-dataprovider DATAPROVIDER_TEST_FILTER='LibrarySyncTests'` or `make test-dataprovider DATAPROVIDER_TEST_FILTER='LibrarySyncTests|MigrationTests'`. Only run the full suite when there is a good reason.
 - Do not create excessive or redundant tests. Add only the smallest set that protects distinct behavior, prefer extending existing tests, and avoid duplicating coverage across layers. Simple wiring, copy, or layout changes may need no new tests.
-- If a simulator is already booted, use it for install/testing as appropriate. For changes affecting app runtime or UI behavior, prefer `make run-sim` over relying only on `make build`. Do not boot a simulator without explicit user permission, even when tests require one.
+- If a simulator is already booted, use it for install/testing as appropriate. Do not boot a simulator without explicit user permission, even when tests require one.
 
 ## Commits
 
@@ -51,3 +51,7 @@
 - When adjacent schema versions mostly share the same entry payload, prefer shared plain DTO bridges such as `AnimeEntryMigrationDTO` and `AnimeEntryDetailDTO` instead of re-copying field lists in `MigrationPlan.swift`. Treat those DTOs as transient migration/fetch bridges, not persisted SwiftData model types.
 - During SwiftData schema version bumps, qualify versioned model references inside older schema helper/bridge files, for example `SchemaV2_7_3.AnimeEntrySeasonSummary` instead of bare `AnimeEntrySeasonSummary`. Once `CurrentSchema` advances, unqualified names in older versioned files can resolve to the new schema types and break the build.
 - When you change/add user-facing text, update the localization files.
+
+## Website Maintenance
+
+- When screenshots or user-facing feature names change, update `../anishelf-site` to match. The site uses `.app-store-assets/screenshots/` and follows `MyAnimeList/Resources/Localizable.xcstrings`.

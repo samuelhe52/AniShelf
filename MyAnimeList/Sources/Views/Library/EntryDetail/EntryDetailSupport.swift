@@ -25,6 +25,18 @@ enum EntryDetailL10n {
     static let watching: LocalizedStringResource = "Watching"
     static let watched: LocalizedStringResource = "Watched"
     static let episodeProgress: LocalizedStringResource = "Episode Progress"
+    static let rewatching: LocalizedStringResource = "Rewatching"
+    static let timesRewatched: LocalizedStringResource = "Times Rewatched"
+    static let rewatchPromptTitle: LocalizedStringResource = "Are You Rewatching?"
+    static let startRewatch: LocalizedStringResource = "Start Rewatch"
+    static let notARewatch: LocalizedStringResource = "Not a Rewatch"
+    static let rewatchPromptEpisodeMessage: LocalizedStringResource =
+        "Starting a rewatch clears episode progress. Marking it watched again adds one to the rewatch count."
+    static let rewatchPromptMovieMessage: LocalizedStringResource =
+        "Marking it watched again adds one to the rewatch count."
+    static func watchNumber(_ number: Int) -> LocalizedStringResource {
+        "Watch #\(number)"
+    }
     static let trackDates: LocalizedStringResource = "Track Dates"
     static let hideDates: LocalizedStringResource = "Hide Dates"
     static let dateStarted: LocalizedStringResource = "Date Started"

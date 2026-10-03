@@ -1,6 +1,6 @@
 # AniShelf 简介
 
-**当前已上线 App Store，欢迎下载体验：[App Store 链接](https://apps.apple.com/us/app/anishelf/id6759359144)。新功能将先在 TestFlight 发布，后续再推送到 App Store。TestFlight 链接：[AniShelf TestFlight](https://testflight.apple.com/join/ns3sR38X)。**
+**当前已上线 App Store，欢迎下载体验：[App Store 链接](https://apps.apple.com/app/id6759359144)。新功能将先在 TestFlight 发布，后续再推送到 App Store。TestFlight 链接：[AniShelf TestFlight](https://testflight.apple.com/join/ns3sR38X)。**
 
 AniShelf 主要用来追踪、记录、管理看过的番剧/动画电影。核心功能：
 
@@ -53,7 +53,7 @@ AniShelf 还提供配套的命令行工具 [anishelf-cli](https://github.com/sam
 ### App 使用
 
 1. 下载并安装 AniShelf App。
-   1. 目前已上架 App Store，直接搜索 "AniShelf" 即可；或者直接点击链接： [App Store 链接](https://apps.apple.com/us/app/anishelf/id6759359144)。
+   1. 目前已上架 App Store，直接搜索 "AniShelf" 即可；或者直接点击链接： [App Store 链接](https://apps.apple.com/app/id6759359144)。
    2. 也可以加入 TestFlight 测试版，提前体验新功能：[AniShelf TestFlight](https://testflight.apple.com/join/ns3sR38X)。如果没有安装 TestFlight，需要先安装 TestFlight 应用，再重新访问链接，点击 "View in TestFlight"。
 2. 如第一次打开，需要按提示输入 TMDb API Key。
 3. 在应用内，点击右下方搜索按钮，输入番剧/动画电影名称，找到对应条目后可以添加到资料库。
@@ -81,7 +81,7 @@ AniShelf 还提供配套的命令行工具 [anishelf-cli](https://github.com/sam
 - API Key 验证不通过？加载缓慢，搜索不到结果？**可以分别尝试开启或关闭梯子，因为不同网络代理的规则可能影响访问。App 默认直连 TMDb；若直连不稳定，可以在设置中开启“Use TMDb Proxy”。如果已在使用梯子或其他网络代理，通常建议保持该选项关闭。**
 - 如何在多台设备间同步资料库？**在设置中手动开启 iCloud Sync，并确保各设备登录同一个 Apple 账户。它会同步资料库、相关设置和观看进度；与 TMDb、Bangumi、AniList 等平台的观看数据同步暂未支持。**
 - 如何反馈 Bug/功能建议？**欢迎通过 GitHub Issues 反馈 Bug 或者提出功能建议。也可以在群里讨论，我会不定期的查看**
-- 是否会上架 App Store？**已经上架。[App Store 链接](https://apps.apple.com/us/app/anishelf/id6759359144)。大多数情况下，新功能仍然将先在 TestFlight 发布，后续再推送到 App Store。**
+- 是否会上架 App Store？**已经上架。[App Store 链接](https://apps.apple.com/app/id6759359144)。大多数情况下，新功能仍然将先在 TestFlight 发布，后续再推送到 App Store。**
 - 是否支持 26 以下系统？**目前不支持。App 中使用了大量液态玻璃效果，26 以下系统不支持。并且我手上也没有 26 以下系统的测试机，如果有愿意做内部测试的同学，可以私信我，我可以尝试做适配，但是 UI 美观性应该会差一些**
 - 是否支持安卓/鸿蒙？**暂时没有这方面计划～**
 

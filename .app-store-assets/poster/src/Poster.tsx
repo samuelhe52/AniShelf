@@ -74,7 +74,7 @@ export const Poster: React.FC = () => {
           }}
         >
           <ScreenshotCard
-            src="screenshots/library-list-view.jpeg"
+            src="screenshots/03-library-list-view.jpeg"
             label="浏览与收藏"
             width={540}
             height={650}
@@ -92,7 +92,7 @@ export const Poster: React.FC = () => {
           }}
         >
           <ScreenshotCard
-            src="screenshots/anime-detail-overview.jpeg"
+            src="screenshots/04-anime-detail-overview.jpeg"
             label="详情与进度"
             width={500}
             height={740}
@@ -110,7 +110,7 @@ export const Poster: React.FC = () => {
           }}
         >
           <ScreenshotCard
-            src="screenshots/library-stats-overview.jpeg"
+            src="screenshots/06-library-stats-overview.jpeg"
             label="资料库统计"
             width={510}
             height={650}

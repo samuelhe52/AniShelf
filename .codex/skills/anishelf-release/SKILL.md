@@ -18,7 +18,7 @@ For a readiness check or workflow explanation, inspect and report only. For a re
    - Update the app version in `MyAnimeList.xcodeproj/project.pbxproj`; check both `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` for the app's build configurations. Do not assume the build number should carry forward or change unrelated test-target versions.
    - Confirm an appropriate entry for the target version in `MyAnimeList/Sources/Models/WhatsNewModels.swift`.
    - Update affected translations in `MyAnimeList/Resources/Localizable.xcstrings` and check the localization catalogs for missing translations. String catalogs are JSON; `jq empty` checks syntax, not translation completeness.
-3. Check whether `README.md`, `README.zh-CN.md`, and `docs/anishelf_overview.md` need release-related changes. Update these documents only with explicit user permission.
+3. Check whether `README.md`, `README.zh-CN.md`, `docs/anishelf_overview.md`, and `docs/anishelf_overview.en.md` need release-related changes. Update these documents only with explicit user permission.
 4. Use the Makefile for formatting, linting, relevant tests, and a Release build: `make format`, `make lint`, and `make build CONFIGURATION=Release`. Review formatting changes to keep unrelated edits out of the release.
 5. Run the smallest relevant tests first, using `APP_TEST_ONLY` or `DATAPROVIDER_TEST_FILTER` as documented in `AGENTS.md`. Use `make test-sim` when broad validation is warranted and `make run-sim` for runtime or UI validation. Reuse an already booted simulator; obtain explicit permission before booting one or performing physical-device validation.
 6. Review the resulting diff and run `git diff --check`. Report the checks actually completed and any remaining validation gaps before committing.

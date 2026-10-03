@@ -134,6 +134,7 @@ extension AnimeEntry {
         _ = backdropPath
         _ = tmdbID
         _ = watchStatus
+        _ = isRewatching
         _ = favorite
         _ = score
         _ = dateSaved

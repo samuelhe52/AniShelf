@@ -430,7 +430,15 @@ class LibraryStore {
 
     @discardableResult
     func enableLibraryCloudSync() async -> Bool {
-        await bootstrapLibraryCloudSyncEnablement().succeeded
+        // Re-enable must not inherit the result of the pass just canceled by
+        // the off toggle. Preserve the enabled intent while waiting for cleanup.
+        updateLibraryCloudSyncStatus {
+            $0.isEnabled = true
+            $0.bootstrapState = .running
+        }
+        await syncCoordinator?.waitUntilCanceledSyncFinishes()
+        guard libraryCloudSyncStatus.isEnabled, !Task.isCancelled else { return false }
+        return await bootstrapLibraryCloudSyncEnablement().succeeded
     }
 
     func bootstrapLibraryCloudSyncEnablement(isUserRetry: Bool = false) async -> LibrarySyncCoordinator.SyncResult {

@@ -30,6 +30,7 @@ struct EntryDetailPresentationState {
     var showSiblingSeasonWarning = false
     var episodeProgressCompletionPrompt: AnimeEntryEpisodeProgressCompletionPrompt?
     var dateUpdateSuggestion: AnimeEntryDateUpdateSuggestion?
+    var showRewatchPrompt = false
 
     var blocksHostMigration: Bool {
         activeSheet != nil
@@ -37,6 +38,7 @@ struct EntryDetailPresentationState {
             || showSiblingSeasonWarning
             || episodeProgressCompletionPrompt != nil
             || dateUpdateSuggestion != nil
+            || showRewatchPrompt
     }
 }
 

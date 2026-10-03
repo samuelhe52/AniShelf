@@ -43,6 +43,8 @@ struct LibraryEntrySyncTests {
         source.dateStarted = referenceDate(year: 2026, month: 5, day: 11)
         source.favorite = true
         source.notes = "Remote notes"
+        source.isRewatching = true
+        source.rewatchCount = 2
         source.libraryUpdatedAt = referenceDate(year: 2026, month: 5, day: 12)
         source.trackingUpdatedAt = referenceDate(year: 2026, month: 5, day: 12)
         source.applyEpisodeProgressSnapshot(
@@ -75,6 +77,8 @@ struct LibraryEntrySyncTests {
         #expect(local.notes == "Remote notes")
         #expect(local.usingCustomPoster)
         #expect(local.customPosterPath == "/custom.jpg")
+        #expect(local.isRewatching)
+        #expect(local.rewatchCount == 2)
         #expect(local.episodeProgressSummary(forSeason: 1).watchedThroughEpisode == 7)
     }
 
@@ -389,6 +393,30 @@ struct LibraryEntrySyncTests {
         #expect(merged.episodeProgresses.first { $0.seasonNumber == 1 }?.watchedThroughEpisode == 5)
         #expect(merged.episodeProgresses.first { $0.seasonNumber == 2 }?.watchedThroughEpisode == 2)
         #expect(merged.episodeProgresses.first { $0.seasonNumber == 3 }?.watchedThroughEpisode == 1)
+    }
+
+    @Test func rewatchProgressResetWinsOverStaleProgressInBothDirections() throws {
+        let rewatchingDevice = AnimeEntry(name: "Series", type: .series, tmdbID: 7_101)
+        rewatchingDevice.updateWatchStatus(.watching)
+        rewatchingDevice.updateEpisodeProgress(seasonNumber: 1, watchedThroughEpisode: 12)
+        rewatchingDevice.updateWatchStatus(.watched)
+        let staleSnapshot = LibraryEntrySyncSnapshot(entry: rewatchingDevice)
+
+        let staleDevice = AnimeEntry(name: "Series", type: .series, tmdbID: 7_101)
+        try staleDevice.applyInitialSyncSnapshot(staleSnapshot)
+
+        rewatchingDevice.updateWatchStatus(.watching)
+        rewatchingDevice.startRewatch()
+        let resetSnapshot = LibraryEntrySyncSnapshot(entry: rewatchingDevice)
+
+        try rewatchingDevice.applySyncSnapshot(staleSnapshot)
+        #expect(rewatchingDevice.episodeProgressSummary(forSeason: 1).watchedThroughEpisode == 0)
+        #expect(rewatchingDevice.isRewatching)
+
+        try staleDevice.applySyncSnapshot(resetSnapshot)
+        #expect(staleDevice.episodeProgressSummary(forSeason: 1).watchedThroughEpisode == 0)
+        #expect(staleDevice.isRewatching)
+        #expect(try staleSnapshot.merged(with: resetSnapshot).hasSameWireState(as: resetSnapshot))
     }
 
     @Test func tombstoneAppliesOnlyWhenNewerThanLocalClocks() throws {

@@ -24,7 +24,9 @@ extension AnimeEntry {
           dateFinished: \(dateFinished?.description ?? "nil"),
           isDateTrackingEnabled: \(isDateTrackingEnabled),
           favorite: \(favorite),
-          status: \(watchStatus)
+          status: \(watchStatus),
+          isRewatching: \(isRewatching),
+          rewatchCount: \(rewatchCount)
         )
         """
     }

@@ -22,6 +22,8 @@ struct LibraryEntrySnapshot: Identifiable, Equatable {
     let primaryMetadata: [String]
     let secondaryMetadata: String?
     let watchStatus: AnimeEntry.WatchStatus
+    let isRewatching: Bool
+    let rewatchCount: Int
     let score: Int?
     let isFavorite: Bool
     let episodeProgressLabel: String?
@@ -39,6 +41,8 @@ struct LibraryEntrySnapshot: Identifiable, Equatable {
         primaryMetadata = Self.primaryMetadata(for: entry)
         secondaryMetadata = Self.secondaryMetadata(for: entry)
         watchStatus = entry.watchStatus
+        isRewatching = entry.isRewatching
+        rewatchCount = entry.rewatchCount
         score = entry.score
         isFavorite = entry.favorite
         episodeProgressLabel = episodeProgress.label

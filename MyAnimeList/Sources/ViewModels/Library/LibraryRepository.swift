@@ -28,27 +28,32 @@ final class LibraryRepository {
     }
 
     func deleteEntry(_ entry: AnimeEntry) throws {
-        entry.resolveLibraryDisplayFaultsBeforeDeletion()
-        let deleteToken = try syncChangeRecorder?.recordDeletion(for: entry)
-        do {
-            try dataProvider.dataHandler.deleteEntry(entry)
-        } catch {
-            if let deleteToken {
-                try? syncChangeRecorder?.restoreDeleteRecord(deleteToken)
-            }
-            throw error
-        }
+        try deleteEntries([entry])
     }
 
     func deleteEntries(_ entries: [AnimeEntry]) throws {
         guard !entries.isEmpty else { return }
-        for entry in entries {
+        let selectedIDs = Set(entries.map(\.id))
+        // Surviving seasons still use their parent for display metadata, so remove
+        // the series from the library view without deleting its backing entry.
+        let entriesToHide = entries.filter { entry in
+            guard case .series = entry.type else { return false }
+            return entry.childSeasonEntries.contains { !selectedIDs.contains($0.id) }
+        }
+        let hiddenIDs = Set(entriesToHide.map(\.id))
+        let entriesToDelete = entries.filter { !hiddenIDs.contains($0.id) }
+        for entry in entriesToDelete {
             entry.resolveLibraryDisplayFaultsBeforeDeletion()
         }
-        let deleteTokens = try syncChangeRecorder?.recordDeletions(for: entries)
+        let deleteTokens =
+            entriesToDelete.isEmpty
+            ? nil : try syncChangeRecorder?.recordDeletions(for: entriesToDelete)
         let context = dataProvider.dataHandler.modelContext
         do {
-            for entry in entries {
+            for entry in entriesToHide {
+                entry.updateDisplayState(false)
+            }
+            for entry in entriesToDelete {
                 context.delete(entry)
             }
             try transactionSaver(context)

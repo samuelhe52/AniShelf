@@ -55,6 +55,14 @@ public struct UserEntryInfo: Equatable, Codable {
     /// Episode progress grouped by season/special partition.
     public var episodeProgresses: [EpisodeProgressSnapshot]
 
+    /// Whether the current watch is a rewatch.
+    ///
+    /// Only meaningful while watching.
+    public var isRewatching: Bool
+
+    /// Number of completed rewatches, excluding the first viewing.
+    public var rewatchCount: Int
+
     private init(
         watchStatus: AnimeEntry.WatchStatus,
         dateStarted: Date? = nil,
@@ -65,7 +73,9 @@ public struct UserEntryInfo: Equatable, Codable {
         notes: String,
         usingCustomPoster: Bool,
         customPosterPath: String? = nil,
-        episodeProgresses: [EpisodeProgressSnapshot] = []
+        episodeProgresses: [EpisodeProgressSnapshot] = [],
+        isRewatching: Bool = false,
+        rewatchCount: Int = 0
     ) {
         self.watchStatus = watchStatus
         self.dateStarted = dateStarted
@@ -77,6 +87,8 @@ public struct UserEntryInfo: Equatable, Codable {
         self.customPosterPath = usingCustomPoster ? customPosterPath : nil
         self.usingCustomPoster = self.customPosterPath != nil
         self.episodeProgresses = Self.normalizedEpisodeProgresses(episodeProgresses)
+        self.isRewatching = isRewatching && watchStatus == .watching
+        self.rewatchCount = max(0, rewatchCount)
     }
 
     public init(from entry: AnimeEntry) {
@@ -98,6 +110,8 @@ public struct UserEntryInfo: Equatable, Codable {
                 )
             }
         )
+        self.isRewatching = entry.isRewatching && entry.watchStatus == .watching
+        self.rewatchCount = max(0, entry.rewatchCount)
     }
 
     /// Whether this user info is "empty", i.e. has no meaningful user data.
@@ -105,7 +119,8 @@ public struct UserEntryInfo: Equatable, Codable {
         watchStatus == .planToWatch && dateStarted == nil && dateFinished == nil
             && isDateTrackingEnabled
             && score == nil && favorite == false && notes.isEmpty && usingCustomPoster == false
-            && episodeProgresses.isEmpty
+            && episodeProgresses.allSatisfy { $0.watchedThroughEpisode == 0 }
+            && !isRewatching && rewatchCount == 0
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -119,6 +134,8 @@ public struct UserEntryInfo: Equatable, Codable {
         case usingCustomPoster
         case customPosterPath
         case episodeProgresses
+        case isRewatching
+        case rewatchCount
     }
 
     public init(from decoder: any Decoder) throws {
@@ -136,7 +153,9 @@ public struct UserEntryInfo: Equatable, Codable {
             episodeProgresses: try container.decodeIfPresent(
                 [EpisodeProgressSnapshot].self,
                 forKey: .episodeProgresses
-            ) ?? []
+            ) ?? [],
+            isRewatching: try container.decodeIfPresent(Bool.self, forKey: .isRewatching) ?? false,
+            rewatchCount: try container.decodeIfPresent(Int.self, forKey: .rewatchCount) ?? 0
         )
     }
 
@@ -152,6 +171,8 @@ public struct UserEntryInfo: Equatable, Codable {
         try container.encode(usingCustomPoster, forKey: .usingCustomPoster)
         try container.encodeIfPresent(customPosterPath, forKey: .customPosterPath)
         try container.encode(episodeProgresses, forKey: .episodeProgresses)
+        try container.encode(isRewatching, forKey: .isRewatching)
+        try container.encode(rewatchCount, forKey: .rewatchCount)
     }
 
     fileprivate static func normalizedEpisodeProgresses(
@@ -159,7 +180,7 @@ public struct UserEntryInfo: Equatable, Codable {
     ) -> [EpisodeProgressSnapshot] {
         Dictionary(
             grouping: episodeProgresses.filter {
-                $0.seasonNumber > 0 && $0.watchedThroughEpisode > 0
+                $0.seasonNumber > 0
             },
             by: \.seasonNumber
         )
@@ -193,10 +214,15 @@ public struct UserEntryInfo: Equatable, Codable {
             && usingCustomPoster == other.usingCustomPoster
             && customPosterPath == other.customPosterPath
             && semanticEpisodeProgresses == other.semanticEpisodeProgresses
+            && isRewatching == other.isRewatching
+            && rewatchCount == other.rewatchCount
     }
 
+    /// Zero progress is a sync reset marker; to the user it reads the same as no progress.
     private var semanticEpisodeProgresses: [EpisodeProgressValue] {
-        episodeProgresses.map(EpisodeProgressValue.init)
+        episodeProgresses
+            .filter { $0.watchedThroughEpisode > 0 }
+            .map(EpisodeProgressValue.init)
     }
 
     private struct EpisodeProgressValue: Equatable {
@@ -233,6 +259,8 @@ extension UserEntryInfo: CustomStringConvertible {
         Notes: \(notes)
         Custom Poster: \(usingCustomPoster)
         Episode Progress: \(Self.episodeProgressDescription(episodeProgresses))
+        Rewatching: \(isRewatching)
+        Rewatch Count: \(rewatchCount)
         """
     }
 
@@ -322,12 +350,55 @@ extension AnimeEntry {
     /// in sync conflict resolution.
     public func setWatchStatus(_ status: WatchStatus) {
         watchStatus = status
+        if status != .watching {
+            isRewatching = false
+        }
     }
 
+    /// Changes the status for a user action.
+    ///
+    /// Finishing a marked rewatch counts one more completed rewatch. Leaving
+    /// Watching for any other status clears the rewatch marker without counting.
     @discardableResult
     public func updateWatchStatus(_ status: WatchStatus, at date: Date = .now) -> Bool {
         guard watchStatus != status else { return false }
+        if isRewatching && status == .watched {
+            rewatchCount += 1
+        }
         setWatchStatus(status)
+        markTrackingModified(at: date)
+        return true
+    }
+
+    /// Marks or unmarks the current watch as a rewatch.
+    ///
+    /// Only applies while watching.
+    @discardableResult
+    public func updateRewatching(_ isRewatching: Bool, at date: Date = .now) -> Bool {
+        let resolved = isRewatching && watchStatus == .watching
+        guard self.isRewatching != resolved else { return false }
+        self.isRewatching = resolved
+        markTrackingModified(at: date)
+        return true
+    }
+
+    /// Marks a watching entry as a rewatch and clears its episode progress so
+    /// the rewatch is tracked from the first episode.
+    @discardableResult
+    public func startRewatch(at date: Date = .now) -> Bool {
+        guard watchStatus == .watching else { return false }
+        var changed = updateRewatching(true, at: date)
+        for seasonNumber in Set(episodeProgresses.map(\.seasonNumber)) {
+            changed = updateEpisodeProgress(seasonNumber: seasonNumber, watchedThroughEpisode: 0, at: date) || changed
+        }
+        return changed
+    }
+
+    @discardableResult
+    public func updateRewatchCount(_ count: Int, at date: Date = .now) -> Bool {
+        let resolved = max(0, count)
+        guard rewatchCount != resolved else { return false }
+        rewatchCount = resolved
         markTrackingModified(at: date)
         return true
     }
@@ -411,6 +482,8 @@ extension AnimeEntry {
         notes = userInfo.notes
         customPosterPath = userInfo.usingCustomPoster ? userInfo.customPosterPath : nil
         usingCustomPoster = customPosterPath != nil
+        isRewatching = userInfo.isRewatching && userInfo.watchStatus == .watching
+        rewatchCount = max(0, userInfo.rewatchCount)
         episodeProgresses.forEach { modelContext?.delete($0) }
         episodeProgresses.removeAll()
         for progress in filteredEpisodeProgresses(from: userInfo) {

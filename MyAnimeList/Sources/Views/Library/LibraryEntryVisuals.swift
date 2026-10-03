@@ -26,12 +26,45 @@ struct LibraryWatchStatusIndicator: View {
 
 struct LibraryWatchStatusBadge: View {
     let status: AnimeEntry.WatchStatus
+    var isRewatching = false
+    var rewatchCount = 0
+
+    private static let rewatchingTitle: LocalizedStringResource = "Rewatching"
+
+    private var showsRewatching: Bool {
+        isRewatching && status == .watching
+    }
+
+    private var statusTitle: LocalizedStringResource {
+        showsRewatching ? Self.rewatchingTitle : status.localizedStringResource
+    }
+
+    private var title: LocalizedStringResource {
+        if rewatchCount > 0 {
+            return "\(String(localized: statusTitle)) ×\(rewatchCount)"
+        }
+        return statusTitle
+    }
+
+    private var accessibilityTitle: LocalizedStringResource {
+        if rewatchCount > 0 {
+            return "\(String(localized: statusTitle)), times rewatched: \(rewatchCount)"
+        }
+        return statusTitle
+    }
 
     var body: some View {
         HStack(spacing: 6) {
-            LibraryWatchStatusIndicator(status: status, diameter: 5)
-            Text(status.localizedStringResource)
+            if showsRewatching {
+                Image(systemName: "arrow.counterclockwise")
+                    .font(Self.iconFont)
+                    .foregroundStyle(status.libraryTintColor.opacity(0.92))
+            } else {
+                LibraryWatchStatusIndicator(status: status, diameter: 5)
+            }
+            Text(title)
                 .font(Self.textFont)
+                .monospacedDigit()
                 .foregroundStyle(status.libraryTintColor.opacity(0.92))
                 .lineLimit(1)
         }
@@ -41,12 +74,43 @@ struct LibraryWatchStatusBadge: View {
             Capsule(style: .continuous)
                 .fill(status.libraryTintColor.opacity(0.09))
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(accessibilityTitle))
     }
 
     fileprivate static let horizontalPadding: CGFloat = 8
     fileprivate static let verticalPadding: CGFloat = 4
     fileprivate static let textFont = Font.caption2.weight(.semibold)
     fileprivate static let iconFont = Font.system(size: 10).weight(.semibold)
+}
+
+struct LibraryRewatchCountBadge: View {
+    let count: Int
+    let status: AnimeEntry.WatchStatus
+
+    var body: some View {
+        if count > 0 {
+            HStack(spacing: 3) {
+                Image(systemName: "repeat")
+                    .font(LibraryWatchStatusBadge.iconFont)
+                Text(count, format: .number)
+                    .font(LibraryWatchStatusBadge.textFont)
+                    .monospacedDigit()
+            }
+            .foregroundStyle(status.libraryTintColor.opacity(0.92))
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 7)
+            .padding(.vertical, 4)
+            .background {
+                Capsule(style: .continuous)
+                    .fill(status.libraryTintColor.opacity(0.09))
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(EntryDetailL10n.timesRewatched)
+            .accessibilityValue(Text(count, format: .number))
+        }
+    }
 }
 
 struct LibraryScoreBadge: View {

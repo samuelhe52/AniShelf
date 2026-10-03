@@ -88,6 +88,8 @@ final class LibrarySyncCoordinator {
     private let syncGate = SyncGate()
     private var activeSyncRequestCount = 0
     private var ordinarySyncCancellationGeneration = 0
+    private var canceledSyncNeedsDrain = false
+    private var activeBootstrapTask: Task<SyncResult, Never>?
     private var activeFirstEnableBootstrapIDs = Set<UUID>()
     private var canceledFirstEnableBootstrapIDs = Set<UUID>()
 
@@ -347,11 +349,20 @@ final class LibrarySyncCoordinator {
 
         syncGate.begin(kind: .bootstrap, ownerHandlesResult: canHandleResult)
         activeFirstEnableBootstrapIDs.insert(bootstrapID)
-        var result = await runFirstEnableBootstrap(
-            preference: preference,
-            bootstrapID: bootstrapID,
-            isUserRetry: isUserRetry
-        )
+        let task = Task {
+            await runFirstEnableBootstrap(
+                preference: preference,
+                bootstrapID: bootstrapID,
+                isUserRetry: isUserRetry
+            )
+        }
+        activeBootstrapTask = task
+        var result = await withTaskCancellationHandler {
+            await task.value
+        } onCancel: {
+            task.cancel()
+        }
+        activeBootstrapTask = nil
         activeFirstEnableBootstrapIDs.remove(bootstrapID)
         canceledFirstEnableBootstrapIDs.remove(bootstrapID)
         if result == .success {
@@ -371,9 +382,17 @@ final class LibrarySyncCoordinator {
     }
 
     func cancelAllSync() {
+        canceledSyncNeedsDrain = hasActiveSyncRequest
         ordinarySyncCancellationGeneration &+= 1
         canceledFirstEnableBootstrapIDs.formUnion(activeFirstEnableBootstrapIDs)
+        activeBootstrapTask?.cancel()
         syncGate.cancelAll()
+    }
+
+    func waitUntilCanceledSyncFinishes() async {
+        guard canceledSyncNeedsDrain else { return }
+        await syncGate.waitUntilIdle()
+        canceledSyncNeedsDrain = false
     }
 
     func waitUntilAllSyncFinishes() async {
@@ -448,6 +467,7 @@ final class LibrarySyncCoordinator {
     /// `recordPipelineFailure` so the bootstrap lands on `.failed` with a
     /// reason instead of stranding the persisted state at `.running`.
     func checkFirstEnableBootstrapCancellation(_ bootstrapID: UUID) throws {
+        try Task.checkCancellation()
         if canceledFirstEnableBootstrapIDs.contains(bootstrapID) {
             throw FirstEnableBootstrapCancellation.cancelled
         }
@@ -557,6 +577,11 @@ final class LibrarySyncCoordinator {
                 "Skipped iCloud library first-enable bootstrap because the library store was unavailable."
             )
             return .permanentFailure
+        }
+
+        guard !Task.isCancelled else {
+            store.recordLibraryCloudSyncCancellation()
+            return .skipped(.disabled)
         }
 
         store.updateLibraryCloudSyncStatus { status in

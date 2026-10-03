@@ -11,6 +11,7 @@ import SwiftUI
 
 struct AnimeEntryListRow: View {
     @AppStorage(.libraryOpenDetailWithSingleTap) private var openDetailWithSingleTap = false
+    @AppStorage(.episodeProgressTrackingEnabled) private var episodeProgressTrackingEnabled = false
     @Environment(\.libraryEntryDetailActivation) private var detailActivation
 
     var entry: AnimeEntry
@@ -223,12 +224,15 @@ struct AnimeEntryListRow: View {
     }
 
     private var statusLabel: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: showsEpisodeProgress ? 6 : 10) {
             statusBadge
             LibraryEpisodeProgressBadge(
                 label: snapshot.episodeProgressLabel,
                 fractionCompleted: snapshot.episodeProgressFraction
             )
+            if !showsEpisodeProgress {
+                LibraryRewatchCountBadge(count: snapshot.rewatchCount, status: snapshot.watchStatus)
+            }
             LibraryScoreBadge(score: snapshot.score)
             Spacer(minLength: 8)
             favoriteButton
@@ -236,6 +240,15 @@ struct AnimeEntryListRow: View {
     }
 
     private var statusBadge: some View {
-        LibraryWatchStatusBadge(status: snapshot.watchStatus)
+        LibraryWatchStatusBadge(
+            status: snapshot.watchStatus,
+            isRewatching: snapshot.isRewatching,
+            rewatchCount: showsEpisodeProgress ? snapshot.rewatchCount : 0
+        )
+        .fixedSize(horizontal: showsEpisodeProgress, vertical: false)
+    }
+
+    private var showsEpisodeProgress: Bool {
+        episodeProgressTrackingEnabled && !(snapshot.episodeProgressLabel ?? "").isEmpty
     }
 }

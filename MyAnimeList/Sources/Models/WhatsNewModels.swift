@@ -416,6 +416,27 @@ enum WhatsNewRegistry {
                     kind: .openURL(projectURL)
                 )
             ]
+        ),
+        "1.102.0": .init(
+            version: "1.102.0",
+            summary:
+                "This release adds rewatch tracking and improves iCloud Sync reliability.",
+            highlights: [
+                "Track each anime's rewatch status and completed rewatch count.",
+                "Fixed iCloud Sync getting stuck during preparation and improved recovery after turning sync off and on again.",
+                "Fixed missing information in season entries after deleting their series.",
+                "Fixed episode progress resets being overwritten by older progress from other devices.",
+                "Added website and privacy policy links to the About page in Settings."
+            ],
+            primaryAction: nil,
+            secondaryActions: [
+                .init(
+                    id: "project-github",
+                    title: "AniShelf on GitHub",
+                    systemImage: "arrow.up.right.square",
+                    kind: .openURL(projectURL)
+                )
+            ]
         )
     ]
 

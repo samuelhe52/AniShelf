@@ -132,7 +132,9 @@ extension LibraryStore {
 
     @discardableResult
     func deleteEntry(_ entry: AnimeEntry) -> Bool {
-        let cachedImageURLs = LibraryImageCacheService.relatedImageURLs(for: entry)
+        let cachedImageURLs =
+            entry.childSeasonEntries.isEmpty
+            ? LibraryImageCacheService.relatedImageURLs(for: entry) : []
         do {
             try repository.deleteEntry(entry)
             LibraryImageCacheService.removeCachedImages(for: cachedImageURLs)
@@ -146,7 +148,12 @@ extension LibraryStore {
 
     @discardableResult
     func deleteEntries(_ entries: [AnimeEntry]) -> Bool {
-        let cachedImageURLs = Set(entries.flatMap { LibraryImageCacheService.relatedImageURLs(for: $0) })
+        let selectedIDs = Set(entries.map(\.id))
+        let cachedImageURLs = Set(
+            entries.flatMap { entry in
+                entry.childSeasonEntries.contains(where: { !selectedIDs.contains($0.id) })
+                    ? [] : LibraryImageCacheService.relatedImageURLs(for: entry)
+            })
         do {
             try repository.deleteEntries(entries)
             LibraryImageCacheService.removeCachedImages(for: cachedImageURLs)

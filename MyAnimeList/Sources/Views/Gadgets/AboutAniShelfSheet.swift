@@ -3,6 +3,8 @@ import SwiftUI
 struct AboutAniShelfSheet: View {
     @Environment(\.dismiss) private var dismiss
 
+    private let websiteURL = URL(string: "https://anishelf.konakona.dev")!
+    private let privacyPolicyURL = URL(string: "https://anishelf.konakona.dev/privacy/")!
     private let githubURL = URL(string: "https://github.com/samuelhe52/AniShelf")!
     private let githubProfileURL = URL(string: "https://github.com/samuelhe52")!
     private let tmdbURL = URL(string: "https://www.themoviedb.org/")!
@@ -119,6 +121,18 @@ struct AboutAniShelfSheet: View {
 
             VStack(spacing: 10) {
                 aboutLinkRow(
+                    title: websiteTitleResource,
+                    systemImage: "globe",
+                    destination: websiteURL
+                )
+
+                aboutLinkRow(
+                    title: privacyPolicyTitleResource,
+                    systemImage: "hand.raised",
+                    destination: privacyPolicyURL
+                )
+
+                aboutLinkRow(
                     title: sourceCodeTitleResource,
                     systemImage: "chevron.left.forwardslash.chevron.right",
                     destination: githubURL
@@ -225,6 +239,14 @@ struct AboutAniShelfSheet: View {
 
     private var syncTitleResource: LocalizedStringResource {
         "Backups"
+    }
+
+    private var websiteTitleResource: LocalizedStringResource {
+        "Website"
+    }
+
+    private var privacyPolicyTitleResource: LocalizedStringResource {
+        "Privacy Policy"
     }
 
     private var sourceCodeTitleResource: LocalizedStringResource {

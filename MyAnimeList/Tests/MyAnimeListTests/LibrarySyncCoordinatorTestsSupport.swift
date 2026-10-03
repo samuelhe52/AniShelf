@@ -117,6 +117,7 @@ final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, @unchecked S
     var fetchedChangeTokens: [CKServerChangeToken?] = []
     var savedRecords: [CKRecord] = []
     var saveBatchSizes: [Int] = []
+    var prepare: (@Sendable () async throws -> Void)?
     var ensureZoneCallCount = 0
     var suspendNextFetch = false
     var suspendNextSave = false
@@ -139,6 +140,7 @@ final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, @unchecked S
         subscriptionID: CKSubscription.ID
     ) async throws {
         ensureZoneCallCount += 1
+        try await prepare?()
     }
 
     func fetchRecordZoneChanges(
