@@ -7,7 +7,11 @@
 - Use `make run-device` for build, install, and launch on a connected iPhone only when the user explicitly asks for device-based verification.
 - Prefer the smallest relevant build or test command before broad verification.
 - If the user asks to perform a change in a new worktree, create that worktree under ../AniShelf-worktrees/.
-- Do not use any of the `openspec` workflows unless the user explicitly requests it.
+- Use the `write-ai-doc` skill for substantial features and decision-shaping fixes. Follow [`docs-ai/workflow.md`](docs-ai/workflow.md) and read [`docs-ai/README.md`](docs-ai/README.md) for existing topics before creating a new record.
+- Write `000-plan.md` before implementation and reconcile `001-action.md` afterward. Record reasons and rejected alternatives that code alone would miss; distinguish recovered discussion memory, implementation inference, and verified evidence.
+- Keep related follow-ups in the existing entry with a numbered amendment. Skip routine investigations, reviews, test reports, minor polish, and docs-only edits unless a durable record is requested.
+- Keep public tutorials and images in `docs/`; internal design history, contracts, and runbooks belong in `docs-ai/`.
+- OpenSpec is retired for this project; use `docs-ai/` records instead.
 
 ## Code Style
 
