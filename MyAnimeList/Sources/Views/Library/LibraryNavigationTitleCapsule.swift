@@ -24,6 +24,8 @@ fileprivate struct LibraryCapsuleSurface<Content: View>: View {
 
 struct LibraryNavigationTitleCapsule: View {
     let count: Int
+    /// Active library category; replaces "Anime" when set.
+    var categoryName: String? = nil
 
     var body: some View {
         LibraryCapsuleSurface {
@@ -32,10 +34,23 @@ struct LibraryNavigationTitleCapsule: View {
                     .font(.title2.weight(.bold))
                     .monospacedDigit()
                     .contentTransition(.numericText(value: Double(count)))
-                Text(animeTitleResource)
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .contentTransition(.identity)
+                if let categoryName {
+                    Text(categoryName)
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(.tint)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: 170, alignment: .leading)
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                } else {
+                    Text(animeTitleResource)
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .contentTransition(.identity)
+                }
             }
             .animation(.bouncy, value: count)
             .fixedSize(horizontal: true, vertical: false)

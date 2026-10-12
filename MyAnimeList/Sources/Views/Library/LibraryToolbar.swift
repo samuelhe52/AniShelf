@@ -22,6 +22,7 @@ struct LibraryToolbar: ToolbarContent {
     let applyBatchAction: (LibraryBatchAction) -> Void
     let deleteSelectedEntries: () -> Void
     let openProfileSettings: () -> Void
+    let openCategoryManager: () -> Void
     let checkDuplicate: (LibraryEntryIdentity) -> Bool
     let processTMDbSearchResults: (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void
     let jumpToEntryInLibrary: (LibraryEntryIdentity) -> Void
@@ -35,7 +36,11 @@ struct LibraryToolbar: ToolbarContent {
     @ToolbarContentBuilder
     private var topBarContent: some ToolbarContent {
         ToolbarItem(placement: .principal) {
-            LibraryToolbarTitle(store: store, interaction: interaction)
+            LibraryToolbarTitle(
+                store: store,
+                interaction: interaction,
+                openCategoryManager: openCategoryManager
+            )
         }
         if supportsMultiSelection && !interaction.isMultiSelecting {
             // Counterbalances the trailing controls so the principal title sits visually left of center.
@@ -84,6 +89,14 @@ struct LibraryToolbar: ToolbarContent {
                     entriesByID: selectionEntriesByID,
                     applyBatchAction: applyBatchAction
                 )
+                if store.categoriesEnabled {
+                    LibrarySelectionCategoryMenu(
+                        store: store,
+                        interaction: interaction,
+                        entriesByID: selectionEntriesByID,
+                        applyBatchAction: applyBatchAction
+                    )
+                }
             }
             ToolbarItem(placement: .bottomBar) {
                 LibrarySelectionActionsMenu(
@@ -121,10 +134,41 @@ struct LibraryToolbar: ToolbarContent {
 fileprivate struct LibraryToolbarTitle: View {
     let store: LibraryStore
     let interaction: LibraryEntryInteractionState
+    let openCategoryManager: () -> Void
 
     var body: some View {
+        if store.categoriesEnabled && !interaction.isMultiSelecting {
+            // The capsule is the category switcher in every view style.
+            Menu {
+                Picker(
+                    "Category",
+                    selection: Binding(
+                        get: { store.activeCategoryID },
+                        set: { id in withAnimation(.snappy) { store.activeCategoryID = id } }
+                    )
+                ) {
+                    Text("All").tag(LibraryCategory.ID?.none)
+                    ForEach(store.categories) { category in
+                        Text(category.name).tag(Optional(category.id))
+                    }
+                }
+                .pickerStyle(.inline)
+                Divider()
+                Button("Edit Categories…", systemImage: "list.bullet", action: openCategoryManager)
+            } label: {
+                capsule
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(Text("Switches the library category"))
+        } else {
+            capsule
+        }
+    }
+
+    private var capsule: some View {
         LibraryNavigationTitleCapsule(
-            count: interaction.isMultiSelecting ? interaction.selectedEntryCount : store.libraryOnDisplay.count
+            count: interaction.isMultiSelecting ? interaction.selectedEntryCount : store.libraryOnDisplay.count,
+            categoryName: interaction.isMultiSelecting ? nil : store.activeCategory?.name
         )
     }
 }
@@ -190,6 +234,81 @@ fileprivate struct LibrarySelectionFavoriteButton: View {
         .disabled(interaction.selectedEntryIDs.isEmpty)
         .animation(.snappy(duration: 0.3), value: allFavorite)
     }
+}
+
+fileprivate struct LibrarySelectionCategoryMenu: View {
+    let store: LibraryStore
+    let interaction: LibraryEntryInteractionState
+    let entriesByID: [LibraryEntryIdentity: AnimeEntry]
+    let applyBatchAction: (LibraryBatchAction) -> Void
+
+    @State private var namePrompt: LibraryCategoryNamePrompt?
+
+    var body: some View {
+        let selectedEntries = interaction.selectedEntryIDs.compactMap { entriesByID[$0] }
+        Menu {
+            Section {
+                ForEach(store.categories) { category in
+                    let membership = membership(of: category.id, in: selectedEntries)
+                    Button {
+                        // A full category removes the selection; otherwise every selected anime joins.
+                        apply(category.id, isMember: membership != .all)
+                    } label: {
+                        Label {
+                            Text(category.name)
+                        } icon: {
+                            membership.icon
+                        }
+                    }
+                    // Stay open so the user sees the result and can pick more categories.
+                    .menuActionDismissBehavior(.disabled)
+                }
+            } header: {
+                Text("Add \(selectedEntries.count) Anime To")
+            }
+            Section {
+                Button("New Category…", systemImage: "plus") {
+                    namePrompt = .init(purpose: .create(memberCount: selectedEntries.count))
+                }
+            }
+        } label: {
+            Label("Category", systemImage: "folder")
+        }
+        .disabled(interaction.selectedEntryIDs.isEmpty)
+        .libraryCategoryNamePrompt($namePrompt) { _, name in
+            guard let category = store.createCategory(named: name) else { return }
+            apply(category.id, isMember: true)
+        }
+    }
+
+    private func apply(_ id: LibraryCategory.ID, isMember: Bool) {
+        applyBatchAction(.category(id, isMember: isMember, knownCategoryIDs: store.knownCategoryIDs))
+    }
+
+    private func membership(of id: LibraryCategory.ID, in entries: [AnimeEntry]) -> Membership {
+        let memberCount = entries.count { $0.categoryIDs.contains(id) }
+        if memberCount == 0 { return .none }
+        return memberCount == entries.count ? .all : .some
+    }
+}
+
+fileprivate enum Membership {
+    case all, some, none
+
+    /// Every row carries an icon so menus keep the category names in one aligned column.
+    var icon: Image {
+        switch self {
+        case .all: Image(systemName: "checkmark")
+        case .some: Image(systemName: "minus")
+        case .none: Image(uiImage: Self.blankIcon)
+        }
+    }
+
+    /// A clear image the size of the checkmark symbol.
+    private static let blankIcon: UIImage = {
+        let size = UIImage(systemName: "checkmark")?.size ?? CGSize(width: 17, height: 16)
+        return UIGraphicsImageRenderer(size: size).image { _ in }
+    }()
 }
 
 fileprivate struct LibrarySelectionActionsMenu: View {

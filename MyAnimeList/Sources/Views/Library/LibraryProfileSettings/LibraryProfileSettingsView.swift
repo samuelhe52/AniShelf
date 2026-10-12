@@ -254,6 +254,7 @@ struct LibraryProfileSettingsView: View {
         )
         .animation(languagePickerAnimation, value: followsSystemLanguage)
         .animation(languagePickerAnimation, value: episodeProgressTrackingEnabled)
+        .animation(languagePickerAnimation, value: store.categoriesEnabled)
         .animation(languagePickerAnimation, value: store.libraryCloudSyncStatus)
     }
 

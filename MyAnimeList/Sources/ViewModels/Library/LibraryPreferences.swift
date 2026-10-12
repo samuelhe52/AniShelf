@@ -17,6 +17,8 @@ struct LibraryPreferences {
         let defaultFilters: Set<LibraryStore.AnimeFilter>
         let autoPrefetchImagesOnAddAndRestore: Bool
         let longTermGalleryPosterCachingEnabled: Bool
+        let categoriesEnabled: Bool
+        let categories: [LibraryCategory]
         let cloudSyncStatus: LibraryCloudSyncStatus
     }
 
@@ -47,6 +49,8 @@ struct LibraryPreferences {
                 forKey: .libraryLongTermGalleryPosterCachingEnabled,
                 defaultValue: false
             ),
+            categoriesEnabled: loadBool(forKey: .libraryCategoriesEnabled, defaultValue: false),
+            categories: loadCategories(),
             cloudSyncStatus: loadCloudSyncStatus()
         )
     }
@@ -69,6 +73,18 @@ struct LibraryPreferences {
 
     func saveLongTermGalleryPosterCachingEnabled(_ value: Bool) {
         defaults.setValue(value, forKey: .libraryLongTermGalleryPosterCachingEnabled)
+    }
+
+    func saveCategoriesEnabled(_ value: Bool) {
+        defaults.setValue(value, forKey: .libraryCategoriesEnabled)
+    }
+
+    func saveCategories(_ categories: [LibraryCategory]) {
+        if categories.isEmpty {
+            defaults.removeObject(forKey: .libraryCategories)
+        } else {
+            defaults.set(categories.map(\.propertyListValue), forKey: .libraryCategories)
+        }
     }
 
     func saveGroupStrategy(_ value: LibraryStore.LibraryGroupStrategy) {
@@ -146,6 +162,11 @@ struct LibraryPreferences {
                 defaults.set(stringValue, forKey: key)
             case .stringArray(let stringArrayValue):
                 defaults.set(stringArrayValue, forKey: key)
+            case .objectArray(let objects):
+                guard key == .libraryCategories else { break }
+                saveCategories(
+                    LibraryCategory.deduplicated(objects.compactMap(LibraryCategory.init(syncObject:)))
+                )
             case .unknown:
                 // Keep this build's existing value when a newer build changes its type.
                 break
@@ -271,6 +292,11 @@ struct LibraryPreferences {
         return status
     }
 
+    private func loadCategories() -> [LibraryCategory] {
+        let stored = defaults.array(forKey: .libraryCategories) as? [[String: String]] ?? []
+        return LibraryCategory.deduplicated(stored.compactMap(LibraryCategory.init(propertyListValue:)))
+    }
+
     private func loadBool(forKey key: String, defaultValue: Bool) -> Bool {
         defaults.bool(forKey: key, defaultValue: defaultValue)
     }
@@ -282,6 +308,13 @@ struct LibraryPreferences {
             case .libraryDefaultFilters:
                 if let value = defaults.array(forKey: key) as? [String] {
                     payload[key] = .stringArray(value)
+                }
+            case .libraryCategories:
+                // An object array, never a string: older builds treat it as an unknown
+                // type and skip settings export instead of erasing a key they do not know.
+                let categories = loadCategories()
+                if !categories.isEmpty {
+                    payload[key] = .objectArray(categories.map(\.syncObject))
                 }
             case .useCurrentLocaleForAnimeInfoLanguage,
                 .librarySortReversed,
@@ -295,7 +328,8 @@ struct LibraryPreferences {
                 .libraryPosterProgressBarOverlayEnabled,
                 .libraryHideDroppedByDefault,
                 .libraryAutoPrefetchImagesOnAddAndRestore,
-                .useTMDbRelayServer:
+                .useTMDbRelayServer,
+                .libraryCategoriesEnabled:
                 if defaults.object(forKey: key) != nil {
                     payload[key] = .bool(defaults.bool(forKey: key))
                 }

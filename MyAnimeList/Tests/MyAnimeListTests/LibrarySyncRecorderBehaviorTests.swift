@@ -72,6 +72,18 @@ struct LibrarySyncRecorderBehaviorTests {
         } else {
             #expect(Bool(false))
         }
+
+        // Category memberships carry their own clock and must queue an upload too.
+        entry.updateCategoryMembership("category-a", isMember: true, at: referenceDate(year: 2026, month: 6, day: 1))
+        try repository.save()
+
+        queue = recorder.dirtyQueueStore.load()
+        #expect(writeCount == 3)
+        if case .upsert(let pendingUpsert)? = queue.entries.first {
+            #expect(pendingUpsert.dirtyAt == entry.categoriesUpdatedAt)
+        } else {
+            #expect(Bool(false))
+        }
     }
 
     @Test @MainActor func testLibrarySyncRecorderBatchesChangedEntriesFromOneSave() throws {

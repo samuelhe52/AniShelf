@@ -31,6 +31,7 @@ struct LibraryView: View {
     // UI state
     @State var isSearching = false
     @State private var showProfileSettings = false
+    @State private var showCategoryManager = false
     @State var scrollState = ScrollState()
     @State var newEntriesAddedToggle = false
     @State var highlightedEntryID: LibraryEntryIdentity?
@@ -97,6 +98,9 @@ struct LibraryView: View {
             refreshSelectionDisplayItemsIfNeeded()
         }
         .onChange(of: store.hideDroppedByDefault) {
+            refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(of: store.activeCategoryID) {
             refreshSelectionDisplayItemsIfNeeded()
         }
         .onChange(of: airingReminders.pendingRoute, initial: true) {
@@ -292,6 +296,7 @@ struct LibraryView: View {
                     applyBatchAction: applyBatchAction,
                     deleteSelectedEntries: deleteSelectedEntries,
                     openProfileSettings: openProfileSettings,
+                    openCategoryManager: openCategoryManager,
                     checkDuplicate: { store.libraryOnDisplay.map(\.libraryIdentity).contains($0) },
                     processTMDbSearchResults: processTMDbSearchResults,
                     jumpToEntryInLibrary: jumpToEntryInLibrary
@@ -302,6 +307,10 @@ struct LibraryView: View {
             .navigationBarTitleDisplayMode(.inline)
             .animation(libraryViewStyleAnimation, value: libraryViewStyle)
             .sensoryFeedback(.success, trigger: newEntriesAddedToggle)
+            .sheet(isPresented: $showCategoryManager) {
+                LibraryCategoryManagerSheet()
+                    .presentationDetents([.medium, .large])
+            }
             .allowsHitTesting(!showProfileSettings)
             .accessibilityHidden(showProfileSettings)
         }
@@ -486,6 +495,10 @@ struct LibraryView: View {
         withAnimation(profileSettingsAnimation) {
             showProfileSettings = true
         }
+    }
+
+    private func openCategoryManager() {
+        showCategoryManager = true
     }
 
     private func closeProfileSettings() {

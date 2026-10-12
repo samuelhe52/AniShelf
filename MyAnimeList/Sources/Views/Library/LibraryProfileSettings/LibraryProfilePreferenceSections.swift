@@ -107,6 +107,8 @@ struct LibraryProfilePreferencesSection: View {
                     "Look up TV broadcast times when you open an eligible anime or season.",
                 isOn: $broadcastScheduleEnabled
             )
+
+            LibraryProfileCategorySettingsRows()
         }
         .padding(14)
         .libraryProfileInsetPanel(cornerRadius: 22, tint: .mint)
@@ -229,6 +231,62 @@ struct LibraryProfilePreferencesSection: View {
         Toggle(
             isOn: defaultFilterBinding(for: filter),
             label: { Text(filter.name) }
+        )
+    }
+}
+
+/// Opt-in switch for library categories and the entry to the category manager.
+fileprivate struct LibraryProfileCategorySettingsRows: View {
+    @Environment(LibraryStore.self) private var store
+    @State private var showCategoryManager = false
+
+    var body: some View {
+        @Bindable var store = store
+
+        VStack(alignment: .leading, spacing: 10) {
+            LibraryProfileSettingsToggleRow(
+                title: "Library Categories",
+                subtitle: "Group anime into your own categories and switch between them in the library.",
+                isOn: categoriesEnabledBinding
+            )
+
+            if store.categoriesEnabled {
+                Button {
+                    showCategoryManager = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Text("Manage Categories")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer(minLength: 12)
+                        Text("\(store.categories.count)")
+                            .font(.subheadline)
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.vertical, 4)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .transition(.opacity)
+                .sheet(isPresented: $showCategoryManager) {
+                    LibraryCategoryManagerSheet()
+                        .presentationDetents([.medium, .large])
+                }
+            }
+        }
+    }
+
+    private var categoriesEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { store.categoriesEnabled },
+            set: { newValue in
+                withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+                    store.categoriesEnabled = newValue
+                }
+            }
         )
     }
 }

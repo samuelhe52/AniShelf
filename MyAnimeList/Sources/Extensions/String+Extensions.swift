@@ -37,6 +37,8 @@ extension String {
     static let libraryDefaultWatchStatus = "LibraryDefaultWatchStatus"
     static let libraryDefaultFilters = "LibraryDefaultFilters"
     static let libraryDefaultFilterPreset = "LibraryDefaultFilterPreset"
+    static let libraryCategoriesEnabled = "LibraryCategoriesEnabled"
+    static let libraryCategories = "LibraryCategories"
     static let libraryAutoPrefetchImagesOnAddAndRestore = "LibraryAutoPrefetchImagesOnAddAndRestore"
     static let libraryLongTermGalleryPosterCachingEnabled = "LibraryLongTermGalleryPosterCachingEnabled"
     static let useSoftNavigationBarEdges = "UseSoftNavigationBarEdges"
@@ -93,6 +95,8 @@ extension String {
         .libraryDefaultFilters,
         .libraryAutoPrefetchImagesOnAddAndRestore,
         .libraryLongTermGalleryPosterCachingEnabled,
+        .libraryCategoriesEnabled,
+        .libraryCategories,
         .useSoftNavigationBarEdges,
         .useTMDbRelayServer,
         .lastSeenWhatsNewVersion
@@ -117,7 +121,9 @@ extension String {
         .libraryDefaultWatchStatus,
         .libraryDefaultFilters,
         .libraryAutoPrefetchImagesOnAddAndRestore,
-        .useTMDbRelayServer
+        .useTMDbRelayServer,
+        .libraryCategoriesEnabled,
+        .libraryCategories
     ]
 }
 

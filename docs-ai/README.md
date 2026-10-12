@@ -28,6 +28,7 @@ historical runtime scenario was rerun. Entry 010 remains an unimplemented propos
 | 012 | 2026-10-03 | [Rewatch tracking and clocked progress resets](012-rewatch-tracking/000-plan.md) | Implemented (retrospective) | [Action](012-rewatch-tracking/001-action.md) |
 | 013 | 2026-10-07 | [Curated decision records](013-documentation-workflow/000-plan.md) | Implemented | [Action](013-documentation-workflow/001-action.md) |
 | 014 | 2026-06-20 | [Library multi-selection rendering invariants](014-multiselect-invariants/000-plan.md) | Implemented (retrospective) | [Action](014-multiselect-invariants/001-action.md) |
+| 015 | 2026-10-13 | [Library categories](015-library-categories/000-plan.md) | In progress | [Action](015-library-categories/001-action.md) |
 
 ## Find a contract or source
 

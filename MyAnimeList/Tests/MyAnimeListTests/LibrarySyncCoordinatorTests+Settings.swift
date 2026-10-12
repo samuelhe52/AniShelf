@@ -162,6 +162,33 @@ extension LibrarySyncCoordinatorTests {
         #expect(!store.hasPendingCloudSyncedSettingsSyncWork())
     }
 
+    @Test @MainActor func categoryDefinitionsRoundTripThroughSettingsPayload() throws {
+        let sourceSuite = "\(#function).source"
+        let targetSuite = "\(#function).target"
+        let sourceDefaults = try #require(UserDefaults(suiteName: sourceSuite))
+        let targetDefaults = try #require(UserDefaults(suiteName: targetSuite))
+        defer {
+            sourceDefaults.removePersistentDomain(forName: sourceSuite)
+            targetDefaults.removePersistentDomain(forName: targetSuite)
+        }
+        let categories = [LibraryCategory(name: "Isekai"), LibraryCategory(name: "Rewatch Later")]
+        let source = LibraryPreferences(defaults: sourceDefaults)
+        source.saveCategories(categories)
+
+        let snapshot = source.loadCloudSyncedSettingsSnapshot()
+        guard case .objectArray = snapshot.payload[.libraryCategories] else {
+            Issue.record("Categories must sync as an object array so older builds skip export.")
+            return
+        }
+
+        let target = LibraryPreferences(defaults: targetDefaults)
+        target.applyCloudSyncedSettingsSnapshot(snapshot)
+        target.noteCloudSyncedSettingsTypes(snapshot)
+
+        #expect(target.load().categories == categories)
+        #expect(!target.hasUnknownCloudSyncedSettingsValues)
+    }
+
     @Test @MainActor func newerRemoteSettingsApplyLocally() async throws {
         let store = makeSyncReadyStore()
         store.preferences.saveCloudSyncedDefaultsUpdatedAt(referenceDate(year: 2026, month: 6, day: 1))

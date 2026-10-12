@@ -85,6 +85,22 @@
         }
       }
     },
+    "%lld selected anime will be added to it." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択した%lld件のアニメが追加されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已选择的 %lld 部动画将加入此分类。"
+          }
+        }
+      }
+    },
     "%lld sync issues" : {
       "localizations" : {
         "en" : {
@@ -514,6 +530,38 @@
         }
       }
     },
+    "Add %lld Anime To" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld件のアニメの追加先"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将 %lld 部动画加入"
+          }
+        }
+      }
+    },
+    "Add anime with Select in List or Grid view. Drag to reorder categories." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リストまたはグリッド表示の「選択」でアニメを追加します。ドラッグでカテゴリを並べ替えられます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在列表或网格视图中使用“选择”添加动画。拖移可调整分类的顺序。"
+          }
+        }
+      }
+    },
     "Added website and privacy policy links to the About page in Settings." : {
       "localizations" : {
         "ja" : {
@@ -558,6 +606,150 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "是在重看吗？"
+          }
+        }
+      }
+    },
+    "Categories" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カテゴリ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分类"
+          }
+        }
+      }
+    },
+    "Category" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カテゴリ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分类"
+          }
+        }
+      }
+    },
+    "Category Name" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カテゴリ名"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分类名称"
+          }
+        }
+      }
+    },
+    "Category names must not be empty, must be unique, and can have up to 40 characters." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カテゴリ名は空欄や重複にできません。40文字まで入力できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分类名称不能为空或重复，最多 40 个字符。"
+          }
+        }
+      }
+    },
+    "Choose Another Name" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別の名前を入力してください"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请换一个名称"
+          }
+        }
+      }
+    },
+    "Create" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作成"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "创建"
+          }
+        }
+      }
+    },
+    "Delete Category" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カテゴリを削除"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除分类"
+          }
+        }
+      }
+    },
+    "Delete “%@”?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「%@」を削除しますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除“%@”？"
+          }
+        }
+      }
+    },
+    "Edit Categories…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カテゴリを編集…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑分类…"
           }
         }
       }
@@ -610,6 +802,54 @@
         }
       }
     },
+    "Group anime into your own categories and switch between them in the library." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アニメを自分のカテゴリに分けて、ライブラリで切り替えます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将动画归入自定义分类，并在资料库中切换。"
+          }
+        }
+      }
+    },
+    "Library Categories" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリのカテゴリ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "资料库分类"
+          }
+        }
+      }
+    },
+    "Manage Categories" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カテゴリを管理"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "管理分类"
+          }
+        }
+      }
+    },
     "Marking it watched again adds one to the rewatch count." : {
       "localizations" : {
         "ja" : {
@@ -622,6 +862,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "再次标为已看时，重看次数会加 1。"
+          }
+        }
+      }
+    },
+    "New Category" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新規カテゴリ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新建分类"
+          }
+        }
+      }
+    },
+    "New Category…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新規カテゴリ…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新建分类…"
+          }
+        }
+      }
+    },
+    "No Categories" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カテゴリなし"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无分类"
           }
         }
       }
@@ -664,6 +952,54 @@
         }
       }
     },
+    "Rename" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名前を変更"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重命名"
+          }
+        }
+      }
+    },
+    "Rename Category" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カテゴリ名を変更"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重命名分类"
+          }
+        }
+      }
+    },
+    "Renames the category" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カテゴリ名を変更します"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重命名此分类"
+          }
+        }
+      }
+    },
     "Rewatching" : {
       "localizations" : {
         "ja" : {
@@ -676,6 +1012,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重看中"
+          }
+        }
+      }
+    },
+    "Select anime in List or Grid view to create a category from them." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リストまたはグリッド表示でアニメを選択すると、カテゴリを作成できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在列表或网格视图中选择动画，即可用它们新建分类。"
           }
         }
       }
@@ -712,6 +1064,22 @@
         }
       }
     },
+    "Switches the library category" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリのカテゴリを切り替えます"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换资料库分类"
+          }
+        }
+      }
+    },
     "Sync Issues" : {
       "localizations" : {
         "ja" : {
@@ -724,6 +1092,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "同步问题"
+          }
+        }
+      }
+    },
+    "The anime in this category stay in your library." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このカテゴリのアニメはライブラリに残ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此分类中的动画仍会保留在资料库中。"
           }
         }
       }
@@ -10938,6 +11322,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "原始文件已保留"
+          }
+        }
+      }
+    },
+    "View" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "表示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "视图"
           }
         }
       }

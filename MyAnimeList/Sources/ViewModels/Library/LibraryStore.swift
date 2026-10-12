@@ -106,6 +106,30 @@ class LibraryStore {
         }
     }
 
+    // MARK: - Categories State
+
+    /// Opt-in switch for library categories. Turning it off keeps categories and memberships.
+    var categoriesEnabled: Bool = false {
+        willSet {
+            preferences.saveCategoriesEnabled(newValue)
+            libraryStoreLogger.debug("Updated categories enabled to \(newValue)")
+        }
+        didSet {
+            if !categoriesEnabled { activeCategoryID = nil }
+        }
+    }
+    /// Category definitions in display order. Write through the category operations.
+    var categories: [LibraryCategory] = [] {
+        willSet { preferences.saveCategories(newValue) }
+        didSet {
+            if let activeCategoryID, !categories.contains(where: { $0.id == activeCategoryID }) {
+                self.activeCategoryID = nil
+            }
+        }
+    }
+    /// The category the library is narrowed to; `nil` means All. Shared across windows, like `filters`.
+    var activeCategoryID: LibraryCategory.ID?
+
     var libraryOnDisplay: [AnimeEntry] {
         filterAndSort(library)
     }
@@ -191,6 +215,12 @@ class LibraryStore {
         }
         if longTermGalleryPosterCachingEnabled != snapshot.longTermGalleryPosterCachingEnabled {
             longTermGalleryPosterCachingEnabled = snapshot.longTermGalleryPosterCachingEnabled
+        }
+        if categoriesEnabled != snapshot.categoriesEnabled {
+            categoriesEnabled = snapshot.categoriesEnabled
+        }
+        if categories != snapshot.categories {
+            categories = snapshot.categories
         }
         if libraryCloudSyncStatus != snapshot.cloudSyncStatus {
             libraryCloudSyncStatus = snapshot.cloudSyncStatus

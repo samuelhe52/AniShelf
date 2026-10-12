@@ -337,6 +337,7 @@ fileprivate func bootstrapDirtyClock(for snapshot: LibraryEntrySyncSnapshot) -> 
     [
         snapshot.libraryUpdatedAt,
         snapshot.trackingUpdatedAt,
+        snapshot.categoriesUpdatedAt,
         snapshot.episodeProgresses.map(\.updatedAt).max()
     ]
     .compactMap(\.self)

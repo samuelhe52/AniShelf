@@ -4,11 +4,18 @@ import SwiftUI
 
 extension LibraryStore {
     func filterAndSort(_ entries: [AnimeEntry]) -> [AnimeEntry] {
+        // The active category narrows the library before the status and type filters (AND).
+        let scopedEntries: [AnimeEntry]
+        if categoriesEnabled, let activeCategoryID {
+            scopedEntries = entries.filter { $0.categoryIDs.contains(activeCategoryID) }
+        } else {
+            scopedEntries = entries
+        }
         let defaultDisplayEntries: [AnimeEntry]
         if hideDroppedByDefault && !filters.contains(.dropped) {
-            defaultDisplayEntries = entries.filter { $0.watchStatus != .dropped }
+            defaultDisplayEntries = scopedEntries.filter { $0.watchStatus != .dropped }
         } else {
-            defaultDisplayEntries = entries
+            defaultDisplayEntries = scopedEntries
         }
         let filteredEntries: [AnimeEntry]
         guard filters.isEmpty else {
