@@ -40,6 +40,8 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         case rewatchCount
         case libraryUpdatedAt
         case trackingUpdatedAt
+        case categoryIDs
+        case categoriesUpdatedAt
     }
 
     /// Per-season episode progress included in a sync snapshot.
@@ -85,12 +87,18 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     public var rewatchCount: Int
     public var libraryUpdatedAt: Date?
     public var trackingUpdatedAt: Date?
+    /// User category memberships (`LibraryCategory.id` values), in insertion order.
+    public var categoryIDs: [String]
+    /// Clock for `categoryIDs`. Kept separate so older builds, which never
+    /// send it, cannot win a merge with an empty membership list.
+    public var categoriesUpdatedAt: Date?
     /// Newest sync clock used when deciding whether remote state can clear a
     /// local dirty-queue entry.
     public var latestSyncClock: Date? {
         [
             libraryUpdatedAt,
             trackingUpdatedAt,
+            categoriesUpdatedAt,
             episodeProgresses.map(\.updatedAt).max()
         ]
         .compactMap(\.self)
@@ -103,6 +111,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             dateSaved,
             libraryUpdatedAt,
             trackingUpdatedAt,
+            categoriesUpdatedAt,
             episodeProgresses.map(\.updatedAt).max()
         ]
         .compactMap(\.self)
@@ -144,6 +153,8 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     ///   - libraryUpdatedAt: Clock for membership/display changes.
     ///   - trackingUpdatedAt: Clock for status, date, score, favorite, notes,
     ///     poster, rewatch, and progress changes.
+    ///   - categoryIDs: Category memberships. Duplicates are dropped.
+    ///   - categoriesUpdatedAt: Clock for category membership changes.
     public init(
         schemaVersion: Int = Self.currentSchemaVersion,
         identity: LibraryEntryIdentity,
@@ -166,7 +177,9 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         isRewatching: Bool = false,
         rewatchCount: Int = 0,
         libraryUpdatedAt: Date?,
-        trackingUpdatedAt: Date?
+        trackingUpdatedAt: Date?,
+        categoryIDs: [String] = [],
+        categoriesUpdatedAt: Date? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.identity = identity
@@ -190,6 +203,8 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         self.rewatchCount = max(0, rewatchCount)
         self.libraryUpdatedAt = libraryUpdatedAt.map(LibrarySyncTimestamp.normalized)
         self.trackingUpdatedAt = trackingUpdatedAt.map(LibrarySyncTimestamp.normalized)
+        self.categoryIDs = Self.normalizedCategoryIDs(categoryIDs)
+        self.categoriesUpdatedAt = categoriesUpdatedAt.map(LibrarySyncTimestamp.normalized)
     }
 
     public init(
@@ -214,7 +229,9 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         isRewatching: Bool = false,
         rewatchCount: Int = 0,
         libraryUpdatedAt: Date?,
-        trackingUpdatedAt: Date?
+        trackingUpdatedAt: Date?,
+        categoryIDs: [String] = [],
+        categoriesUpdatedAt: Date? = nil
     ) {
         self.init(
             schemaVersion: schemaVersion,
@@ -238,7 +255,9 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             isRewatching: isRewatching,
             rewatchCount: rewatchCount,
             libraryUpdatedAt: libraryUpdatedAt,
-            trackingUpdatedAt: trackingUpdatedAt
+            trackingUpdatedAt: trackingUpdatedAt,
+            categoryIDs: categoryIDs,
+            categoriesUpdatedAt: categoriesUpdatedAt
         )
     }
 
@@ -271,7 +290,9 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             isRewatching: entry.isRewatching,
             rewatchCount: entry.rewatchCount,
             libraryUpdatedAt: entry.libraryUpdatedAt,
-            trackingUpdatedAt: entry.trackingUpdatedAt
+            trackingUpdatedAt: entry.trackingUpdatedAt,
+            categoryIDs: entry.categoryIDs,
+            categoriesUpdatedAt: entry.categoriesUpdatedAt
         )
     }
 
@@ -305,7 +326,9 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             isRewatching: try container.decodeIfPresent(Bool.self, forKey: .isRewatching) ?? false,
             rewatchCount: try container.decodeIfPresent(Int.self, forKey: .rewatchCount) ?? 0,
             libraryUpdatedAt: try container.decodeIfPresent(Date.self, forKey: .libraryUpdatedAt),
-            trackingUpdatedAt: try container.decodeIfPresent(Date.self, forKey: .trackingUpdatedAt)
+            trackingUpdatedAt: try container.decodeIfPresent(Date.self, forKey: .trackingUpdatedAt),
+            categoryIDs: try container.decodeIfPresent([String].self, forKey: .categoryIDs) ?? [],
+            categoriesUpdatedAt: try container.decodeIfPresent(Date.self, forKey: .categoriesUpdatedAt)
         )
     }
 
@@ -337,13 +360,15 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         try container.encode(rewatchCount, forKey: .rewatchCount)
         try container.encodeIfPresent(libraryUpdatedAt, forKey: .libraryUpdatedAt)
         try container.encodeIfPresent(trackingUpdatedAt, forKey: .trackingUpdatedAt)
+        try container.encode(categoryIDs, forKey: .categoryIDs)
+        try container.encodeIfPresent(categoriesUpdatedAt, forKey: .categoriesUpdatedAt)
     }
 
     /// Returns the last-writer-wins merge of two snapshots with the same identity.
     ///
     /// Library membership/display fields follow `libraryUpdatedAt`; tracking
-    /// fields follow `trackingUpdatedAt`; episode progress merges per season by
-    /// progress clock.
+    /// fields follow `trackingUpdatedAt`; category memberships follow
+    /// `categoriesUpdatedAt`; episode progress merges per season by progress clock.
     public func merged(with other: LibraryEntrySyncSnapshot) throws -> LibraryEntrySyncSnapshot {
         guard identity == other.identity else {
             throw MergeError.identityMismatch(local: identity, remote: other.identity)
@@ -361,6 +386,17 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             merged.onDisplay = candidate.onDisplay
             merged.dateSaved = candidate.dateSaved
             merged.libraryUpdatedAt = candidate.libraryUpdatedAt
+        }
+
+        let takeCategories = try Self.prefers(
+            candidate.categoriesUpdatedAt,
+            over: merged.categoriesUpdatedAt,
+            candidateValues: { try Self.canonicalData(candidate.categoryIDs) },
+            existingValues: { try Self.canonicalData(merged.categoryIDs) }
+        )
+        if takeCategories {
+            merged.categoryIDs = candidate.categoryIDs
+            merged.categoriesUpdatedAt = candidate.categoriesUpdatedAt
         }
 
         let takeTracking = try Self.prefers(
@@ -420,6 +456,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         copy.dateFinished = dateFinished.map(LibrarySyncTimestamp.normalized)
         copy.libraryUpdatedAt = libraryUpdatedAt.map(LibrarySyncTimestamp.normalized)
         copy.trackingUpdatedAt = trackingUpdatedAt.map(LibrarySyncTimestamp.normalized)
+        copy.categoriesUpdatedAt = categoriesUpdatedAt.map(LibrarySyncTimestamp.normalized)
         copy.episodeProgresses = episodeProgresses.map {
             .init(
                 seasonNumber: $0.seasonNumber,
@@ -475,6 +512,12 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         var customPosterPath: String?
         var isRewatching: Bool
         var rewatchCount: Int
+    }
+
+    /// Drops empty and duplicate IDs while keeping first-seen order.
+    private static func normalizedCategoryIDs(_ ids: [String]) -> [String] {
+        var seen = Set<String>()
+        return ids.filter { !$0.isEmpty && seen.insert($0).inserted }
     }
 
     fileprivate static func isNewer(_ candidate: Date?, than existing: Date?) -> Bool {
@@ -600,6 +643,8 @@ extension AnimeEntry {
         isRewatching = merged.isRewatching
         rewatchCount = merged.rewatchCount
         trackingUpdatedAt = merged.trackingUpdatedAt
+        categoryIDs = merged.categoryIDs
+        categoriesUpdatedAt = merged.categoriesUpdatedAt
         applySyncEpisodeProgresses(merged.episodeProgresses, now: now)
     }
 
@@ -641,6 +686,8 @@ extension AnimeEntry {
         isRewatching = snapshot.isRewatching
         rewatchCount = snapshot.rewatchCount
         trackingUpdatedAt = snapshot.trackingUpdatedAt
+        categoryIDs = snapshot.categoryIDs
+        categoriesUpdatedAt = snapshot.categoriesUpdatedAt
 
         applySyncEpisodeProgresses(snapshot.episodeProgresses, now: now)
     }
@@ -665,7 +712,8 @@ extension AnimeEntry {
     /// enough local metadata for later rehydration and conflict resolution.
     private func applySyncTombstone(deletedAt: Date) {
         if let latestLocalClock = [
-            dateSaved, libraryUpdatedAt, trackingUpdatedAt, episodeProgresses.map(\.updatedAt).max()
+            dateSaved, libraryUpdatedAt, trackingUpdatedAt, categoriesUpdatedAt,
+            episodeProgresses.map(\.updatedAt).max()
         ]
         .compactMap(\.self)
         .max() {

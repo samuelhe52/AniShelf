@@ -60,7 +60,9 @@ struct CloudLibrarySyncClientTests {
             ],
             rewatchCount: 3,
             libraryUpdatedAt: referenceDate(year: 2026, month: 5, day: 10),
-            trackingUpdatedAt: referenceDate(year: 2026, month: 5, day: 11)
+            trackingUpdatedAt: referenceDate(year: 2026, month: 5, day: 11),
+            categoryIDs: ["category-a", "category-b"],
+            categoriesUpdatedAt: referenceDate(year: 2026, month: 5, day: 12)
         )
 
         let record = try client.record(from: snapshot)
@@ -87,6 +89,21 @@ struct CloudLibrarySyncClientTests {
 
         #expect(!decoded.isRewatching)
         #expect(decoded.rewatchCount == 0)
+    }
+
+    @Test func recordWithoutCategoryFieldsDecodesNoMemberships() throws {
+        var snapshot = makeSnapshot()
+        snapshot.categoryIDs = ["category-a"]
+        snapshot.categoriesUpdatedAt = referenceDate(year: 2026, month: 10, day: 13)
+        let record = try client.record(from: snapshot)
+        // A record last written by a build before categories carries neither key.
+        record["categoryIDs"] = nil
+        record["categoriesUpdatedAt"] = nil
+
+        let decoded = try client.snapshot(from: record)
+
+        #expect(decoded.categoryIDs.isEmpty)
+        #expect(decoded.categoriesUpdatedAt == nil)
     }
 
     @Test func legacyCustomPosterURLDecodesToPathWhenPathFieldIsAbsent() throws {

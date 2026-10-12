@@ -133,6 +133,10 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
         record[Field.rewatchCount] = snapshot.rewatchCount
         record[Field.libraryUpdatedAt] = snapshot.libraryUpdatedAt
         record[Field.trackingUpdatedAt] = snapshot.trackingUpdatedAt
+        // Older builds do not write these keys. CloudKit keeps keys a fresh
+        // `.allKeys` record does not carry, so their uploads leave memberships intact.
+        record[Field.categoryIDs] = snapshot.categoryIDs.isEmpty ? nil : snapshot.categoryIDs
+        record[Field.categoriesUpdatedAt] = snapshot.categoriesUpdatedAt
         record[Field.deletedAt] = nil
         cloudLibrarySyncLogger.debug(
             "Encoded an iCloud sync snapshot record for \(identity.rawID, privacy: .private)."
@@ -177,6 +181,8 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
         record[Field.rewatchCount] = nil
         record[Field.libraryUpdatedAt] = nil
         record[Field.trackingUpdatedAt] = nil
+        record[Field.categoryIDs] = nil
+        record[Field.categoriesUpdatedAt] = nil
         cloudLibrarySyncLogger.debug(
             "Encoded an iCloud sync tombstone record for \(identity.rawID, privacy: .private)."
         )
@@ -340,6 +346,9 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
         let rewatchCount: Int = try Self.optionalValue(for: Field.rewatchCount, in: record) ?? 0
         let libraryUpdatedAt: Date? = try Self.optionalValue(for: Field.libraryUpdatedAt, in: record)
         let trackingUpdatedAt: Date? = try Self.optionalValue(for: Field.trackingUpdatedAt, in: record)
+        // Records written before categories, or with no memberships, omit these fields.
+        let categoryIDs: [String] = try Self.optionalValue(for: Field.categoryIDs, in: record) ?? []
+        let categoriesUpdatedAt: Date? = try Self.optionalValue(for: Field.categoriesUpdatedAt, in: record)
 
         return try LibraryEntrySyncSnapshot(
             schemaVersion: schemaVersion,
@@ -363,7 +372,9 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
             isRewatching: isRewatching,
             rewatchCount: rewatchCount,
             libraryUpdatedAt: libraryUpdatedAt,
-            trackingUpdatedAt: trackingUpdatedAt
+            trackingUpdatedAt: trackingUpdatedAt,
+            categoryIDs: categoryIDs,
+            categoriesUpdatedAt: categoriesUpdatedAt
         )
     }
 
@@ -484,6 +495,8 @@ extension CloudLibrarySyncClient {
         fileprivate static let rewatchCount = "rewatchCount"
         fileprivate static let libraryUpdatedAt = "libraryUpdatedAt"
         fileprivate static let trackingUpdatedAt = "trackingUpdatedAt"
+        fileprivate static let categoryIDs = "categoryIDs"
+        fileprivate static let categoriesUpdatedAt = "categoriesUpdatedAt"
         fileprivate static let deletedAt = "deletedAt"
         fileprivate static let updatedAt = "updatedAt"
         fileprivate static let payload = "payload"

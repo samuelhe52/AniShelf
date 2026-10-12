@@ -187,6 +187,32 @@ struct LibraryEntrySyncTests {
             ])
     }
 
+    @Test func categoryMembershipsMergeOnlyByTheirOwnClock() throws {
+        var local = makeSnapshot(tmdbID: 202, trackingDay: 2)
+        local.categoryIDs = ["category-a"]
+        local.categoriesUpdatedAt = referenceDate(year: 2026, month: 5, day: 4)
+
+        // An older build sends newer tracking state but no category fields.
+        let olderBuildEdit = makeSnapshot(tmdbID: 202, trackingDay: 9, favorite: true)
+        let afterOlderBuild = try local.merged(with: olderBuildEdit)
+        #expect(afterOlderBuild.favorite)
+        #expect(afterOlderBuild.categoryIDs == ["category-a"])
+        #expect(try olderBuildEdit.merged(with: local).categoryIDs == ["category-a"])
+
+        var newerCategories = makeSnapshot(tmdbID: 202, trackingDay: 1)
+        newerCategories.categoryIDs = ["category-b"]
+        newerCategories.categoriesUpdatedAt = referenceDate(year: 2026, month: 5, day: 5)
+        #expect(try local.merged(with: newerCategories).categoryIDs == ["category-b"])
+        #expect(try newerCategories.merged(with: local).categoryIDs == ["category-b"])
+
+        var equalClockOther = local
+        equalClockOther.categoryIDs = ["category-c"]
+        #expect(
+            try local.merged(with: equalClockOther).categoryIDs
+                == equalClockOther.merged(with: local).categoryIDs
+        )
+    }
+
     @Test func duplicateSnapshotsWithSameIdentityConverge() throws {
         let local = makeSnapshot(
             tmdbID: 301,

@@ -217,6 +217,21 @@ struct CloudLibrarySyncImporterExporterTests {
         #expect(try client.settingsSnapshot(from: client.record(from: snapshot)) == snapshot)
     }
 
+    @Test func librarySettingsRecordDecodesObjectArrays() throws {
+        let categories: LibrarySettingsSyncSnapshot.Value = .objectArray([
+            ["id": .string("category-a"), "name": .string("Isekai")]
+        ])
+        let snapshot = LibrarySettingsSyncSnapshot(
+            updatedAt: referenceDate(year: 2026, month: 10, day: 13),
+            payload: ["LibraryCategories": categories]
+        )
+
+        let decoded = try client.settingsSnapshot(from: client.record(from: snapshot))
+
+        // A known case, so this build keeps exporting settings.
+        #expect(decoded.payload["LibraryCategories"] == categories)
+    }
+
     @Test func importerDecodesMixedEntryAndSettingsBatch() async throws {
         let namespace = makeNamespace()
         let suiteName = "CloudLibrarySyncImporterExporterTests.\(UUID().uuidString)"

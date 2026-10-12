@@ -788,6 +788,36 @@ struct MigrationTests {
         #expect(migratedEntry.rewatchCount == 0)
     }
 
+    @Test @MainActor func categoriesMigrationFromV282DefaultsMemberships() throws {
+        let storeURL = temporaryStoreURL(name: "categories-migration-v282")
+        let legacySchema = Schema(versionedSchema: SchemaV2_8_2.self)
+        let legacyConfiguration = ModelConfiguration(schema: legacySchema, url: storeURL)
+        let legacyContainer = try ModelContainer(
+            for: legacySchema,
+            configurations: legacyConfiguration
+        )
+        let legacyEntry = SchemaV2_8_2.AnimeEntry(
+            name: "Legacy Movie",
+            type: .movie,
+            tmdbID: 808_300,
+            dateSaved: referenceDate(year: 2026, month: 10, day: 1),
+            score: 5
+        )
+        legacyEntry.rewatchCount = 2
+        legacyContainer.mainContext.insert(legacyEntry)
+        try legacyContainer.mainContext.save()
+
+        let migratedProvider = DataProvider(url: storeURL)
+        let migratedEntry = try #require(
+            try migratedProvider.getAllModels(ofType: AnimeEntry.self).first
+        )
+
+        #expect(migratedEntry.score == 5)
+        #expect(migratedEntry.rewatchCount == 2)
+        #expect(migratedEntry.categoryIDs.isEmpty)
+        #expect(migratedEntry.categoriesUpdatedAt == nil)
+    }
+
     @Test @MainActor func imagePathMigrationFromV279PreservesUserState() throws {
         let storeURL = temporaryStoreURL(name: "image-path-migration-v279-user-state")
 
