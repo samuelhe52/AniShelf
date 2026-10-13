@@ -90,6 +90,7 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
     ///   - settingsSnapshot: Optional settings snapshot to export alongside the
     ///     library entry records.
     ///   - blockedRecordIDs: Quarantined records that this build must not overwrite.
+    ///   - entryNamesByIdentity: Local titles used only for rejection diagnostics.
     /// - Returns: The identities CloudKit saved, and those it rejected one
     ///   record at a time.
     /// - Throws: Encoding errors, or CloudKit errors that affect the whole
@@ -98,7 +99,8 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
         entries: [LibraryEntrySyncDirtyQueueEntry],
         localSnapshotsByIdentity: [LibraryEntryIdentity: LibraryEntrySyncSnapshot],
         settingsSnapshot: LibrarySettingsSyncSnapshot? = nil,
-        blockedRecordIDs: Set<CKRecord.ID> = []
+        blockedRecordIDs: Set<CKRecord.ID> = [],
+        entryNamesByIdentity: [LibraryEntryIdentity: String] = [:]
     ) async throws -> CloudLibrarySyncExportResult {
         let preparedRecords = try prepareRecords(
             for: entries,
@@ -130,7 +132,12 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
                 underlyingError: failure.underlyingError
             )
         }
-        logRejectedRecords(progress, preparedRecordCount: recordsToSave.count)
+        logRejectedRecords(
+            progress,
+            preparedRecordCount: recordsToSave.count,
+            identitiesByRecordID: identitiesByRecordID,
+            entryNamesByIdentity: entryNamesByIdentity
+        )
         return exportResult(for: progress, identitiesByRecordID: identitiesByRecordID)
     }
 
@@ -146,7 +153,12 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
         )
     }
 
-    private func logRejectedRecords(_ progress: SaveProgress, preparedRecordCount: Int) {
+    private func logRejectedRecords(
+        _ progress: SaveProgress,
+        preparedRecordCount: Int,
+        identitiesByRecordID: [CKRecord.ID: LibraryEntryIdentity],
+        entryNamesByIdentity: [LibraryEntryIdentity: String]
+    ) {
         guard !progress.rejectedErrorsByID.isEmpty else { return }
         let reasons = Set(progress.rejectedErrorsByID.values.map(\.cloudLibrarySyncLogDescription))
             .sorted()
@@ -154,6 +166,14 @@ public struct CloudLibrarySyncExporter: @unchecked Sendable {
         cloudLibrarySyncExportLogger.warning(
             "CloudKit rejected \(progress.rejectedErrorsByID.count, privacy: .public) of \(preparedRecordCount, privacy: .public) iCloud sync records; they stay queued for retry: \(reasons, privacy: .public)"
         )
+        for (recordID, error) in progress.rejectedErrorsByID.sorted(by: { $0.key.recordName < $1.key.recordName }) {
+            let identity = identitiesByRecordID[recordID]
+            let entryID = identity?.rawID ?? "settings"
+            let title = identity.flatMap { entryNamesByIdentity[$0] } ?? "unavailable"
+            cloudLibrarySyncExportLogger.warning(
+                "CloudKit rejected record \(recordID.recordName, privacy: .public) in zone \(recordID.zoneID.zoneName, privacy: .public); entry=\(entryID, privacy: .public); title=\(title, privacy: .public); error=\(error.cloudLibrarySyncDetailedLogDescription, privacy: .public)"
+            )
+        }
     }
 
     private func saveRecords(_ records: [CKRecord]) async throws -> SaveProgress {
@@ -323,5 +343,19 @@ extension Error {
     fileprivate var cloudLibrarySyncLogDescription: String {
         let error = self as NSError
         return "\(error.domain):\(error.code)"
+    }
+
+    fileprivate var cloudLibrarySyncDetailedLogDescription: String {
+        let error = self as NSError
+        var details = [cloudLibrarySyncLogDescription, error.localizedDescription]
+        if let reason = error.localizedFailureReason { details.append("reason: \(reason)") }
+        if let suggestion = error.localizedRecoverySuggestion { details.append("recovery: \(suggestion)") }
+        if let debugDescription = error.userInfo[NSDebugDescriptionErrorKey] as? String {
+            details.append("debug: \(debugDescription)")
+        }
+        if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError {
+            details.append("underlying: \(underlying.domain):\(underlying.code) \(underlying.localizedDescription)")
+        }
+        return details.joined(separator: "; ")
     }
 }

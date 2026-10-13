@@ -104,12 +104,16 @@ extension LibrarySyncCoordinator {
         observedDirtyEntries: [LibraryEntrySyncDirtyQueueEntry],
         store: LibraryStore
     ) async throws -> CloudLibrarySyncExportResult {
+        let entryNamesByIdentity = store.library.reduce(into: [LibraryEntryIdentity: String]()) { names, entry in
+            names[entry.libraryIdentity] = entry.name
+        }
         do {
             return try await exporter.export(
                 entries: entries,
                 localSnapshotsByIdentity: localSnapshotsByIdentity,
                 settingsSnapshot: settingsSnapshot,
-                blockedRecordIDs: blockedRecordIDs
+                blockedRecordIDs: blockedRecordIDs,
+                entryNamesByIdentity: entryNamesByIdentity
             )
         } catch let failure as CloudLibrarySyncExportFailure {
             try reconcilePartialExportFailure(
