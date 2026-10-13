@@ -12,25 +12,30 @@ struct HighlightEffectModifier: ViewModifier {
     var highlightColor: Color
     var delay: TimeInterval
     var highlightDuration: TimeInterval
+
+    // Rendered apart from the request so a lazily created row that appears while the
+    // request is already active still animates in from rest instead of popping in lit.
+    @State private var isLit = false
+
     func body(content: Content) -> some View {
         content
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .strokeBorder(highlightColor, lineWidth: 3)
                     .fill(highlightColor.secondary.opacity(0.5))
-                    .opacity(showHighlight ? 0.8 : 0)
+                    .opacity(isLit ? 0.8 : 0)
             )
-            .scaleEffect(showHighlight ? 1.05 : 1)
-            .onChange(of: showHighlight, initial: true) {
-                if showHighlight {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + highlightDuration) {
-                        showHighlight = false
-                    }
-                }
-            }
+            .scaleEffect(isLit ? 1.05 : 1)
             .animation(
                 .interactiveSpring(duration: highlightDuration - 0.05).delay(delay),
-                value: showHighlight)
+                value: isLit)
+            .task(id: showHighlight) {
+                isLit = showHighlight
+                guard showHighlight,
+                    (try? await Task.sleep(for: .seconds(highlightDuration))) != nil
+                else { return }
+                showHighlight = false
+            }
     }
 }
 
