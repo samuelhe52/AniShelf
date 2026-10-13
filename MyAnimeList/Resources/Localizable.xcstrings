@@ -5921,7 +5921,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "详情"
+            "value" : "资料库详情"
           }
         }
       }
@@ -9411,7 +9411,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "支持 AniShelf"
+            "value" : "支持AniShelf"
           }
         }
       }
