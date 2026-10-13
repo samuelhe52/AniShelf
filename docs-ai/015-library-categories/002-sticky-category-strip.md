@@ -9,22 +9,24 @@ always-visible strip as an option, modeled on Telegram's chat folder tabs.
 
 ## Change
 
-Decisions taken by the maintainer on 2026-10-13:
+Decisions taken by the maintainer on 2026-10-13. The tab surface and selection
+treatment were revised after the same-day visual review, as recorded below:
 
 | Choice | Decision and alternative |
 | --- | --- |
 | Where | List and Grid only. Gallery keeps the title capsule menu. |
 | Setting | A plain on/off toggle under "Library Categories" in Settings › General, shown only when categories are on, off by default, cloud-synced like the other library preferences. |
 | Placement | Pinned under the navigation bar, always visible while on. No pull-to-reveal; that interaction was the reason the first strip was removed. |
-| Tab style | Telegram text tabs: "All" first, then categories in display order, scrolling sideways, with a tinted underline that slides to the selected tab. Capsule chips were rejected. No counts on tabs. |
+| Tab style | "All" first, then categories in display order, scrolling sideways. After visual review: one inset floating glass capsule, with tinted selected text and a softly filled capsule that slides behind it. No counts on tabs. The original text-tab underline decision was superseded by this review. |
 | Long press | Telegram menu: a category tab gives Reorder, Rename, Edit Categories…, Delete; "All" gives Reorder and Edit Categories…. Reorder makes the tabs draggable until Done; "All" stays first. "Menu only" was rejected. |
 | Swipe content | No. Sideways swipes on the List or Grid do not switch category; they would compete with List swipe actions. |
 | Title capsule | While the strip shows (List or Grid with the option on), the capsule shows the plain title with no category name and no menu. Gallery and strip-off keep the capsule menu. |
 | Multi-selection | The strip hides during multi-selection, like the capsule menu, because switching category would drop selected anime outside the view. |
 
-Implemented as a full-width `.bar` material surface in a top safe-area inset.
-The strip uses text buttons, a matched-geometry underline, and scrolls the active
-tab into view on selection, definition/order changes, and reorder-mode changes.
+Initially implemented as a full-width `.bar` material surface in a top safe-area
+inset. The visual revision uses an inset `.glassEffect(.regular, in: .capsule)`
+surface and a matched-geometry selection capsule behind the text. It scrolls the
+active tab into view on selection, definition/order changes, and reorder-mode changes.
 The inset and the title capsule share one visibility condition. Neither the
 selection snapshot pipeline nor the List row gesture mask changes.
 
@@ -36,7 +38,10 @@ existing category dialogs, and Edit Categories opens the existing manager sheet.
 
 ### Implementation choices and deviations
 
-- No product-decision deviations. Reorder uses native SwiftUI `draggable` and
+- The visual review supersedes the original flat text-tab/underline treatment
+  with a floating glass surface and a sliding selection capsule. The setting,
+  placement, and category behavior decisions remain in force.
+- Reorder uses native SwiftUI `draggable` and
   `dropDestination` on category tabs only. Dropping onto another tab calls
   `store.moveCategory`; the destination is highlighted during hover. Order commits
   on drop instead of changing during hover, so cancellation leaves order intact
@@ -50,9 +55,59 @@ existing category dialogs, and Edit Categories opens the existing manager sheet.
 - The original delivery's removal history remains in `001-action.md`; its stale
   next-step note now links here. The index links this amendment.
 
+### Visual revision after maintainer review
+
+After seeing the strip in AniShelf, the maintainer asked for a more fitting design
+and then supplied a current Telegram screenshot with a shared glass folder control,
+asking for a more floating feel. This replaces the earlier visual reference and
+the original rejection of a separate floating surface. The revision uses one
+native glass capsule with 16-point side margins, a soft neutral selection fill,
+and the existing `.snappy` matched-geometry movement. Unselected labels use medium
+weight; the selected label keeps semibold weight and the app tint. Tab hit targets
+remain at least 44 points high, and the drop-hover highlight is rounded to match.
+The new surface stays in the existing safe-area inset; no scroll-driven visibility
+or sideways content gesture was added.
+
+A second visual review asked for less vertical space and for a small number of
+categories to fill the row. The compact revision reduces the standard strip from
+64 to 48 points including its outer spacing: a 36-point selection fill inside a
+44-point button/rail, plus 4 points below. It removes the extra outer top gap and
+vertical rail padding. Dynamic Type can still increase the content height.
+The strip measures only its horizontal viewport and gives every tab an equal
+minimum share of the available width (after padding and gaps). Short names fill
+the row, including All plus two categories; longer names retain their intrinsic
+width and overflow scrolls horizontally. Reorder mode accounts for the width
+occupied by Done, and viewport changes keep the selected tab visible.
+
+The next screenshot showed library titles and poster detail competing with the
+category labels through the glass. The readability revision changes inactive labels
+from secondary to primary text and gives the sliding selection a 14% app-tint fill
+instead of an 8% neutral fill. The compact geometry, native `.glassEffect(.regular)`
+surface, and category interactions are unchanged.
+
+Two alternatives were tried and rejected during the same review. A `.regularMaterial`
+base beneath the glass improved contrast but lost the glass look, which the
+maintainer said readability must retain; no surface is layered under the glass.
+Lighter typography (medium selected tab and Done, regular inactive tabs) was also
+tried; the maintainer preferred the original weights, so the selected tab and Done
+stay semibold and inactive tabs stay medium at subheadline size.
+
 ## Refs
 
 - Implementation change: `yksllrss` (`feat: Add an optional sticky category strip`).
+- Visual revision change: `ztonoopp` (`style: Refine the category strip into a compact glass capsule`).
+  Covers the floating glass, compact layout, and readability reviews above. Only
+  `LibraryCategoryStrip.swift` and this record changed.
+  - Each review round passed a fresh `make build` and `make run-sim` on the same
+    already-booted iPhone 18 Pro simulator; the final source launched as PID 36459.
+    The rejected material backing and lighter typography were each built and launched
+    before being reverted. No UI walkthrough was performed.
+  - `swift format lint MyAnimeList/Sources/Views/Library/Categories/LibraryCategoryStrip.swift`
+    and `git diff --check`: passed. No unit tests added or repeated for visual-only
+    changes; the 106 passing tests below belong to the feature implementation.
+  - Maintainer verification remains for compact height, equal tab widths, long-name
+    overflow, Dynamic Type, and glass appearance and text contrast over posters,
+    including dark appearance.
 - Key files:
   - `MyAnimeList/Sources/Views/Library/Categories/LibraryCategoryStrip.swift`
   - `MyAnimeList/Sources/Views/Library/LibraryView.swift`
@@ -84,7 +139,7 @@ existing category dialogs, and Edit Categories opens the existing manager sheet.
 
 ## Open questions
 
-- Maintainer UI checks remain: material integration, selection underline/scrolling,
+- Maintainer UI checks remain: glass integration, selection capsule/scrolling,
   long-press dialogs, native drag/drop including offscreen targets, Dynamic Type,
   and transitions into/out of multi-selection. Validation here is limited to
   building, focused non-UI tests, and launching the already-booted simulator.

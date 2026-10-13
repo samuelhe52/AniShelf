@@ -15,21 +15,29 @@ struct LibraryCategoryStrip: View {
     @Environment(LibraryStore.self) private var store
     let openCategoryManager: () -> Void
 
-    @Namespace private var selectionUnderline
+    @Namespace private var selectionHighlight
     @State private var isReordering = false
     @State private var reorderSession = UUID()
     @State private var targetedCategoryID: LibraryCategory.ID?
     @State private var namePrompt: LibraryCategoryNamePrompt?
     @State private var deletingCategory: LibraryCategory?
+    @State private var viewportWidth: CGFloat = 0
 
     private var selectedTabID: String { store.activeCategoryID ?? "all" }
     private var dragPrefix: String { "anishelf-category:\(reorderSession):" }
+
+    private var minimumTabWidth: CGFloat {
+        let tabCount = store.categories.count + 1
+        // Share spare space equally; long names keep their intrinsic width and scroll.
+        let spacing = CGFloat(tabCount - 1) * 4
+        return max(64, (viewportWidth - 8 - spacing) / CGFloat(tabCount))
+    }
 
     var body: some View {
         HStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal) {
-                    HStack(spacing: 20) {
+                    HStack(spacing: 4) {
                         tab(id: nil, title: Text(LocalizedStringResource("All")))
                             .contextMenu { categoryMenu(for: nil) }
                             .id("all")
@@ -39,10 +47,15 @@ struct LibraryCategoryStrip: View {
                                 .id(category.id)
                         }
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, 4)
                 }
                 .fixedSize(horizontal: false, vertical: true)
                 .scrollIndicators(.hidden)
+                .onGeometryChange(for: CGFloat.self) { geometry in
+                    geometry.size.width
+                } action: { width in
+                    viewportWidth = width
+                }
                 .onChange(of: store.activeCategoryID, initial: true) {
                     withAnimation(.snappy) {
                         proxy.scrollTo(selectedTabID, anchor: .center)
@@ -58,6 +71,9 @@ struct LibraryCategoryStrip: View {
                         proxy.scrollTo(selectedTabID, anchor: .center)
                     }
                 }
+                .onChange(of: viewportWidth) {
+                    proxy.scrollTo(selectedTabID, anchor: .center)
+                }
             }
 
             if isReordering {
@@ -72,7 +88,10 @@ struct LibraryCategoryStrip: View {
                 .frame(minHeight: 44)
             }
         }
-        .background(.bar)
+        .clipShape(.capsule)
+        .glassEffect(.regular, in: .capsule)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 4)
         .animation(.snappy, value: store.activeCategoryID)
         .animation(.snappy, value: store.categories)
         .libraryCategoryNamePrompt($namePrompt) { prompt, name in
@@ -89,7 +108,7 @@ struct LibraryCategoryStrip: View {
             tab(id: category.id, title: Text(category.name))
                 .background {
                     if targetedCategoryID == category.id {
-                        Rectangle().fill(.tint.opacity(0.12))
+                        Capsule().fill(.tint.opacity(0.12))
                     }
                 }
                 .draggable(dragPrefix + category.id)
@@ -128,22 +147,22 @@ struct LibraryCategoryStrip: View {
             withAnimation(.snappy) { store.activeCategoryID = id }
         } label: {
             title
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                .font(.subheadline.weight(isSelected ? .semibold : .medium))
+                .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
-                .padding(.horizontal, 2)
-                .frame(minWidth: 44, minHeight: 44)
-                .padding(.bottom, 3)
-                .overlay(alignment: .bottom) {
+                .padding(.horizontal, 12)
+                .frame(minWidth: minimumTabWidth, minHeight: 36)
+                .background {
                     if isSelected {
-                        UnevenRoundedRectangle(topLeadingRadius: 3, topTrailingRadius: 3)
-                            .fill(.tint)
-                            .frame(height: 3)
-                            .matchedGeometryEffect(id: "selection", in: selectionUnderline)
+                        Capsule()
+                            .fill(.tint.opacity(0.14))
+                            .matchedGeometryEffect(id: "selection", in: selectionHighlight)
                     }
                 }
-                .contentShape(Rectangle())
+                // Keep the selection fill compact while the whole 44-point row is tappable.
+                .padding(.vertical, 4)
+                .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
