@@ -23,6 +23,7 @@ struct LibraryProfileICloudSyncSection: View {
     let cloudSyncManualRetryDisabled: Bool
     let onRetryLibraryCloudSync: () -> Void
     let onDiscardFailedEntry: (LibraryCloudSyncFailedEntry) -> Void
+    var onRequestRebuildLibraryCloudSync: () -> Void = {}
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -30,24 +31,34 @@ struct LibraryProfileICloudSyncSection: View {
                 title: "iCloud Sync",
                 subtitle: "Keep your library available across devices.",
                 systemImage: "icloud",
-                tint: .indigo
+                tint: LibraryProfileSettingsDestination.syncData.tint
             )
 
             LibraryProfileSettingsToggleRow(
                 title: "Master Switch",
                 subtitle: cloudSyncToggleSubtitle,
-                isOn: cloudSyncToggleBinding,
-                tint: .indigo
+                isOn: cloudSyncToggleBinding
             )
             .disabled(cloudSyncToggleDisabled)
 
             if libraryCloudSyncStatus.isEnabled {
                 cloudSyncStatusRow
+                LibraryProfileActionRow(
+                    title: "Rebuild iCloud Sync",
+                    subtitle: "Refetch and reconcile your iCloud library with your local library.",
+                    systemImage: "arrow.triangle.2.circlepath.icloud",
+                    tint: LibraryProfileSettingsDestination.syncData.tint,
+                    horizontalPadding: 0,
+                    showsIcon: false,
+                    action: onRequestRebuildLibraryCloudSync
+                )
+                .disabled(cloudSyncIsBusy)
+                .opacity(cloudSyncIsBusy ? 0.52 : 1)
             }
         }
         .animation(.default, value: cloudSyncIsBusy)
         .padding(14)
-        .libraryProfileInsetPanel(cornerRadius: 22, tint: .indigo)
+        .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsDestination.syncData.tint)
         .sheet(isPresented: $showSyncIssues) {
             LibraryCloudSyncIssuesSheet(
                 issues: syncIssues,
@@ -60,23 +71,8 @@ struct LibraryProfileICloudSyncSection: View {
         }
     }
 
-    /// Problems a completed sync left behind.
-    ///
-    /// Restoration failures are shown separately.
     private var syncIssues: [LibraryCloudSyncIssue] {
-        guard libraryCloudSyncStatus.isEnabled else { return [] }
-        var issues: [LibraryCloudSyncIssue] = []
-        let pendingFailures = libraryCloudSyncStatus.currentPendingReconstructionFailures
-        if libraryCloudSyncStatus.restoration == nil, !pendingFailures.isEmpty {
-            issues.append(.unloadedEntries(pendingFailures.map(LibraryCloudSyncFailedEntry.init)))
-        }
-        if libraryCloudSyncStatus.rejectedUploadCount > 0 {
-            issues.append(.rejectedUploads(libraryCloudSyncStatus.rejectedUploadCount))
-        }
-        if libraryCloudSyncStatus.quarantinedRecordCount > 0 {
-            issues.append(.unreadableRecords(libraryCloudSyncStatus.quarantinedRecordCount))
-        }
-        return issues
+        libraryCloudSyncStatus.settingsSyncIssues
     }
 
     /// One issue is named directly; several fold into a single count.
@@ -246,7 +242,7 @@ struct LibraryCloudSyncFailedEntry: Identifiable {
 }
 
 /// A problem a completed sync left behind.
-fileprivate enum LibraryCloudSyncIssue: Identifiable {
+enum LibraryCloudSyncIssue: Identifiable {
     case unloadedEntries([LibraryCloudSyncFailedEntry])
     case rejectedUploads(Int)
     case unreadableRecords(Int)
@@ -503,7 +499,7 @@ struct LibraryProfileBackupExportSection: View {
                 subtitle:
                     "App backups keep AniShelf data and settings for restore. Library exports create user-facing files in standard formats.",
                 systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90",
-                tint: .orange
+                tint: LibraryProfileSettingsDestination.syncData.tint
             )
 
             HStack(spacing: 10) {
@@ -532,7 +528,7 @@ struct LibraryProfileBackupExportSection: View {
                 .foregroundStyle(.secondary)
         }
         .padding(14)
-        .libraryProfileInsetPanel(cornerRadius: 22, tint: .orange)
+        .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsDestination.syncData.tint)
     }
 
     @ViewBuilder
@@ -540,7 +536,8 @@ struct LibraryProfileBackupExportSection: View {
         LazyShareLink(prepareData: createBackupItems) {
             Label("Backup", systemImage: "archivebox")
         }
-        .buttonStyle(LibraryProfileCommandButtonStyle(tint: .cyan, filled: false))
+        .buttonStyle(
+            LibraryProfileCommandButtonStyle(tint: LibraryProfileSettingsDestination.syncData.tint, filled: false))
     }
 
     private var restoreButton: some View {
@@ -576,110 +573,7 @@ struct LibraryProfileBackupExportSection: View {
         } label: {
             Label("Export as...", systemImage: "square.and.arrow.up.on.square")
         }
-        .buttonStyle(LibraryProfileCommandButtonStyle(tint: .orange, filled: false))
-    }
-}
-
-struct LibraryProfileMaintenanceActionsSection: View {
-    let onChangeAPIKey: () -> Void
-    let onCheckMetadataCacheSize: () -> Void
-    let onRefreshInfos: () -> Void
-    let onPrefetchImages: () -> Void
-    let showRebuildLibraryCloudSync: Bool
-    let rebuildLibraryCloudSyncDisabled: Bool
-    let onRequestRebuildLibraryCloudSync: () -> Void
-    let onShowSupport: () -> Void
-    let whatsNewVersion: String?
-    let onShowWhatsNew: () -> Void
-    let onShowAbout: () -> Void
-    let onDeleteAllAnimes: () -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            LibraryProfileActionRow(
-                title: "Change API Key",
-                subtitle: "Update the TMDb key used for metadata.",
-                systemImage: "person.badge.key",
-                tint: LibraryProfileMaintenancePalette.accent,
-                action: onChangeAPIKey
-            )
-            LibraryProfileActionDivider()
-            LibraryProfileActionRow(
-                title: "Check Metadata Cache Size",
-                subtitle: "Review image and metadata cache usage.",
-                systemImage: "archivebox",
-                tint: LibraryProfileMaintenancePalette.accent,
-                action: onCheckMetadataCacheSize
-            )
-            LibraryProfileActionDivider()
-            LibraryProfileActionRow(
-                title: "Refresh Infos",
-                subtitle: "Fetch latest TMDb metadata for every entry.",
-                systemImage: "arrow.clockwise",
-                tint: LibraryProfileMaintenancePalette.accent,
-                action: onRefreshInfos
-            )
-            LibraryProfileActionDivider()
-            LibraryProfileActionRow(
-                title: "Prefetch Images",
-                subtitle: "Cache posters and artwork without refreshing metadata.",
-                systemImage: "photo.stack",
-                tint: LibraryProfileMaintenancePalette.accent,
-                action: onPrefetchImages
-            )
-            LibraryProfileActionDivider()
-            if showRebuildLibraryCloudSync {
-                LibraryProfileActionRow(
-                    title: "Rebuild iCloud Sync",
-                    subtitle: "Refetch and reconcile your iCloud library with your local library.",
-                    systemImage: "arrow.triangle.2.circlepath.icloud",
-                    tint: LibraryProfileMaintenancePalette.accent,
-                    action: onRequestRebuildLibraryCloudSync
-                )
-                .disabled(rebuildLibraryCloudSyncDisabled)
-                .opacity(rebuildLibraryCloudSyncDisabled ? 0.52 : 1)
-                LibraryProfileActionDivider()
-            }
-            if let whatsNewVersion {
-                LibraryProfileActionRow(
-                    title: "What's New",
-                    subtitle: whatsNewSubtitleResource(for: whatsNewVersion),
-                    systemImage: "sparkles.rectangle.stack",
-                    tint: LibraryProfileMaintenancePalette.accent,
-                    action: onShowWhatsNew
-                )
-                LibraryProfileActionDivider()
-            }
-            LibraryProfileActionRow(
-                title: "Support AniShelf",
-                subtitle: "Optional tip jar. No features are unlocked.",
-                systemImage: "heart.circle",
-                tint: LibraryProfileMaintenancePalette.accent,
-                action: onShowSupport
-            )
-            LibraryProfileActionDivider()
-            LibraryProfileActionRow(
-                title: "About AniShelf",
-                subtitle: "Version, links, and credits.",
-                systemImage: "info.circle",
-                tint: LibraryProfileMaintenancePalette.accent,
-                action: onShowAbout
-            )
-            LibraryProfileActionDivider()
-            LibraryProfileActionRow(
-                title: "Delete All Animes",
-                subtitle: "Remove every saved library entry.",
-                systemImage: "trash",
-                role: .destructive,
-                tint: .red,
-                action: onDeleteAllAnimes
-            )
-        }
-        .padding(.vertical, 4)
-        .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileMaintenancePalette.panel)
-    }
-
-    private func whatsNewSubtitleResource(for version: String) -> LocalizedStringResource {
-        "Reopen the release note for version \(version)."
+        .buttonStyle(
+            LibraryProfileCommandButtonStyle(tint: LibraryProfileSettingsDestination.syncData.tint, filled: false))
     }
 }

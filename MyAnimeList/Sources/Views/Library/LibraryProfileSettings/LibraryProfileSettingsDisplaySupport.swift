@@ -142,3 +142,34 @@ extension LibraryExportFormat {
         }
     }
 }
+
+extension LibraryCloudSyncStatus {
+    /// Restoration failures are shown separately from completed-sync issues.
+    var settingsSyncIssues: [LibraryCloudSyncIssue] {
+        guard isEnabled else { return [] }
+        var issues: [LibraryCloudSyncIssue] = []
+        let failures = currentPendingReconstructionFailures
+        if restoration == nil, !failures.isEmpty {
+            issues.append(.unloadedEntries(failures.map(LibraryCloudSyncFailedEntry.init)))
+        }
+        if rejectedUploadCount > 0 { issues.append(.rejectedUploads(rejectedUploadCount)) }
+        if quarantinedRecordCount > 0 { issues.append(.unreadableRecords(quarantinedRecordCount)) }
+        return issues
+    }
+
+    var settingsIssueCount: Int {
+        guard isEnabled else { return 0 }
+        return settingsSyncIssues.reduce(0) { $0 + $1.count } + (restoration?.failures.count ?? 0)
+    }
+
+    var settingsHubStatus: DisplayStatus {
+        guard isEnabled else {
+            return .init(title: "iCloud Off", systemImage: "icloud.slash", tint: .secondary)
+        }
+        if settingsIssueCount > 0 {
+            return .init(
+                title: "\(settingsIssueCount) sync issues", systemImage: "exclamationmark.triangle.fill", tint: .orange)
+        }
+        return statusDisplay
+    }
+}

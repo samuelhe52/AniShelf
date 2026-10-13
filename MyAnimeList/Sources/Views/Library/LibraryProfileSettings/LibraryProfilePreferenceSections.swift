@@ -18,7 +18,7 @@ struct LibraryProfileLanguageSettingsSection: View {
                 title: "Anime Info Language",
                 subtitle: "Choose the language used for future metadata fetches.",
                 systemImage: "globe",
-                tint: .blue
+                tint: LibraryProfileSettingsDestination.language.tint
             )
 
             HStack {
@@ -27,7 +27,7 @@ struct LibraryProfileLanguageSettingsSection: View {
                 Spacer(minLength: 12)
                 Toggle("Follow System", isOn: $followsSystemLanguage)
                     .labelsHidden()
-                    .tint(.blue)
+                    .tint(LibraryProfileSettingsDestination.language.tint)
                     .scaleEffect(0.78, anchor: .trailing)
                     .frame(width: 42, height: 26, alignment: .trailing)
             }
@@ -50,26 +50,21 @@ struct LibraryProfileLanguageSettingsSection: View {
             }
         }
         .padding(14)
-        .libraryProfileInsetPanel(cornerRadius: 22, tint: .blue)
+        .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsDestination.language.tint)
     }
 }
 
 struct LibraryProfilePreferencesSection: View {
-    @AppStorage(.rememberShareSheetSettings) private var rememberShareSheetSettings = false
-    @AppStorage(.broadcastScheduleEnabled) private var broadcastScheduleEnabled = true
-
     @Binding var hideDroppedByDefault: Bool
     @Binding var defaultNewEntryWatchStatus: AnimeEntry.WatchStatus
     @Binding var defaultFilters: Set<LibraryStore.AnimeFilter>
-    @Binding var autoPrefetchImagesOnAddAndRestore: Bool
-    @Binding var longTermGalleryPosterCachingEnabled: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             LibraryProfileSettingHeader(
-                title: "General",
+                title: "Defaults",
                 systemImage: "slider.horizontal.3",
-                tint: .mint
+                tint: LibraryProfileSettingsDestination.libraryTracking.tint
             )
 
             defaultWatchStatusRow
@@ -80,39 +75,9 @@ struct LibraryProfilePreferencesSection: View {
                 subtitle: "Only show dropped entries after you explicitly enable the Dropped filter.",
                 isOn: $hideDroppedByDefault
             )
-
-            LibraryProfileSettingsToggleRow(
-                title: "Auto Prefetch Images",
-                subtitle: "Prefetch images when adding titles or restoring a backup.",
-                isOn: $autoPrefetchImagesOnAddAndRestore
-            )
-
-            LibraryProfileSettingsToggleRow(
-                title: "Cache Large Gallery Posters",
-                subtitle:
-                    "Store large Gallery posters longer. Off by default and may use more disk space.",
-                isOn: $longTermGalleryPosterCachingEnabled
-            )
-
-            LibraryProfileSettingsToggleRow(
-                title: "Remember Share Settings",
-                subtitle:
-                    "Remember language, corner style, image format, and export size preferences in the share sheet.",
-                isOn: $rememberShareSheetSettings
-            )
-
-            LibraryProfileSettingsToggleRow(
-                title: "Broadcast Airtimes",
-                subtitle:
-                    "Look up TV broadcast times when you open an eligible anime or season.",
-                isOn: $broadcastScheduleEnabled
-            )
-
-            LibraryProfileCategorySettingsRows()
         }
         .padding(14)
-        .libraryProfileInsetPanel(cornerRadius: 22, tint: .mint)
-        .onChange(of: rememberShareSheetSettings, handleRememberShareSheetSettingsChange)
+        .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsDestination.libraryTracking.tint)
     }
 
     private var defaultWatchStatusRow: some View {
@@ -129,7 +94,7 @@ struct LibraryProfilePreferencesSection: View {
             } label: {
                 LibraryProfileSelectionCapsule(
                     title: defaultNewEntryWatchStatus.localizedStringResource,
-                    tint: .mint
+                    tint: LibraryProfileSettingsDestination.libraryTracking.tint
                 )
             }
         }
@@ -155,7 +120,7 @@ struct LibraryProfilePreferencesSection: View {
             } label: {
                 LibraryProfileSelectionCapsule(
                     title: defaultFiltersSummaryResource,
-                    tint: .mint
+                    tint: LibraryProfileSettingsDestination.libraryTracking.tint
                 )
             }
             .menuActionDismissBehavior(.disabled)
@@ -202,11 +167,6 @@ struct LibraryProfilePreferencesSection: View {
         )
     }
 
-    private func handleRememberShareSheetSettingsChange(old: Bool, new: Bool) {
-        guard old != new, !new else { return }
-        AnimeSharingPreferences().resetRememberedSettings()
-    }
-
     private func defaultFilterSummaryResource(
         for filter: LibraryStore.AnimeFilter
     ) -> LocalizedStringResource {
@@ -236,7 +196,7 @@ struct LibraryProfilePreferencesSection: View {
 }
 
 /// Opt-in switch for library categories and the entry to the category manager.
-fileprivate struct LibraryProfileCategorySettingsRows: View {
+struct LibraryProfileCategorySettingsRows: View {
     @Environment(LibraryStore.self) private var store
     @State private var showCategoryManager = false
 

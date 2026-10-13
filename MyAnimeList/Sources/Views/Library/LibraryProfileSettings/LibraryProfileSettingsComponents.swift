@@ -68,12 +68,18 @@ struct LibraryProfileActionRow: View {
     let systemImage: String
     var role: ButtonRole? = nil
     var tint: Color = .secondary
+    /// Zero when the row sits in a padded section card beside toggle rows.
+    var horizontalPadding: CGFloat = 12
+    /// Off for a single row among toggles, where an icon tile breaks the text column.
+    var showsIcon = true
     let action: () -> Void
 
     var body: some View {
         Button(role: role, action: action) {
             HStack(spacing: 12) {
-                LibraryProfileSettingIcon(systemImage: systemImage, tint: tint)
+                if showsIcon {
+                    LibraryProfileSettingIcon(systemImage: systemImage, tint: tint)
+                }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
                         .font(.subheadline.weight(.semibold))
@@ -88,7 +94,7 @@ struct LibraryProfileActionRow: View {
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.tertiary)
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, horizontalPadding)
             .padding(.vertical, 11)
             .contentShape(Rectangle())
         }
@@ -97,11 +103,13 @@ struct LibraryProfileActionRow: View {
 }
 
 struct LibraryProfileActionDivider: View {
+    var leadingInset: CGFloat = 58
+
     var body: some View {
         Rectangle()
             .fill(.primary.opacity(0.075))
             .frame(height: 1)
-            .padding(.leading, 58)
+            .padding(.leading, leadingInset)
     }
 }
 
@@ -239,10 +247,12 @@ struct LibraryProfileCommandButtonStyle: ButtonStyle {
 }
 
 struct LibraryProfileSettingsToggleRow: View {
+    @Environment(\.libraryProfilePageTint) private var pageTint
+
     let title: LocalizedStringResource
     let subtitle: LocalizedStringResource
     @Binding var isOn: Bool
-    var tint: Color = .mint
+    var tint: Color? = nil
 
     var body: some View {
         HStack(alignment: .top) {
@@ -257,10 +267,15 @@ struct LibraryProfileSettingsToggleRow: View {
             Spacer(minLength: 12)
             Toggle(title, isOn: $isOn)
                 .labelsHidden()
-                .tint(tint)
+                .tint(tint ?? pageTint)
                 .scaleEffect(0.78, anchor: .trailing)
                 .frame(width: 42, height: 26, alignment: .trailing)
         }
         .padding(.vertical, 2)
     }
+}
+
+extension EnvironmentValues {
+    /// The pushed settings page's spectrum step; toggles without an explicit tint use it.
+    @Entry var libraryProfilePageTint: Color = .mint
 }

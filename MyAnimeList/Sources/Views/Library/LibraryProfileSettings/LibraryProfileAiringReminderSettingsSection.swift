@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct LibraryProfileAiringReminderSettingsSection: View {
-    @Environment(\.scenePhase) private var scenePhase
     private static let minimumRefreshFeedbackDuration = Duration.milliseconds(600)
     private let airingReminders = AiringReminderCoordinator.shared
 
@@ -22,7 +21,7 @@ struct LibraryProfileAiringReminderSettingsSection: View {
                 title: "Airing Reminders",
                 subtitle: "Get reminders for upcoming episodes.",
                 systemImage: "bell.badge.fill",
-                tint: .orange
+                tint: LibraryProfileSettingsDestination.reminders.tint
             )
 
             HStack(alignment: .firstTextBaseline, spacing: 12) {
@@ -53,7 +52,7 @@ struct LibraryProfileAiringReminderSettingsSection: View {
                 } label: {
                     LibraryProfileSelectionCapsule(
                         title: airingReminders.snapshot.defaultTiming.localizedResource,
-                        tint: .orange
+                        tint: LibraryProfileSettingsDestination.reminders.tint
                     )
                 }
                 .disabled(airingReminders.isRefreshing)
@@ -80,7 +79,10 @@ struct LibraryProfileAiringReminderSettingsSection: View {
                 Button("Refresh", systemImage: "arrow.clockwise") {
                     refreshAiringReminders()
                 }
-                .buttonStyle(LibraryProfileCommandButtonStyle(tint: .cyan, filled: false))
+                .buttonStyle(
+                    LibraryProfileCommandButtonStyle(
+                        tint: LibraryProfileSettingsDestination.reminders.tint, filled: false)
+                )
                 .disabled(
                     airingReminders.isRefreshing
                         || isRefreshFeedbackVisible
@@ -96,12 +98,7 @@ struct LibraryProfileAiringReminderSettingsSection: View {
             }
         }
         .padding(14)
-        .libraryProfileInsetPanel(cornerRadius: 22, tint: .orange)
-        .task { await airingReminders.reloadState() }
-        .onChange(of: scenePhase) { _, newPhase in
-            guard newPhase == .active else { return }
-            Task { await airingReminders.reloadState() }
-        }
+        .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsDestination.reminders.tint)
         .confirmationDialog(
             "Remove All Airing Reminders?",
             isPresented: $showRemoveAllConfirmation,

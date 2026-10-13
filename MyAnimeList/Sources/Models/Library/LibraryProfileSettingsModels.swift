@@ -8,20 +8,55 @@
 import DataProvider
 import SwiftUI
 
-enum LibraryProfileSettingsLayout: Equatable {
-    case compactScroll
-    case wideGrid
+enum LibraryProfileSettingsHubColumns: Equatable {
+    case single
+    case double
 }
 
 struct LibraryProfileSettingsLayoutPolicy {
-    func layout(
+    func hubColumns(
         horizontalSizeClass: UserInterfaceSizeClass?,
         dynamicTypeSize: DynamicTypeSize
-    ) -> LibraryProfileSettingsLayout {
+    ) -> LibraryProfileSettingsHubColumns {
         guard horizontalSizeClass == .regular, !dynamicTypeSize.isAccessibilitySize else {
-            return .compactScroll
+            return .single
         }
-        return .wideGrid
+        return .double
+    }
+}
+
+enum LibraryProfileSettingsDestination: Hashable, CaseIterable {
+    case language, libraryTracking, appearance, reminders, metadataImages, syncData
+
+    var title: LocalizedStringResource {
+        switch self {
+        case .language: "Anime Info Language"
+        case .libraryTracking: "Library & Tracking"
+        case .appearance: "Appearance & Interaction"
+        case .reminders: "Airing & Reminders"
+        case .metadataImages: "Metadata & Images"
+        case .syncData: "Sync & Data"
+        }
+    }
+
+    /// Hub order walks one continuous hue spectrum; each page tints its cards with its step.
+    var tint: Color {
+        switch self {
+        case .language: LibraryProfileSettingsPalette.step(0)
+        case .libraryTracking: LibraryProfileSettingsPalette.step(1)
+        case .appearance: LibraryProfileSettingsPalette.step(2)
+        case .reminders: LibraryProfileSettingsPalette.step(3)
+        case .metadataImages: LibraryProfileSettingsPalette.step(4)
+        case .syncData: LibraryProfileSettingsPalette.step(5)
+        }
+    }
+}
+
+enum LibraryProfileSettingsPalette {
+    /// Teal at step 0, then blue, indigo, violet; the App Info rows continue into pink and rose.
+    static func step(_ index: Int) -> Color {
+        let hue = (0.47 + 0.07 * Double(index)).truncatingRemainder(dividingBy: 1)
+        return Color(hue: hue, saturation: 0.62, brightness: 0.86)
     }
 }
 
@@ -142,11 +177,6 @@ enum LibraryProfileRuntimeMode: Equatable {
             stats.plannedRuntimeDescription
         }
     }
-}
-
-enum LibraryProfileMaintenancePalette {
-    static let accent = Color(red: 0.29, green: 0.70, blue: 0.96)
-    static let panel = accent
 }
 
 enum LibraryProfileSettingsSheet: String, Identifiable {

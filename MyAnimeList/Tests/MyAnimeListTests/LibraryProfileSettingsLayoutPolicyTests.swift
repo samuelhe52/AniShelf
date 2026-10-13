@@ -13,22 +13,22 @@ import Testing
 struct LibraryProfileSettingsLayoutPolicyTests {
     private let policy = LibraryProfileSettingsLayoutPolicy()
 
-    @Test func regularWidthUsesWideGridAtStandardDynamicType() {
+    @Test func regularWidthUsesTwoHubColumnsAtStandardDynamicType() {
         #expect(
-            policy.layout(horizontalSizeClass: .regular, dynamicTypeSize: .large) == .wideGrid
+            policy.hubColumns(horizontalSizeClass: .regular, dynamicTypeSize: .large) == .double
         )
     }
 
-    @Test func compactOrAccessibilityLayoutUsesPhoneComposition() {
+    @Test func compactOrAccessibilityLayoutUsesOneHubColumn() {
         #expect(
-            policy.layout(horizontalSizeClass: .compact, dynamicTypeSize: .large) == .compactScroll
+            policy.hubColumns(horizontalSizeClass: .compact, dynamicTypeSize: .large) == .single
         )
         #expect(
-            policy.layout(horizontalSizeClass: .regular, dynamicTypeSize: .accessibility1)
-                == .compactScroll
+            policy.hubColumns(horizontalSizeClass: .regular, dynamicTypeSize: .accessibility1)
+                == .single
         )
         #expect(
-            policy.layout(horizontalSizeClass: nil, dynamicTypeSize: .large) == .compactScroll
+            policy.hubColumns(horizontalSizeClass: nil, dynamicTypeSize: .large) == .single
         )
     }
 }
