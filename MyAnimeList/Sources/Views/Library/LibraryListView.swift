@@ -12,8 +12,6 @@ struct LibraryListView: View {
     @Environment(LibraryStore.self) private var store
     @Environment(LibraryEntryInteractionState.self) var interaction
 
-    @State private var listEditMode: EditMode = .inactive
-
     let detailActions: LibraryEntryDetailActions
     let displayItems: [LibraryEntryDisplayItem]
     @Binding var scrolledID: LibraryEntryIdentity?
@@ -21,33 +19,23 @@ struct LibraryListView: View {
     @Binding var highlightedEntryID: LibraryEntryIdentity?
 
     var body: some View {
-        @Bindable var interaction = interaction
-
         ScrollViewReader { proxy in
             List(
                 displayItems,
-                selection: interaction.isMultiSelecting
-                    ? $interaction.selectedEntryIDs
-                    : nil
+                selection: listSelection
             ) { item in
                 rowContent(for: item)
             }
             .listStyle(.plain)
             .preferredNavigationBarScrollEdgeEffect()
-            .environment(\.editMode, $listEditMode)
+            .environment(\.editMode, .constant(interaction.isMultiSelecting ? .active : .inactive))
+            .animation(LibraryViewTransitions.selectionModeAnimation(), value: interaction.isMultiSelecting)
             .animation(.default, value: store.groupStrategy)
             .animation(.default, value: store.sortReversed)
             .animation(.default, value: store.sortStrategy)
             .animation(.default, value: store.filters)
             .onAppear {
                 if let scrolledID { proxy.scrollTo(scrolledID) }
-            }
-            .onChange(of: interaction.isMultiSelecting, initial: true) { _, isMultiSelecting in
-                // Match the selection-mode curve so the edit-mode transition
-                // doesn't race the row and toolbar animations on dismiss.
-                withAnimation(LibraryViewTransitions.selectionModeAnimation()) {
-                    listEditMode = isMultiSelecting ? .active : .inactive
-                }
             }
             .onChange(of: scrollRequest) {
                 if let entryID = scrollRequest?.entryID {
@@ -57,6 +45,18 @@ struct LibraryListView: View {
                 }
             }
         }
+    }
+
+    private var listSelection: Binding<Set<LibraryEntryIdentity>> {
+        // Keep native selection configured while edit mode animates out.
+        // Browsing taps must not add items to the batch selection.
+        Binding(
+            get: { interaction.selectedEntryIDs },
+            set: { selectedEntryIDs in
+                guard interaction.isMultiSelecting else { return }
+                interaction.selectedEntryIDs = selectedEntryIDs
+            }
+        )
     }
 
     @ViewBuilder
@@ -84,7 +84,7 @@ struct LibraryListView: View {
         )
         .animation(
             .smooth(duration: 0.18),
-            value: interaction.isSelected(item.id)
+            value: !interaction.isMultiSelecting || interaction.isSelected(item.id)
         )
         .highlightEffect(
             showHighlight: interaction.highlightBinding(
