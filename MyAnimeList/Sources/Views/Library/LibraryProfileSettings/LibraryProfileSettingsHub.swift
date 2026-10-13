@@ -10,7 +10,6 @@ import SwiftUI
 
 struct LibraryProfileSettingsHub: View {
     @Environment(\.colorScheme) private var colorScheme
-    let columns: LibraryProfileSettingsHubColumns
     @Binding var followsSystemLanguage: Bool
     @Binding var preferredLanguage: Language
     let remindersLoaded: Bool
@@ -28,66 +27,25 @@ struct LibraryProfileSettingsHub: View {
                     LibraryProfileLanguageSettingsRow(
                         followsSystemLanguage: $followsSystemLanguage, preferredLanguage: $preferredLanguage
                     )
-                    LibraryProfileActionDivider(leadingInset: 44)
-                    if columns == .double {
-                        // Column-major halves keep each column's reading order intact.
-                        HStack(alignment: .top, spacing: 16) {
-                            destinationColumn(Array(Self.destinations.prefix(3)))
-                            destinationColumn(Array(Self.destinations.dropFirst(3)))
+                    ForEach(LibraryProfileSettingsDestination.allCases, id: \.self) { destination in
+                        LibraryProfileActionDivider(leadingInset: 44)
+                        NavigationLink(value: destination) {
+                            row(destination)
                         }
-                    } else {
-                        destinationColumn(Self.destinations)
+                        .buttonStyle(.plain)
                     }
                 }
             }
 
-            PopupSectionCard("App Info", systemImage: "app.badge", spacing: 8, panelTint: cardTint) {
-                VStack(spacing: 0) {
-                    if let whatsNewVersion {
-                        Button(action: onShowWhatsNew) {
-                            LibraryProfileHubRow(
-                                title: "What's New", systemImage: "sparkles.rectangle.stack",
-                                tint: LibraryProfileSettingsPalette.appInfo,
-                                value: LocalizedStringResource("\(whatsNewVersion)"))
-                        }
-                        LibraryProfileActionDivider(leadingInset: 44)
-                    }
-                    Button(action: onShowSupport) {
-                        LibraryProfileHubRow(
-                            title: "Support AniShelf", systemImage: "heart.circle",
-                            tint: LibraryProfileSettingsPalette.appInfo)
-                    }
-                    LibraryProfileActionDivider(leadingInset: 44)
-                    Button(action: onShowAbout) {
-                        LibraryProfileHubRow(
-                            title: "About AniShelf", systemImage: "info.circle",
-                            tint: LibraryProfileSettingsPalette.appInfo)
-                    }
-                }
-                .buttonStyle(.plain)
-            }
+            LibraryProfileAppInfoCard(
+                whatsNewVersion: whatsNewVersion, onShowWhatsNew: onShowWhatsNew,
+                onShowSupport: onShowSupport, onShowAbout: onShowAbout
+            )
         }
     }
 
     private var cardTint: Color {
         colorScheme == .dark ? .black.opacity(0.22) : .white.opacity(0.05)
-    }
-
-    private static let destinations = LibraryProfileSettingsDestination.allCases
-
-    private func destinationColumn(_ destinations: [LibraryProfileSettingsDestination]) -> some View {
-        VStack(spacing: 0) {
-            ForEach(destinations, id: \.self) { destination in
-                if destination != destinations.first {
-                    LibraryProfileActionDivider(leadingInset: 44)
-                }
-                NavigationLink(value: destination) {
-                    row(destination)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .top)
     }
 
     @ViewBuilder
@@ -126,6 +84,67 @@ struct LibraryProfileSettingsHub: View {
         if reminders.snapshot.authorizationStatus == .denied { return "Notifications Off" }
         if reminders.snapshot.warning != nil || reminders.lastRefreshFailed { return "Needs Attention" }
         return "\(reminders.snapshot.subscriptions.count) anime"
+    }
+}
+
+/// What's New, Support, and About; shared by the hub and the regular-width workspace.
+struct LibraryProfileAppInfoCard: View {
+    enum Style {
+        /// A titled card, matching the hub's Settings card.
+        case card
+        /// Rows in an inset panel; the workspace titles it like its other groups.
+        case panel
+    }
+
+    @Environment(\.colorScheme) private var colorScheme
+    var style: Style = .card
+    let whatsNewVersion: String?
+    let onShowWhatsNew: () -> Void
+    let onShowSupport: () -> Void
+    let onShowAbout: () -> Void
+
+    var body: some View {
+        switch style {
+        case .card:
+            PopupSectionCard("App Info", systemImage: "app.badge", spacing: 8, panelTint: cardTint) {
+                rows
+            }
+        case .panel:
+            rows
+                .padding(.horizontal, 14)
+                .padding(.vertical, 4)
+                .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsPalette.appInfo)
+        }
+    }
+
+    private var rows: some View {
+        VStack(spacing: 0) {
+            if let whatsNewVersion {
+                Button(action: onShowWhatsNew) {
+                    LibraryProfileHubRow(
+                        title: "What's New", systemImage: "sparkles.rectangle.stack",
+                        tint: LibraryProfileSettingsPalette.appInfo,
+                        value: LocalizedStringResource("\(whatsNewVersion)"))
+                }
+                LibraryProfileActionDivider(leadingInset: 44)
+            }
+            Button(action: onShowSupport) {
+                LibraryProfileHubRow(
+                    title: "Support AniShelf", systemImage: "heart.circle",
+                    tint: LibraryProfileSettingsPalette.appInfo)
+            }
+            LibraryProfileActionDivider(leadingInset: 44)
+            Button(action: onShowAbout) {
+                LibraryProfileHubRow(
+                    title: "About AniShelf", systemImage: "info.circle",
+                    tint: LibraryProfileSettingsPalette.appInfo)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var cardTint: Color {
+        colorScheme == .dark ? .black.opacity(0.22) : .white.opacity(0.05)
     }
 }
 

@@ -210,7 +210,7 @@ struct LibraryProfileSettingsView: View {
             summaryLayout {
                 LibraryProfilePrimaryStatsGrid(
                     stats: stats,
-                    layout: hubColumns == .double ? .fillsSummaryHeight : .compact
+                    layout: layout == .workspace ? .fillsSummaryHeight : .compact
                 )
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 .profileReveal(index: 1, appeared: appeared)
@@ -219,22 +219,28 @@ struct LibraryProfileSettingsView: View {
                     .profileReveal(index: 2, appeared: appeared)
             }
 
-            LibraryProfileSettingsHub(
-                columns: hubColumns,
-                followsSystemLanguage: followsSystemLanguageBinding,
-                preferredLanguage: $preferredLanguage,
-                remindersLoaded: remindersLoaded,
-                syncStatus: store.libraryCloudSyncStatus,
-                whatsNewVersion: whatsNew.currentEntry?.version,
-                onShowWhatsNew: presentWhatsNewSheet,
-                onShowSupport: presentSupportSheet,
-                onShowAbout: presentAboutSheet
-            )
+            Group {
+                switch layout {
+                case .hub:
+                    LibraryProfileSettingsHub(
+                        followsSystemLanguage: followsSystemLanguageBinding,
+                        preferredLanguage: $preferredLanguage,
+                        remindersLoaded: remindersLoaded,
+                        syncStatus: store.libraryCloudSyncStatus,
+                        whatsNewVersion: whatsNew.currentEntry?.version,
+                        onShowWhatsNew: presentWhatsNewSheet,
+                        onShowSupport: presentSupportSheet,
+                        onShowAbout: presentAboutSheet
+                    )
+                case .workspace:
+                    settingsWorkspace
+                }
+            }
             .profileReveal(index: 3, appeared: appeared)
         }
         .animation(languagePickerAnimation, value: followsSystemLanguage)
-        .frame(maxWidth: hubColumns == .double ? 1180 : 720)
-        .padding(.horizontal, hubColumns == .double ? 28 : 18)
+        .frame(maxWidth: layout == .workspace ? 1180 : 720)
+        .padding(.horizontal, layout == .workspace ? 28 : 18)
         .padding(.top, 16)
         .padding(.bottom, 32)
         .frame(maxWidth: .infinity)
@@ -242,12 +248,12 @@ struct LibraryProfileSettingsView: View {
 
     /// Regular width keeps the original side-by-side summary; compact stacks it.
     private var summaryLayout: AnyLayout {
-        hubColumns == .double
+        layout == .workspace
             ? AnyLayout(HStackLayout(spacing: 20)) : AnyLayout(VStackLayout(spacing: 16))
     }
 
-    private var hubColumns: LibraryProfileSettingsHubColumns {
-        LibraryProfileSettingsLayoutPolicy().hubColumns(
+    private var layout: LibraryProfileSettingsLayout {
+        LibraryProfileSettingsLayoutPolicy().layout(
             horizontalSizeClass: horizontalSizeClass, dynamicTypeSize: dynamicTypeSize
         )
     }
@@ -256,10 +262,75 @@ struct LibraryProfileSettingsView: View {
         LibraryProfileSettingsPage(destination: destination, onClose: dismissSettings) {
             destinationContent(destination)
         }
-        .animation(languagePickerAnimation, value: episodeProgressTrackingEnabled)
-        .animation(languagePickerAnimation, value: store.categoriesEnabled)
-        .animation(languagePickerAnimation, value: store.categoryStripEnabled)
-        .animation(languagePickerAnimation, value: store.libraryCloudSyncStatus)
+        .modifier(settingsContentAnimations)
+    }
+
+    /// Regular width keeps the pre-hub layout: every section expanded in two columns,
+    /// using the same destination content the hub pushes on compact width.
+    private var settingsWorkspace: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("Settings", systemImage: "gearshape.2")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(.primary)
+
+            HStack(alignment: .top, spacing: 20) {
+                VStack(spacing: 20) {
+                    LibraryProfileLanguageSettingsRow(
+                        followsSystemLanguage: followsSystemLanguageBinding, preferredLanguage: $preferredLanguage
+                    )
+                    .padding(.horizontal, 14)
+                    .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsPalette.language)
+                    workspaceGroup(.libraryTracking)
+                    workspaceGroup(.reminders)
+                    workspaceGroup(.appearance)
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+                VStack(spacing: 20) {
+                    workspaceGroup(.syncData)
+                    workspaceGroup(.metadataImages)
+                    VStack(alignment: .leading, spacing: 10) {
+                        workspaceGroupTitle("App Info")
+                        LibraryProfileAppInfoCard(
+                            style: .panel,
+                            whatsNewVersion: whatsNew.currentEntry?.version, onShowWhatsNew: presentWhatsNewSheet,
+                            onShowSupport: presentSupportSheet, onShowAbout: presentAboutSheet
+                        )
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+            }
+        }
+        .modifier(settingsContentAnimations)
+    }
+
+    /// Titled with the hub row's name so "Settings › Sync & Data" in the guides holds on iPad too.
+    private func workspaceGroup(_ destination: LibraryProfileSettingsDestination) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            workspaceGroupTitle(destination.title)
+            VStack(spacing: 20) {
+                destinationContent(destination)
+            }
+        }
+        .environment(\.libraryProfilePageTint, destination.tint)
+    }
+
+    private func workspaceGroupTitle(_ title: LocalizedStringResource) -> some View {
+        Text(title)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.leading, 4)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    private var settingsContentAnimations: LibraryProfileSettingsContentAnimations {
+        LibraryProfileSettingsContentAnimations(
+            animation: languagePickerAnimation,
+            episodeProgressTrackingEnabled: episodeProgressTrackingEnabled,
+            categoriesEnabled: store.categoriesEnabled,
+            categoryStripEnabled: store.categoryStripEnabled,
+            libraryCloudSyncStatus: store.libraryCloudSyncStatus
+        )
     }
 
     @ViewBuilder
@@ -685,4 +756,21 @@ struct LibraryProfileSettingsView: View {
         .environment(store)
         .environment(SupportStore())
         .environment(WhatsNewController(currentVersion: "1.54"))
+}
+
+/// Animates the expanding rows inside settings sections, on pushed pages and in the workspace alike.
+fileprivate struct LibraryProfileSettingsContentAnimations: ViewModifier {
+    let animation: Animation
+    let episodeProgressTrackingEnabled: Bool
+    let categoriesEnabled: Bool
+    let categoryStripEnabled: Bool
+    let libraryCloudSyncStatus: LibraryCloudSyncStatus
+
+    func body(content: Content) -> some View {
+        content
+            .animation(animation, value: episodeProgressTrackingEnabled)
+            .animation(animation, value: categoriesEnabled)
+            .animation(animation, value: categoryStripEnabled)
+            .animation(animation, value: libraryCloudSyncStatus)
+    }
 }

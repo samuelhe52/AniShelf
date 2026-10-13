@@ -8,20 +8,22 @@
 import DataProvider
 import SwiftUI
 
-enum LibraryProfileSettingsHubColumns: Equatable {
-    case single
-    case double
+enum LibraryProfileSettingsLayout: Equatable {
+    /// Destination rows that push focused pages.
+    case hub
+    /// Every section expanded in two columns, as before the hub.
+    case workspace
 }
 
 struct LibraryProfileSettingsLayoutPolicy {
-    func hubColumns(
+    func layout(
         horizontalSizeClass: UserInterfaceSizeClass?,
         dynamicTypeSize: DynamicTypeSize
-    ) -> LibraryProfileSettingsHubColumns {
+    ) -> LibraryProfileSettingsLayout {
         guard horizontalSizeClass == .regular, !dynamicTypeSize.isAccessibilitySize else {
-            return .single
+            return .hub
         }
-        return .double
+        return .workspace
     }
 }
 
