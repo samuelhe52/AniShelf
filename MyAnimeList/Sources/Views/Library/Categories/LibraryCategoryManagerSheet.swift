@@ -54,7 +54,10 @@ struct LibraryCategoryManagerSheet: View {
                         store.moveCategories(fromOffsets: source, toOffset: destination)
                     }
                 } footer: {
-                    Text("Add anime with Select in List or Grid view. Touch and hold to reorder categories.")
+                    // The empty state already explains how to add anime.
+                    if !store.categories.isEmpty {
+                        Text("Add anime with Select in List or Grid view. Touch and hold to reorder categories.")
+                    }
                 }
             }
             .overlay {

@@ -370,7 +370,9 @@ struct LibraryView: View {
 
     private var showsCategoryStrip: Bool {
         // Stays during multi-selection; switching keeps only still-visible selections.
-        store.categoriesEnabled && store.categoryStripEnabled && supportsMultiSelection
+        // With no categories yet, the toolbar capsule menu stands in for a lone "All" chip.
+        store.categoriesEnabled && store.categoryStripEnabled && !store.categories.isEmpty
+            && supportsMultiSelection
     }
 
     // MARK: - Content
