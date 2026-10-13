@@ -319,6 +319,9 @@ struct LibraryView: View {
                     )
                 }
             }
+            // The strip can appear from paths without an animation transaction, such as the
+            // first category created from the selection menu or arriving through sync.
+            .animation(.snappy, value: showsCategoryStrip)
             .toolbar {
                 LibraryToolbar(
                     store: store,
