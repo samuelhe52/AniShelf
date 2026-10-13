@@ -26,11 +26,10 @@ struct LibraryProfileSettingsLayoutPolicy {
 }
 
 enum LibraryProfileSettingsDestination: Hashable, CaseIterable {
-    case language, libraryTracking, appearance, reminders, metadataImages, syncData
+    case libraryTracking, appearance, reminders, metadataImages, syncData
 
     var title: LocalizedStringResource {
         switch self {
-        case .language: "Anime Info Language"
         case .libraryTracking: "Library & Tracking"
         case .appearance: "Appearance & Interaction"
         case .reminders: "Airing & Reminders"
@@ -39,10 +38,10 @@ enum LibraryProfileSettingsDestination: Hashable, CaseIterable {
         }
     }
 
-    /// Hub order walks one continuous hue spectrum; each page tints its cards with its step.
+    /// Hub order walks one continuous hue spectrum after the inline language row at step 0;
+    /// each page tints its cards with its step.
     var tint: Color {
         switch self {
-        case .language: LibraryProfileSettingsPalette.step(0)
         case .libraryTracking: LibraryProfileSettingsPalette.step(1)
         case .appearance: LibraryProfileSettingsPalette.step(2)
         case .reminders: LibraryProfileSettingsPalette.step(3)
@@ -53,6 +52,9 @@ enum LibraryProfileSettingsDestination: Hashable, CaseIterable {
 }
 
 enum LibraryProfileSettingsPalette {
+    /// The anime info language row sits inline in the hub Settings card, ahead of the destinations.
+    static var language: Color { step(0) }
+
     /// Teal at step 0, then blue, indigo, violet; the App Info rows continue into pink and rose.
     static func step(_ index: Int) -> Color {
         let hue = (0.47 + 0.07 * Double(index)).truncatingRemainder(dividingBy: 1)

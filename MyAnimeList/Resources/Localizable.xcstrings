@@ -3122,22 +3122,6 @@
         }
       }
     },
-    "Choose the language used for future metadata fetches." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "今後のメタデータ取得に使う言語を選んでください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择用于后续元数据获取的语言。"
-          }
-        }
-      }
-    },
     "Choose which library data to keep." : {
       "localizations" : {
         "ja" : {
@@ -11658,22 +11642,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "同步与数据"
-          }
-        }
-      }
-    },
-    "System (%@)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "システム（%@）"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "系统（%@）"
           }
         }
       }

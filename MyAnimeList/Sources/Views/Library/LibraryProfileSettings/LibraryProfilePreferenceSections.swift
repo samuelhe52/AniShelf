@@ -8,30 +8,34 @@
 import DataProvider
 import SwiftUI
 
-struct LibraryProfileLanguageSettingsSection: View {
+/// Hub row; the language picker is short enough to stay inline instead of pushing a page.
+struct LibraryProfileLanguageSettingsRow: View {
     @Binding var followsSystemLanguage: Bool
     @Binding var preferredLanguage: Language
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            LibraryProfileSettingHeader(
-                title: "Anime Info Language",
-                subtitle: "Choose the language used for future metadata fetches.",
-                systemImage: "globe",
-                tint: LibraryProfileSettingsDestination.language.tint
-            )
+    private var tint: Color { LibraryProfileSettingsPalette.language }
 
-            HStack {
-                Text("Follow System")
-                    .font(.subheadline.weight(.semibold))
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                LibraryProfileSettingIcon(systemImage: "globe", tint: tint)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Anime Info Language")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Follow System")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 12)
                 Toggle("Follow System", isOn: $followsSystemLanguage)
                     .labelsHidden()
-                    .tint(LibraryProfileSettingsDestination.language.tint)
+                    .tint(tint)
                     .scaleEffect(0.78, anchor: .trailing)
                     .frame(width: 42, height: 26, alignment: .trailing)
             }
-            .padding(.vertical, 2)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
 
             if !followsSystemLanguage {
                 Picker("Anime Info Language", selection: $preferredLanguage) {
@@ -40,7 +44,7 @@ struct LibraryProfileLanguageSettingsSection: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .padding(.top, 2)
+                .padding(.bottom, 12)
                 .transition(
                     .asymmetric(
                         insertion: .opacity.combined(with: .move(edge: .top)),
@@ -49,8 +53,6 @@ struct LibraryProfileLanguageSettingsSection: View {
                 )
             }
         }
-        .padding(14)
-        .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsDestination.language.tint)
     }
 }
 

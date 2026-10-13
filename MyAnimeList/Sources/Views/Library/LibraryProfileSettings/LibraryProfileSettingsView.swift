@@ -221,7 +221,8 @@ struct LibraryProfileSettingsView: View {
 
             LibraryProfileSettingsHub(
                 columns: hubColumns,
-                languageSummary: languageSummary,
+                followsSystemLanguage: followsSystemLanguageBinding,
+                preferredLanguage: $preferredLanguage,
                 remindersLoaded: remindersLoaded,
                 syncStatus: store.libraryCloudSyncStatus,
                 whatsNewVersion: whatsNew.currentEntry?.version,
@@ -231,6 +232,7 @@ struct LibraryProfileSettingsView: View {
             )
             .profileReveal(index: 3, appeared: appeared)
         }
+        .animation(languagePickerAnimation, value: followsSystemLanguage)
         .frame(maxWidth: hubColumns == .double ? 1180 : 720)
         .padding(.horizontal, hubColumns == .double ? 28 : 18)
         .padding(.top, 16)
@@ -250,18 +252,10 @@ struct LibraryProfileSettingsView: View {
         )
     }
 
-    private var languageSummary: LocalizedStringResource {
-        if followsSystemLanguage {
-            return "System (\(String(localized: Language.current.localizedStringResource)))"
-        }
-        return preferredLanguage.localizedStringResource
-    }
-
     private func settingsPage(for destination: LibraryProfileSettingsDestination) -> some View {
         LibraryProfileSettingsPage(destination: destination, onClose: dismissSettings) {
             destinationContent(destination)
         }
-        .animation(languagePickerAnimation, value: followsSystemLanguage)
         .animation(languagePickerAnimation, value: episodeProgressTrackingEnabled)
         .animation(languagePickerAnimation, value: store.categoriesEnabled)
         .animation(languagePickerAnimation, value: store.categoryStripEnabled)
@@ -272,10 +266,6 @@ struct LibraryProfileSettingsView: View {
     private func destinationContent(_ destination: LibraryProfileSettingsDestination) -> some View {
         @Bindable var store = store
         switch destination {
-        case .language:
-            LibraryProfileLanguageSettingsSection(
-                followsSystemLanguage: followsSystemLanguageBinding, preferredLanguage: $preferredLanguage
-            )
         case .libraryTracking:
             LibraryProfilePreferencesSection(
                 hideDroppedByDefault: $store.hideDroppedByDefault,

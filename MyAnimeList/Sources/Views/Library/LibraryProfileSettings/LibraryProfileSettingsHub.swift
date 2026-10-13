@@ -5,12 +5,14 @@
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/10/13.
 //
 
+import DataProvider
 import SwiftUI
 
 struct LibraryProfileSettingsHub: View {
     @Environment(\.colorScheme) private var colorScheme
     let columns: LibraryProfileSettingsHubColumns
-    let languageSummary: LocalizedStringResource
+    @Binding var followsSystemLanguage: Bool
+    @Binding var preferredLanguage: Language
     let remindersLoaded: Bool
     let syncStatus: LibraryCloudSyncStatus
     let whatsNewVersion: String?
@@ -22,14 +24,20 @@ struct LibraryProfileSettingsHub: View {
     var body: some View {
         VStack(spacing: 16) {
             PopupSectionCard("Settings", systemImage: "gearshape.2", spacing: 8, panelTint: cardTint) {
-                if columns == .double {
-                    // Column-major halves keep each column's reading order intact.
-                    HStack(alignment: .top, spacing: 16) {
-                        destinationColumn(Array(Self.destinations.prefix(3)))
-                        destinationColumn(Array(Self.destinations.dropFirst(3)))
+                VStack(spacing: 0) {
+                    LibraryProfileLanguageSettingsRow(
+                        followsSystemLanguage: $followsSystemLanguage, preferredLanguage: $preferredLanguage
+                    )
+                    LibraryProfileActionDivider(leadingInset: 44)
+                    if columns == .double {
+                        // Column-major halves keep each column's reading order intact.
+                        HStack(alignment: .top, spacing: 16) {
+                            destinationColumn(Array(Self.destinations.prefix(3)))
+                            destinationColumn(Array(Self.destinations.dropFirst(3)))
+                        }
+                    } else {
+                        destinationColumn(Self.destinations)
                     }
-                } else {
-                    destinationColumn(Self.destinations)
                 }
             }
 
@@ -85,9 +93,6 @@ struct LibraryProfileSettingsHub: View {
     @ViewBuilder
     private func row(_ destination: LibraryProfileSettingsDestination) -> some View {
         switch destination {
-        case .language:
-            LibraryProfileHubRow(
-                title: destination.title, systemImage: "globe", tint: destination.tint, value: languageSummary)
         case .libraryTracking:
             LibraryProfileHubRow(
                 title: destination.title, subtitle: "Defaults, filters, categories, progress",

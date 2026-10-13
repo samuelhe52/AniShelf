@@ -71,3 +71,4 @@ format and make lint. Record failures and unverified iPad/runtime scenarios in
 ## Amendments
 
 - Updated 2026-10-13: Visual review — spectrum tints, Library Details restored to the hub, copy and guide fixes — see [002-visual-review.md](002-visual-review.md)
+- Updated 2026-10-13: Anime Info Language shown inline on the hub — see [003-inline-language.md](003-inline-language.md)
