@@ -57,6 +57,12 @@ extension LibraryView {
     }
 
     private func performJump(to id: LibraryEntryIdentity) {
+        // Search spans the whole library, so leave a category that hides the entry.
+        if store.activeCategoryID != nil,
+            !store.libraryOnDisplay.contains(where: { $0.libraryIdentity == id })
+        {
+            withAnimation(.snappy) { store.activeCategoryID = nil }
+        }
         requestLibraryScroll(to: id)
         highlightRequest = LibraryHighlightRequest(entryID: id)
     }
