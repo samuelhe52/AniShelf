@@ -490,6 +490,8 @@ struct LibrarySortingAndDeletionTests {
 
         store.activeCategoryID = category.id
         #expect(Set(store.libraryOnDisplay.map(\.tmdbID)) == [301, 302])
+        // Search duplicate detection still sees entries the category hides.
+        #expect(store.containsEntry(outsider.libraryIdentity))
         store.filters = [.favorited]
         #expect(store.libraryOnDisplay.map(\.tmdbID) == [301])
 

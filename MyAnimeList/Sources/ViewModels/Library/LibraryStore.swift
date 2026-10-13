@@ -142,6 +142,11 @@ class LibraryStore {
         libraryOnDisplay.map(LibraryEntryDisplayItem.init)
     }
 
+    /// Whether the library already holds an entry, regardless of the active category or filters.
+    func containsEntry(_ identity: LibraryEntryIdentity) -> Bool {
+        library.contains { $0.libraryIdentity == identity }
+    }
+
     var requiresDuplicateRepair: Bool {
         !duplicateEntryGroups.isEmpty
     }

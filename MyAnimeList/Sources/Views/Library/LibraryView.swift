@@ -336,7 +336,7 @@ struct LibraryView: View {
                     deleteSelectedEntries: deleteSelectedEntries,
                     openProfileSettings: openProfileSettings,
                     openCategoryManager: openCategoryManager,
-                    checkDuplicate: { store.libraryOnDisplay.map(\.libraryIdentity).contains($0) },
+                    checkDuplicate: store.containsEntry,
                     processTMDbSearchResults: processTMDbSearchResults,
                     jumpToEntryInLibrary: jumpToEntryInLibrary,
                     onSearchDismissed: searchSheetDidDismiss
