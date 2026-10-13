@@ -32,6 +32,7 @@ struct LibraryView: View {
     @State var isSearching = false
     @State private var showProfileSettings = false
     @State private var showCategoryManager = false
+    @State private var isReorderingCategories = false
     @State var scrollState = ScrollState()
     @State var newEntriesAddedToggle = false
     @State var highlightedEntryID: LibraryEntryIdentity?
@@ -288,7 +289,11 @@ struct LibraryView: View {
             }
             .safeAreaInset(edge: .top, spacing: 0) {
                 if showsCategoryStrip {
-                    LibraryCategoryStrip(openCategoryManager: openCategoryManager)
+                    LibraryCategoryStrip(
+                        openCategoryManager: openCategoryManager,
+                        allowsCategoryActions: !interaction.isMultiSelecting,
+                        isReordering: $isReorderingCategories
+                    )
                 }
             }
             .toolbar {
@@ -301,6 +306,7 @@ struct LibraryView: View {
                     selectionEntriesByID: selectionEntriesByID,
                     supportsMultiSelection: supportsMultiSelection,
                     showsCategoryStrip: showsCategoryStrip,
+                    isReorderingCategories: $isReorderingCategories,
                     enterMultiSelection: enterMultiSelection,
                     exitMultiSelection: exitMultiSelection,
                     applyBatchAction: applyBatchAction,
@@ -317,6 +323,15 @@ struct LibraryView: View {
             .navigationBarTitleDisplayMode(.inline)
             .animation(libraryViewStyleAnimation, value: libraryViewStyle)
             .sensoryFeedback(.success, trigger: newEntriesAddedToggle)
+            .onChange(of: showsCategoryStrip) {
+                if !showsCategoryStrip { isReorderingCategories = false }
+            }
+            .onChange(of: interaction.isMultiSelecting) {
+                isReorderingCategories = false
+            }
+            .onChange(of: isSearching) {
+                if isSearching { isReorderingCategories = false }
+            }
             .sheet(isPresented: $showCategoryManager) {
                 LibraryCategoryManagerSheet()
                     .presentationDetents([.medium, .large])
@@ -507,12 +522,14 @@ struct LibraryView: View {
     }
 
     private func openProfileSettings() {
+        isReorderingCategories = false
         withAnimation(profileSettingsAnimation) {
             showProfileSettings = true
         }
     }
 
     private func openCategoryManager() {
+        isReorderingCategories = false
         showCategoryManager = true
     }
 

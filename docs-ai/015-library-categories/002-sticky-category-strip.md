@@ -41,13 +41,16 @@ existing category dialogs, and Edit Categories opens the existing manager sheet.
 - The visual review supersedes the original flat text-tab/underline treatment
   with a floating glass surface and a sliding selection capsule. The setting,
   placement, and category behavior decisions remain in force.
-- Reorder uses native SwiftUI `draggable` and
+- The initial reorder implementation used native SwiftUI `draggable` and
   `dropDestination` on category tabs only. Dropping onto another tab calls
   `store.moveCategory`; the destination is highlighted during hover. Order commits
   on drop instead of changing during hover, so cancellation leaves order intact
   and moving drop targets cannot oscillate beneath the pointer. A per-reorder-mode
   token rejects unrelated text and drags from another window or an earlier mode.
-  All has no drag source or drop destination; Done exits the mode.
+  All has no drag source or drop destination; Done exits the mode. Superseded by
+  [003-interactive-tab-reordering.md](003-interactive-tab-reordering.md): the
+  current strip uses a short-hold gesture with live local rearrangement and edge
+  scrolling, plus a wiggle and Done in the upper-right toolbar.
 - Native horizontal dragging was chosen over a custom pan recognizer to leave
   horizontal scrolling with the system and avoid competing gestures. Its actual
   edge scrolling and feel remain for the maintainer's UI checks; no manual drag
@@ -76,8 +79,10 @@ vertical rail padding. Dynamic Type can still increase the content height.
 The strip measures only its horizontal viewport and gives every tab an equal
 minimum share of the available width (after padding and gaps). Short names fill
 the row, including All plus two categories; longer names retain their intrinsic
-width and overflow scrolls horizontally. Reorder mode accounts for the width
-occupied by Done, and viewport changes keep the selected tab visible.
+width and overflow scrolls horizontally. The initial reorder mode accounted for
+the width occupied by Done; amendment [003](003-interactive-tab-reordering.md)
+moves Done to the upper toolbar, leaving the full rail width available. Viewport
+changes keep the selected tab visible.
 
 The next screenshot showed library titles and poster detail competing with the
 category labels through the glass. The readability revision changes inactive labels

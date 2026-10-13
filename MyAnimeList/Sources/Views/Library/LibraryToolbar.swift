@@ -18,6 +18,7 @@ struct LibraryToolbar: ToolbarContent {
     let selectionEntriesByID: [LibraryEntryIdentity: AnimeEntry]
     let supportsMultiSelection: Bool
     let showsCategoryStrip: Bool
+    @Binding var isReorderingCategories: Bool
     let enterMultiSelection: () -> Void
     let exitMultiSelection: () -> Void
     let applyBatchAction: (LibraryBatchAction) -> Void
@@ -44,7 +45,15 @@ struct LibraryToolbar: ToolbarContent {
                 openCategoryManager: openCategoryManager
             )
         }
-        if supportsMultiSelection && !interaction.isMultiSelecting {
+        if isReorderingCategories {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(LocalizedStringResource("Done")) {
+                    withAnimation(.snappy) { isReorderingCategories = false }
+                }
+                .font(.headline.weight(.semibold))
+            }
+        }
+        if supportsMultiSelection && !interaction.isMultiSelecting && !isReorderingCategories {
             // Counterbalances the trailing controls so the principal title sits visually left of center.
             ToolbarItem(placement: .topBarTrailing) {
                 Color.clear
@@ -61,7 +70,7 @@ struct LibraryToolbar: ToolbarContent {
                 }
                 .accessibilityLabel(Text("Dismiss Selection"))
             }
-        } else {
+        } else if !isReorderingCategories {
             ToolbarItem(placement: .topBarTrailing) {
                 if supportsMultiSelection {
                     Button(action: enterMultiSelection) {

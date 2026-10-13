@@ -1,34 +1,66 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Drag onto another category to reorder." : {
+    "Move Left" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "別のカテゴリにドラッグして並べ替えます。"
+            "value" : "左に移動"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "拖到另一个分类上以调整顺序。"
+            "value" : "向左移动"
           }
         }
       }
     },
-    "Reorder" : {
+    "Move Right" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "並べ替え"
+            "value" : "右に移動"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "重新排序"
+            "value" : "向右移动"
+          }
+        }
+      }
+    },
+    "Hold and drag to reorder." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "長押ししてドラッグすると並べ替えられます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "长按并拖动以调整顺序。"
+          }
+        }
+      }
+    },
+    "Reorder Tabs" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タブを並べ替え"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "调整标签顺序"
           }
         }
       }
