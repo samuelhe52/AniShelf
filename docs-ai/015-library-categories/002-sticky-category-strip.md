@@ -171,11 +171,23 @@ performed; switching categories while selecting remains for the maintainer to ch
 - Catalog comparison: exactly four new keys, all with Japanese and Simplified
   Chinese translations; existing entries are unchanged.
 
+### Animated first appearance
+
+The maintainer found (2026-10-13) that with the strip enabled and no categories,
+creating the first one from the selection menu's "New Category…" made the strip
+appear abruptly. `showsCategoryStrip` hides the strip until a category exists, and
+that path called `createCategory` outside an animation transaction; the manager
+sheet's create path already used `withAnimation`. `LibraryView` now applies
+`.animation(.snappy, value: showsCategoryStrip)` at the strip's safe-area inset, so
+every path animates, including a first category arriving through sync and deleting
+the last one. Rejected: wrapping only the selection-menu call, which leaves the
+sync and deletion paths abrupt.
+
+Validation: `make run-sim` built, installed, and launched on the booted iPhone 18
+Pro simulator. The maintainer confirmed the animation on 2026-10-13.
+
 ## Open questions
 
-- Maintainer UI checks remain: glass integration, selection capsule/scrolling,
-  long-press dialogs, native drag/drop including offscreen targets, Dynamic Type,
-  and transitions into/out of multi-selection. Validation here is limited to
-  building, focused non-UI tests, and launching the already-booted simulator.
-- Cloud transport between devices and backup-file restore were not exercised;
-  the option reuses the existing allowlists and settings payload path.
+- Maintainer UI checks passed (2026-10-13): glass integration, selection
+  capsule/scrolling, long-press dialogs, reordering, Dynamic Type, and
+  transitions into/out of multi-selection.

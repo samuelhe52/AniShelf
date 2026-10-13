@@ -28,8 +28,8 @@ historical runtime scenario was rerun. Entry 010 remains an unimplemented propos
 | 012 | 2026-10-03 | [Rewatch tracking and clocked progress resets](012-rewatch-tracking/000-plan.md) | Implemented (retrospective) | [Action](012-rewatch-tracking/001-action.md) |
 | 013 | 2026-10-07 | [Curated decision records](013-documentation-workflow/000-plan.md) | Implemented | [Action](013-documentation-workflow/001-action.md) |
 | 014 | 2026-06-20 | [Library multi-selection rendering invariants](014-multiselect-invariants/000-plan.md) | Implemented (retrospective) | [Action](014-multiselect-invariants/001-action.md) |
-| 015 | 2026-10-13 | [Library categories](015-library-categories/000-plan.md) | In progress | [Action](015-library-categories/001-action.md), [optional sticky strip](015-library-categories/002-sticky-category-strip.md), [interactive reordering](015-library-categories/003-interactive-tab-reordering.md) |
-| 016 | 2026-10-13 | [Settings hub](016-settings-hub/000-plan.md) | Implemented | [Action](016-settings-hub/001-action.md), [visual review](016-settings-hub/002-visual-review.md) |
+| 015 | 2026-10-13 | [Library categories](015-library-categories/000-plan.md) | Implemented | [Action](015-library-categories/001-action.md), [optional sticky strip](015-library-categories/002-sticky-category-strip.md), [interactive reordering](015-library-categories/003-interactive-tab-reordering.md) |
+| 016 | 2026-10-13 | [Settings hub](016-settings-hub/000-plan.md) | Implemented | [Action](016-settings-hub/001-action.md), [visual review](016-settings-hub/002-visual-review.md), [inline language](016-settings-hub/003-inline-language.md), [section palette](016-settings-hub/004-section-palette.md), [iPad workspace](016-settings-hub/005-ipad-workspace.md) |
 
 ## Find a contract or source
 

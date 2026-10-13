@@ -8,6 +8,7 @@
 | 2026-10-13 | `SchemaV2_8_3`, entry/record/settings sync fields, and DataProvider tests. | `pzzpuvtw` |
 | 2026-10-13 | App feature: preferences, store operations, selection-bar Category menu, title capsule menu, browse-menu Category picker, manager sheet, settings rows, localization, app tests. | `lwopslvt` |
 | 2026-10-13 | Maintainer review rounds, folded into `lwopslvt`: settings rows moved to the end of General and animated at the settings card (like the language and episode-progress options); selection menu labels aligned, the create item shortened, and the menu kept open after a pick; a pull-to-reveal strip was built, found non-linear, rebuilt as a content-embedded strip, then removed; an always-visible capsule chevron was rejected; the browse-menu Category picker joined the first section, renamed from "Group By" to "View", to save height. | `lwopslvt` |
+| 2026-10-13 | Maintainer UI checks passed. Animated the strip's first appearance ([002](002-sticky-category-strip.md#animated-first-appearance)). Added categories to the app tutorials (step 9) and the website guides (`#categories`, EN/ZH/JA). | `10da259`; site `b3e55a3`; this record's docs commit |
 
 ## Outcome and current state (as of 2026-10-13)
 
@@ -101,13 +102,9 @@ Key files:
   [002-sticky-category-strip.md](002-sticky-category-strip.md); its validation
   and remaining UI checks are recorded there.
 
-- Manual UI checks are pending (maintainer): capsule menu, bottom-menu
-  Category picker, selection menu staying open with live checkmarks, manager
-  sheet editing. Discoverability of the capsule menu in All mode is an open
-  design concern; the bottom-menu picker is the fallback.
-- Whether an open SwiftUI menu refreshes its checkmark/dash labels after a
-  pick with `.menuActionDismissBehavior(.disabled)` is unverified at runtime.
-- The selection menu's blank icon relies on menus reserving a column when
-  every row has an image; unverified at runtime.
+- Maintainer UI checks passed (2026-10-13): capsule menu, bottom-menu Category
+  picker, selection menu staying open with live checkmarks and aligned blank
+  icons, and manager sheet editing. Discoverability of the capsule menu in All
+  mode was an open concern; the optional strip and the bottom-menu picker cover it.
 - Older builds pause settings export while the server holds a non-empty
   category list. This is the intended trade-off, not observed on a device.

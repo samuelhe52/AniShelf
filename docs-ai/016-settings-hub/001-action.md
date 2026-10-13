@@ -4,9 +4,9 @@
 
 | Date | Change | Ref |
 | --- | --- | --- |
-| 2026-10-13 | Read the approved HTML plan and wrote 000-plan.md before code. | Working tree |
-| 2026-10-13 | Implemented flat navigation, focused settings sections, live hub status, and stable presentation ownership. | Working tree |
-| 2026-10-13 | Added translations and focused tests; updated app tutorials and three website guide locales. | Working tree |
+| 2026-10-13 | Read the approved HTML plan and wrote 000-plan.md before code. | `3b3d07b` |
+| 2026-10-13 | Implemented flat navigation, focused settings sections, live hub status, and stable presentation ownership. | `3b3d07b` |
+| 2026-10-13 | Added translations and focused tests; updated app tutorials and three website guide locales. | `3b3d07b`, `03397d1`; site `2a37952` |
 | 2026-10-13 | Samuel withdrew further visual checks and will perform them himself. | User instruction |
 
 ## Outcome and current state (as of 2026-10-13)
@@ -102,8 +102,9 @@ checks were tooling failures, not app failures.
 
 ## Open questions / remaining manual verification
 
-Samuel will verify all destinations, animation timing on Back, iPad
-layout/resizing, accessibility Dynamic Type, dark mode, and other app locales.
-Real iCloud conflict delivery during an open modal, import/restore/export flows,
-and notification permission transitions were not exercised against live services.
-Website light/dark and responsive visual checks were also stopped at his request.
+Samuel verified the remaining checks on 2026-10-13: all destinations, animation
+timing on Back, iPad layout/resizing, Dynamic Type, dark mode, other locales,
+the live-service flows (iCloud conflicts during a modal, import/restore/export,
+notification permissions), and website light/dark and responsive layout. The
+later amendments (003–005) were covered by the same review. Only the Chinese
+你/您 mix ([002](002-visual-review.md)) remains, deferred.

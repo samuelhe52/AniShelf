@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status | In progress (code complete; manual UI checks pending) |
+| Status | Implemented |
 | Anchor date | 2026-10-13 |
 | Origin | Maintainer request on 2026-10-13 (custom categories with a Telegram-style switcher); decisions taken through an interactive HTML plan the same day |
 | Related | [005-adaptive-library](../005-adaptive-library/000-plan.md), [009-cloud-sync-correctness](../009-cloud-sync-correctness/000-plan.md), [014-multiselect-invariants](../014-multiselect-invariants/000-plan.md), [002-image-path-storage](../002-image-path-storage/000-plan.md) |

@@ -49,5 +49,5 @@ Samuel asked for an audit of Codex's copy and docs.
 
 ## Open questions
 
-- Chinese mixes 你 and 您. Not normalized here.
-- iPad layout, dark mode, and accessibility sizes remain unverified.
+- Chinese mixes 你 and 您. Deferred by Samuel (2026-10-13) to a later pass.
+- iPad layout, dark mode, and accessibility sizes: verified by Samuel (2026-10-13).
