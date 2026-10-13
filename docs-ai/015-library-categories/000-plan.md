@@ -99,4 +99,4 @@ proposed `MyAnimeList/Sources/Views/Library/Categories/`.
 
 ## Amendments
 
-None yet.
+- Updated 2026-10-13: Optional always-visible category strip for List and Grid — see [002-sticky-category-strip.md](002-sticky-category-strip.md)
