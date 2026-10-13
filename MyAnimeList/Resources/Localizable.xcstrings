@@ -642,18 +642,18 @@
         }
       }
     },
-    "Add anime with Select in List or Grid view. Drag to reorder categories." : {
+    "Add anime with Select in List or Grid view. Touch and hold to reorder categories." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "リストまたはグリッド表示の「選択」でアニメを追加します。ドラッグでカテゴリを並べ替えられます。"
+            "value" : "リストまたはグリッド表示の「選択」でアニメを追加します。長押ししてカテゴリを並べ替えられます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在列表或网格视图中使用“选择”添加动画。拖移可调整分类的顺序。"
+            "value" : "在列表或网格视图中使用“选择”添加动画。按住可调整分类的顺序。"
           }
         }
       }
@@ -11434,6 +11434,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "视图"
+          }
+        }
+      }
+    },
+    "%lld anime" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 作品"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 部动画"
           }
         }
       }

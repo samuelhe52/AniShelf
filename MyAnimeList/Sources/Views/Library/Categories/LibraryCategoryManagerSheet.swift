@@ -26,28 +26,35 @@ struct LibraryCategoryManagerSheet: View {
                         Button {
                             namePrompt = .init(purpose: .rename(category))
                         } label: {
-                            HStack {
+                            VStack(alignment: .leading, spacing: 2) {
                                 Text(category.name)
                                     .foregroundStyle(.primary)
-                                Spacer(minLength: 12)
-                                Text("\(counts[category.id, default: 0])")
+                                Text("\(counts[category.id, default: 0]) anime")
+                                    .font(.subheadline)
                                     .monospacedDigit()
                                     .foregroundStyle(.secondary)
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityHint(Text("Renames the category"))
+                        .swipeActions(edge: .trailing) {
+                            // Not `.destructive`: that role removes the row before the user confirms.
+                            Button("Delete", systemImage: "trash") {
+                                deletingCategory = category
+                            }
+                            .tint(.red)
+                            Button("Rename", systemImage: "pencil") {
+                                namePrompt = .init(purpose: .rename(category))
+                            }
+                        }
                     }
                     .onMove { source, destination in
                         store.moveCategories(fromOffsets: source, toOffset: destination)
                     }
-                    .onDelete { offsets in
-                        guard let index = offsets.first, store.categories.indices.contains(index) else { return }
-                        deletingCategory = store.categories[index]
-                    }
                 } footer: {
-                    Text("Add anime with Select in List or Grid view. Drag to reorder categories.")
+                    Text("Add anime with Select in List or Grid view. Touch and hold to reorder categories.")
                 }
             }
             .overlay {
@@ -59,17 +66,20 @@ struct LibraryCategoryManagerSheet: View {
                     }
                 }
             }
-            .environment(\.editMode, .constant(.active))
+            .contentMargins(.top, 8, for: .scrollContent)
             .navigationTitle("Categories")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(action: dismiss.callAsFunction) {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel(Text("Close"))
+                }
+                ToolbarItem(placement: .primaryAction) {
                     Button("New Category", systemImage: "plus") {
                         namePrompt = .init(purpose: .create(memberCount: 0))
                     }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
                 }
             }
             .libraryCategoryNamePrompt($namePrompt) { prompt, name in
