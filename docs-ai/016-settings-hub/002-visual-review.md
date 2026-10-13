@@ -32,6 +32,9 @@ Samuel asked for an audit of Codex's copy and docs.
   "Support AniShelf" (`支持AniShelf`) and its Japanese string lost theirs to match
   "About AniShelf". The existing Chinese "Library Details" translation (`详情`)
   became `资料库详情`.
+  A follow-up removed every remaining manual space between CJK text and Latin
+  letters, digits, or format placeholders in the Japanese and Chinese catalog
+  entries (178 values; placeholders were masked so `%lld` stays intact).
 - App tutorials list the six groups inside step 9, replacing a standalone
   "Settings now groups…" paragraph. Website guides use the corrected names and
   drop a path repeated in the bullet after "These controls are in Sync & Data".
@@ -46,6 +49,5 @@ Samuel asked for an audit of Codex's copy and docs.
 
 ## Open questions
 
-- Older catalog strings outside this change still contain manual CJK–Latin spaces
-  (both languages), and Chinese mixes 你 and 您. Not normalized here.
+- Chinese mixes 你 and 您. Not normalized here.
 - iPad layout, dark mode, and accessibility sizes remain unverified.
