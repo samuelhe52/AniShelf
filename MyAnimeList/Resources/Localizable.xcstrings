@@ -7308,22 +7308,6 @@
         }
       }
     },
-    "Paste your new API Key. AniShelf will check it before saving." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新しいAPIキーを貼り付けてください。保存前にAniShelfが確認します。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请粘贴新的API密钥。AniShelf会在保存前检查。"
-          }
-        }
-      }
-    },
     "Paste your TMDB API Key here. AniShelf will check it before saving." : {
       "localizations" : {
         "ja" : {

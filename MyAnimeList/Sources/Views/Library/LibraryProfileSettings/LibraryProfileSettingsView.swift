@@ -471,7 +471,7 @@ struct LibraryProfileSettingsView: View {
         switch sheet {
         case .changeAPIKey:
             TMDbAPIConfigurator()
-                .presentationDetents([.fraction(0.65), .large])
+                .presentationDetents([.medium, .large])
                 .presentationSizing(.form)
         case .support:
             NavigationStack {
