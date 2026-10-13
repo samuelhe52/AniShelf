@@ -17,6 +17,7 @@ struct LibraryToolbar: ToolbarContent {
     @Binding var isSearching: Bool
     let selectionEntriesByID: [LibraryEntryIdentity: AnimeEntry]
     let supportsMultiSelection: Bool
+    let showsCategoryStrip: Bool
     let enterMultiSelection: () -> Void
     let exitMultiSelection: () -> Void
     let applyBatchAction: (LibraryBatchAction) -> Void
@@ -39,6 +40,7 @@ struct LibraryToolbar: ToolbarContent {
             LibraryToolbarTitle(
                 store: store,
                 interaction: interaction,
+                showsCategoryStrip: showsCategoryStrip,
                 openCategoryManager: openCategoryManager
             )
         }
@@ -134,11 +136,12 @@ struct LibraryToolbar: ToolbarContent {
 fileprivate struct LibraryToolbarTitle: View {
     let store: LibraryStore
     let interaction: LibraryEntryInteractionState
+    let showsCategoryStrip: Bool
     let openCategoryManager: () -> Void
 
     var body: some View {
-        if store.categoriesEnabled && !interaction.isMultiSelecting {
-            // The capsule is the category switcher in every view style.
+        if store.categoriesEnabled && !interaction.isMultiSelecting && !showsCategoryStrip {
+            // Gallery and strip-off keep the capsule category switcher.
             Menu {
                 Picker(
                     "Category",
@@ -168,7 +171,7 @@ fileprivate struct LibraryToolbarTitle: View {
     private var capsule: some View {
         LibraryNavigationTitleCapsule(
             count: interaction.isMultiSelecting ? interaction.selectedEntryCount : store.libraryOnDisplay.count,
-            categoryName: interaction.isMultiSelecting ? nil : store.activeCategory?.name
+            categoryName: interaction.isMultiSelecting || showsCategoryStrip ? nil : store.activeCategory?.name
         )
     }
 }

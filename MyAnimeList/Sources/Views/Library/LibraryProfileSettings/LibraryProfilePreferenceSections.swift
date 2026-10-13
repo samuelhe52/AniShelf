@@ -251,6 +251,13 @@ fileprivate struct LibraryProfileCategorySettingsRows: View {
             )
 
             if store.categoriesEnabled {
+                LibraryProfileSettingsToggleRow(
+                    title: "Sticky Category Strip",
+                    subtitle: "Keep category tabs below the navigation bar in List and Grid views.",
+                    isOn: $store.categoryStripEnabled
+                )
+                .transition(.opacity)
+
                 Button {
                     showCategoryManager = true
                 } label: {

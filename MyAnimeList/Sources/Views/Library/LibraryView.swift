@@ -282,6 +282,11 @@ struct LibraryView: View {
             ZStack {
                 libraryView
             }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if showsCategoryStrip {
+                    LibraryCategoryStrip(openCategoryManager: openCategoryManager)
+                }
+            }
             .toolbar {
                 LibraryToolbar(
                     store: store,
@@ -291,6 +296,7 @@ struct LibraryView: View {
                     isSearching: $isSearching,
                     selectionEntriesByID: selectionEntriesByID,
                     supportsMultiSelection: supportsMultiSelection,
+                    showsCategoryStrip: showsCategoryStrip,
                     enterMultiSelection: enterMultiSelection,
                     exitMultiSelection: exitMultiSelection,
                     applyBatchAction: applyBatchAction,
@@ -314,6 +320,11 @@ struct LibraryView: View {
             .allowsHitTesting(!showProfileSettings)
             .accessibilityHidden(showProfileSettings)
         }
+    }
+
+    private var showsCategoryStrip: Bool {
+        store.categoriesEnabled && store.categoryStripEnabled
+            && supportsMultiSelection && !interaction.isMultiSelecting
     }
 
     // MARK: - Content

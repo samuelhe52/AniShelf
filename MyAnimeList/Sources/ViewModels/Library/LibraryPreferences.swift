@@ -17,6 +17,7 @@ struct LibraryPreferences {
         let defaultFilters: Set<LibraryStore.AnimeFilter>
         let autoPrefetchImagesOnAddAndRestore: Bool
         let longTermGalleryPosterCachingEnabled: Bool
+        let categoryStripEnabled: Bool
         let categoriesEnabled: Bool
         let categories: [LibraryCategory]
         let cloudSyncStatus: LibraryCloudSyncStatus
@@ -49,6 +50,7 @@ struct LibraryPreferences {
                 forKey: .libraryLongTermGalleryPosterCachingEnabled,
                 defaultValue: false
             ),
+            categoryStripEnabled: loadBool(forKey: .libraryCategoryStripEnabled, defaultValue: false),
             categoriesEnabled: loadBool(forKey: .libraryCategoriesEnabled, defaultValue: false),
             categories: loadCategories(),
             cloudSyncStatus: loadCloudSyncStatus()
@@ -77,6 +79,10 @@ struct LibraryPreferences {
 
     func saveCategoriesEnabled(_ value: Bool) {
         defaults.setValue(value, forKey: .libraryCategoriesEnabled)
+    }
+
+    func saveCategoryStripEnabled(_ value: Bool) {
+        defaults.setValue(value, forKey: .libraryCategoryStripEnabled)
     }
 
     func saveCategories(_ categories: [LibraryCategory]) {
@@ -329,7 +335,8 @@ struct LibraryPreferences {
                 .libraryHideDroppedByDefault,
                 .libraryAutoPrefetchImagesOnAddAndRestore,
                 .useTMDbRelayServer,
-                .libraryCategoriesEnabled:
+                .libraryCategoriesEnabled,
+                .libraryCategoryStripEnabled:
                 if defaults.object(forKey: key) != nil {
                     payload[key] = .bool(defaults.bool(forKey: key))
                 }

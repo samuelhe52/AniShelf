@@ -118,6 +118,10 @@ class LibraryStore {
             if !categoriesEnabled { activeCategoryID = nil }
         }
     }
+    /// Optional pinned switcher for List and Grid; retained when categories are disabled.
+    var categoryStripEnabled: Bool = false {
+        willSet { preferences.saveCategoryStripEnabled(newValue) }
+    }
     /// Category definitions in display order. Write through the category operations.
     var categories: [LibraryCategory] = [] {
         willSet { preferences.saveCategories(newValue) }
@@ -218,6 +222,9 @@ class LibraryStore {
         }
         if categoriesEnabled != snapshot.categoriesEnabled {
             categoriesEnabled = snapshot.categoriesEnabled
+        }
+        if categoryStripEnabled != snapshot.categoryStripEnabled {
+            categoryStripEnabled = snapshot.categoryStripEnabled
         }
         if categories != snapshot.categories {
             categories = snapshot.categories

@@ -1,6 +1,70 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Drag onto another category to reorder." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別のカテゴリにドラッグして並べ替えます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拖到另一个分类上以调整顺序。"
+          }
+        }
+      }
+    },
+    "Reorder" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "並べ替え"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新排序"
+          }
+        }
+      }
+    },
+    "Keep category tabs below the navigation bar in List and Grid views." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リスト表示とグリッド表示で、ナビゲーションバーの下にカテゴリタブを固定表示します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在列表和网格视图中，将分类标签固定在导航栏下方。"
+          }
+        }
+      }
+    },
+    "Sticky Category Strip" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カテゴリタブを固定表示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "固定分类栏"
+          }
+        }
+      }
+    },
     "" : {
       "localizations" : {
         "ja" : {

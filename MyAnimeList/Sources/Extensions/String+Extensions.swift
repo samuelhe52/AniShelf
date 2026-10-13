@@ -38,6 +38,7 @@ extension String {
     static let libraryDefaultFilters = "LibraryDefaultFilters"
     static let libraryDefaultFilterPreset = "LibraryDefaultFilterPreset"
     static let libraryCategoriesEnabled = "LibraryCategoriesEnabled"
+    static let libraryCategoryStripEnabled = "LibraryCategoryStripEnabled"
     static let libraryCategories = "LibraryCategories"
     static let libraryAutoPrefetchImagesOnAddAndRestore = "LibraryAutoPrefetchImagesOnAddAndRestore"
     static let libraryLongTermGalleryPosterCachingEnabled = "LibraryLongTermGalleryPosterCachingEnabled"
@@ -96,6 +97,7 @@ extension String {
         .libraryAutoPrefetchImagesOnAddAndRestore,
         .libraryLongTermGalleryPosterCachingEnabled,
         .libraryCategoriesEnabled,
+        .libraryCategoryStripEnabled,
         .libraryCategories,
         .useSoftNavigationBarEdges,
         .useTMDbRelayServer,
@@ -123,6 +125,7 @@ extension String {
         .libraryAutoPrefetchImagesOnAddAndRestore,
         .useTMDbRelayServer,
         .libraryCategoriesEnabled,
+        .libraryCategoryStripEnabled,
         .libraryCategories
     ]
 }

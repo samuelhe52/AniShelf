@@ -43,8 +43,8 @@ Key files:
 
 ## Deviations from plan
 
-- No category strip ships. After the content-embedded strip, the maintainer
-  chose to drop it: the title capsule already works as a menu, and a strip
+- The first delivery shipped no category strip. After the content-embedded strip,
+  the maintainer chose to drop it: the title capsule already works as a menu, and a strip
   costs space. The plan's strip, chip long-press actions, and drag reorder in
   the strip (decision `reorder=strip`) are gone; reorder lives in the manager
   sheet. The strip history below is kept as the reason for this choice.
@@ -96,8 +96,9 @@ Key files:
 
 ## Open questions
 
-- Next step (maintainer, 2026-10-13): a setting that lets users choose a
-  persistent sticky category strip. Not started.
+- Follow-up (2026-10-13): the optional persistent strip is implemented in
+  [002-sticky-category-strip.md](002-sticky-category-strip.md); its validation
+  and remaining UI checks are recorded there.
 
 - Manual UI checks are pending (maintainer): capsule menu, bottom-menu
   Category picker, selection menu staying open with live checkmarks, manager
