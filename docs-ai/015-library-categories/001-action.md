@@ -69,8 +69,9 @@ Key files:
 - The manager sheet is presented with local sheet state from Settings and the
   library, not through a new `LibraryProfileSettingsSheet` case, because the
   library view also opens it.
-- The capsule menu is unavailable during multi-selection, because switching
-  category then would drop selected anime outside the new view.
+- The capsule menu was first unavailable during multi-selection, because switching
+  category would drop selected anime outside the new view. Since revised: see
+  [002 › Multi-selection revision](002-sticky-category-strip.md#multi-selection-revision).
 - Category-related menu strings avoid inflection markup; "anime" does not
   inflect in English and the catalog has no inflected entries.
 

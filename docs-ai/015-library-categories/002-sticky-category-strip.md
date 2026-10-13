@@ -21,7 +21,7 @@ treatment were revised after the same-day visual review, as recorded below:
 | Long press | Telegram menu: a category tab gives Reorder, Rename, Edit Categories…, Delete; "All" gives Reorder and Edit Categories…. Reorder makes the tabs draggable until Done; "All" stays first. "Menu only" was rejected. |
 | Swipe content | No. Sideways swipes on the List or Grid do not switch category; they would compete with List swipe actions. |
 | Title capsule | While the strip shows (List or Grid with the option on), the capsule shows the plain title with no category name and no menu. Gallery and strip-off keep the capsule menu. |
-| Multi-selection | The strip hides during multi-selection, like the capsule menu, because switching category would drop selected anime outside the view. |
+| Multi-selection | Originally hidden during multi-selection, like the capsule menu. Superseded the same day: both stay available while selecting (see [Multi-selection revision](#multi-selection-revision)). |
 
 Initially implemented as a full-width `.bar` material surface in a top safe-area
 inset. The visual revision uses an inset `.glassEffect(.regular, in: .capsule)`
@@ -91,6 +91,35 @@ maintainer said readability must retain; no surface is layered under the glass.
 Lighter typography (medium selected tab and Done, regular inactive tabs) was also
 tried; the maintainer preferred the original weights, so the selected tab and Done
 stay semibold and inactive tabs stay medium at subheadline size.
+
+### Multi-selection revision
+
+The strip and the capsule menu were first hidden during multi-selection because
+switching category drops selected anime that the new category does not show. The
+maintainer then pointed out (2026-10-13) that users expect a selection to belong to
+the current view, as in Photos albums or Files folders, so a category switch
+narrowing it is unsurprising. Both controls now stay available while selecting.
+
+Switching relies on the existing `activeCategoryID` observer, which refreshes the
+selection snapshot and intersects the selection with the newly displayed entries.
+Anime that are still visible stay selected, matching other view changes during
+selection; clearing the whole selection was considered and not chosen. Keeping
+hidden selections across categories was rejected: batch delete and status
+changes would reach anime that are off screen, and the count would no longer
+match the view. Keeping the strip visible also removes the 48-point content shift
+when entering or leaving selection. The capsule label is unchanged: it still shows
+the selection count without a category name.
+
+The `activeCategoryID` observer wraps the snapshot refresh in `withAnimation(.snappy)`.
+While selecting, the list renders the snapshot rather than the live display items,
+and `onChange` did not reliably inherit the strip's animated transaction, so the
+maintainer saw some switches jump without animation.
+
+Validation: `make build`, `swift format lint` on the two changed views, and
+`git diff --check` passed; `make run-sim` launched on the already-booted iPhone 18
+Pro simulator (PID 21014; PID 24137 after the animation fix). No tests were added, because the change only removes a
+visibility condition and the pruning path is unchanged. No manual walkthrough was
+performed; switching categories while selecting remains for the maintainer to check.
 
 ## Refs
 

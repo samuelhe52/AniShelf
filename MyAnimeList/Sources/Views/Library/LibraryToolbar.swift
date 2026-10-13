@@ -140,7 +140,7 @@ fileprivate struct LibraryToolbarTitle: View {
     let openCategoryManager: () -> Void
 
     var body: some View {
-        if store.categoriesEnabled && !interaction.isMultiSelecting && !showsCategoryStrip {
+        if store.categoriesEnabled && !showsCategoryStrip {
             // Gallery and strip-off keep the capsule category switcher.
             Menu {
                 Picker(

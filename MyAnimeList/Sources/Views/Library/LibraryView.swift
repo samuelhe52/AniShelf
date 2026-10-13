@@ -101,7 +101,11 @@ struct LibraryView: View {
             refreshSelectionDisplayItemsIfNeeded()
         }
         .onChange(of: store.activeCategoryID) {
-            refreshSelectionDisplayItemsIfNeeded()
+            // onChange does not reliably inherit the switch's animation, and
+            // the selection snapshot is what the list renders while selecting.
+            withAnimation(.snappy) {
+                refreshSelectionDisplayItemsIfNeeded()
+            }
         }
         .onChange(of: airingReminders.pendingRoute, initial: true) {
             handleAiringReminderRoute()
@@ -323,8 +327,8 @@ struct LibraryView: View {
     }
 
     private var showsCategoryStrip: Bool {
-        store.categoriesEnabled && store.categoryStripEnabled
-            && supportsMultiSelection && !interaction.isMultiSelecting
+        // Stays during multi-selection; switching keeps only still-visible selections.
+        store.categoriesEnabled && store.categoryStripEnabled && supportsMultiSelection
     }
 
     // MARK: - Content
