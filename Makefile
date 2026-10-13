@@ -7,6 +7,8 @@ DEVICE_SCHEME ?= MyAnimeList-Release
 APP_NAME ?= MyAnimeList
 CONFIGURATION ?= Debug
 DEVICE_CONFIGURATION ?= Release
+RELEASE_TESTING_DIR ?= $(CURDIR)/.build/release-testing
+RELEASE_TESTING_EXPORT_OPTIONS ?= scripts/ReleaseTestingExportOptions.plist
 BUNDLE_ID ?= com.samuelhe.MyAnimeList
 APP_TEST_ONLY ?= MyAnimeListTests
 DATAPROVIDER_TEST_FILTER ?=
@@ -75,6 +77,13 @@ test-sim:
 	@echo "All tests completed."
 
 # Build and Run
+.PHONY: release-testing
+release-testing:
+	@mkdir -p "$(RELEASE_TESTING_DIR)"
+	xcodebuild -quiet -project "$(PROJECT)" -scheme "$(DEVICE_SCHEME)" -configuration "$(DEVICE_CONFIGURATION)" -destination 'generic/platform=iOS' -archivePath "$(RELEASE_TESTING_DIR)/$(APP_NAME).xcarchive" -allowProvisioningUpdates archive
+	xcodebuild -exportArchive -archivePath "$(RELEASE_TESTING_DIR)/$(APP_NAME).xcarchive" -exportOptionsPlist "$(RELEASE_TESTING_EXPORT_OPTIONS)" -exportPath "$(RELEASE_TESTING_DIR)/export" -allowProvisioningUpdates
+	@echo "Release Testing IPA: $(RELEASE_TESTING_DIR)/export/$(APP_NAME).ipa"
+
 .PHONY: build
 build:
 	@echo "Building $(SCHEME)..."
