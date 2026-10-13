@@ -16,6 +16,19 @@ struct LibraryScrollRequest: Equatable {
     let entryID: LibraryEntryIdentity?
 }
 
+struct LibraryHighlightRequest: Equatable {
+    // A fresh token restarts the pulse even when the same entry is requested again.
+    let token = UUID()
+    let entryID: LibraryEntryIdentity
+
+    /// Long enough for a row created late in the jump scroll to finish its pulse.
+    static let lifetime: Duration = .seconds(2)
+
+    func trigger(for entryID: LibraryEntryIdentity) -> UUID? {
+        self.entryID == entryID ? token : nil
+    }
+}
+
 struct LibraryView: View {
     // MARK: - Stored Properties
 
@@ -35,7 +48,7 @@ struct LibraryView: View {
     @State private var isReorderingCategories = false
     @State var scrollState = ScrollState()
     @State var newEntriesAddedToggle = false
-    @State var highlightedEntryID: LibraryEntryIdentity?
+    @State var highlightRequest: LibraryHighlightRequest?
     @State var scrollRequest: LibraryScrollRequest?
     @State private var inspectorDetailWorkspaceState = LibraryInspectorDetailWorkspaceState()
 
@@ -107,6 +120,13 @@ struct LibraryView: View {
             withAnimation(.snappy) {
                 refreshSelectionDisplayItemsIfNeeded()
             }
+        }
+        .task(id: highlightRequest?.token) {
+            // Expire the request so rows recreated later by scrolling or filtering do not pulse again.
+            guard highlightRequest != nil,
+                (try? await Task.sleep(for: LibraryHighlightRequest.lifetime)) != nil
+            else { return }
+            highlightRequest = nil
         }
         .onChange(of: airingReminders.pendingRoute, initial: true) {
             handleAiringReminderRoute()
@@ -375,7 +395,7 @@ struct LibraryView: View {
                     displayItems: displayItems,
                     scrolledID: $scrollState.scrolledID,
                     scrollRequest: scrollRequest,
-                    highlightedEntryID: $highlightedEntryID
+                    highlightRequest: highlightRequest
                 )
                 .safeAreaPadding(.bottom, 20)
             }
@@ -386,7 +406,7 @@ struct LibraryView: View {
                     displayItems: displayItems,
                     scrolledID: $scrollState.scrolledID,
                     scrollRequest: scrollRequest,
-                    highlightedEntryID: $highlightedEntryID
+                    highlightRequest: highlightRequest
                 )
                 .safeAreaPadding(.bottom, 20)
             }

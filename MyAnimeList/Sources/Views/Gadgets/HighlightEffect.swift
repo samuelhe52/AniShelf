@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct HighlightEffectModifier: ViewModifier {
-    @Binding var showHighlight: Bool
+    var trigger: UUID?
     var highlightColor: Color
     var delay: TimeInterval
     var highlightDuration: TimeInterval
@@ -26,29 +26,31 @@ struct HighlightEffectModifier: ViewModifier {
                     .opacity(isLit ? 0.8 : 0)
             )
             .scaleEffect(isLit ? 1.05 : 1)
-            .animation(
-                .interactiveSpring(duration: highlightDuration - 0.05).delay(delay),
-                value: isLit)
-            .task(id: showHighlight) {
-                isLit = showHighlight
-                guard showHighlight,
-                    (try? await Task.sleep(for: .seconds(highlightDuration))) != nil
+            .task(id: trigger) {
+                // Each trigger restarts the pulse from rest; a cancelled pulse leaves the
+                // state to its successor, and clearing the trigger settles the row.
+                let animation = Animation.interactiveSpring(duration: highlightDuration - 0.05)
+                if isLit { withAnimation(animation) { isLit = false } }
+                guard trigger != nil,
+                    (try? await Task.sleep(for: .seconds(delay))) != nil
                 else { return }
-                showHighlight = false
+                withAnimation(animation) { isLit = true }
+                guard (try? await Task.sleep(for: .seconds(highlightDuration))) != nil else { return }
+                withAnimation(animation) { isLit = false }
             }
     }
 }
 
 extension View {
     func highlightEffect(
-        showHighlight: Binding<Bool>,
+        trigger: UUID?,
         color: Color = .yellow,
         delay: TimeInterval = 0,
         duration: TimeInterval = 0.5
     ) -> some View {
         self.modifier(
             HighlightEffectModifier(
-                showHighlight: showHighlight,
+                trigger: trigger,
                 highlightColor: color,
                 delay: delay,
                 highlightDuration: duration))

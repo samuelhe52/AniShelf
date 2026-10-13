@@ -16,7 +16,7 @@ struct LibraryListView: View {
     let displayItems: [LibraryEntryDisplayItem]
     @Binding var scrolledID: LibraryEntryIdentity?
     let scrollRequest: LibraryScrollRequest?
-    @Binding var highlightedEntryID: LibraryEntryIdentity?
+    let highlightRequest: LibraryHighlightRequest?
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -87,10 +87,7 @@ struct LibraryListView: View {
             value: !interaction.isMultiSelecting || interaction.isSelected(item.id)
         )
         .highlightEffect(
-            showHighlight: interaction.highlightBinding(
-                for: item.id,
-                highlightedEntryID: $highlightedEntryID
-            ),
+            trigger: highlightRequest?.trigger(for: item.id),
             delay: 0.2
         )
         .tag(item.id)

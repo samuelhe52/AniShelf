@@ -41,7 +41,7 @@ struct LibrarySearchButton: View {
 extension LibraryView {
     func jumpToEntryInLibrary(withID id: LibraryEntryIdentity) {
         requestLibraryScroll(to: id)
-        highlightedEntryID = id
+        highlightRequest = LibraryHighlightRequest(entryID: id)
     }
 
     func processTMDbSearchResults(
