@@ -292,7 +292,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "* 出于安全考虑，您的TMDb API密钥不会被导出。"
+            "value" : "* 出于安全考虑，你的TMDb API密钥不会被导出。"
           }
         }
       }
@@ -1785,7 +1785,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新增可选的按集进度跟踪功能。您需要在设置中启用该功能。"
+            "value" : "新增可选的按集进度跟踪功能。你需要在设置中启用该功能。"
           }
         }
       }
@@ -2123,7 +2123,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AniShelf现在会在您持续、有意义地使用后，于不打断操作的时机邀请您在App Store留下评价。"
+            "value" : "AniShelf现在会在你持续、有意义地使用后，于不打断操作的时机邀请你在App Store留下评价。"
           }
         }
       }
@@ -2347,7 +2347,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "您的资料库中已存在该系列的其他季度条目。将此季度转换为系列后，资料库中可能会同时保留系列条目和其他同系列季度条目。"
+            "value" : "你的资料库中已存在该系列的其他季度条目。将此季度转换为系列后，资料库中可能会同时保留系列条目和其他同系列季度条目。"
           }
         }
       }
@@ -6884,7 +6884,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "不会自动上传任何内容。只有在您选择操作后才会准备导出文件。"
+            "value" : "不会自动上传任何内容。只有在你选择操作后才会准备导出文件。"
           }
         }
       }
@@ -9771,7 +9771,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "替代资料库为空。您可以尝试通过早期版本的备份或iCloud同步恢复数据。"
+            "value" : "替代资料库为空。你可以尝试通过早期版本的备份或iCloud同步恢复数据。"
           }
         }
       }

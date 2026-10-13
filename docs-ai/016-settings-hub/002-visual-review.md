@@ -49,5 +49,7 @@ Samuel asked for an audit of Codex's copy and docs.
 
 ## Open questions
 
-- Chinese mixes 你 and 您. Deferred by Samuel (2026-10-13) to a later pass.
+- Chinese mixed 你 and 您. Resolved 2026-10-13: Samuel chose 你, matching the
+  tutorials and website. The six 您 strings in the catalog, including two past
+  release notes, now use 你.
 - iPad layout, dark mode, and accessibility sizes: verified by Samuel (2026-10-13).

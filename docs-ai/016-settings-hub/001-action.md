@@ -106,5 +106,5 @@ Samuel verified the remaining checks on 2026-10-13: all destinations, animation
 timing on Back, iPad layout/resizing, Dynamic Type, dark mode, other locales,
 the live-service flows (iCloud conflicts during a modal, import/restore/export,
 notification permissions), and website light/dark and responsive layout. The
-later amendments (003–005) were covered by the same review. Only the Chinese
-你/您 mix ([002](002-visual-review.md)) remains, deferred.
+later amendments (003–005) were covered by the same review. The Chinese 你/您
+mix ([002](002-visual-review.md)) was resolved to 你.
