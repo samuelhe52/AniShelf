@@ -72,3 +72,4 @@ format and make lint. Record failures and unverified iPad/runtime scenarios in
 
 - Updated 2026-10-13: Visual review — spectrum tints, Library Details restored to the hub, copy and guide fixes — see [002-visual-review.md](002-visual-review.md)
 - Updated 2026-10-13: Anime Info Language shown inline on the hub — see [003-inline-language.md](003-inline-language.md)
+- Updated 2026-10-13: Spectrum replaced by a muted per-section palette — see [004-section-palette.md](004-section-palette.md)

@@ -47,7 +47,7 @@ struct LibraryProfileSettingsHub: View {
                         Button(action: onShowWhatsNew) {
                             LibraryProfileHubRow(
                                 title: "What's New", systemImage: "sparkles.rectangle.stack",
-                                tint: LibraryProfileSettingsPalette.step(6),
+                                tint: LibraryProfileSettingsPalette.appInfo,
                                 value: LocalizedStringResource("\(whatsNewVersion)"))
                         }
                         LibraryProfileActionDivider(leadingInset: 44)
@@ -55,13 +55,13 @@ struct LibraryProfileSettingsHub: View {
                     Button(action: onShowSupport) {
                         LibraryProfileHubRow(
                             title: "Support AniShelf", systemImage: "heart.circle",
-                            tint: LibraryProfileSettingsPalette.step(7))
+                            tint: LibraryProfileSettingsPalette.appInfo)
                     }
                     LibraryProfileActionDivider(leadingInset: 44)
                     Button(action: onShowAbout) {
                         LibraryProfileHubRow(
                             title: "About AniShelf", systemImage: "info.circle",
-                            tint: LibraryProfileSettingsPalette.step(8))
+                            tint: LibraryProfileSettingsPalette.appInfo)
                     }
                 }
                 .buttonStyle(.plain)

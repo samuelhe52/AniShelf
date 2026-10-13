@@ -544,7 +544,7 @@ struct LibraryProfileBackupExportSection: View {
         Button(role: .destructive, action: onRestoreButtonPress) {
             Label("Restore", systemImage: restoreButtonSystemImage)
         }
-        .buttonStyle(LibraryProfileCommandButtonStyle(tint: .red, filled: false))
+        .buttonStyle(LibraryProfileCommandButtonStyle(tint: LibraryProfileSettingsPalette.destructive, filled: false))
         .opacity(libraryCloudSyncStatus.blocksBackupRestore ? 0.52 : 1)
         .accessibilityHint(Text(restoreButtonAccessibilityHint))
     }

@@ -93,7 +93,9 @@ struct LibraryProfileAiringReminderSettingsSection: View {
                 Button("Remove All", systemImage: "bell.slash", role: .destructive) {
                     showRemoveAllConfirmation = true
                 }
-                .buttonStyle(LibraryProfileCommandButtonStyle(tint: .red, filled: false))
+                .buttonStyle(
+                    LibraryProfileCommandButtonStyle(tint: LibraryProfileSettingsPalette.destructive, filled: false)
+                )
                 .disabled(airingReminders.snapshot.subscriptions.isEmpty)
             }
         }

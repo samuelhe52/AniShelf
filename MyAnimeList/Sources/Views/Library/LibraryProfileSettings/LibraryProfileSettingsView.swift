@@ -320,12 +320,13 @@ struct LibraryProfileSettingsView: View {
             )
             LibraryProfileActionRow(
                 title: "Delete All Animes", subtitle: "Remove every saved library entry.",
-                systemImage: "trash", role: .destructive, tint: .red, horizontalPadding: 0,
+                systemImage: "trash", role: .destructive, tint: LibraryProfileSettingsPalette.destructive,
+                horizontalPadding: 0,
                 action: requestClearLibrary
             )
             .padding(.horizontal, 14)
             .padding(.vertical, 3)
-            .libraryProfileInsetPanel(cornerRadius: 22, tint: .red)
+            .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsPalette.destructive)
         }
     }
 

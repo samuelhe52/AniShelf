@@ -83,7 +83,7 @@ struct LibraryProfileActionRow: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(role == .destructive ? .red : .primary)
+                        .foregroundStyle(role == .destructive ? LibraryProfileSettingsPalette.destructive : .primary)
                     Text(subtitle)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -276,6 +276,6 @@ struct LibraryProfileSettingsToggleRow: View {
 }
 
 extension EnvironmentValues {
-    /// The pushed settings page's spectrum step; toggles without an explicit tint use it.
+    /// The pushed settings page's destination tint; toggles without an explicit tint use it.
     @Entry var libraryProfilePageTint: Color = .mint
 }

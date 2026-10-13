@@ -38,27 +38,32 @@ enum LibraryProfileSettingsDestination: Hashable, CaseIterable {
         }
     }
 
-    /// Hub order walks one continuous hue spectrum after the inline language row at step 0;
-    /// each page tints its cards with its step.
+    /// Each destination keeps the hue its sections had before the hub; its page tints its cards with it.
     var tint: Color {
         switch self {
-        case .libraryTracking: LibraryProfileSettingsPalette.step(1)
-        case .appearance: LibraryProfileSettingsPalette.step(2)
-        case .reminders: LibraryProfileSettingsPalette.step(3)
-        case .metadataImages: LibraryProfileSettingsPalette.step(4)
-        case .syncData: LibraryProfileSettingsPalette.step(5)
+        case .libraryTracking: LibraryProfileSettingsPalette.muted(.mint)
+        case .appearance: LibraryProfileSettingsPalette.muted(.teal)
+        case .reminders: LibraryProfileSettingsPalette.muted(.orange)
+        case .metadataImages: LibraryProfileSettingsPalette.muted(.cyan)
+        case .syncData: LibraryProfileSettingsPalette.muted(.indigo)
         }
     }
 }
 
 enum LibraryProfileSettingsPalette {
     /// The anime info language row sits inline in the hub Settings card, ahead of the destinations.
-    static var language: Color { step(0) }
+    static let language = muted(.blue)
 
-    /// Teal at step 0, then blue, indigo, violet; the App Info rows continue into pink and rose.
-    static func step(_ index: Int) -> Color {
-        let hue = (0.47 + 0.07 * Double(index)).truncatingRemainder(dividingBy: 1)
-        return Color(hue: hue, saturation: 0.62, brightness: 0.86)
+    /// The App Info rows share the accent the old maintenance list used.
+    static let appInfo = muted(Color(red: 0.29, green: 0.70, blue: 0.96))
+
+    /// Destructive actions on settings pages, muted to match the section tints beside them.
+    static let destructive = muted(.red)
+
+    /// Pulls a hue toward gray so adjacent hub icons don't compete; system colors keep their
+    /// light and dark variants.
+    static func muted(_ color: Color) -> Color {
+        color.mix(with: .gray, by: 0.3)
     }
 }
 
