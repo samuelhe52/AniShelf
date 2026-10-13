@@ -38,7 +38,9 @@
 
 ## Commits
 
-- Use jj (colocated with Git) for local version control: `jj describe`, `jj new`, and `jj log` instead of `git add` and `git commit`. Record your own work proactively with `jj describe` and `jj new`, even when the user does not explicitly request a commit; do not squash, rebase, abandon, or edit changes you did not create in the current task without asking. Moving bookmarks, `jj git push`, and `--ignore-immutable` still require explicit authorization.
+- Use jj (colocated with Git) for local version control: `jj commit <paths>`, `jj describe`, and `jj log` instead of `git add` and `git commit`. Record your own work proactively, even when the user does not explicitly request a commit; do not squash, rebase, abandon, or edit changes you did not create in the current task without asking. Moving bookmarks, `jj git push`, and `--ignore-immutable` still require explicit authorization.
+- Keep iterating in the current change while the maintainer is reviewing or revising it: amend in place rather than starting new changes for corrections, reverts, or tweaks. Start a new change only for a distinct concern or once the maintainer accepts the current one. Before handing back, make sure no change in your stack undoes or redoes another.
+- Other agents may be editing the same working copy. Commit only your own files with `jj commit <paths> -m "…"`; never run bare `jj commit`, `jj describe` followed by `jj new`, or `jj squash` on a working copy that may hold others' edits. Keep parallel agents on separate files, because hunk-level selection is interactive.
 - Use conventional commits: `<type>: <subject>`.
 - Write imperative, capitalized subjects; keep them concise and avoid periods.
 - Add a body when the change needs explanation.
