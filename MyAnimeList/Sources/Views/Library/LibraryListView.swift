@@ -86,10 +86,7 @@ struct LibraryListView: View {
             .smooth(duration: 0.18),
             value: !interaction.isMultiSelecting || interaction.isSelected(item.id)
         )
-        .highlightEffect(
-            trigger: highlightRequest?.trigger(for: item.id),
-            delay: 0.2
-        )
+        .highlightEffect(trigger: highlightRequest?.trigger(for: item.id))
         .tag(item.id)
         .listRowInsets(.init(top: 8, leading: 10, bottom: 8, trailing: 10))
         .listRowSeparator(.visible)

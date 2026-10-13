@@ -14,10 +14,11 @@ struct LibrarySearchButton: View {
     let checkDuplicate: (LibraryEntryIdentity) -> Bool
     let processTMDbSearchResults: (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void
     let jumpToEntryInLibrary: (LibraryEntryIdentity) -> Void
+    let onDismiss: () -> Void
 
     var body: some View {
         Button("Search...", systemImage: "magnifyingglass") { isSearching = true }
-            .sheet(isPresented: $isSearching) {
+            .sheet(isPresented: $isSearching, onDismiss: onDismiss) {
                 NavigationStack {
                     SearchPage(
                         onDuplicateTapped: { tappedID in
@@ -40,6 +41,22 @@ struct LibrarySearchButton: View {
 
 extension LibraryView {
     func jumpToEntryInLibrary(withID id: LibraryEntryIdentity) {
+        // Defer a jump from search until the sheet has dismissed so the scroll and pulse play in view.
+        if isSearchSheetOnScreen {
+            pendingJumpEntryID = id
+        } else {
+            performJump(to: id)
+        }
+    }
+
+    func searchSheetDidDismiss() {
+        isSearchSheetOnScreen = false
+        guard let pendingJumpEntryID else { return }
+        self.pendingJumpEntryID = nil
+        performJump(to: pendingJumpEntryID)
+    }
+
+    private func performJump(to id: LibraryEntryIdentity) {
         requestLibraryScroll(to: id)
         highlightRequest = LibraryHighlightRequest(entryID: id)
     }

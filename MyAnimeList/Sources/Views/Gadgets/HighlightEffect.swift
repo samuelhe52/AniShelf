@@ -11,7 +11,7 @@ struct HighlightEffectModifier: ViewModifier {
     var trigger: UUID?
     var highlightColor: Color
     var delay: TimeInterval
-    var highlightDuration: TimeInterval
+    var hold: TimeInterval
 
     // Rendered apart from the request so a lazily created row that appears while the
     // request is already active still animates in from rest instead of popping in lit.
@@ -29,14 +29,13 @@ struct HighlightEffectModifier: ViewModifier {
             .task(id: trigger) {
                 // Each trigger restarts the pulse from rest; a cancelled pulse leaves the
                 // state to its successor, and clearing the trigger settles the row.
-                let animation = Animation.interactiveSpring(duration: highlightDuration - 0.05)
-                if isLit { withAnimation(animation) { isLit = false } }
+                if isLit { withAnimation(.smooth(duration: 0.4)) { isLit = false } }
                 guard trigger != nil,
                     (try? await Task.sleep(for: .seconds(delay))) != nil
                 else { return }
-                withAnimation(animation) { isLit = true }
-                guard (try? await Task.sleep(for: .seconds(highlightDuration))) != nil else { return }
-                withAnimation(animation) { isLit = false }
+                withAnimation(.smooth(duration: 0.25)) { isLit = true }
+                guard (try? await Task.sleep(for: .seconds(0.25 + hold))) != nil else { return }
+                withAnimation(.smooth(duration: 0.4)) { isLit = false }
             }
     }
 }
@@ -45,14 +44,15 @@ extension View {
     func highlightEffect(
         trigger: UUID?,
         color: Color = .yellow,
-        delay: TimeInterval = 0,
-        duration: TimeInterval = 0.5
+        // Lets the jump scroll settle so the pulse does not compete with its bounce.
+        delay: TimeInterval = 0.4,
+        hold: TimeInterval = 0.25
     ) -> some View {
         self.modifier(
             HighlightEffectModifier(
                 trigger: trigger,
                 highlightColor: color,
                 delay: delay,
-                highlightDuration: duration))
+                hold: hold))
     }
 }

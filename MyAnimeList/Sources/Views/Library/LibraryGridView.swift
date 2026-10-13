@@ -69,10 +69,7 @@ struct LibraryGridView: View {
             snapshot: item.snapshot,
             isSelected: !interaction.isMultiSelecting || interaction.isSelected(item.id)
         )
-        .highlightEffect(
-            trigger: highlightRequest?.trigger(for: item.id),
-            delay: 0.2
-        )
+        .highlightEffect(trigger: highlightRequest?.trigger(for: item.id))
 
         return
             baseItem

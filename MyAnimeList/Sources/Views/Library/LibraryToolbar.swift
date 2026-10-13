@@ -28,6 +28,7 @@ struct LibraryToolbar: ToolbarContent {
     let checkDuplicate: (LibraryEntryIdentity) -> Bool
     let processTMDbSearchResults: (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void
     let jumpToEntryInLibrary: (LibraryEntryIdentity) -> Void
+    let onSearchDismissed: () -> Void
 
     @ToolbarContentBuilder
     var body: some ToolbarContent {
@@ -133,7 +134,8 @@ struct LibraryToolbar: ToolbarContent {
                     isSearching: $isSearching,
                     checkDuplicate: checkDuplicate,
                     processTMDbSearchResults: processTMDbSearchResults,
-                    jumpToEntryInLibrary: jumpToEntryInLibrary
+                    jumpToEntryInLibrary: jumpToEntryInLibrary,
+                    onDismiss: onSearchDismissed
                 )
             }
         }

@@ -22,7 +22,7 @@ struct LibraryHighlightRequest: Equatable {
     let entryID: LibraryEntryIdentity
 
     /// Long enough for a row created late in the jump scroll to finish its pulse.
-    static let lifetime: Duration = .seconds(2)
+    static let lifetime: Duration = .seconds(2.5)
 
     func trigger(for entryID: LibraryEntryIdentity) -> UUID? {
         self.entryID == entryID ? token : nil
@@ -49,6 +49,9 @@ struct LibraryView: View {
     @State var scrollState = ScrollState()
     @State var newEntriesAddedToggle = false
     @State var highlightRequest: LibraryHighlightRequest?
+    // A jump from search waits for the sheet to finish dismissing so it is not hidden behind it.
+    @State var isSearchSheetOnScreen = false
+    @State var pendingJumpEntryID: LibraryEntryIdentity?
     @State var scrollRequest: LibraryScrollRequest?
     @State private var inspectorDetailWorkspaceState = LibraryInspectorDetailWorkspaceState()
 
@@ -335,7 +338,8 @@ struct LibraryView: View {
                     openCategoryManager: openCategoryManager,
                     checkDuplicate: { store.libraryOnDisplay.map(\.libraryIdentity).contains($0) },
                     processTMDbSearchResults: processTMDbSearchResults,
-                    jumpToEntryInLibrary: jumpToEntryInLibrary
+                    jumpToEntryInLibrary: jumpToEntryInLibrary,
+                    onSearchDismissed: searchSheetDidDismiss
                 )
             }
             .environment(interaction)
@@ -350,7 +354,10 @@ struct LibraryView: View {
                 isReorderingCategories = false
             }
             .onChange(of: isSearching) {
-                if isSearching { isReorderingCategories = false }
+                if isSearching {
+                    isReorderingCategories = false
+                    isSearchSheetOnScreen = true
+                }
             }
             .sheet(isPresented: $showCategoryManager) {
                 LibraryCategoryManagerSheet()
