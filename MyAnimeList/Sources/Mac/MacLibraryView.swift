@@ -249,7 +249,7 @@
         var visibleDisplayItems: [LibraryEntryDisplayItem] {
             let query = find.query
             guard !query.isEmpty else { return scope.displayItems }
-            let matches = LibrarySearchService.matcher(for: query)
+            let matches = LibrarySearchMatcher.matcher(for: query)
             return scope.displayItems.filter { matches($0.entry) }
         }
 

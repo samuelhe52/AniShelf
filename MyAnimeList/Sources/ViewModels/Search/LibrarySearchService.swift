@@ -50,27 +50,49 @@ class LibrarySearchService {
             status = .loaded
         } else {
             withAnimation {
-                results = searchInLibrary(
-                    query: query.lowercased(),
-                    entries: entriesProvider()
-                )
+                results = LibrarySearchMatcher.search(query, in: entriesProvider())
             }
             status = .loaded
         }
     }
+}
 
-    private func searchInLibrary(query: String, entries: [AnimeEntry]) -> [AnimeEntry] {
+/// Ranks library entries for a text query, tier by tier.
+///
+/// The search sheet uses every tier. App Intents skip notes and dates so a Shortcuts
+/// search never matches on personal text.
+enum LibrarySearchMatcher {
+    enum Tier: CaseIterable {
+        case name
+        case nameTranslations
+        case parentSeries
+        case overview
+        case overviewTranslations
+        case notes
+        case onAirDate
+    }
+
+    static let metadataTiers: [Tier] = [
+        .name, .nameTranslations, .parentSeries, .overview, .overviewTranslations
+    ]
+
+    /// Returns visible entries matching `query`, ordered by the first tier each one matches.
+    static func search(
+        _ query: String,
+        in entries: [AnimeEntry],
+        tiers: [Tier] = Tier.allCases
+    ) -> [AnimeEntry] {
         let lowercasedQuery = query.lowercased()
 
         var results: [AnimeEntry] = []
         var processedIdentities = Set<LibraryEntryIdentity>()
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .medium
 
-        // Earlier predicates rank higher: name, translations, parent series, overview,
-        // overview translations, notes, then air date.
-        for predicate in Self.matchPredicates(lowercasedQuery: lowercasedQuery) {
+        for tier in tiers {
             for entry in entries where !processedIdentities.contains(entry.libraryIdentity) {
                 guard entry.onDisplay else { continue }
-                if predicate(entry) {
+                if matches(entry, tier: tier, lowercasedQuery: lowercasedQuery, dateFormatter: dateFormatter) {
                     results.append(entry)
                     processedIdentities.insert(entry.libraryIdentity)
                 }
@@ -83,23 +105,31 @@ class LibrarySearchService {
     /// Matches entries by the same rules as the search page, without its ranking.
     ///
     /// The Mac toolbar's Find filters the visible library with it.
-    static func matcher(for query: String) -> (AnimeEntry) -> Bool {
-        let predicates = matchPredicates(lowercasedQuery: query.lowercased())
-        return { entry in predicates.contains { $0(entry) } }
-    }
-
-    private static func matchPredicates(lowercasedQuery: String) -> [(AnimeEntry) -> Bool] {
+    static func matcher(for query: String, tiers: [Tier] = Tier.allCases) -> (AnimeEntry) -> Bool {
+        let lowercasedQuery = query.lowercased()
         let dateFormatter = DateFormatter()
         dateFormatter.dateStyle = .medium
-        return [
-            // Priority 1: Name matches (displayName)
-            { $0.displayName.lowercased().contains(lowercasedQuery) },
-            // Priority 2: Name translations
-            { $0.nameTranslations.contains(where: { $0.value.lowercased().contains(lowercasedQuery) }) },
-            // Priority 3: Parent series matches
-            { entry in
-                guard let parentSeries = entry.parentSeriesEntry else { return false }
-                return parentSeries.overview?.lowercased().contains(lowercasedQuery) ?? false
+        return { entry in
+            tiers.contains {
+                matches(entry, tier: $0, lowercasedQuery: lowercasedQuery, dateFormatter: dateFormatter)
+            }
+        }
+    }
+
+    private static func matches(
+        _ entry: AnimeEntry,
+        tier: Tier,
+        lowercasedQuery: String,
+        dateFormatter: DateFormatter
+    ) -> Bool {
+        switch tier {
+        case .name:
+            entry.displayName.lowercased().contains(lowercasedQuery)
+        case .nameTranslations:
+            entry.nameTranslations.contains(where: { $0.value.lowercased().contains(lowercasedQuery) })
+        case .parentSeries:
+            entry.parentSeriesEntry.map { parentSeries in
+                parentSeries.overview?.lowercased().contains(lowercasedQuery) ?? false
                     || parentSeries.displayName.lowercased().contains(lowercasedQuery)
                     || parentSeries.nameTranslations.contains(where: {
                         $0.value.lowercased().contains(lowercasedQuery)
@@ -107,22 +137,19 @@ class LibrarySearchService {
                     || parentSeries.overviewTranslations.contains(where: {
                         $0.value.lowercased().contains(lowercasedQuery)
                     })
-            },
-            // Priority 4: Overview matches
-            { $0.overview?.lowercased().contains(lowercasedQuery) ?? false },
-            // Priority 5: Overview translations
-            {
-                $0.overviewTranslations.contains(where: {
-                    $0.value.lowercased().contains(lowercasedQuery)
-                })
-            },
-            // Priority 6: Notes matches
-            { $0.notes.lowercased().contains(lowercasedQuery) },
-            // Priority 7: Date matches
-            { entry in
-                guard let onAirDate = entry.onAirDate else { return false }
-                return dateFormatter.string(from: onAirDate).lowercased().contains(lowercasedQuery)
-            }
-        ]
+            } ?? false
+        case .overview:
+            entry.overview?.lowercased().contains(lowercasedQuery) ?? false
+        case .overviewTranslations:
+            entry.overviewTranslations.contains(where: {
+                $0.value.lowercased().contains(lowercasedQuery)
+            })
+        case .notes:
+            entry.notes.lowercased().contains(lowercasedQuery)
+        case .onAirDate:
+            entry.onAirDate.map {
+                dateFormatter.string(from: $0).lowercased().contains(lowercasedQuery)
+            } ?? false
+        }
     }
 }
