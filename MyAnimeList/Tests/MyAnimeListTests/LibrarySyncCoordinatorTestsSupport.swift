@@ -119,6 +119,7 @@ final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, @unchecked S
     var saveBatchSizes: [Int] = []
     var prepare: (@Sendable () async throws -> Void)?
     var ensureZoneCallCount = 0
+    var recreatingUserDeletedZoneRequests: [Bool] = []
     /// Errors thrown, in order, by the next zone-change fetches.
     var fetchErrors: [any Error] = []
     var suspendNextFetch = false
@@ -139,9 +140,11 @@ final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, @unchecked S
 
     func ensureZoneAndSubscription(
         zoneID: CKRecordZone.ID,
-        subscriptionID: CKSubscription.ID
+        subscriptionID: CKSubscription.ID,
+        recreatingUserDeletedZone: Bool
     ) async throws {
         ensureZoneCallCount += 1
+        recreatingUserDeletedZoneRequests.append(recreatingUserDeletedZone)
         try await prepare?()
     }
 
@@ -214,7 +217,8 @@ final class InterleavingCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, @unc
 
     func ensureZoneAndSubscription(
         zoneID: CKRecordZone.ID,
-        subscriptionID: CKSubscription.ID
+        subscriptionID: CKSubscription.ID,
+        recreatingUserDeletedZone: Bool
     ) async throws {}
 
     func fetchRecordZoneChanges(

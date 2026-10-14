@@ -343,9 +343,12 @@ final class LibrarySyncCoordinator {
         ).result
     }
 
+    /// `recreatingDeletedZone` lets this bootstrap save a zone the user deleted
+    /// in iCloud settings. Only the explicit upload action passes `true`.
     func bootstrapFirstEnablementOutcome(
         preference: LibraryCloudSyncConflictPreference?,
         isUserRetry: Bool = false,
+        recreatingDeletedZone: Bool = false,
         canHandleResult: Bool = false
     ) async -> SyncOutcome {
         activeSyncRequestCount += 1
@@ -365,7 +368,8 @@ final class LibrarySyncCoordinator {
             await runFirstEnableBootstrap(
                 preference: preference,
                 bootstrapID: bootstrapID,
-                isUserRetry: isUserRetry
+                isUserRetry: isUserRetry,
+                recreatingDeletedZone: recreatingDeletedZone
             )
         }
         activeBootstrapTask = task
@@ -582,7 +586,8 @@ final class LibrarySyncCoordinator {
     private func runFirstEnableBootstrap(
         preference: LibraryCloudSyncConflictPreference?,
         bootstrapID: UUID,
-        isUserRetry: Bool
+        isUserRetry: Bool,
+        recreatingDeletedZone: Bool
     ) async -> SyncResult {
         guard let store else {
             librarySyncCoordinatorLogger.warning(
@@ -608,7 +613,10 @@ final class LibrarySyncCoordinator {
             status.lastFailureReason = nil
         }
 
-        let pass = bootstrapSyncPass(bootstrapID: bootstrapID)
+        let pass = bootstrapSyncPass(
+            bootstrapID: bootstrapID,
+            recreatesUserDeletedZone: recreatingDeletedZone
+        )
         let state = SyncPipelineState(dateProvider: dateProvider)
         do {
             guard let head = try await runImportHead(pass: pass, state: state, store: store) else {
@@ -720,8 +728,18 @@ struct LocalSettingsSnapshotState {
 }
 
 extension Error {
+    /// Whether the user deleted AniShelf's iCloud data in iCloud settings.
+    ///
+    /// The zone stays purged until a client saves it again, so retrying cannot
+    /// help. A purge can also land in the middle of a pass, which surfaces as
+    /// a raw CloudKit error from a fetch or save.
+    var isLibraryCloudZoneDeletedByUser: Bool {
+        if self is CloudLibrarySyncZoneDeletedByUserError { return true }
+        return librarySyncBlockingCKError?.code == .userDeletedZone
+    }
+
     var isPermanentLibrarySyncFailure: Bool {
-        if librarySyncBlockingCKError != nil {
+        if self is CloudLibrarySyncZoneDeletedByUserError || librarySyncBlockingCKError != nil {
             return true
         }
         if let exportFailure = self as? CloudLibrarySyncExportFailure {
@@ -757,6 +775,9 @@ extension Error {
         if let exportFailure = self as? CloudLibrarySyncExportFailure {
             return exportFailure.underlyingError.librarySyncFailureReason
         }
+        if isLibraryCloudZoneDeletedByUser {
+            return String(localized: "AniShelf's iCloud data was deleted in iCloud settings.")
+        }
         if let reason = librarySyncBlockingCKError?.code.librarySyncAccountReason {
             return reason
         }
@@ -782,7 +803,7 @@ extension Error {
         if let exportFailure = self as? CloudLibrarySyncExportFailure {
             return exportFailure.underlyingError.librarySyncDegradedReason
         }
-        if librarySyncBlockingCKError?.code.librarySyncAccountReason != nil {
+        if isLibraryCloudZoneDeletedByUser || librarySyncBlockingCKError?.code.librarySyncAccountReason != nil {
             return librarySyncFailureReason
         }
         if let partialFailure = self as? CloudLibrarySyncPartialSaveFailure,
@@ -849,6 +870,7 @@ extension CKError.Code {
         .accountTemporarilyUnavailable,
         .managedAccountRestricted,
         .permissionFailure,
+        .userDeletedZone,
         .incompatibleVersion,
         .badContainer,
         .missingEntitlement,
@@ -881,7 +903,8 @@ fileprivate struct DisabledCloudLibrarySyncDatabase: CloudLibrarySyncDatabase {
 
     func ensureZoneAndSubscription(
         zoneID: CKRecordZone.ID,
-        subscriptionID: CKSubscription.ID
+        subscriptionID: CKSubscription.ID,
+        recreatingUserDeletedZone: Bool
     ) async throws {
         throw DisabledError.unavailable
     }

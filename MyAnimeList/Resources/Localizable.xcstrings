@@ -11710,6 +11710,134 @@
         }
       }
     },
+    "iCloud Data Deleted" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloudデータ削除済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud数据已删除"
+          }
+        }
+      }
+    },
+    "AniShelf's iCloud data was deleted in iCloud settings. Your library on this device is unchanged." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfのiCloudデータはiCloud設定で削除されました。このデバイスのライブラリは変更されていません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf的iCloud数据已在iCloud设置中删除。此设备上的资料库没有变化。"
+          }
+        }
+      }
+    },
+    "AniShelf's iCloud data was deleted in iCloud settings." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfのiCloudデータはiCloud設定で削除されました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf的iCloud数据已在iCloud设置中删除。"
+          }
+        }
+      }
+    },
+    "Upload This Library" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このライブラリをアップロード"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上传此资料库"
+          }
+        }
+      }
+    },
+    "Turn Off iCloud Sync" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud同期をオフにする"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭iCloud同步"
+          }
+        }
+      }
+    },
+    "Upload This Library?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このライブラリをアップロードしますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上传此资料库？"
+          }
+        }
+      }
+    },
+    "Upload" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アップロード"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上传"
+          }
+        }
+      }
+    },
+    "AniShelf will re-create its iCloud data from the library on this device. Your other devices will sync with it again." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイスのライブラリからAniShelfのiCloudデータを再作成します。他のデバイスも再びこのデータと同期します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf将根据此设备上的资料库重新创建iCloud数据。你的其他设备将再次与其同步。"
+          }
+        }
+      }
+    },
     "Your Apple Account needs attention. Open Settings to verify it, then try again." : {
       "localizations" : {
         "ja" : {
@@ -11773,6 +11901,15 @@
           }
         }
       }
+    },
+    "Deleted" : {
+
+    },
+    "iCloud data was deleted in iCloud settings. Upload stays blocked while failures are injected." : {
+
+    },
+    "Injected failures are off. Upload This Library re-creates the iCloud data and completes sync." : {
+
     }
   },
   "version" : "1.2"

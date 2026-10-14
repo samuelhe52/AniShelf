@@ -388,4 +388,43 @@ extension LibrarySyncCoordinatorTests {
         #expect(store.libraryCloudSyncStatus.bootstrapState == .completed)
     }
 
+    @Test @MainActor func uploadingAfterCloudDeletionRecreatesZoneAndExportsLibrary() async throws {
+        let store = makeSyncReadyStore()
+        store.updateLibraryCloudSyncStatus { status in
+            status.cloudLibraryDeletedByUser = true
+            status.lastResult = .permanentFailure
+        }
+        let dateSaved = referenceDate(year: 2026, month: 5, day: 1)
+        let entries = [
+            AnimeEntry(name: "Upload Series", type: .series, tmdbID: 891, dateSaved: dateSaved),
+            AnimeEntry(name: "Upload Movie", type: .movie, tmdbID: 892, dateSaved: dateSaved)
+        ]
+        for entry in entries {
+            try store.repository.newEntry(entry)
+        }
+        try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([])
+        store.preferences.saveSortReversed(false)
+        store.rebuildSyncChangeTracking()
+        let client = CloudLibrarySyncClient()
+        let database = FakeCloudLibrarySyncDatabase(changes: [makeEmptyChangeBatch(), makeEmptyChangeBatch()])
+        store.configureLibrarySyncCoordinator(
+            client: client,
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        #expect(await store.rebuildLibraryCloudSync(recreatingDeletedZone: true))
+
+        #expect(database.recreatingUserDeletedZoneRequests == [true])
+        #expect(!store.libraryCloudSyncStatus.cloudLibraryDeletedByUser)
+        #expect(store.libraryCloudSyncStatus.bootstrapState == .completed)
+        #expect(
+            Set(database.savedRecords.map(\.recordID))
+                == Set(entries.map { client.recordID(for: $0.libraryIdentity) } + [client.librarySettingsRecordID])
+        )
+
+        // Rebuild's confirmation does not ask to re-upload deleted data.
+        #expect(await store.rebuildLibraryCloudSync())
+        #expect(database.recreatingUserDeletedZoneRequests == [true, false])
+    }
 }

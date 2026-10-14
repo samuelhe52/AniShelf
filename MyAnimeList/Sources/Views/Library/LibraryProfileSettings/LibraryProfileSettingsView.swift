@@ -119,6 +119,14 @@ struct LibraryProfileSettingsView: View {
                 "Refetch and reconcile your iCloud library with your local library. This may resolve some iCloud sync issues."
             )
         }
+        .alert("Upload This Library?", isPresented: $cloudSync.showUploadLibraryAlert) {
+            Button("Upload", action: uploadLibraryToDeletedCloud)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(
+                "AniShelf will re-create its iCloud data from the library on this device. Your other devices will sync with it again."
+            )
+        }
         .alert("Delete all animes?", isPresented: $showClearAllAlert) {
             Button("Delete", role: .destructive, action: confirmClearLibrary)
             Button("Cancel", role: .cancel) {}
@@ -380,7 +388,9 @@ struct LibraryProfileSettingsView: View {
                 cloudSyncManualRetryDisabled: cloudSyncManualRetryDisabled,
                 onRetryLibraryCloudSync: retryLibraryCloudSync,
                 onDiscardFailedEntry: discardFailedEntry,
-                onRequestRebuildLibraryCloudSync: requestRebuildLibraryCloudSync
+                onRequestRebuildLibraryCloudSync: requestRebuildLibraryCloudSync,
+                onRequestUploadLibrary: requestUploadLibraryToDeletedCloud,
+                onTurnOffLibraryCloudSync: actions.disableLibraryCloudSync
             )
             LibraryProfileBackupExportSection(
                 libraryCloudSyncStatus: libraryCloudSyncStatus,
@@ -410,7 +420,8 @@ struct LibraryProfileSettingsView: View {
         presentationState.presentedSheet != nil || showFileImporter || showRestoreConfirmation
             || showCacheAlert || showClearAllAlert || showExportError || showRestoreError
             || showRefreshInfoOnLanguageUpdateAlert || showRefreshInfoAlert
-            || cloudSync.showRebuildAlert || cloudSync.showRestoreUnavailableAlert
+            || cloudSync.showRebuildAlert || cloudSync.showUploadLibraryAlert
+            || cloudSync.showRestoreUnavailableAlert
             || whatsNew.presentedEntry(forSceneIdentifier: windowSceneIdentifier) != nil
     }
 
@@ -659,7 +670,10 @@ struct LibraryProfileSettingsView: View {
     }
 
     private var cloudSyncStatusTitleColor: Color {
-        switch libraryCloudSyncStatus.bootstrapState {
+        if libraryCloudSyncStatus.showsCloudLibraryDeletedNotice {
+            return .orange.opacity(colorScheme == .dark ? 0.82 : 0.74)
+        }
+        return switch libraryCloudSyncStatus.bootstrapState {
         case .needsConflictChoice:
             .orange.opacity(colorScheme == .dark ? 0.82 : 0.74)
         case .failed:
@@ -705,6 +719,21 @@ struct LibraryProfileSettingsView: View {
         cloudSync.actionInFlight = true
         Task {
             _ = await actions.rebuildLibraryCloudSync()
+            cloudSync.actionInFlight = false
+        }
+    }
+
+    private func requestUploadLibraryToDeletedCloud() {
+        guard !cloudSyncIsBusy else { return }
+        cloudSync.showConflictAlert = false
+        cloudSync.showUploadLibraryAlert = true
+    }
+
+    private func uploadLibraryToDeletedCloud() {
+        guard !cloudSyncIsBusy else { return }
+        cloudSync.actionInFlight = true
+        Task {
+            _ = await actions.uploadLibraryToDeletedCloud()
             cloudSync.actionInFlight = false
         }
     }

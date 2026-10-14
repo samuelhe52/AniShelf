@@ -437,7 +437,16 @@ class LibraryStore {
         let shouldBootstrapDefaultEnablement =
             libraryCloudSyncStatus.isEnabled
             && libraryCloudSyncStatus.bootstrapState == .notStarted
-        if shouldResumeInterruptedCloudSyncBootstrap || shouldBootstrapDefaultEnablement {
+        // First enable on a purged account leaves bootstrap failed, which
+        // blocks ordinary passes. Retry the bootstrap without recreating the
+        // zone, so it succeeds only once another device has uploaded again.
+        let shouldRecheckDeletedCloudLibrary =
+            libraryCloudSyncStatus.isEnabled
+            && libraryCloudSyncStatus.bootstrapState == .failed
+            && libraryCloudSyncStatus.cloudLibraryDeletedByUser
+        if shouldResumeInterruptedCloudSyncBootstrap || shouldBootstrapDefaultEnablement
+            || shouldRecheckDeletedCloudLibrary
+        {
             guard cloudSyncStateController.hasRequiredBootstrapInputs() else {
                 recordLibraryCloudSyncSkipped(
                     trigger: trigger,
@@ -483,12 +492,19 @@ class LibraryStore {
         return await bootstrapLibraryCloudSyncEnablement().succeeded
     }
 
-    func bootstrapLibraryCloudSyncEnablement(isUserRetry: Bool = false) async -> LibrarySyncCoordinator.SyncResult {
-        await bootstrapLibraryCloudSyncEnablementOutcome(isUserRetry: isUserRetry).result
+    func bootstrapLibraryCloudSyncEnablement(
+        isUserRetry: Bool = false,
+        recreatingDeletedZone: Bool = false
+    ) async -> LibrarySyncCoordinator.SyncResult {
+        await bootstrapLibraryCloudSyncEnablementOutcome(
+            isUserRetry: isUserRetry,
+            recreatingDeletedZone: recreatingDeletedZone
+        ).result
     }
 
     func bootstrapLibraryCloudSyncEnablementOutcome(
         isUserRetry: Bool = false,
+        recreatingDeletedZone: Bool = false,
         canHandleResult: Bool = false
     ) async -> LibrarySyncCoordinator.SyncOutcome {
         updateLibraryCloudSyncStatus { status in
@@ -531,6 +547,7 @@ class LibraryStore {
         }
         return await syncCoordinator.bootstrapFirstEnablementOutcome(
             preference: nil, isUserRetry: isUserRetry,
+            recreatingDeletedZone: recreatingDeletedZone,
             canHandleResult: canHandleResult
         )
     }
@@ -575,8 +592,14 @@ class LibraryStore {
         syncCoordinator.removeAllChangeTokens()
     }
 
+    /// Refetches the iCloud library from scratch and reconciles it with this device.
+    ///
+    /// `recreatingDeletedZone` saves the iCloud library again after the user
+    /// deleted it in iCloud settings. Only the **Upload This Library** action
+    /// passes `true`, after the user confirms. The bootstrap then finds an
+    /// empty zone and uploads every local entry.
     @discardableResult
-    func rebuildLibraryCloudSync() async -> Bool {
+    func rebuildLibraryCloudSync(recreatingDeletedZone: Bool = false) async -> Bool {
         cancelAllLibraryCloudSyncWork()
         syncScheduler?.resetRetryBackoff()
         await syncCoordinator?.waitUntilAllSyncFinishes()
@@ -599,8 +622,14 @@ class LibraryStore {
             status.lastRetryAfterSeconds = nil
             status.degradedReason = nil
             status.lastCompletedScope = nil
+            if recreatingDeletedZone {
+                status.cloudLibraryDeletedByUser = false
+            }
         }
-        return await bootstrapLibraryCloudSyncEnablement(isUserRetry: true).succeeded
+        return await bootstrapLibraryCloudSyncEnablement(
+            isUserRetry: true,
+            recreatingDeletedZone: recreatingDeletedZone
+        ).succeeded
     }
 
     /// Resets persisted sync metadata that belonged to a replaced local store.
@@ -660,6 +689,7 @@ class LibraryStore {
             status.lastFailureReason = nil
             status.degradedReason = nil
             status.lastCompletedScope = nil
+            status.cloudLibraryDeletedByUser = false
             if resetRetryState {
                 status.retryState = .idle
             }
@@ -772,6 +802,7 @@ class LibraryStore {
             status.lastRetryAfterSeconds = nil
             status.degradedReason = nil
             status.pendingConflictSummary = nil
+            status.cloudLibraryDeletedByUser = false
         }
     }
 

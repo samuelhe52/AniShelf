@@ -125,6 +125,7 @@ struct LibraryPreferences {
         saveOptional(status.lastFailurePhase?.rawValue, forKey: .libraryCloudSyncLastFailurePhase)
         saveOptional(status.lastFailureReason, forKey: .libraryCloudSyncLastFailureReason)
         saveOptional(status.degradedReason, forKey: .libraryCloudSyncDegradedReason)
+        defaults.set(status.cloudLibraryDeletedByUser, forKey: .libraryCloudSyncCloudLibraryDeletedByUser)
         saveCodable(status.lastCompletedScope, forKey: .libraryCloudSyncLastCompletedScope)
         saveCodable(status.pendingConflictSummary, forKey: .libraryCloudSyncConflictSummary)
         saveCodable(status.retryState, forKey: .libraryCloudSyncRetryState)
@@ -291,6 +292,7 @@ struct LibraryPreferences {
             .flatMap(LibraryCloudSyncOperation.init(rawValue:))
         status.lastFailureReason = defaults.string(forKey: .libraryCloudSyncLastFailureReason)
         status.degradedReason = defaults.string(forKey: .libraryCloudSyncDegradedReason)
+        status.cloudLibraryDeletedByUser = defaults.bool(forKey: .libraryCloudSyncCloudLibraryDeletedByUser)
         status.lastCompletedScope = loadCodable(
             LibraryCloudSyncScope.self,
             forKey: .libraryCloudSyncLastCompletedScope

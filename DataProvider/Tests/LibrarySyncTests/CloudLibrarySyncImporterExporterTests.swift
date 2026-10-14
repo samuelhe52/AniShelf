@@ -669,7 +669,8 @@ fileprivate final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, 
 
     func ensureZoneAndSubscription(
         zoneID: CKRecordZone.ID,
-        subscriptionID: CKSubscription.ID
+        subscriptionID: CKSubscription.ID,
+        recreatingUserDeletedZone: Bool
     ) async throws {
         ensureCallCount += 1
     }

@@ -214,6 +214,11 @@ struct LibraryCloudSyncStatus: Equatable {
     var lastRetryAfterSeconds: TimeInterval?
     var degradedReason: String?
     var lastCompletedScope: LibraryCloudSyncScope?
+    /// The user deleted AniShelf's iCloud data in iCloud settings.
+    ///
+    /// Sync stops retrying until the user uploads this device's library again,
+    /// turns sync off, or another device recreates the iCloud library.
+    var cloudLibraryDeletedByUser: Bool
 
     static let defaultValue = LibraryCloudSyncStatus(
         isEnabled: false,
@@ -235,7 +240,8 @@ struct LibraryCloudSyncStatus: Equatable {
         lastFailureReason: nil,
         lastRetryAfterSeconds: nil,
         degradedReason: nil,
-        lastCompletedScope: nil
+        lastCompletedScope: nil,
+        cloudLibraryDeletedByUser: false
     )
 
     /// Whether a sync operation is active or has unfinished persisted work.

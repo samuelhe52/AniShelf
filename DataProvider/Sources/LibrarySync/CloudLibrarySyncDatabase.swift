@@ -46,9 +46,15 @@ public struct CloudLibrarySyncZoneChangeBatch {
 /// handling.
 public protocol CloudLibrarySyncDatabase: Sendable {
     /// Ensures the custom record zone and silent push subscription exist.
+    ///
+    /// `recreatingUserDeletedZone` allows saving a zone the user deleted in
+    /// iCloud settings. Pass `true` only after the user agreed to upload this
+    /// device's library; otherwise such a zone throws
+    /// `CloudLibrarySyncZoneDeletedByUserError`.
     func ensureZoneAndSubscription(
         zoneID: CKRecordZone.ID,
-        subscriptionID: CKSubscription.ID
+        subscriptionID: CKSubscription.ID,
+        recreatingUserDeletedZone: Bool
     ) async throws
 
     /// Fetches one page of zone changes after an optional previous token.
@@ -63,6 +69,36 @@ public protocol CloudLibrarySyncDatabase: Sendable {
 
     /// Saves records and returns only the record IDs CloudKit accepted.
     func save(records: [CKRecord]) async throws -> [CKRecord.ID]
+}
+
+extension CloudLibrarySyncDatabase {
+    /// Ensures the zone and subscription without recreating a user-deleted zone.
+    public func ensureZoneAndSubscription(
+        zoneID: CKRecordZone.ID,
+        subscriptionID: CKSubscription.ID
+    ) async throws {
+        try await ensureZoneAndSubscription(
+            zoneID: zoneID,
+            subscriptionID: subscriptionID,
+            recreatingUserDeletedZone: false
+        )
+    }
+}
+
+/// The user deleted AniShelf's iCloud data in iCloud settings.
+///
+/// CloudKit keeps the zone marked as purged until a client saves it again, so
+/// the sync pipeline must not recreate it without the user's consent.
+public struct CloudLibrarySyncZoneDeletedByUserError: LocalizedError {
+    public let zoneID: CKRecordZone.ID
+
+    public init(zoneID: CKRecordZone.ID) {
+        self.zoneID = zoneID
+    }
+
+    public var errorDescription: String? {
+        "AniShelf's iCloud data was deleted in iCloud settings."
+    }
 }
 
 /// Live `CloudLibrarySyncDatabase` backed by a `CKDatabase`.
@@ -85,9 +121,10 @@ public final class CloudLibrarySyncLiveDatabase: CloudLibrarySyncDatabase, @unch
     /// so repeated sync attempts remain idempotent.
     public func ensureZoneAndSubscription(
         zoneID: CKRecordZone.ID,
-        subscriptionID: CKSubscription.ID
+        subscriptionID: CKSubscription.ID,
+        recreatingUserDeletedZone: Bool
     ) async throws {
-        try await ensureZone(zoneID)
+        try await ensureZone(zoneID, recreatingUserDeletedZone: recreatingUserDeletedZone)
         try await ensureSubscription(subscriptionID, zoneID: zoneID)
     }
 
@@ -203,7 +240,13 @@ public final class CloudLibrarySyncLiveDatabase: CloudLibrarySyncDatabase, @unch
     }
 
     /// Creates the custom zone when CloudKit reports it as missing.
-    private func ensureZone(_ zoneID: CKRecordZone.ID) async throws {
+    ///
+    /// A zone the user deleted in iCloud settings is saved again only when the
+    /// caller explicitly allows it.
+    private func ensureZone(
+        _ zoneID: CKRecordZone.ID,
+        recreatingUserDeletedZone: Bool
+    ) async throws {
         let operation = CKFetchRecordZonesOperation(recordZoneIDs: [zoneID])
         let pending = CloudLibrarySyncOperation(operation)
         operation.perRecordZoneResultBlock = { [weak pending] _, result in
@@ -215,7 +258,9 @@ public final class CloudLibrarySyncLiveDatabase: CloudLibrarySyncDatabase, @unch
         }
         do {
             try await pending.run { self.database.add(operation) }
-        } catch  where error.isCloudLibrarySyncMissingItem {
+        } catch  where error.isCloudLibrarySyncUserDeletedZone && !recreatingUserDeletedZone {
+            throw CloudLibrarySyncZoneDeletedByUserError(zoneID: zoneID)
+        } catch  where error.isCloudLibrarySyncMissingItem || error.isCloudLibrarySyncUserDeletedZone {
             try Task.checkCancellation()
             let save = CKModifyRecordZonesOperation(
                 recordZonesToSave: [CKRecordZone(zoneID: zoneID)], recordZoneIDsToDelete: nil
@@ -357,6 +402,10 @@ extension Error {
     fileprivate var isCloudLibrarySyncMissingItem: Bool {
         guard let ckError = self as? CKError else { return false }
         return ckError.code == .unknownItem || ckError.code == .zoneNotFound
+    }
+
+    fileprivate var isCloudLibrarySyncUserDeletedZone: Bool {
+        (self as? CKError)?.code == .userDeletedZone
     }
 
     fileprivate var isCloudLibrarySyncAlreadyExists: Bool {

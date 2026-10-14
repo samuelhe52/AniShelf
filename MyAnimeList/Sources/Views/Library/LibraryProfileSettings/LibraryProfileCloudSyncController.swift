@@ -14,6 +14,7 @@ final class LibraryProfileCloudSyncController {
     var actionInFlight = false
     var showConflictAlert = false
     var showRebuildAlert = false
+    var showUploadLibraryAlert = false
     var showRestoreUnavailableAlert = false
 
     func reconcileConflict(needsChoice: Bool, presentationBlocked: Bool) {

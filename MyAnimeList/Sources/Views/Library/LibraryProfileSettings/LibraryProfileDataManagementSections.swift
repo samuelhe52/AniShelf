@@ -24,6 +24,8 @@ struct LibraryProfileICloudSyncSection: View {
     let onRetryLibraryCloudSync: () -> Void
     let onDiscardFailedEntry: (LibraryCloudSyncFailedEntry) -> Void
     var onRequestRebuildLibraryCloudSync: () -> Void = {}
+    var onRequestUploadLibrary: () -> Void = {}
+    var onTurnOffLibraryCloudSync: () -> Void = {}
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -43,6 +45,10 @@ struct LibraryProfileICloudSyncSection: View {
 
             if libraryCloudSyncStatus.isEnabled {
                 cloudSyncStatusRow
+            }
+            // Rebuild cannot recreate data the user deleted; the notice offers
+            // the upload that can.
+            if libraryCloudSyncStatus.isEnabled, !libraryCloudSyncStatus.showsCloudLibraryDeletedNotice {
                 LibraryProfileActionRow(
                     title: "Rebuild iCloud Sync",
                     subtitle: "Refetch and reconcile your iCloud library with your local library.",
@@ -130,6 +136,11 @@ struct LibraryProfileICloudSyncSection: View {
         VStack(alignment: .leading, spacing: 2) {
             cloudSyncStatusAndRetryRow
 
+            if libraryCloudSyncStatus.showsCloudLibraryDeletedNotice {
+                deletedCloudLibraryActions
+                    .padding(.top, 8)
+            }
+
             // Full width, so the issue line doesn't wrap beside the retry button.
             if !syncIssues.isEmpty {
                 syncIssuesRow
@@ -147,7 +158,11 @@ struct LibraryProfileICloudSyncSection: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(cloudSyncStatusTitleColor)
 
-                if let restoration = libraryCloudSyncStatus.restoration {
+                // The deleted notice outranks restoration progress: a bootstrap
+                // that hits a deleted zone keeps its restoration state.
+                if let restoration = libraryCloudSyncStatus.restoration,
+                    !libraryCloudSyncStatus.showsCloudLibraryDeletedNotice
+                {
                     HStack(spacing: 2) {
                         Text("Restored \(restoration.restoredEntries) of \(restoration.totalEntries) entries.")
                             .font(.caption)
@@ -165,6 +180,7 @@ struct LibraryProfileICloudSyncSection: View {
                     Text(libraryCloudSyncStatus.detailDisplayResource)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 if libraryCloudSyncStatus.restoration?.failures.isEmpty != false,
@@ -177,27 +193,69 @@ struct LibraryProfileICloudSyncSection: View {
                 }
             }
 
-            Spacer(minLength: 10)
+            if !libraryCloudSyncStatus.showsCloudLibraryDeletedNotice {
+                Spacer(minLength: 10)
 
-            Button(action: onRetryLibraryCloudSync) {
-                Label(libraryCloudSyncStatus.actionTitleResource, systemImage: "arrow.clockwise")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.indigo.opacity(colorScheme == .dark ? 0.92 : 0.82))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
+                capsuleButton(
+                    libraryCloudSyncStatus.actionTitleResource,
+                    systemImage: "arrow.clockwise",
+                    tint: .indigo,
+                    action: onRetryLibraryCloudSync
+                )
+                .padding(.top, 4)
+                .disabled(cloudSyncManualRetryDisabled)
+                .opacity(cloudSyncManualRetryDisabled ? 0.52 : 1)
             }
-            .buttonStyle(.plain)
-            .background {
-                Capsule(style: .continuous)
-                    .fill(.indigo.opacity(colorScheme == .dark ? 0.12 : 0.07))
-            }
-            .overlay {
-                Capsule(style: .continuous)
-                    .stroke(.indigo.opacity(0.14), lineWidth: 1)
-            }
-            .padding(.top, 4)
-            .disabled(cloudSyncManualRetryDisabled)
-            .opacity(cloudSyncManualRetryDisabled ? 0.52 : 1)
+        }
+    }
+
+    /// Retry cannot get past a deletion, so the user chooses what happens next.
+    private var deletedCloudLibraryActions: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) { deletedCloudLibraryButtons }
+            VStack(alignment: .leading, spacing: 8) { deletedCloudLibraryButtons }
+        }
+        .disabled(cloudSyncIsBusy)
+        .opacity(cloudSyncIsBusy ? 0.52 : 1)
+    }
+
+    @ViewBuilder
+    private var deletedCloudLibraryButtons: some View {
+        capsuleButton(
+            "Upload This Library",
+            systemImage: "icloud.and.arrow.up",
+            tint: .indigo,
+            action: onRequestUploadLibrary
+        )
+        capsuleButton(
+            "Turn Off iCloud Sync",
+            systemImage: "icloud.slash",
+            tint: .primary,
+            action: onTurnOffLibraryCloudSync
+        )
+    }
+
+    private func capsuleButton(
+        _ title: LocalizedStringResource,
+        systemImage: String,
+        tint: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(tint.opacity(colorScheme == .dark ? 0.92 : 0.82))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+        }
+        .buttonStyle(.plain)
+        .background {
+            Capsule(style: .continuous)
+                .fill(tint.opacity(colorScheme == .dark ? 0.12 : 0.07))
+        }
+        .overlay {
+            Capsule(style: .continuous)
+                .stroke(tint.opacity(0.14), lineWidth: 1)
         }
     }
 }

@@ -109,10 +109,15 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
     }
 
     /// Ensures the remote zone and silent subscription are available.
-    public func prepareRemoteSync() async throws {
+    ///
+    /// `recreatingUserDeletedZone` allows saving a zone the user deleted in
+    /// iCloud settings. Only an explicit user choice to upload this device's
+    /// library may pass `true`.
+    public func prepareRemoteSync(recreatingUserDeletedZone: Bool = false) async throws {
         try await database.ensureZoneAndSubscription(
             zoneID: Self.zoneID,
-            subscriptionID: CloudLibrarySyncClient.subscriptionID
+            subscriptionID: CloudLibrarySyncClient.subscriptionID,
+            recreatingUserDeletedZone: recreatingUserDeletedZone
         )
     }
 

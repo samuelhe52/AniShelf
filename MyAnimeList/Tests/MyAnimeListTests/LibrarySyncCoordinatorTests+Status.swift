@@ -53,6 +53,7 @@ extension LibrarySyncCoordinatorTests {
             status.lastFailurePhase = .remoteFetch
             status.lastFailureReason = "Network unavailable."
             status.degradedReason = "Automatic retries are exhausted."
+            status.cloudLibraryDeletedByUser = true
         }
 
         store.disableLibraryCloudSync()
@@ -66,6 +67,7 @@ extension LibrarySyncCoordinatorTests {
         #expect(store.libraryCloudSyncStatus.lastFailureReason == nil)
         #expect(store.libraryCloudSyncStatus.lastFailurePhase == nil)
         #expect(store.libraryCloudSyncStatus.degradedReason == nil)
+        #expect(!store.libraryCloudSyncStatus.cloudLibraryDeletedByUser)
         #expect(store.preferences.load().cloudSyncStatus == store.libraryCloudSyncStatus)
     }
 
@@ -113,7 +115,8 @@ extension LibrarySyncCoordinatorTests {
     }
 
     @Test(arguments: [
-        (CKError.Code.accountTemporarilyUnavailable, LibraryCloudKitAvailability.temporarilyUnavailable),
+        (CKError.Code.userDeletedZone, LibraryCloudKitAvailability.couldNotDetermine),
+        (.accountTemporarilyUnavailable, .temporarilyUnavailable),
         (.managedAccountRestricted, .restricted),
         (.incompatibleVersion, .couldNotDetermine),
         (.badContainer, .couldNotDetermine),
@@ -138,6 +141,7 @@ extension LibrarySyncCoordinatorTests {
         for error in errors {
             #expect(error.isPermanentLibrarySyncFailure)
             #expect(error.libraryCloudKitAvailability == availability)
+            #expect(error.isLibraryCloudZoneDeletedByUser == (code == .userDeletedZone))
             #expect(error.librarySyncFailureReason != CKError(code).localizedDescription)
             #expect(error.librarySyncDegradedReason == error.librarySyncFailureReason)
         }
