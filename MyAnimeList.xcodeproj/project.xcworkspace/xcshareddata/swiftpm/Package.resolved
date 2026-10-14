@@ -20,15 +20,6 @@
       }
     },
     {
-      "identity" : "shcontainers",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/samuelhe52/SHContainers.git",
-      "state" : {
-        "branch" : "main",
-        "revision" : "17ae5296d62023cdbcd1554dd9dcb7ee585ada54"
-      }
-    },
-    {
       "identity" : "swift-collections",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-collections.git",

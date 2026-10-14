@@ -8,7 +8,12 @@
 import Foundation
 import Kingfisher
 import SwiftDraw
-import UIKit
+
+#if os(macOS)
+    import AppKit
+#else
+    import UIKit
+#endif
 
 struct SVGImageProcessor: ImageProcessor {
     private static let defaultRasterScale: CGFloat = 3
@@ -30,10 +35,14 @@ struct SVGImageProcessor: ImageProcessor {
         switch item {
         case .data(let data):
             guard let svg = SVG(data: data) else { return nil }
-            if let targetSize {
-                return svg.rasterize(size: Self.aspectFitSize(for: svg, in: targetSize), scale: scale)
-            }
-            return svg.rasterize(scale: scale)
+            #if os(macOS)
+                return svg.rasterize(with: targetSize.map { Self.aspectFitSize(for: svg, in: $0) }, scale: scale)
+            #else
+                if let targetSize {
+                    return svg.rasterize(size: Self.aspectFitSize(for: svg, in: targetSize), scale: scale)
+                }
+                return svg.rasterize(scale: scale)
+            #endif
         case .image(let image):
             return image
         }

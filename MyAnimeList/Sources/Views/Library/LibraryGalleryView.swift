@@ -102,7 +102,7 @@ struct LibraryGalleryView: View {
         .overlay(alignment: .trailing) {
             if interaction.inspectorPresentation != nil {
                 LinearGradient(
-                    colors: [.clear, Color(.systemBackground)],
+                    colors: [.clear, Color.platformSystemBackground],
                     startPoint: .leading,
                     endPoint: .trailing
                 )

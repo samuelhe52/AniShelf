@@ -165,16 +165,16 @@ struct SearchPage: View {
         }
         .searchable(
             text: $query,
-            placement: .navigationBarDrawer(displayMode: .automatic),
+            placement: .platformDrawerAutomatic,
             prompt: searchPrompt
         )
         .onSubmit(of: .search) {
             performSearch()
         }
         .toolbar {
-            DefaultToolbarItem(kind: .search, placement: .bottomBar)
+            DefaultToolbarItem(kind: .search, placement: .platformBottomBar)
             if mode == .tmdb {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .platformTrailing) {
                     Button {
                         isShowingBatchAddEntryAlert = true
                     } label: {

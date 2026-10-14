@@ -47,7 +47,7 @@ struct LibraryToolbar: ToolbarContent {
             )
         }
         if isReorderingCategories {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .platformTrailing) {
                 Button(LocalizedStringResource("Done")) {
                     withAnimation(.snappy) { isReorderingCategories = false }
                 }
@@ -56,14 +56,14 @@ struct LibraryToolbar: ToolbarContent {
         }
         if supportsMultiSelection && !interaction.isMultiSelecting && !isReorderingCategories {
             // Counterbalances the trailing controls so the principal title sits visually left of center.
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .platformTrailing) {
                 Color.clear
                     .frame(width: 10, height: 0)
             }
             .sharedBackgroundVisibility(.hidden)
         }
         if interaction.isMultiSelecting {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .platformTrailing) {
                 Button {
                     exitMultiSelection()
                 } label: {
@@ -72,7 +72,7 @@ struct LibraryToolbar: ToolbarContent {
                 .accessibilityLabel(Text("Dismiss Selection"))
             }
         } else if !isReorderingCategories {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .platformTrailing) {
                 if supportsMultiSelection {
                     Button(action: enterMultiSelection) {
                         Text("Select").font(.headline.weight(.semibold))
@@ -81,7 +81,7 @@ struct LibraryToolbar: ToolbarContent {
                     .padding(.leading, 3)
                 }
             }
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .platformTrailing) {
                 LibraryProfileSettingsButton(action: openProfileSettings)
                     .padding(.trailing, 3)
             }
@@ -91,7 +91,7 @@ struct LibraryToolbar: ToolbarContent {
     @ToolbarContentBuilder
     private var bottomBarContent: some ToolbarContent {
         if interaction.isMultiSelecting {
-            ToolbarItem(placement: .bottomBar) {
+            ToolbarItem(placement: .platformBottomBar) {
                 LibrarySelectionDeleteButton(interaction: interaction, deleteSelectedEntries: deleteSelectedEntries)
             }
             ToolbarItemGroup(placement: .status) {
@@ -110,7 +110,7 @@ struct LibraryToolbar: ToolbarContent {
                     )
                 }
             }
-            ToolbarItem(placement: .bottomBar) {
+            ToolbarItem(placement: .platformBottomBar) {
                 LibrarySelectionActionsMenu(
                     interaction: interaction,
                     scoringEnabled: scoringEnabled,
@@ -118,7 +118,7 @@ struct LibraryToolbar: ToolbarContent {
                 )
             }
         } else {
-            ToolbarItem(placement: .bottomBar) {
+            ToolbarItem(placement: .platformBottomBar) {
                 Picker("View Style", selection: $libraryViewStyle) {
                     ForEach(LibraryView.LibraryViewStyle.allCases, id: \.self) { style in
                         Label(style.nameKey, systemImage: style.systemImageName).tag(style)
@@ -129,7 +129,7 @@ struct LibraryToolbar: ToolbarContent {
             ToolbarItem(placement: .status) {
                 LibraryBrowseSummaryMenu(store: store, scoringEnabled: scoringEnabled)
             }
-            ToolbarItem(placement: .bottomBar) {
+            ToolbarItem(placement: .platformBottomBar) {
                 LibrarySearchButton(
                     isSearching: $isSearching,
                     checkDuplicate: checkDuplicate,
@@ -277,7 +277,7 @@ fileprivate struct LibrarySelectionCategoryMenu: View {
                         }
                     }
                     // Stay open so the user sees the result and can pick more categories.
-                    .menuActionDismissBehavior(.disabled)
+                    .keepsMenuPresentedAfterAction()
                 }
             } header: {
                 Text("Add \(selectedEntries.count) Anime To")
@@ -316,15 +316,22 @@ fileprivate enum Membership {
         switch self {
         case .all: Image(systemName: "checkmark")
         case .some: Image(systemName: "minus")
-        case .none: Image(uiImage: Self.blankIcon)
+        case .none:
+            #if os(macOS)
+                Image(nsImage: NSImage(size: CGSize(width: 17, height: 16)))
+            #else
+                Image(uiImage: Self.blankIcon)
+            #endif
         }
     }
 
     /// A clear image the size of the checkmark symbol.
-    private static let blankIcon: UIImage = {
-        let size = UIImage(systemName: "checkmark")?.size ?? CGSize(width: 17, height: 16)
-        return UIGraphicsImageRenderer(size: size).image { _ in }
-    }()
+    #if !os(macOS)
+        private static let blankIcon: UIImage = {
+            let size = UIImage(systemName: "checkmark")?.size ?? CGSize(width: 17, height: 16)
+            return UIGraphicsImageRenderer(size: size).image { _ in }
+        }()
+    #endif
 }
 
 fileprivate struct LibrarySelectionActionsMenu: View {

@@ -76,7 +76,7 @@ struct AiringReminderTimingSheet: View {
             }
             .preferredNavigationBarScrollEdgeEffect()
             .navigationTitle("Reminder Timing")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -123,7 +123,9 @@ struct AiringReminderTimingSheet: View {
                 }
                 .frame(maxWidth: .infinity)
             }
-            .pickerStyle(.wheel)
+            #if !os(macOS)
+                .pickerStyle(.wheel)
+            #endif
             .frame(height: 150)
             .clipped()
 

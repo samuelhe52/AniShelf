@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct SharingCardView: View {
-    let image: UIImage?
+    let image: PlatformImage?
     let title: AttributedString
     let subtitle: AttributedString?
     let detail: String?
@@ -94,7 +94,7 @@ struct SharingCardView: View {
     private var backdropLayer: some View {
         Group {
             if let image {
-                Image(uiImage: image)
+                Image(platformImage: image)
                     .resizable()
                     .scaledToFill()
             } else {

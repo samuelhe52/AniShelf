@@ -362,7 +362,7 @@ fileprivate struct LibraryCloudSyncIssuesSheet: View {
             }
             .preferredNavigationBarScrollEdgeEffect()
             .navigationTitle("Sync Issues")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
@@ -371,7 +371,7 @@ fileprivate struct LibraryCloudSyncIssuesSheet: View {
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
-        .presentationBackground(Color(.systemGroupedBackground))
+        .presentationBackground(Color.platformSystemGroupedBackground)
     }
 
     private func issueSection(_ issue: LibraryCloudSyncIssue) -> some View {
@@ -399,7 +399,7 @@ fileprivate struct LibraryCloudSyncIssuesSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(
-            Color(.secondarySystemGroupedBackground),
+            Color.platformSecondarySystemGroupedBackground,
             in: RoundedRectangle(cornerRadius: 20, style: .continuous)
         )
     }

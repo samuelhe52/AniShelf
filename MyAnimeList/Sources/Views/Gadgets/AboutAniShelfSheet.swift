@@ -25,9 +25,9 @@ struct AboutAniShelfSheet: View {
         .scrollBounceBehavior(.basedOnSize)
         .preferredNavigationBarScrollEdgeEffect()
         .navigationTitle(aboutTitleResource)
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .platformTrailing) {
                 Button(doneTitleResource) { dismiss() }
             }
         }

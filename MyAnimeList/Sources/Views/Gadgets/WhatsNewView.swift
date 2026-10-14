@@ -45,9 +45,9 @@ struct WhatsNewView: View {
             .preferredNavigationBarScrollEdgeEffect()
         }
         .navigationTitle(whatsNewTitleResource)
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .platformTrailing) {
                 Button(doneTitleResource, action: onDismiss)
             }
         }

@@ -50,7 +50,7 @@ struct EntryDetailBroadcastSearchSheet: View {
         NavigationStack {
             searchContent
                 .navigationTitle(EntryDetailL10n.searchTVMaze)
-                .navigationBarTitleDisplayMode(.inline)
+                .inlineNavigationTitle()
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button(action: dismiss.callAsFunction) {
@@ -62,7 +62,7 @@ struct EntryDetailBroadcastSearchSheet: View {
         }
         .searchable(
             text: $query,
-            placement: .navigationBarDrawer(displayMode: .always),
+            placement: .platformDrawerAlways,
             prompt: Text(EntryDetailL10n.searchAnimePrompt)
         )
         .onSubmit(of: .search, submitSearch)

@@ -19,7 +19,7 @@ struct PersonCardView: View {
 
     private var backgroundStyle: AnyShapeStyle {
         colorScheme == .dark
-            ? AnyShapeStyle(Color(uiColor: .quaternarySystemFill))
+            ? AnyShapeStyle(Color.platformQuaternarySystemFill)
             : AnyShapeStyle(.thinMaterial)
     }
 

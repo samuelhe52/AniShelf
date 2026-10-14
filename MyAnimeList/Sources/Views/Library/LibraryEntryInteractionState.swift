@@ -9,7 +9,12 @@ import DataProvider
 import LibrarySync
 import Observation
 import SwiftUI
-import UIKit
+
+#if os(macOS)
+    import AppKit
+#else
+    import UIKit
+#endif
 
 enum LibraryEntryWorkflow: Equatable, Sendable {
     case posterSelection(LibraryEntryIdentity)
@@ -31,9 +36,9 @@ enum LibraryEntryDetailHost: Equatable, Sendable {
     var pageBackground: Color {
         switch self {
         case .sheet:
-            Color(.systemGroupedBackground)
+            Color.platformSystemGroupedBackground
         case .inspector:
-            Color(.systemBackground)
+            Color.platformSystemBackground
         }
     }
 }
@@ -47,7 +52,7 @@ struct LibraryEntryDetailHostPolicy: Equatable, Sendable {
     let host: LibraryEntryDetailHost
     let activation: LibraryEntryDetailActivation
 
-    init(horizontalSizeClass: UserInterfaceSizeClass?) {
+    init(horizontalSizeClass: PlatformHorizontalSizeClass?) {
         if horizontalSizeClass == .regular {
             host = .inspector
             activation = .singleTap
@@ -401,6 +406,14 @@ final class LibraryEntryInteractionState {
         ToastCenter.global.pasted = true
     }
 
+    private static var hasUserEntryPasteboardContent: Bool {
+        #if os(macOS)
+            NSPasteboard.general.availableType(from: [.init(UserEntryInfo.pasteboardUTType.identifier)]) != nil
+        #else
+            UIPasteboard.general.contains(pasteboardTypes: [UserEntryInfo.pasteboardUTType.identifier])
+        #endif
+    }
+
     func clearPasteRequest(requestID: UUID) {
         guard pendingPasteRequest?.id == requestID else { return }
         pendingPasteRequest = nil
@@ -483,9 +496,7 @@ extension LibraryEntryInteractionState {
                 self.pasteInfo(for: entry)
             }
             .disabled(
-                !UIPasteboard.general.contains(
-                    pasteboardTypes: [UserEntryInfo.pasteboardUTType.identifier]
-                )
+                !Self.hasUserEntryPasteboardContent
             )
         }
     }

@@ -113,7 +113,7 @@ struct EntryDetailView: View {
         }
         .animation(entryReplacementAnimation, value: session.instanceID)
         .ignoresSafeArea(edges: .top)
-        .toolbarBackground(.hidden, for: .navigationBar)
+        .hiddenNavigationBarBackground()
         .toolbar { toolbarContent }
         .presentationDragIndicator(.visible)
         .interactiveDismissDisabled(
@@ -127,7 +127,7 @@ struct EntryDetailView: View {
                     searchTitle: broadcastTitleFallbackName,
                     displayTitle: session.model.displayTitle
                 )
-                .presentationBackground(Color(.systemGroupedBackground))
+                .presentationBackground(Color.platformSystemGroupedBackground)
             case .changePoster:
                 NavigationStack {
                     PosterSelectionView(
@@ -495,7 +495,7 @@ struct EntryDetailView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
+        ToolbarItem(placement: .platformTrailing) {
             doneToolbarControl
         }
     }

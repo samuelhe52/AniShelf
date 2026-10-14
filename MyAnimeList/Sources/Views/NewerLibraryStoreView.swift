@@ -21,7 +21,7 @@ struct NewerLibraryStoreView: View {
             LinearGradient(
                 colors: [
                     Color.blue.opacity(0.16),
-                    Color(uiColor: .systemBackground),
+                    Color.platformSystemBackground,
                     Color.teal.opacity(0.08)
                 ],
                 startPoint: .topLeading,

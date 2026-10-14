@@ -14,7 +14,7 @@ fileprivate let logger = Logger(subsystem: .bundleIdentifier, category: "PosterV
 struct KFImageView: View {
     private enum LoadState {
         case loading
-        case loaded(UIImage)
+        case loaded(PlatformImage)
         case fallback
     }
 
@@ -51,7 +51,7 @@ struct KFImageView: View {
         Group {
             switch loadState {
             case .loaded(let displayImage):
-                Image(uiImage: displayImage)
+                Image(platformImage: displayImage)
                     .resizable()
             case .fallback:
                 fallbackImage
@@ -66,7 +66,7 @@ struct KFImageView: View {
     private var fallbackImage: some View {
         ZStack {
             Rectangle()
-                .fill(Color(.secondarySystemFill))
+                .fill(Color.platformSecondarySystemFill)
 
             Image(systemName: "photo.badge.exclamationmark")
                 .symbolRenderingMode(.hierarchical)

@@ -13,7 +13,7 @@ struct LibraryDetailHostCoordination: ViewModifier {
     let store: LibraryStore
     let interaction: LibraryEntryInteractionState
     let detailSessionStore: EntryDetailSessionStore
-    let horizontalSizeClass: UserInterfaceSizeClass?
+    let horizontalSizeClass: PlatformHorizontalSizeClass?
     let isSearching: Bool
     let isShowingProfileSettings: Bool
     @Binding var workspaceState: LibraryInspectorDetailWorkspaceState
@@ -179,7 +179,7 @@ extension View {
         store: LibraryStore,
         interaction: LibraryEntryInteractionState,
         detailSessionStore: EntryDetailSessionStore,
-        horizontalSizeClass: UserInterfaceSizeClass?,
+        horizontalSizeClass: PlatformHorizontalSizeClass?,
         isSearching: Bool,
         isShowingProfileSettings: Bool,
         workspaceState: Binding<LibraryInspectorDetailWorkspaceState>,

@@ -6,7 +6,12 @@
 //
 
 import SwiftUI
-import UIKit
+
+#if os(macOS)
+    import AppKit
+#else
+    import UIKit
+#endif
 
 /// A pinned category switcher.
 ///
@@ -352,57 +357,89 @@ extension View {
 }
 
 /// A short hold claims the pan; swiping before the hold still scrolls normally.
-fileprivate struct CategoryReorderGesture: UIGestureRecognizerRepresentable {
-    let isEnabled: Bool
-    let coordinateSpace: Namespace.ID
-    let canBegin: (CGPoint) -> Bool
-    let began: (CGPoint) -> Void
-    let moved: (CGPoint) -> Void
-    let ended: (Bool) -> Void
-
-    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator {
-        Coordinator(canBegin: canBegin, converter: converter, coordinateSpace: coordinateSpace)
-    }
-
-    func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
-        let recognizer = UILongPressGestureRecognizer()
-        recognizer.minimumPressDuration = 0.2
-        recognizer.allowableMovement = 4
-        recognizer.delegate = context.coordinator
-        recognizer.isEnabled = isEnabled
-        return recognizer
-    }
-
-    func updateUIGestureRecognizer(_ recognizer: UILongPressGestureRecognizer, context: Context) {
-        context.coordinator.canBegin = canBegin
-        recognizer.isEnabled = isEnabled
-    }
-
-    func handleUIGestureRecognizerAction(_ recognizer: UILongPressGestureRecognizer, context: Context) {
-        let location = context.converter.location(in: .named(coordinateSpace))
-        switch recognizer.state {
-        case .began: began(location)
-        case .changed: moved(location)
-        case .ended: ended(true)
-        case .cancelled, .failed: ended(false)
-        default: break
-        }
-    }
-
-    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
-        var canBegin: (CGPoint) -> Bool
-        let converter: CoordinateSpaceConverter
+#if os(macOS)
+    fileprivate struct CategoryReorderGesture: Gesture {
+        let isEnabled: Bool
         let coordinateSpace: Namespace.ID
+        let canBegin: (CGPoint) -> Bool
+        let began: (CGPoint) -> Void
+        let moved: (CGPoint) -> Void
+        let ended: (Bool) -> Void
+        @State private var dragging = false
 
-        init(canBegin: @escaping (CGPoint) -> Bool, converter: CoordinateSpaceConverter, coordinateSpace: Namespace.ID)
-        {
-            self.canBegin = canBegin
-            self.converter = converter
-            self.coordinateSpace = coordinateSpace
-        }
-
-        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-            canBegin(converter.location(in: .named(coordinateSpace)))
+        var body: some Gesture {
+            DragGesture(minimumDistance: 4, coordinateSpace: .named(coordinateSpace))
+                .onChanged { value in
+                    guard isEnabled, canBegin(value.startLocation) else { return }
+                    if !dragging {
+                        dragging = true
+                        began(value.startLocation)
+                    }
+                    moved(value.location)
+                }
+                .onEnded { _ in
+                    guard dragging else { return }
+                    dragging = false
+                    ended(true)
+                }
         }
     }
-}
+#else
+    fileprivate struct CategoryReorderGesture: UIGestureRecognizerRepresentable {
+        let isEnabled: Bool
+        let coordinateSpace: Namespace.ID
+        let canBegin: (CGPoint) -> Bool
+        let began: (CGPoint) -> Void
+        let moved: (CGPoint) -> Void
+        let ended: (Bool) -> Void
+
+        func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator {
+            Coordinator(canBegin: canBegin, converter: converter, coordinateSpace: coordinateSpace)
+        }
+
+        func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
+            let recognizer = UILongPressGestureRecognizer()
+            recognizer.minimumPressDuration = 0.2
+            recognizer.allowableMovement = 4
+            recognizer.delegate = context.coordinator
+            recognizer.isEnabled = isEnabled
+            return recognizer
+        }
+
+        func updateUIGestureRecognizer(_ recognizer: UILongPressGestureRecognizer, context: Context) {
+            context.coordinator.canBegin = canBegin
+            recognizer.isEnabled = isEnabled
+        }
+
+        func handleUIGestureRecognizerAction(_ recognizer: UILongPressGestureRecognizer, context: Context) {
+            let location = context.converter.location(in: .named(coordinateSpace))
+            switch recognizer.state {
+            case .began: began(location)
+            case .changed: moved(location)
+            case .ended: ended(true)
+            case .cancelled, .failed: ended(false)
+            default: break
+            }
+        }
+
+        final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+            var canBegin: (CGPoint) -> Bool
+            let converter: CoordinateSpaceConverter
+            let coordinateSpace: Namespace.ID
+
+            init(
+                canBegin: @escaping (CGPoint) -> Bool, converter: CoordinateSpaceConverter,
+                coordinateSpace: Namespace.ID
+            ) {
+                self.canBegin = canBegin
+                self.converter = converter
+                self.coordinateSpace = coordinateSpace
+            }
+
+            func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+                canBegin(converter.location(in: .named(coordinateSpace)))
+            }
+        }
+    }
+
+#endif

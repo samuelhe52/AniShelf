@@ -18,7 +18,10 @@ CONNECTED_IOS_DEVICE_ID := $(shell xcrun xcdevice list | /usr/bin/python3 -c 'im
 BOOTED_SIMULATOR_ID := $(shell xcrun simctl list devices booted -j | /usr/bin/python3 -c 'import json, sys; devices = json.load(sys.stdin).get("devices", {}); print(next((device["udid"] for runtime_name, runtime_devices in devices.items() if "iOS" in runtime_name for device in runtime_devices if device.get("isAvailable") and device.get("state") == "Booted"), ""))')
 DEVICE_APP_PATH = $(shell xcodebuild -quiet -project $(PROJECT) -scheme $(DEVICE_SCHEME) -configuration $(DEVICE_CONFIGURATION) -destination "id=$(CONNECTED_IOS_DEVICE_ID)" -showBuildSettings -json | /usr/bin/python3 -c 'import json, sys; data = json.load(sys.stdin); item = next(entry for entry in data if entry.get("target") == "$(APP_NAME)"); settings = item["buildSettings"]; print(settings["TARGET_BUILD_DIR"] + "/" + settings["FULL_PRODUCT_NAME"])')
 SIMULATOR_APP_PATH = $(shell if [ -n "$(BOOTED_SIMULATOR_ID)" ]; then xcodebuild -quiet -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "id=$(BOOTED_SIMULATOR_ID)" -showBuildSettings -json | /usr/bin/python3 -c 'import json, sys; data = json.load(sys.stdin); item = next(entry for entry in data if entry.get("target") == "$(APP_NAME)"); settings = item["buildSettings"]; print(settings["TARGET_BUILD_DIR"] + "/" + settings["FULL_PRODUCT_NAME"])'; fi)
+MAC_DESTINATION ?= platform=macOS
+MAC_APP_PATH = $(shell xcodebuild -quiet -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "$(MAC_DESTINATION)" -showBuildSettings -json | /usr/bin/python3 -c 'import json, sys; data = json.load(sys.stdin); item = next(entry for entry in data if entry.get("target") == "$(APP_NAME)"); settings = item["buildSettings"]; print(settings["TARGET_BUILD_DIR"] + "/" + settings["FULL_PRODUCT_NAME"])')
 DEVICE_PROCESS_LAUNCH_ARGS ?=
+MAC_LAUNCH_ARGS ?=
 APP_ONLY_TESTING_ARGS = $(foreach test,$(APP_TEST_ONLY),-only-testing:$(test))
 SKIP_ONLY_TESTING_ARGS = $(foreach test,$(SKIP_APP_TESTS),-skip-testing:$(test))
 DATAPROVIDER_TEST_FILTER_ARG = $(if $(strip $(DATAPROVIDER_TEST_FILTER)),--filter "$(DATAPROVIDER_TEST_FILTER)",)
@@ -46,6 +49,12 @@ test-app-sim:
 	@echo "Using simulator $(BOOTED_SIMULATOR_ID)"
 	@echo "Running MyAnimeList tests..."
 	@set -o pipefail; NSUnbufferedIO=YES xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "id=$(BOOTED_SIMULATOR_ID)" test $(APP_ONLY_TESTING_ARGS) $(SKIP_ONLY_TESTING_ARGS) -collect-test-diagnostics never 2>&1 | xcbeautify --disable-logging && echo "** TEST SUCCEEDED **"
+	@echo "MyAnimeList tests completed."
+
+.PHONY: test-app-mac
+test-app-mac:
+	@echo "Running MyAnimeList tests on native macOS..."
+	@set -o pipefail; NSUnbufferedIO=YES xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "$(MAC_DESTINATION)" -allowProvisioningUpdates test $(APP_ONLY_TESTING_ARGS) $(SKIP_ONLY_TESTING_ARGS) -collect-test-diagnostics never 2>&1 | xcbeautify --disable-logging && echo "** TEST SUCCEEDED **"
 	@echo "MyAnimeList tests completed."
 
 .PHONY: test-app-live-fetch
@@ -76,6 +85,12 @@ test-sim:
 	@$(MAKE) --no-print-directory test-dataprovider $(TEST_DATAPROVIDER_MAKE_ARGS)
 	@echo "All tests completed."
 
+.PHONY: test-mac
+test-mac:
+	@$(MAKE) --no-print-directory test-app-mac $(TEST_APP_MAKE_ARGS)
+	@$(MAKE) --no-print-directory test-dataprovider $(TEST_DATAPROVIDER_MAKE_ARGS)
+	@echo "All tests completed."
+
 # Build and Run
 .PHONY: release-testing
 release-testing:
@@ -88,6 +103,12 @@ release-testing:
 build:
 	@echo "Building $(SCHEME)..."
 	@set -o pipefail; NSUnbufferedIO=YES xcodebuild -quiet -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination 'generic/platform=iOS' build 2>&1 | xcbeautify --disable-logging
+	@echo "Build completed."
+
+.PHONY: build-mac
+build-mac:
+	@echo "Building $(SCHEME) for native macOS..."
+	@set -o pipefail; NSUnbufferedIO=YES xcodebuild -quiet -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "$(MAC_DESTINATION)" -allowProvisioningUpdates build 2>&1 | xcbeautify --disable-logging
 	@echo "Build completed."
 
 .PHONY: run-device
@@ -105,6 +126,13 @@ run-sim:
 	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "id=$(BOOTED_SIMULATOR_ID)" build
 	xcrun simctl install "$(BOOTED_SIMULATOR_ID)" "$(SIMULATOR_APP_PATH)"
 	xcrun simctl launch --terminate-running-process "$(BOOTED_SIMULATOR_ID)" $(BUNDLE_ID) $(DEVICE_PROCESS_LAUNCH_ARGS)
+
+.PHONY: run-mac
+run-mac:
+	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "$(MAC_DESTINATION)" -allowProvisioningUpdates build
+	@app_path="$(MAC_APP_PATH)"; \
+	pkill -f "$$app_path/Contents/MacOS/" && sleep 1; \
+	open -n "$$app_path" $(if $(strip $(MAC_LAUNCH_ARGS)),--args $(MAC_LAUNCH_ARGS),)
 
 # Maintenance
 .PHONY: clean

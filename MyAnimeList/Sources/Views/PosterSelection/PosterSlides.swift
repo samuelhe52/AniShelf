@@ -27,7 +27,7 @@ struct PosterSlides: View {
 
     var body: some View {
         ZStack {
-            Color(.systemBackground)
+            Color.platformSystemBackground
                 .ignoresSafeArea()
 
             switch fetchState {
@@ -282,21 +282,40 @@ struct PosterSlides: View {
 ///
 /// ScrollView paging does not
 /// provide them, and disabling interaction keeps swipe ownership in the ScrollView.
-fileprivate struct PosterPageIndicator: UIViewRepresentable {
-    let numberOfPages: Int
-    let currentPage: Int
+#if os(macOS)
+    fileprivate struct PosterPageIndicator: View {
+        let numberOfPages: Int
+        let currentPage: Int
+        var body: some View {
+            if numberOfPages > 1 {
+                HStack(spacing: 6) {
+                    ForEach(0..<numberOfPages, id: \.self) { index in
+                        Circle().fill(index == currentPage ? Color.secondary : Color.secondary.opacity(0.3))
+                            .frame(width: 5, height: 5)
+                    }
+                }
+                .accessibilityHidden(true)
+            }
+        }
+    }
+#else
+    fileprivate struct PosterPageIndicator: UIViewRepresentable {
+        let numberOfPages: Int
+        let currentPage: Int
 
-    func makeUIView(context: Context) -> UIPageControl {
-        let pageControl = UIPageControl()
-        pageControl.isUserInteractionEnabled = false
-        pageControl.currentPageIndicatorTintColor = .secondaryLabel
-        pageControl.pageIndicatorTintColor = .tertiaryLabel
-        return pageControl
+        func makeUIView(context: Context) -> UIPageControl {
+            let pageControl = UIPageControl()
+            pageControl.isUserInteractionEnabled = false
+            pageControl.currentPageIndicatorTintColor = .secondaryLabel
+            pageControl.pageIndicatorTintColor = .tertiaryLabel
+            return pageControl
+        }
+
+        func updateUIView(_ pageControl: UIPageControl, context: Context) {
+            pageControl.numberOfPages = numberOfPages
+            pageControl.currentPage = currentPage
+            pageControl.hidesForSinglePage = true
+        }
     }
 
-    func updateUIView(_ pageControl: UIPageControl, context: Context) {
-        pageControl.numberOfPages = numberOfPages
-        pageControl.currentPage = currentPage
-        pageControl.hidesForSinglePage = true
-    }
-}
+#endif

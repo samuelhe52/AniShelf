@@ -44,9 +44,9 @@ struct AnimeSharingSheet: View {
                     compactSharingContent
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color.platformSystemGroupedBackground)
             .navigationTitle("Share")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .presentationDragIndicator(.visible)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

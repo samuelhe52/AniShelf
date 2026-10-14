@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "9F8D662F2D055FEF00CF355D"
-               BuildableName = "MyAnimeList.app"
+               BuildableName = "AniShelf.app"
                BlueprintName = "MyAnimeList"
                ReferencedContainer = "container:MyAnimeList.xcodeproj">
             </BuildableReference>
@@ -68,7 +68,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "9F8D662F2D055FEF00CF355D"
-            BuildableName = "MyAnimeList.app"
+            BuildableName = "AniShelf.app"
             BlueprintName = "MyAnimeList"
             ReferencedContainer = "container:MyAnimeList.xcodeproj">
          </BuildableReference>
@@ -85,7 +85,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "9F8D662F2D055FEF00CF355D"
-            BuildableName = "MyAnimeList.app"
+            BuildableName = "AniShelf.app"
             BlueprintName = "MyAnimeList"
             ReferencedContainer = "container:MyAnimeList.xcodeproj">
          </BuildableReference>

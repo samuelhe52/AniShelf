@@ -78,12 +78,12 @@ struct TMDbBatchAddView: View {
                             text: $promptInput,
                             placeholder: inputPlaceholderResource
                         )
-                        .textInputAutocapitalization(.never)
+                        .noInputAutocapitalization()
                         .autocorrectionDisabled(true)
                         .frame(height: TMDbBatchAddLayout.promptHeight)
                         .padding(12)
                         .background(
-                            Color(.secondarySystemBackground),
+                            Color.platformSecondarySystemBackground,
                             in: RoundedRectangle(cornerRadius: 18, style: .continuous)
                         )
                     }
@@ -96,9 +96,9 @@ struct TMDbBatchAddView: View {
         .scrollBounceBehavior(.basedOnSize)
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle(Text(batchAddTitleResource))
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
+            ToolbarItem(placement: .platformLeading) {
                 Button {
                     exitBatchAdd()
                 } label: {
@@ -164,9 +164,9 @@ struct TMDbBatchAddView: View {
             }
         }
         .navigationTitle(Text(batchResultsTitleResource))
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
+            ToolbarItem(placement: .platformLeading) {
                 Button {
                     exitBatchAdd()
                 } label: {
@@ -175,7 +175,7 @@ struct TMDbBatchAddView: View {
                 .accessibilityLabel(Text(backTitleResource))
             }
 
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .platformTrailing) {
                 Button {
                     returnToInputStep()
                 } label: {

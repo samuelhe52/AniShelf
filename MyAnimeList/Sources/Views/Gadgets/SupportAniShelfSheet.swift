@@ -45,9 +45,9 @@ struct SupportAniShelfSheet: View {
             .preferredNavigationBarScrollEdgeEffect()
         }
         .navigationTitle(supportTitleResource)
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .platformTrailing) {
                 Button(doneTitleResource) { dismiss() }
             }
         }

@@ -60,8 +60,8 @@ struct PosterSelectionView: View {
             .frame(maxWidth: .infinity)
         }
         .preferredNavigationBarScrollEdgeEffect()
-        .background(Color(.systemGroupedBackground))
-        .navigationBarTitleDisplayMode(.inline)
+        .background(Color.platformSystemGroupedBackground)
+        .inlineNavigationTitle()
         .presentationDragIndicator(.visible)
         .toolbar {
             if showsDismissButton {
@@ -86,10 +86,12 @@ struct PosterSelectionView: View {
             )
             .presentationSizing(.page)
             .presentationCompactAdaptation(.fullScreenCover)
-            .navigationTransition(
-                .zoom(
-                    sourceID: selection.poster.metadata.filePath,
-                    in: preview))
+            #if !os(macOS)
+                .navigationTransition(
+                    .zoom(
+                        sourceID: selection.poster.metadata.filePath,
+                        in: preview))
+            #endif
         }
         .presentationSizing(.page)
     }

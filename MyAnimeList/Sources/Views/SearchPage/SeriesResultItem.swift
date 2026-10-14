@@ -141,11 +141,11 @@ fileprivate struct SeasonSelector: View {
         .padding(9)
         .background(in: .circle)
         .backgroundStyle(
-            selectedSeasonIDs.isEmpty ? Color(uiColor: .systemGray5) : .blue.opacity(0.2)
+            selectedSeasonIDs.isEmpty ? Color.platformSystemGray5 : .blue.opacity(0.2)
         )
         .frame(height: 0)
         .animation(.smooth(duration: 0.2), value: selectedSeasonIDs)
-        .menuActionDismissBehavior(.disabled)
+        .keepsMenuPresentedAfterAction()
         .sensoryFeedback(.selection, trigger: selectedSeasonIDs)
     }
 }

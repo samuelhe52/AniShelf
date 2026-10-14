@@ -31,7 +31,7 @@ struct LibrarySearchButton: View {
                         jumpToEntryInLibrary: jumpIfRevealable
                     )
                     .navigationTitle("Search")
-                    .navigationBarTitleDisplayMode(.inline)
+                    .inlineNavigationTitle()
                     .alert(
                         "Entry Hidden",
                         isPresented: Binding(

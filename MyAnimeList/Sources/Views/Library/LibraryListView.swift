@@ -28,7 +28,7 @@ struct LibraryListView: View {
             }
             .listStyle(.plain)
             .preferredNavigationBarScrollEdgeEffect()
-            .environment(\.editMode, .constant(interaction.isMultiSelecting ? .active : .inactive))
+            .selectionEditMode(interaction.isMultiSelecting)
             .animation(LibraryViewTransitions.selectionModeAnimation(), value: interaction.isMultiSelecting)
             .animation(.default, value: store.groupStrategy)
             .animation(.default, value: store.sortReversed)

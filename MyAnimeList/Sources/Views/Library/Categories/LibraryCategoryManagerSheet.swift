@@ -71,7 +71,7 @@ struct LibraryCategoryManagerSheet: View {
             }
             .contentMargins(.top, 8, for: .scrollContent)
             .navigationTitle("Categories")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(action: dismiss.callAsFunction) {

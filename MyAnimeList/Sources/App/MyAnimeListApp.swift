@@ -9,11 +9,20 @@ import DataProvider
 import StoreKit
 import SwiftData
 import SwiftUI
-import UIKit
+
+#if os(macOS)
+    import AppKit
+#else
+    import UIKit
+#endif
 
 @main
 struct MyAnimeListApp: App {
-    @UIApplicationDelegateAdaptor(LibrarySyncNotificationBridge.self) private var notificationBridge
+    #if os(macOS)
+        @NSApplicationDelegateAdaptor(LibrarySyncNotificationBridge.self) private var notificationBridge
+    #else
+        @UIApplicationDelegateAdaptor(LibrarySyncNotificationBridge.self) private var notificationBridge
+    #endif
     @State var libraryStore: LibraryStore
     @State var keyStorage: TMDbAPIKeyStorage
     @State var whatsNew: WhatsNewController

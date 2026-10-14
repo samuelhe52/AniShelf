@@ -87,7 +87,7 @@ struct LibraryBrowseSummaryMenu: View {
         } label: {
             LibraryToolbarSummaryCapsule(primary: filterSummaryResource)
         }
-        .menuActionDismissBehavior(.disabled)
+        .keepsMenuPresentedAfterAction()
     }
 
     private var availableGroupStrategies: [LibraryStore.LibraryGroupStrategy] {

@@ -19,7 +19,7 @@ struct LibraryProfileSettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.windowSceneIdentifier) private var windowSceneIdentifier
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.platformHorizontalSizeClass) private var horizontalSizeClass
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
@@ -71,10 +71,10 @@ struct LibraryProfileSettingsView: View {
                 .preferredNavigationBarScrollEdgeEffect()
             }
             .navigationTitle(profileTitleResource)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
+            .inlineNavigationTitle()
+            .hiddenNavigationBarBackground()
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .platformTrailing) {
                     Button(action: dismissSettings) {
                         Image(systemName: "xmark")
                             .font(.subheadline.weight(.bold))

@@ -29,10 +29,10 @@ struct LibraryProfileSettingsPage<Content: View>: View {
         }
         .environment(\.libraryProfilePageTint, destination.tint)
         .navigationTitle(destination.title)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
+        .inlineNavigationTitle()
+        .hiddenNavigationBarBackground()
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .platformTrailing) {
                 Button(action: onClose) {
                     Image(systemName: "xmark")
                         .font(.subheadline.weight(.bold))

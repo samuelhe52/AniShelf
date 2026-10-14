@@ -31,7 +31,7 @@ struct EntryDetailBroadcastValidationSheet: View {
         NavigationStack {
             content
                 .navigationTitle(navigationTitle)
-                .navigationBarTitleDisplayMode(.inline)
+                .inlineNavigationTitle()
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button(action: dismiss.callAsFunction) {

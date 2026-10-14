@@ -175,7 +175,7 @@ struct LibraryProfilePreferencesSection: View {
                     tint: LibraryProfileSettingsDestination.libraryTracking.tint
                 )
             }
-            .menuActionDismissBehavior(.disabled)
+            .keepsMenuPresentedAfterAction()
         }
         .padding(.vertical, 2)
     }

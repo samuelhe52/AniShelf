@@ -17,7 +17,7 @@ enum LibraryProfileSettingsLayout: Equatable {
 
 struct LibraryProfileSettingsLayoutPolicy {
     func layout(
-        horizontalSizeClass: UserInterfaceSizeClass?,
+        horizontalSizeClass: PlatformHorizontalSizeClass?,
         dynamicTypeSize: DynamicTypeSize
     ) -> LibraryProfileSettingsLayout {
         guard horizontalSizeClass == .regular, !dynamicTypeSize.isAccessibilitySize else {

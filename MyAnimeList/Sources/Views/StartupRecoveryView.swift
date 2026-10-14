@@ -21,7 +21,7 @@ struct StartupRecoveryView: View {
             LinearGradient(
                 colors: [
                     Color.orange.opacity(0.16),
-                    Color(uiColor: .systemBackground),
+                    Color.platformSystemBackground,
                     Color.yellow.opacity(0.08)
                 ],
                 startPoint: .topLeading,

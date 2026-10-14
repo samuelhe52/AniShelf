@@ -8,7 +8,12 @@
 import DataProvider
 import LibrarySync
 import SwiftUI
-import UIKit
+
+#if os(macOS)
+    import AppKit
+#else
+    import UIKit
+#endif
 
 struct LibraryScrollRequest: Equatable {
     // Keep repeated explicit requests to the same entry observable.
@@ -33,7 +38,7 @@ struct LibraryView: View {
     // MARK: - Stored Properties
 
     @Environment(LibraryStore.self) var store
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.platformHorizontalSizeClass) private var horizontalSizeClass
     @Environment(\.windowSceneIdentifier) private var windowSceneIdentifier
     @Environment(AppReviewPromptController.self) var appReview
     private let airingReminders = AiringReminderCoordinator.shared
@@ -137,15 +142,23 @@ struct LibraryView: View {
         .onChange(of: windowSceneIdentifier) {
             handleAiringReminderRoute()
         }
-        .onReceive(NotificationCenter.default.publisher(for: UIScene.didDisconnectNotification)) {
-            notification in
-            // The disconnecting window still receives this before it is purged; only survivors retry.
-            let disconnectedSceneIdentifier = (notification.object as? UIScene)?.session.persistentIdentifier
-            guard disconnectedSceneIdentifier != windowSceneIdentifier else { return }
-            // A route targeting the closed window falls back to the remaining windows. Retry on the
-            // next turn so the disconnected scene has left `connectedScenes`.
-            Task { @MainActor in handleAiringReminderRoute() }
-        }
+        #if os(macOS)
+            .onReceive(NotificationCenter.default.publisher(for: NSWindow.willCloseNotification)) { notification in
+                let closedIdentifier = (notification.object as? NSWindow)?.sceneIdentifier
+                guard closedIdentifier != windowSceneIdentifier else { return }
+                Task { @MainActor in handleAiringReminderRoute() }
+            }
+        #else
+            .onReceive(NotificationCenter.default.publisher(for: UIScene.didDisconnectNotification)) {
+                notification in
+                // The disconnecting window still receives this before it is purged; only survivors retry.
+                let disconnectedSceneIdentifier = (notification.object as? UIScene)?.session.persistentIdentifier
+                guard disconnectedSceneIdentifier != windowSceneIdentifier else { return }
+                // A route targeting the closed window falls back to the remaining windows. Retry on the
+                // next turn so the disconnected scene has left `connectedScenes`.
+                Task { @MainActor in handleAiringReminderRoute() }
+            }
+        #endif
         .alert(
             airingReminderWarningTitle,
             isPresented: Binding(
@@ -347,7 +360,7 @@ struct LibraryView: View {
             }
             .environment(interaction)
             .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .animation(libraryViewStyleAnimation, value: libraryViewStyle)
             .sensoryFeedback(.success, trigger: newEntriesAddedToggle)
             .onChange(of: showsCategoryStrip) {
@@ -503,9 +516,13 @@ struct LibraryView: View {
     }
 
     private static func isSceneConnected(_ identifier: String) -> Bool {
-        UIApplication.shared.connectedScenes.contains {
-            $0.session.persistentIdentifier == identifier
-        }
+        #if os(macOS)
+            NSApplication.shared.windows.contains { $0.sceneIdentifier == identifier && $0.isVisible }
+        #else
+            UIApplication.shared.connectedScenes.contains {
+                $0.session.persistentIdentifier == identifier
+            }
+        #endif
     }
 
     private var airingReminderWarningMessage: LocalizedStringResource {
