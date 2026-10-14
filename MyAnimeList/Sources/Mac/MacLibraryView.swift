@@ -228,7 +228,7 @@
         var visibleDisplayItems: [LibraryEntryDisplayItem] {
             let query = find.query
             guard !query.isEmpty else { return store.libraryDisplayItems }
-            let matches = LibrarySearchService.matcher(for: query)
+            let matches = LibrarySearchMatcher.matcher(for: query)
             return store.libraryDisplayItems.filter { matches($0.entry) }
         }
 
