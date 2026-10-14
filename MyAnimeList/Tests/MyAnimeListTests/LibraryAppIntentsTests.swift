@@ -5,6 +5,7 @@
 //  Created by Claude Code on behalf of samuelhe52 on 2026/10/14.
 //
 
+import CoreSpotlight
 import DataProvider
 import Foundation
 import Testing
@@ -85,6 +86,11 @@ struct LibraryAppIntentsTests {
         #expect(entity.alternateNames.contains("Frieren Season 1"))
         #expect(entity.kind == .season)
         #expect(entity.seasonNumber == 1)
+        // Spotlight shows `contentDescription` as the subtitle; the default set leaves it empty.
+        let attributes = entity.attributeSet
+        #expect(attributes.displayName == "Frieren")
+        #expect(attributes.contentDescription == entity.subtitle)
+        #expect(attributes.keywords?.contains("Frieren Season 1") == true)
     }
 
     @Test func unknownMalformedAndDeletedIdentifiersResolveToNothing() throws {

@@ -49,38 +49,6 @@
         }
       }
     },
-    "Mark the next episode of ${entry} watched in ${applicationName}" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "${applicationName}で${entry}の次の話を視聴済みにする"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在${applicationName}中将${entry}的下一集标为已看"
-          }
-        }
-      }
-    },
-    "Open ${target} in ${applicationName}" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "${applicationName}で${target}を開く"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在${applicationName}中打开${target}"
-          }
-        }
-      }
-    },
     "Open an entry in ${applicationName}" : {
       "localizations" : {
         "ja" : {
@@ -109,22 +77,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在${applicationName}中设置观看状态"
-          }
-        }
-      }
-    },
-    "Show ${target} in ${applicationName}" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "${applicationName}で${target}を表示"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在${applicationName}中显示${target}"
           }
         }
       }
