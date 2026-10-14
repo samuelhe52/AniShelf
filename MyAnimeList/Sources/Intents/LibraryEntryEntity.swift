@@ -83,8 +83,14 @@ struct LibraryEntryEntity: AppEntity, IndexedEntity {
     }
 
     var attributeSet: CSSearchableItemAttributeSet {
+        // The default set fills in only the title, and Spotlight shows `contentDescription`
+        // as the subtitle. iOS Spotlight currently matches only the title and display name;
+        // translated titles also go in `keywords` so they match if that changes.
         let attributes = defaultAttributeSet
+        attributes.displayName = name
+        attributes.contentDescription = subtitle
         attributes.alternateNames = alternateNames
+        attributes.keywords = alternateNames
         // Indexed for search but not shown; notes are never indexed.
         attributes.textContent = overview
         if let thumbnailData = Self.cachedPosterData(posterPath: posterPath) {

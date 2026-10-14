@@ -115,7 +115,5 @@ final class LibrarySpotlightIndexer {
             indexedFingerprints = nil
             spotlightLogger.error("Failed to update the Spotlight index: \(error.localizedDescription, privacy: .public)")
         }
-        // App Shortcut phrases that name an entry read the suggested entities.
-        AniShelfShortcuts.updateAppShortcutParameters()
     }
 }
