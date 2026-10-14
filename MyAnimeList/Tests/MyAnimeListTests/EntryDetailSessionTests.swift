@@ -413,6 +413,39 @@ struct EntryDetailSessionTests {
         #expect(store.presentedSession == nil)
     }
 
+    @Test @MainActor func discardKeepsAnIntentChangeAndRevertsTheUsersOwnEdits() throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let entry = AnimeEntry.template(id: 42)
+        entry.notes = "Saved note"
+        let otherEntry = AnimeEntry.template(id: 43)
+        try store.repository.newEntry(entry)
+        try store.repository.newEntry(otherEntry)
+        try store.refreshLibrary()
+        let session = EntryDetailSession(entry: entry, repository: store.repository)
+        let otherSession = EntryDetailSession(entry: otherEntry, repository: store.repository)
+        let otherBaseline = otherSession.originalUserInfo
+        let context = AppIntentLibraryContext(
+            store: store,
+            allowsLibraryActivity: { true },
+            hasTMDbAPIKey: { true }
+        )
+
+        entry.notes = "Rewritten note"
+        entry.updateScore(2)
+        _ = try context.setWatchStatus(.watching, forEntryID: entry.libraryIdentity.rawID)
+        let intentStartDate = try #require(entry.dateStarted)
+        let intentClock = entry.trackingUpdatedAt
+
+        session.restoreBaseline()
+
+        #expect(entry.watchStatus == .watching)
+        #expect(entry.dateStarted == intentStartDate)
+        #expect(entry.trackingUpdatedAt == intentClock)
+        #expect(entry.notes == "Saved note")
+        #expect(entry.score == nil)
+        #expect(otherSession.originalUserInfo == otherBaseline)
+    }
+
     private func populatedPresentationState() -> EntryDetailPresentationState {
         EntryDetailPresentationState(
             activeSheet: .sharing,

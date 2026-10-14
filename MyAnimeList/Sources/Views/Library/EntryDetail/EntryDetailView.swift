@@ -831,8 +831,7 @@ struct EntryDetailView: View {
     }
 
     private func discardUserEdits() {
-        session.entry.updateUserInfo(from: session.originalUserInfo)
-        session.entry.trackingUpdatedAt = session.originalTrackingUpdatedAt
+        session.restoreBaseline()
         do {
             try session.save()
         } catch {
