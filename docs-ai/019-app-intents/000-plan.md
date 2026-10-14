@@ -271,4 +271,4 @@ register or unregister.
 
 ## Amendments
 
-None yet.
+- Updated 2026-10-14: Spotlight subtitle and keywords set explicitly, and App Shortcut phrases no longer take an entry — see [002-spotlight-results.md](002-spotlight-results.md)
