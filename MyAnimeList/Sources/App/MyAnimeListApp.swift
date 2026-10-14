@@ -5,6 +5,7 @@
 //  Created by Samuel He on 2024/12/8.
 //
 
+import AppIntents
 import DataProvider
 import StoreKit
 import SwiftData
@@ -88,6 +89,22 @@ struct MyAnimeListApp: App {
         _backgroundSyncExecution = State(initialValue: backgroundSyncExecution)
         self.recoveryActivityGate = recoveryActivityGate
         RecoveryExportManager.cleanupAllTemporaryExports()
+
+        // Intents run in this process, against the same store and gates as the windows.
+        let intentContext = AppIntentLibraryContext(
+            store: libraryStore,
+            allowsLibraryActivity: { recoveryActivityGate.allowsLibraryActivity },
+            hasTMDbAPIKey: {
+                guard let key = keyStorage.key else { return false }
+                return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
+        )
+        AppDependencyManager.shared.add(dependency: intentContext)
+        libraryStore.spotlightIndexer = LibrarySpotlightIndexer(
+            store: libraryStore,
+            allowsLibraryActivity: { recoveryActivityGate.allowsLibraryActivity }
+        )
+        libraryStore.spotlightIndexer?.scheduleReconcile()
 
         LibrarySyncNotificationBridge.configureSyncHandler { [libraryStore, recoveryActivityGate] in
             guard recoveryActivityGate.allowsLibraryActivity else { return .noData }
@@ -358,6 +375,7 @@ struct MyAnimeListApp: App {
         recoveryActivityGate.isBlocked = false
         startupRecovery = nil
         libraryStore.enableAiringReminderPruning()
+        libraryStore.spotlightIndexer?.scheduleReconcile()
         requestSync(trigger: .appLaunch)
         updateWhatsNewPresentation()
     }

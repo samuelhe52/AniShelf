@@ -5,6 +5,7 @@
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/7/14.
 //
 
+import Combine
 import DataProvider
 import LibrarySync
 import Observation
@@ -75,6 +76,7 @@ final class EntryDetailSession {
     var isStaffExpanded: Bool
     var scrollPosition = ScrollPosition()
     private(set) var isAwaitingActiveSheetDismissalForHostChange = false
+    @ObservationIgnored private var trackingChangeObservation: AnyCancellable?
 
     var blocksHostMigration: Bool {
         presentation.blocksHostMigration
@@ -118,10 +120,29 @@ final class EntryDetailSession {
             )
         // The first frame shows the stored detail; the view's load task only refreshes it.
         model.prepare(for: entry, language: .resolvedAnimeInfoLanguage())
+        trackingChangeObservation = LibraryEntryTrackingChange.observe { [weak self] change in
+            self?.rebaseBaseline(after: change)
+        }
+    }
+
+    /// Moves the soft-undo baseline past a change saved outside this detail.
+    ///
+    /// Only the changed fields are copied, so "Discard Changes" keeps the outside change
+    /// and still undoes the user's own edits to other fields.
+    func rebaseBaseline(after change: LibraryEntryTrackingChange) {
+        guard change.identity == entryIdentity else { return }
+        change.apply(to: &originalUserInfo)
+        originalTrackingUpdatedAt = change.trackingUpdatedAt
     }
 
     func save() throws {
         try repository.save()
+    }
+
+    /// Writes the soft-undo baseline back to the live entry, as "Discard Changes" does.
+    func restoreBaseline() {
+        entry.updateUserInfo(from: originalUserInfo)
+        entry.trackingUpdatedAt = originalTrackingUpdatedAt
     }
 
     func toggleFavorite() {

@@ -39,6 +39,8 @@ class LibraryStore {
     /// False for generated fixture libraries (docs-ai 026): no sync coordinator or scheduler
     /// exists, so every sync path, including Settings' enable and retry, does nothing.
     @ObservationIgnored let allowsCloudSync: Bool
+    /// Set by the app; previews and tests leave it `nil` so they never touch Spotlight.
+    @ObservationIgnored var spotlightIndexer: LibrarySpotlightIndexer?
     private(set) var libraryRevision = 0
 
     // MARK: - State
@@ -280,6 +282,7 @@ class LibraryStore {
             }
         }
         pruneAiringReminderSubscriptions()
+        spotlightIndexer?.scheduleReconcile()
     }
 
     func enableAiringReminderPruning() {

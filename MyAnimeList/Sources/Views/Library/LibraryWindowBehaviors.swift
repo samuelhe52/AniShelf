@@ -5,6 +5,7 @@
 //  Created by Claude Code on behalf of samuelhe52 on 2026/10/17.
 //
 
+import AppIntents
 import DataProvider
 import SwiftUI
 
@@ -12,8 +13,8 @@ extension View {
     /// Window-level library behavior both library roots share.
     ///
     /// `openRoutedEntry` shows the
-    /// entry an airing-reminder notification opened in this window, after the root dismisses
-    /// whatever covers the library. Selection pruning stays with each root, since only the root
+    /// entry an airing-reminder notification or, on iOS, an Open Entry intent opened in this
+    /// window, after the root dismisses whatever covers the library. Selection pruning stays with each root, since only the root
     /// knows which entries its window shows.
     func libraryWindowBehaviors(
         store: LibraryStore,
@@ -59,6 +60,17 @@ fileprivate struct LibraryWindowBehaviors: ViewModifier {
             .onChange(of: windows.registeredWindowIDs) {
                 Task { @MainActor in handleAiringReminderRoute() }
             }
+            #if !os(macOS)
+                .onAppIntentExecution(OpenLibraryEntryIntent.self) { intent in
+                    // The system delivers the intent to one scene, so only this window opens the detail.
+                    guard let identity = LibraryEntryIdentity(rawID: intent.target.id),
+                        let entry = store.repository.existingEntry(identity: identity),
+                        entry.onDisplay
+                    else { return }
+                    browse.isSearching = false
+                    openRoutedEntry(entry)
+                }
+            #endif
             // The warning is app-wide, so only the most recently active library window shows it;
             // Settings and Support have no presenter for it.
             .alert(
