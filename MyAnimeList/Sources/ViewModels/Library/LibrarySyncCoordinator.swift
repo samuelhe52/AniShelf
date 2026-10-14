@@ -721,11 +721,14 @@ struct LocalSettingsSnapshotState {
 
 extension Error {
     var isPermanentLibrarySyncFailure: Bool {
+        if librarySyncBlockingCKError != nil {
+            return true
+        }
         if let exportFailure = self as? CloudLibrarySyncExportFailure {
             return exportFailure.underlyingError.isPermanentLibrarySyncFailure
         }
         if let partialFailure = self as? CloudLibrarySyncPartialSaveFailure {
-            return partialFailure.accountError != nil || partialFailure.isQuotaExceeded
+            return partialFailure.isQuotaExceeded
         }
         if let hydrationError = self as? LibrarySyncHydrationError {
             return hydrationError.underlyingError.isPermanentLibrarySyncFailure
@@ -733,13 +736,7 @@ extension Error {
         if self is DisabledCloudLibrarySyncDatabase.DisabledError {
             return true
         }
-        guard let ckError = self as? CKError else { return false }
-        switch ckError.code {
-        case .notAuthenticated, .permissionFailure, .quotaExceeded:
-            return true
-        default:
-            return false
-        }
+        return (self as? CKError)?.code == .quotaExceeded
     }
 
     var librarySyncRetryAfterSeconds: TimeInterval? {
@@ -759,6 +756,9 @@ extension Error {
     var librarySyncFailureReason: String {
         if let exportFailure = self as? CloudLibrarySyncExportFailure {
             return exportFailure.underlyingError.librarySyncFailureReason
+        }
+        if let reason = librarySyncBlockingCKError?.code.librarySyncAccountReason {
+            return reason
         }
         if let partialFailure = self as? CloudLibrarySyncPartialSaveFailure,
             partialFailure.isQuotaExceeded
@@ -782,6 +782,9 @@ extension Error {
         if let exportFailure = self as? CloudLibrarySyncExportFailure {
             return exportFailure.underlyingError.librarySyncDegradedReason
         }
+        if librarySyncBlockingCKError?.code.librarySyncAccountReason != nil {
+            return librarySyncFailureReason
+        }
         if let partialFailure = self as? CloudLibrarySyncPartialSaveFailure,
             partialFailure.isQuotaExceeded
         {
@@ -795,24 +798,78 @@ extension Error {
     }
 
     var libraryCloudKitAvailability: LibraryCloudKitAvailability {
-        if let exportFailure = self as? CloudLibrarySyncExportFailure {
-            return exportFailure.underlyingError.libraryCloudKitAvailability
-        }
-        if let partialFailure = self as? CloudLibrarySyncPartialSaveFailure,
-            let accountError = partialFailure.accountError
-        {
-            return accountError.libraryCloudKitAvailability
-        }
-        guard let ckError = self as? CKError else {
-            return .couldNotDetermine
-        }
-        switch ckError.code {
+        switch librarySyncBlockingCKError?.code {
         case .notAuthenticated:
-            return .noAccount
-        case .permissionFailure:
-            return .restricted
+            .noAccount
+        case .permissionFailure, .managedAccountRestricted:
+            .restricted
+        case .accountTemporarilyUnavailable:
+            .temporarilyUnavailable
         default:
-            return .couldNotDetermine
+            .couldNotDetermine
+        }
+    }
+
+    /// The CloudKit error that blocks every request until the user, or a new
+    /// build, fixes it.
+    ///
+    /// Unwraps the sync pipeline's wrappers. When several records failed, an
+    /// account problem outranks the others because it explains them all.
+    var librarySyncBlockingCKError: CKError? {
+        if let exportFailure = self as? CloudLibrarySyncExportFailure {
+            return exportFailure.underlyingError.librarySyncBlockingCKError
+        }
+        if let hydrationError = self as? LibrarySyncHydrationError {
+            return hydrationError.underlyingError.librarySyncBlockingCKError
+        }
+        let candidates: [any Error]
+        if let partialFailure = self as? CloudLibrarySyncPartialSaveFailure {
+            candidates =
+                Array(partialFailure.failedErrorsByID.values)
+                + [partialFailure.aggregateError].compactMap(\.self)
+        } else if let ckError = self as? CKError, ckError.code == .partialFailure {
+            candidates = [ckError] + (ckError.partialErrorsByItemID.map { Array($0.values) } ?? [])
+        } else {
+            candidates = [self]
+        }
+        let ckErrors = candidates.compactMap { $0 as? CKError }
+        for code in CKError.Code.librarySyncBlockingCodes {
+            if let match = ckErrors.first(where: { $0.code == code }) {
+                return match
+            }
+        }
+        return nil
+    }
+}
+
+extension CKError.Code {
+    /// Codes that no retry can fix, in the order that best explains a failure.
+    fileprivate static let librarySyncBlockingCodes: [CKError.Code] = [
+        .notAuthenticated,
+        .accountTemporarilyUnavailable,
+        .managedAccountRestricted,
+        .permissionFailure,
+        .incompatibleVersion,
+        .badContainer,
+        .missingEntitlement,
+        .badDatabase
+    ]
+
+    /// Localized guidance for account and configuration failures.
+    ///
+    /// `notAuthenticated` and `permissionFailure` keep CloudKit's own message.
+    fileprivate var librarySyncAccountReason: String? {
+        switch self {
+        case .accountTemporarilyUnavailable:
+            String(localized: "Your Apple Account needs attention. Open Settings to verify it, then try again.")
+        case .managedAccountRestricted:
+            String(localized: "iCloud is restricted for this account.")
+        case .incompatibleVersion:
+            String(localized: "Update AniShelf to keep syncing with iCloud.")
+        case .badContainer, .missingEntitlement, .badDatabase:
+            String(localized: "iCloud Sync isn't available in this build.")
+        default:
+            nil
         }
     }
 }

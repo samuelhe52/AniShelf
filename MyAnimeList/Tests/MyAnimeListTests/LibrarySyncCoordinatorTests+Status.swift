@@ -111,4 +111,35 @@ extension LibrarySyncCoordinatorTests {
         #expect(store.libraryCloudSyncStatus.lastFailureReason == "Network unavailable.")
         #expect(store.preferences.load().cloudSyncStatus == store.libraryCloudSyncStatus)
     }
+
+    @Test(arguments: [
+        (CKError.Code.accountTemporarilyUnavailable, LibraryCloudKitAvailability.temporarilyUnavailable),
+        (.managedAccountRestricted, .restricted),
+        (.incompatibleVersion, .couldNotDetermine),
+        (.badContainer, .couldNotDetermine),
+        (.missingEntitlement, .couldNotDetermine),
+        (.badDatabase, .couldNotDetermine)
+    ])
+    func nonRetryableCloudKitErrorsStopRetriesWithGuidance(
+        code: CKError.Code,
+        availability: LibraryCloudKitAvailability
+    ) {
+        let recordID = CKRecord.ID(recordName: "entry")
+        let errors: [any Error] = [
+            CKError(code),
+            CloudLibrarySyncExportFailure(
+                partialResult: .init(exportedIdentities: []),
+                underlyingError: CloudLibrarySyncPartialSaveFailure(
+                    savedRecordIDs: [],
+                    failedErrorsByID: [recordID: CKError(code)]
+                )
+            )
+        ]
+        for error in errors {
+            #expect(error.isPermanentLibrarySyncFailure)
+            #expect(error.libraryCloudKitAvailability == availability)
+            #expect(error.librarySyncFailureReason != CKError(code).localizedDescription)
+            #expect(error.librarySyncDegradedReason == error.librarySyncFailureReason)
+        }
+    }
 }

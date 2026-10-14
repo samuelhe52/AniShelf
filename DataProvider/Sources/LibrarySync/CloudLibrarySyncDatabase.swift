@@ -323,14 +323,6 @@ public struct CloudLibrarySyncPartialSaveFailure: Error, LocalizedError {
             && failedErrorsByID.values.allSatisfy { ($0 as? CKError)?.code == .quotaExceeded }
     }
 
-    /// An account failure affects the whole save, even if CloudKit also
-    /// reports unrelated per-record errors in the same partial result.
-    public var accountError: CKError? {
-        let errors = failedErrorsByID.values.compactMap { $0 as? CKError }
-        return errors.first { $0.code == .notAuthenticated }
-            ?? errors.first { $0.code == .permissionFailure }
-    }
-
     /// Whether every failure concerns only its own record.
     ///
     /// Those records can stay queued for a later attempt while the rest of the

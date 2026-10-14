@@ -11709,6 +11709,70 @@
           }
         }
       }
+    },
+    "Your Apple Account needs attention. Open Settings to verify it, then try again." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appleアカウントの確認が必要です。設定を開いて確認してから、もう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的Apple账户需要处理。请打开“设置”进行验证，然后重试。"
+          }
+        }
+      }
+    },
+    "iCloud is restricted for this account." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このアカウントではiCloudが制限されています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此账户的iCloud受到限制。"
+          }
+        }
+      }
+    },
+    "Update AniShelf to keep syncing with iCloud." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloudとの同期を続けるには、AniShelfをアップデートしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请更新AniShelf以继续与iCloud同步。"
+          }
+        }
+      }
+    },
+    "iCloud Sync isn't available in this build." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このビルドではiCloud同期を利用できません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此版本无法使用iCloud同步。"
+          }
+        }
+      }
     }
   },
   "version" : "1.2"

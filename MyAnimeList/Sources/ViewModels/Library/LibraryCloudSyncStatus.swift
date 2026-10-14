@@ -148,6 +148,7 @@ enum LibraryCloudKitAvailability: String, Codable, Equatable {
     case available
     case noAccount
     case restricted
+    case temporarilyUnavailable
     case couldNotDetermine
 }
 

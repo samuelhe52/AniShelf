@@ -285,7 +285,7 @@ extension LibrarySyncCoordinator {
     ) -> SyncResult {
         let result: SyncResult = error.isPermanentLibrarySyncFailure ? .permanentFailure : .retryableFailure
         let availability = error.libraryCloudKitAvailability
-        if availability == .noAccount || availability == .restricted {
+        if availability != .couldNotDetermine {
             store.updateLibraryCloudKitAvailability(availability)
         }
         store.recordLibraryCloudSyncFailure(
@@ -303,6 +303,11 @@ extension LibrarySyncCoordinator {
         librarySyncCoordinatorLogger.error(
             "iCloud library sync triggered by \(pass.trigger.rawValue, privacy: .public) failed during \(state.currentPhase?.rawValue ?? "unknown", privacy: .public): \(error.localizedDescription, privacy: .private)"
         )
+        if let blockingError = error.librarySyncBlockingCKError {
+            librarySyncCoordinatorLogger.error(
+                "iCloud library sync stopped retrying because CloudKit returned non-retryable error code \(blockingError.code.rawValue, privacy: .public)."
+            )
+        }
         return result
     }
 }
