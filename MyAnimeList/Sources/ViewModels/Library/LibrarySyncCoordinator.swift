@@ -295,6 +295,18 @@ final class LibrarySyncCoordinator {
             guard let head = try await runImportHead(pass: pass, state: state, store: store) else {
                 return .permanentFailure
             }
+            if head.importBatch.isFullRefetch {
+                // The zone may have been replaced, so queue whatever it lacks.
+                librarySyncCoordinatorLogger.info(
+                    "Re-seeding the iCloud sync dirty queue after an ordinary sync refetched the whole zone."
+                )
+                try await seedDirtyQueueDifferingFromRemote(
+                    head.importBatch.remoteChanges,
+                    pass: pass,
+                    state: state,
+                    store: store
+                )
+            }
             let result = try await runApplyExportTail(
                 pass: pass,
                 state: state,
@@ -644,17 +656,12 @@ final class LibrarySyncCoordinator {
             }
             try pass.checkCancellation()
 
-            let decisionSnapshots = try localSnapshotsByIdentity(for: store)
-            let remoteChangesByIdentity = try Self.coalescedRemoteChangesByIdentity(fetchedBatch.remoteChanges)
-            try await pass.run(.dirtyQueueSeeding, state: state, store: store) {
-                try seedDirtyQueue(
-                    with: decisionSnapshots.filter { identity, snapshot in
-                        remoteChangesByIdentity[identity] != .snapshot(snapshot)
-                    },
-                    at: dateProvider(),
-                    in: store
-                )
-            }
+            let decisionSnapshots = try await seedDirtyQueueDifferingFromRemote(
+                fetchedBatch.remoteChanges,
+                pass: pass,
+                state: state,
+                store: store
+            )
 
             var importBatch = fetchedBatch
             if let preference {

@@ -714,4 +714,61 @@ extension LibrarySyncCoordinatorTests {
         #expect(store.libraryCloudSyncStatus.currentPhase == nil)
         #expect(store.libraryCloudSyncStatus.lastResult == nil)
     }
+
+    /// A zone replaced while this device held a token must receive the local
+    /// library again instead of silently drifting from it.
+    @Test @MainActor func fullRefetchInOrdinarySyncQueuesLocalStateTheCloudLacks() async throws {
+        let store = makeSyncReadyStore()
+        let client = CloudLibrarySyncClient()
+        let localOnly = AnimeEntry(
+            name: "Local Only", type: .series, tmdbID: 881, dateSaved: referenceDate(year: 2026, month: 5, day: 1)
+        )
+        let differing = AnimeEntry(
+            name: "Differing", type: .series, tmdbID: 882, dateSaved: referenceDate(year: 2026, month: 5, day: 1)
+        )
+        differing.notes = "Local notes"
+        differing.trackingUpdatedAt = referenceDate(year: 2026, month: 6, day: 2)
+        let matching = AnimeEntry(
+            name: "Matching", type: .series, tmdbID: 883, dateSaved: referenceDate(year: 2026, month: 5, day: 1)
+        )
+        for entry in [localOnly, differing, matching] {
+            try store.repository.newEntry(entry)
+        }
+        try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([])
+        store.rebuildSyncChangeTracking()
+
+        var staleRemote = LibraryEntrySyncSnapshot(entry: differing)
+        staleRemote.notes = "Remote notes"
+        staleRemote.trackingUpdatedAt = referenceDate(year: 2026, month: 6, day: 1)
+        let database = FakeCloudLibrarySyncDatabase(changes: [
+            try makeChangeBatch(client: client, snapshots: [staleRemote, LibraryEntrySyncSnapshot(entry: matching)])
+        ])
+        // The replaced zone no longer recognizes the stored token.
+        database.fetchErrors = [CKError(.zoneNotFound)]
+        let namespace = makeNamespace()
+        let tokenDefaults = UserDefaults(suiteName: "LibrarySyncCoordinatorTests.FullRefetch.\(UUID().uuidString)")!
+        let tokenStore = CloudLibrarySyncChangeTokenStore(userDefaults: tokenDefaults)
+        tokenStore.setToken(makeToken(), for: CloudLibrarySyncClient.recordZoneID, namespace: namespace)
+        store.configureLibrarySyncCoordinator(
+            client: client,
+            database: database,
+            changeTokenStore: tokenStore,
+            namespaceProvider: { namespace }
+        )
+
+        #expect(await store.performLibrarySync(trigger: .foreground))
+
+        #expect(database.fetchedChangeTokens.count == 2)
+        #expect(database.fetchedChangeTokens.last == .some(nil))
+        let savedEntryRecords = database.savedRecords.filter { $0.recordID != client.librarySettingsRecordID }
+        #expect(
+            Set(savedEntryRecords.map(\.recordID))
+                == [client.recordID(for: localOnly.libraryIdentity), client.recordID(for: differing.libraryIdentity)]
+        )
+        let uploadedDiffering = try #require(
+            savedEntryRecords.first { $0.recordID == client.recordID(for: differing.libraryIdentity) }
+        )
+        #expect(try savedSnapshot(from: uploadedDiffering, client: client).notes == "Local notes")
+        #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
+    }
 }

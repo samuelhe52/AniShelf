@@ -119,6 +119,8 @@ final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, @unchecked S
     var saveBatchSizes: [Int] = []
     var prepare: (@Sendable () async throws -> Void)?
     var ensureZoneCallCount = 0
+    /// Errors thrown, in order, by the next zone-change fetches.
+    var fetchErrors: [any Error] = []
     var suspendNextFetch = false
     var suspendNextSave = false
     var suspendedFetchCount = 0
@@ -148,6 +150,9 @@ final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, @unchecked S
         since changeToken: CKServerChangeToken?
     ) async throws -> CloudLibrarySyncZoneChangeBatch {
         fetchedChangeTokens.append(changeToken)
+        if !fetchErrors.isEmpty {
+            throw fetchErrors.removeFirst()
+        }
         if suspendNextFetch || suspendedFetchCount > 0 {
             if suspendNextFetch {
                 suspendNextFetch = false

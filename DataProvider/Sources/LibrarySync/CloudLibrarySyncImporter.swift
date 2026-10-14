@@ -25,6 +25,11 @@ public struct CloudLibrarySyncImportBatch {
     public var changeToken: CKServerChangeToken
     public var namespace: CloudLibrarySyncChangeTokenStore.Namespace
     public var zoneID: CKRecordZone.ID
+    /// Whether this batch came from the start of the zone instead of a stored token.
+    ///
+    /// A full refetch can follow a zone that was replaced, so its records alone
+    /// do not show what the cloud is missing from this device.
+    public var isFullRefetch = false
     var quarantineDecodedRecordIDs: Set<CKRecord.ID> = []
     var quarantineDeletedRecordIDs: Set<CKRecord.ID> = []
     var quarantineFailures: [CloudLibrarySyncQuarantineStore.Entry] = []
@@ -113,8 +118,9 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
 
     /// Fetches remote changes and resolves them against the current local state.
     ///
-    /// If the stored token has expired, the importer clears it and retries once
-    /// from the beginning of the zone.
+    /// If CloudKit rejects the stored token as expired, or reports the zone
+    /// missing for it because the zone was replaced, the importer clears the
+    /// token and retries once from the beginning of the zone.
     ///
     /// - Parameters:
     ///   - namespace: Container/account namespace for loading the previous token.
@@ -136,12 +142,12 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
                 startingToken: token
             )
         } catch {
-            guard error.isCloudLibrarySyncChangeTokenExpired, token != nil else {
+            guard error.isCloudLibrarySyncChangeTokenRejected, token != nil else {
                 throw error
             }
 
             cloudLibrarySyncImportLogger.warning(
-                "The stored iCloud sync change token expired. Clearing it and refetching from the start of the zone."
+                "CloudKit rejected the stored iCloud sync change token (code \((error as? CKError)?.code.rawValue ?? -1, privacy: .public)). Clearing it and refetching from the start of the zone."
             )
             changeTokenStore.removeToken(for: Self.zoneID, namespace: namespace)
             return try await fetchChanges(
@@ -288,6 +294,7 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
             namespace: namespace,
             zoneID: Self.zoneID
         )
+        result.isFullRefetch = startingToken == nil
         result.quarantineDecodedRecordIDs = decodedRecordIDs
         result.quarantineDeletedRecordIDs = deletedRecordIDs
         result.quarantineFailures = Array(failedRecords.values)
@@ -311,8 +318,10 @@ public enum CloudLibrarySyncImportError: Error, Equatable {
 }
 
 extension Error {
-    fileprivate var isCloudLibrarySyncChangeTokenExpired: Bool {
+    /// A stored token can expire, or outlive its zone when the zone was
+    /// deleted and created again.
+    fileprivate var isCloudLibrarySyncChangeTokenRejected: Bool {
         guard let ckError = self as? CKError else { return false }
-        return ckError.code == .changeTokenExpired
+        return ckError.code == .changeTokenExpired || ckError.code == .zoneNotFound
     }
 }

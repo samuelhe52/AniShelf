@@ -75,7 +75,9 @@ struct CloudLibrarySyncImporterExporterTests {
         #expect(tokenStore.token(for: CloudLibrarySyncClient.recordZoneID, namespace: namespace) != nil)
     }
 
-    @Test func importerResetsExpiredTokenAndRetriesFromNil() async throws {
+    /// A replaced zone can reject an old token as either expired or missing.
+    @Test(arguments: [CKError.Code.changeTokenExpired, .zoneNotFound])
+    func importerResetsRejectedTokenAndMarksFullRefetch(_ rejection: CKError.Code) async throws {
         let namespace = makeNamespace()
         let suiteName = "CloudLibrarySyncImporterExporterTests.\(UUID().uuidString)"
         let userDefaults = try #require(UserDefaults(suiteName: suiteName))
@@ -100,9 +102,10 @@ struct CloudLibrarySyncImporterExporterTests {
                     deletedRecordIDs: [],
                     changeToken: finalToken,
                     moreComing: false
-                )
+                ),
+                .init(modifiedRecordsByID: [:], deletedRecordIDs: [], changeToken: try makeToken(), moreComing: false)
             ],
-            firstFetchError: CKError(.changeTokenExpired)
+            firstFetchError: CKError(rejection)
         )
         let importer = CloudLibrarySyncImporter(
             client: client,
@@ -123,6 +126,13 @@ struct CloudLibrarySyncImporterExporterTests {
             #expect(Bool(false))
         }
         #expect(database.requestedTokens[1] == nil)
+        #expect(batch.isFullRefetch)
+        #expect(tokenStore.token(for: CloudLibrarySyncClient.recordZoneID, namespace: namespace) == nil)
+
+        try importer.commit(batch)
+        let incremental = try await importer.fetchChanges(namespace: namespace, localSnapshotsByIdentity: [:])
+        #expect(database.requestedTokens[2] != nil)
+        #expect(!incremental.isFullRefetch)
     }
 
     @Test func importerReturnsLeanTombstonesAndIgnoresRawDeletes() async throws {

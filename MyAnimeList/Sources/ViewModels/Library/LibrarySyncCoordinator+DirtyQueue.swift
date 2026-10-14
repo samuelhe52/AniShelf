@@ -38,6 +38,35 @@ extension LibrarySyncCoordinator {
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries(Array(entriesByID.values))
     }
 
+    /// Queues every local entry whose state the fetched zone lacks or holds
+    /// differently.
+    ///
+    /// Bootstrap and any ordinary pass that refetched the whole zone run this,
+    /// so a replaced or recreated zone receives this device's library again.
+    /// Entries already equal in the cloud stay out of the queue.
+    ///
+    /// - Returns: The local snapshots the decision was based on.
+    @discardableResult
+    func seedDirtyQueueDifferingFromRemote(
+        _ remoteChanges: [LibraryEntrySyncRemoteChange],
+        pass: SyncPass,
+        state: SyncPipelineState,
+        store: LibraryStore
+    ) async throws -> [LibraryEntryIdentity: LibraryEntrySyncSnapshot] {
+        let localSnapshots = try localSnapshotsByIdentity(for: store)
+        let remoteChangesByIdentity = try Self.coalescedRemoteChangesByIdentity(remoteChanges)
+        try await pass.run(.dirtyQueueSeeding, state: state, store: store) {
+            try seedDirtyQueue(
+                with: localSnapshots.filter { identity, snapshot in
+                    remoteChangesByIdentity[identity] != .snapshot(snapshot)
+                },
+                at: dateProvider(),
+                in: store
+            )
+        }
+        return localSnapshots
+    }
+
     func removeExportedDirtyEntries(
         _ exportedIdentities: Set<LibraryEntryIdentity>,
         from dirtyEntries: [LibraryEntrySyncDirtyQueueEntry],
