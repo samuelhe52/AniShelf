@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Planned |
+| Status | Implemented |
 | Anchor date | 2026-10-14 |
 | Origin | Maintainer request on 2026-10-14: add App Intents (mainly for Shortcuts) and Spotlight integration through `AppEntity` and `EntityQuery`; Siri and Apple Intelligence are not the focus. Decisions were settled through an interactive HTML plan the same day. |
 | Related | [005 adaptive library](../005-adaptive-library/000-plan.md) · [008 multi-window presentation](../008-multi-window-presentation/000-plan.md) · [009 cloud sync correctness](../009-cloud-sync-correctness/000-plan.md) · [012 rewatch tracking](../012-rewatch-tracking/000-plan.md) |
