@@ -93,6 +93,12 @@
                 .disabled(library == nil)
             }
 
+            // AniShelf has no Help Book; point Help at the website and its guides.
+            CommandGroup(replacing: .help) {
+                Link("AniShelf Website", destination: URL(string: "https://anishelf.konakona.dev")!)
+                Link("Privacy Policy", destination: URL(string: "https://anishelf.konakona.dev/privacy/")!)
+            }
+
             CommandMenu("Anime") {
                 let entry = library?.targetEntry
                 Button("Show Details") { if let entry { library?.openDetails(entry) } }

@@ -98,11 +98,11 @@ struct TMDbBatchAddView: View {
         .navigationTitle(Text(batchAddTitleResource))
         .inlineNavigationTitle()
         .toolbar {
-            ToolbarItem(placement: .platformLeading) {
+            ToolbarItem(placement: .sheetLeading) {
                 Button {
                     exitBatchAdd()
                 } label: {
-                    Image(systemName: "chevron.backward")
+                    backLabel
                 }
                 .accessibilityLabel(Text(backTitleResource))
             }
@@ -166,26 +166,40 @@ struct TMDbBatchAddView: View {
         .navigationTitle(Text(batchResultsTitleResource))
         .inlineNavigationTitle()
         .toolbar {
-            ToolbarItem(placement: .platformLeading) {
+            ToolbarItem(placement: .sheetLeading) {
                 Button {
                     exitBatchAdd()
                 } label: {
-                    Image(systemName: "chevron.backward")
+                    backLabel
                 }
                 .accessibilityLabel(Text(backTitleResource))
             }
 
-            ToolbarItem(placement: .platformTrailing) {
+            ToolbarItem(placement: .sheetTrailing) {
                 Button {
                     returnToInputStep()
                 } label: {
-                    Image(systemName: "square.and.pencil")
+                    #if os(macOS)
+                        Text(editTitleResource)
+                    #else
+                        Image(systemName: "square.and.pencil")
+                    #endif
                 }
                 .accessibilityLabel(Text(editTitleResource))
             }
         }
         .animation(batchResultsAnimation, value: tmdbSearchService.batchStatus)
         .animation(batchResultsAnimation, value: batchResultsAnimationKey)
+    }
+
+    /// Mac sheet bar buttons are text buttons; iOS keeps the chevron.
+    @ViewBuilder
+    private var backLabel: some View {
+        #if os(macOS)
+            Text(backTitleResource)
+        #else
+            Image(systemName: "chevron.backward")
+        #endif
     }
 
     @ViewBuilder

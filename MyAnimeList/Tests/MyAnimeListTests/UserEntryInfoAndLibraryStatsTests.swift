@@ -7,7 +7,6 @@
 
 import Foundation
 import Testing
-import UIKit
 
 @testable import DataProvider
 @testable import MyAnimeList

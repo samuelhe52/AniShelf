@@ -27,7 +27,7 @@ struct AboutAniShelfSheet: View {
         .navigationTitle(aboutTitleResource)
         .inlineNavigationTitle()
         .toolbar {
-            ToolbarItem(placement: .platformTrailing) {
+            ToolbarItem(placement: .sheetTrailing) {
                 Button(doneTitleResource) { dismiss() }
             }
         }

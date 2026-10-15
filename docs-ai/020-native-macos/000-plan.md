@@ -168,3 +168,4 @@ No action record is warranted until implementation proceeds.
 - Updated 2026-10-15: Implementation approved; open questions resolved and slices planned — see [002-implementation-decisions.md](002-implementation-decisions.md)
 - Updated 2026-10-15: Slice 1 — native build and launch — see [003-slice-1-native-build.md](003-slice-1-native-build.md)
 - Updated 2026-10-16: Slice 2 — Mac shell (sidebar split view, desktop selection, inspector layout, commands, Settings window) — see [004-slice-2-mac-shell.md](004-slice-2-mac-shell.md)
+- Updated 2026-10-16: Slice 3 — feature parity (save panels, sheet buttons, SVG rasters, native Mac tests, lifecycle and sync validation) — see [005-slice-3-feature-parity.md](005-slice-3-feature-parity.md)

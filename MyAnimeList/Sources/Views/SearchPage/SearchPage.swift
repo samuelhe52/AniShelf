@@ -188,7 +188,7 @@ struct SearchPage: View {
             #endif
             DefaultToolbarItem(kind: .search, placement: .platformBottomBar)
             if mode == .tmdb {
-                ToolbarItem(placement: .platformTrailing) {
+                ToolbarItem(placement: .sheetTrailing) {
                     Button {
                         isShowingBatchAddEntryAlert = true
                     } label: {

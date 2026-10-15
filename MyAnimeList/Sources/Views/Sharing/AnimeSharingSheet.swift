@@ -58,6 +58,27 @@ struct AnimeSharingSheet: View {
                     .accessibilityLabel(Text("Close"))
                 }
 
+                #if os(macOS)
+                    // The share menu has no Save on the Mac, and a tap gesture layered on
+                    // ShareLink can swallow its click, so Save and Share are separate controls.
+                    // Mac sheet bars show one item per slot: Share takes the leading slot
+                    // (styled normally; the placement only positions it), Save the default one.
+                    ToolbarItem(placement: .destructiveAction) {
+                        if let url = viewModel.renderedImageURL {
+                            ShareLink(item: url) {
+                                Text("Share…")
+                            }
+                        }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        if let url = viewModel.renderedImageURL {
+                            Button("Save…") { saveRenderedImage(url) }
+                        } else {
+                            Label("Rendering…", systemImage: "hourglass")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                #else
                 ToolbarItem(placement: .primaryAction) {
                     if let url = viewModel.renderedImageURL {
                         ShareLink(item: url) {
@@ -78,6 +99,7 @@ struct AnimeSharingSheet: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                #endif
             }
             .navigationDestination(isPresented: $showPosterSelection) {
                 PosterSelectionView(
@@ -121,6 +143,16 @@ struct AnimeSharingSheet: View {
         .presentationSizing(.page)
         .macSheetFrame(width: 980, height: 700)
     }
+
+    #if os(macOS)
+        private func saveRenderedImage(_ url: URL) {
+            // This sheet is its own key window; a save panel on the parent would queue behind it.
+            guard let window = NSApplication.shared.keyWindow else { return }
+            didActivateShare = true
+            appReview.record(.entryShare(entryID: viewModel.entry.libraryIdentity), scheduleRequest: false)
+            ShareSheetPresenter.saveCopy(of: url, in: window)
+        }
+    #endif
 
     private var wideSharingContent: some View {
         HStack(spacing: Constants.wideColumnSpacing) {

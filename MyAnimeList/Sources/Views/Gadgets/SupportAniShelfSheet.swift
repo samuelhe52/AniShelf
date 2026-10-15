@@ -47,7 +47,7 @@ struct SupportAniShelfSheet: View {
         .navigationTitle(supportTitleResource)
         .inlineNavigationTitle()
         .toolbar {
-            ToolbarItem(placement: .platformTrailing) {
+            ToolbarItem(placement: .sheetTrailing) {
                 Button(doneTitleResource) { dismiss() }
             }
         }

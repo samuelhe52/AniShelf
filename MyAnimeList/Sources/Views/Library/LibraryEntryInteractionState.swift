@@ -503,9 +503,20 @@ extension LibraryEntryInteractionState {
     @ViewBuilder
     func savePosterButton(for entry: AnimeEntry) -> some View {
         if let posterURL = entry.posterURL {
-            ShareLink(item: posterURL) {
-                Label("Save Poster", systemImage: "photo.badge.arrow.down")
-            }
+            #if os(macOS)
+                // The Mac share menu cannot save a file, so download it into a save panel.
+                Button("Save Poster…", systemImage: "photo.badge.arrow.down") {
+                    let window = NSApplication.shared.keyWindow
+                    Task {
+                        guard let window else { return }
+                        await ShareSheetPresenter.saveDownload(of: posterURL, in: window)
+                    }
+                }
+            #else
+                ShareLink(item: posterURL) {
+                    Label("Save Poster", systemImage: "photo.badge.arrow.down")
+                }
+            #endif
         }
     }
 

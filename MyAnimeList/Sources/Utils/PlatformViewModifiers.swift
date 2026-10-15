@@ -72,6 +72,23 @@ extension ToolbarItemPlacement {
             .topBarLeading
         #endif
     }
+    /// A sheet's trailing button. macOS sheets only show toolbar items in the cancel and confirm
+    /// slots of their bottom bar, so it becomes the confirm slot there.
+    static var sheetTrailing: Self {
+        #if os(macOS)
+            .confirmationAction
+        #else
+            .topBarTrailing
+        #endif
+    }
+    /// A sheet's leading button, such as Back; the cancel slot on macOS.
+    static var sheetLeading: Self {
+        #if os(macOS)
+            .cancellationAction
+        #else
+            .topBarLeading
+        #endif
+    }
     static var platformBottomBar: Self {
         #if os(macOS)
             .automatic
