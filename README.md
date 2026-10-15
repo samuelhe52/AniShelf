@@ -46,9 +46,9 @@ New features will be released on TestFlight before being pushed to the App Store
 - **📚 Library Management** - Keep track of all your anime in one place
 - **🔍 Smart Search** - Find anime using The Movie Database (TMDb) with multi-language support
 - **🎨 Beautiful UI** - Native SwiftUI interface, polished and consistent design language
-- **📊 Track Progress** - Track watch status, scores, and episode-level progress
-- **⏰ Broadcast & Reminders** - View broadcast airtimes for eligible anime and set reminders for each new episode
-- **💾 Backup & Restore** - Export and import your library data
+- **📊 Track Progress** - Track watch status, scores, episode-level progress, and rewatches
+- **⏰ Broadcast & Reminders** - View broadcast airtimes for eligible anime and set reminders for each new episode, before or after airtime
+- **💾 Backup & Restore** - Back up and restore your library and settings, or export your library to common file formats
 - **☁️ iCloud Sync** - Keep your library and preferences in sync across your devices
 - **🌍 Multi-language** - Support for anime metadata in English, Chinese, and Japanese.
 

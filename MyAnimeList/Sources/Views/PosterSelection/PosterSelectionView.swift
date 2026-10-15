@@ -112,7 +112,8 @@ fileprivate struct PosterPreviewSelection: Identifiable {
 extension Array where Element == Poster {
     func filteredAndSorted(
         originalLanguageCode: String? = nil,
-        metadataLanguageCode: String? = nil
+        metadataLanguageCode: String? = nil,
+        posterLanguage: PosterLanguagePreference = .originalLanguage
     ) -> [Poster] {
         let fallbackPosters = sorted { lhs, rhs in
             lhs.metadata.width > rhs.metadata.width
@@ -122,7 +123,8 @@ extension Array where Element == Poster {
                 let priority = TMDbImageSelection.posterLanguagePriority(
                     for: poster.metadata.languageCode,
                     originalLanguageCode: originalLanguageCode,
-                    metadataLanguageCode: metadataLanguageCode
+                    metadataLanguageCode: metadataLanguageCode,
+                    posterLanguage: posterLanguage
                 )
             else {
                 return nil

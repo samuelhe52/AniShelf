@@ -7,7 +7,11 @@
 - Use `make run-device` for build, install, and launch on a connected iPhone only when the user explicitly asks for device-based verification.
 - Prefer the smallest relevant build or test command before broad verification.
 - If the user asks to perform a change in a new worktree, create that worktree under ../AniShelf-worktrees/.
-- Do not use any of the `openspec` workflows unless the user explicitly requests it.
+- Use the `write-ai-doc` skill for substantial features and decision-shaping fixes. Follow [`docs-ai/workflow.md`](docs-ai/workflow.md) and read [`docs-ai/README.md`](docs-ai/README.md) for existing topics before creating a new record.
+- Write `000-plan.md` before implementation and reconcile `001-action.md` afterward. Record reasons and rejected alternatives that code alone would miss; distinguish recovered discussion memory, implementation inference, and verified evidence.
+- Keep related follow-ups in the existing entry with a numbered amendment. Skip routine investigations, reviews, test reports, minor polish, and docs-only edits unless a durable record is requested.
+- Keep public tutorials and images in `docs/`; internal design history, contracts, and runbooks belong in `docs-ai/`.
+- OpenSpec is retired for this project; use `docs-ai/` records instead.
 
 ## Code Style
 
@@ -34,10 +38,12 @@
 
 ## Commits
 
+- Use Git for version control. Commit only when the maintainer asks; pushing requires explicit authorization. Do not amend, rebase, reset, or otherwise rewrite commits you did not create in the current task without asking.
+- Other agents may be editing the same working tree. Stage only your own files by path (`git add <paths>`); never use `git add -A`, `git add .`, or `git commit -a`. Keep parallel agents on separate files.
 - Use conventional commits: `<type>: <subject>`.
 - Write imperative, capitalized subjects; keep them concise and avoid periods.
 - Add a body when the change needs explanation.
-- When explicitly authorized to commit, organize complex work into coherent checkpoint commits.
+- When committing, organize work into coherent commits; fold review corrections and reverts into the commit they fix rather than stacking them.
 
 ## Releases
 

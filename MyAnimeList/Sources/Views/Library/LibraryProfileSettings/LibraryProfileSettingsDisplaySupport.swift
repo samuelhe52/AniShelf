@@ -15,6 +15,14 @@ extension LibraryCloudSyncStatus {
         let tint: Color
     }
 
+    /// The user deleted AniShelf's iCloud data, and no pass is running.
+    ///
+    /// The notice replaces the failure display until the user uploads this
+    /// library again or turns sync off.
+    var showsCloudLibraryDeletedNotice: Bool {
+        isEnabled && cloudLibraryDeletedByUser && !isSyncInProgress
+    }
+
     var isFailureDisplay: Bool {
         if bootstrapState == .failed {
             return true
@@ -33,6 +41,9 @@ extension LibraryCloudSyncStatus {
         }
         if isSyncInProgress {
             return DisplayStatus(title: "Syncing", systemImage: "arrow.triangle.2.circlepath", tint: .indigo)
+        }
+        if showsCloudLibraryDeletedNotice {
+            return DisplayStatus(title: "iCloud Data Deleted", systemImage: "icloud.slash", tint: .orange)
         }
 
         switch bootstrapState {
@@ -61,6 +72,10 @@ extension LibraryCloudSyncStatus {
     }
 
     var detailDisplayResource: LocalizedStringResource {
+        if showsCloudLibraryDeletedNotice {
+            return
+                "AniShelf's iCloud data was deleted in iCloud settings. Your library on this device is unchanged."
+        }
         if bootstrapState == .needsConflictChoice || lastResult == .conflictChoiceRequired {
             return conflictSummaryResource
         }
@@ -80,7 +95,9 @@ extension LibraryCloudSyncStatus {
     }
 
     var failureReasonDisplay: String? {
-        guard isFailureDisplay, let lastFailureReason, !lastFailureReason.isEmpty else {
+        guard isFailureDisplay, !showsCloudLibraryDeletedNotice,
+            let lastFailureReason, !lastFailureReason.isEmpty
+        else {
             return nil
         }
         if let lastFailurePhase {
@@ -140,5 +157,39 @@ extension LibraryExportFormat {
         case .excel:
             "tablecells.fill"
         }
+    }
+}
+
+extension LibraryCloudSyncStatus {
+    /// Restoration failures are shown separately from completed-sync issues.
+    var settingsSyncIssues: [LibraryCloudSyncIssue] {
+        guard isEnabled else { return [] }
+        var issues: [LibraryCloudSyncIssue] = []
+        let failures = currentPendingReconstructionFailures
+        if restoration == nil, !failures.isEmpty {
+            issues.append(.unloadedEntries(failures.map(LibraryCloudSyncFailedEntry.init)))
+        }
+        if rejectedUploadCount > 0 { issues.append(.rejectedUploads(rejectedUploadCount)) }
+        if quarantinedRecordCount > 0 { issues.append(.unreadableRecords(quarantinedRecordCount)) }
+        return issues
+    }
+
+    var settingsIssueCount: Int {
+        guard isEnabled else { return 0 }
+        return settingsSyncIssues.reduce(0) { $0 + $1.count } + (restoration?.failures.count ?? 0)
+    }
+
+    var settingsHubStatus: DisplayStatus {
+        guard isEnabled else {
+            return .init(title: "iCloud Off", systemImage: "icloud.slash", tint: .secondary)
+        }
+        if showsCloudLibraryDeletedNotice {
+            return statusDisplay
+        }
+        if settingsIssueCount > 0 {
+            return .init(
+                title: "\(settingsIssueCount) sync issues", systemImage: "exclamationmark.triangle.fill", tint: .orange)
+        }
+        return statusDisplay
     }
 }

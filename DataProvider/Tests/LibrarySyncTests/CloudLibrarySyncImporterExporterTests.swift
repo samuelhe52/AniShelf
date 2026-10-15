@@ -75,7 +75,9 @@ struct CloudLibrarySyncImporterExporterTests {
         #expect(tokenStore.token(for: CloudLibrarySyncClient.recordZoneID, namespace: namespace) != nil)
     }
 
-    @Test func importerResetsExpiredTokenAndRetriesFromNil() async throws {
+    /// A replaced zone can reject an old token as either expired or missing.
+    @Test(arguments: [CKError.Code.changeTokenExpired, .zoneNotFound])
+    func importerResetsRejectedTokenAndMarksFullRefetch(_ rejection: CKError.Code) async throws {
         let namespace = makeNamespace()
         let suiteName = "CloudLibrarySyncImporterExporterTests.\(UUID().uuidString)"
         let userDefaults = try #require(UserDefaults(suiteName: suiteName))
@@ -100,9 +102,10 @@ struct CloudLibrarySyncImporterExporterTests {
                     deletedRecordIDs: [],
                     changeToken: finalToken,
                     moreComing: false
-                )
+                ),
+                .init(modifiedRecordsByID: [:], deletedRecordIDs: [], changeToken: try makeToken(), moreComing: false)
             ],
-            firstFetchError: CKError(.changeTokenExpired)
+            firstFetchError: CKError(rejection)
         )
         let importer = CloudLibrarySyncImporter(
             client: client,
@@ -123,6 +126,13 @@ struct CloudLibrarySyncImporterExporterTests {
             #expect(Bool(false))
         }
         #expect(database.requestedTokens[1] == nil)
+        #expect(batch.isFullRefetch)
+        #expect(tokenStore.token(for: CloudLibrarySyncClient.recordZoneID, namespace: namespace) == nil)
+
+        try importer.commit(batch)
+        let incremental = try await importer.fetchChanges(namespace: namespace, localSnapshotsByIdentity: [:])
+        #expect(database.requestedTokens[2] != nil)
+        #expect(!incremental.isFullRefetch)
     }
 
     @Test func importerReturnsLeanTombstonesAndIgnoresRawDeletes() async throws {
@@ -215,6 +225,21 @@ struct CloudLibrarySyncImporterExporterTests {
                     ])))
         #expect(snapshot.payload["FutureArray"] == .unknown(.array([.number(1), .string("x")])))
         #expect(try client.settingsSnapshot(from: client.record(from: snapshot)) == snapshot)
+    }
+
+    @Test func librarySettingsRecordDecodesObjectArrays() throws {
+        let categories: LibrarySettingsSyncSnapshot.Value = .objectArray([
+            ["id": .string("category-a"), "name": .string("Isekai")]
+        ])
+        let snapshot = LibrarySettingsSyncSnapshot(
+            updatedAt: referenceDate(year: 2026, month: 10, day: 13),
+            payload: ["LibraryCategories": categories]
+        )
+
+        let decoded = try client.settingsSnapshot(from: client.record(from: snapshot))
+
+        // A known case, so this build keeps exporting settings.
+        #expect(decoded.payload["LibraryCategories"] == categories)
     }
 
     @Test func importerDecodesMixedEntryAndSettingsBatch() async throws {
@@ -583,14 +608,16 @@ struct CloudLibrarySyncImporterExporterTests {
         #expect(secondDatabase.requestedRecordIDs == [[recordID]])
         #expect(recovered.changes == [.snapshot(snapshot)])
         #expect(recovered.quarantinedRecordIDs.isEmpty)
-        #expect(try quarantineStore.entries(namespace: namespace, zoneID: CloudLibrarySyncClient.recordZoneID).count == 1)
+        #expect(
+            try quarantineStore.entries(namespace: namespace, zoneID: CloudLibrarySyncClient.recordZoneID).count == 1)
 
         // Local application can fail before commit. The next pass must fetch
         // the recovered record by ID again even though zone changes are empty.
         let retryDatabase = FakeCloudLibrarySyncDatabase(
             changes: [
-                .init(modifiedRecordsByID: [:], deletedRecordIDs: [],
-                      changeToken: try makeToken(), moreComing: false)
+                .init(
+                    modifiedRecordsByID: [:], deletedRecordIDs: [],
+                    changeToken: try makeToken(), moreComing: false)
             ],
             fetchedRecordsByID: [recordID: recoveredRecord]
         )
@@ -644,7 +671,8 @@ fileprivate final class FakeCloudLibrarySyncDatabase: CloudLibrarySyncDatabase, 
 
     func ensureZoneAndSubscription(
         zoneID: CKRecordZone.ID,
-        subscriptionID: CKSubscription.ID
+        subscriptionID: CKSubscription.ID,
+        recreatingUserDeletedZone: Bool
     ) async throws {
         ensureCallCount += 1
     }

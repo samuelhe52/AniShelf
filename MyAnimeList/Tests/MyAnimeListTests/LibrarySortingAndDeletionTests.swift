@@ -463,7 +463,94 @@ struct LibrarySortingAndDeletionTests {
         store.hideDroppedByDefault = true
         #expect(!store.libraryOnDisplay.contains { $0.tmdbID == dropped.tmdbID })
 
+        // Resetting filters for a search jump opts into Dropped without changing the preference.
+        store.filters = [.favorited]
+        store.resetFiltersToReveal(plain.libraryIdentity)
+        #expect(store.filters.isEmpty)
+        store.filters = [.favorited]
+        store.resetFiltersToReveal(dropped.libraryIdentity)
+        #expect(store.filters == [.dropped])
+        #expect(store.hideDroppedByDefault)
+        store.filters = []
+
         store.hideDroppedByDefault = false
         #expect(store.libraryOnDisplay.contains { $0.tmdbID == dropped.tmdbID })
+    }
+
+    @Test @MainActor func testActiveCategoryNarrowsLibraryBeforeFilters() throws {
+        let defaults = UserDefaults(suiteName: #function)!
+        defer { defaults.removePersistentDomain(forName: #function) }
+        let store = LibraryStore(
+            dataProvider: DataProvider(inMemory: true),
+            preferences: LibraryPreferences(defaults: defaults)
+        )
+        let favoriteMember = makeLibraryEntry(name: "Member", tmdbID: 301, daySaved: 1, favorite: true)
+        let plainMember = makeLibraryEntry(name: "Plain Member", tmdbID: 302, daySaved: 2)
+        let outsider = makeLibraryEntry(name: "Outsider", tmdbID: 303, daySaved: 3, favorite: true)
+        for entry in [favoriteMember, plainMember, outsider] {
+            try store.repository.newEntry(entry)
+        }
+        try store.refreshLibrary()
+
+        store.categoriesEnabled = true
+        let category = try #require(store.createCategory(named: " Isekai "))
+        #expect(category.name == "Isekai")
+        LibraryBatchAction.category(category.id, isMember: true, knownCategoryIDs: store.knownCategoryIDs)
+            .apply(to: [favoriteMember, plainMember])
+
+        store.activeCategoryID = category.id
+        #expect(Set(store.libraryOnDisplay.map(\.tmdbID)) == [301, 302])
+        // Search duplicate detection still sees entries the category hides.
+        #expect(store.containsEntry(outsider.libraryIdentity))
+        store.filters = [.favorited]
+        #expect(store.libraryOnDisplay.map(\.tmdbID) == [301])
+        // A search jump leaves the category itself, so only the filters decide whether it can land.
+        #expect(store.canRevealEntry(outsider.libraryIdentity))
+        #expect(!store.canRevealEntry(plainMember.libraryIdentity))
+
+        // Turning the feature off shows All again but keeps memberships.
+        store.filters = []
+        store.categoriesEnabled = false
+        #expect(store.activeCategoryID == nil)
+        #expect(store.libraryOnDisplay.count == 3)
+        #expect(favoriteMember.categoryIDs == [category.id])
+
+        // Deleting a category leaves stale IDs; the next membership write drops them.
+        store.categoriesEnabled = true
+        let other = try #require(store.createCategory(named: "Comfort"))
+        store.activeCategoryID = category.id
+        store.deleteCategory(category.id)
+        #expect(store.activeCategoryID == nil)
+        #expect(store.categoryEntryCounts[category.id] == nil)
+        LibraryBatchAction.category(other.id, isMember: true, knownCategoryIDs: store.knownCategoryIDs)
+            .apply(to: [favoriteMember])
+        #expect(favoriteMember.categoryIDs == [other.id])
+        #expect(plainMember.categoryIDs == [category.id])
+    }
+
+    @Test @MainActor func testCategoryNamesAndOrder() throws {
+        let defaults = UserDefaults(suiteName: #function)!
+        defer { defaults.removePersistentDomain(forName: #function) }
+        let store = LibraryStore(
+            dataProvider: DataProvider(inMemory: true),
+            preferences: LibraryPreferences(defaults: defaults)
+        )
+        let first = try #require(store.createCategory(named: "First"))
+        let second = try #require(store.createCategory(named: "Second"))
+        let third = try #require(store.createCategory(named: "Third"))
+
+        #expect(store.createCategory(named: "first") == nil)
+        #expect(store.createCategory(named: "   ") == nil)
+        #expect(!store.renameCategory(second.id, to: "FIRST"))
+        #expect(store.renameCategory(second.id, to: "Second Pick"))
+
+        store.moveCategory(third.id, to: first.id)
+        #expect(store.categories.map(\.id) == [third.id, first.id, second.id])
+        store.moveCategory(third.id, to: second.id)
+        #expect(store.categories.map(\.id) == [first.id, second.id, third.id])
+
+        // Definitions and their order persist through preferences.
+        let reloaded = LibraryPreferences(defaults: defaults).load().categories
+        #expect(reloaded.map(\.name) == ["First", "Second Pick", "Third"])
     }
 }

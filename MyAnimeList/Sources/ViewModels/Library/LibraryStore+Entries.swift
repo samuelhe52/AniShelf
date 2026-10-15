@@ -32,7 +32,8 @@ extension LibraryStore {
         let latestInfo = try await infoFetcher.latestInfo(
             entryType: type,
             tmdbID: id,
-            language: language
+            language: language,
+            posterLanguage: posterLanguage
         )
         let entry = AnimeEntry(fromInfo: latestInfo.0)
         applyNewEntryDefaults(to: entry)
@@ -48,7 +49,8 @@ extension LibraryStore {
                     .generateParentSeriesEntryForSeason(
                         parentSeriesID: parentSeriesID,
                         fetcher: infoFetcher,
-                        infoLanguage: language)
+                        infoLanguage: language,
+                        posterLanguage: posterLanguage)
                 entry.parentSeriesEntry = parentSeriesEntry
             }
         }
@@ -61,7 +63,8 @@ extension LibraryStore {
         let latestInfo = try await infoFetcher.latestInfo(
             entryType: entry.type,
             tmdbID: tmdbID,
-            language: language
+            language: language,
+            posterLanguage: posterLanguage
         )
         try hydrateExistingEntry(
             entry,

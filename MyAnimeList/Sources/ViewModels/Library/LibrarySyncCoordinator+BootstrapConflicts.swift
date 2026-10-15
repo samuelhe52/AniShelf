@@ -254,6 +254,10 @@ fileprivate func hasAuthoritativeLocalWork(
     {
         return true
     }
+    // Category memberships are always clocked, so they never form bootstrap conflicts.
+    if hasNewerClock(localSnapshot.categoriesUpdatedAt, than: remoteSnapshot.categoriesUpdatedAt) {
+        return true
+    }
     return hasNewerLocalEpisodeProgress(localSnapshot, remoteSnapshot: remoteSnapshot)
 }
 

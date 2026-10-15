@@ -1,0 +1,216 @@
+{
+  "migration_date": "2026-10-07",
+  "source_revision": "1b5b5d6",
+  "files": [
+    {
+      "source": "docs/implemented/cloudkit-sync-implementation-plan.md",
+      "destination": "docs-ai/001-selective-library-sync/historical/cloudkit-sync-implementation-plan.md",
+      "source_sha256": "3cb415baca6e6fc0612821727adf9971e812ce7a15337eddf38bde13fe19f0e3",
+      "destination_sha256": "3cb415baca6e6fc0612821727adf9971e812ce7a15337eddf38bde13fe19f0e3",
+      "link_relocations": []
+    },
+    {
+      "source": "docs/implemented/cloudkit-sync-stages-1-5-review.md",
+      "destination": "docs-ai/001-selective-library-sync/historical/cloudkit-sync-stages-1-5-review.md",
+      "source_sha256": "5fb43828fff61dbe5d2c53108262fcdedd19e855b8f29e0c5811b8966873f1ba",
+      "destination_sha256": "5fb43828fff61dbe5d2c53108262fcdedd19e855b8f29e0c5811b8966873f1ba",
+      "link_relocations": []
+    },
+    {
+      "source": "docs/implemented/code-review-2026-06-13.md",
+      "destination": "docs-ai/002-image-path-storage/historical/code-review-2026-06-13.md",
+      "source_sha256": "0acb763e207d54bc14fe10d51a01b2209073ccfb3a7a74af85b469f1675aaedb",
+      "destination_sha256": "0acb763e207d54bc14fe10d51a01b2209073ccfb3a7a74af85b469f1675aaedb",
+      "link_relocations": []
+    },
+    {
+      "source": "docs/implemented/code-review-2026-06-14.md",
+      "destination": "docs-ai/002-image-path-storage/historical/code-review-2026-06-14.md",
+      "source_sha256": "449f9f1eed1952d9d202227056978c3902052430d7b1010b383b02caae5b4bf4",
+      "destination_sha256": "449f9f1eed1952d9d202227056978c3902052430d7b1010b383b02caae5b4bf4",
+      "link_relocations": []
+    },
+    {
+      "source": "docs/broadcast-time-feature/broadcast-time-feature-plan.md",
+      "destination": "docs-ai/006-broadcast-and-reminders/historical/broadcast-time-feature-plan.md",
+      "source_sha256": "e264aac1417e4468ccb365ee32dd77d4ad54a13decdce174c3c0a09508adc2a2",
+      "destination_sha256": "e264aac1417e4468ccb365ee32dd77d4ad54a13decdce174c3c0a09508adc2a2",
+      "link_relocations": []
+    },
+    {
+      "source": "docs/broadcast-time-feature/broadcast-availability-policy.md",
+      "destination": "docs-ai/006-broadcast-and-reminders/broadcast-availability-policy.md",
+      "source_sha256": "b67e0f89b512b00f37eddab3441d2fdfecc81cd2d29c97afc2a99423cc1ca73e",
+      "destination_sha256": "b67e0f89b512b00f37eddab3441d2fdfecc81cd2d29c97afc2a99423cc1ca73e",
+      "link_relocations": []
+    },
+    {
+      "source": "docs/broadcast-time-feature/ios-recurring-notifications-qa.md",
+      "destination": "docs-ai/006-broadcast-and-reminders/recurring-notifications-rationale.md",
+      "source_sha256": "bcfd77a3449656597572a4b6a6880aa0d21d14686c4a1ad48705c264fe918c29",
+      "destination_sha256": "bcfd77a3449656597572a4b6a6880aa0d21d14686c4a1ad48705c264fe918c29",
+      "link_relocations": []
+    },
+    {
+      "source": "docs/cloud-sync-correctness-fixes-plan.md",
+      "destination": "docs-ai/009-cloud-sync-correctness/historical/cloud-sync-correctness-fixes-plan.md",
+      "source_sha256": "008c05eb1e02ac0289c94857f0d03e463e9f925e9b41cadd8cb2e5ebc2c8dbf0",
+      "destination_sha256": "1e41ab5c5cf8280977f5d5cdd507f9d345b2d71d33f24871f0fefeb56624efaa",
+      "link_relocations": [
+        {
+          "from": "selective-cloud-sync-library-plan.md",
+          "to": "../../010-selective-sync-package/design.md"
+        },
+        {
+          "from": "../MyAnimeList/Sources/ViewModels/Library/LibrarySyncCoordinator+DirtyQueue.swift",
+          "to": "../../../MyAnimeList/Sources/ViewModels/Library/LibrarySyncCoordinator+DirtyQueue.swift"
+        },
+        {
+          "from": "../DataProvider/Sources/LibrarySync/CloudLibrarySyncDatabase.swift",
+          "to": "../../../DataProvider/Sources/LibrarySync/CloudLibrarySyncDatabase.swift"
+        }
+      ]
+    },
+    {
+      "source": "docs/selective-cloud-sync-library-plan.md",
+      "destination": "docs-ai/010-selective-sync-package/design.md",
+      "source_sha256": "99240544f6c2b3c3918b49298ef7916c6fddead3e960ab2b7aba6201ce02c4cc",
+      "destination_sha256": "1e9416ec6a0b3ad0d9b69ee974a78971862a952e4ee242cb6e86934ae96f642f",
+      "link_relocations": [
+        {
+          "from": "cloud-sync-correctness-fixes-plan.md",
+          "to": "../009-cloud-sync-correctness/historical/cloud-sync-correctness-fixes-plan.md"
+        },
+        {
+          "from": "cloud-sync-correctness-fixes-plan.md",
+          "to": "../009-cloud-sync-correctness/historical/cloud-sync-correctness-fixes-plan.md"
+        },
+        {
+          "from": "cloud-sync-correctness-fixes-plan.md",
+          "to": "../009-cloud-sync-correctness/historical/cloud-sync-correctness-fixes-plan.md"
+        },
+        {
+          "from": "implemented/cloudkit-sync-implementation-plan.md",
+          "to": "../001-selective-library-sync/historical/cloudkit-sync-implementation-plan.md"
+        }
+      ],
+      "annotations": "Updated prerequisite wording to distinguish later implemented fixes; edits carry a dated header note and inline markers. Staged tasks unchanged.",
+      "content_annotations": [
+        {
+          "from": "Fix them first, following",
+          "to": "Reconcile the remaining prerequisites first, following"
+        },
+        {
+          "from": "The current implementation has correctness defects that the package must not\ncarry into its public contract.",
+          "to": "The source proposal identified correctness defects that the package must not\ncarry into its public contract. Some were subsequently fixed in AniShelf; see the\ncurrent action record in entry 009 before treating the historical list as open."
+        },
+        {
+          "from": "Prerequisite: complete the",
+          "to": "Prerequisite: reconcile completed fixes and resolve the remaining obligations in the"
+        },
+        {
+          "from": "adapter must\naddress the defects listed there under \"Deferred\".",
+          "to": "adapter must\naddress remaining defects listed there under \"Deferred\". Progress clearing (D5)\nwas subsequently implemented by [clocked zero resets](../012-rewatch-tracking/000-plan.md)."
+        }
+      ]
+    },
+    {
+      "source": "openspec/config.yaml",
+      "destination": "docs-ai/013-documentation-workflow/historical/legacy-workflow-config.yaml",
+      "source_sha256": "7f64d2448e1c83ffa6f2f3398b742fb5f2d4d3ea47b2c540a9076484977026b4",
+      "destination_sha256": "7f64d2448e1c83ffa6f2f3398b742fb5f2d4d3ea47b2c540a9076484977026b4",
+      "link_relocations": []
+    },
+    {
+      "source": "openspec/changes/recover-corrupted-store-with-diagnostic-export/.openspec.yaml",
+      "destination": "docs-ai/003-persistent-store-recovery/historical/change-metadata.yaml",
+      "source_sha256": "d36d5ade13d63079e8fac69f1e3c45e2ee23d6b22c94f88c6a340556a023f11c",
+      "destination_sha256": "d36d5ade13d63079e8fac69f1e3c45e2ee23d6b22c94f88c6a340556a023f11c",
+      "link_relocations": []
+    },
+    {
+      "source": "openspec/changes/recover-corrupted-store-with-diagnostic-export/design.md",
+      "destination": "docs-ai/003-persistent-store-recovery/historical/design.md",
+      "source_sha256": "6b1b691885083a49628c1acd3a9b3d4bb52ab3292478286fa618c7352ef26f57",
+      "destination_sha256": "6b1b691885083a49628c1acd3a9b3d4bb52ab3292478286fa618c7352ef26f57",
+      "link_relocations": []
+    },
+    {
+      "source": "openspec/changes/recover-corrupted-store-with-diagnostic-export/proposal.md",
+      "destination": "docs-ai/003-persistent-store-recovery/historical/proposal.md",
+      "source_sha256": "eea3053e8f28f4fe261b07eedd60b8a4262101f984037b52ab4355e64197017f",
+      "destination_sha256": "eea3053e8f28f4fe261b07eedd60b8a4262101f984037b52ab4355e64197017f",
+      "link_relocations": []
+    },
+    {
+      "source": "openspec/changes/recover-corrupted-store-with-diagnostic-export/specs/persistent-store-recovery/spec.md",
+      "destination": "docs-ai/003-persistent-store-recovery/historical/specs/persistent-store-recovery/spec.md",
+      "source_sha256": "1cf66ec18037e1b67d244e1a01de6f27cc72850c82c7af640cd95a1a4bcf9a3a",
+      "destination_sha256": "1cf66ec18037e1b67d244e1a01de6f27cc72850c82c7af640cd95a1a4bcf9a3a",
+      "link_relocations": []
+    },
+    {
+      "source": "openspec/changes/recover-corrupted-store-with-diagnostic-export/tasks.md",
+      "destination": "docs-ai/003-persistent-store-recovery/historical/tasks.md",
+      "source_sha256": "9b2471151cf761ad7f29226ea59173d879a19e6fbb40cb3d47c6e136cfe0ebda",
+      "destination_sha256": "9b2471151cf761ad7f29226ea59173d879a19e6fbb40cb3d47c6e136cfe0ebda",
+      "link_relocations": []
+    },
+    {
+      "source": "openspec/changes/archive/2026-07-24-adapt-library-for-resizable-windows/.openspec.yaml",
+      "destination": "docs-ai/005-adaptive-library/historical/change-metadata.yaml",
+      "source_sha256": "bd4305ac1a1cb1281090962376d040192905b3b8cc6261caaecac4b6782c0050",
+      "destination_sha256": "bd4305ac1a1cb1281090962376d040192905b3b8cc6261caaecac4b6782c0050",
+      "link_relocations": []
+    },
+    {
+      "source": "openspec/changes/archive/2026-07-24-adapt-library-for-resizable-windows/design.md",
+      "destination": "docs-ai/005-adaptive-library/historical/design.md",
+      "source_sha256": "4f15409dd631febf48903392a08ede55e479a31bc50f9af39f586277758fd7c6",
+      "destination_sha256": "4f15409dd631febf48903392a08ede55e479a31bc50f9af39f586277758fd7c6",
+      "link_relocations": []
+    },
+    {
+      "source": "openspec/changes/archive/2026-07-24-adapt-library-for-resizable-windows/proposal.md",
+      "destination": "docs-ai/005-adaptive-library/historical/proposal.md",
+      "source_sha256": "6b338198703a0eed1ace3fcedc4506e57bd0f37942bf875aaaf8162955757429",
+      "destination_sha256": "6b338198703a0eed1ace3fcedc4506e57bd0f37942bf875aaaf8162955757429",
+      "link_relocations": []
+    },
+    {
+      "source": "openspec/changes/archive/2026-07-24-adapt-library-for-resizable-windows/specs/adaptive-library-experience/spec.md",
+      "destination": "docs-ai/005-adaptive-library/historical/specs/adaptive-library-experience/spec.md",
+      "source_sha256": "c0cdd16447065821d006aa2843272b8b910720f98c7a659329b7a36c9b56440a",
+      "destination_sha256": "c0cdd16447065821d006aa2843272b8b910720f98c7a659329b7a36c9b56440a",
+      "link_relocations": []
+    },
+    {
+      "source": "openspec/changes/archive/2026-07-24-adapt-library-for-resizable-windows/specs/adaptive-modal-presentations/spec.md",
+      "destination": "docs-ai/005-adaptive-library/historical/specs/adaptive-modal-presentations/spec.md",
+      "source_sha256": "62a2b56d9f280715688b247ee1bad01200ee06dce0d324b14d99ef64df69478a",
+      "destination_sha256": "62a2b56d9f280715688b247ee1bad01200ee06dce0d324b14d99ef64df69478a",
+      "link_relocations": []
+    },
+    {
+      "source": "openspec/changes/archive/2026-07-24-adapt-library-for-resizable-windows/tasks.md",
+      "destination": "docs-ai/005-adaptive-library/historical/tasks.md",
+      "source_sha256": "9ecf5c69edff542de5a01e9611a7885fc8d6a439f88c256cf1929f2e507873b2",
+      "destination_sha256": "9ecf5c69edff542de5a01e9611a7885fc8d6a439f88c256cf1929f2e507873b2",
+      "link_relocations": []
+    },
+    {
+      "source": "openspec/specs/adaptive-library-experience/spec.md",
+      "destination": "docs-ai/005-adaptive-library/requirements/adaptive-library-experience/spec.md",
+      "source_sha256": "9f0018c5202c2146470a9e951249fa2edc1c0c7672f87922f31de257bcde617e",
+      "destination_sha256": "9f0018c5202c2146470a9e951249fa2edc1c0c7672f87922f31de257bcde617e",
+      "link_relocations": []
+    },
+    {
+      "source": "openspec/specs/adaptive-modal-presentations/spec.md",
+      "destination": "docs-ai/005-adaptive-library/requirements/adaptive-modal-presentations/spec.md",
+      "source_sha256": "97d80791f956eb00f37c8c4d4d7b3a392189f94c78e424bce9c12ecdb28d742d",
+      "destination_sha256": "97d80791f956eb00f37c8c4d4d7b3a392189f94c78e424bce9c12ecdb28d742d",
+      "link_relocations": []
+    }
+  ]
+}

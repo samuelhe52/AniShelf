@@ -18,7 +18,8 @@ struct InfoFetcherLiveFetchTests {
     @Test func testFetchInfo() async throws {
         let result = try await fetcher.searchTVSeries(name: "Frieren", language: language).first
         try #require(result != nil, "No search results for 'Frieren'")
-        let info = try await fetcher.tvSeriesInfo(tmdbID: result!.id, language: language)
+        let info = try await fetcher.tvSeriesInfo(
+            tmdbID: result!.id, language: language, posterLanguage: .originalLanguage)
         let entry = AnimeEntry(fromInfo: info)
         #expect(!entry.name.isEmpty)
     }

@@ -18,6 +18,7 @@ struct EntryDetailView: View {
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
+    @AppStorage(.defaultPosterLanguage) private var posterLanguage: PosterLanguagePreference = .originalLanguage
     @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
     @AppStorage(.episodeProgressTrackingEnabled) private var episodeProgressTrackingEnabled = false
     @AppStorage(.broadcastScheduleEnabled) private var broadcastScheduleEnabled = true
@@ -808,7 +809,8 @@ struct EntryDetailView: View {
         do {
             try await session.model.convertSeasonToSeries(
                 session.entry,
-                language: currentLanguage
+                language: currentLanguage,
+                posterLanguage: posterLanguage
             )
             guard !Task.isCancelled else { return }
             ToastCenter.global.completionState = .completed(EntryDetailL10n.convertedToSeries)
@@ -826,7 +828,8 @@ struct EntryDetailView: View {
             try await session.model.convertSeriesToSeason(
                 session.entry,
                 seasonNumber: seasonNumber,
-                language: currentLanguage
+                language: currentLanguage,
+                posterLanguage: posterLanguage
             )
             guard !Task.isCancelled else { return }
             ToastCenter.global.completionState = .completed(EntryDetailL10n.convertedToSeason)

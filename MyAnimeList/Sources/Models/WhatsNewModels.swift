@@ -437,6 +437,29 @@ enum WhatsNewRegistry {
                     kind: .openURL(projectURL)
                 )
             ]
+        ),
+        "1.103.0": .init(
+            version: "1.103.0",
+            summary:
+                "This release adds custom library categories and a default poster language preference, redesigns Settings, and improves iCloud Sync.",
+            highlights: [
+                "Create custom library categories and add anime to multiple categories in bulk, with iCloud sync and backup support.",
+                "Added an optional sticky category strip for quick switching and drag reordering.",
+                "Use posters that match the anime info language by default.",
+                "Improved animations when entering and leaving multi-select mode in List view.",
+                "Redesigned Settings with controls grouped by function.",
+                "Improved library search and the API key entry interface.",
+                "Improved iCloud Sync error messages and handling."
+            ],
+            primaryAction: nil,
+            secondaryActions: [
+                .init(
+                    id: "project-github",
+                    title: "AniShelf on GitHub",
+                    systemImage: "arrow.up.right.square",
+                    kind: .openURL(projectURL)
+                )
+            ]
         )
     ]
 

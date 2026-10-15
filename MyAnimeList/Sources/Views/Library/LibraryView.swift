@@ -16,6 +16,19 @@ struct LibraryScrollRequest: Equatable {
     let entryID: LibraryEntryIdentity?
 }
 
+struct LibraryHighlightRequest: Equatable {
+    // A fresh token restarts the pulse even when the same entry is requested again.
+    let token = UUID()
+    let entryID: LibraryEntryIdentity
+
+    /// Long enough for a row created late in the jump scroll to finish its pulse.
+    static let lifetime: Duration = .seconds(2.5)
+
+    func trigger(for entryID: LibraryEntryIdentity) -> UUID? {
+        self.entryID == entryID ? token : nil
+    }
+}
+
 struct LibraryView: View {
     // MARK: - Stored Properties
 
@@ -31,9 +44,14 @@ struct LibraryView: View {
     // UI state
     @State var isSearching = false
     @State private var showProfileSettings = false
+    @State private var showCategoryManager = false
+    @State private var isReorderingCategories = false
     @State var scrollState = ScrollState()
     @State var newEntriesAddedToggle = false
-    @State var highlightedEntryID: LibraryEntryIdentity?
+    @State var highlightRequest: LibraryHighlightRequest?
+    // A jump from search waits for the sheet to finish dismissing so it is not hidden behind it.
+    @State var isSearchSheetOnScreen = false
+    @State var pendingJumpEntryID: LibraryEntryIdentity?
     @State var scrollRequest: LibraryScrollRequest?
     @State private var inspectorDetailWorkspaceState = LibraryInspectorDetailWorkspaceState()
 
@@ -98,6 +116,20 @@ struct LibraryView: View {
         }
         .onChange(of: store.hideDroppedByDefault) {
             refreshSelectionDisplayItemsIfNeeded()
+        }
+        .onChange(of: store.activeCategoryID) {
+            // onChange does not reliably inherit the switch's animation, and
+            // the selection snapshot is what the list renders while selecting.
+            withAnimation(.snappy) {
+                refreshSelectionDisplayItemsIfNeeded()
+            }
+        }
+        .task(id: highlightRequest?.token) {
+            // Expire the request so rows recreated later by scrolling or filtering do not pulse again.
+            guard highlightRequest != nil,
+                (try? await Task.sleep(for: LibraryHighlightRequest.lifetime)) != nil
+            else { return }
+            highlightRequest = nil
         }
         .onChange(of: airingReminders.pendingRoute, initial: true) {
             handleAiringReminderRoute()
@@ -278,6 +310,18 @@ struct LibraryView: View {
             ZStack {
                 libraryView
             }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if showsCategoryStrip {
+                    LibraryCategoryStrip(
+                        openCategoryManager: openCategoryManager,
+                        allowsCategoryActions: !interaction.isMultiSelecting,
+                        isReordering: $isReorderingCategories
+                    )
+                }
+            }
+            // The strip can appear from paths without an animation transaction, such as the
+            // first category created from the selection menu or arriving through sync.
+            .animation(.snappy, value: showsCategoryStrip)
             .toolbar {
                 LibraryToolbar(
                     store: store,
@@ -287,14 +331,18 @@ struct LibraryView: View {
                     isSearching: $isSearching,
                     selectionEntriesByID: selectionEntriesByID,
                     supportsMultiSelection: supportsMultiSelection,
+                    showsCategoryStrip: showsCategoryStrip,
+                    isReorderingCategories: $isReorderingCategories,
                     enterMultiSelection: enterMultiSelection,
                     exitMultiSelection: exitMultiSelection,
                     applyBatchAction: applyBatchAction,
                     deleteSelectedEntries: deleteSelectedEntries,
                     openProfileSettings: openProfileSettings,
-                    checkDuplicate: { store.libraryOnDisplay.map(\.libraryIdentity).contains($0) },
+                    openCategoryManager: openCategoryManager,
+                    checkDuplicate: store.containsEntry,
                     processTMDbSearchResults: processTMDbSearchResults,
-                    jumpToEntryInLibrary: jumpToEntryInLibrary
+                    jumpToEntryInLibrary: jumpToEntryInLibrary,
+                    onSearchDismissed: searchSheetDidDismiss
                 )
             }
             .environment(interaction)
@@ -302,9 +350,32 @@ struct LibraryView: View {
             .navigationBarTitleDisplayMode(.inline)
             .animation(libraryViewStyleAnimation, value: libraryViewStyle)
             .sensoryFeedback(.success, trigger: newEntriesAddedToggle)
+            .onChange(of: showsCategoryStrip) {
+                if !showsCategoryStrip { isReorderingCategories = false }
+            }
+            .onChange(of: interaction.isMultiSelecting) {
+                isReorderingCategories = false
+            }
+            .onChange(of: isSearching) {
+                if isSearching {
+                    isReorderingCategories = false
+                    isSearchSheetOnScreen = true
+                }
+            }
+            .sheet(isPresented: $showCategoryManager) {
+                LibraryCategoryManagerSheet()
+                    .presentationDetents([.medium, .large])
+            }
             .allowsHitTesting(!showProfileSettings)
             .accessibilityHidden(showProfileSettings)
         }
+    }
+
+    private var showsCategoryStrip: Bool {
+        // Stays during multi-selection; switching keeps only still-visible selections.
+        // With no categories yet, the toolbar capsule menu stands in for a lone "All" chip.
+        store.categoriesEnabled && store.categoryStripEnabled && !store.categories.isEmpty
+            && supportsMultiSelection
     }
 
     // MARK: - Content
@@ -336,7 +407,7 @@ struct LibraryView: View {
                     displayItems: displayItems,
                     scrolledID: $scrollState.scrolledID,
                     scrollRequest: scrollRequest,
-                    highlightedEntryID: $highlightedEntryID
+                    highlightRequest: highlightRequest
                 )
                 .safeAreaPadding(.bottom, 20)
             }
@@ -347,7 +418,7 @@ struct LibraryView: View {
                     displayItems: displayItems,
                     scrolledID: $scrollState.scrolledID,
                     scrollRequest: scrollRequest,
-                    highlightedEntryID: $highlightedEntryID
+                    highlightRequest: highlightRequest
                 )
                 .safeAreaPadding(.bottom, 20)
             }
@@ -483,9 +554,15 @@ struct LibraryView: View {
     }
 
     private func openProfileSettings() {
+        isReorderingCategories = false
         withAnimation(profileSettingsAnimation) {
             showProfileSettings = true
         }
+    }
+
+    private func openCategoryManager() {
+        isReorderingCategories = false
+        showCategoryManager = true
     }
 
     private func closeProfileSettings() {

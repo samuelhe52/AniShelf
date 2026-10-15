@@ -15,7 +15,7 @@ struct LibraryBrowseSummaryMenu: View {
         @Bindable var store = store
 
         Menu {
-            Section("Group By") {
+            Section("View") {
                 Picker(
                     "Group By",
                     systemImage: "square.grid.2x2",
@@ -26,6 +26,22 @@ struct LibraryBrowseSummaryMenu: View {
                     }
                 }
                 .pickerStyle(.menu)
+
+                if store.categoriesEnabled {
+                    // A category is a single-choice scope applied before the filters (AND),
+                    // so it is a picker here instead of a filter toggle.
+                    Picker(
+                        "Category",
+                        systemImage: "folder",
+                        selection: categoryBinding
+                    ) {
+                        Text("All").tag(LibraryCategory.ID?.none)
+                        ForEach(store.categories) { category in
+                            Text(category.name).tag(Optional(category.id))
+                        }
+                    }
+                    .pickerStyle(.menu)
+                }
             }
 
             Section("Sort") {
@@ -134,6 +150,13 @@ struct LibraryBrowseSummaryMenu: View {
                     store.filters.remove(filter)
                 }
             }
+        )
+    }
+
+    private var categoryBinding: Binding<LibraryCategory.ID?> {
+        Binding(
+            get: { store.activeCategoryID },
+            set: { id in withAnimation(.snappy) { store.activeCategoryID = id } }
         )
     }
 

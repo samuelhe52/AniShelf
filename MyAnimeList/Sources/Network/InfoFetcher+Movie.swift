@@ -51,11 +51,14 @@ extension InfoFetcher {
             imageResources: payload.imageResources,
             translations: payload.requiredTranslations(),
             imagesConfiguration: payload.imagesConfiguration,
-            language: language
+            language: language,
+            posterLanguage: .originalLanguage
         )
     }
 
-    func movieInfo(tmdbID: Int, language: Language) async throws -> EntryMetadata {
+    func movieInfo(tmdbID: Int, language: Language, posterLanguage: PosterLanguagePreference) async throws
+        -> EntryMetadata
+    {
         let payload = try await moviePayload(
             tmdbID: tmdbID,
             language: language,
@@ -67,7 +70,8 @@ extension InfoFetcher {
             imageResources: payload.imageResources,
             translations: payload.requiredTranslations(),
             imagesConfiguration: payload.imagesConfiguration,
-            language: language
+            language: language,
+            posterLanguage: posterLanguage
         )
     }
 
@@ -118,7 +122,7 @@ extension InfoFetcher {
         )
     }
 
-    func latestMovieInfo(tmdbID: Int, language: Language) async throws
+    func latestMovieInfo(tmdbID: Int, language: Language, posterLanguage: PosterLanguagePreference) async throws
         -> (EntryMetadata, AnimeEntryDetailDTO)
     {
         let payload = try await moviePayload(
@@ -134,7 +138,8 @@ extension InfoFetcher {
                 imageResources: payload.imageResources,
                 translations: payload.requiredTranslations(),
                 imagesConfiguration: payload.imagesConfiguration,
-                language: language
+                language: language,
+                posterLanguage: posterLanguage
             ),
             movieDetail(
                 from: payload.movie,
@@ -186,7 +191,8 @@ extension InfoFetcher {
         imageResources: ImageCollection,
         translations: TranslationDictionaries,
         imagesConfiguration: ImagesConfiguration,
-        language: Language
+        language: Language,
+        posterLanguage: PosterLanguagePreference
     ) -> EntryMetadata {
         EntryMetadata(
             name: movie.title,
@@ -197,7 +203,8 @@ extension InfoFetcher {
                 from: TMDbImageSelection.preferredPosterPath(
                     from: imageResources.posters,
                     originalLanguageCode: movie.originalLanguage,
-                    metadataLanguageCode: language.rawValue
+                    metadataLanguageCode: language.rawValue,
+                    posterLanguage: posterLanguage
                 )
             ),
             backdropPath: TMDbImagePath.storagePath(

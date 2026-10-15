@@ -8,44 +8,51 @@
 import SwiftUI
 
 struct HighlightEffectModifier: ViewModifier {
-    @Binding var showHighlight: Bool
+    var trigger: UUID?
     var highlightColor: Color
     var delay: TimeInterval
-    var highlightDuration: TimeInterval
+    var hold: TimeInterval
+
+    // Rendered apart from the request so a lazily created row that appears while the
+    // request is already active still animates in from rest instead of popping in lit.
+    @State private var isLit = false
+
     func body(content: Content) -> some View {
         content
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .strokeBorder(highlightColor, lineWidth: 3)
                     .fill(highlightColor.secondary.opacity(0.5))
-                    .opacity(showHighlight ? 0.8 : 0)
+                    .opacity(isLit ? 0.8 : 0)
             )
-            .scaleEffect(showHighlight ? 1.05 : 1)
-            .onChange(of: showHighlight, initial: true) {
-                if showHighlight {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + highlightDuration) {
-                        showHighlight = false
-                    }
-                }
+            .scaleEffect(isLit ? 1.05 : 1)
+            .task(id: trigger) {
+                // Each trigger restarts the pulse from rest; a cancelled pulse leaves the
+                // state to its successor, and clearing the trigger settles the row.
+                if isLit { withAnimation(.smooth(duration: 0.4)) { isLit = false } }
+                guard trigger != nil,
+                    (try? await Task.sleep(for: .seconds(delay))) != nil
+                else { return }
+                withAnimation(.smooth(duration: 0.25)) { isLit = true }
+                guard (try? await Task.sleep(for: .seconds(0.25 + hold))) != nil else { return }
+                withAnimation(.smooth(duration: 0.4)) { isLit = false }
             }
-            .animation(
-                .interactiveSpring(duration: highlightDuration - 0.05).delay(delay),
-                value: showHighlight)
     }
 }
 
 extension View {
     func highlightEffect(
-        showHighlight: Binding<Bool>,
+        trigger: UUID?,
         color: Color = .yellow,
-        delay: TimeInterval = 0,
-        duration: TimeInterval = 0.5
+        // Lets the jump scroll settle so the pulse does not compete with its bounce.
+        delay: TimeInterval = 0.4,
+        hold: TimeInterval = 0.25
     ) -> some View {
         self.modifier(
             HighlightEffectModifier(
-                showHighlight: showHighlight,
+                trigger: trigger,
                 highlightColor: color,
                 delay: delay,
-                highlightDuration: duration))
+                hold: hold))
     }
 }

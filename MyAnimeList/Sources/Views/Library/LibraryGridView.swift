@@ -18,7 +18,7 @@ struct LibraryGridView: View {
     let displayItems: [LibraryEntryDisplayItem]
     @Binding var scrolledID: LibraryEntryIdentity?
     let scrollRequest: LibraryScrollRequest?
-    @Binding var highlightedEntryID: LibraryEntryIdentity?
+    let highlightRequest: LibraryHighlightRequest?
     private let columns = [GridItem(.adaptive(minimum: 104, maximum: 132), spacing: 10)]
 
     var body: some View {
@@ -69,13 +69,7 @@ struct LibraryGridView: View {
             snapshot: item.snapshot,
             isSelected: !interaction.isMultiSelecting || interaction.isSelected(item.id)
         )
-        .highlightEffect(
-            showHighlight: interaction.highlightBinding(
-                for: item.id,
-                highlightedEntryID: $highlightedEntryID
-            ),
-            delay: 0.2
-        )
+        .highlightEffect(trigger: highlightRequest?.trigger(for: item.id))
 
         return
             baseItem
@@ -273,7 +267,7 @@ fileprivate struct LibraryGridItem: View {
         displayItems: store.libraryDisplayItems,
         scrolledID: .constant(nil),
         scrollRequest: nil,
-        highlightedEntryID: .constant(nil)
+        highlightRequest: nil
     )
     .onAppear {
         DataProvider.forPreview.generateEntriesForPreview()

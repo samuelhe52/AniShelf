@@ -204,6 +204,7 @@ extension LibraryMetadataRefreshTests {
             for: library,
             fetcher: makeLibraryMetadataRefreshTestFetcher(),
             language: .english,
+            posterLanguage: .originalLanguage,
             options: .init(
                 reporter: reporter,
                 prefetchImages: false
@@ -298,7 +299,8 @@ extension LibraryMetadataRefreshTests {
         let latestInfo = try await fetcher.latestInfo(
             entryType: .movie,
             tmdbID: 1,
-            language: .english
+            language: .english,
+            posterLanguage: .originalLanguage
         )
         #expect(latestInfo.0.name == "Fight Club")
 
@@ -329,6 +331,7 @@ extension LibraryMetadataRefreshTests {
             for: library,
             fetcher: fetcher,
             language: .english,
+            posterLanguage: .originalLanguage,
             options: .init(
                 reporter: reporter,
                 prefetchImages: false
@@ -388,6 +391,7 @@ extension LibraryMetadataRefreshTests {
             for: library,
             fetcher: fetcher,
             language: .english,
+            posterLanguage: .originalLanguage,
             options: .init(
                 reporter: .silent,
                 prefetchImages: false

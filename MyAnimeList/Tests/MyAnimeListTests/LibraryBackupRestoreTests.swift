@@ -180,10 +180,11 @@ struct LibraryBackupRestoreTests {
 
     @Test @MainActor func testStartupRecoveryRebootsEnabledCloudSyncWithFreshMetadata() async throws {
         let store = makeSyncReadyStore()
-        store.preferences.noteCloudSyncedSettingsTypes(.init(
-            updatedAt: referenceDate(year: 2026, month: 6, day: 1),
-            payload: [.useTMDbRelayServer: .unknown(.number(1))]
-        ))
+        store.preferences.noteCloudSyncedSettingsTypes(
+            .init(
+                updatedAt: referenceDate(year: 2026, month: 6, day: 1),
+                payload: [.useTMDbRelayServer: .unknown(.number(1))]
+            ))
         #expect(store.preferences.hasUnknownCloudSyncedSettingsValues)
         let staleDeleteIdentity = LibraryEntryIdentity(entryType: .movie, tmdbID: 910_001)
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([

@@ -82,6 +82,7 @@
 				Tests/MyAnimeListTests/LibraryMetadataRefreshTestSupport.swift,
 				Tests/MyAnimeListTests/LibraryPreferenceDefaultsTests.swift,
 				Tests/MyAnimeListTests/LibraryProfileSettingsLayoutPolicyTests.swift,
+				Tests/MyAnimeListTests/LibraryProfileSettingsStateTests.swift,
 				Tests/MyAnimeListTests/LibraryRelationshipAndConversionTests.swift,
 				Tests/MyAnimeListTests/LibrarySortingAndDeletionTests.swift,
 				Tests/MyAnimeListTests/LibrarySyncCoordinatorTests.swift,
@@ -148,6 +149,7 @@
 				Tests/MyAnimeListTests/LibraryMetadataRefreshTestSupport.swift,
 				Tests/MyAnimeListTests/LibraryPreferenceDefaultsTests.swift,
 				Tests/MyAnimeListTests/LibraryProfileSettingsLayoutPolicyTests.swift,
+				Tests/MyAnimeListTests/LibraryProfileSettingsStateTests.swift,
 				Tests/MyAnimeListTests/LibraryRelationshipAndConversionTests.swift,
 				Tests/MyAnimeListTests/LibrarySortingAndDeletionTests.swift,
 				Tests/MyAnimeListTests/LibrarySyncCoordinatorTests.swift,
@@ -619,7 +621,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.102.0;
+				MARKETING_VERSION = 1.103.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelhe.MyAnimeList;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -661,7 +663,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.102.0;
+				MARKETING_VERSION = 1.103.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelhe.MyAnimeList;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;

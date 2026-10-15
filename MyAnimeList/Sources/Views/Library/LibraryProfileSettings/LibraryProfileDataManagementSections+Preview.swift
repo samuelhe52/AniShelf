@@ -13,8 +13,9 @@ import SwiftUI
 
 /// One interactive preview for every iCloud sync notice.
 ///
-/// Switch scenarios to see first-enable restoration failures, or a completed
-/// sync that left unloaded entries, rejected uploads, and unreadable records.
+/// Switch scenarios to see first-enable restoration failures, a completed
+/// sync that left unloaded entries, rejected uploads, and unreadable records,
+/// or iCloud data the user deleted in iCloud settings.
 #Preview("iCloud Sync") {
     LibraryProfileICloudSyncSectionPreviewHost()
 }
@@ -43,7 +44,9 @@ fileprivate struct LibraryProfileICloudSyncSectionPreviewHost: View {
                         cloudSyncStatusTitleColor: cloudSyncStatusTitleColor,
                         cloudSyncManualRetryDisabled: cloudSyncManager.isSyncing,
                         onRetryLibraryCloudSync: cloudSyncManager.retry,
-                        onDiscardFailedEntry: cloudSyncManager.discard
+                        onDiscardFailedEntry: cloudSyncManager.discard,
+                        onRequestUploadLibrary: cloudSyncManager.retry,
+                        onTurnOffLibraryCloudSync: { cloudSyncManager.setEnabled(false) }
                     )
                 }
                 .padding()
@@ -93,6 +96,8 @@ fileprivate enum PreviewCloudSyncScenario: Hashable, CaseIterable {
     case restoration
     /// A completed sync that left entries pending.
     case completedSync
+    /// The user deleted AniShelf's iCloud data in iCloud settings.
+    case deletedInICloud
 }
 
 fileprivate struct PreviewSyntheticLibrarySummary: View {
@@ -108,6 +113,7 @@ fileprivate struct PreviewSyntheticLibrarySummary: View {
             Picker("Scenario", selection: $scenario) {
                 Text("Restoration").tag(PreviewCloudSyncScenario.restoration)
                 Text("Completed Sync").tag(PreviewCloudSyncScenario.completedSync)
+                Text("Deleted").tag(PreviewCloudSyncScenario.deletedInICloud)
             }
             .pickerStyle(.segmented)
             Text(scenarioDescription)
@@ -139,6 +145,10 @@ fileprivate struct PreviewSyntheticLibrarySummary: View {
             "Sync succeeded, but two entries couldn't be loaded, two changes weren't uploaded, and one record is unreadable. The entry TMDb no longer lists can be discarded right away."
         case (.completedSync, false):
             "Injected failures are off. The next Retry will load the pending entries and clear the other notices."
+        case (.deletedInICloud, true):
+            "iCloud data was deleted in iCloud settings. Upload stays blocked while failures are injected."
+        case (.deletedInICloud, false):
+            "Injected failures are off. Upload This Library re-creates the iCloud data and completes sync."
         }
     }
 }
@@ -237,6 +247,24 @@ fileprivate final class PreviewCloudSyncManager {
             restoreLibrary(isUserRetry: isUserRetry)
         case .completedSync:
             syncCompletedLibrary()
+        case .deletedInICloud:
+            if library.failureInjectionEnabled {
+                // Mirrors a bootstrap fetch that finds the zone deleted after
+                // restoration progress was recorded.
+                status.bootstrapState = .failed
+                status.restoration = .init(
+                    scope: Self.scope,
+                    totalEntries: library.activeEntries.count
+                )
+                status.cloudLibraryDeletedByUser = true
+                status.lastResult = .permanentFailure
+                status.lastFailurePhase = .remoteFetch
+                status.lastFailureReason = "AniShelf's iCloud data was deleted in iCloud settings."
+            } else {
+                status.cloudLibraryDeletedByUser = false
+                status.restoration = nil
+                recordSuccess()
+            }
         }
         status.currentPhase = nil
         status.lastAttemptDate = .now

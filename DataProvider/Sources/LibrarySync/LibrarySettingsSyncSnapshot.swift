@@ -31,6 +31,11 @@ extension LibrarySettingsSyncSnapshot {
         case bool(Bool)
         case string(String)
         case stringArray([String])
+        /// A non-empty array of JSON objects, such as the library category list.
+        ///
+        /// Builds before this case decode it as `.unknown` and then skip settings
+        /// export, so they cannot erase a key they do not know.
+        case objectArray([[String: JSONValue]])
         case unknown(JSONValue)
 
         /// A JSON value whose type is not understood by this build.
@@ -97,6 +102,10 @@ extension LibrarySettingsSyncSnapshot.Value: Codable {
             self = .stringArray(value)
             return
         }
+        if let value = try? container.decode([[String: JSONValue]].self) {
+            self = .objectArray(value)
+            return
+        }
         self = .unknown(try JSONValue(from: decoder))
     }
 
@@ -108,6 +117,8 @@ extension LibrarySettingsSyncSnapshot.Value: Codable {
         case .string(let value):
             try container.encode(value)
         case .stringArray(let value):
+            try container.encode(value)
+        case .objectArray(let value):
             try container.encode(value)
         case .unknown(let value):
             try container.encode(value)

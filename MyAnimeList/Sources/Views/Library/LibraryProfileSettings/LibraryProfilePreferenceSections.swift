@@ -8,68 +8,115 @@
 import DataProvider
 import SwiftUI
 
-struct LibraryProfileLanguageSettingsSection: View {
+/// The Language page's cards; onboarding reuses them for its language step.
+struct LibraryProfileLanguageSettingsSections: View {
     @Binding var followsSystemLanguage: Bool
     @Binding var preferredLanguage: Language
+    @Binding var posterLanguage: PosterLanguagePreference
+
+    private var tint: Color { LibraryProfileSettingsPalette.language }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            LibraryProfileSettingHeader(
-                title: "Anime Info Language",
-                subtitle: "Choose the language used for future metadata fetches.",
-                systemImage: "globe",
-                tint: .blue
-            )
+        // The pushed page and onboarding don't inherit the toggle binding's transaction, so the
+        // stack animates its own layout: the picker slides in and the poster card moves with it.
+        VStack(spacing: 16) {
+            LibraryProfileSettingsSection("Anime Info Language", systemImage: "globe", tint: tint) {
+                HStack {
+                    Text("Follow System")
+                        .font(.subheadline.weight(.semibold))
+                    Spacer(minLength: 12)
+                    Toggle("Follow System", isOn: $followsSystemLanguage)
+                        .labelsHidden()
+                        .tint(tint)
+                        .scaleEffect(0.78, anchor: .trailing)
+                        .frame(width: 42, height: 26, alignment: .trailing)
+                }
+                .padding(.vertical, 2)
 
-            HStack {
-                Text("Follow System")
-                    .font(.subheadline.weight(.semibold))
-                Spacer(minLength: 12)
-                Toggle("Follow System", isOn: $followsSystemLanguage)
-                    .labelsHidden()
-                    .tint(.blue)
-                    .scaleEffect(0.78, anchor: .trailing)
-                    .frame(width: 42, height: 26, alignment: .trailing)
+                if !followsSystemLanguage {
+                    Picker("Anime Info Language", selection: $preferredLanguage) {
+                        ForEach(Language.allCases, id: \.rawValue) { language in
+                            Text(language.localizedStringResource).tag(language)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.top, 2)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
             }
-            .padding(.vertical, 2)
 
-            if !followsSystemLanguage {
-                Picker("Anime Info Language", selection: $preferredLanguage) {
-                    ForEach(Language.allCases, id: \.rawValue) { language in
-                        Text(language.localizedStringResource).tag(language)
+            LibraryProfileSettingsSection("Default Poster", systemImage: "photo", tint: tint) {
+                ForEach(PosterLanguagePreference.allCases, id: \.self) { preference in
+                    if preference != PosterLanguagePreference.allCases.first {
+                        LibraryProfileActionDivider(leadingInset: 0)
+                    }
+                    option(
+                        preference.localizedStringResource, subtitle: preference.fallbackDescription,
+                        isSelected: posterLanguage == preference
+                    ) {
+                        posterLanguage = preference
                     }
                 }
-                .pickerStyle(.segmented)
-                .padding(.top, 2)
-                .transition(
-                    .asymmetric(
-                        insertion: .opacity.combined(with: .move(edge: .top)),
-                        removal: .opacity.combined(with: .scale(scale: 0.98, anchor: .top))
-                    )
-                )
             }
         }
-        .padding(14)
-        .libraryProfileInsetPanel(cornerRadius: 22, tint: .blue)
+        .animation(.spring(response: 0.34, dampingFraction: 0.88), value: followsSystemLanguage)
+    }
+
+    private func option(
+        _ title: LocalizedStringResource,
+        subtitle: LocalizedStringResource? = nil,
+        isSelected: Bool,
+        select: @escaping () -> Void
+    ) -> some View {
+        Button {
+            withAnimation(.snappy(duration: 0.2), select)
+        } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Spacer(minLength: 12)
+                Image(systemName: "checkmark")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(tint)
+                    .opacity(isSelected ? 1 : 0)
+            }
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+extension PosterLanguagePreference {
+    fileprivate var fallbackDescription: LocalizedStringResource {
+        switch self {
+        case .originalLanguage: "Falls back to the Anime Info Language."
+        case .animeInfoLanguage: "Falls back to the original language."
+        }
     }
 }
 
 struct LibraryProfilePreferencesSection: View {
-    @AppStorage(.rememberShareSheetSettings) private var rememberShareSheetSettings = false
-    @AppStorage(.broadcastScheduleEnabled) private var broadcastScheduleEnabled = true
-
     @Binding var hideDroppedByDefault: Bool
     @Binding var defaultNewEntryWatchStatus: AnimeEntry.WatchStatus
     @Binding var defaultFilters: Set<LibraryStore.AnimeFilter>
-    @Binding var autoPrefetchImagesOnAddAndRestore: Bool
-    @Binding var longTermGalleryPosterCachingEnabled: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             LibraryProfileSettingHeader(
-                title: "General",
+                title: "Defaults",
                 systemImage: "slider.horizontal.3",
-                tint: .mint
+                tint: LibraryProfileSettingsDestination.libraryTracking.tint
             )
 
             defaultWatchStatusRow
@@ -80,37 +127,9 @@ struct LibraryProfilePreferencesSection: View {
                 subtitle: "Only show dropped entries after you explicitly enable the Dropped filter.",
                 isOn: $hideDroppedByDefault
             )
-
-            LibraryProfileSettingsToggleRow(
-                title: "Auto Prefetch Images",
-                subtitle: "Prefetch images when adding titles or restoring a backup.",
-                isOn: $autoPrefetchImagesOnAddAndRestore
-            )
-
-            LibraryProfileSettingsToggleRow(
-                title: "Cache Large Gallery Posters",
-                subtitle:
-                    "Store large Gallery posters longer. Off by default and may use more disk space.",
-                isOn: $longTermGalleryPosterCachingEnabled
-            )
-
-            LibraryProfileSettingsToggleRow(
-                title: "Remember Share Settings",
-                subtitle:
-                    "Remember language, corner style, image format, and export size preferences in the share sheet.",
-                isOn: $rememberShareSheetSettings
-            )
-
-            LibraryProfileSettingsToggleRow(
-                title: "Broadcast Airtimes",
-                subtitle:
-                    "Look up TV broadcast times when you open an eligible anime or season.",
-                isOn: $broadcastScheduleEnabled
-            )
         }
         .padding(14)
-        .libraryProfileInsetPanel(cornerRadius: 22, tint: .mint)
-        .onChange(of: rememberShareSheetSettings, handleRememberShareSheetSettingsChange)
+        .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsDestination.libraryTracking.tint)
     }
 
     private var defaultWatchStatusRow: some View {
@@ -127,7 +146,7 @@ struct LibraryProfilePreferencesSection: View {
             } label: {
                 LibraryProfileSelectionCapsule(
                     title: defaultNewEntryWatchStatus.localizedStringResource,
-                    tint: .mint
+                    tint: LibraryProfileSettingsDestination.libraryTracking.tint
                 )
             }
         }
@@ -153,7 +172,7 @@ struct LibraryProfilePreferencesSection: View {
             } label: {
                 LibraryProfileSelectionCapsule(
                     title: defaultFiltersSummaryResource,
-                    tint: .mint
+                    tint: LibraryProfileSettingsDestination.libraryTracking.tint
                 )
             }
             .menuActionDismissBehavior(.disabled)
@@ -200,11 +219,6 @@ struct LibraryProfilePreferencesSection: View {
         )
     }
 
-    private func handleRememberShareSheetSettingsChange(old: Bool, new: Bool) {
-        guard old != new, !new else { return }
-        AnimeSharingPreferences().resetRememberedSettings()
-    }
-
     private func defaultFilterSummaryResource(
         for filter: LibraryStore.AnimeFilter
     ) -> LocalizedStringResource {
@@ -229,6 +243,69 @@ struct LibraryProfilePreferencesSection: View {
         Toggle(
             isOn: defaultFilterBinding(for: filter),
             label: { Text(filter.name) }
+        )
+    }
+}
+
+/// Opt-in switch for library categories and the entry to the category manager.
+struct LibraryProfileCategorySettingsRows: View {
+    @Environment(LibraryStore.self) private var store
+    @State private var showCategoryManager = false
+
+    var body: some View {
+        @Bindable var store = store
+
+        VStack(alignment: .leading, spacing: 10) {
+            LibraryProfileSettingsToggleRow(
+                title: "Library Categories",
+                subtitle: "Group anime into your own categories and switch between them in the library.",
+                isOn: categoriesEnabledBinding
+            )
+
+            if store.categoriesEnabled {
+                LibraryProfileSettingsToggleRow(
+                    title: "Sticky Category Strip",
+                    subtitle: "Keep category tabs below the navigation bar in List and Grid views.",
+                    isOn: $store.categoryStripEnabled
+                )
+                .transition(.opacity)
+
+                Button {
+                    showCategoryManager = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Text("Manage Categories")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer(minLength: 12)
+                        Text("\(store.categories.count)")
+                            .font(.subheadline)
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.vertical, 4)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .transition(.opacity)
+                .sheet(isPresented: $showCategoryManager) {
+                    LibraryCategoryManagerSheet()
+                        .presentationDetents([.medium, .large])
+                }
+            }
+        }
+    }
+
+    private var categoriesEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { store.categoriesEnabled },
+            set: { newValue in
+                withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+                    store.categoriesEnabled = newValue
+                }
+            }
         )
     }
 }

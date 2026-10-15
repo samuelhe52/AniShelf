@@ -405,23 +405,6 @@ final class LibraryEntryInteractionState {
         guard pendingPasteRequest?.id == requestID else { return }
         pendingPasteRequest = nil
     }
-
-    func highlightBinding(
-        for entry: AnimeEntry,
-        highlightedEntryID: Binding<LibraryEntryIdentity?>
-    ) -> Binding<Bool> {
-        highlightBinding(for: entry.libraryIdentity, highlightedEntryID: highlightedEntryID)
-    }
-
-    func highlightBinding(
-        for entryID: LibraryEntryIdentity,
-        highlightedEntryID: Binding<LibraryEntryIdentity?>
-    ) -> Binding<Bool> {
-        Binding(
-            get: { highlightedEntryID.wrappedValue == entryID },
-            set: { if !$0 { highlightedEntryID.wrappedValue = nil } }
-        )
-    }
 }
 
 enum LibraryEntryDetailActivation: Equatable, Sendable {

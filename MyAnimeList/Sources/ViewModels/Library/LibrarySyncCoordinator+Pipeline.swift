@@ -13,6 +13,9 @@ extension LibrarySyncCoordinator {
     struct SyncPass {
         let trigger: Trigger
         let completedBootstrap: Bool
+        /// Only the user's choice to upload this library may save a zone they
+        /// deleted in iCloud settings.
+        var recreatesUserDeletedZone = false
         let noNamespaceDegradedReason: String
         let permanentFailureDegradedReason: String
         let checkCancellation: () throws -> Void
@@ -73,10 +76,11 @@ extension LibrarySyncCoordinator {
         )
     }
 
-    func bootstrapSyncPass(bootstrapID: UUID) -> SyncPass {
+    func bootstrapSyncPass(bootstrapID: UUID, recreatesUserDeletedZone: Bool) -> SyncPass {
         .init(
             trigger: .firstEnableBootstrap,
             completedBootstrap: true,
+            recreatesUserDeletedZone: recreatesUserDeletedZone,
             noNamespaceDegradedReason:
                 "iCloud library sync enablement is blocked until iCloud account access is available.",
             permanentFailureDegradedReason:
@@ -100,7 +104,9 @@ extension LibrarySyncCoordinator {
     ) async throws -> ImportHead? {
         try pass.checkCancellation()
         try await pass.run(.prepareZoneSubscription, state: state, store: store) {
-            try await importer.prepareRemoteSync()
+            try await importer.prepareRemoteSync(
+                recreatingUserDeletedZone: pass.recreatesUserDeletedZone
+            )
         }
 
         let resolvedNamespace = try await pass.run(
@@ -285,8 +291,13 @@ extension LibrarySyncCoordinator {
     ) -> SyncResult {
         let result: SyncResult = error.isPermanentLibrarySyncFailure ? .permanentFailure : .retryableFailure
         let availability = error.libraryCloudKitAvailability
-        if availability == .noAccount || availability == .restricted {
+        if availability != .couldNotDetermine {
             store.updateLibraryCloudKitAvailability(availability)
+        }
+        // Other failures say nothing about the zone, so they leave the flag
+        // for a successful pass, the upload action, or disabling sync to clear.
+        if error.isLibraryCloudZoneDeletedByUser {
+            store.updateLibraryCloudSyncStatus { $0.cloudLibraryDeletedByUser = true }
         }
         store.recordLibraryCloudSyncFailure(
             trigger: pass.trigger,
@@ -303,6 +314,11 @@ extension LibrarySyncCoordinator {
         librarySyncCoordinatorLogger.error(
             "iCloud library sync triggered by \(pass.trigger.rawValue, privacy: .public) failed during \(state.currentPhase?.rawValue ?? "unknown", privacy: .public): \(error.localizedDescription, privacy: .private)"
         )
+        if let blockingError = error.librarySyncBlockingCKError {
+            librarySyncCoordinatorLogger.error(
+                "iCloud library sync stopped retrying because CloudKit returned non-retryable error code \(blockingError.code.rawValue, privacy: .public)."
+            )
+        }
         return result
     }
 }
@@ -371,12 +387,14 @@ final class SyncGate {
         waiters.removeAll()
         var bootstrapRetryOwnerAssigned = passOwnerHandlesResult
         for waiter in pendingWaiters {
-            let shouldHandleResult = passKind == .bootstrap
+            let shouldHandleResult =
+                passKind == .bootstrap
                 && waiter.canHandleResult && !bootstrapRetryOwnerAssigned
             if shouldHandleResult { bootstrapRetryOwnerAssigned = true }
-            waiter.continuation.resume(returning: .init(
-                result, wasCoalesced: true, shouldHandleResult: shouldHandleResult
-            ))
+            waiter.continuation.resume(
+                returning: .init(
+                    result, wasCoalesced: true, shouldHandleResult: shouldHandleResult
+                ))
         }
     }
 
@@ -385,9 +403,10 @@ final class SyncGate {
         let pendingWaiters = waiters
         waiters.removeAll()
         for waiter in pendingWaiters {
-            waiter.continuation.resume(returning: .init(
-                .skipped(.disabled), wasCoalesced: true, shouldHandleResult: false
-            ))
+            waiter.continuation.resume(
+                returning: .init(
+                    .skipped(.disabled), wasCoalesced: true, shouldHandleResult: false
+                ))
         }
     }
 }

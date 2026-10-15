@@ -139,20 +139,24 @@ final class InfoFetcher: Sendable {
         return results.results.filter { $0.genreIDs.contains(16) }
     }
 
-    func fetchInfoFromTMDB(entryType: AnimeType, tmdbID: Int, language: Language) async throws
-        -> EntryMetadata
-    {
+    func fetchInfoFromTMDB(
+        entryType: AnimeType,
+        tmdbID: Int,
+        language: Language,
+        posterLanguage: PosterLanguagePreference
+    ) async throws -> EntryMetadata {
         switch entryType {
         case .season(let seasonNumber, let parentSeriesID):
             return try await tvSeasonInfo(
                 seasonNumber: seasonNumber,
                 parentSeriesID: parentSeriesID,
-                language: language
+                language: language,
+                posterLanguage: posterLanguage
             )
         case .movie:
-            return try await movieInfo(tmdbID: tmdbID, language: language)
+            return try await movieInfo(tmdbID: tmdbID, language: language, posterLanguage: posterLanguage)
         case .series:
-            return try await tvSeriesInfo(tmdbID: tmdbID, language: language)
+            return try await tvSeriesInfo(tmdbID: tmdbID, language: language, posterLanguage: posterLanguage)
         }
     }
 
@@ -175,19 +179,24 @@ final class InfoFetcher: Sendable {
         }
     }
 
-    func latestInfo(entryType: AnimeType, tmdbID: Int, language: Language) async throws
-        -> (EntryMetadata, AnimeEntryDetailDTO)
-    {
+    /// - Parameter posterLanguage: Chooses the default poster; required so every library write path passes the current preference.
+    func latestInfo(
+        entryType: AnimeType,
+        tmdbID: Int,
+        language: Language,
+        posterLanguage: PosterLanguagePreference
+    ) async throws -> (EntryMetadata, AnimeEntryDetailDTO) {
         switch entryType {
         case .movie:
-            return try await latestMovieInfo(tmdbID: tmdbID, language: language)
+            return try await latestMovieInfo(tmdbID: tmdbID, language: language, posterLanguage: posterLanguage)
         case .series:
-            return try await latestTVSeriesInfo(tmdbID: tmdbID, language: language)
+            return try await latestTVSeriesInfo(tmdbID: tmdbID, language: language, posterLanguage: posterLanguage)
         case .season(let seasonNumber, let parentSeriesID):
             return try await latestTVSeasonInfo(
                 parentSeriesID: parentSeriesID,
                 seasonNumber: seasonNumber,
-                language: language
+                language: language,
+                posterLanguage: posterLanguage
             )
         }
     }

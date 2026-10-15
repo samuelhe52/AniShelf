@@ -87,6 +87,39 @@ extension TMDbImageAndTranslationTests {
         #expect(selectedNoLanguagePoster == noLanguagePoster)
     }
 
+    @Test func testAnimeInfoLanguageModePrefersMetadataLanguagePoster() throws {
+        let japanesePoster = URL(string: "/poster-ja.jpg")!
+        let chinesePoster = URL(string: "/poster-zh.jpg")!
+        let noLanguagePoster = URL(string: "/poster-none.jpg")!
+        let allPosters: [TMDbImageSelection.Resource] = [
+            .init(languageCode: "ja", filePath: japanesePoster),
+            .init(languageCode: nil, filePath: noLanguagePoster),
+            .init(languageCode: "zh", filePath: chinesePoster)
+        ]
+
+        func select(_ resources: [TMDbImageSelection.Resource]) -> URL? {
+            TMDbImageSelection.preferredPosterPath(
+                from: resources,
+                originalLanguageCode: "ja",
+                metadataLanguageCode: "zh",
+                posterLanguage: .animeInfoLanguage
+            )
+        }
+
+        #expect(select(allPosters) == chinesePoster)
+        #expect(select(allPosters.filter { $0.languageCode != "zh" }) == japanesePoster)
+        #expect(select(allPosters.filter { $0.languageCode == nil }) == noLanguagePoster)
+        // The manual picker ranks with the same order, so the default poster sorts first.
+        #expect(
+            TMDbImageSelection.posterLanguagePriority(
+                for: "zh",
+                originalLanguageCode: "ja",
+                metadataLanguageCode: "zh",
+                posterLanguage: .animeInfoLanguage
+            ) == 0
+        )
+    }
+
     @Test func testFilteredResponseRestoresJapaneseOrNoLanguagePosterCandidates() throws {
         let englishPoster = makeImageMetadata(filePath: "/poster-en.jpg", width: 500, languageCode: "en")
         let japanesePoster = makeImageMetadata(filePath: "/poster-ja.jpg", width: 600, languageCode: "ja")

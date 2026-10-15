@@ -15,12 +15,15 @@ struct LibraryProfileSettingsView: View {
     @Environment(LibraryStore.self) private var store
     @Environment(WhatsNewController.self) private var whatsNew
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.windowSceneIdentifier) private var windowSceneIdentifier
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
+    @AppStorage(.defaultPosterLanguage) private var posterLanguage: PosterLanguagePreference = .originalLanguage
     @AppStorage(.episodeProgressTrackingEnabled) private var episodeProgressTrackingEnabled = false
 
     @State private var showCacheAlert = false
@@ -33,10 +36,15 @@ struct LibraryProfileSettingsView: View {
     @State private var restoreFileURL: URL?
     @State private var showRestoreConfirmation = false
     @State private var showRefreshInfoOnLanguageUpdateAlert = false
+    @State private var showRefreshInfoOnPosterLanguageUpdateAlert = false
     @State private var showRefreshInfoAlert = false
     @State private var presentationState = LibraryProfileSettingsPresentationState()
     @State private var cacheSizeResult: Result<UInt, KingfisherError>?
     @State private var appeared = false
+    @State private var path: [LibraryProfileSettingsDestination] = []
+    @State private var cloudSync = LibraryProfileCloudSyncController()
+    @State private var remindersLoaded = false
+    private let airingReminders = AiringReminderCoordinator.shared
     @State private var restoreCompleted = false
 
     init(onDismiss: (() -> Void)? = nil) {
@@ -52,7 +60,7 @@ struct LibraryProfileSettingsView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ZStack {
                 LibraryProfileBackdrop()
 
@@ -78,9 +86,48 @@ struct LibraryProfileSettingsView: View {
                     .accessibilityLabel(Text(closeTitleResource))
                 }
             }
-            .onAppear(perform: handleAppear)
-            .onChange(of: preferredLanguage, handlePreferredLanguageChange)
-            .onChange(of: followsSystemLanguage, handleFollowsSystemLanguageChange)
+            .navigationDestination(for: LibraryProfileSettingsDestination.self) { destination in
+                settingsPage(for: destination)
+            }
+        }
+        .onAppear(perform: handleAppear)
+        .onChange(of: effectiveLanguage, handleEffectiveLanguageChange)
+        .onChange(of: posterLanguage, handlePosterLanguageChange)
+        .task { await reloadReminders() }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task { await reloadReminders() }
+        }
+        .task(id: store.libraryCloudSyncStatus.bootstrapState) {
+            await presentPendingCloudConflict()
+        }
+        .alert("Resolve iCloud Sync Conflict", isPresented: $cloudSync.showConflictAlert) {
+            Button("Use iCloud") { resolveLibraryCloudSyncConflicts(.preferCloud) }
+            Button("Use This Device") { resolveLibraryCloudSyncConflicts(.preferLocal) }
+            Button("Cancel", role: .cancel, action: cancelLibraryCloudSyncEnablement)
+        } message: {
+            Text(store.libraryCloudSyncStatus.conflictSummaryResource)
+        }
+        .alert("Restore Unavailable", isPresented: $cloudSync.showRestoreUnavailableAlert) {
+            Button("OK") {}
+        } message: {
+            Text("Turn off iCloud Sync before restoring a backup. You can turn it on again after restore.")
+        }
+        .alert("Rebuild iCloud Sync?", isPresented: $cloudSync.showRebuildAlert) {
+            Button("Rebuild", action: rebuildLibraryCloudSync)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(
+                "Refetch and reconcile your iCloud library with your local library. This may resolve some iCloud sync issues."
+            )
+        }
+        .alert("Upload This Library?", isPresented: $cloudSync.showUploadLibraryAlert) {
+            Button("Upload", action: uploadLibraryToDeletedCloud)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(
+                "AniShelf will re-create its iCloud data from the library on this device. Your other devices will sync with it again."
+            )
         }
         .alert("Delete all animes?", isPresented: $showClearAllAlert) {
             Button("Delete", role: .destructive, action: confirmClearLibrary)
@@ -96,6 +143,20 @@ struct LibraryProfileSettingsView: View {
             let message: LocalizedStringResource = """
                 Changing the metadata language setting will not refresh existing infos.
                 Refresh all anime infos now? This may take considerable time.
+                """
+
+            Text(message)
+        }
+        .alert(
+            "Refresh Default Posters?",
+            isPresented: $showRefreshInfoOnPosterLanguageUpdateAlert
+        ) {
+            Button("Refresh", action: confirmRefreshInfos)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            let message: LocalizedStringResource = """
+                Changing the default poster setting will not update existing entries.
+                Refresh all anime infos now? This may take considerable time. Custom posters are kept.
                 """
 
             Text(message)
@@ -165,124 +226,237 @@ struct LibraryProfileSettingsView: View {
         }
     }
 
-    private var heroCard: some View {
-        LibraryProfileHeroCard(
-            stats: stats,
-            animeTitleResource: animeTitleResource
-        )
-    }
-
-    private var primaryStatsGrid: some View {
-        LibraryProfilePrimaryStatsGrid(
-            stats: stats,
-            layout: layout == .wideGrid ? .fillsSummaryHeight : .compact
-        )
-    }
-
-    private var libraryDetailsCard: some View {
-        LibraryProfileLibraryDetailsCard(stats: stats)
-    }
-
-    @ViewBuilder
     private var profileContent: some View {
-        VStack(spacing: profileContentSpacing) {
-            heroCard
+        VStack(spacing: 16) {
+            LibraryProfileHeroCard(stats: stats, animeTitleResource: animeTitleResource)
                 .profileReveal(index: 0, appeared: appeared)
 
-            profileSummary
-
-            settingsCard(layout: settingsCardLayout)
-                .profileReveal(
-                    index: settingsRevealIndex,
-                    appeared: appeared
+            summaryLayout {
+                LibraryProfilePrimaryStatsGrid(
+                    stats: stats,
+                    layout: layout == .workspace ? .fillsSummaryHeight : .compact
                 )
-        }
-        .frame(maxWidth: layout == .wideGrid ? 1_180 : nil)
-        .padding(.horizontal, layout == .wideGrid ? 28 : 18)
-        .padding(.top, layout == .wideGrid ? 24 : 16)
-        .padding(.bottom, layout == .wideGrid ? 40 : 32)
-        .frame(maxWidth: layout == .wideGrid ? .infinity : nil)
-    }
-
-    private var profileSummary: some View {
-        summaryLayout {
-            primaryStatsGrid
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 .profileReveal(index: 1, appeared: appeared)
-            libraryDetailsCard
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                .profileReveal(index: 2, appeared: appeared)
+                LibraryProfileLibraryDetailsCard(stats: stats)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .profileReveal(index: 2, appeared: appeared)
+            }
+
+            Group {
+                switch layout {
+                case .hub:
+                    LibraryProfileSettingsHub(
+                        languageSummary: languageSummary,
+                        remindersLoaded: remindersLoaded,
+                        syncStatus: store.libraryCloudSyncStatus,
+                        whatsNewVersion: whatsNew.currentEntry?.version,
+                        onShowWhatsNew: presentWhatsNewSheet,
+                        onShowSupport: presentSupportSheet,
+                        onShowAbout: presentAboutSheet
+                    )
+                case .workspace:
+                    settingsWorkspace
+                }
+            }
+            .profileReveal(index: 3, appeared: appeared)
         }
+        .animation(languagePickerAnimation, value: followsSystemLanguage)
+        .frame(maxWidth: layout == .workspace ? 1180 : 720)
+        .padding(.horizontal, layout == .workspace ? 28 : 18)
+        .padding(.top, 16)
+        .padding(.bottom, 32)
+        .frame(maxWidth: .infinity)
     }
 
-    @ViewBuilder
-    private func settingsCard(layout: LibraryProfileSettingsCard.Layout) -> some View {
-        @Bindable var store = store
-
-        LibraryProfileSettingsCard(
-            followsSystemLanguage: followsSystemLanguageBinding,
-            hideDroppedByDefault: $store.hideDroppedByDefault,
-            defaultNewEntryWatchStatus: $store.defaultNewEntryWatchStatus,
-            defaultFilters: $store.defaultFilters,
-            autoPrefetchImagesOnAddAndRestore: $store.autoPrefetchImagesOnAddAndRestore,
-            longTermGalleryPosterCachingEnabled: $store.longTermGalleryPosterCachingEnabled,
-            preferredLanguage: $preferredLanguage,
-            layout: layout,
-            libraryCloudSyncStatus: store.libraryCloudSyncStatus,
-            restoreCompleted: restoreCompleted,
-            createBackupItems: createBackupItems,
-            onExportLibrary: exportLibrary,
-            onRestore: requestRestore,
-            onEnableLibraryCloudSync: { await actions.enableLibraryCloudSync() },
-            onDisableLibraryCloudSync: { actions.disableLibraryCloudSync() },
-            onRetryLibraryCloudSync: { await actions.retryLibraryCloudSync() },
-            onDiscardFailedEntry: { await actions.discardFailedCloudSyncEntry($0) },
-            onRebuildLibraryCloudSync: { await actions.rebuildLibraryCloudSync() },
-            onResolveLibraryCloudSyncConflicts: { preference in
-                await actions.resolveLibraryCloudSyncConflicts(preference: preference)
-            },
-            onCancelLibraryCloudSyncEnablement: { actions.cancelLibraryCloudSyncEnablement() },
-            onChangeAPIKey: requestAPIKeySheet,
-            onCheckMetadataCacheSize: checkMetadataCacheSize,
-            onRefreshInfos: requestRefreshInfos,
-            onPrefetchImages: { actions.prefetchAllImages() },
-            onShowSupport: presentSupportSheet,
-            whatsNewVersion: whatsNew.currentEntry?.version,
-            onShowWhatsNew: presentWhatsNewSheet,
-            onShowAbout: presentAboutSheet,
-            onDeleteAllAnimes: requestClearLibrary
-        )
-        .animation(languagePickerAnimation, value: followsSystemLanguage)
-        .animation(languagePickerAnimation, value: episodeProgressTrackingEnabled)
-        .animation(languagePickerAnimation, value: store.libraryCloudSyncStatus)
+    /// Regular width keeps the original side-by-side summary; compact stacks it.
+    private var summaryLayout: AnyLayout {
+        layout == .workspace
+            ? AnyLayout(HStackLayout(spacing: 20)) : AnyLayout(VStackLayout(spacing: 16))
     }
 
     private var layout: LibraryProfileSettingsLayout {
         LibraryProfileSettingsLayoutPolicy().layout(
-            horizontalSizeClass: horizontalSizeClass,
-            dynamicTypeSize: dynamicTypeSize
+            horizontalSizeClass: horizontalSizeClass, dynamicTypeSize: dynamicTypeSize
         )
     }
 
-    private var summaryLayout: AnyLayout {
-        switch layout {
-        case .compactScroll:
-            AnyLayout(VStackLayout(spacing: 16))
-        case .wideGrid:
-            AnyLayout(HStackLayout(spacing: 20))
+    private func settingsPage(for destination: LibraryProfileSettingsDestination) -> some View {
+        LibraryProfileSettingsPage(destination: destination, onClose: dismissSettings) {
+            destinationContent(destination)
+        }
+        .modifier(settingsContentAnimations)
+    }
+
+    /// Regular width keeps the pre-hub layout: every section expanded in two columns,
+    /// using the same destination content the hub pushes on compact width.
+    private var settingsWorkspace: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("Settings", systemImage: "gearshape.2")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(.primary)
+
+            HStack(alignment: .top, spacing: 20) {
+                VStack(spacing: 20) {
+                    workspaceGroup(.language)
+                    workspaceGroup(.libraryTracking)
+                    workspaceGroup(.reminders)
+                    workspaceGroup(.appearance)
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+                VStack(spacing: 20) {
+                    workspaceGroup(.syncData)
+                    workspaceGroup(.metadataImages)
+                    VStack(alignment: .leading, spacing: 10) {
+                        workspaceGroupTitle("App Info")
+                        LibraryProfileAppInfoCard(
+                            style: .panel,
+                            whatsNewVersion: whatsNew.currentEntry?.version, onShowWhatsNew: presentWhatsNewSheet,
+                            onShowSupport: presentSupportSheet, onShowAbout: presentAboutSheet
+                        )
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+            }
+        }
+        .modifier(settingsContentAnimations)
+    }
+
+    /// Titled with the hub row's name so "Settings › Sync & Data" in the guides holds on iPad too.
+    private func workspaceGroup(_ destination: LibraryProfileSettingsDestination) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            workspaceGroupTitle(destination.title)
+            VStack(spacing: 20) {
+                destinationContent(destination)
+            }
+        }
+        .environment(\.libraryProfilePageTint, destination.tint)
+    }
+
+    private func workspaceGroupTitle(_ title: LocalizedStringResource) -> some View {
+        Text(title)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.leading, 4)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    private var settingsContentAnimations: LibraryProfileSettingsContentAnimations {
+        LibraryProfileSettingsContentAnimations(
+            animation: languagePickerAnimation,
+            episodeProgressTrackingEnabled: episodeProgressTrackingEnabled,
+            categoriesEnabled: store.categoriesEnabled,
+            categoryStripEnabled: store.categoryStripEnabled,
+            libraryCloudSyncStatus: store.libraryCloudSyncStatus
+        )
+    }
+
+    @ViewBuilder
+    private func destinationContent(_ destination: LibraryProfileSettingsDestination) -> some View {
+        @Bindable var store = store
+        switch destination {
+        case .language:
+            LibraryProfileLanguageSettingsSections(
+                followsSystemLanguage: followsSystemLanguageBinding, preferredLanguage: $preferredLanguage,
+                posterLanguage: $posterLanguage
+            )
+        case .libraryTracking:
+            LibraryProfilePreferencesSection(
+                hideDroppedByDefault: $store.hideDroppedByDefault,
+                defaultNewEntryWatchStatus: $store.defaultNewEntryWatchStatus,
+                defaultFilters: $store.defaultFilters
+            )
+            LibraryProfileSettingsSection(
+                "Categories", systemImage: "folder", tint: LibraryProfileSettingsDestination.libraryTracking.tint
+            ) {
+                LibraryProfileCategorySettingsRows()
+            }
+            LibraryProfileTrackingSettingsSection()
+        case .appearance:
+            LibraryProfileInterfaceSettingsSection()
+        case .reminders:
+            LibraryProfileBroadcastSettingsSection()
+            LibraryProfileAiringReminderSettingsSection()
+        case .metadataImages:
+            LibraryProfileMetadataImagesPage(
+                autoPrefetchImagesOnAddAndRestore: $store.autoPrefetchImagesOnAddAndRestore,
+                longTermGalleryPosterCachingEnabled: $store.longTermGalleryPosterCachingEnabled,
+                onChangeAPIKey: requestAPIKeySheet,
+                onCheckMetadataCacheSize: checkMetadataCacheSize,
+                onRefreshInfos: requestRefreshInfos,
+                onPrefetchImages: { actions.prefetchAllImages() }
+            )
+        case .syncData:
+            syncDataContent
         }
     }
 
-    private var profileContentSpacing: CGFloat {
-        layout == .wideGrid ? 24 : 16
+    private var syncDataContent: some View {
+        Group {
+            LibraryProfileICloudSyncSection(
+                libraryCloudSyncStatus: libraryCloudSyncStatus,
+                cloudSyncToggleBinding: cloudSyncToggleBinding,
+                cloudSyncToggleDisabled: cloudSyncToggleDisabled,
+                cloudSyncToggleSubtitle: cloudSyncToggleSubtitle,
+                cloudSyncIsBusy: cloudSyncIsBusy,
+                cloudSyncStatusTitleColor: cloudSyncStatusTitleColor,
+                cloudSyncManualRetryDisabled: cloudSyncManualRetryDisabled,
+                onRetryLibraryCloudSync: retryLibraryCloudSync,
+                onDiscardFailedEntry: discardFailedEntry,
+                onRequestRebuildLibraryCloudSync: requestRebuildLibraryCloudSync,
+                onRequestUploadLibrary: requestUploadLibraryToDeletedCloud,
+                onTurnOffLibraryCloudSync: actions.disableLibraryCloudSync
+            )
+            LibraryProfileBackupExportSection(
+                libraryCloudSyncStatus: libraryCloudSyncStatus,
+                restoreCompleted: restoreCompleted,
+                createBackupItems: createBackupItems,
+                onExportLibrary: exportLibrary,
+                onRestoreButtonPress: handleRestoreButtonPress
+            )
+            LibraryProfileActionRow(
+                title: "Delete All Animes", subtitle: "Remove every saved library entry.",
+                systemImage: "trash", role: .destructive, tint: LibraryProfileSettingsPalette.destructive,
+                horizontalPadding: 0,
+                action: requestClearLibrary
+            )
+            .padding(.horizontal, 14)
+            .padding(.vertical, 3)
+            .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsPalette.destructive)
+        }
     }
 
-    private var settingsCardLayout: LibraryProfileSettingsCard.Layout {
-        layout == .wideGrid ? .workspaceGrid : .compactCard
+    private func reloadReminders() async {
+        await airingReminders.reloadState()
+        remindersLoaded = true
     }
 
-    private var settingsRevealIndex: Int {
-        layout == .wideGrid ? 2 : 3
+    private var hasPendingPresentation: Bool {
+        presentationState.presentedSheet != nil || showFileImporter || showRestoreConfirmation
+            || showCacheAlert || showClearAllAlert || showExportError || showRestoreError
+            || showRefreshInfoOnLanguageUpdateAlert || showRefreshInfoOnPosterLanguageUpdateAlert
+            || showRefreshInfoAlert
+            || cloudSync.showRebuildAlert || cloudSync.showUploadLibraryAlert
+            || cloudSync.showRestoreUnavailableAlert
+            || whatsNew.presentedEntry(forSceneIdentifier: windowSceneIdentifier) != nil
+    }
+
+    private func presentPendingCloudConflict() async {
+        guard libraryCloudSyncStatus.bootstrapState == .needsConflictChoice else {
+            cloudSync.reconcileConflict(needsChoice: false, presentationBlocked: false)
+            return
+        }
+        // Only poll while a conflict is pending. The actual presenting scene is
+        // checked too, including leaf popovers and UIKit activity controllers.
+        while !Task.isCancelled {
+            let blocked =
+                hasPendingPresentation
+                || !LibraryProfileCloudSyncController.sceneIsReadyForAlert(windowSceneIdentifier)
+            cloudSync.reconcileConflict(needsChoice: true, presentationBlocked: blocked)
+            if cloudSync.showConflictAlert { return }
+            do { try await Task.sleep(for: .milliseconds(200)) } catch { return }
+        }
     }
 
     private var followsSystemLanguageBinding: Binding<Bool> {
@@ -298,6 +472,13 @@ struct LibraryProfileSettingsView: View {
 
     private var languagePickerAnimation: Animation {
         .spring(response: 0.34, dampingFraction: 0.88)
+    }
+
+    private var languageSummary: LocalizedStringResource {
+        if followsSystemLanguage {
+            return "System (\(String(localized: Language.current.localizedStringResource)))"
+        }
+        return preferredLanguage.localizedStringResource
     }
 
     private var effectiveLanguage: Language {
@@ -331,25 +512,16 @@ struct LibraryProfileSettingsView: View {
         }
     }
 
-    private func handlePreferredLanguageChange(old: Language, new: Language) {
-        guard old != new, !followsSystemLanguage else { return }
+    /// Watches the resolved language because one choice on the Language page can change both stored values.
+    private func handleEffectiveLanguageChange(old: Language, new: Language) {
         store.language = new
+        guard old != new else { return }
         showRefreshInfoOnLanguageUpdateAlert = true
     }
 
-    private func handleFollowsSystemLanguageChange(old: Bool, new: Bool) {
-        guard old != new else { return }
-        let oldLanguage = resolvedLanguage(
-            followsSystem: old,
-            preferredLanguage: preferredLanguage
-        )
-        let newLanguage = resolvedLanguage(
-            followsSystem: new,
-            preferredLanguage: preferredLanguage
-        )
-        store.language = new ? .current : preferredLanguage
-        guard oldLanguage != newLanguage else { return }
-        showRefreshInfoOnLanguageUpdateAlert = true
+    private func handlePosterLanguageChange(old: PosterLanguagePreference, new: PosterLanguagePreference) {
+        guard old != new, !store.library.isEmpty else { return }
+        showRefreshInfoOnPosterLanguageUpdateAlert = true
     }
 
     private func requestAPIKeySheet() {
@@ -457,11 +629,135 @@ struct LibraryProfileSettingsView: View {
         showRestoreError = true
     }
 
-    private func resolvedLanguage(
-        followsSystem: Bool,
-        preferredLanguage: Language
-    ) -> Language {
-        followsSystem ? .current : preferredLanguage
+    private var libraryCloudSyncStatus: LibraryCloudSyncStatus { store.libraryCloudSyncStatus }
+
+    private func handleRestoreButtonPress() {
+        if libraryCloudSyncStatus.blocksBackupRestore {
+            cloudSync.showRestoreUnavailableAlert = true
+        } else {
+            requestRestore()
+        }
+    }
+
+    private func discardFailedEntry(_ entry: LibraryCloudSyncFailedEntry) {
+        guard !cloudSyncIsBusy else { return }
+        cloudSync.actionInFlight = true
+        Task {
+            _ = await actions.discardFailedCloudSyncEntry(entry)
+            cloudSync.actionInFlight = false
+        }
+    }
+
+    private var cloudSyncToggleBinding: Binding<Bool> {
+        Binding(
+            get: { libraryCloudSyncStatus.isEnabled },
+            set: { isEnabled in
+                if isEnabled {
+                    enableLibraryCloudSync()
+                } else {
+                    actions.disableLibraryCloudSync()
+                }
+            }
+        )
+    }
+
+    private var cloudSyncIsBusy: Bool {
+        cloudSync.actionInFlight || libraryCloudSyncStatus.isSyncInProgress
+    }
+
+    private var cloudSyncManualRetryDisabled: Bool {
+        cloudSyncIsBusy || libraryCloudSyncStatus.bootstrapState == .needsConflictChoice
+    }
+
+    private var cloudSyncToggleDisabled: Bool {
+        !libraryCloudSyncStatus.isEnabled && cloudSyncIsBusy
+    }
+
+    private var cloudSyncToggleSubtitle: LocalizedStringResource {
+        "Existing iCloud data stays untouched."
+    }
+
+    private var cloudSyncStatusTitleColor: Color {
+        if libraryCloudSyncStatus.showsCloudLibraryDeletedNotice {
+            return .orange.opacity(colorScheme == .dark ? 0.82 : 0.74)
+        }
+        return switch libraryCloudSyncStatus.bootstrapState {
+        case .needsConflictChoice:
+            .orange.opacity(colorScheme == .dark ? 0.82 : 0.74)
+        case .failed:
+            .red.opacity(colorScheme == .dark ? 0.84 : 0.76)
+        case .completed:
+            switch libraryCloudSyncStatus.lastResult {
+            case .retryableFailure, .permanentFailure:
+                .red.opacity(colorScheme == .dark ? 0.84 : 0.76)
+            case .success, .skipped, .conflictChoiceRequired, nil:
+                .secondary
+            }
+        case .notStarted, .running:
+            .secondary
+        }
+    }
+
+    private func enableLibraryCloudSync() {
+        guard !cloudSyncIsBusy else { return }
+        cloudSync.actionInFlight = true
+        Task {
+            _ = await actions.enableLibraryCloudSync()
+            cloudSync.actionInFlight = false
+        }
+    }
+
+    private func retryLibraryCloudSync() {
+        guard !cloudSyncManualRetryDisabled else { return }
+        cloudSync.actionInFlight = true
+        Task {
+            _ = await actions.retryLibraryCloudSync()
+            cloudSync.actionInFlight = false
+        }
+    }
+
+    private func requestRebuildLibraryCloudSync() {
+        guard !cloudSyncIsBusy else { return }
+        cloudSync.showConflictAlert = false
+        cloudSync.showRebuildAlert = true
+    }
+
+    private func rebuildLibraryCloudSync() {
+        guard !cloudSyncIsBusy else { return }
+        cloudSync.actionInFlight = true
+        Task {
+            _ = await actions.rebuildLibraryCloudSync()
+            cloudSync.actionInFlight = false
+        }
+    }
+
+    private func requestUploadLibraryToDeletedCloud() {
+        guard !cloudSyncIsBusy else { return }
+        cloudSync.showConflictAlert = false
+        cloudSync.showUploadLibraryAlert = true
+    }
+
+    private func uploadLibraryToDeletedCloud() {
+        guard !cloudSyncIsBusy else { return }
+        cloudSync.actionInFlight = true
+        Task {
+            _ = await actions.uploadLibraryToDeletedCloud()
+            cloudSync.actionInFlight = false
+        }
+    }
+
+    private func resolveLibraryCloudSyncConflicts(_ preference: LibraryCloudSyncConflictPreference) {
+        guard !cloudSync.actionInFlight else { return }
+        cloudSync.actionInFlight = true
+        Task {
+            _ = await actions.resolveLibraryCloudSyncConflicts(preference: preference)
+            cloudSync.actionInFlight = false
+        }
+    }
+
+    private func cancelLibraryCloudSyncEnablement() {
+        cloudSync.showConflictAlert = false
+        actions.cancelLibraryCloudSyncEnablement()
     }
 
     @ViewBuilder
@@ -469,7 +765,7 @@ struct LibraryProfileSettingsView: View {
         switch sheet {
         case .changeAPIKey:
             TMDbAPIConfigurator()
-                .presentationDetents([.fraction(0.65), .large])
+                .presentationDetents([.medium, .large])
                 .presentationSizing(.form)
         case .support:
             NavigationStack {
@@ -497,4 +793,21 @@ struct LibraryProfileSettingsView: View {
         .environment(store)
         .environment(SupportStore())
         .environment(WhatsNewController(currentVersion: "1.54"))
+}
+
+/// Animates the expanding rows inside settings sections, on pushed pages and in the workspace alike.
+fileprivate struct LibraryProfileSettingsContentAnimations: ViewModifier {
+    let animation: Animation
+    let episodeProgressTrackingEnabled: Bool
+    let categoriesEnabled: Bool
+    let categoryStripEnabled: Bool
+    let libraryCloudSyncStatus: LibraryCloudSyncStatus
+
+    func body(content: Content) -> some View {
+        content
+            .animation(animation, value: episodeProgressTrackingEnabled)
+            .animation(animation, value: categoriesEnabled)
+            .animation(animation, value: categoryStripEnabled)
+            .animation(animation, value: libraryCloudSyncStatus)
+    }
 }

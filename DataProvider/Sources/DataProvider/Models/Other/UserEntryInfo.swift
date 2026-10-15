@@ -432,6 +432,43 @@ extension AnimeEntry {
         updateFavorite(!favorite, at: date)
     }
 
+    /// Adds or removes one category and advances `categoriesUpdatedAt`.
+    ///
+    /// Pass `knownCategoryIDs` to drop IDs of deleted categories in the same write;
+    /// category deletion leaves those IDs on entries instead of rewriting every entry.
+    @discardableResult
+    public func updateCategoryMembership(
+        _ categoryID: String,
+        isMember: Bool,
+        knownCategoryIDs: Set<String>? = nil,
+        at date: Date = .now
+    ) -> Bool {
+        var ids = categoryIDs
+        if let knownCategoryIDs {
+            ids.removeAll { !knownCategoryIDs.contains($0) }
+        }
+        if isMember {
+            if !ids.contains(categoryID) { ids.append(categoryID) }
+        } else {
+            ids.removeAll { $0 == categoryID }
+        }
+        guard ids != categoryIDs else { return false }
+        categoryIDs = ids
+        categoriesUpdatedAt = LibrarySyncTimestamp.next(date, after: categoriesUpdatedAt)
+        return true
+    }
+
+    /// Replaces all category memberships and advances `categoriesUpdatedAt`.
+    ///
+    /// Use when another entry's memberships carry over, such as during series/season conversion.
+    @discardableResult
+    public func updateCategoryIDs(_ ids: [String], at date: Date = .now) -> Bool {
+        guard ids != categoryIDs else { return false }
+        categoryIDs = ids
+        categoriesUpdatedAt = LibrarySyncTimestamp.next(date, after: categoriesUpdatedAt)
+        return true
+    }
+
     @discardableResult
     public func updateNotes(_ notes: String, at date: Date = .now) -> Bool {
         guard self.notes != notes else { return false }

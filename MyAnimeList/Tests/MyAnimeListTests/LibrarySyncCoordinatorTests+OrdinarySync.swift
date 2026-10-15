@@ -7,8 +7,8 @@
 
 import CloudKit
 import Foundation
-import Testing
 import TMDb
+import Testing
 
 @testable import DataProvider
 @testable import LibrarySync
@@ -46,6 +46,12 @@ fileprivate final class SuspendedFirstNamespaceResolution {
         continuation?.resume()
         continuation = nil
     }
+}
+
+enum CloudLibraryDeletionPoint: CaseIterable, Sendable {
+    case preparation
+    case fetch
+    case export
 }
 
 extension LibrarySyncCoordinatorTests {
@@ -713,5 +719,145 @@ extension LibrarySyncCoordinatorTests {
         #expect(result == .success)
         #expect(store.libraryCloudSyncStatus.currentPhase == nil)
         #expect(store.libraryCloudSyncStatus.lastResult == nil)
+    }
+
+    @Test(arguments: CloudLibraryDeletionPoint.allCases)
+    @MainActor func userDeletedCloudLibraryStopsRetriesAndKeepsLocalWork(
+        _ point: CloudLibraryDeletionPoint
+    ) async throws {
+        let store = makeSyncReadyStore()
+        let client = CloudLibrarySyncClient()
+        let entry = AnimeEntry(
+            name: "Kept Locally",
+            type: .series,
+            tmdbID: 871,
+            dateSaved: referenceDate(year: 2026, month: 5, day: 1)
+        )
+        try store.repository.newEntry(entry)
+        let dirtyEntry = LibraryEntrySyncDirtyQueueEntry.upsert(
+            .init(identity: entry.libraryIdentity, dirtyAt: referenceDate(year: 2026, month: 5, day: 2))
+        )
+        try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([dirtyEntry])
+        // A purge that lands mid-pass surfaces as a raw CloudKit error.
+        let deletedZoneSaveFailure = CloudLibrarySyncPartialSaveFailure(
+            savedRecordIDs: [],
+            failedErrorsByID: [client.recordID(for: entry.libraryIdentity): CKError(.userDeletedZone)]
+        )
+        let database = FakeCloudLibrarySyncDatabase(
+            changes: [makeEmptyChangeBatch()],
+            saveErrorsByCallIndex: point == .export ? [1: deletedZoneSaveFailure] : [:]
+        )
+        switch point {
+        case .preparation:
+            database.prepare = {
+                throw CloudLibrarySyncZoneDeletedByUserError(zoneID: CloudLibrarySyncClient.recordZoneID)
+            }
+        case .fetch:
+            database.fetchErrors = [CKError(.userDeletedZone)]
+        case .export:
+            break
+        }
+        store.configureLibrarySyncCoordinator(
+            client: client,
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        let result = await store.performLibrarySyncResult(trigger: .localChange)
+
+        #expect(result == .permanentFailure)
+        #expect(database.recreatingUserDeletedZoneRequests == [false])
+        let status = store.libraryCloudSyncStatus
+        #expect(status.cloudLibraryDeletedByUser)
+        #expect(status.showsCloudLibraryDeletedNotice)
+        #expect(status.failureReasonDisplay == nil)
+        #expect(status.lastFailureReason == String(localized: "AniShelf's iCloud data was deleted in iCloud settings."))
+        #expect(store.preferences.load().cloudSyncStatus == status)
+        #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries == [dirtyEntry])
+        #expect(store.library.contains { $0.libraryIdentity == entry.libraryIdentity })
+    }
+
+    /// First enable on a purged account leaves bootstrap failed.
+    ///
+    /// That blocks ordinary passes, yet a foreground trigger must still notice
+    /// that another device uploaded its library again.
+    @Test @MainActor func foregroundRecoversAfterAnotherDeviceRecreatesDeletedCloudLibrary() async throws {
+        let store = makeStore(enabled: false, bootstrapState: .notStarted, hasTMDbAPIKey: true)
+        let database = FakeCloudLibrarySyncDatabase(changes: [makeEmptyChangeBatch()])
+        database.prepare = {
+            throw CloudLibrarySyncZoneDeletedByUserError(zoneID: CloudLibrarySyncClient.recordZoneID)
+        }
+        store.configureLibrarySyncCoordinator(
+            client: CloudLibrarySyncClient(),
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        #expect(!(await store.enableLibraryCloudSync()))
+        #expect(store.libraryCloudSyncStatus.bootstrapState == .failed)
+        #expect(store.libraryCloudSyncStatus.cloudLibraryDeletedByUser)
+
+        database.prepare = nil
+        #expect(await store.performLibrarySync(trigger: .foreground))
+        #expect(store.libraryCloudSyncStatus.bootstrapState == .completed)
+        #expect(!store.libraryCloudSyncStatus.cloudLibraryDeletedByUser)
+        #expect(database.recreatingUserDeletedZoneRequests == [false, false])
+    }
+
+    /// A zone replaced while this device held a token must receive the local
+    /// library again instead of silently drifting from it.
+    @Test @MainActor func fullRefetchInOrdinarySyncQueuesLocalStateTheCloudLacks() async throws {
+        let store = makeSyncReadyStore()
+        let client = CloudLibrarySyncClient()
+        let localOnly = AnimeEntry(
+            name: "Local Only", type: .series, tmdbID: 881, dateSaved: referenceDate(year: 2026, month: 5, day: 1)
+        )
+        let differing = AnimeEntry(
+            name: "Differing", type: .series, tmdbID: 882, dateSaved: referenceDate(year: 2026, month: 5, day: 1)
+        )
+        differing.notes = "Local notes"
+        differing.trackingUpdatedAt = referenceDate(year: 2026, month: 6, day: 2)
+        let matching = AnimeEntry(
+            name: "Matching", type: .series, tmdbID: 883, dateSaved: referenceDate(year: 2026, month: 5, day: 1)
+        )
+        for entry in [localOnly, differing, matching] {
+            try store.repository.newEntry(entry)
+        }
+        try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([])
+        store.rebuildSyncChangeTracking()
+
+        var staleRemote = LibraryEntrySyncSnapshot(entry: differing)
+        staleRemote.notes = "Remote notes"
+        staleRemote.trackingUpdatedAt = referenceDate(year: 2026, month: 6, day: 1)
+        let database = FakeCloudLibrarySyncDatabase(changes: [
+            try makeChangeBatch(client: client, snapshots: [staleRemote, LibraryEntrySyncSnapshot(entry: matching)])
+        ])
+        // The replaced zone no longer recognizes the stored token.
+        database.fetchErrors = [CKError(.zoneNotFound)]
+        let namespace = makeNamespace()
+        let tokenDefaults = UserDefaults(suiteName: "LibrarySyncCoordinatorTests.FullRefetch.\(UUID().uuidString)")!
+        let tokenStore = CloudLibrarySyncChangeTokenStore(userDefaults: tokenDefaults)
+        tokenStore.setToken(makeToken(), for: CloudLibrarySyncClient.recordZoneID, namespace: namespace)
+        store.configureLibrarySyncCoordinator(
+            client: client,
+            database: database,
+            changeTokenStore: tokenStore,
+            namespaceProvider: { namespace }
+        )
+
+        #expect(await store.performLibrarySync(trigger: .foreground))
+
+        #expect(database.fetchedChangeTokens.count == 2)
+        #expect(database.fetchedChangeTokens.last == .some(nil))
+        let savedEntryRecords = database.savedRecords.filter { $0.recordID != client.librarySettingsRecordID }
+        #expect(
+            Set(savedEntryRecords.map(\.recordID))
+                == [client.recordID(for: localOnly.libraryIdentity), client.recordID(for: differing.libraryIdentity)]
+        )
+        let uploadedDiffering = try #require(
+            savedEntryRecords.first { $0.recordID == client.recordID(for: differing.libraryIdentity) }
+        )
+        #expect(try savedSnapshot(from: uploadedDiffering, client: client).notes == "Local notes")
+        #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
     }
 }

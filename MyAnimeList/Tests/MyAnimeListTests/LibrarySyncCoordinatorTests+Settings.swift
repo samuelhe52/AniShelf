@@ -162,6 +162,55 @@ extension LibrarySyncCoordinatorTests {
         #expect(!store.hasPendingCloudSyncedSettingsSyncWork())
     }
 
+    @Test @MainActor func categoryDefinitionsRoundTripThroughSettingsPayload() throws {
+        let sourceSuite = "\(#function).source"
+        let targetSuite = "\(#function).target"
+        let sourceDefaults = try #require(UserDefaults(suiteName: sourceSuite))
+        let targetDefaults = try #require(UserDefaults(suiteName: targetSuite))
+        defer {
+            sourceDefaults.removePersistentDomain(forName: sourceSuite)
+            targetDefaults.removePersistentDomain(forName: targetSuite)
+        }
+        let categories = [LibraryCategory(name: "Isekai"), LibraryCategory(name: "Rewatch Later")]
+        let source = LibraryPreferences(defaults: sourceDefaults)
+        #expect(!source.load().categoriesEnabled)
+        #expect(!source.load().categoryStripEnabled)
+        #expect(String.allPreferenceKeys.contains(.libraryCategoryStripEnabled))
+        source.saveCategoriesEnabled(true)
+        source.saveCategoryStripEnabled(true)
+        source.saveCategories(categories)
+
+        let snapshot = source.loadCloudSyncedSettingsSnapshot()
+        guard case .objectArray = snapshot.payload[.libraryCategories] else {
+            Issue.record("Categories must sync as an object array so older builds skip export.")
+            return
+        }
+
+        #expect(snapshot.payload[.libraryCategoriesEnabled] == .bool(true))
+        #expect(snapshot.payload[.libraryCategoryStripEnabled] == .bool(true))
+        let target = LibraryPreferences(defaults: targetDefaults)
+        target.applyCloudSyncedSettingsSnapshot(snapshot)
+        target.noteCloudSyncedSettingsTypes(snapshot)
+
+        #expect(target.load().categories == categories)
+        #expect(target.load().categoriesEnabled)
+        #expect(target.load().categoryStripEnabled)
+        #expect(!target.hasUnknownCloudSyncedSettingsValues)
+
+        source.saveCategoryStripEnabled(false)
+        let disabledSnapshot = source.loadCloudSyncedSettingsSnapshot()
+        #expect(disabledSnapshot.payload[.libraryCategoryStripEnabled] == .bool(false))
+        target.applyCloudSyncedSettingsSnapshot(disabledSnapshot)
+        #expect(!target.load().categoryStripEnabled)
+
+        // A settings payload from before this option existed restores its off default.
+        target.saveCategoryStripEnabled(true)
+        var legacySnapshot = snapshot
+        legacySnapshot.payload.removeValue(forKey: .libraryCategoryStripEnabled)
+        target.applyCloudSyncedSettingsSnapshot(legacySnapshot)
+        #expect(!target.load().categoryStripEnabled)
+    }
+
     @Test @MainActor func newerRemoteSettingsApplyLocally() async throws {
         let store = makeSyncReadyStore()
         store.preferences.saveCloudSyncedDefaultsUpdatedAt(referenceDate(year: 2026, month: 6, day: 1))

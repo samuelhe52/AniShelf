@@ -33,14 +33,16 @@ final class LibrarySyncChangeRecorder {
     private struct ClockBaseline: Equatable {
         var libraryUpdatedAt: Date?
         var trackingUpdatedAt: Date?
+        var categoriesUpdatedAt: Date?
 
         init(entry: AnimeEntry) {
             libraryUpdatedAt = entry.libraryUpdatedAt
             trackingUpdatedAt = entry.trackingUpdatedAt
+            categoriesUpdatedAt = entry.categoriesUpdatedAt
         }
 
         var dirtyAt: Date? {
-            [libraryUpdatedAt, trackingUpdatedAt].compactMap(\.self).max()
+            [libraryUpdatedAt, trackingUpdatedAt, categoriesUpdatedAt].compactMap(\.self).max()
         }
 
         func hasAdvanced(since previous: ClockBaseline?) -> Bool {
@@ -49,6 +51,7 @@ final class LibrarySyncChangeRecorder {
             }
             return Self.isNewer(libraryUpdatedAt, than: previous.libraryUpdatedAt)
                 || Self.isNewer(trackingUpdatedAt, than: previous.trackingUpdatedAt)
+                || Self.isNewer(categoriesUpdatedAt, than: previous.categoriesUpdatedAt)
         }
 
         private static func isNewer(_ candidate: Date?, than existing: Date?) -> Bool {

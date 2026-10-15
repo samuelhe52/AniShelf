@@ -10,8 +10,15 @@ import SwiftUI
 struct TMDbAPIOnboardingView: View {
     @Environment(TMDbAPIKeyStorage.self) private var keyStorage
 
-    @State private var keyEntryViewModel = TMDbAPIKeyEntryViewModel()
+    @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
+    @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
+        Language.followsSystemPreference()
+    @AppStorage(.defaultPosterLanguage) private var posterLanguage: PosterLanguagePreference = .originalLanguage
+
+    // The key is saved after the language step, which is what opens the library.
+    @State private var keyEntryViewModel = TMDbAPIKeyEntryViewModel(savesKeyOnValidation: false)
     @State private var selectedStep: Step = .welcome
+    @State private var keySaveFailed = false
 
     private let apiSettingsURL = URL(string: "https://www.themoviedb.org/settings/api")!
     private let loginURL = URL(string: "https://www.themoviedb.org/login")!
@@ -33,8 +40,8 @@ struct TMDbAPIOnboardingView: View {
                 TMDbOnboardingNavigation(
                     canGoBack: selectedStep.previous != nil,
                     canContinue: canContinue,
-                    primaryTitle: selectedStep.primaryButtonTitle,
-                    validationStatus: selectedStep == .enterKey ? keyEntryViewModel.status : nil,
+                    primaryTitle: primaryButtonTitle,
+                    validationStatus: navigationValidationStatus,
                     goBack: goToPreviousStep,
                     goForward: goToNextStep
                 )
@@ -48,11 +55,18 @@ struct TMDbAPIOnboardingView: View {
             Color.clear.frame(height: 14)
         }
         .animation(.spring(response: 0.32, dampingFraction: 0.88), value: selectedStep)
+        .animation(.spring(response: 0.34, dampingFraction: 0.88), value: followsSystemLanguage)
         .sensoryFeedback(trigger: keyEntryViewModel.status) { _, new in
             switch new {
             case .invalid: .error
             case .valid: .success
             default: nil
+            }
+        }
+        .onChange(of: keyEntryViewModel.validatedKey) { _, validatedKey in
+            guard validatedKey != nil, selectedStep == .enterKey else { return }
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) {
+                selectedStep = .languages
             }
         }
     }
@@ -79,11 +93,65 @@ struct TMDbAPIOnboardingView: View {
                     validate: validateKey
                 )
             }
+        case .languages:
+            VStack(alignment: .leading, spacing: 16) {
+                Text(languagesMessageResource)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 4)
+
+                LibraryProfileLanguageSettingsSections(
+                    followsSystemLanguage: followsSystemLanguageBinding,
+                    preferredLanguage: $preferredLanguage,
+                    posterLanguage: $posterLanguage
+                )
+
+                if keySaveFailed {
+                    Label(keySaveFailedResource, systemImage: "exclamationmark.triangle.fill")
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .padding(.horizontal, 4)
+                }
+            }
         }
+    }
+
+    private var followsSystemLanguageBinding: Binding<Bool> {
+        Binding(
+            get: { followsSystemLanguage },
+            set: { newValue in
+                withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+                    followsSystemLanguage = newValue
+                }
+            }
+        )
+    }
+
+    private var languagesMessageResource: LocalizedStringResource {
+        "Choose the language for anime info and posters. You can change this later in Settings."
+    }
+
+    private var keySaveFailedResource: LocalizedStringResource {
+        "Couldn't save the API key. Try again."
     }
 
     private var currentProgressResource: LocalizedStringResource {
         "Step \(selectedStep.rawValue) of \(Step.allCases.count)"
+    }
+
+    /// Back from Languages keeps the validated key; the button's locked success state would block Next.
+    private var keyIsAlreadyValidated: Bool {
+        selectedStep == .enterKey && keyEntryViewModel.validatedKey != nil
+    }
+
+    private var primaryButtonTitle: LocalizedStringResource {
+        keyIsAlreadyValidated ? "Next" : selectedStep.primaryButtonTitle
+    }
+
+    private var navigationValidationStatus: TMDbAPIKeyCheckStatus? {
+        guard selectedStep == .enterKey, !keyIsAlreadyValidated else { return nil }
+        return keyEntryViewModel.status
     }
 
     private var canContinue: Bool {
@@ -92,9 +160,15 @@ struct TMDbAPIOnboardingView: View {
     }
 
     private func goToNextStep() {
-        if selectedStep == .enterKey {
+        switch selectedStep {
+        case .enterKey:
             validateKey()
             return
+        case .languages:
+            keySaveFailed = !keyEntryViewModel.saveValidatedKey(using: keyStorage)
+            return
+        case .welcome, .getKey:
+            break
         }
         guard let nextStep = selectedStep.next else { return }
         withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) {
@@ -109,7 +183,14 @@ struct TMDbAPIOnboardingView: View {
         }
     }
 
+    /// Returning from the language step with an unchanged key skips a second check.
     private func validateKey() {
+        guard keyEntryViewModel.validatedKey == nil else {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) {
+                selectedStep = .languages
+            }
+            return
+        }
         keyEntryViewModel.validate(using: keyStorage)
     }
 
@@ -117,6 +198,7 @@ struct TMDbAPIOnboardingView: View {
         case welcome = 1
         case getKey = 2
         case enterKey = 3
+        case languages = 4
 
         var id: Int { rawValue }
 
@@ -128,6 +210,8 @@ struct TMDbAPIOnboardingView: View {
                 "Get a TMDB key"
             case .enterKey:
                 "Connect TMDB"
+            case .languages:
+                "Choose Languages"
             }
         }
 
@@ -137,6 +221,8 @@ struct TMDbAPIOnboardingView: View {
                 "Next"
             case .enterKey:
                 "Validate Key"
+            case .languages:
+                "Start Using AniShelf"
             }
         }
 

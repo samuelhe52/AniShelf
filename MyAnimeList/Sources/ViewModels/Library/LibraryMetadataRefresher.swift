@@ -56,6 +56,7 @@ final class LibraryMetadataRefresher {
         for library: [AnimeEntry],
         fetcher: InfoFetcher,
         language: Language,
+        posterLanguage: PosterLanguagePreference,
         options: LibraryRefreshOptions = .toastDefault
     ) async {
         libraryMetadataRefreshLogger.info(
@@ -87,6 +88,7 @@ final class LibraryMetadataRefresher {
                 entries: Array(chunk),
                 fetcher: fetcher,
                 language: language,
+                posterLanguage: posterLanguage,
                 updateProgress: { current, _ in
                     let resolvedCurrent = refreshedCount + failures.count + current
                     options.reporter.report(
@@ -129,7 +131,8 @@ final class LibraryMetadataRefresher {
                         for: entry,
                         refreshedInfo: info,
                         fetcher: fetcher,
-                        language: language)
+                        language: language,
+                        posterLanguage: posterLanguage)
                     {
                         parentUpdates.append(parentUpdate)
                     }
@@ -355,6 +358,7 @@ final class LibraryMetadataRefresher {
         entries: [AnimeEntry],
         fetcher: InfoFetcher,
         language: Language,
+        posterLanguage: PosterLanguagePreference,
         updateProgress: @escaping (Int, Int) -> Void
     ) async -> (
         successes: [(PersistentIdentifier, EntryMetadata, AnimeEntryDetailDTO)],
@@ -378,7 +382,8 @@ final class LibraryMetadataRefresher {
                             tmdbID: tmdbID,
                             entryType: type,
                             fetcher: fetcher,
-                            language: language)
+                            language: language,
+                            posterLanguage: posterLanguage)
                         return .success(latestInfo.0, latestInfo.1, latestInfo.2)
                     } catch {
                         return .failure(
@@ -412,12 +417,14 @@ final class LibraryMetadataRefresher {
         tmdbID: Int,
         entryType: AnimeType,
         fetcher: InfoFetcher,
-        language: Language
+        language: Language,
+        posterLanguage: PosterLanguagePreference
     ) async throws -> (PersistentIdentifier, EntryMetadata, AnimeEntryDetailDTO) {
         let latestInfo = try await fetcher.latestInfo(
             entryType: entryType,
             tmdbID: tmdbID,
-            language: language)
+            language: language,
+            posterLanguage: posterLanguage)
         return (entryID, latestInfo.0, latestInfo.1)
     }
 
@@ -425,7 +432,8 @@ final class LibraryMetadataRefresher {
         for entry: AnimeEntry,
         refreshedInfo: EntryMetadata,
         fetcher: InfoFetcher,
-        language: Language
+        language: Language,
+        posterLanguage: PosterLanguagePreference
     ) async -> LibraryMetadataRefreshParentUpdate? {
         guard let parentSeriesID = refreshedInfo.type.parentSeriesID else { return nil }
 
@@ -450,7 +458,8 @@ final class LibraryMetadataRefresher {
             let parentLatestInfo = try await fetcher.latestInfo(
                 entryType: .series,
                 tmdbID: parentSeriesID,
-                language: language
+                language: language,
+                posterLanguage: posterLanguage
             )
             return .init(
                 childEntryID: entry.id,

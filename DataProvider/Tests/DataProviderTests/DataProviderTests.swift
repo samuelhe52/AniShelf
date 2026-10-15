@@ -1,4 +1,6 @@
+import CoreData
 import Foundation
+import SwiftData
 import Testing
 
 @testable import DataProvider
@@ -139,6 +141,51 @@ import Testing
             atPath: recovery.recoveryDirectoryURL.appendingPathComponent("mal.store").path()
         )
     )
+}
+
+@Test @MainActor func startupBootstrapLeavesNewerSchemaStoreInPlace() throws {
+    let fileManager = FileManager.default
+    let rootDirectory = fileManager.temporaryDirectory
+        .appendingPathComponent("DataProviderNewerStoreTests-\(UUID().uuidString)", isDirectory: true)
+    let storeURL = rootDirectory.appendingPathComponent("mal.store")
+    try fileManager.createDirectory(at: rootDirectory, withIntermediateDirectories: true)
+    defer { try? fileManager.removeItem(at: rootDirectory) }
+
+    // A bare Core Data store stamped the way SwiftData stamps a future schema version.
+    let futureModel = NSManagedObjectModel()
+    futureModel.versionIdentifiers = ["99.0.0"]
+    let coordinator = NSPersistentStoreCoordinator(managedObjectModel: futureModel)
+    try coordinator.remove(coordinator.addPersistentStore(type: .sqlite, at: storeURL))
+    let originalStoreData = try Data(contentsOf: storeURL)
+
+    var factoryCalls: [Bool] = []
+    let result = DataProvider.bootstrap(
+        url: storeURL,
+        fileManager: fileManager,
+        now: Date(timeIntervalSince1970: 1_750_000_000)
+    ) { inMemory, url in
+        factoryCalls.append(inMemory)
+        return try DataProvider.createModelContainer(inMemory: inMemory, url: url)
+    }
+
+    #expect(result.status == .requiresNewerApp(storeVersion: Schema.Version(99, 0, 0)))
+    #expect(result.provider.inMemory)
+    #expect(factoryCalls == [true])
+    #expect(try Data(contentsOf: storeURL) == originalStoreData)
+    #expect(!fileManager.fileExists(atPath: rootDirectory.appendingPathComponent("Recovery").path()))
+}
+
+@Test @MainActor func simulatedRecoveryStaysInTemporaryFolder() throws {
+    let result = DataProvider.simulatedRecoveryBootstrap()
+    let recovery = try #require(result.recovery)
+    defer { try? FileManager.default.removeItem(at: result.provider.url.deletingLastPathComponent()) }
+
+    let temporaryPath = FileManager.default.temporaryDirectory.standardizedFileURL.path()
+    #expect(result.provider.inMemory)
+    #expect(recovery.recoveryDirectoryURL.standardizedFileURL.path().hasPrefix(temporaryPath))
+    #expect(result.provider.url.standardizedFileURL.path().hasPrefix(temporaryPath))
+    #expect(recovery.files.map(\.name) == ["mal.store"])
+    #expect(FileManager.default.fileExists(atPath: recovery.manifestURL.path()))
 }
 
 fileprivate enum TestStartupError: Error {

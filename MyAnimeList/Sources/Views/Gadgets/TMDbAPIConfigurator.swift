@@ -16,27 +16,23 @@ struct TMDbAPIConfigurator: View {
         @Bindable var keyEntryViewModel = keyEntryViewModel
 
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 24) {
                 TMDbAPIConfiguratorHeader()
 
-                TMDbSetupPanel {
-                    TMDbAPIKeyEntryCard(
-                        apiKey: $keyEntryViewModel.apiKeyInput,
-                        mode: .settings,
-                        autoFocus: true,
-                        showsValidateButton: false,
-                        validate: validateKey
-                    )
-                }
+                TMDbAPIKeyEntryCard(
+                    apiKey: $keyEntryViewModel.apiKeyInput,
+                    mode: .settings,
+                    isChecking: keyEntryViewModel.checking,
+                    autoFocus: true,
+                    showsValidateButton: false,
+                    validate: validateKey
+                )
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 24)
+            .padding(.horizontal, 28)
+            .padding(.top, 36)
             .padding(.bottom, 24)
             .frame(maxWidth: 560)
             .frame(maxWidth: .infinity)
-        }
-        .safeAreaInset(edge: .top) {
-            Color.clear.frame(height: 14)
         }
         .safeAreaInset(edge: .bottom) {
             TMDbProminentButton(
@@ -47,9 +43,9 @@ struct TMDbAPIConfigurator: View {
                 validationStatus: keyEntryViewModel.status,
                 action: validateKey
             )
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 28)
             .padding(.top, 8)
-            .padding(.bottom, 8)
+            .padding(.bottom, 12)
         }
         .scrollBounceBehavior(.basedOnSize)
         .onAppear {
@@ -79,7 +75,7 @@ fileprivate struct TMDbAPIConfiguratorHeader: View {
         VStack(alignment: .leading, spacing: 8) {
             Label(sectionLabelResource, systemImage: "person.badge.key")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.blue)
 
             Text(keyEntryTitleResource)
                 .font(.title2.weight(.bold))
@@ -113,12 +109,13 @@ enum TMDbAPIKeyEntryMode {
     case onboarding
     case settings
 
-    var message: LocalizedStringResource {
+    /// Settings already explains the task in its sheet header, so only onboarding repeats it here.
+    var message: LocalizedStringResource? {
         switch self {
         case .onboarding:
             "Paste your TMDB API Key here. AniShelf will check it before saving."
         case .settings:
-            "Paste your new API Key. AniShelf will check it before saving."
+            nil
         }
     }
 
@@ -149,32 +146,20 @@ struct TMDbAPIKeyEntryCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(mode.message)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            if let message = mode.message {
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
-            Label(keyTypeWarningResource, systemImage: "key.horizontal")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.blue)
-                .fixedSize(horizontal: false, vertical: true)
+            keyField
 
-            TextField(tmdbAPIKeyTitleResource, text: $apiKey)
-                .padding()
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .focused($isTextFieldFocused)
-                .textContentType(.password)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled(true)
-                .privacySensitive()
-                .submitLabel(.go)
-                .onSubmit(validate)
-
-            Text(mode.fieldHint)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 8) {
+                hintRow(keyTypeWarningResource, systemImage: "info.circle.fill", iconStyle: .blue)
+                hintRow(mode.fieldHint, systemImage: "lock.fill", iconStyle: .secondary)
+            }
+            .padding(.horizontal, 4)
 
             if showsValidateButton {
                 TMDbProminentButton(
@@ -191,6 +176,72 @@ struct TMDbAPIKeyEntryCard: View {
             guard autoFocus else { return }
             isTextFieldFocused = true
         }
+    }
+
+    private var keyField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "key.horizontal.fill")
+                .font(.subheadline)
+                .foregroundStyle(isTextFieldFocused ? .blue : .secondary)
+                .accessibilityHidden(true)
+
+            TextField(tmdbAPIKeyTitleResource, text: $apiKey)
+                .font(.callout.monospaced())
+                .focused($isTextFieldFocused)
+                .textContentType(.password)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled(true)
+                .privacySensitive()
+                .submitLabel(.go)
+                .onSubmit(validate)
+                .disabled(isChecking)
+
+            if isFieldEmpty {
+                PasteButton(payloadType: String.self) { strings in
+                    guard let pasted = strings.first else { return }
+                    apiKey = pasted.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+                .labelStyle(.iconOnly)
+                .buttonBorderShape(.capsule)
+                .controlSize(.small)
+                .tint(.blue)
+            } else if !isChecking {
+                Button(clearButtonResource, systemImage: "xmark.circle.fill") {
+                    apiKey = ""
+                    isTextFieldFocused = true
+                }
+                .labelStyle(.iconOnly)
+                .foregroundStyle(.tertiary)
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 14)
+        .frame(minHeight: 52)
+        .background(
+            Color(.secondarySystemBackground),
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+        )
+        .animation(.easeOut(duration: 0.15), value: isFieldEmpty)
+    }
+
+    private func hintRow(
+        _ text: LocalizedStringResource,
+        systemImage: String,
+        iconStyle: some ShapeStyle
+    ) -> some View {
+        Label {
+            Text(text)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } icon: {
+            Image(systemName: systemImage)
+                .foregroundStyle(iconStyle)
+        }
+        .font(.footnote)
+    }
+
+    private var clearButtonResource: LocalizedStringResource {
+        "Clear"
     }
 
     private var keyTypeWarningResource: LocalizedStringResource {

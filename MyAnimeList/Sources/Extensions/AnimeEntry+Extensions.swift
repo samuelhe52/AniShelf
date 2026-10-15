@@ -107,10 +107,11 @@ extension AnimeEntry {
     static func generateParentSeriesEntryForSeason(
         parentSeriesID: Int,
         fetcher: InfoFetcher,
-        infoLanguage language: Language
+        infoLanguage language: Language,
+        posterLanguage: PosterLanguagePreference
     ) async throws -> sending AnimeEntry {
         let parentSeriesInfo = try await fetcher.tvSeriesInfo(
-            tmdbID: parentSeriesID, language: language)
+            tmdbID: parentSeriesID, language: language, posterLanguage: posterLanguage)
         let parentSeriesEntry = AnimeEntry(fromInfo: parentSeriesInfo)
         parentSeriesEntry.setDisplayState(false)
         return parentSeriesEntry

@@ -295,6 +295,18 @@ final class LibrarySyncCoordinator {
             guard let head = try await runImportHead(pass: pass, state: state, store: store) else {
                 return .permanentFailure
             }
+            if head.importBatch.isFullRefetch {
+                // The zone may have been replaced, so queue whatever it lacks.
+                librarySyncCoordinatorLogger.info(
+                    "Re-seeding the iCloud sync dirty queue after an ordinary sync refetched the whole zone."
+                )
+                try await seedDirtyQueueDifferingFromRemote(
+                    head.importBatch.remoteChanges,
+                    pass: pass,
+                    state: state,
+                    store: store
+                )
+            }
             let result = try await runApplyExportTail(
                 pass: pass,
                 state: state,
@@ -331,9 +343,12 @@ final class LibrarySyncCoordinator {
         ).result
     }
 
+    /// `recreatingDeletedZone` lets this bootstrap save a zone the user deleted
+    /// in iCloud settings. Only the explicit upload action passes `true`.
     func bootstrapFirstEnablementOutcome(
         preference: LibraryCloudSyncConflictPreference?,
         isUserRetry: Bool = false,
+        recreatingDeletedZone: Bool = false,
         canHandleResult: Bool = false
     ) async -> SyncOutcome {
         activeSyncRequestCount += 1
@@ -353,7 +368,8 @@ final class LibrarySyncCoordinator {
             await runFirstEnableBootstrap(
                 preference: preference,
                 bootstrapID: bootstrapID,
-                isUserRetry: isUserRetry
+                isUserRetry: isUserRetry,
+                recreatingDeletedZone: recreatingDeletedZone
             )
         }
         activeBootstrapTask = task
@@ -570,7 +586,8 @@ final class LibrarySyncCoordinator {
     private func runFirstEnableBootstrap(
         preference: LibraryCloudSyncConflictPreference?,
         bootstrapID: UUID,
-        isUserRetry: Bool
+        isUserRetry: Bool,
+        recreatingDeletedZone: Bool
     ) async -> SyncResult {
         guard let store else {
             librarySyncCoordinatorLogger.warning(
@@ -596,7 +613,10 @@ final class LibrarySyncCoordinator {
             status.lastFailureReason = nil
         }
 
-        let pass = bootstrapSyncPass(bootstrapID: bootstrapID)
+        let pass = bootstrapSyncPass(
+            bootstrapID: bootstrapID,
+            recreatesUserDeletedZone: recreatingDeletedZone
+        )
         let state = SyncPipelineState(dateProvider: dateProvider)
         do {
             guard let head = try await runImportHead(pass: pass, state: state, store: store) else {
@@ -644,17 +664,12 @@ final class LibrarySyncCoordinator {
             }
             try pass.checkCancellation()
 
-            let decisionSnapshots = try localSnapshotsByIdentity(for: store)
-            let remoteChangesByIdentity = try Self.coalescedRemoteChangesByIdentity(fetchedBatch.remoteChanges)
-            try await pass.run(.dirtyQueueSeeding, state: state, store: store) {
-                try seedDirtyQueue(
-                    with: decisionSnapshots.filter { identity, snapshot in
-                        remoteChangesByIdentity[identity] != .snapshot(snapshot)
-                    },
-                    at: dateProvider(),
-                    in: store
-                )
-            }
+            let decisionSnapshots = try await seedDirtyQueueDifferingFromRemote(
+                fetchedBatch.remoteChanges,
+                pass: pass,
+                state: state,
+                store: store
+            )
 
             var importBatch = fetchedBatch
             if let preference {
@@ -713,12 +728,25 @@ struct LocalSettingsSnapshotState {
 }
 
 extension Error {
+    /// Whether the user deleted AniShelf's iCloud data in iCloud settings.
+    ///
+    /// The zone stays purged until a client saves it again, so retrying cannot
+    /// help. A purge can also land in the middle of a pass, which surfaces as
+    /// a raw CloudKit error from a fetch or save.
+    var isLibraryCloudZoneDeletedByUser: Bool {
+        if self is CloudLibrarySyncZoneDeletedByUserError { return true }
+        return librarySyncBlockingCKError?.code == .userDeletedZone
+    }
+
     var isPermanentLibrarySyncFailure: Bool {
+        if self is CloudLibrarySyncZoneDeletedByUserError || librarySyncBlockingCKError != nil {
+            return true
+        }
         if let exportFailure = self as? CloudLibrarySyncExportFailure {
             return exportFailure.underlyingError.isPermanentLibrarySyncFailure
         }
         if let partialFailure = self as? CloudLibrarySyncPartialSaveFailure {
-            return partialFailure.accountError != nil || partialFailure.isQuotaExceeded
+            return partialFailure.isQuotaExceeded
         }
         if let hydrationError = self as? LibrarySyncHydrationError {
             return hydrationError.underlyingError.isPermanentLibrarySyncFailure
@@ -726,13 +754,7 @@ extension Error {
         if self is DisabledCloudLibrarySyncDatabase.DisabledError {
             return true
         }
-        guard let ckError = self as? CKError else { return false }
-        switch ckError.code {
-        case .notAuthenticated, .permissionFailure, .quotaExceeded:
-            return true
-        default:
-            return false
-        }
+        return (self as? CKError)?.code == .quotaExceeded
     }
 
     var librarySyncRetryAfterSeconds: TimeInterval? {
@@ -752,6 +774,12 @@ extension Error {
     var librarySyncFailureReason: String {
         if let exportFailure = self as? CloudLibrarySyncExportFailure {
             return exportFailure.underlyingError.librarySyncFailureReason
+        }
+        if isLibraryCloudZoneDeletedByUser {
+            return String(localized: "AniShelf's iCloud data was deleted in iCloud settings.")
+        }
+        if let reason = librarySyncBlockingCKError?.code.librarySyncAccountReason {
+            return reason
         }
         if let partialFailure = self as? CloudLibrarySyncPartialSaveFailure,
             partialFailure.isQuotaExceeded
@@ -775,6 +803,9 @@ extension Error {
         if let exportFailure = self as? CloudLibrarySyncExportFailure {
             return exportFailure.underlyingError.librarySyncDegradedReason
         }
+        if isLibraryCloudZoneDeletedByUser || librarySyncBlockingCKError?.code.librarySyncAccountReason != nil {
+            return librarySyncFailureReason
+        }
         if let partialFailure = self as? CloudLibrarySyncPartialSaveFailure,
             partialFailure.isQuotaExceeded
         {
@@ -788,24 +819,79 @@ extension Error {
     }
 
     var libraryCloudKitAvailability: LibraryCloudKitAvailability {
-        if let exportFailure = self as? CloudLibrarySyncExportFailure {
-            return exportFailure.underlyingError.libraryCloudKitAvailability
-        }
-        if let partialFailure = self as? CloudLibrarySyncPartialSaveFailure,
-            let accountError = partialFailure.accountError
-        {
-            return accountError.libraryCloudKitAvailability
-        }
-        guard let ckError = self as? CKError else {
-            return .couldNotDetermine
-        }
-        switch ckError.code {
+        switch librarySyncBlockingCKError?.code {
         case .notAuthenticated:
-            return .noAccount
-        case .permissionFailure:
-            return .restricted
+            .noAccount
+        case .permissionFailure, .managedAccountRestricted:
+            .restricted
+        case .accountTemporarilyUnavailable:
+            .temporarilyUnavailable
         default:
-            return .couldNotDetermine
+            .couldNotDetermine
+        }
+    }
+
+    /// The CloudKit error that blocks every request until the user, or a new
+    /// build, fixes it.
+    ///
+    /// Unwraps the sync pipeline's wrappers. When several records failed, an
+    /// account problem outranks the others because it explains them all.
+    var librarySyncBlockingCKError: CKError? {
+        if let exportFailure = self as? CloudLibrarySyncExportFailure {
+            return exportFailure.underlyingError.librarySyncBlockingCKError
+        }
+        if let hydrationError = self as? LibrarySyncHydrationError {
+            return hydrationError.underlyingError.librarySyncBlockingCKError
+        }
+        let candidates: [any Error]
+        if let partialFailure = self as? CloudLibrarySyncPartialSaveFailure {
+            candidates =
+                Array(partialFailure.failedErrorsByID.values)
+                + [partialFailure.aggregateError].compactMap(\.self)
+        } else if let ckError = self as? CKError, ckError.code == .partialFailure {
+            candidates = [ckError] + (ckError.partialErrorsByItemID.map { Array($0.values) } ?? [])
+        } else {
+            candidates = [self]
+        }
+        let ckErrors = candidates.compactMap { $0 as? CKError }
+        for code in CKError.Code.librarySyncBlockingCodes {
+            if let match = ckErrors.first(where: { $0.code == code }) {
+                return match
+            }
+        }
+        return nil
+    }
+}
+
+extension CKError.Code {
+    /// Codes that no retry can fix, in the order that best explains a failure.
+    fileprivate static let librarySyncBlockingCodes: [CKError.Code] = [
+        .notAuthenticated,
+        .accountTemporarilyUnavailable,
+        .managedAccountRestricted,
+        .permissionFailure,
+        .userDeletedZone,
+        .incompatibleVersion,
+        .badContainer,
+        .missingEntitlement,
+        .badDatabase
+    ]
+
+    /// Localized guidance for account and configuration failures.
+    ///
+    /// `notAuthenticated` and `permissionFailure` keep CloudKit's own message.
+    fileprivate var librarySyncAccountReason: String? {
+        switch self {
+        case .accountTemporarilyUnavailable:
+            String(localized: "Your Apple Account needs attention. Open Settings to verify it, then try again.")
+        case .managedAccountRestricted:
+            String(localized: "iCloud is restricted for this account.")
+        case .incompatibleVersion:
+            String(localized: "Update AniShelf to keep syncing with iCloud.")
+        case .badContainer, .missingEntitlement, .badDatabase:
+            String(localized: "iCloud Sync isn't available in this build.")
+        default:
+            nil
         }
     }
 }
@@ -817,7 +903,8 @@ fileprivate struct DisabledCloudLibrarySyncDatabase: CloudLibrarySyncDatabase {
 
     func ensureZoneAndSubscription(
         zoneID: CKRecordZone.ID,
-        subscriptionID: CKSubscription.ID
+        subscriptionID: CKSubscription.ID,
+        recreatingUserDeletedZone: Bool
     ) async throws {
         throw DisabledError.unavailable
     }

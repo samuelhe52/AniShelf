@@ -22,6 +22,7 @@ extension LibraryView {
         guard !entries.isEmpty else { return }
 
         action.apply(to: entries)
+        guard action.endsMultiSelection else { return }
         exitMultiSelection()
         if entries.count >= 3 {
             appReview.record(.multiSelectAction)

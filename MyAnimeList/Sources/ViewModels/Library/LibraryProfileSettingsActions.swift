@@ -145,6 +145,13 @@ final class LibraryProfileSettingsActions {
         await store.rebuildLibraryCloudSync()
     }
 
+    /// Re-creates iCloud data from this device after the user deleted it in
+    /// iCloud settings.
+    @discardableResult
+    func uploadLibraryToDeletedCloud() async -> Bool {
+        await store.rebuildLibraryCloudSync(recreatingDeletedZone: true)
+    }
+
     func discardFailedCloudSyncEntry(_ entry: LibraryCloudSyncFailedEntry) async -> Bool {
         switch entry.source {
         case .restoration(let failure):
@@ -191,6 +198,7 @@ final class LibraryProfileSettingsActions {
                         for: entries,
                         fetcher: store.infoFetcher,
                         language: store.language,
+                        posterLanguage: store.posterLanguage,
                         options: options
                     )
                 }

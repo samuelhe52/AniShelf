@@ -48,6 +48,8 @@ class LibraryStore {
     var isResolvingDuplicateEntryGroup = false
     @ObservationIgnored var infoFetcher: InfoFetcher
     var language: Language = .resolvedAnimeInfoLanguage()
+    /// Read at each fetch so a settings change applies to the next library write.
+    var posterLanguage: PosterLanguagePreference { preferences.loadPosterLanguage() }
     private(set) var libraryCloudSyncStatus: LibraryCloudSyncStatus
 
     // MARK: - Filtering & Sorting State
@@ -106,12 +108,45 @@ class LibraryStore {
         }
     }
 
+    // MARK: - Categories State
+
+    /// Opt-in switch for library categories. Turning it off keeps categories and memberships.
+    var categoriesEnabled: Bool = false {
+        willSet {
+            preferences.saveCategoriesEnabled(newValue)
+            libraryStoreLogger.debug("Updated categories enabled to \(newValue)")
+        }
+        didSet {
+            if !categoriesEnabled { activeCategoryID = nil }
+        }
+    }
+    /// Optional pinned switcher for List and Grid; retained when categories are disabled.
+    var categoryStripEnabled: Bool = false {
+        willSet { preferences.saveCategoryStripEnabled(newValue) }
+    }
+    /// Category definitions in display order. Write through the category operations.
+    var categories: [LibraryCategory] = [] {
+        willSet { preferences.saveCategories(newValue) }
+        didSet {
+            if let activeCategoryID, !categories.contains(where: { $0.id == activeCategoryID }) {
+                self.activeCategoryID = nil
+            }
+        }
+    }
+    /// The category the library is narrowed to; `nil` means All. Shared across windows, like `filters`.
+    var activeCategoryID: LibraryCategory.ID?
+
     var libraryOnDisplay: [AnimeEntry] {
         filterAndSort(library)
     }
 
     var libraryDisplayItems: [LibraryEntryDisplayItem] {
         libraryOnDisplay.map(LibraryEntryDisplayItem.init)
+    }
+
+    /// Whether the library already holds an entry, regardless of the active category or filters.
+    func containsEntry(_ identity: LibraryEntryIdentity) -> Bool {
+        library.contains { $0.libraryIdentity == identity }
     }
 
     var requiresDuplicateRepair: Bool {
@@ -148,6 +183,7 @@ class LibraryStore {
         self.shouldResumeInterruptedCloudSyncBootstrap =
             snapshot.cloudSyncStatus.isEnabled && snapshot.cloudSyncStatus.bootstrapState == .running
         reloadPersistedPreferences()
+        applyDefaultFilters()
         lastObservedCloudSyncedPreferencesHash = preferences.cloudSyncedSettingsPayloadHash()
         setupUpdateLibrary()
         setupTMDbAPIConfigurationChangeMonitor()
@@ -192,11 +228,20 @@ class LibraryStore {
         if longTermGalleryPosterCachingEnabled != snapshot.longTermGalleryPosterCachingEnabled {
             longTermGalleryPosterCachingEnabled = snapshot.longTermGalleryPosterCachingEnabled
         }
+        if categoriesEnabled != snapshot.categoriesEnabled {
+            categoriesEnabled = snapshot.categoriesEnabled
+        }
+        if categoryStripEnabled != snapshot.categoryStripEnabled {
+            categoryStripEnabled = snapshot.categoryStripEnabled
+        }
+        if categories != snapshot.categories {
+            categories = snapshot.categories
+        }
         if libraryCloudSyncStatus != snapshot.cloudSyncStatus {
             libraryCloudSyncStatus = snapshot.cloudSyncStatus
         }
-
-        applyDefaultFilters()
+        // Browse filters reset only through `defaultFilters.didSet`, so unrelated
+        // preference writes (such as category edits) keep the current filters.
     }
 
     func applyRemoteCloudSyncedPreferences(_ snapshot: LibrarySettingsSyncSnapshot) {
@@ -395,7 +440,16 @@ class LibraryStore {
         let shouldBootstrapDefaultEnablement =
             libraryCloudSyncStatus.isEnabled
             && libraryCloudSyncStatus.bootstrapState == .notStarted
-        if shouldResumeInterruptedCloudSyncBootstrap || shouldBootstrapDefaultEnablement {
+        // First enable on a purged account leaves bootstrap failed, which
+        // blocks ordinary passes. Retry the bootstrap without recreating the
+        // zone, so it succeeds only once another device has uploaded again.
+        let shouldRecheckDeletedCloudLibrary =
+            libraryCloudSyncStatus.isEnabled
+            && libraryCloudSyncStatus.bootstrapState == .failed
+            && libraryCloudSyncStatus.cloudLibraryDeletedByUser
+        if shouldResumeInterruptedCloudSyncBootstrap || shouldBootstrapDefaultEnablement
+            || shouldRecheckDeletedCloudLibrary
+        {
             guard cloudSyncStateController.hasRequiredBootstrapInputs() else {
                 recordLibraryCloudSyncSkipped(
                     trigger: trigger,
@@ -441,12 +495,19 @@ class LibraryStore {
         return await bootstrapLibraryCloudSyncEnablement().succeeded
     }
 
-    func bootstrapLibraryCloudSyncEnablement(isUserRetry: Bool = false) async -> LibrarySyncCoordinator.SyncResult {
-        await bootstrapLibraryCloudSyncEnablementOutcome(isUserRetry: isUserRetry).result
+    func bootstrapLibraryCloudSyncEnablement(
+        isUserRetry: Bool = false,
+        recreatingDeletedZone: Bool = false
+    ) async -> LibrarySyncCoordinator.SyncResult {
+        await bootstrapLibraryCloudSyncEnablementOutcome(
+            isUserRetry: isUserRetry,
+            recreatingDeletedZone: recreatingDeletedZone
+        ).result
     }
 
     func bootstrapLibraryCloudSyncEnablementOutcome(
         isUserRetry: Bool = false,
+        recreatingDeletedZone: Bool = false,
         canHandleResult: Bool = false
     ) async -> LibrarySyncCoordinator.SyncOutcome {
         updateLibraryCloudSyncStatus { status in
@@ -489,6 +550,7 @@ class LibraryStore {
         }
         return await syncCoordinator.bootstrapFirstEnablementOutcome(
             preference: nil, isUserRetry: isUserRetry,
+            recreatingDeletedZone: recreatingDeletedZone,
             canHandleResult: canHandleResult
         )
     }
@@ -533,8 +595,14 @@ class LibraryStore {
         syncCoordinator.removeAllChangeTokens()
     }
 
+    /// Refetches the iCloud library from scratch and reconciles it with this device.
+    ///
+    /// `recreatingDeletedZone` saves the iCloud library again after the user
+    /// deleted it in iCloud settings. Only the **Upload This Library** action
+    /// passes `true`, after the user confirms. The bootstrap then finds an
+    /// empty zone and uploads every local entry.
     @discardableResult
-    func rebuildLibraryCloudSync() async -> Bool {
+    func rebuildLibraryCloudSync(recreatingDeletedZone: Bool = false) async -> Bool {
         cancelAllLibraryCloudSyncWork()
         syncScheduler?.resetRetryBackoff()
         await syncCoordinator?.waitUntilAllSyncFinishes()
@@ -557,8 +625,14 @@ class LibraryStore {
             status.lastRetryAfterSeconds = nil
             status.degradedReason = nil
             status.lastCompletedScope = nil
+            if recreatingDeletedZone {
+                status.cloudLibraryDeletedByUser = false
+            }
         }
-        return await bootstrapLibraryCloudSyncEnablement(isUserRetry: true).succeeded
+        return await bootstrapLibraryCloudSyncEnablement(
+            isUserRetry: true,
+            recreatingDeletedZone: recreatingDeletedZone
+        ).succeeded
     }
 
     /// Resets persisted sync metadata that belonged to a replaced local store.
@@ -618,6 +692,7 @@ class LibraryStore {
             status.lastFailureReason = nil
             status.degradedReason = nil
             status.lastCompletedScope = nil
+            status.cloudLibraryDeletedByUser = false
             if resetRetryState {
                 status.retryState = .idle
             }
@@ -730,6 +805,7 @@ class LibraryStore {
             status.lastRetryAfterSeconds = nil
             status.degradedReason = nil
             status.pendingConflictSummary = nil
+            status.cloudLibraryDeletedByUser = false
         }
     }
 

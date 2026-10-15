@@ -38,6 +38,35 @@ extension LibrarySyncCoordinator {
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries(Array(entriesByID.values))
     }
 
+    /// Queues every local entry whose state the fetched zone lacks or holds
+    /// differently.
+    ///
+    /// Bootstrap and any ordinary pass that refetched the whole zone run this,
+    /// so a replaced or recreated zone receives this device's library again.
+    /// Entries already equal in the cloud stay out of the queue.
+    ///
+    /// - Returns: The local snapshots the decision was based on.
+    @discardableResult
+    func seedDirtyQueueDifferingFromRemote(
+        _ remoteChanges: [LibraryEntrySyncRemoteChange],
+        pass: SyncPass,
+        state: SyncPipelineState,
+        store: LibraryStore
+    ) async throws -> [LibraryEntryIdentity: LibraryEntrySyncSnapshot] {
+        let localSnapshots = try localSnapshotsByIdentity(for: store)
+        let remoteChangesByIdentity = try Self.coalescedRemoteChangesByIdentity(remoteChanges)
+        try await pass.run(.dirtyQueueSeeding, state: state, store: store) {
+            try seedDirtyQueue(
+                with: localSnapshots.filter { identity, snapshot in
+                    remoteChangesByIdentity[identity] != .snapshot(snapshot)
+                },
+                at: dateProvider(),
+                in: store
+            )
+        }
+        return localSnapshots
+    }
+
     func removeExportedDirtyEntries(
         _ exportedIdentities: Set<LibraryEntryIdentity>,
         from dirtyEntries: [LibraryEntrySyncDirtyQueueEntry],
@@ -104,12 +133,16 @@ extension LibrarySyncCoordinator {
         observedDirtyEntries: [LibraryEntrySyncDirtyQueueEntry],
         store: LibraryStore
     ) async throws -> CloudLibrarySyncExportResult {
+        let entryNamesByIdentity = store.library.reduce(into: [LibraryEntryIdentity: String]()) { names, entry in
+            names[entry.libraryIdentity] = entry.name
+        }
         do {
             return try await exporter.export(
                 entries: entries,
                 localSnapshotsByIdentity: localSnapshotsByIdentity,
                 settingsSnapshot: settingsSnapshot,
-                blockedRecordIDs: blockedRecordIDs
+                blockedRecordIDs: blockedRecordIDs,
+                entryNamesByIdentity: entryNamesByIdentity
             )
         } catch let failure as CloudLibrarySyncExportFailure {
             try reconcilePartialExportFailure(
@@ -337,6 +370,7 @@ fileprivate func bootstrapDirtyClock(for snapshot: LibraryEntrySyncSnapshot) -> 
     [
         snapshot.libraryUpdatedAt,
         snapshot.trackingUpdatedAt,
+        snapshot.categoriesUpdatedAt,
         snapshot.episodeProgresses.map(\.updatedAt).max()
     ]
     .compactMap(\.self)

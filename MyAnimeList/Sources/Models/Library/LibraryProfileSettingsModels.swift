@@ -9,8 +9,10 @@ import DataProvider
 import SwiftUI
 
 enum LibraryProfileSettingsLayout: Equatable {
-    case compactScroll
-    case wideGrid
+    /// Destination rows that push focused pages.
+    case hub
+    /// Every section expanded in two columns, as before the hub.
+    case workspace
 }
 
 struct LibraryProfileSettingsLayoutPolicy {
@@ -19,9 +21,53 @@ struct LibraryProfileSettingsLayoutPolicy {
         dynamicTypeSize: DynamicTypeSize
     ) -> LibraryProfileSettingsLayout {
         guard horizontalSizeClass == .regular, !dynamicTypeSize.isAccessibilitySize else {
-            return .compactScroll
+            return .hub
         }
-        return .wideGrid
+        return .workspace
+    }
+}
+
+enum LibraryProfileSettingsDestination: Hashable, CaseIterable {
+    case language, libraryTracking, appearance, reminders, metadataImages, syncData
+
+    var title: LocalizedStringResource {
+        switch self {
+        case .language: "Language"
+        case .libraryTracking: "Library & Tracking"
+        case .appearance: "Appearance & Interaction"
+        case .reminders: "Airing & Reminders"
+        case .metadataImages: "Metadata & Images"
+        case .syncData: "Sync & Data"
+        }
+    }
+
+    /// Each destination keeps the hue its sections had before the hub; its page tints its cards with it.
+    var tint: Color {
+        switch self {
+        case .language: LibraryProfileSettingsPalette.language
+        case .libraryTracking: LibraryProfileSettingsPalette.muted(.mint)
+        case .appearance: LibraryProfileSettingsPalette.muted(.teal)
+        case .reminders: LibraryProfileSettingsPalette.muted(.orange)
+        case .metadataImages: LibraryProfileSettingsPalette.muted(.cyan)
+        case .syncData: LibraryProfileSettingsPalette.muted(.indigo)
+        }
+    }
+}
+
+enum LibraryProfileSettingsPalette {
+    /// Language leads the hub and the workspace.
+    static let language = muted(.blue)
+
+    /// The App Info rows share the accent the old maintenance list used.
+    static let appInfo = muted(Color(red: 0.29, green: 0.70, blue: 0.96))
+
+    /// Destructive actions on settings pages, muted to match the section tints beside them.
+    static let destructive = muted(.red)
+
+    /// Pulls a hue toward gray so adjacent hub icons don't compete; system colors keep their
+    /// light and dark variants.
+    static func muted(_ color: Color) -> Color {
+        color.mix(with: .gray, by: 0.15)
     }
 }
 
@@ -142,11 +188,6 @@ enum LibraryProfileRuntimeMode: Equatable {
             stats.plannedRuntimeDescription
         }
     }
-}
-
-enum LibraryProfileMaintenancePalette {
-    static let accent = Color(red: 0.29, green: 0.70, blue: 0.96)
-    static let panel = accent
 }
 
 enum LibraryProfileSettingsSheet: String, Identifiable {

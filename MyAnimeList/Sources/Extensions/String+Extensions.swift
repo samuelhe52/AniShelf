@@ -11,6 +11,7 @@ import Foundation
 extension String {
     static let preferredAnimeInfoLanguage = "PreferredAnimeInfoLanguage"
     static let useCurrentLocaleForAnimeInfoLanguage = "UseCurrentLocaleForAnimeInfoLanguage"
+    static let defaultPosterLanguage = "DefaultPosterLanguage"
     static let searchTMDbLanguage = "SearchTMDbLanguage"
     static let searchPageQuery = "SearchPageQuery"
     static let searchMode = "SearchMode"
@@ -37,6 +38,9 @@ extension String {
     static let libraryDefaultWatchStatus = "LibraryDefaultWatchStatus"
     static let libraryDefaultFilters = "LibraryDefaultFilters"
     static let libraryDefaultFilterPreset = "LibraryDefaultFilterPreset"
+    static let libraryCategoriesEnabled = "LibraryCategoriesEnabled"
+    static let libraryCategoryStripEnabled = "LibraryCategoryStripEnabled"
+    static let libraryCategories = "LibraryCategories"
     static let libraryAutoPrefetchImagesOnAddAndRestore = "LibraryAutoPrefetchImagesOnAddAndRestore"
     static let libraryLongTermGalleryPosterCachingEnabled = "LibraryLongTermGalleryPosterCachingEnabled"
     static let useSoftNavigationBarEdges = "UseSoftNavigationBarEdges"
@@ -65,6 +69,7 @@ extension String {
     static let libraryCloudSyncLastFailurePhase = "LibraryCloudSyncLastFailurePhase"
     static let libraryCloudSyncLastFailureReason = "LibraryCloudSyncLastFailureReason"
     static let libraryCloudSyncDegradedReason = "LibraryCloudSyncDegradedReason"
+    static let libraryCloudSyncCloudLibraryDeletedByUser = "LibraryCloudSyncCloudLibraryDeletedByUser"
     static let libraryCloudSyncLastCompletedScope = "LibraryCloudSyncLastCompletedScope"
     static let libraryCloudSyncedDefaultsUpdatedAt = "LibraryCloudSyncedDefaultsUpdatedAt"
     static let useTMDbRelayServer = "UseTMDbRelayServer"
@@ -73,6 +78,7 @@ extension String {
     static let allPreferenceKeys: [String] = [
         .preferredAnimeInfoLanguage,
         .useCurrentLocaleForAnimeInfoLanguage,
+        .defaultPosterLanguage,
         .searchTMDbLanguage,
         .searchPageQuery,
         .persistedScrolledID,
@@ -93,6 +99,9 @@ extension String {
         .libraryDefaultFilters,
         .libraryAutoPrefetchImagesOnAddAndRestore,
         .libraryLongTermGalleryPosterCachingEnabled,
+        .libraryCategoriesEnabled,
+        .libraryCategoryStripEnabled,
+        .libraryCategories,
         .useSoftNavigationBarEdges,
         .useTMDbRelayServer,
         .lastSeenWhatsNewVersion
@@ -101,6 +110,7 @@ extension String {
     static let cloudSyncedPreferenceKeys: [String] = [
         .preferredAnimeInfoLanguage,
         .useCurrentLocaleForAnimeInfoLanguage,
+        .defaultPosterLanguage,
         .searchTMDbLanguage,
         .libraryGroupStrategy,
         .librarySortStrategy,
@@ -117,7 +127,10 @@ extension String {
         .libraryDefaultWatchStatus,
         .libraryDefaultFilters,
         .libraryAutoPrefetchImagesOnAddAndRestore,
-        .useTMDbRelayServer
+        .useTMDbRelayServer,
+        .libraryCategoriesEnabled,
+        .libraryCategoryStripEnabled,
+        .libraryCategories
     ]
 }
 

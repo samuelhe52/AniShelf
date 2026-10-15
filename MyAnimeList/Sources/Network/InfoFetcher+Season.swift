@@ -34,7 +34,9 @@ fileprivate struct TVSeasonPayload {
 }
 
 extension InfoFetcher {
-    func tvSeasonInfo(seasonNumber: Int, parentSeriesID: Int, language: Language) async throws
+    func tvSeasonInfo(
+        seasonNumber: Int, parentSeriesID: Int, language: Language, posterLanguage: PosterLanguagePreference
+    ) async throws
         -> EntryMetadata
     {
         let payload = try await tvSeasonPayload(
@@ -52,7 +54,8 @@ extension InfoFetcher {
             seasonPosters: payload.seasonPosters,
             translations: payload.requiredTranslations(),
             imagesConfiguration: payload.imagesConfiguration,
-            language: language
+            language: language,
+            posterLanguage: posterLanguage
         )
     }
 
@@ -77,7 +80,8 @@ extension InfoFetcher {
 
     func seasonInfos(
         forSeriesID tmdbID: Int,
-        language: Language
+        language: Language,
+        posterLanguage: PosterLanguagePreference
     ) async throws -> [EntryMetadata] {
         let series = try await tvSeries(tmdbID, language: language)
         guard let seasons = series.seasons else { return [] }
@@ -111,7 +115,8 @@ extension InfoFetcher {
                         seasonPosters: await seasonPosters,
                         translations: try await translations,
                         imagesConfiguration: resolvedImagesConfiguration,
-                        language: language
+                        language: language,
+                        posterLanguage: posterLanguage
                     )
                 }
             }
@@ -161,7 +166,8 @@ extension InfoFetcher {
     func latestTVSeasonInfo(
         parentSeriesID: Int,
         seasonNumber: Int,
-        language: Language
+        language: Language,
+        posterLanguage: PosterLanguagePreference
     ) async throws -> (EntryMetadata, AnimeEntryDetailDTO) {
         let payload = try await tvSeasonPayload(
             parentSeriesID: parentSeriesID,
@@ -180,7 +186,8 @@ extension InfoFetcher {
                 seasonPosters: payload.seasonPosters,
                 translations: payload.requiredTranslations(),
                 imagesConfiguration: payload.imagesConfiguration,
-                language: language
+                language: language,
+                posterLanguage: posterLanguage
             ),
             tvSeasonDetail(
                 from: payload.season,
@@ -261,7 +268,8 @@ extension InfoFetcher {
         seasonPosters: [ImageMetadata]?,
         translations: TranslationDictionaries,
         imagesConfiguration: ImagesConfiguration,
-        language: Language
+        language: Language,
+        posterLanguage: PosterLanguagePreference
     ) -> EntryMetadata {
         EntryMetadata(
             name: season.name,
@@ -272,7 +280,8 @@ extension InfoFetcher {
                 from: TMDbImageSelection.preferredPosterPath(
                     from: seasonPosters ?? [],
                     originalLanguageCode: parentSeries.originalLanguage,
-                    metadataLanguageCode: language.rawValue
+                    metadataLanguageCode: language.rawValue,
+                    posterLanguage: posterLanguage
                 ) ?? season.posterPath
             ),
             backdropPath: TMDbImagePath.storagePath(

@@ -9,15 +9,17 @@ AniShelf helps you track, record, and manage the anime series and films you've w
   - Planned, Watching, Watched, Dropped
   - Start and finish dates
   - Episode-level watch progress
+  - Rewatch status and rewatch count
 - Write notes and give ratings
 - Favorite entries, then filter or group the library by favorite status
 - Batch add from search: add multiple entries at once by title or TMDb ID
 - Multi-select entries in list and grid views to change watch status, rating, favorite, and date tracking in bulk, or delete them in bulk
 - View per-episode summaries, voice cast, and more
 - View an entry's TMDb rating
-- View air times for eligible series and set reminders for each new episode of currently airing shows
+- View air times for eligible series and set reminders for each new episode of currently airing shows, at a default time or a custom time for each anime
 - Sync your library, settings, and watch progress across devices with iCloud Sync
 - Back up and restore your AniShelf library and settings, or export the library as TXT, CSV, TSV, JSON, or XLSX
+- Show anime info in English, Chinese, or Japanese
 - A polished UI and smooth interactions
 
 AniShelf also has a companion command-line tool, [anishelf-cli](https://github.com/samuelhe52/anishelf-cli). With iCloud Sync enabled, the `ani` command gives you read-only access to your AniShelf library. See the [anishelf-cli README](https://github.com/samuelhe52/anishelf-cli#readme) for installation and usage.
@@ -68,18 +70,30 @@ AniShelf requires a TMDb API key, which is free for personal use. To get one:
    2. Tap the heart button to favorite or unfavorite an entry.
    3. Tap the share button to generate a poster for recommending the show to friends.
    4. Scroll down to see the overview, voice cast, episode summaries, and more.
-   5. Eligible series show their air times; use the "···" menu to set reminders for each new episode of a currently airing show.
+   5. Eligible series show their air times. For a currently airing show, open the "···" menu and choose "Notifications" > "Enable" to get a reminder for each new episode. To change when one show's reminders arrive, choose "Reminder Timing" in the same menu, turn off "Use Default", and set a time before or after airtime.
+   6. Episode progress is off by default. Turn on "Track Episode Progress" under Library & Tracking in Settings. The progress control then appears while an entry is Watching.
+   7. To rewatch an entry, change its status from Watched to Watching. When asked "Are You Rewatching?", tap "Start Rewatch". This clears episode progress, and marking the entry Watched again adds one to its rewatch count. Tap the badge next to the watch status to turn "Rewatching" on or off or to correct "Times Rewatched".
 7. Long-press an entry on the main screen for more actions. In list view, swipe right or left on an entry to quickly update its watch status or delete it.
 8. In list or grid view, tap "Select" at the top right to enter multi-select mode, where you can change status, rating, favorite, and date tracking in bulk, or delete entries in bulk.
-9. Tap the settings icon at the top right to open Settings, where you can see a library overview and change app settings.
-   1. To sync your library, settings, and watch progress across devices, turn on iCloud Sync in Settings and make sure every device is signed in to the same Apple Account.
-   2. In "Backup & Restore", you can create or restore backups of your library and settings; "Export as..." exports the library to common file formats.
+9. To group anime your own way, turn on "Library Categories" under Library & Tracking in Settings.
+   1. In multi-select mode, select some entries and tap "Category". Pick a category to add or remove them, or tap "New Category…" to create one with them.
+   2. Tap the title at the top of the library, or use "Category" in the status bar's menu, to switch categories. "All" shows the whole library. Choose "Edit Categories…" in the title menu, or tap "Manage Categories" in Settings, to rename, delete, or reorder categories. Deleting a category keeps its anime in your library.
+   3. Turn on "Sticky Category Strip" to keep category tabs below the navigation bar in list and grid views. Touch and hold a tab to rename or delete it, or choose "Reorder Tabs", drag the tabs, and tap "Done".
+10. Tap the settings icon at the top right to open Settings. It shows your library statistics, followed by six groups of settings: Language, Library & Tracking, Appearance & Interaction, Airing & Reminders, Metadata & Images, and Sync & Data.
+   1. To sync your library, settings, and watch progress across devices, turn on iCloud Sync in Sync & Data and make sure every device is signed in to the same Apple Account.
+   2. In Sync & Data, "Backup" saves your library and settings as a `.mallib` file (your TMDb API key isn't included), and "Restore" replaces the current library with a backup. Turn off iCloud Sync before restoring. "Export as..." exports the library to common file formats; these files can't be restored.
+   3. In Language, turn off "Follow System" to choose English, Chinese, or Japanese for anime info. Under "Default Poster", choose "Follow Anime Info Language" to show posters in that language when TMDb has one. Both changes apply only to info fetched afterward, so tap "Refresh" when asked, or "Refresh Infos" later, to update existing entries; posters you picked yourself are kept. "Refresh Infos" is in Metadata & Images, along with the TMDb proxy, API key, and cache controls.
+   4. In Airing & Reminders, choose the "Default Timing" for all reminders, and tap "Reminders" to review, retime, or remove each reminder.
 
 ## FAQ
 
 - What is the TMDb API? What is an API key? **AniShelf uses the TMDb API to fetch data for series and films, such as titles, overviews, and posters. A TMDb API key is a credential you request from the TMDb website that authorizes AniShelf to access TMDb data. Because the app is completely free, there is no shared API key; you need to request your own by following the guide above.**
 - My API key won't validate, loading is slow, or search returns nothing? **Try turning your VPN on or off, since some network proxy rules can interfere with access. The app connects to TMDb directly by default; if that's unreliable, turn on "Use TMDb Proxy" in Settings. If you already use a VPN or another network proxy, it's usually best to leave that option off.**
 - How do I sync my library across devices? **Turn on iCloud Sync in Settings and make sure every device is signed in to the same Apple Account. It syncs your library, related settings, and watch progress. Syncing watch data with TMDb, AniList, Bangumi, and similar platforms isn't supported yet.**
+- Why can't I find episode progress? **It's off by default. Turn on "Track Episode Progress" under Library & Tracking in Settings. The progress control appears on the detail page only while an entry is Watching.**
+- Why can't I restore my library? **Turn off iCloud Sync first, then turn it on again after the restore. Only `.mallib` backup files can be restored; files made with "Export as..." (TXT, CSV, TSV, JSON, XLSX) can't.**
+- AniShelf asked me to "Resolve iCloud Sync Conflict". What should I choose? **This appears when you turn on or rebuild iCloud Sync and the same anime has different data on this device and in iCloud. "Use iCloud" keeps the iCloud version of those entries; "Use This Device" keeps this device's version and uploads it. "Cancel" turns iCloud Sync off without changing your library. Anime that exist in only one place are kept either way.**
+- iCloud Sync shows an error or sync issues? **In Settings, tap "Retry" next to the iCloud Sync status. If an orange sync issues line appears, tap it to see what went wrong; entries TMDb no longer lists can be discarded from iCloud there. If problems persist, tap "Rebuild iCloud Sync" in Settings to refetch your iCloud library and reconcile it with this device.**
 - How do I report a bug or request a feature? **Please open a GitHub Issue for bug reports and feature requests.**
 - Is it on the App Store? **Yes: [App Store link](https://apps.apple.com/app/id6759359144). In most cases, new features will still ship to TestFlight first and reach the App Store later.**
 - Does it support OS versions earlier than 26? **Not at the moment. The app makes heavy use of Liquid Glass, which isn't available before iOS/iPadOS 26, and I don't have a test device running an earlier version. If you'd like to help with internal testing, open a GitHub Issue and I can try adding support, though the UI probably won't look as good.**
