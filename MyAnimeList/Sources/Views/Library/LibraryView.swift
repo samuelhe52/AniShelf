@@ -118,6 +118,9 @@ struct LibraryView: View {
         }
         .onChange(of: store.filters) {
             refreshSelectionDisplayItemsIfNeeded()
+            #if os(macOS)
+                dismissInspectorOutsideScope()
+            #endif
         }
         .onChange(of: store.groupStrategy) {
             refreshSelectionDisplayItemsIfNeeded()
@@ -137,6 +140,9 @@ struct LibraryView: View {
             withAnimation(.snappy) {
                 refreshSelectionDisplayItemsIfNeeded()
             }
+            #if os(macOS)
+                dismissInspectorOutsideScope()
+            #endif
         }
         .task(id: highlightRequest?.token) {
             // Expire the request so rows recreated later by scrolling or filtering do not pulse again.

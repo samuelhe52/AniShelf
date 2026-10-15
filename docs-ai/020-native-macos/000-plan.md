@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status | In progress |
+| Status | Implemented (branch `feat/native-macos`, not merged); see [001-action.md](001-action.md) |
 | Anchor date | 2026-10-15 |
 | Origin | Maintainer requested a whole-app native macOS feasibility assessment, then asked to preserve it on the existing Mac branch |
 | Related | [Adaptive library](../005-adaptive-library/000-plan.md), [Background sync safety](../007-background-sync-safety/000-plan.md), [Multi-window presentation](../008-multi-window-presentation/000-plan.md), [Multi-selection invariants](../014-multiselect-invariants/000-plan.md) |
@@ -169,3 +169,4 @@ No action record is warranted until implementation proceeds.
 - Updated 2026-10-15: Slice 1 — native build and launch — see [003-slice-1-native-build.md](003-slice-1-native-build.md)
 - Updated 2026-10-16: Slice 2 — Mac shell (sidebar split view, desktop selection, inspector layout, commands, Settings window) — see [004-slice-2-mac-shell.md](004-slice-2-mac-shell.md)
 - Updated 2026-10-16: Slice 3 — feature parity (save panels, sheet buttons, SVG rasters, native Mac tests, lifecycle and sync validation) — see [005-slice-3-feature-parity.md](005-slice-3-feature-parity.md)
+- Updated 2026-10-16: Slice 4 — polish and validation (grid keyboard, scope-bound inspector, toolbar menu, app icon, light/localization/regression runs) — see [006-slice-4-polish.md](006-slice-4-polish.md)

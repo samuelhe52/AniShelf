@@ -71,13 +71,17 @@ struct LibraryToolbarSummaryCapsule: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.secondary.opacity(0.92))
 
-            Text(primary)
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(1)
+            // The Mac window title already names the scope, and AppKit does not resize a
+            // toolbar item whose label grows, so the Mac shows only the glyphs.
+            #if !os(macOS)
+                Text(primary)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
 
-            Circle()
-                .fill(.secondary.opacity(0.45))
-                .frame(width: 3.5, height: 3.5)
+                Circle()
+                    .fill(.secondary.opacity(0.45))
+                    .frame(width: 3.5, height: 3.5)
+            #endif
 
             Image(systemName: "arrow.up.arrow.down")
                 .font(.system(size: 11, weight: .semibold))

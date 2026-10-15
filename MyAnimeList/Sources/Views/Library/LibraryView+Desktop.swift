@@ -88,7 +88,7 @@ extension LibraryView {
             case .category:
                 Text(verbatim: store.activeCategory?.name ?? "")
             case nil:
-                Text("Library")
+                store.filters.count > 1 ? Text("\(store.filters.count) Filters") : Text("Library")
             }
         }
 
@@ -198,6 +198,17 @@ extension LibraryView {
                 }
                 interaction.selectedEntryIDs = ids
             }
+        }
+
+        /// A scope change that hides the inspected entry closes the inspector, as a selection
+        /// does when a Finder window changes folders. Edits that move the entry out of scope
+        /// keep it, so changing its status in the inspector does not close it.
+        func dismissInspectorOutsideScope() {
+            guard !interaction.isMultiSelecting,
+                let id = interaction.inspectorPresentation?.entryIdentity,
+                !store.libraryDisplayItems.contains(where: { $0.id == id })
+            else { return }
+            interaction.dismissDetails()
         }
 
         /// AppKit widens the window by the inspector's width when it opens, even past the

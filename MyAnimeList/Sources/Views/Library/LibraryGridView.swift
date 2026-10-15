@@ -20,7 +20,13 @@ struct LibraryGridView: View {
     let scrollRequest: LibraryScrollRequest?
     let highlightRequest: LibraryHighlightRequest?
     #if os(macOS)
-        private let columns = [GridItem(.adaptive(minimum: 132, maximum: 168), spacing: 18)]
+        private static let minimumColumnWidth: CGFloat = 132
+        private static let columnSpacing: CGFloat = 18
+        private let columns = [
+            GridItem(.adaptive(minimum: minimumColumnWidth, maximum: 168), spacing: columnSpacing)
+        ]
+        @FocusState private var isGridFocused: Bool
+        @State private var columnCount = 1
     #else
         private let columns = [GridItem(.adaptive(minimum: 104, maximum: 132), spacing: 10)]
     #endif
@@ -39,6 +45,13 @@ struct LibraryGridView: View {
                 }
                 .onChange(of: scrollRequest) { handleScrollRequest(proxy: proxy) }
                 .onAppear { onGridViewAppear(proxy: proxy) }
+                #if os(macOS)
+                    .onGeometryChange(for: Int.self) { geometry in
+                        Self.columnCount(forWidth: geometry.size.width)
+                    } action: {
+                        columnCount = $0
+                    }
+                #endif
                 .padding(.horizontal, 14)
                 .padding(.top, 6)
                 .padding(.bottom, 104)
@@ -48,8 +61,51 @@ struct LibraryGridView: View {
             .animation(.spring, value: store.sortReversed)
             .animation(.spring, value: store.sortStrategy)
             .animation(.spring, value: store.filters)
+            #if os(macOS)
+                .focusable()
+                .focusEffectDisabled()
+                .focused($isGridFocused)
+                .onKeyPress(keys: [.leftArrow, .rightArrow, .upArrow, .downArrow]) { press in
+                    moveSelection(press.key, proxy: proxy) ? .handled : .ignored
+                }
+                .onExitCommand { detailActions.select?([]) }
+            #endif
         }
     }
+
+    #if os(macOS)
+        /// The number of columns an adaptive grid item fits into this width.
+        private static func columnCount(forWidth width: CGFloat) -> Int {
+            max(1, Int((width + columnSpacing) / (minimumColumnWidth + columnSpacing)))
+        }
+
+        /// Arrow keys move the inspected entry by one card, or by one row vertically.
+        private func moveSelection(_ key: KeyEquivalent, proxy: ScrollViewProxy) -> Bool {
+            guard let click = detailActions.click, !displayItems.isEmpty else { return false }
+            let offset =
+                switch key {
+                case .leftArrow: -1
+                case .rightArrow: 1
+                case .upArrow: -columnCount
+                default: columnCount
+                }
+            let ids = displayItems.map(\.id)
+            let currentID = interaction.inspectorPresentation?.entryIdentity ?? scrolledID
+            let targetIndex: Int
+            if let currentID, let index = ids.firstIndex(of: currentID) {
+                targetIndex = index + offset
+            } else {
+                targetIndex = 0
+            }
+            // At an edge the key is still consumed so the scroll view does not jump.
+            guard ids.indices.contains(targetIndex) else { return true }
+            let id = ids[targetIndex]
+            scrolledID = id
+            click(id, .replace)
+            proxy.scrollTo(id)
+            return true
+        }
+    #endif
 
     private var isInspectorPresented: Bool {
         interaction.inspectorPresentation != nil
@@ -106,6 +162,7 @@ struct LibraryGridView: View {
         private func gestures(for item: LibraryEntryDisplayItem) -> some ViewModifier {
             LibraryGridMacClickModifier(
                 onClick: {
+                    isGridFocused = true
                     scrolledID = item.id
                     if let click = detailActions.click {
                         click(item.id, .current)
@@ -121,31 +178,31 @@ struct LibraryGridView: View {
         }
     #else
         private func gestures(for item: LibraryEntryDisplayItem) -> some ViewModifier {
-                LibraryGridDetailGestureModifier(
-                    isMultiSelecting: interaction.isMultiSelecting,
-                    opensDetailOnSingleTap: detailActivation.usesSingleTap(
-                        userPreference: openDetailWithSingleTap
-                    ),
-                    onPrimaryTap: {
-                        scrolledID = item.id
-                        if interaction.isMultiSelecting {
-                            toggleSelection(for: item.id)
-                        } else {
-                            openDetails(for: item.entry)
-                        }
-                    },
-                    onFocusTap: {
-                        scrolledID = item.id
-                        interaction.focus(item.entry)
-                        if interaction.isMultiSelecting {
-                            toggleSelection(for: item.id)
-                        }
-                    },
-                    onDoubleTap: {
+            LibraryGridDetailGestureModifier(
+                isMultiSelecting: interaction.isMultiSelecting,
+                opensDetailOnSingleTap: detailActivation.usesSingleTap(
+                    userPreference: openDetailWithSingleTap
+                ),
+                onPrimaryTap: {
+                    scrolledID = item.id
+                    if interaction.isMultiSelecting {
+                        toggleSelection(for: item.id)
+                    } else {
                         openDetails(for: item.entry)
-                        scrolledID = item.id
                     }
-                )
+                },
+                onFocusTap: {
+                    scrolledID = item.id
+                    interaction.focus(item.entry)
+                    if interaction.isMultiSelecting {
+                        toggleSelection(for: item.id)
+                    }
+                },
+                onDoubleTap: {
+                    openDetails(for: item.entry)
+                    scrolledID = item.id
+                }
+            )
         }
     #endif
 

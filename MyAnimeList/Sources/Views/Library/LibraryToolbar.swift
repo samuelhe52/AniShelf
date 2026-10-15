@@ -90,6 +90,7 @@ struct LibraryToolbar: ToolbarContent {
                 ToolbarItem(placement: .primaryAction) {
                     LibraryBrowseSummaryMenu(store: store, scoringEnabled: scoringEnabled)
                         .help(Text("Sort, group, and filter"))
+                        .accessibilityLabel(Text("Sort, group, and filter"))
                 }
                 ToolbarItemGroup(placement: .primaryAction) {
                     Button("Add Anime…", systemImage: "plus", action: addAnime)

@@ -40,6 +40,7 @@ struct LibraryProfileLanguageSettingsSections: View {
                         }
                     }
                     .pickerStyle(.segmented)
+                    .labelsHidden()
                     .padding(.top, 2)
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
@@ -267,12 +268,12 @@ struct LibraryProfileCategorySettingsRows: View {
             if store.categoriesEnabled {
                 // The Mac lists categories in the sidebar instead of a strip.
                 #if !os(macOS)
-                LibraryProfileSettingsToggleRow(
-                    title: "Sticky Category Strip",
-                    subtitle: "Keep category tabs below the navigation bar in List and Grid views.",
-                    isOn: $store.categoryStripEnabled
-                )
-                .transition(.opacity)
+                    LibraryProfileSettingsToggleRow(
+                        title: "Sticky Category Strip",
+                        subtitle: "Keep category tabs below the navigation bar in List and Grid views.",
+                        isOn: $store.categoryStripEnabled
+                    )
+                    .transition(.opacity)
                 #endif
 
                 Button {

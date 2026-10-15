@@ -113,6 +113,7 @@ struct AiringReminderTimingSheet: View {
                 Text("After Airtime").tag(true)
             }
             .pickerStyle(.segmented)
+            .labelsHidden()
 
             HStack(spacing: 0) {
                 Picker("Hours", selection: $hours) {
