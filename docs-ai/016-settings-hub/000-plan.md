@@ -74,3 +74,4 @@ format and make lint. Record failures and unverified iPad/runtime scenarios in
 - Updated 2026-10-13: Anime Info Language shown inline on the hub — see [003-inline-language.md](003-inline-language.md)
 - Updated 2026-10-13: Spectrum replaced by a muted per-section palette — see [004-section-palette.md](004-section-palette.md)
 - Updated 2026-10-13: iPad keeps the expanded two-column workspace; the hub is compact-only — see [005-ipad-workspace.md](005-ipad-workspace.md)
+- Updated 2026-10-15: Palette muting lightened from 30% to 15%; 004's saturation row corrected in place — see [006-palette-strength.md](006-palette-strength.md)

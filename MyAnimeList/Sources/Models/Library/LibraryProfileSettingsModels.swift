@@ -65,7 +65,7 @@ enum LibraryProfileSettingsPalette {
     /// Pulls a hue toward gray so adjacent hub icons don't compete; system colors keep their
     /// light and dark variants.
     static func muted(_ color: Color) -> Color {
-        color.mix(with: .gray, by: 0.3)
+        color.mix(with: .gray, by: 0.15)
     }
 }
 
