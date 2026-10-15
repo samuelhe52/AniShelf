@@ -5,7 +5,7 @@
 | --- | --- | --- |
 | 2026-10-15 | Preference, poster selection, fetch plumbing, poster browser ordering, tests | `eaac7e0` |
 | 2026-10-15 | Language settings page with Default Poster and refresh prompt (replaced a first inline row; see [002](002-language-page.md)) | `944dfda` |
-| 2026-10-15 | Onboarding language step with deferred key save; this record | commit `feat: Ask for language preferences during onboarding` |
+| 2026-10-15 | Onboarding language step with deferred key save, including the Back → Next fix below; this record | `ea2fe5b` |
 
 ## Outcome and current state (as of 2026-10-15)
 
@@ -26,6 +26,10 @@
   and **Start Using AniShelf** saves the key, which lets the existing root switch to
   the library. If the save fails, the step shows an inline error. The settings sheet
   `TMDbAPIConfigurator` keeps saving as soon as validation succeeds.
+- Returning to the key step from Languages with the key already validated shows an
+  enabled **Next** instead of passing `.valid` to `TMDbProminentButton`, whose success
+  state disables it. Next skips a second validation. A Codex review found the
+  disabled button; the fix was folded into `ea2fe5b` before it was pushed.
 - The Language settings page (hub destination and iPad workspace group; see
   [002-language-page.md](002-language-page.md)) holds the Anime Info Language and Default Poster cards.
   When the mode changes and the library is not empty, a **Refresh Default Posters?**
@@ -72,8 +76,13 @@ Key files:
 - **One run stalled.** A first combined run of all six suites, including
   `LibrarySyncCoordinatorTests`, stalled for more than 10 minutes with the host app idle,
   and I killed it. The same suites passed when run in smaller batches.
-- `make run-sim`: the app installed and launched. The maintainer is reviewing the
-  onboarding step and settings UI.
+- These test runs covered the first implementation only. Later rounds were checked
+  with `make build`, `swift format lint`, and `make run-sim` only; their tests were not
+  rerun. Those rounds were the Language page (`944dfda`), the Follow System animation,
+  and the Back → Next fix (in `ea2fe5b`).
+- `eaac7e0` and `944dfda` each built on their own in temporary worktrees.
+- No visual check has been done. The onboarding step, Back → Next, the Language page
+  animation, and the shortened Japanese copy are left for the maintainer to review.
 
 ## Open questions
 
