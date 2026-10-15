@@ -12,30 +12,54 @@ import SwiftUI
 struct LibrarySearchButton: View {
     @Binding var isSearching: Bool
     let checkDuplicate: (LibraryEntryIdentity) -> Bool
+    let canRevealEntry: (LibraryEntryIdentity) -> Bool
+    let resetFiltersToReveal: (LibraryEntryIdentity) -> Void
     let processTMDbSearchResults: (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void
     let jumpToEntryInLibrary: (LibraryEntryIdentity) -> Void
     let onDismiss: () -> Void
+
+    @State private var hiddenEntryID: LibraryEntryIdentity?
 
     var body: some View {
         Button("Search...", systemImage: "magnifyingglass") { isSearching = true }
             .sheet(isPresented: $isSearching, onDismiss: onDismiss) {
                 NavigationStack {
                     SearchPage(
-                        onDuplicateTapped: { tappedID in
-                            isSearching = false
-                            jumpToEntryInLibrary(tappedID)
-                        },
+                        onDuplicateTapped: jumpIfRevealable,
                         checkDuplicate: checkDuplicate,
                         processTMDbSearchResults: processTMDbSearchResults,
-                        jumpToEntryInLibrary: { tmdbID in
-                            isSearching = false
-                            jumpToEntryInLibrary(tmdbID)
-                        }
+                        jumpToEntryInLibrary: jumpIfRevealable
                     )
                     .navigationTitle("Search")
                     .navigationBarTitleDisplayMode(.inline)
+                    .alert(
+                        "Entry Hidden",
+                        isPresented: Binding(
+                            get: { hiddenEntryID != nil },
+                            set: { if !$0 { hiddenEntryID = nil } }
+                        ),
+                        presenting: hiddenEntryID
+                    ) { id in
+                        Button("Cancel", role: .cancel) {}
+                        Button("Reset Filters") {
+                            resetFiltersToReveal(id)
+                            jumpIfRevealable(id)
+                        }
+                    } message: { _ in
+                        Text("Your current filters hide this entry. Reset them to see it in your library.")
+                    }
                 }
             }
+    }
+
+    // Keep search open when the jump could not show the entry, instead of dismissing to nothing.
+    private func jumpIfRevealable(_ id: LibraryEntryIdentity) {
+        guard canRevealEntry(id) else {
+            hiddenEntryID = id
+            return
+        }
+        isSearching = false
+        jumpToEntryInLibrary(id)
     }
 }
 

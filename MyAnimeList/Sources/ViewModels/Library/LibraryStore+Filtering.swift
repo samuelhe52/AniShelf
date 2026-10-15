@@ -11,23 +11,28 @@ extension LibraryStore {
         } else {
             scopedEntries = entries
         }
-        let defaultDisplayEntries: [AnimeEntry]
-        if hideDroppedByDefault && !filters.contains(.dropped) {
-            defaultDisplayEntries = scopedEntries.filter { $0.watchStatus != .dropped }
-        } else {
-            defaultDisplayEntries = scopedEntries
+        return scopedEntries.filter(matchesBrowseFilters).sorted(by: compareEntriesForDisplay)
+    }
+
+    /// Whether a jump can show the entry; the jump itself leaves a category that hides it.
+    func canRevealEntry(_ identity: LibraryEntryIdentity) -> Bool {
+        library.contains { $0.libraryIdentity == identity && matchesBrowseFilters($0) }
+    }
+
+    /// Clears the filters so a search jump can show the entry, opting into Dropped for this
+    /// session when Hide Dropped Entries would still hide it; the preference stays unchanged.
+    func resetFiltersToReveal(_ identity: LibraryEntryIdentity) {
+        filters = []
+        if !canRevealEntry(identity) {
+            filters = [.dropped]
         }
-        let filteredEntries: [AnimeEntry]
-        guard filters.isEmpty else {
-            filteredEntries = defaultDisplayEntries.filter { entry in
-                filters.contains { filter in
-                    filter.evaluate(entry)
-                }
-            }
-            return filteredEntries.sorted(by: compareEntriesForDisplay)
+    }
+
+    private func matchesBrowseFilters(_ entry: AnimeEntry) -> Bool {
+        if hideDroppedByDefault && !filters.contains(.dropped) && entry.watchStatus == .dropped {
+            return false
         }
-        filteredEntries = defaultDisplayEntries
-        return filteredEntries.sorted(by: compareEntriesForDisplay)
+        return filters.isEmpty || filters.contains { $0.evaluate(entry) }
     }
 
     private func compareEntriesForDisplay(_ lhs: AnimeEntry, _ rhs: AnimeEntry) -> Bool {

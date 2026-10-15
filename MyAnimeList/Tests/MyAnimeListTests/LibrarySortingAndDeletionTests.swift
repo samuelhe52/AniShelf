@@ -463,6 +463,16 @@ struct LibrarySortingAndDeletionTests {
         store.hideDroppedByDefault = true
         #expect(!store.libraryOnDisplay.contains { $0.tmdbID == dropped.tmdbID })
 
+        // Resetting filters for a search jump opts into Dropped without changing the preference.
+        store.filters = [.favorited]
+        store.resetFiltersToReveal(plain.libraryIdentity)
+        #expect(store.filters.isEmpty)
+        store.filters = [.favorited]
+        store.resetFiltersToReveal(dropped.libraryIdentity)
+        #expect(store.filters == [.dropped])
+        #expect(store.hideDroppedByDefault)
+        store.filters = []
+
         store.hideDroppedByDefault = false
         #expect(store.libraryOnDisplay.contains { $0.tmdbID == dropped.tmdbID })
     }
@@ -494,6 +504,9 @@ struct LibrarySortingAndDeletionTests {
         #expect(store.containsEntry(outsider.libraryIdentity))
         store.filters = [.favorited]
         #expect(store.libraryOnDisplay.map(\.tmdbID) == [301])
+        // A search jump leaves the category itself, so only the filters decide whether it can land.
+        #expect(store.canRevealEntry(outsider.libraryIdentity))
+        #expect(!store.canRevealEntry(plainMember.libraryIdentity))
 
         // Turning the feature off shows All again but keeps memberships.
         store.filters = []

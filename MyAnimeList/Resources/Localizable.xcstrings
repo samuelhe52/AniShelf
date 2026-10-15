@@ -12342,6 +12342,54 @@
           }
         }
       }
+    },
+    "Entry Hidden" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "項目は非表示です"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "条目已隐藏"
+          }
+        }
+      }
+    },
+    "Reset Filters" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フィルターをリセット"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置筛选"
+          }
+        }
+      }
+    },
+    "Your current filters hide this entry. Reset them to see it in your library." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在のフィルターでこの項目が非表示になっています。リセットするとライブラリに表示されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前筛选隐藏了此条目。重置筛选即可在资料库中查看。"
+          }
+        }
+      }
     }
   },
   "version" : "1.2"

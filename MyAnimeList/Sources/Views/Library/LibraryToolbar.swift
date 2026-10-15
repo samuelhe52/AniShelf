@@ -133,6 +133,8 @@ struct LibraryToolbar: ToolbarContent {
                 LibrarySearchButton(
                     isSearching: $isSearching,
                     checkDuplicate: checkDuplicate,
+                    canRevealEntry: store.canRevealEntry,
+                    resetFiltersToReveal: store.resetFiltersToReveal,
                     processTMDbSearchResults: processTMDbSearchResults,
                     jumpToEntryInLibrary: jumpToEntryInLibrary,
                     onDismiss: onSearchDismissed
