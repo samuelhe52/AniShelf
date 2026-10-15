@@ -98,10 +98,6 @@ run-device:
 	xcrun devicectl device install app --device $(CONNECTED_IOS_DEVICE_ID) "$(DEVICE_APP_PATH)"
 	xcrun devicectl device process launch --terminate-existing --device $(CONNECTED_IOS_DEVICE_ID) $(BUNDLE_ID) $(DEVICE_PROCESS_LAUNCH_ARGS)
 
-.PHONY: run-device-reset-tmdb-api-key
-run-device-reset-tmdb-api-key: DEVICE_PROCESS_LAUNCH_ARGS = -- -reset-tmdb-api-key
-run-device-reset-tmdb-api-key: run-device
-
 .PHONY: run-sim
 run-sim:
 	@[ -n "$(BOOTED_SIMULATOR_ID)" ] || { echo "No booted simulator found."; exit 1; }
