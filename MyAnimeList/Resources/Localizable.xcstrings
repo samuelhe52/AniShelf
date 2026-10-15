@@ -65,6 +65,54 @@
         }
       }
     },
+    "Choose Languages" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "言語を選択"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择语言"
+          }
+        }
+      }
+    },
+    "Choose the language for anime info and posters. You can change this later in Settings." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アニメ情報とポスターの言語を選んでください。あとから設定で変更できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择动画信息和海报的语言。以后可以在设置中更改。"
+          }
+        }
+      }
+    },
+    "Couldn't save the API key. Try again." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "APIキーを保存できませんでした。もう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法保存API密钥，请重试。"
+          }
+        }
+      }
+    },
     "Default Poster" : {
       "localizations" : {
         "ja" : {
@@ -269,6 +317,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在列表和网格视图中，将分类标签固定在导航栏下方。"
+          }
+        }
+      }
+    },
+    "Start Using AniShelf" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfを使い始める"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始使用AniShelf"
           }
         }
       }

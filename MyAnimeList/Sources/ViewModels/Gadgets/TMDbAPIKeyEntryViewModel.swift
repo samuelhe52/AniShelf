@@ -20,16 +20,26 @@ final class TMDbAPIKeyEntryViewModel {
         didSet {
             guard apiKeyInput != oldValue else { return }
             validationTask?.cancel()
+            validatedKey = nil
             withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
                 status = nil
             }
         }
     }
     var status: TMDbAPIKeyCheckStatus?
+    /// Set instead of saving when `savesKeyOnValidation` is false; onboarding saves it after the language step.
+    private(set) var validatedKey: String?
+
+    /// Onboarding saves last because the app root opens the library as soon as a key exists.
+    @ObservationIgnored private let savesKeyOnValidation: Bool
 
     @ObservationIgnored private var validationTask: Task<Void, Never>?
 
     var checking: Bool { status == .checking }
+
+    init(savesKeyOnValidation: Bool = true) {
+        self.savesKeyOnValidation = savesKeyOnValidation
+    }
 
     var isFieldEmpty: Bool {
         apiKeyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -75,14 +85,30 @@ final class TMDbAPIKeyEntryViewModel {
         try? await Task.sleep(for: .milliseconds(500))
         guard isCurrentValidation(for: key) else { return }
 
-        let result = keyStorage.saveKey(key)
         validationTask = nil
+        if savesKeyOnValidation {
+            save(key, using: keyStorage)
+        } else {
+            validatedKey = key
+        }
+    }
+
+    /// Saves the key held by a validation that did not save it.
+    func saveValidatedKey(using keyStorage: TMDbAPIKeyStorage) -> Bool {
+        guard let validatedKey else { return false }
+        return save(validatedKey, using: keyStorage)
+    }
+
+    @discardableResult
+    private func save(_ key: String, using keyStorage: TMDbAPIKeyStorage) -> Bool {
+        let result = keyStorage.saveKey(key)
         if result {
             NotificationCenter.default.post(
                 name: .tmdbAPIConfigurationDidChange,
                 object: nil
             )
         }
+        return result
     }
 
     private func isCurrentValidation(for key: String) -> Bool {

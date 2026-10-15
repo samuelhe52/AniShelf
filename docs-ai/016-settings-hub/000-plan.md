@@ -75,3 +75,4 @@ format and make lint. Record failures and unverified iPad/runtime scenarios in
 - Updated 2026-10-13: Spectrum replaced by a muted per-section palette — see [004-section-palette.md](004-section-palette.md)
 - Updated 2026-10-13: iPad keeps the expanded two-column workspace; the hub is compact-only — see [005-ipad-workspace.md](005-ipad-workspace.md)
 - Updated 2026-10-15: Palette muting lightened from 30% to 15%; 004's saturation row corrected in place — see [006-palette-strength.md](006-palette-strength.md)
+- Updated 2026-10-15: Language is a pushed destination again now that it also holds Default Poster, reversing 003 — see [018.002](../018-poster-language/002-language-page.md)
