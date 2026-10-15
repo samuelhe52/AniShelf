@@ -1,6 +1,134 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "This release adds custom library categories and a default poster language preference, redesigns Settings, and improves iCloud Sync." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カスタムカテゴリとデフォルトのポスターの言語設定を追加し、設定画面を刷新して、iCloud同期を改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本次更新新增自定义资料库分类与默认海报语言偏好，重新设计设置界面，并优化iCloud同步。"
+          }
+        }
+      }
+    },
+    "Create custom library categories and add anime to multiple categories in bulk, with iCloud sync and backup support." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリにカスタムカテゴリを作成し、複数のアニメをまとめて複数のカテゴリに追加できます。iCloud同期とバックアップにも対応しています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "支持自定义资料库分类，可批量将动画加入多个分类，并支持 iCloud 同步与备份。"
+          }
+        }
+      }
+    },
+    "Added an optional sticky category strip for quick switching and drag reordering." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カテゴリをすばやく切り替えたり、ドラッグで並べ替えたりできる、常時表示のカテゴリバーをオプションとして追加しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增可选的常驻分类栏，支持快速切换和拖动排序。"
+          }
+        }
+      }
+    },
+    "Use posters that match the anime info language by default." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アニメ情報の言語に合うポスターをデフォルトで使用できるようになりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "支持默认使用与动画信息语言相匹配的海报。"
+          }
+        }
+      }
+    },
+    "Improved animations when entering and leaving multi-select mode in List view." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リスト表示で複数選択モードを開始・終了する際のアニメーションを改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "优化列表视图进入和退出多选模式时的动画。"
+          }
+        }
+      }
+    },
+    "Redesigned Settings with controls grouped by function." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定画面を全面的に刷新し、機能ごとにグループ化しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全面重构设置界面，按功能分组。"
+          }
+        }
+      }
+    },
+    "Improved library search and the API key entry interface." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリ検索とAPIキーの入力画面を改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "改善资料库搜索、API 密钥输入界面。"
+          }
+        }
+      }
+    },
+    "Improved iCloud Sync error messages and handling." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud同期のエラーメッセージとエラー処理を改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "优化了 iCloud 同步的错误提示与处理。"
+          }
+        }
+      }
+    },
     "AniShelf has not changed or moved your library, and iCloud Sync is paused until you update." : {
       "localizations" : {
         "ja" : {
