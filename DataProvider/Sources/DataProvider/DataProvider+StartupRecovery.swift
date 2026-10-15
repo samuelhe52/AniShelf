@@ -5,6 +5,7 @@
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/6/19.
 //
 
+import CoreData
 import Foundation
 import SwiftData
 import os
@@ -30,10 +31,22 @@ public struct PersistentStoreRecovery: Equatable, Sendable {
     public let files: [PersistentStoreRecoveryFile]
 }
 
+public enum DataProviderBootstrapStatus: Equatable, Sendable {
+    case opened
+    case recovered(PersistentStoreRecovery)
+    /// The store was written by a schema newer than this build knows; it was left untouched.
+    case requiresNewerApp(storeVersion: Schema.Version)
+}
+
 @MainActor
 public struct DataProviderBootstrapResult {
     public let provider: DataProvider
-    public let recovery: PersistentStoreRecovery?
+    public let status: DataProviderBootstrapStatus
+
+    public var recovery: PersistentStoreRecovery? {
+        guard case .recovered(let recovery) = status else { return nil }
+        return recovery
+    }
 }
 
 extension DataProvider {
@@ -56,11 +69,23 @@ extension DataProvider {
         now: Date,
         containerFactory: ModelContainerFactory
     ) -> DataProviderBootstrapResult {
+        // Check before opening so a newer store never reaches an older schema or recovery.
+        if let storeVersion = newerStoreModelVersion(at: url, fileManager: fileManager) {
+            dataProviderLogger.error(
+                "Persistent store uses newer schema \(storeVersion.description, privacy: .public); leaving it untouched."
+            )
+            return newerStorePlaceholderBootstrap(
+                storeVersion: storeVersion,
+                url: url,
+                containerFactory: containerFactory
+            )
+        }
         do {
             let container = try containerFactory(false, url)
+            let pendingRecovery = pendingPersistentStoreRecovery(at: url, fileManager: fileManager)
             return DataProviderBootstrapResult(
                 provider: DataProvider(container: container, inMemory: false, url: url),
-                recovery: pendingPersistentStoreRecovery(at: url, fileManager: fileManager)
+                status: pendingRecovery.map { .recovered($0) } ?? .opened
             )
         } catch {
             logContainerCreationFailure(error, url: url, operation: "create")
@@ -78,7 +103,7 @@ extension DataProvider {
                         inMemory: false,
                         url: url
                     ),
-                    recovery: recovery
+                    status: .recovered(recovery)
                 )
             } catch let recoveryError {
                 dataProviderLogger.critical(
@@ -89,6 +114,66 @@ extension DataProvider {
                 )
             }
         }
+    }
+
+    /// Returns a blocked bootstrap result backed by an in-memory placeholder store.
+    ///
+    /// DEBUG builds also use this to preview the newer-store state without touching real files.
+    public static func newerStorePlaceholderBootstrap(
+        storeVersion: Schema.Version,
+        url: URL = persistenStoreURL
+    ) -> DataProviderBootstrapResult {
+        newerStorePlaceholderBootstrap(
+            storeVersion: storeVersion,
+            url: url,
+            containerFactory: createModelContainer(inMemory:url:)
+        )
+    }
+
+    private static func newerStorePlaceholderBootstrap(
+        storeVersion: Schema.Version,
+        url: URL,
+        containerFactory: ModelContainerFactory
+    ) -> DataProviderBootstrapResult {
+        let placeholder: ModelContainer
+        do {
+            placeholder = try containerFactory(true, url)
+        } catch {
+            fatalError("Could not create in-memory placeholder ModelContainer: \(error)")
+        }
+        return DataProviderBootstrapResult(
+            provider: DataProvider(container: placeholder, inMemory: true, url: url),
+            status: .requiresNewerApp(storeVersion: storeVersion)
+        )
+    }
+
+    /// The store's model version when it is newer than every schema this build knows.
+    static func newerStoreModelVersion(
+        at storeURL: URL,
+        fileManager: FileManager
+    ) -> Schema.Version? {
+        guard fileManager.fileExists(atPath: storeURL.path(percentEncoded: false)),
+            let metadata = try? NSPersistentStoreCoordinator.metadataForPersistentStore(
+                type: .sqlite,
+                at: storeURL
+            ),
+            let identifiers = metadata[NSStoreModelVersionIdentifiersKey] as? [String]
+        else {
+            return nil
+        }
+        let newestKnownVersion = MigrationPlan.schemas.map { $0.versionIdentifier }.max()
+        let storeVersion = identifiers.compactMap(schemaVersion(from:)).max()
+        guard let storeVersion, let newestKnownVersion, storeVersion > newestKnownVersion else {
+            return nil
+        }
+        return storeVersion
+    }
+
+    private static func schemaVersion(from identifier: String) -> Schema.Version? {
+        let components = identifier.split(separator: ".").map { Int($0) }
+        guard (1...3).contains(components.count), !components.contains(nil) else { return nil }
+        let numbers = components.compactMap { $0 } + Array(repeating: 0, count: 3 - components.count)
+        return Schema.Version(numbers[0], numbers[1], numbers[2])
     }
 
     static func quarantinePersistentStore(

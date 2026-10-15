@@ -1,6 +1,22 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "AniShelf has not changed or moved your library, and iCloud Sync is paused until you update." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfはライブラリを変更・移動していません。アップデートするまでiCloud同期は一時停止されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf未更改或移动你的资料库，更新前iCloud同步将暂停。"
+          }
+        }
+      }
+    },
     "App Info" : {
       "localizations" : {
         "ja" : {
@@ -13,6 +29,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "应用信息"
+          }
+        }
+      }
+    },
+    "App Version" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリのバージョン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App版本"
+          }
+        }
+      }
+    },
+    "Library Data Version" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリデータのバージョン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "资料库数据版本"
           }
         }
       }
@@ -61,6 +109,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "长按并拖动以调整顺序。"
+          }
+        }
+      }
+    },
+    "Open App Store" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Storeを開く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开App Store"
           }
         }
       }
@@ -1272,6 +1336,22 @@
         }
       }
     },
+    "Update AniShelf to Open Your Library" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリをアップデートしてライブラリを開く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新AniShelf以打开资料库"
+          }
+        }
+      }
+    },
     "Watch #%lld" : {
       "localizations" : {
         "ja" : {
@@ -1306,6 +1386,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "官方网站"
+          }
+        }
+      }
+    },
+    "Your library is safe" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリは安全です"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的资料库安全无损"
+          }
+        }
+      }
+    },
+    "Your library was saved by a newer version of AniShelf. Update the app to open it." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このライブラリは新しいバージョンのAniShelfで保存されています。開くにはアプリをアップデートしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此资料库由更新版本的AniShelf保存。请更新App以打开它。"
           }
         }
       }

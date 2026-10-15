@@ -56,3 +56,4 @@ bundle must be tested on a disposable copy; historical success is not universal 
 
 - Updated 2026-10-07: Recover the legacy-schema bridge rationale — see [002-legacy-schema-bridge.md](002-legacy-schema-bridge.md).
 - Updated 2026-10-07: Record the in-place V2.7.9 redefinition behind the 1.93/1.94 launch crash — see [003-v279-schema-collision.md](003-v279-schema-collision.md).
+- Updated 2026-10-15: Leave stores written by a newer schema in place and block the app until it is updated — see [004-newer-schema-store.md](004-newer-schema-store.md).

@@ -20,6 +20,8 @@ struct MyAnimeListApp: App {
     @State var supportStore: SupportStore
     @State private var appReview: AppReviewPromptController
     @State private var startupRecovery: PersistentStoreRecovery?
+    /// Set when the store was saved by a newer schema; the app stays blocked for this launch.
+    private let newerLibraryStoreVersion: Schema.Version?
     @State private var backgroundSyncExecution: LibrarySyncBackgroundExecutionController
     private let recoveryActivityGate: StartupRecoveryActivityGate
     private let lifecycleEventGate = AppLifecycleEventGate()
@@ -29,13 +31,18 @@ struct MyAnimeListApp: App {
         Language.followsSystemPreference()
 
     init() {
-        let startupBootstrap = DataProvider.startupBootstrap
-        let startupRecovery = Self.startupRecovery(
-            bootstrapRecovery: startupBootstrap.recovery
-        )
+        let startupBootstrap = Self.startupBootstrap()
+        let startupRecovery = startupBootstrap.recovery
+        let newerLibraryStoreVersion: Schema.Version? =
+            if case .requiresNewerApp(let storeVersion) = startupBootstrap.status {
+                storeVersion
+            } else {
+                nil
+            }
         let keyStorage = TMDbAPIKeyStorage()
+        // A newer-store block never lifts: only an app update can open the library.
         let recoveryActivityGate = StartupRecoveryActivityGate(
-            isBlocked: startupRecovery != nil
+            isBlocked: startupRecovery != nil || newerLibraryStoreVersion != nil
         )
         let libraryStore = LibraryStore(
             dataProvider: startupBootstrap.provider,
@@ -55,6 +62,7 @@ struct MyAnimeListApp: App {
         _supportStore = State(initialValue: supportStore)
         _appReview = State(initialValue: appReview)
         _startupRecovery = State(initialValue: startupRecovery)
+        self.newerLibraryStoreVersion = newerLibraryStoreVersion
         _backgroundSyncExecution = State(
             initialValue: LibrarySyncBackgroundExecutionController()
         )
@@ -76,16 +84,24 @@ struct MyAnimeListApp: App {
         }
     }
 
-    private static func startupRecovery(
-        bootstrapRecovery: PersistentStoreRecovery?
-    ) -> PersistentStoreRecovery? {
-        bootstrapRecovery
+    private static func startupBootstrap() -> DataProviderBootstrapResult {
+        #if DEBUG
+            // Previews the newer-store block without opening or touching the real store.
+            if ProcessInfo.processInfo.arguments.contains("-simulate-newer-library-store") {
+                return DataProvider.newerStorePlaceholderBootstrap(
+                    storeVersion: Schema.Version(99, 0, 0)
+                )
+            }
+        #endif
+        return DataProvider.startupBootstrap
     }
 
     var body: some Scene {
         WindowGroup {
             ZStack {
-                if let startupRecovery {
+                if let newerLibraryStoreVersion {
+                    NewerLibraryStoreView(storeVersion: newerLibraryStoreVersion)
+                } else if let startupRecovery {
                     StartupRecoveryView(
                         recovery: startupRecovery,
                         onContinue: continueAfterStartupRecovery
@@ -112,7 +128,7 @@ struct MyAnimeListApp: App {
             .onAppear {
                 guard lifecycleEventGate.shouldHandleLaunch() else { return }
                 keyStorage.retryInitialLookupIfNeeded()
-                if startupRecovery == nil {
+                if !isLibraryBlocked {
                     requestSync(trigger: .appLaunch)
                     recordActiveLibraryDayIfUsable()
                     refreshAiringReminders()
@@ -147,7 +163,7 @@ struct MyAnimeListApp: App {
     }
 
     private func updateWhatsNewPresentation() {
-        guard startupRecovery == nil else { return }
+        guard !isLibraryBlocked else { return }
         whatsNew.presentIfNeeded(allowsAutoPresentation: hasTMDbAPIKey)
     }
 
@@ -164,7 +180,7 @@ struct MyAnimeListApp: App {
     }
 
     private func requestSync(trigger: LibrarySyncCoordinator.Trigger) {
-        guard startupRecovery == nil else { return }
+        guard !isLibraryBlocked else { return }
         guard !libraryStore.requiresDuplicateRepair else { return }
         libraryStore.syncLibrary(trigger: trigger)
     }
@@ -183,13 +199,17 @@ struct MyAnimeListApp: App {
         )
     }
 
+    private var isLibraryBlocked: Bool {
+        startupRecovery != nil || newerLibraryStoreVersion != nil
+    }
+
     private var hasTMDbAPIKey: Bool {
         guard let key = keyStorage.key else { return false }
         return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func recordActiveLibraryDayIfUsable() {
-        guard scenePhase == .active, startupRecovery == nil, hasTMDbAPIKey else { return }
+        guard scenePhase == .active, !isLibraryBlocked, hasTMDbAPIKey else { return }
         guard !libraryStore.requiresDuplicateRepair else { return }
         appReview.recordActiveLibraryDay()
     }
