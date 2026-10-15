@@ -175,6 +175,19 @@ import Testing
     #expect(!fileManager.fileExists(atPath: rootDirectory.appendingPathComponent("Recovery").path()))
 }
 
+@Test @MainActor func simulatedRecoveryStaysInTemporaryFolder() throws {
+    let result = DataProvider.simulatedRecoveryBootstrap()
+    let recovery = try #require(result.recovery)
+    defer { try? FileManager.default.removeItem(at: result.provider.url.deletingLastPathComponent()) }
+
+    let temporaryPath = FileManager.default.temporaryDirectory.standardizedFileURL.path()
+    #expect(result.provider.inMemory)
+    #expect(recovery.recoveryDirectoryURL.standardizedFileURL.path().hasPrefix(temporaryPath))
+    #expect(result.provider.url.standardizedFileURL.path().hasPrefix(temporaryPath))
+    #expect(recovery.files.map(\.name) == ["mal.store"])
+    #expect(FileManager.default.fileExists(atPath: recovery.manifestURL.path()))
+}
+
 fileprivate enum TestStartupError: Error {
     case openFailed
 }

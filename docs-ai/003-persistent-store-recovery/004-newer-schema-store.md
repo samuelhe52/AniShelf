@@ -36,7 +36,8 @@ Planned and implemented on 2026-10-15:
   pass the argument after the bundle ID, for example
   `xcrun simctl launch booted com.samuelhe.MyAnimeList -simulate-newer-library-store`,
   or add it to the scheme's launch arguments in Xcode. Release builds ignore it.
-  `StartupRecoveryView` has no equivalent override.
+  `StartupRecoveryView` later got a matching override; see
+  [005-simulated-startup-recovery.md](005-simulated-startup-recovery.md).
 
 | Choice | Reason and rejected alternative |
 | --- | --- |

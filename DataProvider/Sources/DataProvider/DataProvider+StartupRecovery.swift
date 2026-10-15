@@ -24,6 +24,10 @@ public struct PersistentStoreRecoveryManifest: Codable, Equatable, Sendable {
     public let files: [PersistentStoreRecoveryFile]
 }
 
+enum SimulatedStartupRecoveryError: Error {
+    case launchArgument
+}
+
 public struct PersistentStoreRecovery: Equatable, Sendable {
     public let recoveredAt: Date
     public let recoveryDirectoryURL: URL
@@ -145,6 +149,41 @@ extension DataProvider {
             provider: DataProvider(container: placeholder, inMemory: true, url: url),
             status: .requiresNewerApp(storeVersion: storeVersion)
         )
+    }
+
+    /// Builds a real recovery from a junk store in a temporary folder, for previewing recovery.
+    ///
+    /// Never opens or touches the real store. Each call replaces the previous simulated folder.
+    public static func simulatedRecoveryBootstrap(
+        fileManager: FileManager = .default,
+        now: Date = Date()
+    ) -> DataProviderBootstrapResult {
+        let rootURL = fileManager.temporaryDirectory.appendingPathComponent(
+            "AniShelf-Simulated-Recovery",
+            isDirectory: true
+        )
+        let storeURL = rootURL.appendingPathComponent("mal.store")
+        do {
+            try? fileManager.removeItem(at: rootURL)
+            try fileManager.createDirectory(at: rootURL, withIntermediateDirectories: true)
+            try Data("simulated unreadable store".utf8).write(to: storeURL)
+            let recovery = try quarantinePersistentStore(
+                at: storeURL,
+                error: SimulatedStartupRecoveryError.launchArgument,
+                now: now,
+                fileManager: fileManager
+            )
+            return DataProviderBootstrapResult(
+                provider: DataProvider(
+                    container: try createModelContainer(inMemory: true, url: storeURL),
+                    inMemory: true,
+                    url: storeURL
+                ),
+                status: .recovered(recovery)
+            )
+        } catch {
+            fatalError("Could not build simulated startup recovery: \(error)")
+        }
     }
 
     /// The store's model version when it is newer than every schema this build knows.

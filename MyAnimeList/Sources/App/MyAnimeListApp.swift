@@ -22,6 +22,8 @@ struct MyAnimeListApp: App {
     @State private var startupRecovery: PersistentStoreRecovery?
     /// Set when the store was saved by a newer schema; the app stays blocked for this launch.
     private let newerLibraryStoreVersion: Schema.Version?
+    /// A DEBUG launch argument replaced the real store; library and sync work stay off for this launch.
+    private let isSimulatedStartup: Bool
     @State private var backgroundSyncExecution: LibrarySyncBackgroundExecutionController
     private let recoveryActivityGate: StartupRecoveryActivityGate
     private let lifecycleEventGate = AppLifecycleEventGate()
@@ -31,7 +33,7 @@ struct MyAnimeListApp: App {
         Language.followsSystemPreference()
 
     init() {
-        let startupBootstrap = Self.startupBootstrap()
+        let (startupBootstrap, isSimulatedStartup) = Self.startupBootstrap()
         let startupRecovery = startupBootstrap.recovery
         let newerLibraryStoreVersion: Schema.Version? =
             if case .requiresNewerApp(let storeVersion) = startupBootstrap.status {
@@ -63,6 +65,7 @@ struct MyAnimeListApp: App {
         _appReview = State(initialValue: appReview)
         _startupRecovery = State(initialValue: startupRecovery)
         self.newerLibraryStoreVersion = newerLibraryStoreVersion
+        self.isSimulatedStartup = isSimulatedStartup
         _backgroundSyncExecution = State(
             initialValue: LibrarySyncBackgroundExecutionController()
         )
@@ -84,16 +87,25 @@ struct MyAnimeListApp: App {
         }
     }
 
-    private static func startupBootstrap() -> DataProviderBootstrapResult {
+    private static func startupBootstrap() -> (
+        result: DataProviderBootstrapResult, isSimulated: Bool
+    ) {
         #if DEBUG
-            // Previews the newer-store block without opening or touching the real store.
-            if ProcessInfo.processInfo.arguments.contains("-simulate-newer-library-store") {
-                return DataProvider.newerStorePlaceholderBootstrap(
-                    storeVersion: Schema.Version(99, 0, 0)
+            // Preview startup screens without opening or touching the real store.
+            let arguments = ProcessInfo.processInfo.arguments
+            if arguments.contains("-simulate-newer-library-store") {
+                return (
+                    DataProvider.newerStorePlaceholderBootstrap(
+                        storeVersion: Schema.Version(99, 0, 0)
+                    ),
+                    true
                 )
             }
+            if arguments.contains("-simulate-startup-recovery") {
+                return (DataProvider.simulatedRecoveryBootstrap(), true)
+            }
         #endif
-        return DataProvider.startupBootstrap
+        return (DataProvider.startupBootstrap, false)
     }
 
     var body: some Scene {
@@ -168,6 +180,14 @@ struct MyAnimeListApp: App {
     }
 
     private func continueAfterStartupRecovery() {
+        if isSimulatedStartup {
+            // Skip the sync reset and reminder pruning: both act on real preferences and iCloud.
+            if let startupRecovery {
+                DataProvider.acknowledgePersistentStoreRecovery(startupRecovery)
+            }
+            startupRecovery = nil
+            return
+        }
         libraryStore.prepareLibraryCloudSyncAfterPersistentStoreRecovery()
         if let startupRecovery {
             DataProvider.acknowledgePersistentStoreRecovery(startupRecovery)
@@ -200,7 +220,7 @@ struct MyAnimeListApp: App {
     }
 
     private var isLibraryBlocked: Bool {
-        startupRecovery != nil || newerLibraryStoreVersion != nil
+        startupRecovery != nil || newerLibraryStoreVersion != nil || isSimulatedStartup
     }
 
     private var hasTMDbAPIKey: Bool {
