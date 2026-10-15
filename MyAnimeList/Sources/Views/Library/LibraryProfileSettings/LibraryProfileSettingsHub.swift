@@ -10,8 +10,7 @@ import SwiftUI
 
 struct LibraryProfileSettingsHub: View {
     @Environment(\.colorScheme) private var colorScheme
-    @Binding var followsSystemLanguage: Bool
-    @Binding var preferredLanguage: Language
+    let languageSummary: LocalizedStringResource
     let remindersLoaded: Bool
     let syncStatus: LibraryCloudSyncStatus
     let whatsNewVersion: String?
@@ -24,11 +23,10 @@ struct LibraryProfileSettingsHub: View {
         VStack(spacing: 16) {
             PopupSectionCard("Settings", systemImage: "gearshape.2", spacing: 8, panelTint: cardTint) {
                 VStack(spacing: 0) {
-                    LibraryProfileLanguageSettingsRow(
-                        followsSystemLanguage: $followsSystemLanguage, preferredLanguage: $preferredLanguage
-                    )
                     ForEach(LibraryProfileSettingsDestination.allCases, id: \.self) { destination in
-                        LibraryProfileActionDivider(leadingInset: 44)
+                        if destination != LibraryProfileSettingsDestination.allCases.first {
+                            LibraryProfileActionDivider(leadingInset: 44)
+                        }
                         NavigationLink(value: destination) {
                             row(destination)
                         }
@@ -51,6 +49,9 @@ struct LibraryProfileSettingsHub: View {
     @ViewBuilder
     private func row(_ destination: LibraryProfileSettingsDestination) -> some View {
         switch destination {
+        case .language:
+            LibraryProfileHubRow(
+                title: destination.title, systemImage: "globe", tint: destination.tint, value: languageSummary)
         case .libraryTracking:
             LibraryProfileHubRow(
                 title: destination.title, subtitle: "Defaults, filters, categories, progress",

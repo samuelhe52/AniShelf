@@ -8,50 +8,100 @@
 import DataProvider
 import SwiftUI
 
-/// Hub row; the language picker is short enough to stay inline instead of pushing a page.
-struct LibraryProfileLanguageSettingsRow: View {
+/// The Language page's cards; onboarding reuses them for its language step.
+struct LibraryProfileLanguageSettingsSections: View {
     @Binding var followsSystemLanguage: Bool
     @Binding var preferredLanguage: Language
+    @Binding var posterLanguage: PosterLanguagePreference
 
     private var tint: Color { LibraryProfileSettingsPalette.language }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 10) {
-                LibraryProfileSettingIcon(systemImage: "globe", tint: tint)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Anime Info Language")
-                        .font(.subheadline.weight(.semibold))
+        // The pushed page and onboarding don't inherit the toggle binding's transaction, so the
+        // stack animates its own layout: the picker slides in and the poster card moves with it.
+        VStack(spacing: 16) {
+            LibraryProfileSettingsSection("Anime Info Language", systemImage: "globe", tint: tint) {
+                HStack {
                     Text("Follow System")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.subheadline.weight(.semibold))
+                    Spacer(minLength: 12)
+                    Toggle("Follow System", isOn: $followsSystemLanguage)
+                        .labelsHidden()
+                        .tint(tint)
+                        .scaleEffect(0.78, anchor: .trailing)
+                        .frame(width: 42, height: 26, alignment: .trailing)
                 }
-                .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 12)
-                Toggle("Follow System", isOn: $followsSystemLanguage)
-                    .labelsHidden()
-                    .tint(tint)
-                    .scaleEffect(0.78, anchor: .trailing)
-                    .frame(width: 42, height: 26, alignment: .trailing)
-            }
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+                .padding(.vertical, 2)
 
-            if !followsSystemLanguage {
-                Picker("Anime Info Language", selection: $preferredLanguage) {
-                    ForEach(Language.allCases, id: \.rawValue) { language in
-                        Text(language.localizedStringResource).tag(language)
+                if !followsSystemLanguage {
+                    Picker("Anime Info Language", selection: $preferredLanguage) {
+                        ForEach(Language.allCases, id: \.rawValue) { language in
+                            Text(language.localizedStringResource).tag(language)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.top, 2)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+
+            LibraryProfileSettingsSection("Default Poster", systemImage: "photo", tint: tint) {
+                ForEach(PosterLanguagePreference.allCases, id: \.self) { preference in
+                    if preference != PosterLanguagePreference.allCases.first {
+                        LibraryProfileActionDivider(leadingInset: 0)
+                    }
+                    option(
+                        preference.localizedStringResource, subtitle: preference.fallbackDescription,
+                        isSelected: posterLanguage == preference
+                    ) {
+                        posterLanguage = preference
                     }
                 }
-                .pickerStyle(.segmented)
-                .padding(.bottom, 12)
-                .transition(
-                    .asymmetric(
-                        insertion: .opacity.combined(with: .move(edge: .top)),
-                        removal: .opacity.combined(with: .scale(scale: 0.98, anchor: .top))
-                    )
-                )
             }
+        }
+        .animation(.spring(response: 0.34, dampingFraction: 0.88), value: followsSystemLanguage)
+    }
+
+    private func option(
+        _ title: LocalizedStringResource,
+        subtitle: LocalizedStringResource? = nil,
+        isSelected: Bool,
+        select: @escaping () -> Void
+    ) -> some View {
+        Button {
+            withAnimation(.snappy(duration: 0.2), select)
+        } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Spacer(minLength: 12)
+                Image(systemName: "checkmark")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(tint)
+                    .opacity(isSelected ? 1 : 0)
+            }
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+extension PosterLanguagePreference {
+    fileprivate var fallbackDescription: LocalizedStringResource {
+        switch self {
+        case .originalLanguage: "Falls back to the Anime Info Language."
+        case .animeInfoLanguage: "Falls back to the original language."
         }
     }
 }

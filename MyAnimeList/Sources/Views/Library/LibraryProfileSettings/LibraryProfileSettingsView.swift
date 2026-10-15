@@ -23,6 +23,7 @@ struct LibraryProfileSettingsView: View {
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
+    @AppStorage(.defaultPosterLanguage) private var posterLanguage: PosterLanguagePreference = .originalLanguage
     @AppStorage(.episodeProgressTrackingEnabled) private var episodeProgressTrackingEnabled = false
 
     @State private var showCacheAlert = false
@@ -35,6 +36,7 @@ struct LibraryProfileSettingsView: View {
     @State private var restoreFileURL: URL?
     @State private var showRestoreConfirmation = false
     @State private var showRefreshInfoOnLanguageUpdateAlert = false
+    @State private var showRefreshInfoOnPosterLanguageUpdateAlert = false
     @State private var showRefreshInfoAlert = false
     @State private var presentationState = LibraryProfileSettingsPresentationState()
     @State private var cacheSizeResult: Result<UInt, KingfisherError>?
@@ -89,8 +91,8 @@ struct LibraryProfileSettingsView: View {
             }
         }
         .onAppear(perform: handleAppear)
-        .onChange(of: preferredLanguage, handlePreferredLanguageChange)
-        .onChange(of: followsSystemLanguage, handleFollowsSystemLanguageChange)
+        .onChange(of: effectiveLanguage, handleEffectiveLanguageChange)
+        .onChange(of: posterLanguage, handlePosterLanguageChange)
         .task { await reloadReminders() }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
@@ -141,6 +143,20 @@ struct LibraryProfileSettingsView: View {
             let message: LocalizedStringResource = """
                 Changing the metadata language setting will not refresh existing infos.
                 Refresh all anime infos now? This may take considerable time.
+                """
+
+            Text(message)
+        }
+        .alert(
+            "Refresh Default Posters?",
+            isPresented: $showRefreshInfoOnPosterLanguageUpdateAlert
+        ) {
+            Button("Refresh", action: confirmRefreshInfos)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            let message: LocalizedStringResource = """
+                Changing the default poster setting will not update existing entries.
+                Refresh all anime infos now? This may take considerable time. Custom posters are kept.
                 """
 
             Text(message)
@@ -231,8 +247,7 @@ struct LibraryProfileSettingsView: View {
                 switch layout {
                 case .hub:
                     LibraryProfileSettingsHub(
-                        followsSystemLanguage: followsSystemLanguageBinding,
-                        preferredLanguage: $preferredLanguage,
+                        languageSummary: languageSummary,
                         remindersLoaded: remindersLoaded,
                         syncStatus: store.libraryCloudSyncStatus,
                         whatsNewVersion: whatsNew.currentEntry?.version,
@@ -283,11 +298,7 @@ struct LibraryProfileSettingsView: View {
 
             HStack(alignment: .top, spacing: 20) {
                 VStack(spacing: 20) {
-                    LibraryProfileLanguageSettingsRow(
-                        followsSystemLanguage: followsSystemLanguageBinding, preferredLanguage: $preferredLanguage
-                    )
-                    .padding(.horizontal, 14)
-                    .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsPalette.language)
+                    workspaceGroup(.language)
                     workspaceGroup(.libraryTracking)
                     workspaceGroup(.reminders)
                     workspaceGroup(.appearance)
@@ -345,6 +356,11 @@ struct LibraryProfileSettingsView: View {
     private func destinationContent(_ destination: LibraryProfileSettingsDestination) -> some View {
         @Bindable var store = store
         switch destination {
+        case .language:
+            LibraryProfileLanguageSettingsSections(
+                followsSystemLanguage: followsSystemLanguageBinding, preferredLanguage: $preferredLanguage,
+                posterLanguage: $posterLanguage
+            )
         case .libraryTracking:
             LibraryProfilePreferencesSection(
                 hideDroppedByDefault: $store.hideDroppedByDefault,
@@ -419,7 +435,8 @@ struct LibraryProfileSettingsView: View {
     private var hasPendingPresentation: Bool {
         presentationState.presentedSheet != nil || showFileImporter || showRestoreConfirmation
             || showCacheAlert || showClearAllAlert || showExportError || showRestoreError
-            || showRefreshInfoOnLanguageUpdateAlert || showRefreshInfoAlert
+            || showRefreshInfoOnLanguageUpdateAlert || showRefreshInfoOnPosterLanguageUpdateAlert
+            || showRefreshInfoAlert
             || cloudSync.showRebuildAlert || cloudSync.showUploadLibraryAlert
             || cloudSync.showRestoreUnavailableAlert
             || whatsNew.presentedEntry(forSceneIdentifier: windowSceneIdentifier) != nil
@@ -457,6 +474,13 @@ struct LibraryProfileSettingsView: View {
         .spring(response: 0.34, dampingFraction: 0.88)
     }
 
+    private var languageSummary: LocalizedStringResource {
+        if followsSystemLanguage {
+            return "System (\(String(localized: Language.current.localizedStringResource)))"
+        }
+        return preferredLanguage.localizedStringResource
+    }
+
     private var effectiveLanguage: Language {
         followsSystemLanguage ? .current : preferredLanguage
     }
@@ -488,25 +512,16 @@ struct LibraryProfileSettingsView: View {
         }
     }
 
-    private func handlePreferredLanguageChange(old: Language, new: Language) {
-        guard old != new, !followsSystemLanguage else { return }
+    /// Watches the resolved language because one choice on the Language page can change both stored values.
+    private func handleEffectiveLanguageChange(old: Language, new: Language) {
         store.language = new
+        guard old != new else { return }
         showRefreshInfoOnLanguageUpdateAlert = true
     }
 
-    private func handleFollowsSystemLanguageChange(old: Bool, new: Bool) {
-        guard old != new else { return }
-        let oldLanguage = resolvedLanguage(
-            followsSystem: old,
-            preferredLanguage: preferredLanguage
-        )
-        let newLanguage = resolvedLanguage(
-            followsSystem: new,
-            preferredLanguage: preferredLanguage
-        )
-        store.language = new ? .current : preferredLanguage
-        guard oldLanguage != newLanguage else { return }
-        showRefreshInfoOnLanguageUpdateAlert = true
+    private func handlePosterLanguageChange(old: PosterLanguagePreference, new: PosterLanguagePreference) {
+        guard old != new, !store.library.isEmpty else { return }
+        showRefreshInfoOnPosterLanguageUpdateAlert = true
     }
 
     private func requestAPIKeySheet() {
@@ -612,13 +627,6 @@ struct LibraryProfileSettingsView: View {
     private func presentRestoreError(_ error: Error) {
         restoreError = error
         showRestoreError = true
-    }
-
-    private func resolvedLanguage(
-        followsSystem: Bool,
-        preferredLanguage: Language
-    ) -> Language {
-        followsSystem ? .current : preferredLanguage
     }
 
     private var libraryCloudSyncStatus: LibraryCloudSyncStatus { store.libraryCloudSyncStatus }

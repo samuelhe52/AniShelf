@@ -28,10 +28,11 @@ struct LibraryProfileSettingsLayoutPolicy {
 }
 
 enum LibraryProfileSettingsDestination: Hashable, CaseIterable {
-    case libraryTracking, appearance, reminders, metadataImages, syncData
+    case language, libraryTracking, appearance, reminders, metadataImages, syncData
 
     var title: LocalizedStringResource {
         switch self {
+        case .language: "Language"
         case .libraryTracking: "Library & Tracking"
         case .appearance: "Appearance & Interaction"
         case .reminders: "Airing & Reminders"
@@ -43,6 +44,7 @@ enum LibraryProfileSettingsDestination: Hashable, CaseIterable {
     /// Each destination keeps the hue its sections had before the hub; its page tints its cards with it.
     var tint: Color {
         switch self {
+        case .language: LibraryProfileSettingsPalette.language
         case .libraryTracking: LibraryProfileSettingsPalette.muted(.mint)
         case .appearance: LibraryProfileSettingsPalette.muted(.teal)
         case .reminders: LibraryProfileSettingsPalette.muted(.orange)
@@ -53,7 +55,7 @@ enum LibraryProfileSettingsDestination: Hashable, CaseIterable {
 }
 
 enum LibraryProfileSettingsPalette {
-    /// The anime info language row sits inline in the hub Settings card, ahead of the destinations.
+    /// Language leads the hub and the workspace.
     static let language = muted(.blue)
 
     /// The App Info rows share the accent the old maintenance list used.

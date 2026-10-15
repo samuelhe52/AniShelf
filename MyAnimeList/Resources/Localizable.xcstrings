@@ -49,6 +49,70 @@
         }
       }
     },
+    "Changing the default poster setting will not update existing entries.\nRefresh all anime infos now? This may take considerable time. Custom posters are kept." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既定のポスター設定を変更しても既存の項目は更新されません。\nすべてのアニメ情報を今すぐ更新しますか？時間がかかる場合があります。カスタムポスターは保持されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改默认海报设置不会更新现有条目。\n现在刷新所有动画信息吗？这可能需要一些时间。手动选择的海报会保留。"
+          }
+        }
+      }
+    },
+    "Default Poster" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既定のポスター"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "默认海报"
+          }
+        }
+      }
+    },
+    "Falls back to the Anime Info Language." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "なければアニメ情報の言語を使用"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有时使用动画信息语言。"
+          }
+        }
+      }
+    },
+    "Falls back to the original language." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "なければ原語を使用"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有时使用原语言。"
+          }
+        }
+      }
+    },
     "Follow Anime Info Language" : {
       "localizations" : {
         "ja" : {
@@ -157,6 +221,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "优先原语言"
+          }
+        }
+      }
+    },
+    "Refresh Default Posters?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既定のポスターを更新しますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刷新默认海报？"
           }
         }
       }
@@ -12054,6 +12134,22 @@
     },
     "Injected failures are off. Upload This Library re-creates the iCloud data and completes sync." : {
 
+    },
+    "System (%@)" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "システム（%@）"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系统（%@）"
+          }
+        }
+      }
     }
   },
   "version" : "1.2"
