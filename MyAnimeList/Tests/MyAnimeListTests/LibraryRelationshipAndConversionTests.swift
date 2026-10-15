@@ -157,6 +157,7 @@ struct LibraryRelationshipAndConversionTests {
         seasonEntry.dateStarted = referenceDate(year: 2026, month: 5, day: 1)
         seasonEntry.dateFinished = referenceDate(year: 2026, month: 5, day: 2)
         seasonEntry.notes = "Season-side score"
+        seasonEntry.updateCategoryMembership("category-a", isMember: true)
         try repository.newEntry(seasonEntry)
 
         try await converter.convertSeasonToSeries(
@@ -174,6 +175,8 @@ struct LibraryRelationshipAndConversionTests {
 
         #expect(seriesEntry.score == 5)
         #expect(seriesEntry.notes == "Season-side score")
+        #expect(seriesEntry.categoryIDs == ["category-a"])
+        #expect(seriesEntry.categoriesUpdatedAt != nil)
         #expect(!seriesEntry.isDateTrackingEnabled)
         #expect(seriesEntry.dateStarted == referenceDate(year: 2026, month: 5, day: 1))
         #expect(seriesEntry.dateFinished == referenceDate(year: 2026, month: 5, day: 2))
@@ -201,6 +204,7 @@ struct LibraryRelationshipAndConversionTests {
         seriesEntry.dateStarted = referenceDate(year: 2026, month: 5, day: 3)
         seriesEntry.dateFinished = referenceDate(year: 2026, month: 5, day: 4)
         seriesEntry.notes = "Series-side score"
+        seriesEntry.updateCategoryMembership("category-a", isMember: true)
         try repository.newEntry(seriesEntry)
 
         try await converter.convertSeriesToSeason(
@@ -227,6 +231,8 @@ struct LibraryRelationshipAndConversionTests {
 
         #expect(seasonEntry.score == 2)
         #expect(seasonEntry.notes == "Series-side score")
+        #expect(seasonEntry.categoryIDs == ["category-a"])
+        #expect(seasonEntry.categoriesUpdatedAt != nil)
         #expect(!seasonEntry.isDateTrackingEnabled)
         #expect(seasonEntry.dateStarted == referenceDate(year: 2026, month: 5, day: 3))
         #expect(seasonEntry.dateFinished == referenceDate(year: 2026, month: 5, day: 4))

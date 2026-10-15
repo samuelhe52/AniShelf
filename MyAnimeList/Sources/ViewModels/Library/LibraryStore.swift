@@ -183,6 +183,7 @@ class LibraryStore {
         self.shouldResumeInterruptedCloudSyncBootstrap =
             snapshot.cloudSyncStatus.isEnabled && snapshot.cloudSyncStatus.bootstrapState == .running
         reloadPersistedPreferences()
+        applyDefaultFilters()
         lastObservedCloudSyncedPreferencesHash = preferences.cloudSyncedSettingsPayloadHash()
         setupUpdateLibrary()
         setupTMDbAPIConfigurationChangeMonitor()
@@ -239,8 +240,8 @@ class LibraryStore {
         if libraryCloudSyncStatus != snapshot.cloudSyncStatus {
             libraryCloudSyncStatus = snapshot.cloudSyncStatus
         }
-
-        applyDefaultFilters()
+        // Browse filters reset only through `defaultFilters.didSet`, so unrelated
+        // preference writes (such as category edits) keep the current filters.
     }
 
     func applyRemoteCloudSyncedPreferences(_ snapshot: LibrarySettingsSyncSnapshot) {

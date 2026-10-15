@@ -25,6 +25,7 @@ final class LibraryEntryConverter {
             "Converting season \(seasonTMDbID, privacy: .public) to series \(parentSeriesID, privacy: .public)")
 
         let userInfo = entry.userInfo
+        let categoryIDs = entry.categoryIDs
         let originalPosterURL = entry.posterURL
 
         let parentEntry: AnimeEntry
@@ -51,6 +52,7 @@ final class LibraryEntryConverter {
         }
 
         parentEntry.updateUserInfoFromUserAction(userInfo)
+        parentEntry.updateCategoryIDs(categoryIDs)
         if userInfo.usingCustomPoster {
             parentEntry.updateCustomPosterURL(originalPosterURL)
         }
@@ -74,6 +76,7 @@ final class LibraryEntryConverter {
             "Converting series \(parentSeriesID, privacy: .public) to season \(seasonNumber, privacy: .public)")
 
         let userInfo = entry.userInfo
+        let categoryIDs = entry.categoryIDs
         let originalPosterURL = entry.posterURL
         let seasonTMDbID = entry.tmdbID
         let resolveLatestInfo =
@@ -104,6 +107,7 @@ final class LibraryEntryConverter {
         seasonEntry.parentSeriesEntry = parentEntry
         seasonEntry.updateDisplayState(true)
         seasonEntry.updateUserInfoFromUserAction(userInfo)
+        seasonEntry.updateCategoryIDs(categoryIDs)
         if userInfo.usingCustomPoster {
             seasonEntry.updateCustomPosterURL(originalPosterURL)
         }

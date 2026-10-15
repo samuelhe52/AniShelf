@@ -458,6 +458,17 @@ extension AnimeEntry {
         return true
     }
 
+    /// Replaces all category memberships and advances `categoriesUpdatedAt`.
+    ///
+    /// Use when another entry's memberships carry over, such as during series/season conversion.
+    @discardableResult
+    public func updateCategoryIDs(_ ids: [String], at date: Date = .now) -> Bool {
+        guard ids != categoryIDs else { return false }
+        categoryIDs = ids
+        categoriesUpdatedAt = LibrarySyncTimestamp.next(date, after: categoriesUpdatedAt)
+        return true
+    }
+
     @discardableResult
     public func updateNotes(_ notes: String, at date: Date = .now) -> Bool {
         guard self.notes != notes else { return false }

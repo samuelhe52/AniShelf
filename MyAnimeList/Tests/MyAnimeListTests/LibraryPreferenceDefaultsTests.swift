@@ -187,6 +187,11 @@ struct LibraryPreferenceDefaultsTests {
         #expect(store.filters == Set([.favorited, .watched]))
         #expect(store.defaultNewEntryWatchStatus == .watching)
 
+        // Unrelated preference writes, such as category edits, reload preferences without resetting browse filters.
+        store.filters = [.watched]
+        store.reloadPersistedPreferences()
+        #expect(store.filters == [.watched])
+
         store.newEntryFromEntryMetadata(
             EntryMetadata(
                 name: "Defaulted Entry",
