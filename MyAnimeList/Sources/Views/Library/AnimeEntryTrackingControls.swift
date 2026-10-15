@@ -17,7 +17,8 @@ struct AnimeEntryWatchedStatusPicker: View {
         VStack(alignment: .leading, spacing: 12) {
             Picker(selection: $selection) {
                 Text(EntryDetailL10n.planned).tag(AnimeEntry.WatchStatus.planToWatch)
-                Text(isRewatching ? EntryDetailL10n.rewatching : EntryDetailL10n.watching).tag(AnimeEntry.WatchStatus.watching)
+                Text(isRewatching ? EntryDetailL10n.rewatching : EntryDetailL10n.watching).tag(
+                    AnimeEntry.WatchStatus.watching)
                 Text(EntryDetailL10n.watched).tag(AnimeEntry.WatchStatus.watched)
             } label: {
             }

@@ -387,12 +387,14 @@ final class SyncGate {
         waiters.removeAll()
         var bootstrapRetryOwnerAssigned = passOwnerHandlesResult
         for waiter in pendingWaiters {
-            let shouldHandleResult = passKind == .bootstrap
+            let shouldHandleResult =
+                passKind == .bootstrap
                 && waiter.canHandleResult && !bootstrapRetryOwnerAssigned
             if shouldHandleResult { bootstrapRetryOwnerAssigned = true }
-            waiter.continuation.resume(returning: .init(
-                result, wasCoalesced: true, shouldHandleResult: shouldHandleResult
-            ))
+            waiter.continuation.resume(
+                returning: .init(
+                    result, wasCoalesced: true, shouldHandleResult: shouldHandleResult
+                ))
         }
     }
 
@@ -401,9 +403,10 @@ final class SyncGate {
         let pendingWaiters = waiters
         waiters.removeAll()
         for waiter in pendingWaiters {
-            waiter.continuation.resume(returning: .init(
-                .skipped(.disabled), wasCoalesced: true, shouldHandleResult: false
-            ))
+            waiter.continuation.resume(
+                returning: .init(
+                    .skipped(.disabled), wasCoalesced: true, shouldHandleResult: false
+                ))
         }
     }
 }

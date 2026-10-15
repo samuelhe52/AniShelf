@@ -56,7 +56,9 @@ extension InfoFetcher {
         )
     }
 
-    func movieInfo(tmdbID: Int, language: Language, posterLanguage: PosterLanguagePreference) async throws -> EntryMetadata {
+    func movieInfo(tmdbID: Int, language: Language, posterLanguage: PosterLanguagePreference) async throws
+        -> EntryMetadata
+    {
         let payload = try await moviePayload(
             tmdbID: tmdbID,
             language: language,

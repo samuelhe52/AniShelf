@@ -34,7 +34,9 @@ fileprivate struct TVSeasonPayload {
 }
 
 extension InfoFetcher {
-    func tvSeasonInfo(seasonNumber: Int, parentSeriesID: Int, language: Language, posterLanguage: PosterLanguagePreference) async throws
+    func tvSeasonInfo(
+        seasonNumber: Int, parentSeriesID: Int, language: Language, posterLanguage: PosterLanguagePreference
+    ) async throws
         -> EntryMetadata
     {
         let payload = try await tvSeasonPayload(

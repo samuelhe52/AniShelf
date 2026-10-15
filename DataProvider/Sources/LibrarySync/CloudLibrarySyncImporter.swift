@@ -203,7 +203,8 @@ public struct CloudLibrarySyncImporter: @unchecked Sendable {
         startingToken: CKServerChangeToken?
     ) async throws -> CloudLibrarySyncImportBatch {
         let existingQuarantined = try quarantineStore.entries(namespace: namespace, zoneID: Self.zoneID)
-        let retryRecordIDs = existingQuarantined
+        let retryRecordIDs =
+            existingQuarantined
             .filter { $0.attemptedAppVersion != appVersion }
             .map(\.recordID)
         let retriedRecords: [CKRecord.ID: CKRecord] =

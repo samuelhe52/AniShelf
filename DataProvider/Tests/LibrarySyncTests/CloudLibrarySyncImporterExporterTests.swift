@@ -608,14 +608,16 @@ struct CloudLibrarySyncImporterExporterTests {
         #expect(secondDatabase.requestedRecordIDs == [[recordID]])
         #expect(recovered.changes == [.snapshot(snapshot)])
         #expect(recovered.quarantinedRecordIDs.isEmpty)
-        #expect(try quarantineStore.entries(namespace: namespace, zoneID: CloudLibrarySyncClient.recordZoneID).count == 1)
+        #expect(
+            try quarantineStore.entries(namespace: namespace, zoneID: CloudLibrarySyncClient.recordZoneID).count == 1)
 
         // Local application can fail before commit. The next pass must fetch
         // the recovered record by ID again even though zone changes are empty.
         let retryDatabase = FakeCloudLibrarySyncDatabase(
             changes: [
-                .init(modifiedRecordsByID: [:], deletedRecordIDs: [],
-                      changeToken: try makeToken(), moreComing: false)
+                .init(
+                    modifiedRecordsByID: [:], deletedRecordIDs: [],
+                    changeToken: try makeToken(), moreComing: false)
             ],
             fetchedRecordsByID: [recordID: recoveredRecord]
         )
