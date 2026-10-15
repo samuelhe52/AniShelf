@@ -27,6 +27,7 @@ struct PosterBrowserView: View {
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
+    @AppStorage(.defaultPosterLanguage) private var posterLanguage: PosterLanguagePreference = .originalLanguage
 
     private var currentPosters: [Poster] {
         postersBySource[selectedPosterSource] ?? []
@@ -123,7 +124,8 @@ struct PosterBrowserView: View {
             guard !Task.isCancelled, selectedPosterSource == source else { return }
             let posters = resolvedPosters.filteredAndSorted(
                 originalLanguageCode: originalPosterLanguageCode,
-                metadataLanguageCode: metadataLanguageCode
+                metadataLanguageCode: metadataLanguageCode,
+                posterLanguage: posterLanguage
             )
             postersBySource[source] = posters
             loadState = posters.isEmpty ? .empty : .loaded

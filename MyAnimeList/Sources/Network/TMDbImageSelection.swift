@@ -22,12 +22,14 @@ enum TMDbImageSelection {
     static func preferredPosterPath(
         from resources: [ImageMetadata],
         originalLanguageCode: String? = nil,
-        metadataLanguageCode: String? = nil
+        metadataLanguageCode: String? = nil,
+        posterLanguage: PosterLanguagePreference = .originalLanguage
     ) -> URL? {
         preferredPosterPath(
             from: resources.map(Resource.init),
             originalLanguageCode: originalLanguageCode,
-            metadataLanguageCode: metadataLanguageCode
+            metadataLanguageCode: metadataLanguageCode,
+            posterLanguage: posterLanguage
         )
     }
 
@@ -50,13 +52,15 @@ enum TMDbImageSelection {
     static func preferredPosterPath(
         from resources: [Resource],
         originalLanguageCode: String? = nil,
-        metadataLanguageCode: String? = nil
+        metadataLanguageCode: String? = nil,
+        posterLanguage: PosterLanguagePreference = .originalLanguage
     ) -> URL? {
         preferredPath(
             from: resources,
             rules: posterMatchRules(
                 originalLanguageCode: originalLanguageCode,
-                metadataLanguageCode: metadataLanguageCode
+                metadataLanguageCode: metadataLanguageCode,
+                posterLanguage: posterLanguage
             )
         )
     }
@@ -111,11 +115,13 @@ enum TMDbImageSelection {
     static func posterLanguagePriority(
         for languageCode: String?,
         originalLanguageCode: String? = nil,
-        metadataLanguageCode: String? = nil
+        metadataLanguageCode: String? = nil,
+        posterLanguage: PosterLanguagePreference = .originalLanguage
     ) -> Int? {
         for (index, rule) in posterMatchRules(
             originalLanguageCode: originalLanguageCode,
-            metadataLanguageCode: metadataLanguageCode
+            metadataLanguageCode: metadataLanguageCode,
+            posterLanguage: posterLanguage
         ).enumerated() where matches(languageCode: languageCode, rule: rule) {
             return index
         }
@@ -136,7 +142,8 @@ enum TMDbImageSelection {
 
     private static func posterMatchRules(
         originalLanguageCode: String?,
-        metadataLanguageCode: String?
+        metadataLanguageCode: String?,
+        posterLanguage: PosterLanguagePreference
     ) -> [LanguageMatchRule] {
         var rules: [LanguageMatchRule] = []
 
@@ -148,8 +155,14 @@ enum TMDbImageSelection {
             rules.append(rule)
         }
 
-        appendLanguage(originalLanguageCode)
-        appendLanguage(metadataLanguageCode)
+        switch posterLanguage {
+        case .originalLanguage:
+            appendLanguage(originalLanguageCode)
+            appendLanguage(metadataLanguageCode)
+        case .animeInfoLanguage:
+            appendLanguage(metadataLanguageCode)
+            appendLanguage(originalLanguageCode)
+        }
         rules.append(.noLanguage)
         return rules
     }

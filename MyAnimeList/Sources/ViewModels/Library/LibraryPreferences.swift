@@ -57,6 +57,10 @@ struct LibraryPreferences {
         )
     }
 
+    func loadPosterLanguage() -> PosterLanguagePreference {
+        .stored(defaults: defaults)
+    }
+
     func saveHideDroppedByDefault(_ value: Bool) {
         defaults.setValue(value, forKey: .libraryHideDroppedByDefault)
     }

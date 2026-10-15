@@ -73,6 +73,22 @@ struct LibraryPreferenceDefaultsTests {
         #expect(!defaults.isBroadcastScheduleEnabled)
     }
 
+    @Test func testPosterLanguageDefaultsToOriginalAndSyncs() {
+        let suiteName = "MyAnimeListTests.PosterLanguagePreference"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        #expect(PosterLanguagePreference.stored(defaults: defaults) == .originalLanguage)
+        defaults.set("unknownFutureMode", forKey: .defaultPosterLanguage)
+        #expect(PosterLanguagePreference.stored(defaults: defaults) == .originalLanguage)
+        defaults.set(PosterLanguagePreference.animeInfoLanguage.rawValue, forKey: .defaultPosterLanguage)
+        #expect(PosterLanguagePreference.stored(defaults: defaults) == .animeInfoLanguage)
+
+        #expect(String.allPreferenceKeys.contains(.defaultPosterLanguage))
+        #expect(String.cloudSyncedPreferenceKeys.contains(.defaultPosterLanguage))
+    }
+
     @Test func testAiringReminderPreferencesRemainDeviceLocal() {
         #expect(!String.allPreferenceKeys.contains(.airingReminderSubscriptions))
         #expect(!String.allPreferenceKeys.contains(.airingReminderDefaultTimingOffsetMinutes))

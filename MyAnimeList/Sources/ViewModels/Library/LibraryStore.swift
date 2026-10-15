@@ -48,6 +48,8 @@ class LibraryStore {
     var isResolvingDuplicateEntryGroup = false
     @ObservationIgnored var infoFetcher: InfoFetcher
     var language: Language = .resolvedAnimeInfoLanguage()
+    /// Read at each fetch so a settings change applies to the next library write.
+    var posterLanguage: PosterLanguagePreference { preferences.loadPosterLanguage() }
     private(set) var libraryCloudSyncStatus: LibraryCloudSyncStatus
 
     // MARK: - Filtering & Sorting State

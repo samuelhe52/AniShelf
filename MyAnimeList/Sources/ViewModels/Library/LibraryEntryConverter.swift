@@ -15,6 +15,7 @@ final class LibraryEntryConverter {
     func convertSeasonToSeries(
         _ entry: AnimeEntry,
         language: Language,
+        posterLanguage: PosterLanguagePreference,
         fetcher: InfoFetcher,
         latestInfoFetcher: LibraryEntryLatestInfoFetcher? = nil
     ) async throws {
@@ -38,7 +39,8 @@ final class LibraryEntryConverter {
                     try await fetcher.latestInfo(
                         entryType: entryType,
                         tmdbID: tmdbID,
-                        language: language
+                        language: language,
+                        posterLanguage: posterLanguage
                     )
                 }
             let parentLatestInfo = try await resolveLatestInfo(.series, parentSeriesID, language)
@@ -63,6 +65,7 @@ final class LibraryEntryConverter {
         _ entry: AnimeEntry,
         seasonNumber: Int,
         language: Language,
+        posterLanguage: PosterLanguagePreference,
         fetcher: InfoFetcher,
         latestInfoFetcher: LibraryEntryLatestInfoFetcher? = nil
     ) async throws {
@@ -78,7 +81,8 @@ final class LibraryEntryConverter {
                 try await fetcher.latestInfo(
                     entryType: entryType,
                     tmdbID: tmdbID,
-                    language: language
+                    language: language,
+                    posterLanguage: posterLanguage
                 )
             }
 

@@ -11,6 +11,7 @@ import Foundation
 extension String {
     static let preferredAnimeInfoLanguage = "PreferredAnimeInfoLanguage"
     static let useCurrentLocaleForAnimeInfoLanguage = "UseCurrentLocaleForAnimeInfoLanguage"
+    static let defaultPosterLanguage = "DefaultPosterLanguage"
     static let searchTMDbLanguage = "SearchTMDbLanguage"
     static let searchPageQuery = "SearchPageQuery"
     static let searchMode = "SearchMode"
@@ -77,6 +78,7 @@ extension String {
     static let allPreferenceKeys: [String] = [
         .preferredAnimeInfoLanguage,
         .useCurrentLocaleForAnimeInfoLanguage,
+        .defaultPosterLanguage,
         .searchTMDbLanguage,
         .searchPageQuery,
         .persistedScrolledID,
@@ -108,6 +110,7 @@ extension String {
     static let cloudSyncedPreferenceKeys: [String] = [
         .preferredAnimeInfoLanguage,
         .useCurrentLocaleForAnimeInfoLanguage,
+        .defaultPosterLanguage,
         .searchTMDbLanguage,
         .libraryGroupStrategy,
         .librarySortStrategy,

@@ -325,7 +325,8 @@ extension LibrarySyncCoordinator {
                 parentSeriesEntry = try await AnimeEntry.generateParentSeriesEntryForSeason(
                     parentSeriesID: parentSeriesID,
                     fetcher: store.infoFetcher,
-                    infoLanguage: store.language
+                    infoLanguage: store.language,
+                    posterLanguage: store.posterLanguage
                 )
             }
         } catch is CancellationError {
@@ -350,7 +351,8 @@ extension LibrarySyncCoordinator {
         let latestInfo = try await store.infoFetcher.latestInfo(
             entryType: snapshot.entryType,
             tmdbID: snapshot.tmdbID,
-            language: store.language
+            language: store.language,
+            posterLanguage: store.posterLanguage
         )
         let entry = AnimeEntry(fromInfo: latestInfo.0)
         entry.dateSaved = snapshot.dateSaved

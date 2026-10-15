@@ -49,6 +49,22 @@
         }
       }
     },
+    "Follow Anime Info Language" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アニメ情報の言語に合わせる"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跟随动画信息语言"
+          }
+        }
+      }
+    },
     "Library Data Version" : {
       "localizations" : {
         "ja" : {
@@ -125,6 +141,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打开App Store"
+          }
+        }
+      }
+    },
+    "Prefer Original Language" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原語を優先"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "优先原语言"
           }
         }
       }

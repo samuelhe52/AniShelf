@@ -320,11 +320,16 @@ final class EntryDetailViewModel {
         return series.seasons?.map(\.seasonNumber).sorted() ?? []
     }
 
-    func convertSeasonToSeries(_ entry: AnimeEntry, language: Language) async throws {
+    func convertSeasonToSeries(
+        _ entry: AnimeEntry,
+        language: Language,
+        posterLanguage: PosterLanguagePreference
+    ) async throws {
         let converter = LibraryEntryConverter(repository: repository)
         try await converter.convertSeasonToSeries(
             entry,
             language: language,
+            posterLanguage: posterLanguage,
             fetcher: infoFetcher
         )
     }
@@ -332,13 +337,15 @@ final class EntryDetailViewModel {
     func convertSeriesToSeason(
         _ entry: AnimeEntry,
         seasonNumber: Int,
-        language: Language
+        language: Language,
+        posterLanguage: PosterLanguagePreference
     ) async throws {
         let converter = LibraryEntryConverter(repository: repository)
         try await converter.convertSeriesToSeason(
             entry,
             seasonNumber: seasonNumber,
             language: language,
+            posterLanguage: posterLanguage,
             fetcher: infoFetcher
         )
     }

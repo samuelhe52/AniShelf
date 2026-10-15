@@ -198,6 +198,7 @@ final class LibraryProfileSettingsActions {
                         for: entries,
                         fetcher: store.infoFetcher,
                         language: store.language,
+                        posterLanguage: store.posterLanguage,
                         options: options
                     )
                 }

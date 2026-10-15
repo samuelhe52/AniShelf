@@ -162,6 +162,7 @@ struct LibraryRelationshipAndConversionTests {
         try await converter.convertSeasonToSeries(
             seasonEntry,
             language: .english,
+            posterLanguage: .originalLanguage,
             fetcher: fetcher,
             latestInfoFetcher: makeLatestInfoFetcher()
         )
@@ -206,6 +207,7 @@ struct LibraryRelationshipAndConversionTests {
             seriesEntry,
             seasonNumber: 1,
             language: .english,
+            posterLanguage: .originalLanguage,
             fetcher: fetcher,
             latestInfoFetcher: makeLatestInfoFetcher()
         )
@@ -262,6 +264,7 @@ struct LibraryRelationshipAndConversionTests {
             try await converter.convertSeasonToSeries(
                 seasonEntry,
                 language: .english,
+                posterLanguage: .originalLanguage,
                 fetcher: fetcher,
                 latestInfoFetcher: makeLatestInfoFetcher()
             )
@@ -303,6 +306,7 @@ struct LibraryRelationshipAndConversionTests {
                 seriesEntry,
                 seasonNumber: 1,
                 language: .english,
+                posterLanguage: .originalLanguage,
                 fetcher: fetcher,
                 latestInfoFetcher: makeLatestInfoFetcher()
             )
