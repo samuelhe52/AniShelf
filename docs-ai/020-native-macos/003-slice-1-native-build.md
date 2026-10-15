@@ -26,7 +26,9 @@ reviewed by Claude Code.
   `MyAnimeList/Sources/Utils/PlatformViewModifiers.swift` (semantic colors,
   toolbar placements, iOS-only modifiers as Mac no-ops, a Mac size class that is
   always regular), and `#if os(macOS)` branches for pasteboard, window identity
-  (`NSWindow.windowNumber` in place of the UIScene persistent identifier), share
+  (an `NSWindow` object-identity string in place of the UIScene persistent
+  identifier; corrected 2026-10-16 from `windowNumber`, see
+  [004](004-slice-2-mac-shell.md)), share
   presentation (`NSSharingServicePicker`), text editing, page dots, and
   category-strip gestures. Every iOS branch keeps its previous code.
 - `MyAnimeList/Sources/Mac/MacLibraryLifecycle.swift` provides the Mac

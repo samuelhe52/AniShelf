@@ -29,12 +29,94 @@ struct LibraryToolbar: ToolbarContent {
     let processTMDbSearchResults: (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void
     let jumpToEntryInLibrary: (LibraryEntryIdentity) -> Void
     let onSearchDismissed: () -> Void
+    var searchInitialMode: SearchMode? = nil
+    var addAnime: () -> Void = {}
+    var isInspectorPresented = false
+    var toggleInspector: () -> Void = {}
 
     @ToolbarContentBuilder
     var body: some ToolbarContent {
-        topBarContent
-        bottomBarContent
+        #if os(macOS)
+            macContent
+        #else
+            topBarContent
+            bottomBarContent
+        #endif
     }
+
+    #if os(macOS)
+        @ToolbarContentBuilder
+        private var macContent: some ToolbarContent {
+            if interaction.isMultiSelecting {
+                ToolbarItemGroup(placement: .primaryAction) {
+                    LibrarySelectionStatusMenu(interaction: interaction, applyBatchAction: applyBatchAction)
+                    LibrarySelectionFavoriteButton(
+                        interaction: interaction,
+                        entriesByID: selectionEntriesByID,
+                        applyBatchAction: applyBatchAction
+                    )
+                    if store.categoriesEnabled {
+                        LibrarySelectionCategoryMenu(
+                            store: store,
+                            interaction: interaction,
+                            entriesByID: selectionEntriesByID,
+                            applyBatchAction: applyBatchAction
+                        )
+                    }
+                    LibrarySelectionActionsMenu(
+                        interaction: interaction,
+                        scoringEnabled: scoringEnabled,
+                        applyBatchAction: applyBatchAction
+                    )
+                    LibrarySelectionDeleteButton(interaction: interaction, deleteSelectedEntries: deleteSelectedEntries)
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Done", action: exitMultiSelection)
+                        .help(Text("End the selection"))
+                }
+            } else {
+                ToolbarItem(placement: .primaryAction) {
+                    Picker("View Style", selection: $libraryViewStyle) {
+                        ForEach(LibraryView.LibraryViewStyle.allCases, id: \.self) { style in
+                            Label(style.nameKey, systemImage: style.systemImageName)
+                                .labelStyle(.iconOnly)
+                                .help(Text(style.nameKey))
+                                .tag(style)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    LibraryBrowseSummaryMenu(store: store, scoringEnabled: scoringEnabled)
+                        .help(Text("Sort, group, and filter"))
+                }
+                ToolbarItemGroup(placement: .primaryAction) {
+                    Button("Add Anime…", systemImage: "plus", action: addAnime)
+                        .help(Text("Add anime from TMDb"))
+                    LibrarySearchButton(
+                        isSearching: $isSearching,
+                        checkDuplicate: checkDuplicate,
+                        canRevealEntry: store.canRevealEntry,
+                        resetFiltersToReveal: store.resetFiltersToReveal,
+                        processTMDbSearchResults: processTMDbSearchResults,
+                        jumpToEntryInLibrary: jumpToEntryInLibrary,
+                        onDismiss: onSearchDismissed,
+                        initialMode: searchInitialMode
+                    )
+                    .help(Text("Search"))
+                }
+            }
+            // An open inspector has its own Done button; dropping the toggle then keeps
+            // Add and Search out of the overflow menu in narrow windows.
+            if !isInspectorPresented {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Show Inspector", systemImage: "sidebar.trailing", action: toggleInspector)
+                        .help(Text("Show Inspector"))
+                }
+            }
+        }
+    #endif
 
     @ToolbarContentBuilder
     private var topBarContent: some ToolbarContent {

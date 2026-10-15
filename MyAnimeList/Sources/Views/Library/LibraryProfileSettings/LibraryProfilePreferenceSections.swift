@@ -149,6 +149,7 @@ struct LibraryProfilePreferencesSection: View {
                     tint: LibraryProfileSettingsDestination.libraryTracking.tint
                 )
             }
+            .customLabeledMenu()
         }
         .padding(.vertical, 2)
     }
@@ -175,6 +176,7 @@ struct LibraryProfilePreferencesSection: View {
                     tint: LibraryProfileSettingsDestination.libraryTracking.tint
                 )
             }
+            .customLabeledMenu()
             .keepsMenuPresentedAfterAction()
         }
         .padding(.vertical, 2)
@@ -263,12 +265,15 @@ struct LibraryProfileCategorySettingsRows: View {
             )
 
             if store.categoriesEnabled {
+                // The Mac lists categories in the sidebar instead of a strip.
+                #if !os(macOS)
                 LibraryProfileSettingsToggleRow(
                     title: "Sticky Category Strip",
                     subtitle: "Keep category tabs below the navigation bar in List and Grid views.",
                     isOn: $store.categoryStripEnabled
                 )
                 .transition(.opacity)
+                #endif
 
                 Button {
                     showCategoryManager = true

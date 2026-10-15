@@ -69,7 +69,7 @@ struct PosterSelectionView: View {
                     Button {
                         dismiss()
                     } label: {
-                        Image(systemName: "xmark")
+                        SheetCloseLabel()
                     }
                     .accessibilityLabel(Text("Close"))
                 }
@@ -94,6 +94,7 @@ struct PosterSelectionView: View {
             #endif
         }
         .presentationSizing(.page)
+        .macSheetFrame(width: 900, height: 680)
     }
 
     private func finishPendingPosterSelection() {

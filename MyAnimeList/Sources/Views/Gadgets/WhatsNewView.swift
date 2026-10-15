@@ -47,11 +47,18 @@ struct WhatsNewView: View {
         .navigationTitle(whatsNewTitleResource)
         .inlineNavigationTitle()
         .toolbar {
-            ToolbarItem(placement: .platformTrailing) {
-                Button(doneTitleResource, action: onDismiss)
-            }
+            #if os(macOS)
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(doneTitleResource, action: onDismiss)
+                }
+            #else
+                ToolbarItem(placement: .platformTrailing) {
+                    Button(doneTitleResource, action: onDismiss)
+                }
+            #endif
         }
         .presentationSizing(.page)
+        .macSheetFrame(width: 680, height: 720)
     }
 
     private var heroCard: some View {

@@ -166,3 +166,46 @@ extension View {
         #endif
     }
 }
+
+extension View {
+    /// Gives a sheet a desktop size. Sheets on macOS otherwise shrink to their content's ideal
+    /// size, which collapses lists and geometry-driven layouts.
+    @ViewBuilder func macSheetFrame(width: CGFloat, height: CGFloat) -> some View {
+        #if os(macOS)
+            frame(
+                minWidth: width,
+                idealWidth: width,
+                maxWidth: .infinity,
+                minHeight: height,
+                idealHeight: height,
+                maxHeight: .infinity
+            )
+        #else
+            self
+        #endif
+    }
+}
+
+/// Label for a sheet's dismiss button: a glyph on iOS, and the text button macOS sheets use.
+struct SheetCloseLabel: View {
+    var body: some View {
+        #if os(macOS)
+            Text("Close")
+        #else
+            Image(systemName: "xmark")
+        #endif
+    }
+}
+
+extension View {
+    /// A menu whose label draws its own chevron. macOS would add a second indicator.
+    @ViewBuilder func customLabeledMenu() -> some View {
+        #if os(macOS)
+            menuStyle(.button)
+                .buttonStyle(.plain)
+                .menuIndicator(.hidden)
+        #else
+            self
+        #endif
+    }
+}

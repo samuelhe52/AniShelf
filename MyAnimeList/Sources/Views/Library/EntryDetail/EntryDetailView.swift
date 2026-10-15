@@ -128,6 +128,7 @@ struct EntryDetailView: View {
                     displayTitle: session.model.displayTitle
                 )
                 .presentationBackground(Color.platformSystemGroupedBackground)
+                .macSheetFrame(width: 600, height: 620)
             case .changePoster:
                 NavigationStack {
                     PosterSelectionView(

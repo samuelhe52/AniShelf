@@ -75,9 +75,8 @@ struct MyAnimeListApp: App {
         _startupRecovery = State(initialValue: startupRecovery)
         self.newerLibraryStoreVersion = newerLibraryStoreVersion
         self.isSimulatedStartup = isSimulatedStartup
-        _backgroundSyncExecution = State(
-            initialValue: LibrarySyncBackgroundExecutionController()
-        )
+        let backgroundSyncExecution = LibrarySyncBackgroundExecutionController()
+        _backgroundSyncExecution = State(initialValue: backgroundSyncExecution)
         self.recoveryActivityGate = recoveryActivityGate
         RecoveryExportManager.cleanupAllTemporaryExports()
 
@@ -94,7 +93,45 @@ struct MyAnimeListApp: App {
                 return .failed
             }
         }
+        #if os(macOS)
+            Self.configureMacLifecycle(
+                libraryStore: libraryStore,
+                recoveryActivityGate: recoveryActivityGate,
+                backgroundSyncExecution: backgroundSyncExecution
+            )
+        #endif
     }
+
+    #if os(macOS)
+        /// Wires app-lifetime events into the shared objects directly: the App value captured
+        /// here would hold stale `@State` once startup recovery finishes.
+        private static func configureMacLifecycle(
+            libraryStore: LibraryStore,
+            recoveryActivityGate: StartupRecoveryActivityGate,
+            backgroundSyncExecution: LibrarySyncBackgroundExecutionController
+        ) {
+            let canSyncLibrary = { @MainActor in
+                recoveryActivityGate.allowsLibraryActivity && !libraryStore.requiresDuplicateRepair
+            }
+            LibrarySyncNotificationBridge.configureTerminationFlush(
+                isNeeded: { canSyncLibrary() && libraryStore.needsBackgroundLibrarySyncProtection },
+                flush: { _ = await libraryStore.flushPendingLocalLibrarySyncAndWait() }
+            )
+            LibrarySyncNotificationBridge.configureSleepAndWake(
+                willSleep: {
+                    guard canSyncLibrary(), libraryStore.needsBackgroundLibrarySyncProtection else { return }
+                    backgroundSyncExecution.run(
+                        onExpiration: { libraryStore.cancelLibrarySyncForBackgroundExpiration() },
+                        operation: { _ = await libraryStore.flushPendingLocalLibrarySyncAndWait() }
+                    )
+                },
+                didWake: {
+                    guard canSyncLibrary() else { return }
+                    libraryStore.syncLibrary(trigger: .foreground)
+                }
+            )
+        }
+    #endif
 
     private static func startupBootstrap() -> (
         result: DataProviderBootstrapResult, isSimulated: Bool
@@ -118,7 +155,36 @@ struct MyAnimeListApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        #if os(macOS)
+            WindowGroup(id: MacWindowID.library) {
+                libraryWindowContent
+            }
+            .defaultSize(width: 1180, height: 760)
+            .commands {
+                SidebarCommands()
+                MacLibraryCommands()
+            }
+
+            Settings {
+                MacSettingsRoot(isLibraryBlocked: isLibraryBlocked || !hasTMDbAPIKey)
+                    .environment(libraryStore)
+                    .environment(keyStorage)
+                    .environment(whatsNew)
+                    .environment(supportStore)
+                    .environment(appReview)
+                    // What's New opened from Settings presents in the Settings window.
+                    .modifier(WhatsNewPresenter(whatsNew: whatsNew, libraryStore: libraryStore))
+                    .globalToasts()
+                    .providesWindowSceneIdentifier()
+            }
+        #else
+            WindowGroup {
+                libraryWindowContent
+            }
+        #endif
+    }
+
+    private var libraryWindowContent: some View {
             ZStack {
                 if let newerLibraryStoreVersion {
                     NewerLibraryStoreView(storeVersion: newerLibraryStoreVersion)
@@ -180,7 +246,6 @@ struct MyAnimeListApp: App {
             .modifier(AppReviewPromptPresenter(appReview: appReview))
             .globalToasts()
             .providesWindowSceneIdentifier()
-        }
     }
 
     private func updateWhatsNewPresentation() {

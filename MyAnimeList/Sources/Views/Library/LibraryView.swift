@@ -39,7 +39,7 @@ struct LibraryView: View {
 
     @Environment(LibraryStore.self) var store
     @Environment(\.platformHorizontalSizeClass) private var horizontalSizeClass
-    @Environment(\.windowSceneIdentifier) private var windowSceneIdentifier
+    @Environment(\.windowSceneIdentifier) var windowSceneIdentifier
     @Environment(AppReviewPromptController.self) var appReview
     private let airingReminders = AiringReminderCoordinator.shared
 
@@ -71,6 +71,15 @@ struct LibraryView: View {
     @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
     @AppStorage(.libraryLastInspectorDetailEntryIdentity)
     private var persistedLastInspectorDetailEntryIdentity: String?
+
+    #if os(macOS)
+        @Environment(\.openSettings) private var openSettings
+        @Environment(\.openWindow) private var openWindow
+        @State var searchInitialMode: SearchMode?
+        @State var macSelectionAnchor: LibraryEntryIdentity?
+        @State var showRefreshAllMetadataAlert = false
+        @State var showDeleteSelectionAlert = false
+    #endif
 
     // MARK: - Body
 
@@ -143,6 +152,9 @@ struct LibraryView: View {
             handleAiringReminderRoute()
         }
         #if os(macOS)
+            .onChange(of: windowSceneIdentifier, initial: true) { _, identifier in
+                MacLibraryWindows.register(identifier, openWindow: openWindow)
+            }
             .onReceive(NotificationCenter.default.publisher(for: NSWindow.willCloseNotification)) { notification in
                 let closedIdentifier = (notification.object as? NSWindow)?.sceneIdentifier
                 guard closedIdentifier != windowSceneIdentifier else { return }
@@ -178,6 +190,7 @@ struct LibraryView: View {
             LibraryDuplicateRepairSheet(store: store)
                 .presentationDetents([.large])
                 .presentationSizing(.page)
+                .macSheetFrame(width: 760, height: 640)
         }
     }
 
@@ -188,11 +201,23 @@ struct LibraryView: View {
         )
     }
 
+    /// Hosts entry detail in the trailing inspector. On the Mac it is attached to the library
+    /// column inside the split view: attached outside it, AppKit counted the inspector's width
+    /// twice in the window's minimum size.
+    private var entryInspector: LibraryEntryInspectorModifier {
+        LibraryEntryInspectorModifier(
+            interaction: interaction,
+            detailSession: detailSessionStore.session(for: interaction.presentedDetailEntryID),
+            content: { presentation, session in
+                AnyView(detailHostContent(presentation: presentation, session: session))
+            }
+        )
+    }
+
     private var libraryNavigation: some View {
         let detailSession = detailSessionStore.session(
             for: interaction.presentedDetailEntryID
         )
-        let inspectorPresentation = interaction.inspectorPresentation
         let presentedSheetRoute = interaction.activeSheetRoute
         let detailActivation = currentDetailActivation
         let activeSheetRoute = Binding<LibraryEntrySheetRoute?>(
@@ -206,29 +231,9 @@ struct LibraryView: View {
         return
             libraryNavigationStack
             .environment(\.libraryEntryDetailActivation, detailActivation)
-            .inspector(
-                isPresented: Binding(
-                    get: {
-                        guard let inspectorPresentation else { return false }
-                        return interaction.inspectorPresentation?.id == inspectorPresentation.id
-                    },
-                    set: { isPresented in
-                        guard !isPresented, let inspectorPresentation else { return }
-                        interaction.detailHostDidDismiss(inspectorPresentation)
-                    }
-                )
-            ) {
-                if let inspectorPresentation,
-                    let detailSession
-                {
-                    detailHostContent(
-                        presentation: inspectorPresentation,
-                        session: detailSession
-                    )
-                    .presentationBackground(inspectorPresentation.host.pageBackground)
-                    .inspectorColumnWidth(min: 400, ideal: 480, max: 520)
-                }
-            }
+            #if !os(macOS)
+                .modifier(entryInspector)
+            #endif
             .sheet(item: activeSheetRoute) { route in
                 sheetContent(for: route, detailSession: detailSession)
             }
@@ -318,7 +323,48 @@ struct LibraryView: View {
         }
     }
 
+    @ViewBuilder
     private var libraryNavigationStack: some View {
+        #if os(macOS)
+            NavigationSplitView {
+                MacLibrarySidebar(openCategoryManager: openCategoryManager)
+            } detail: {
+                // The column holds the library and the inspector, so its minimum grows while the
+                // inspector is open. A library squeezed narrower than its toolbar put AppKit into an
+                // endless layout loop, and narrow rows clip under the inspector.
+                libraryBrowserStack
+                    .modifier(entryInspector)
+                    .navigationSplitViewColumnWidth(
+                        min: interaction.inspectorPresentation == nil ? 520 : 1000,
+                        // A changing ideal would resize the window every time the inspector opens.
+                        ideal: 900
+                    )
+            }
+            .focusedSceneValue(\.macLibraryCommands, macCommandActions)
+            .onChange(of: interaction.inspectorPresentation != nil) { _, isPresented in
+                guard isPresented else { return }
+                keepWindowWidthForInspector()
+            }
+            .alert("Refresh all anime infos?", isPresented: $showRefreshAllMetadataAlert) {
+                Button("Refresh") { LibraryProfileSettingsActions(store: store).refreshInfos() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This may take considerable time.")
+            }
+            .alert(LocalizedStringResource("Delete Selected Anime?"), isPresented: $showDeleteSelectionAlert) {
+                Button("Delete", role: .destructive, action: deleteSelectedEntries)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(
+                    LocalizedStringResource(
+                        "This will delete \(interaction.selectedEntryCount) selected anime from your library."))
+            }
+        #else
+            libraryBrowserStack
+        #endif
+    }
+
+    private var libraryBrowserStack: some View {
         NavigationStack {
             ZStack {
                 libraryView
@@ -355,12 +401,21 @@ struct LibraryView: View {
                     checkDuplicate: store.containsEntry,
                     processTMDbSearchResults: processTMDbSearchResults,
                     jumpToEntryInLibrary: jumpToEntryInLibrary,
-                    onSearchDismissed: searchSheetDidDismiss
+                    onSearchDismissed: searchSheetDidDismiss,
+                    searchInitialMode: macSearchInitialMode,
+                    addAnime: { openSearch(mode: .tmdb) },
+                    isInspectorPresented: interaction.inspectorPresentation != nil,
+                    toggleInspector: toggleInspector
                 )
             }
             .environment(interaction)
-            .navigationTitle("")
-            .inlineNavigationTitle()
+            #if os(macOS)
+                .navigationTitle(macWindowTitle)
+                .navigationSubtitle(macWindowSubtitle)
+            #else
+                .navigationTitle("")
+                .inlineNavigationTitle()
+            #endif
             .animation(libraryViewStyleAnimation, value: libraryViewStyle)
             .sensoryFeedback(.success, trigger: newEntriesAddedToggle)
             .onChange(of: showsCategoryStrip) {
@@ -385,6 +440,10 @@ struct LibraryView: View {
     }
 
     private var showsCategoryStrip: Bool {
+        #if os(macOS)
+            // The sidebar lists the categories on the Mac.
+            return false
+        #endif
         // Stays during multi-selection; switching keeps only still-visible selections.
         // With no categories yet, the toolbar capsule menu stands in for a lone "All" chip.
         store.categoriesEnabled && store.categoryStripEnabled && !store.categories.isEmpty
@@ -397,10 +456,19 @@ struct LibraryView: View {
     private var libraryView: some View {
         let displayItems = selectionDisplayItems ?? store.libraryDisplayItems
         let layoutIDs = selectionLayoutIDs ?? displayItems.map(\.id)
-        let detailActions = LibraryEntryDetailActions(
-            open: openDetails,
-            edit: editDetails
-        )
+        #if os(macOS)
+            let detailActions = LibraryEntryDetailActions(
+                open: openDetails,
+                edit: editDetails,
+                click: { id, click in handleMacClick(on: id, click, layoutIDs: layoutIDs) },
+                select: applyMacSelection
+            )
+        #else
+            let detailActions = LibraryEntryDetailActions(
+                open: openDetails,
+                edit: editDetails
+            )
+        #endif
 
         switch libraryViewStyle {
         case .gallery:
@@ -491,7 +559,7 @@ struct LibraryView: View {
             || interaction.workflowPresentation != nil
     }
 
-    private func openDetails(_ entry: AnimeEntry) {
+    func openDetails(_ entry: AnimeEntry) {
         prepareAndConfigureDetailHost(for: entry)
         interaction.openDetails(for: entry)
     }
@@ -535,7 +603,7 @@ struct LibraryView: View {
             ?? "Reminder Scheduling Issue"
     }
 
-    private func editDetails(_ entry: AnimeEntry) {
+    func editDetails(_ entry: AnimeEntry) {
         prepareAndConfigureDetailHost(for: entry)
         interaction.setEditingEntry(entry)
     }
@@ -571,13 +639,17 @@ struct LibraryView: View {
     }
 
     private func openProfileSettings() {
+        #if os(macOS)
+            openSettings()
+            return
+        #endif
         isReorderingCategories = false
         withAnimation(profileSettingsAnimation) {
             showProfileSettings = true
         }
     }
 
-    private func openCategoryManager() {
+    func openCategoryManager() {
         isReorderingCategories = false
         showCategoryManager = true
     }
@@ -634,4 +706,40 @@ struct LibraryView: View {
             DataProvider.forPreview.generateEntriesForPreview()
         }
         .environment(store)
+}
+
+fileprivate struct LibraryEntryInspectorModifier: ViewModifier {
+    let interaction: LibraryEntryInteractionState
+    let detailSession: EntryDetailSession?
+    let content: (LibraryEntryDetailHostPresentation, EntryDetailSession) -> AnyView
+
+    func body(content base: Content) -> some View {
+        let inspectorPresentation = interaction.inspectorPresentation
+        base
+            .inspector(
+                isPresented: Binding(
+                    get: {
+                        guard let inspectorPresentation else { return false }
+                        return interaction.inspectorPresentation?.id == inspectorPresentation.id
+                    },
+                    set: { isPresented in
+                        guard !isPresented, let inspectorPresentation else { return }
+                        interaction.detailHostDidDismiss(inspectorPresentation)
+                    }
+                )
+            ) {
+                if let inspectorPresentation,
+                    let detailSession
+                {
+                    content(inspectorPresentation, detailSession)
+                        .presentationBackground(inspectorPresentation.host.pageBackground)
+                        #if os(macOS)
+                            // Narrower than iPad so the library column keeps room for its toolbar.
+                            .inspectorColumnWidth(min: 340, ideal: 400, max: 560)
+                        #else
+                            .inspectorColumnWidth(min: 400, ideal: 480, max: 520)
+                        #endif
+                }
+            }
+    }
 }

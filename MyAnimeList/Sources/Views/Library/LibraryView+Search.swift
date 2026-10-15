@@ -17,6 +17,8 @@ struct LibrarySearchButton: View {
     let processTMDbSearchResults: (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void
     let jumpToEntryInLibrary: (LibraryEntryIdentity) -> Void
     let onDismiss: () -> Void
+    /// Opens the page in this mode instead of the last-used one.
+    var initialMode: SearchMode? = nil
 
     @State private var hiddenEntryID: LibraryEntryIdentity?
 
@@ -28,7 +30,8 @@ struct LibrarySearchButton: View {
                         onDuplicateTapped: jumpIfRevealable,
                         checkDuplicate: checkDuplicate,
                         processTMDbSearchResults: processTMDbSearchResults,
-                        jumpToEntryInLibrary: jumpIfRevealable
+                        jumpToEntryInLibrary: jumpIfRevealable,
+                        initialMode: initialMode
                     )
                     .navigationTitle("Search")
                     .inlineNavigationTitle()

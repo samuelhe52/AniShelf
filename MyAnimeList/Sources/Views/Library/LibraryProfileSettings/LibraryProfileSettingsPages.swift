@@ -32,6 +32,8 @@ struct LibraryProfileSettingsPage<Content: View>: View {
         .inlineNavigationTitle()
         .hiddenNavigationBarBackground()
         .toolbar {
+            // The Settings window closes like any Mac window.
+            #if !os(macOS)
             ToolbarItem(placement: .platformTrailing) {
                 Button(action: onClose) {
                     Image(systemName: "xmark")
@@ -43,6 +45,7 @@ struct LibraryProfileSettingsPage<Content: View>: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text(LocalizedStringResource("Close")))
             }
+            #endif
         }
     }
 }

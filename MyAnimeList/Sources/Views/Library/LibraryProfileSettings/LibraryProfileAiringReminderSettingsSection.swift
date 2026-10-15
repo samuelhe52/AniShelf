@@ -55,6 +55,7 @@ struct LibraryProfileAiringReminderSettingsSection: View {
                         tint: LibraryProfileSettingsDestination.reminders.tint
                     )
                 }
+                .customLabeledMenu()
                 .disabled(airingReminders.isRefreshing)
             }
 

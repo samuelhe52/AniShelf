@@ -19,7 +19,11 @@ struct LibraryGridView: View {
     @Binding var scrolledID: LibraryEntryIdentity?
     let scrollRequest: LibraryScrollRequest?
     let highlightRequest: LibraryHighlightRequest?
-    private let columns = [GridItem(.adaptive(minimum: 104, maximum: 132), spacing: 10)]
+    #if os(macOS)
+        private let columns = [GridItem(.adaptive(minimum: 132, maximum: 168), spacing: 18)]
+    #else
+        private let columns = [GridItem(.adaptive(minimum: 104, maximum: 132), spacing: 10)]
+    #endif
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -65,11 +69,22 @@ struct LibraryGridView: View {
     }
 
     private func configuredGridItem(for item: LibraryEntryDisplayItem) -> some View {
-        let baseItem = LibraryGridItem(
-            snapshot: item.snapshot,
-            isSelected: !interaction.isMultiSelecting || interaction.isSelected(item.id)
-        )
-        .highlightEffect(trigger: highlightRequest?.trigger(for: item.id))
+        #if os(macOS)
+            // Desktop selection marks the chosen cards instead of dimming the others.
+            let baseItem = LibraryGridItem(
+                snapshot: item.snapshot,
+                showsSelectionRing: interaction.isMultiSelecting
+                    ? interaction.isSelected(item.id)
+                    : interaction.inspectorPresentation?.entryIdentity == item.id
+            )
+            .highlightEffect(trigger: highlightRequest?.trigger(for: item.id))
+        #else
+            let baseItem = LibraryGridItem(
+                snapshot: item.snapshot,
+                isSelected: !interaction.isMultiSelecting || interaction.isSelected(item.id)
+            )
+            .highlightEffect(trigger: highlightRequest?.trigger(for: item.id))
+        #endif
 
         return
             baseItem
@@ -84,7 +99,28 @@ struct LibraryGridView: View {
                 EntryContextMenuPreview(snapshot: item.snapshot)
                     .onAppear { scrolledID = item.id }
             }
-            .modifier(
+            .modifier(gestures(for: item))
+    }
+
+    #if os(macOS)
+        private func gestures(for item: LibraryEntryDisplayItem) -> some ViewModifier {
+            LibraryGridMacClickModifier(
+                onClick: {
+                    scrolledID = item.id
+                    if let click = detailActions.click {
+                        click(item.id, .current)
+                    } else {
+                        openDetails(for: item.entry)
+                    }
+                },
+                onDoubleClick: {
+                    scrolledID = item.id
+                    openDetails(for: item.entry)
+                }
+            )
+        }
+    #else
+        private func gestures(for item: LibraryEntryDisplayItem) -> some ViewModifier {
                 LibraryGridDetailGestureModifier(
                     isMultiSelecting: interaction.isMultiSelecting,
                     opensDetailOnSingleTap: detailActivation.usesSingleTap(
@@ -110,8 +146,8 @@ struct LibraryGridView: View {
                         scrolledID = item.id
                     }
                 )
-            )
-    }
+        }
+    #endif
 
     private func toggleSelection(for id: LibraryEntryIdentity) {
         interaction.toggleSelection(for: id)
@@ -159,9 +195,23 @@ fileprivate struct LibraryGridDetailGestureModifier: ViewModifier {
     }
 }
 
+#if os(macOS)
+    fileprivate struct LibraryGridMacClickModifier: ViewModifier {
+        let onClick: () -> Void
+        let onDoubleClick: () -> Void
+
+        func body(content: Content) -> some View {
+            content
+                .simultaneousGesture(TapGesture().onEnded(onClick))
+                .simultaneousGesture(TapGesture(count: 2).onEnded(onDoubleClick))
+        }
+    }
+#endif
+
 fileprivate struct LibraryGridItem: View {
     var snapshot: LibraryEntrySnapshot
     var isSelected: Bool = true
+    var showsSelectionRing = false
     private let posterShape = RoundedRectangle(cornerRadius: 16, style: .continuous)
 
     var body: some View {
@@ -187,6 +237,13 @@ fileprivate struct LibraryGridItem: View {
                     .stroke(.white.opacity(0.08), lineWidth: 1)
             }
             .clipShape(posterShape)
+            .overlay {
+                if showsSelectionRing {
+                    posterShape
+                        .inset(by: -3.5)
+                        .stroke(Color.accentColor, lineWidth: 3)
+                }
+            }
             .shadow(color: .black.opacity(0.22), radius: 11, y: 6)
     }
 

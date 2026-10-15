@@ -20,6 +20,8 @@ struct LibraryProfileInterfaceSettingsSection: View {
 
     var body: some View {
         VStack(spacing: 16) {
+            // A click always opens the inspector on the Mac, and its toolbar has no soft edge option.
+            #if !os(macOS)
             LibraryProfileSettingsSection(
                 "Library", systemImage: "hand.tap", tint: LibraryProfileSettingsDestination.appearance.tint
             ) {
@@ -38,6 +40,7 @@ struct LibraryProfileInterfaceSettingsSection: View {
                     )
                 }
             }
+            #endif
             LibraryProfileSettingsSection(
                 "Entry Details", systemImage: "rectangle.3.group.fill",
                 tint: LibraryProfileSettingsDestination.appearance.tint

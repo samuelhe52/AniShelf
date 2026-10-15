@@ -54,7 +54,7 @@ struct EntryDetailBroadcastSearchSheet: View {
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button(action: dismiss.callAsFunction) {
-                            Image(systemName: "xmark")
+                            SheetCloseLabel()
                         }
                         .accessibilityLabel(EntryDetailL10n.close)
                     }
@@ -102,6 +102,7 @@ struct EntryDetailBroadcastSearchSheet: View {
             Button(EntryDetailL10n.close, role: .cancel) {}
         }
         .presentationSizing(.page)
+        .macSheetFrame(width: 640, height: 640)
     }
 
     @ViewBuilder

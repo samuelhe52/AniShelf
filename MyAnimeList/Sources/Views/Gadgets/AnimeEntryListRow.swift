@@ -55,7 +55,15 @@ struct AnimeEntryListRow: View {
         .frame(height: rowHeight, alignment: .top)
         .padding(.vertical, 5)
         .overlay {
-            rowTapSurface
+            #if os(macOS)
+                // Mac lists select natively; an inert overlay would still take the click
+                // away from the table and leave keyboard focus elsewhere.
+                if tapGesturesEnabled {
+                    rowTapSurface
+                }
+            #else
+                rowTapSurface
+            #endif
         }
     }
 

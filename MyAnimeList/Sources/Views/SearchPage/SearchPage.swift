@@ -35,6 +35,7 @@ enum SearchSubmissionOrigin {
 struct SearchPage: View {
     @Environment(LibraryStore.self) private var store
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dismiss) private var dismiss
     // Query and mode stay live per window so concurrent search pages don't mirror each other;
     // the stored values only restore the last search when the page opens.
     @AppStorage(.searchMode) private var persistedMode: SearchMode = .tmdb
@@ -59,7 +60,8 @@ struct SearchPage: View {
         onDuplicateTapped: @escaping (_ tappedID: LibraryEntryIdentity) -> Void,
         checkDuplicate: @escaping (_ identity: LibraryEntryIdentity) -> Bool,
         processTMDbSearchResults: @escaping (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void,
-        jumpToEntryInLibrary: @escaping (LibraryEntryIdentity) -> Void = { _ in }
+        jumpToEntryInLibrary: @escaping (LibraryEntryIdentity) -> Void = { _ in },
+        initialMode: SearchMode? = nil
     ) {
         self.onDuplicateTapped = onDuplicateTapped
         self.checkDuplicate = checkDuplicate
@@ -67,7 +69,8 @@ struct SearchPage: View {
         self.jumpToEntryInLibrary = jumpToEntryInLibrary
         let defaults = UserDefaults.standard
         _mode = State(
-            initialValue: defaults.string(forKey: .searchMode).flatMap(SearchMode.init(rawValue:))
+            initialValue: initialMode
+                ?? defaults.string(forKey: .searchMode).flatMap(SearchMode.init(rawValue:))
                 ?? .tmdb
         )
         _query = State(initialValue: defaults.string(forKey: .searchPageQuery) ?? "")
@@ -129,6 +132,7 @@ struct SearchPage: View {
         .frame(maxWidth: 1_000)
         .frame(maxWidth: .infinity)
         .presentationSizing(.page)
+        .macSheetFrame(width: 760, height: 680)
     }
 
     private var regularSearchContent: some View {
@@ -163,6 +167,10 @@ struct SearchPage: View {
                     .transition(.move(edge: .trailing))
             }
         }
+        #if os(macOS)
+            // Keeps the mode picker at the top when the results are an empty state.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        #endif
         .searchable(
             text: $query,
             placement: .platformDrawerAutomatic,
@@ -172,6 +180,12 @@ struct SearchPage: View {
             performSearch()
         }
         .toolbar {
+            #if os(macOS)
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(action: dismiss.callAsFunction) { SheetCloseLabel() }
+                        .keyboardShortcut(.cancelAction)
+                }
+            #endif
             DefaultToolbarItem(kind: .search, placement: .platformBottomBar)
             if mode == .tmdb {
                 ToolbarItem(placement: .platformTrailing) {

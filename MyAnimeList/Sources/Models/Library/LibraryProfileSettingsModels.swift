@@ -41,6 +41,17 @@ enum LibraryProfileSettingsDestination: Hashable, CaseIterable {
         }
     }
 
+    var systemImage: String {
+        switch self {
+        case .language: "globe"
+        case .libraryTracking: "slider.horizontal.3"
+        case .appearance: "rectangle.3.group.fill"
+        case .reminders: "bell.badge.fill"
+        case .metadataImages: "photo.stack"
+        case .syncData: "icloud"
+        }
+    }
+
     /// Each destination keeps the hue its sections had before the hub; its page tints its cards with it.
     var tint: Color {
         switch self {

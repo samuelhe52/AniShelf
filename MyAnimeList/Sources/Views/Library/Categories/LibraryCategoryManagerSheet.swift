@@ -39,6 +39,17 @@ struct LibraryCategoryManagerSheet: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityHint(Text("Renames the category"))
+                        #if os(macOS)
+                            // Swipe actions need a touch surface; the Mac uses a context menu.
+                            .contextMenu {
+                                Button("Rename…", systemImage: "pencil") {
+                                    namePrompt = .init(purpose: .rename(category))
+                                }
+                                Button("Delete Category…", systemImage: "trash", role: .destructive) {
+                                    deletingCategory = category
+                                }
+                            }
+                        #endif
                         .swipeActions(edge: .trailing) {
                             // Not `.destructive`: that role removes the row before the user confirms.
                             Button("Delete", systemImage: "trash") {
@@ -55,11 +66,28 @@ struct LibraryCategoryManagerSheet: View {
                     }
                 } footer: {
                     // The empty state already explains how to add anime.
-                    if !store.categories.isEmpty {
-                        Text("Add anime with Select in List or Grid view. Touch and hold to reorder categories.")
-                    }
+                    #if !os(macOS)
+                        if !store.categories.isEmpty {
+                            Text("Add anime with Select in List or Grid view. Touch and hold to reorder categories.")
+                        }
+                    #endif
                 }
             }
+            #if os(macOS)
+                // Mac list footers stay on one line, so the help sits below the list instead.
+                .safeAreaInset(edge: .bottom) {
+                    if !store.categories.isEmpty {
+                        Text(
+                            "Add anime by selecting several in List or Grid view and choosing Category in the toolbar. Drag categories to reorder them."
+                        )
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                    }
+                }
+            #endif
             .overlay {
                 if store.categories.isEmpty {
                     ContentUnavailableView {
@@ -75,7 +103,7 @@ struct LibraryCategoryManagerSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(action: dismiss.callAsFunction) {
-                        Image(systemName: "xmark")
+                        SheetCloseLabel()
                     }
                     .accessibilityLabel(Text("Close"))
                 }
@@ -95,5 +123,6 @@ struct LibraryCategoryManagerSheet: View {
             }
             .libraryCategoryDeleteConfirmation($deletingCategory)
         }
+        .macSheetFrame(width: 440, height: 480)
     }
 }

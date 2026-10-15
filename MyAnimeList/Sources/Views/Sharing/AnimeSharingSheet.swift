@@ -53,7 +53,7 @@ struct AnimeSharingSheet: View {
                     Button {
                         dismiss()
                     } label: {
-                        Image(systemName: "xmark")
+                        SheetCloseLabel()
                     }
                     .accessibilityLabel(Text("Close"))
                 }
@@ -119,6 +119,7 @@ struct AnimeSharingSheet: View {
             }
         }
         .presentationSizing(.page)
+        .macSheetFrame(width: 980, height: 700)
     }
 
     private var wideSharingContent: some View {

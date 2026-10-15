@@ -46,7 +46,30 @@ enum LibraryEntryDetailHost: Equatable, Sendable {
 struct LibraryEntryDetailActions {
     let open: @MainActor (AnimeEntry) -> Void
     let edit: @MainActor (AnimeEntry) -> Void
+    #if os(macOS)
+        /// Desktop selection: a click with its modifier keys, routed through the library view.
+        var click: (@MainActor (LibraryEntryIdentity, MacSelectionClick) -> Void)? = nil
+        /// Desktop selection made natively by a list.
+        var select: (@MainActor (Set<LibraryEntryIdentity>) -> Void)? = nil
+    #endif
 }
+
+#if os(macOS)
+    /// How a click changes the desktop selection, from the modifier keys held during the click.
+    enum MacSelectionClick {
+        case replace
+        case toggle
+        case extend
+
+        @MainActor static var current: MacSelectionClick {
+            // The click's own flags; the global state can miss modifiers on synthesized events.
+            let flags = NSApp.currentEvent?.modifierFlags ?? NSEvent.modifierFlags
+            if flags.contains(.command) { return .toggle }
+            if flags.contains(.shift) { return .extend }
+            return .replace
+        }
+    }
+#endif
 
 struct LibraryEntryDetailHostPolicy: Equatable, Sendable {
     let host: LibraryEntryDetailHost

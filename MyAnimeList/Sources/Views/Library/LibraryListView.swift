@@ -17,6 +17,9 @@ struct LibraryListView: View {
     @Binding var scrolledID: LibraryEntryIdentity?
     let scrollRequest: LibraryScrollRequest?
     let highlightRequest: LibraryHighlightRequest?
+    #if os(macOS)
+        @FocusState private var isListFocused: Bool
+    #endif
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -27,6 +30,9 @@ struct LibraryListView: View {
                 rowContent(for: item)
             }
             .listStyle(.plain)
+            #if os(macOS)
+                .focused($isListFocused)
+            #endif
             .preferredNavigationBarScrollEdgeEffect()
             .selectionEditMode(interaction.isMultiSelecting)
             .animation(LibraryViewTransitions.selectionModeAnimation(), value: interaction.isMultiSelecting)
@@ -47,6 +53,23 @@ struct LibraryListView: View {
         }
     }
 
+    #if os(macOS)
+        /// Desktop lists always select natively: one selected row is the inspected entry,
+        /// several form the batch selection.
+        private var listSelection: Binding<Set<LibraryEntryIdentity>> {
+            Binding(
+                get: {
+                    if interaction.isMultiSelecting { return interaction.selectedEntryIDs }
+                    return interaction.inspectorPresentation.map { [$0.entryIdentity] } ?? []
+                },
+                set: { selectedEntryIDs in
+                    // Keep arrow keys in the list after a click instead of the sidebar.
+                    isListFocused = true
+                    detailActions.select?(selectedEntryIDs)
+                }
+            )
+        }
+    #else
     private var listSelection: Binding<Set<LibraryEntryIdentity>> {
         // Keep native selection configured while edit mode animates out.
         // Browsing taps must not add items to the batch selection.
@@ -58,13 +81,14 @@ struct LibraryListView: View {
             }
         )
     }
+    #endif
 
     @ViewBuilder
     private func rowContent(for item: LibraryEntryDisplayItem) -> some View {
         AnimeEntryListRow(
             entry: item.entry,
             snapshot: item.snapshot,
-            tapGesturesEnabled: !interaction.isMultiSelecting,
+            tapGesturesEnabled: rowTapGesturesEnabled,
             onTap: {
                 scrolledID = item.id
                 interaction.focus(item.entry)
@@ -76,6 +100,7 @@ struct LibraryListView: View {
             },
             onToggleFavorite: toggleFavorite
         )
+        #if !os(macOS)
         .opacity(
             !interaction.isMultiSelecting || interaction.isSelected(item.id) ? 1 : 0.48
         )
@@ -86,12 +111,15 @@ struct LibraryListView: View {
             .smooth(duration: 0.18),
             value: !interaction.isMultiSelecting || interaction.isSelected(item.id)
         )
+        #endif
         .highlightEffect(trigger: highlightRequest?.trigger(for: item.id))
         .tag(item.id)
         .listRowInsets(.init(top: 8, leading: 10, bottom: 8, trailing: 10))
         .listRowSeparator(.visible)
         .listRowSeparatorTint(.white.opacity(0.06))
+        #if !os(macOS)
         .listRowBackground(Color.clear)
+        #endif
         .contextMenu {
             interaction.contextMenu(
                 for: item.entry,
@@ -122,6 +150,15 @@ struct LibraryListView: View {
                     .tint(.indigo)
             }
         }
+    }
+
+    /// Desktop rows leave clicks to the list's native selection.
+    private var rowTapGesturesEnabled: Bool {
+        #if os(macOS)
+            false
+        #else
+            !interaction.isMultiSelecting
+        #endif
     }
 
     private func openDetails(for entry: AnimeEntry) {

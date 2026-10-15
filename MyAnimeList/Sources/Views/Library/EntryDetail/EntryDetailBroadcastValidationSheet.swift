@@ -35,7 +35,7 @@ struct EntryDetailBroadcastValidationSheet: View {
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button(action: dismiss.callAsFunction) {
-                            Image(systemName: "xmark")
+                            SheetCloseLabel()
                         }
                         .accessibilityLabel(EntryDetailL10n.close)
                         .disabled(isSavingConfirmation)

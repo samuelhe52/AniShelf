@@ -103,6 +103,7 @@ struct AiringReminderTimingSheet: View {
         .presentationDetents([.fraction(0.80), .large])
         .presentationSizing(.form)
         .presentationDragIndicator(.visible)
+        .macSheetFrame(width: 480, height: 560)
     }
 
     private var customTimingControls: some View {

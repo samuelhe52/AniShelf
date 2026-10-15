@@ -46,6 +46,14 @@ struct LibraryProfileSettingsView: View {
     @State private var remindersLoaded = false
     private let airingReminders = AiringReminderCoordinator.shared
     @State private var restoreCompleted = false
+    #if os(macOS)
+        @State private var macPane: MacSettingsPane? = .overview
+
+        enum MacSettingsPane: Hashable {
+            case overview
+            case destination(LibraryProfileSettingsDestination)
+        }
+    #endif
 
     init(onDismiss: (() -> Void)? = nil) {
         self.onDismiss = onDismiss
@@ -59,37 +67,117 @@ struct LibraryProfileSettingsView: View {
         LibraryProfileSettingsActions(store: store)
     }
 
-    var body: some View {
-        NavigationStack(path: $path) {
-            ZStack {
-                LibraryProfileBackdrop()
+    @ViewBuilder
+    private var settingsNavigation: some View {
+        #if os(macOS)
+            macSettingsNavigation
+        #else
+            NavigationStack(path: $path) {
+                ZStack {
+                    LibraryProfileBackdrop()
 
-                ScrollView {
-                    profileContent
-                }
-                .scrollContentBackground(.hidden)
-                .preferredNavigationBarScrollEdgeEffect()
-            }
-            .navigationTitle(profileTitleResource)
-            .inlineNavigationTitle()
-            .hiddenNavigationBarBackground()
-            .toolbar {
-                ToolbarItem(placement: .platformTrailing) {
-                    Button(action: dismissSettings) {
-                        Image(systemName: "xmark")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(.primary)
-                            .padding(8)
-                            .contentShape(Rectangle())
+                    ScrollView {
+                        profileContent
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(Text(closeTitleResource))
+                    .scrollContentBackground(.hidden)
+                    .preferredNavigationBarScrollEdgeEffect()
+                }
+                .navigationTitle(profileTitleResource)
+                .inlineNavigationTitle()
+                .hiddenNavigationBarBackground()
+                .toolbar {
+                    ToolbarItem(placement: .platformTrailing) {
+                        Button(action: dismissSettings) {
+                            Image(systemName: "xmark")
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(.primary)
+                                .padding(8)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Text(closeTitleResource))
+                    }
+                }
+                .navigationDestination(for: LibraryProfileSettingsDestination.self) { destination in
+                    settingsPage(for: destination)
                 }
             }
-            .navigationDestination(for: LibraryProfileSettingsDestination.self) { destination in
-                settingsPage(for: destination)
+        #endif
+    }
+
+    #if os(macOS)
+        /// The Settings window: a System Settings–style sidebar of pages, with the library
+        /// overview first, instead of the iPhone hub or the iPad two-column workspace.
+        private var macSettingsNavigation: some View {
+            NavigationSplitView {
+                List(selection: $macPane) {
+                    macPaneLabel(
+                        Text("Overview"), systemImage: "chart.bar.xaxis", tint: LibraryProfileSettingsPalette.appInfo
+                    )
+                    .tag(MacSettingsPane.overview)
+                    Section("Settings") {
+                        ForEach(LibraryProfileSettingsDestination.allCases, id: \.self) { destination in
+                            macPaneLabel(
+                                Text(destination.title), systemImage: destination.systemImage, tint: destination.tint
+                            )
+                            .tag(MacSettingsPane.destination(destination))
+                        }
+                    }
+                }
+                .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 280)
+                .toolbar(removing: .sidebarToggle)
+            } detail: {
+                switch macPane ?? .overview {
+                case .overview:
+                    ZStack {
+                        LibraryProfileBackdrop()
+                        ScrollView {
+                            macOverviewContent
+                        }
+                        .scrollContentBackground(.hidden)
+                    }
+                    .navigationTitle(Text("Overview"))
+                case .destination(let destination):
+                    settingsPage(for: destination)
+                        .id(destination)
+                }
             }
         }
+
+        private var macOverviewContent: some View {
+            VStack(spacing: 16) {
+                LibraryProfileHeroCard(stats: stats, animeTitleResource: animeTitleResource)
+                HStack(alignment: .top, spacing: 20) {
+                    LibraryProfilePrimaryStatsGrid(stats: stats, layout: .fillsSummaryHeight)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                    LibraryProfileLibraryDetailsCard(stats: stats)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
+                LibraryProfileAppInfoCard(
+                    whatsNewVersion: whatsNew.currentEntry?.version, onShowWhatsNew: presentWhatsNewSheet,
+                    onShowSupport: presentSupportSheet, onShowAbout: presentAboutSheet
+                )
+            }
+            .frame(maxWidth: 900)
+            .padding(24)
+            .frame(maxWidth: .infinity)
+        }
+
+        private func macPaneLabel(_ title: Text, systemImage: String, tint: Color) -> some View {
+            Label {
+                title
+            } icon: {
+                Image(systemName: systemImage)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 22, height: 22)
+                    .background(tint.gradient, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            }
+        }
+    #endif
+
+    var body: some View {
+        settingsNavigation
         .onAppear(perform: handleAppear)
         .onChange(of: effectiveLanguage, handleEffectiveLanguageChange)
         .onChange(of: posterLanguage, handlePosterLanguageChange)
