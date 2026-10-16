@@ -40,11 +40,20 @@ struct LibraryGridItem: View {
             }
             .clipShape(posterShape)
             .overlay {
-                if showsSelectionRing {
-                    posterShape
-                        .inset(by: -3.5)
-                        .stroke(Color.accentColor, lineWidth: 3)
+                ZStack {
+                    if showsSelectionRing {
+                        posterShape
+                            .inset(by: -3.5)
+                            .stroke(Color.accentColor, lineWidth: 3)
+                            .transition(
+                                .asymmetric(
+                                    insertion: .opacity.combined(with: .scale(scale: 1.04)),
+                                    removal: .opacity
+                                )
+                            )
+                    }
                 }
+                .animation(.snappy(duration: 0.12), value: showsSelectionRing)
             }
             .shadow(color: .black.opacity(0.22), radius: 11, y: 6)
     }
