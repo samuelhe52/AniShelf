@@ -213,9 +213,14 @@
             return ZStack {
                 ForEach(Array(shown.enumerated()), id: \.element.libraryIdentity) { depth, entry in
                     let spread = CGFloat(depth)
+                    // The grid's poster variant, which is usually still in the memory cache,
+                    // so a newly selected poster is ready before its insertion animates.
                     KFImageView(
-                        url: entry.posterURL,
-                        targetSize: CGSize(width: 200, height: 300),
+                        url: entry.selectedPosterPath.flatMap {
+                            TMDbImageURLResolver.current.url(
+                                for: $0, role: .poster, idealWidth: TMDbPosterDisplayType.grid.idealWidth)
+                        },
+                        targetWidth: 360,
                         diskCacheExpiration: .longTerm
                     )
                     .scaledToFill()
@@ -227,16 +232,11 @@
                             .stroke(.separator, lineWidth: 0.5)
                     }
                     .shadow(color: .black.opacity(depth == 0 ? 0.20 : 0.10), radius: 3, y: 2)
-                    .scaleEffect(1 - CGFloat(depth) * 0.04)
-                    .rotationEffect(.degrees(Double(spread) * -3))
-                    .offset(x: -spread * 14, y: spread * 3)
-                    .zIndex(Double(Self.posterLimit - depth))
-                    .transition(
-                        .asymmetric(
-                            insertion: .scale(scale: 1.15).combined(with: .opacity),
-                            removal: .opacity
-                        )
-                    )
+                    .modifier(PosterFanStep(steps: spread))
+                    // Count from the selection size, not the poster limit, so a deselected
+                    // front poster stays above the one that takes its place while it leaves.
+                    .zIndex(Double(selectedEntries.count - depth))
+                    .transition(posterTransition(depth: depth))
                 }
             }
             // Center the whole fan, rather than placing the front poster at the center
@@ -247,8 +247,36 @@
             .accessibilityHidden(true)
         }
 
+        /// The newest poster drops onto the pile and slides off it when deselected. Any other
+        /// poster comes and goes one step further back in the fan, so a poster backfilling the
+        /// stack, or pushed past its limit, moves through the back instead of popping in place.
+        private func posterTransition(depth: Int) -> AnyTransition {
+            let throughBack = AnyTransition.modifier(
+                active: PosterFanStep(steps: 1),
+                identity: PosterFanStep(steps: 0)
+            ).combined(with: .opacity)
+            guard depth == 0 else { return throughBack }
+            return .asymmetric(
+                insertion: .scale(scale: 1.15).combined(with: .opacity),
+                removal: .offset(x: 36, y: -4).combined(with: .opacity)
+            )
+        }
+
         private var titleSummary: String {
             newestEntries.prefix(3).map(\.displayName).joined(separator: ", ")
+        }
+    }
+
+    /// Moves a poster the given number of steps back in the fan: smaller, tilted further, and
+    /// farther left and down.
+    private struct PosterFanStep: ViewModifier {
+        let steps: CGFloat
+
+        func body(content: Content) -> some View {
+            content
+                .scaleEffect(1 - steps * 0.04)
+                .rotationEffect(.degrees(Double(steps) * -3))
+                .offset(x: -steps * 14, y: steps * 3)
         }
     }
 #endif
