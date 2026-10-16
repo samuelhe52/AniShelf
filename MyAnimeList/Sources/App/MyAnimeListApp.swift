@@ -203,6 +203,15 @@ struct MyAnimeListApp: App {
         #endif
     }
 
+    @ViewBuilder
+    private var libraryRoot: some View {
+        #if os(macOS)
+            MacLibraryView()
+        #else
+            LibraryView()
+        #endif
+    }
+
     private var libraryWindowContent: some View {
         ZStack {
             if let newerLibraryStoreVersion {
@@ -213,7 +222,7 @@ struct MyAnimeListApp: App {
                     onContinue: continueAfterStartupRecovery
                 )
             } else if let key = keyStorage.key, !key.isEmpty {
-                LibraryView()
+                libraryRoot
                     .onAppear {
                         libraryStore.language = followsSystemLanguage ? .current : preferredLanguage
                     }

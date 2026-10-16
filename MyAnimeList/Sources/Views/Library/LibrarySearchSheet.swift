@@ -1,5 +1,5 @@
 //
-//  LibraryView+Search.swift
+//  LibrarySearchSheet.swift
 //  AniShelf
 //
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/7/25.
@@ -8,14 +8,6 @@
 import Collections
 import DataProvider
 import SwiftUI
-
-struct LibrarySearchButton: View {
-    @Binding var isSearching: Bool
-
-    var body: some View {
-        Button("Search...", systemImage: "magnifyingglass") { isSearching = true }
-    }
-}
 
 extension View {
     /// Hosts the search page. Attach it to a view that outlives toolbar changes: menu commands
@@ -105,65 +97,5 @@ fileprivate struct LibrarySearchSheet: ViewModifier {
         }
         isSearching = false
         jumpToEntryInLibrary(id)
-    }
-}
-
-extension LibraryView {
-    func jumpToEntryInLibrary(withID id: LibraryEntryIdentity) {
-        // Defer a jump from search until the sheet has dismissed so the scroll and pulse play in view.
-        if isSearchSheetOnScreen {
-            pendingJumpEntryID = id
-        } else {
-            performJump(to: id)
-        }
-    }
-
-    func searchSheetDidDismiss() {
-        isSearchSheetOnScreen = false
-        guard let pendingJumpEntryID else { return }
-        self.pendingJumpEntryID = nil
-        performJump(to: pendingJumpEntryID)
-    }
-
-    private func performJump(to id: LibraryEntryIdentity) {
-        #if os(macOS)
-            // An explicit reveal wins over this window's Find text.
-            if !libraryFindQuery.isEmpty, !visibleDisplayItems.contains(where: { $0.id == id }) {
-                libraryFindQuery = ""
-            }
-        #endif
-        // Search spans the whole library, so leave a category that hides the entry.
-        if store.activeCategoryID != nil,
-            !store.libraryOnDisplay.contains(where: { $0.libraryIdentity == id })
-        {
-            withAnimation(.snappy) { store.activeCategoryID = nil }
-        }
-        requestLibraryScroll(to: id)
-        highlightRequest = LibraryHighlightRequest(entryID: id)
-        #if os(macOS)
-            // On the Mac the found or added entry becomes the selection, shown in the inspector.
-            showInMacInspector(id)
-        #endif
-    }
-
-    func processTMDbSearchResults(
-        _ results: OrderedSet<SearchResult>,
-        origin: SearchSubmissionOrigin
-    ) {
-        isSearching = false
-        Task {
-            ToastCenter.global.loadingMessage = .message("Loading...")
-            let success = await store.newEntryFromSearchResults(results)
-            if success {
-                appReview.record(origin == .regular ? .regularSearchAdd : .batchSearchAdd)
-                ToastCenter.global.loadingMessage = nil
-                withAnimation {
-                    newEntriesAddedToggle.toggle()
-                    if let id = results.first?.libraryIdentity {
-                        jumpToEntryInLibrary(withID: id)
-                    }
-                }
-            }
-        }
     }
 }

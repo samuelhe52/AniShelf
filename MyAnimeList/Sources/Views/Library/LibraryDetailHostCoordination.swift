@@ -102,7 +102,7 @@ import SwiftUI
         private var isRootPresentationActive: Bool {
             isSearching
                 || isShowingProfileSettings
-                || interaction.workflowPresentation != nil
+                || interaction.actions.workflowPresentation != nil
         }
 
         private func updateDetailHost() {

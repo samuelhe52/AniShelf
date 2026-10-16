@@ -1,5 +1,5 @@
 //
-//  LibraryView+Mac.swift
+//  MacLibraryView+Actions.swift
 //  AniShelf
 //
 //  Created by Claude Code on behalf of samuelhe52 on 2026/10/15.
@@ -9,66 +9,23 @@
     import DataProvider
     import SwiftUI
 
-    extension LibraryView {
-        /// The library window's sidebar and detail column. `detail` already carries the inspector.
-        func macLibrarySplitView(detail: some View) -> some View {
-            NavigationSplitView(columnVisibility: $macSidebarVisibility) {
-                MacLibrarySidebar(openCategoryManager: openCategoryManager)
-            } detail: {
-                detail
-                    .navigationSplitViewColumnWidth(min: 520, ideal: 900)
-            }
-            // Escape clears the selection from anywhere in the window. A focused field or open
-            // menu consumes Escape first.
-            .onExitCommand { macSelection.select([]) }
-            .modifier(
-                MacLibrarySelectionObservers(
-                    selection: macSelection,
-                    makeCommandActions: { macCommandActions },
-                    persistSelection: persistMacSelection
-                )
-            )
-            .onAppear(perform: restoreMacSelection)
-            .onChange(of: windowSceneIdentifier, initial: true) { _, identifier in
-                MacLibraryWindows.register(identifier, openWindow: openWindow)
-            }
-            .alert("Refresh all anime infos?", isPresented: $showRefreshAllMetadataAlert) {
-                Button("Refresh") { LibraryProfileSettingsActions(store: store).refreshInfos() }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This may take considerable time.")
-            }
-            .alert(
-                LocalizedStringResource("Delete Selected Anime?"),
-                isPresented: Binding(
-                    get: { macPendingBatchDeletion != nil },
-                    set: { if !$0 { macPendingBatchDeletion = nil } }
-                ),
-                presenting: macPendingBatchDeletion
-            ) { entries in
-                Button("Delete", role: .destructive) { deleteMacEntries(entries) }
-                Button("Cancel", role: .cancel) {}
-            } message: { entries in
-                Text(LocalizedStringResource("This will delete \(entries.count) selected anime from your library."))
-            }
-        }
-
+    extension MacLibraryView {
         /// The inspector's content, which follows this window's selection.
-        var macInspector: some View {
+        var inspector: some View {
             MacLibraryInspector(
                 store: store,
-                selection: macSelection,
+                selection: selection,
                 displayItems: visibleDisplayItems,
                 detailSessionStore: detailSessionStore,
-                editRequest: $macEditRequest,
+                editRequest: $editRequest,
                 scoringEnabled: scoringEnabled,
-                applyBatchAction: applyMacBatchAction,
-                deleteEntries: deleteMacEntries,
-                isPresented: $isMacInspectorShown
+                applyBatchAction: applyBatchAction,
+                deleteEntries: deleteEntries,
+                isPresented: $isInspectorShown
             )
         }
 
-        var macWindowTitle: Text {
+        var windowTitle: Text {
             switch store.macLibraryScope {
             case .all:
                 Text("All Anime")
@@ -87,8 +44,8 @@
         }
 
         /// Reads the selection, so only call it from a view that depends on the selection.
-        var macCommandActions: MacLibraryCommandActions {
-            let selectionCount = macSelection.ids.count
+        var commandActions: MacLibraryCommandActions {
+            let selectionCount = selection.ids.count
             return MacLibraryCommandActions(
                 addAnime: { openSearch(mode: .tmdb) },
                 findInLibrary: { isLibraryFindFocused = true },
@@ -100,15 +57,15 @@
                         }
                     }
                 ),
-                isInspectorPresented: isMacInspectorShown,
+                isInspectorPresented: isInspectorShown,
                 toggleInspector: toggleInspector,
                 hasSelection: selectionCount > 0,
                 hasBatchSelection: selectionCount > 1,
                 selectAll: selectAllDisplayedEntries,
-                clearSelection: { macSelection.select([]) },
+                clearSelection: { selection.select([]) },
                 openCategoryManager: openCategoryManager,
                 refreshAllMetadata: { showRefreshAllMetadataAlert = true },
-                targetEntry: macSelection.single.flatMap { store.repository.existingEntry(identity: $0) },
+                targetEntry: selection.single.flatMap { store.repository.existingEntry(identity: $0) },
                 openDetails: openDetails,
                 editEntry: editDetails,
                 toggleFavorite: { entry in
@@ -119,22 +76,22 @@
                         ToastCenter.global.unFavorited = true
                     }
                 },
-                shareEntry: { interaction.presentWorkflow(.sharing($0.libraryIdentity)) },
-                switchPoster: { interaction.presentWorkflow(.posterSelection($0.libraryIdentity)) },
-                deleteEntry: { interaction.prepareDeletion(for: $0) },
-                deleteSelection: { macPendingBatchDeletion = selectedMacEntries }
+                shareEntry: { actions.presentWorkflow(.sharing($0.libraryIdentity)) },
+                switchPoster: { actions.presentWorkflow(.posterSelection($0.libraryIdentity)) },
+                deleteEntry: { actions.prepareDeletion(for: $0) },
+                deleteSelection: { pendingBatchDeletion = selectedEntries }
             )
         }
 
         /// The selected entries in layout order.
-        private var selectedMacEntries: [AnimeEntry] {
-            let ids = macSelection.ids
+        private var selectedEntries: [AnimeEntry] {
+            let ids = selection.ids
             return visibleDisplayItems.filter { ids.contains($0.id) }.map(\.entry)
         }
 
         /// Selects an entry and shows it in the inspector, as double-click, Show Details, and
         /// an airing reminder do. Scope and Find give way when they hide the entry.
-        func revealInMacInspector(_ id: LibraryEntryIdentity) {
+        func revealInInspector(_ id: LibraryEntryIdentity) {
             if !visibleDisplayItems.contains(where: { $0.id == id }) {
                 libraryFindQuery = ""
                 if store.activeCategoryID != nil,
@@ -144,43 +101,43 @@
                 }
                 if !store.canRevealEntry(id) { store.resetFiltersToReveal(id) }
             }
-            showInMacInspector(id)
-            requestLibraryScroll(to: id)
+            showInInspector(id)
+            browse.requestScroll(to: id)
         }
 
         /// Makes an entry the selection and shows the inspector.
-        func showInMacInspector(_ id: LibraryEntryIdentity) {
-            macSelection.select([id])
-            if !isMacInspectorShown {
-                withAnimation { isMacInspectorShown = true }
+        func showInInspector(_ id: LibraryEntryIdentity) {
+            selection.select([id])
+            if !isInspectorShown {
+                withAnimation { isInspectorShown = true }
             }
         }
 
         func selectAllDisplayedEntries() {
-            macSelection.select(Set(visibleDisplayItems.map(\.id)))
+            selection.select(Set(visibleDisplayItems.map(\.id)))
         }
 
-        func applyMacBatchAction(_ entries: [AnimeEntry], _ action: LibraryBatchAction) {
+        func applyBatchAction(_ entries: [AnimeEntry], _ action: LibraryBatchAction) {
             guard !entries.isEmpty else { return }
             // A desktop selection stays until the user changes it, as in Finder, so several
             // actions can apply to it. Entries the action moves out of scope leave it.
             action.apply(to: entries)
-            refreshSelectionDisplayItemsIfNeeded()
+            pruneSelection()
             if entries.count >= 3 { appReview.record(.multiSelectAction) }
         }
 
-        func deleteMacEntries(_ entries: [AnimeEntry]) {
+        func deleteEntries(_ entries: [AnimeEntry]) {
             guard !entries.isEmpty else { return }
             let deleted = Set(entries.map(\.libraryIdentity))
             let scrollTarget = visibleDisplayItems.first { !deleted.contains($0.id) }?.id
             guard store.deleteEntries(entries) else { return }
-            requestLibraryScroll(to: scrollTarget)
-            refreshSelectionDisplayItemsIfNeeded()
+            browse.requestScroll(to: scrollTarget)
+            pruneSelection()
         }
 
         /// Remembers a single selection as the last-inspected entry, as iPad does for its
         /// inspector, so the next window opens on it.
-        private func persistMacSelection(_ ids: Set<LibraryEntryIdentity>) {
+        func persistSelection(_ ids: Set<LibraryEntryIdentity>) {
             if ids.isEmpty {
                 persistedLastInspectorDetailEntryIdentity = nil
             } else if ids.count == 1, let id = ids.first {
@@ -188,18 +145,18 @@
             }
         }
 
-        private func restoreMacSelection() {
-            guard macSelection.isEmpty,
+        func restoreSelection() {
+            guard selection.isEmpty,
                 let rawID = persistedLastInspectorDetailEntryIdentity,
                 let item = visibleDisplayItems.first(where: { $0.id.rawID == rawID })
             else { return }
-            macSelection.select([item.id])
+            selection.select([item.id])
         }
     }
 
-    /// The window state that depends on the selection, kept out of `LibraryView`'s body so a
+    /// The window state that depends on the selection, kept out of `MacLibraryView`'s body so a
     /// click does not recompute the library's display items.
-    fileprivate struct MacLibrarySelectionObservers: ViewModifier {
+    struct MacLibrarySelectionObservers: ViewModifier {
         let selection: MacLibrarySelection
         let makeCommandActions: () -> MacLibraryCommandActions
         let persistSelection: (Set<LibraryEntryIdentity>) -> Void

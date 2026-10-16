@@ -8,133 +8,71 @@
 import DataProvider
 import SwiftUI
 
-struct LibraryGridView: View {
-    @AppStorage(.libraryOpenDetailWithSingleTap) private var openDetailWithSingleTap = false
-    @Environment(\.libraryEntryDetailActivation) private var detailActivation
+// The Mac grid is `MacLibraryGrid`.
+#if !os(macOS)
+    struct LibraryGridView: View {
+        @AppStorage(.libraryOpenDetailWithSingleTap) private var openDetailWithSingleTap = false
+        @Environment(\.libraryEntryDetailActivation) private var detailActivation
 
-    @Environment(LibraryStore.self) private var store
-    @Environment(LibraryEntryInteractionState.self) var interaction
-    let detailActions: LibraryEntryDetailActions
-    let displayItems: [LibraryEntryDisplayItem]
-    @Binding var scrolledID: LibraryEntryIdentity?
-    let scrollRequest: LibraryScrollRequest?
-    let highlightRequest: LibraryHighlightRequest?
-    /// Whether the trailing inspector is showing; the grid reflows smoothly when it changes.
-    var isInspectorPresented = false
-    #if os(macOS)
-        @Environment(MacLibrarySelection.self) private var selection
-        nonisolated private static let minimumColumnWidth: CGFloat = 132
-        nonisolated private static let columnSpacing: CGFloat = 18
-        private let columns = [
-            GridItem(.adaptive(minimum: minimumColumnWidth, maximum: 168), spacing: columnSpacing)
-        ]
-        @FocusState private var isGridFocused: Bool
-        @State private var columnCount = 1
-    #else
+        @Environment(LibraryStore.self) private var store
+        @Environment(LibraryEntryInteractionState.self) private var interaction
+        @Environment(LibraryEntryActionState.self) private var actions
+        let detailActions: LibraryEntryDetailActions
+        let displayItems: [LibraryEntryDisplayItem]
+        @Binding var scrolledID: LibraryEntryIdentity?
+        let scrollRequest: LibraryScrollRequest?
+        let highlightRequest: LibraryHighlightRequest?
+        /// Whether the trailing inspector is showing; the grid reflows smoothly when it changes.
+        var isInspectorPresented = false
         private let columns = [GridItem(.adaptive(minimum: 104, maximum: 132), spacing: 10)]
-    #endif
 
-    var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(displayItems) { item in
-                        configuredGridItem(for: item)
-                            .geometryGroup()
+        var body: some View {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 16) {
+                        ForEach(displayItems) { item in
+                            configuredGridItem(for: item)
+                                .geometryGroup()
+                        }
                     }
-                }
-                .transaction(value: isInspectorPresented) { transaction in
-                    transaction.animation = .smooth(duration: 0.3)
-                }
-                .onChange(of: scrollRequest) { handleScrollRequest(proxy: proxy) }
-                .onAppear { onGridViewAppear(proxy: proxy) }
-                #if os(macOS)
-                    .onGeometryChange(for: Int.self) { geometry in
-                        Self.columnCount(forWidth: geometry.size.width)
-                    } action: {
-                        columnCount = $0
+                    .transaction(value: isInspectorPresented) { transaction in
+                        transaction.animation = .smooth(duration: 0.3)
                     }
-                #endif
-                .padding(.horizontal, 14)
-                .padding(.top, 6)
-                .padding(.bottom, 104)
-            }
-            .preferredNavigationBarScrollEdgeEffect()
-            .animation(.spring, value: store.groupStrategy)
-            .animation(.spring, value: store.sortReversed)
-            .animation(.spring, value: store.sortStrategy)
-            .animation(.spring, value: store.filters)
-            #if os(macOS)
-                .focusable()
-                .focusEffectDisabled()
-                .focused($isGridFocused)
-                .onKeyPress(keys: [.leftArrow, .rightArrow, .upArrow, .downArrow]) { press in
-                    moveSelection(press.key, proxy: proxy) ? .handled : .ignored
+                    .onChange(of: scrollRequest) { handleScrollRequest(proxy: proxy) }
+                    .onAppear { onGridViewAppear(proxy: proxy) }
+                    .padding(.horizontal, 14)
+                    .padding(.top, 6)
+                    .padding(.bottom, 104)
                 }
-                .onExitCommand { selection.select([]) }
-            #endif
-        }
-    }
-
-    #if os(macOS)
-        /// The number of columns an adaptive grid item fits into this width.
-        nonisolated private static func columnCount(forWidth width: CGFloat) -> Int {
-            max(1, Int((width + columnSpacing) / (minimumColumnWidth + columnSpacing)))
-        }
-
-        /// Arrow keys move the selection by one card, or by one row vertically.
-        private func moveSelection(_ key: KeyEquivalent, proxy: ScrollViewProxy) -> Bool {
-            guard !displayItems.isEmpty else { return false }
-            let offset =
-                switch key {
-                case .leftArrow: -1
-                case .rightArrow: 1
-                case .upArrow: -columnCount
-                default: columnCount
-                }
-            // At an edge the key is still consumed so the scroll view does not jump.
-            if let id = selection.move(by: offset, in: displayItems.map(\.id)) {
-                scrolledID = id
-                proxy.scrollTo(id)
+                .preferredNavigationBarScrollEdgeEffect()
+                .animation(.spring, value: store.groupStrategy)
+                .animation(.spring, value: store.sortReversed)
+                .animation(.spring, value: store.sortStrategy)
+                .animation(.spring, value: store.filters)
             }
-            return true
         }
-    #endif
 
-
-    private func handleScrollRequest(proxy: ScrollViewProxy) {
-        guard let entryID = scrollRequest?.entryID else { return }
-        withAnimation(.bouncy) {
-            proxy.scrollTo(entryID)
+        private func handleScrollRequest(proxy: ScrollViewProxy) {
+            guard let entryID = scrollRequest?.entryID else { return }
+            withAnimation(.bouncy) {
+                proxy.scrollTo(entryID)
+            }
         }
-    }
 
-    private func onGridViewAppear(proxy: ScrollViewProxy) {
-        if let scrolledID {
-            proxy.scrollTo(scrolledID, anchor: .center)
+        private func onGridViewAppear(proxy: ScrollViewProxy) {
+            if let scrolledID {
+                proxy.scrollTo(scrolledID, anchor: .center)
+            }
         }
-    }
 
-    private func configuredGridItem(for item: LibraryEntryDisplayItem) -> some View {
-        #if os(macOS)
-            // Desktop selection marks the chosen cards instead of dimming the others.
-            let baseItem = LibraryGridItem(
-                snapshot: item.snapshot,
-                showsSelectionRing: selection.ids.contains(item.id)
-            )
-            .highlightEffect(trigger: highlightRequest?.trigger(for: item.id))
-        #else
-            let baseItem = LibraryGridItem(
+        private func configuredGridItem(for item: LibraryEntryDisplayItem) -> some View {
+            LibraryGridItem(
                 snapshot: item.snapshot,
                 isSelected: !interaction.isMultiSelecting || interaction.isSelected(item.id)
             )
             .highlightEffect(trigger: highlightRequest?.trigger(for: item.id))
-        #endif
-
-        return
-            baseItem
             .contextMenu {
-                interaction.contextMenu(
+                actions.contextMenu(
                     for: item.entry,
                     toggleFavorite: toggleFavorite,
                     editEntry: editEntry
@@ -145,23 +83,8 @@ struct LibraryGridView: View {
                     .onAppear { scrolledID = item.id }
             }
             .modifier(gestures(for: item))
-    }
-
-    #if os(macOS)
-        private func gestures(for item: LibraryEntryDisplayItem) -> some ViewModifier {
-            LibraryGridMacClickModifier(
-                onClick: {
-                    isGridFocused = true
-                    scrolledID = item.id
-                    selection.click(item.id, .current, layoutIDs: displayItems.map(\.id))
-                },
-                onDoubleClick: {
-                    scrolledID = item.id
-                    openDetails(for: item.entry)
-                }
-            )
         }
-    #else
+
         private func gestures(for item: LibraryEntryDisplayItem) -> some ViewModifier {
             LibraryGridDetailGestureModifier(
                 isMultiSelecting: interaction.isMultiSelecting,
@@ -189,190 +112,72 @@ struct LibraryGridView: View {
                 }
             )
         }
-    #endif
 
-    private func toggleSelection(for id: LibraryEntryIdentity) {
-        interaction.toggleSelection(for: id)
+        private func toggleSelection(for id: LibraryEntryIdentity) {
+            interaction.toggleSelection(for: id)
+        }
+
+        private func openDetails(for entry: AnimeEntry) {
+            detailActions.open(entry)
+        }
+
+        private func editEntry(_ entry: AnimeEntry) {
+            detailActions.edit(entry)
+        }
+
+        private func toggleFavorite(_ entry: AnimeEntry) {
+            store.repository.toggleFavorite(entry)
+        }
     }
 
-    private func openDetails(for entry: AnimeEntry) {
-        detailActions.open(entry)
-    }
-
-    private func editEntry(_ entry: AnimeEntry) {
-        detailActions.edit(entry)
-    }
-
-    private func toggleFavorite(_ entry: AnimeEntry) {
-        store.repository.toggleFavorite(entry)
-    }
-}
-
-fileprivate struct LibraryGridDetailGestureModifier: ViewModifier {
-    let isMultiSelecting: Bool
-    let opensDetailOnSingleTap: Bool
-    let onPrimaryTap: () -> Void
-    let onFocusTap: () -> Void
-    let onDoubleTap: () -> Void
-
-    func body(content: Content) -> some View {
-        // Keep the card's recognizer tree stable when its detail host changes.
-        // Swapping tap wrappers here recreates card-local image loading state.
-        content
-            .simultaneousGesture(
-                TapGesture().onEnded {
-                    if isMultiSelecting || opensDetailOnSingleTap {
-                        onPrimaryTap()
-                    } else {
-                        onFocusTap()
-                    }
-                }
-            )
-            .simultaneousGesture(
-                TapGesture(count: 2).onEnded {
-                    guard !isMultiSelecting, !opensDetailOnSingleTap else { return }
-                    onDoubleTap()
-                }
-            )
-    }
-}
-
-#if os(macOS)
-    fileprivate struct LibraryGridMacClickModifier: ViewModifier {
-        let onClick: () -> Void
-        let onDoubleClick: () -> Void
+    fileprivate struct LibraryGridDetailGestureModifier: ViewModifier {
+        let isMultiSelecting: Bool
+        let opensDetailOnSingleTap: Bool
+        let onPrimaryTap: () -> Void
+        let onFocusTap: () -> Void
+        let onDoubleTap: () -> Void
 
         func body(content: Content) -> some View {
+            // Keep the card's recognizer tree stable when its detail host changes.
+            // Swapping tap wrappers here recreates card-local image loading state.
             content
-                .simultaneousGesture(TapGesture().onEnded(onClick))
-                .simultaneousGesture(TapGesture(count: 2).onEnded(onDoubleClick))
+                .simultaneousGesture(
+                    TapGesture().onEnded {
+                        if isMultiSelecting || opensDetailOnSingleTap {
+                            onPrimaryTap()
+                        } else {
+                            onFocusTap()
+                        }
+                    }
+                )
+                .simultaneousGesture(
+                    TapGesture(count: 2).onEnded {
+                        guard !isMultiSelecting, !opensDetailOnSingleTap else { return }
+                        onDoubleTap()
+                    }
+                )
         }
+    }
+
+    #Preview {
+        @Previewable let store = LibraryStore(dataProvider: .forPreview)
+        @Previewable let interaction = LibraryEntryInteractionState()
+
+        LibraryGridView(
+            detailActions: LibraryEntryDetailActions(
+                open: { _ in },
+                edit: { _ in }
+            ),
+            displayItems: store.libraryDisplayItems,
+            scrolledID: .constant(nil),
+            scrollRequest: nil,
+            highlightRequest: nil
+        )
+        .onAppear {
+            DataProvider.forPreview.generateEntriesForPreview()
+        }
+        .environment(store)
+        .environment(interaction)
+        .environment(interaction.actions)
     }
 #endif
-
-fileprivate struct LibraryGridItem: View {
-    var snapshot: LibraryEntrySnapshot
-    var isSelected: Bool = true
-    var showsSelectionRing = false
-    private let posterShape = RoundedRectangle(cornerRadius: 16, style: .continuous)
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            poster
-            titleLabel
-        }
-        .opacity(selectionOpacity)
-        .scaleEffect(selectionScale)
-        .contentShape(.rect)
-        .animation(.bouncy(duration: 0.18, extraBounce: 0.1), value: isSelected)
-    }
-
-    private var poster: some View {
-        Color.clear
-            .aspectRatio(2.0 / 3.0, contentMode: .fit)
-            .overlay { posterImage }
-            .overlay(alignment: .topLeading) { statusIndicator }
-            .overlay(alignment: .topTrailing) { favoriteIndicator }
-            .overlay(alignment: .bottom) { progressBar }
-            .overlay {
-                posterShape
-                    .stroke(.white.opacity(0.08), lineWidth: 1)
-            }
-            .clipShape(posterShape)
-            .overlay {
-                if showsSelectionRing {
-                    posterShape
-                        .inset(by: -3.5)
-                        .stroke(Color.accentColor, lineWidth: 3)
-                }
-            }
-            .shadow(color: .black.opacity(0.22), radius: 11, y: 6)
-    }
-
-    private var posterImage: some View {
-        KFImageView(
-            url: snapshot.displayPosterURL(for: .grid),
-            targetWidth: 360,
-            diskCacheExpiration: .longTerm
-        )
-        .scaledToFill()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private var titleLabel: some View {
-        Text(snapshot.title)
-            .font(.system(size: 11.5, weight: .semibold))
-            .foregroundStyle(.primary.opacity(0.88))
-            .multilineTextAlignment(.leading)
-            .lineLimit(2)
-            .lineSpacing(-1)
-            .truncationMode(.tail)
-            .frame(maxWidth: .infinity, minHeight: 28, alignment: .topLeading)
-    }
-
-    private var statusIndicator: some View {
-        LibraryWatchStatusIndicator(
-            status: snapshot.watchStatus,
-            diameter: 10,
-            strokeColor: .white.opacity(0.88),
-            strokeWidth: 1.8,
-            shadowColor: .black.opacity(0.22),
-            shadowRadius: 4,
-            shadowYOffset: 2
-        )
-        .padding(8)
-    }
-
-    private var progressBar: some View {
-        LibraryPosterEpisodeProgressBar(
-            fractionCompleted: snapshot.episodeProgressFraction,
-            style: .compact
-        )
-    }
-
-    @ViewBuilder
-    private var favoriteIndicator: some View {
-        if snapshot.isFavorite {
-            LibraryFavoriteSymbol(
-                isFavorite: true,
-                font: .system(size: 11, weight: .bold),
-                filledColor: .pink.opacity(0.92),
-                emptyColor: .pink.opacity(0.92),
-                shadowColor: .black.opacity(0.55),
-                shadowRadius: 5,
-                shadowYOffset: 2
-            )
-            .padding(8)
-        }
-    }
-
-    private var selectionOpacity: Double {
-        isSelected ? 1 : 0.48
-    }
-
-    private var selectionScale: CGFloat {
-        isSelected ? 1 : 0.95
-    }
-}
-
-#Preview {
-    @Previewable let store = LibraryStore(dataProvider: .forPreview)
-
-    LibraryGridView(
-        detailActions: LibraryEntryDetailActions(
-            open: { _ in },
-            edit: { _ in }
-        ),
-        displayItems: store.libraryDisplayItems,
-        scrolledID: .constant(nil),
-        scrollRequest: nil,
-        highlightRequest: nil
-    )
-    .onAppear {
-        DataProvider.forPreview.generateEntriesForPreview()
-    }
-    .environment(store)
-    #if os(macOS)
-        .environment(MacLibrarySelection())
-    #endif
-}

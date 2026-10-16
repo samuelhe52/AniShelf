@@ -88,7 +88,7 @@ struct LibraryEntryInteractionStateTests {
             #expect(state.focusedEntryID == entry.libraryIdentity)
             #expect(state.presentedDetailEntryID == entry.libraryIdentity)
             #expect(request.entryIdentity == entry.libraryIdentity)
-            #expect(state.workflowPresentation == nil)
+            #expect(state.actions.workflowPresentation == nil)
 
             let hostPresentation = try #require(state.detailHostPresentation)
             #expect(request.hostPresentationID == hostPresentation.id)
@@ -103,38 +103,40 @@ struct LibraryEntryInteractionStateTests {
         }
     #endif
 
-    @Test @MainActor func multiSelectionDoesNotReplaceFocusedEntry() {
-        let state = LibraryEntryInteractionState()
-        let entry = AnimeEntry.template(id: 42)
-        state.focus(entry)
+    #if !os(macOS)
+        @Test @MainActor func multiSelectionDoesNotReplaceFocusedEntry() {
+            let state = LibraryEntryInteractionState()
+            let entry = AnimeEntry.template(id: 42)
+            state.focus(entry)
 
-        state.enterMultiSelection()
-        let firstSelection = LibraryEntryIdentity(entryType: .movie, tmdbID: 7)
-        let secondSelection = LibraryEntryIdentity(entryType: .series, tmdbID: 9)
-        state.toggleSelection(for: firstSelection)
-        state.toggleSelection(for: secondSelection)
+            state.enterMultiSelection()
+            let firstSelection = LibraryEntryIdentity(entryType: .movie, tmdbID: 7)
+            let secondSelection = LibraryEntryIdentity(entryType: .series, tmdbID: 9)
+            state.toggleSelection(for: firstSelection)
+            state.toggleSelection(for: secondSelection)
 
-        #expect(state.focusedEntryID == entry.libraryIdentity)
-        #expect(state.selectedEntryIDs == [firstSelection, secondSelection])
-    }
+            #expect(state.focusedEntryID == entry.libraryIdentity)
+            #expect(state.selectedEntryIDs == [firstSelection, secondSelection])
+        }
 
-    @Test @MainActor func multiSelectionDistinguishesEntryTypesWithTheSameTMDbID() {
-        let state = LibraryEntryInteractionState()
-        let movie = AnimeEntry(name: "Movie", type: .movie, tmdbID: 42)
-        let series = AnimeEntry(name: "Series", type: .series, tmdbID: 42)
+        @Test @MainActor func multiSelectionDistinguishesEntryTypesWithTheSameTMDbID() {
+            let state = LibraryEntryInteractionState()
+            let movie = AnimeEntry(name: "Movie", type: .movie, tmdbID: 42)
+            let series = AnimeEntry(name: "Series", type: .series, tmdbID: 42)
 
-        state.enterMultiSelection()
-        state.toggleSelection(for: movie.libraryIdentity)
-        state.toggleSelection(for: series.libraryIdentity)
+            state.enterMultiSelection()
+            state.toggleSelection(for: movie.libraryIdentity)
+            state.toggleSelection(for: series.libraryIdentity)
 
-        #expect(state.selectedEntryIDs.count == 2)
-        #expect(state.isSelected(movie.libraryIdentity))
-        #expect(state.isSelected(series.libraryIdentity))
-        #expect(LibraryEntrySnapshot(entry: movie).id != LibraryEntrySnapshot(entry: series).id)
-    }
+            #expect(state.selectedEntryIDs.count == 2)
+            #expect(state.isSelected(movie.libraryIdentity))
+            #expect(state.isSelected(series.libraryIdentity))
+            #expect(LibraryEntrySnapshot(entry: movie).id != LibraryEntrySnapshot(entry: series).id)
+        }
+    #endif
 
     @Test @MainActor func workflowPresentationsUseTypeQualifiedIdentity() throws {
-        let state = LibraryEntryInteractionState()
+        let state = LibraryEntryActionState()
         let movie = AnimeEntry(name: "Movie", type: .movie, tmdbID: 42)
         let series = AnimeEntry(name: "Series", type: .series, tmdbID: 42)
 
@@ -155,16 +157,16 @@ struct LibraryEntryInteractionStateTests {
             state.setEditingEntry(entry)
             let detailPresentationID = state.detailPresentation?.id
 
-            state.presentWorkflow(.sharing(entry.libraryIdentity))
+            state.actions.presentWorkflow(.sharing(entry.libraryIdentity))
 
             #expect(state.detailEditRequest == nil)
             #expect(state.detailPresentation?.id == detailPresentationID)
-            #expect(state.workflowPresentation?.workflow == .sharing(entry.libraryIdentity))
+            #expect(state.actions.workflowPresentation?.workflow == .sharing(entry.libraryIdentity))
         }
     #endif
 
     @Test @MainActor func pasteConfirmationResolvesTheCurrentModelByIdentity() throws {
-        let state = LibraryEntryInteractionState()
+        let state = LibraryEntryActionState()
         let original = AnimeEntry.template(id: 42)
         original.notes = "Original model"
         let replacement = AnimeEntry.template(id: 42)
@@ -184,7 +186,7 @@ struct LibraryEntryInteractionStateTests {
     }
 
     @Test @MainActor func stalePasteCallbacksCannotAffectANewerRequest() throws {
-        let state = LibraryEntryInteractionState()
+        let state = LibraryEntryActionState()
         let first = AnimeEntry.template(id: 41)
         first.notes = "First original"
         let second = AnimeEntry.template(id: 42)
@@ -407,7 +409,7 @@ struct LibraryEntryInteractionStateTests {
     #endif
 
     @Test @MainActor func staleWorkflowDismissalCannotCloseAReopenedWorkflow() throws {
-        let state = LibraryEntryInteractionState()
+        let state = LibraryEntryActionState()
         let entry = AnimeEntry.template(id: 42)
         let workflow = LibraryEntryWorkflow.sharing(entry.libraryIdentity)
         state.presentWorkflow(workflow)

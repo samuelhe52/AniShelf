@@ -12,12 +12,12 @@
 
     /// Actions the key window's library publishes for the menu bar.
     ///
-    /// Menu commands act on whichever window is key, so each `LibraryView` publishes its own
+    /// Menu commands act on whichever window is key, so each `MacLibraryView` publishes its own
     /// actions through `focusedSceneValue`.
     struct MacLibraryCommandActions {
         var addAnime: () -> Void
         var findInLibrary: () -> Void
-        var viewStyle: Binding<LibraryView.LibraryViewStyle>
+        var viewStyle: Binding<LibraryViewStyle>
         var isInspectorPresented: Bool
         var toggleInspector: () -> Void
         var hasSelection: Bool
@@ -78,7 +78,7 @@
             CommandGroup(before: .sidebar) {
                 if let library {
                     Picker("View As", selection: library.viewStyle) {
-                        ForEach(Array(LibraryView.LibraryViewStyle.platformCases.enumerated()), id: \.element) {
+                        ForEach(Array(LibraryViewStyle.macCases.enumerated()), id: \.element) {
                             index, style in
                             Text(style.nameKey)
                                 .tag(style)
@@ -88,7 +88,7 @@
                     .pickerStyle(.inline)
                 } else {
                     // Keeps the menu's layout stable while no library window is key.
-                    ForEach(LibraryView.LibraryViewStyle.platformCases, id: \.self) { style in
+                    ForEach(LibraryViewStyle.macCases, id: \.self) { style in
                         Button(style.nameKey) {}.disabled(true)
                     }
                 }

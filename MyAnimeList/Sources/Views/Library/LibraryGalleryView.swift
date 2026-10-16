@@ -9,7 +9,7 @@ import DataProvider
 import Foundation
 import SwiftUI
 
-// The Mac has no Gallery; see `LibraryView.libraryViewStyle`.
+// The Mac has no Gallery; see `MacLibraryView.libraryViewStyle`.
 #if !os(macOS)
     struct LibraryGalleryView: View {
         @Environment(LibraryStore.self) private var store
@@ -192,12 +192,12 @@ import SwiftUI
         @ViewBuilder
         func contextMenu(for entry: AnimeEntry) -> some View {
             ControlGroup {
-                interaction.editButton(for: entry, editEntry: editEntry)
-                interaction.shareButton(for: entry)
+                interaction.actions.editButton(for: entry, editEntry: editEntry)
+                interaction.actions.shareButton(for: entry)
             }
-            interaction.switchPosterButton(for: entry)
-            interaction.savePosterButton(for: entry)
-            interaction.deleteButton(for: entry)
+            interaction.actions.switchPosterButton(for: entry)
+            interaction.actions.savePosterButton(for: entry)
+            interaction.actions.deleteButton(for: entry)
         }
 
         private func openDetails() {

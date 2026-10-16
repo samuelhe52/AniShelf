@@ -6,214 +6,79 @@
 //
 
 import DataProvider
-import LibrarySync
 import SwiftUI
 
-struct LibraryScrollRequest: Equatable {
-    // Keep repeated explicit requests to the same entry observable.
-    let token = UUID()
-    let entryID: LibraryEntryIdentity?
-}
+#if !os(macOS)
+    /// The iOS and iPadOS library root. Entry detail opens as a sheet or an iPad inspector,
+    /// and batch actions use the multi-selection mode. The Mac root is `MacLibraryView`.
+    struct LibraryView: View {
+        // MARK: - Stored Properties
 
-struct LibraryHighlightRequest: Equatable {
-    // A fresh token restarts the pulse even when the same entry is requested again.
-    let token = UUID()
-    let entryID: LibraryEntryIdentity
-
-    /// Long enough for a row created late in the jump scroll to finish its pulse.
-    static let lifetime: Duration = .seconds(2.5)
-
-    func trigger(for entryID: LibraryEntryIdentity) -> UUID? {
-        self.entryID == entryID ? token : nil
-    }
-}
-
-struct LibraryView: View {
-    // MARK: - Stored Properties
-
-    @Environment(LibraryStore.self) var store
-    #if !os(macOS)
+        @Environment(LibraryStore.self) var store
         @Environment(\.platformHorizontalSizeClass) private var horizontalSizeClass
-    #endif
-    @Environment(\.windowSceneIdentifier) var windowSceneIdentifier
-    @Environment(AppReviewPromptController.self) var appReview
-    private let airingReminders = AiringReminderCoordinator.shared
+        @Environment(AppReviewPromptController.self) var appReview
 
-    @State var interaction = LibraryEntryInteractionState()
-    @State var detailSessionStore = EntryDetailSessionStore()
+        @State var interaction = LibraryEntryInteractionState()
+        @State var detailSessionStore = EntryDetailSessionStore()
+        @State var browse = LibraryBrowseState()
 
-    // UI state
-    @State var isSearching = false
-    @State private var showProfileSettings = false
-    @State private var showCategoryManager = false
-    @State private var isReorderingCategories = false
-    @State var scrollState = ScrollState()
-    @State var newEntriesAddedToggle = false
-    @State var highlightRequest: LibraryHighlightRequest?
-    // A jump from search waits for the sheet to finish dismissing so it is not hidden behind it.
-    @State var isSearchSheetOnScreen = false
-    @State var pendingJumpEntryID: LibraryEntryIdentity?
-    @State var scrollRequest: LibraryScrollRequest?
-    #if !os(macOS)
+        // UI state
+        @State private var showProfileSettings = false
+        @State private var showCategoryManager = false
+        @State private var isReorderingCategories = false
         @State private var inspectorDetailWorkspaceState = LibraryInspectorDetailWorkspaceState()
-    #endif
 
-    // Multi-selection snapshot: decouples selection rendering from live store
-    // recomputation so toggling items stays cheap. See LibraryView+MultiSelection.
-    @State var selectionDisplayItems: [LibraryEntryDisplayItem]?
-    @State var selectionLayoutIDs: [LibraryEntryIdentity]?
-    @State var selectionEntriesByID: [LibraryEntryIdentity: AnimeEntry] = [:]
+        // Multi-selection snapshot: decouples selection rendering from live store
+        // recomputation so toggling items stays cheap. See LibraryView+MultiSelection.
+        @State var selectionDisplayItems: [LibraryEntryDisplayItem]?
+        @State var selectionLayoutIDs: [LibraryEntryIdentity]?
+        @State var selectionEntriesByID: [LibraryEntryIdentity: AnimeEntry] = [:]
 
-    // Persistent UI preference
-    @AppStorage(.libraryViewStyle) private var storedLibraryViewStyle: LibraryViewStyle = .gallery
-    /// The library's view style. The Mac has no Gallery: a shelf paged one poster at a time
-    /// works against mouse and trackpad scrolling, and Grid with the inspector already shows
-    /// the artwork. A stored Gallery preference shows as Grid there.
-    var libraryViewStyle: LibraryViewStyle {
-        get {
-            #if os(macOS)
-                storedLibraryViewStyle == .gallery ? .grid : storedLibraryViewStyle
-            #else
-                storedLibraryViewStyle
-            #endif
-        }
-        nonmutating set { storedLibraryViewStyle = newValue }
-    }
-    @AppStorage(.libraryScoringEnabled) var scoringEnabled = true
-    @AppStorage(.libraryLastInspectorDetailEntryIdentity)
-    var persistedLastInspectorDetailEntryIdentity: String?
+        // Persistent UI preference
+        @AppStorage(.libraryViewStyle) var libraryViewStyle: LibraryViewStyle = .gallery
+        @AppStorage(.libraryScoringEnabled) var scoringEnabled = true
+        @AppStorage(.libraryLastInspectorDetailEntryIdentity)
+        var persistedLastInspectorDetailEntryIdentity: String?
 
-    #if os(macOS)
-        @Environment(\.openSettings) private var openSettings
-        @Environment(\.openWindow) var openWindow
-        @State var searchInitialMode: SearchMode?
-        /// The toolbar Find text. Per window, unlike the sidebar scope.
-        @State var libraryFindQuery = ""
-        @State var isLibraryFindFocused = false
-        @State var macSidebarVisibility: NavigationSplitViewVisibility = .automatic
-        /// This window's selection. Only views that depend on it read it (see `MacLibrarySelection`).
-        @State var macSelection = MacLibrarySelection()
-        /// Whether this window shows its inspector, independent of the selection.
-        @SceneStorage("libraryInspectorShown") var isMacInspectorShown = true
-        @State var macEditRequest: MacEntryEditRequest?
-        @State var showRefreshAllMetadataAlert = false
-        /// The batch the Delete menu command asked to delete, awaiting confirmation.
-        @State var macPendingBatchDeletion: [AnimeEntry]?
-    #endif
+        // MARK: - Body
 
-    // MARK: - Body
+        var body: some View {
+            ZStack {
+                libraryNavigation
+                    .opacity(showProfileSettings ? 0 : 1)
+                    .allowsHitTesting(!showProfileSettings)
+                    .accessibilityHidden(showProfileSettings)
 
-    var body: some View {
-        ZStack {
-            libraryNavigation
-                .opacity(showProfileSettings ? 0 : 1)
-                .allowsHitTesting(!showProfileSettings)
-                .accessibilityHidden(showProfileSettings)
-
-            if showProfileSettings {
-                LibraryProfileSettingsView {
-                    closeProfileSettings()
+                if showProfileSettings {
+                    LibraryProfileSettingsView {
+                        closeProfileSettings()
+                    }
+                    .transition(profileSettingsTransition)
+                    .zIndex(1)
                 }
-                .transition(profileSettingsTransition)
-                .zIndex(1)
             }
-        }
-        .animation(profileSettingsAnimation, value: showProfileSettings)
-        .onChange(of: scoringEnabled) { _, newValue in
-            guard !newValue, store.groupStrategy == .score else { return }
-            store.groupStrategy = .none
-        }
-        #if !os(macOS)
-            // The Mac inspector follows the window's selection instead (`MacLibraryInspector`).
+            .animation(profileSettingsAnimation, value: showProfileSettings)
             .libraryDetailHostCoordination(
                 store: store,
                 interaction: interaction,
                 detailSessionStore: detailSessionStore,
                 horizontalSizeClass: horizontalSizeClass,
-                isSearching: isSearching,
+                isSearching: browse.isSearching,
                 isShowingProfileSettings: showProfileSettings,
                 workspaceState: $inspectorDetailWorkspaceState,
                 persistedLastInspectorDetailEntryIdentity: $persistedLastInspectorDetailEntryIdentity
             )
-        #endif
-        .onChange(of: store.libraryRevision) {
-            refreshSelectionDisplayItemsIfNeeded()
-        }
-        .onChange(of: store.filters) {
-            refreshSelectionDisplayItemsIfNeeded()
-        }
-        .onChange(of: store.groupStrategy) {
-            refreshSelectionDisplayItemsIfNeeded()
-        }
-        .onChange(of: store.sortStrategy) {
-            refreshSelectionDisplayItemsIfNeeded()
-        }
-        .onChange(of: store.sortReversed) {
-            refreshSelectionDisplayItemsIfNeeded()
-        }
-        .onChange(of: store.hideDroppedByDefault) {
-            refreshSelectionDisplayItemsIfNeeded()
-        }
-        #if os(macOS)
-            .onChange(of: libraryFindQuery) {
-                refreshSelectionDisplayItemsIfNeeded()
-            }
-        #endif
-        .onChange(of: store.activeCategoryID) {
-            // onChange does not reliably inherit the switch's animation, and
-            // the selection snapshot is what the list renders while selecting.
-            withAnimation(.snappy) {
-                refreshSelectionDisplayItemsIfNeeded()
-            }
-        }
-        .task(id: highlightRequest?.token) {
-            // Expire the request so rows recreated later by scrolling or filtering do not pulse again.
-            guard highlightRequest != nil,
-                (try? await Task.sleep(for: LibraryHighlightRequest.lifetime)) != nil
-            else { return }
-            highlightRequest = nil
-        }
-        .onChange(of: airingReminders.pendingRoute, initial: true) {
-            handleAiringReminderRoute()
-        }
-        .onChange(of: windowSceneIdentifier) {
-            handleAiringReminderRoute()
-        }
-        // A route targeting the closed window falls back to the remaining windows.
-        .onOtherWindowSceneClosed(than: windowSceneIdentifier) {
-            handleAiringReminderRoute()
-        }
-        .alert(
-            airingReminderWarningTitle,
-            isPresented: Binding(
-                get: { airingReminders.presentedWarning != nil },
-                set: { isPresented in
-                    if !isPresented {
-                        airingReminders.dismissPresentedWarning()
-                    }
-                }
+            .libraryWindowBehaviors(
+                store: store,
+                browse: browse,
+                openRoutedEntry: { entry in
+                    showProfileSettings = false
+                    openDetails(entry)
+                },
+                scopeDidChange: refreshSelectionDisplayItemsIfNeeded
             )
-        ) {
-            Button("OK") { airingReminders.dismissPresentedWarning() }
-        } message: {
-            Text(airingReminderWarningMessage)
         }
-        .sheet(isPresented: duplicateRepairPresented) {
-            LibraryDuplicateRepairSheet(store: store)
-                .presentationDetents([.large])
-                .presentationSizing(.page)
-                .macSheetFrame(width: 760, height: 640)
-        }
-    }
 
-    private var duplicateRepairPresented: Binding<Bool> {
-        Binding(
-            get: { store.requiresDuplicateRepair },
-            set: { _ in }
-        )
-    }
-
-    #if !os(macOS)
         /// Hosts entry detail in the iPad's trailing inspector.
         private var entryInspector: LibraryEntryInspectorModifier {
             LibraryEntryInspectorModifier(
@@ -224,50 +89,42 @@ struct LibraryView: View {
                 }
             )
         }
-    #endif
 
-    private var libraryNavigation: some View {
-        #if os(macOS)
-            let detailSession: EntryDetailSession? = nil
-        #else
+        private var libraryNavigation: some View {
             let detailSession = detailSessionStore.session(
                 for: interaction.presentedDetailEntryID
             )
-        #endif
-        let presentedSheetRoute = interaction.activeSheetRoute
-        let activeSheetRoute = Binding<LibraryEntrySheetRoute?>(
-            get: { interaction.activeSheetRoute },
-            set: { route in
-                guard route == nil, let presentedSheetRoute else { return }
-                interaction.sheetRouteDidDismiss(presentedSheetRoute)
-            }
-        )
+            let presentedSheetRoute = interaction.activeSheetRoute
+            let activeSheetRoute = Binding<LibraryEntrySheetRoute?>(
+                get: { interaction.activeSheetRoute },
+                set: { route in
+                    guard route == nil, let presentedSheetRoute else { return }
+                    interaction.sheetRouteDidDismiss(presentedSheetRoute)
+                }
+            )
 
-        return
-            libraryNavigationStack
-            #if !os(macOS)
+            return
+                libraryBrowserStack
                 .environment(\.libraryEntryDetailActivation, currentDetailActivation)
                 .modifier(entryInspector)
-            #endif
-            .sheet(item: activeSheetRoute) { route in
-                sheetContent(for: route, detailSession: detailSession)
-            }
-            .libraryEntryInteractionOverlays(
-                state: interaction,
-                deleteEntry: { entry in
-                    store.deleteEntry(entry) { requestLibraryScroll(to: $0) }
-                },
-                resolveEntry: { store.repository.existingEntry(identity: $0) }
-            )
-    }
+                .sheet(item: activeSheetRoute) { route in
+                    sheetContent(for: route, detailSession: detailSession)
+                }
+                .libraryEntryActionOverlays(
+                    state: interaction.actions,
+                    deleteEntry: { entry in
+                        store.deleteEntry(entry) { browse.requestScroll(to: $0) }
+                    },
+                    resolveEntry: { store.repository.existingEntry(identity: $0) }
+                )
+        }
 
-    @ViewBuilder
-    private func sheetContent(
-        for route: LibraryEntrySheetRoute,
-        detailSession: EntryDetailSession?
-    ) -> some View {
-        switch route {
-        #if !os(macOS)
+        @ViewBuilder
+        private func sheetContent(
+            for route: LibraryEntrySheetRoute,
+            detailSession: EntryDetailSession?
+        ) -> some View {
+            switch route {
             case .detail(let presentation):
                 if let detailSession {
                     detailHostContent(
@@ -276,13 +133,11 @@ struct LibraryView: View {
                     )
                     .presentationBackground(presentation.host.pageBackground)
                 }
-        #endif
-        case .workflow(let presentation):
-            workflowContent(for: presentation)
+            case .workflow(let presentation):
+                LibraryEntryWorkflowSheet(store: store, presentation: presentation)
+            }
         }
-    }
 
-    #if !os(macOS)
         private func detailHostContent(
             presentation: LibraryEntryDetailHostPresentation,
             session: EntryDetailSession
@@ -314,229 +169,149 @@ struct LibraryView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-    #endif
 
-    @ViewBuilder
-    private func workflowContent(for presentation: LibraryEntryWorkflowPresentation) -> some View {
-        if let entry = store.repository.existingEntry(
-            identity: presentation.workflow.entryIdentity
-        ) {
-            switch presentation.workflow {
-            case .posterSelection:
-                NavigationStack {
-                    PosterSelectionView(
-                        tmdbID: entry.tmdbID,
-                        type: entry.type,
-                        originalPosterLanguageCode: entry.originalLanguageCode
-                            ?? entry.parentSeriesEntry?.originalLanguageCode
-                    ) { url in
-                        if url != entry.posterURL || !entry.usingCustomPoster {
-                            entry.updateCustomPosterURL(url)
-                        }
-                    }
-                    .navigationTitle("Pick a poster")
+        private var libraryBrowserStack: some View {
+            NavigationStack {
+                ZStack {
+                    libraryView
                 }
-            case .sharing:
-                AnimeSharingSheet(entry: entry)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var libraryNavigationStack: some View {
-        #if os(macOS)
-            // The inspector is attached to the library column inside the split view: attached
-            // outside it, AppKit counted the inspector's width twice in the window's minimum.
-            macLibrarySplitView(
-                detail:
-                    libraryBrowserStack
-                    .inspector(isPresented: $isMacInspectorShown) { macInspector }
-                    .environment(macSelection)
-            )
-        #else
-            libraryBrowserStack
-        #endif
-    }
-
-    private var libraryBrowserStack: some View {
-        NavigationStack {
-            ZStack {
-                libraryView
-            }
-            .safeAreaInset(edge: .top, spacing: 0) {
-                if showsCategoryStrip {
-                    LibraryCategoryStrip(
-                        openCategoryManager: openCategoryManager,
-                        allowsCategoryActions: !interaction.isMultiSelecting,
-                        isReordering: $isReorderingCategories
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    if showsCategoryStrip {
+                        LibraryCategoryStrip(
+                            openCategoryManager: openCategoryManager,
+                            allowsCategoryActions: !interaction.isMultiSelecting,
+                            isReordering: $isReorderingCategories
+                        )
+                    }
+                }
+                // The strip can appear from paths without an animation transaction, such as the
+                // first category created from the selection menu or arriving through sync.
+                .animation(.snappy, value: showsCategoryStrip)
+                .toolbar {
+                    LibraryToolbar(
+                        store: store,
+                        interaction: interaction,
+                        libraryViewStyle: libraryViewStyleBinding,
+                        scoringEnabled: scoringEnabled,
+                        isSearching: $browse.isSearching,
+                        selectionEntriesByID: selectionEntriesByID,
+                        supportsMultiSelection: supportsMultiSelection,
+                        showsCategoryStrip: showsCategoryStrip,
+                        isReorderingCategories: $isReorderingCategories,
+                        enterMultiSelection: enterMultiSelection,
+                        exitMultiSelection: exitMultiSelection,
+                        applyBatchAction: applyBatchAction,
+                        deleteSelectedEntries: deleteSelectedEntries,
+                        openProfileSettings: openProfileSettings,
+                        openCategoryManager: openCategoryManager
                     )
                 }
-            }
-            // The strip can appear from paths without an animation transaction, such as the
-            // first category created from the selection menu or arriving through sync.
-            .animation(.snappy, value: showsCategoryStrip)
-            .toolbar {
-                LibraryToolbar(
-                    store: store,
-                    interaction: interaction,
-                    libraryViewStyle: libraryViewStyleBinding,
-                    scoringEnabled: scoringEnabled,
-                    isSearching: $isSearching,
-                    selectionEntriesByID: selectionEntriesByID,
-                    supportsMultiSelection: supportsMultiSelection,
-                    showsCategoryStrip: showsCategoryStrip,
-                    isReorderingCategories: $isReorderingCategories,
-                    enterMultiSelection: enterMultiSelection,
-                    exitMultiSelection: exitMultiSelection,
-                    applyBatchAction: applyBatchAction,
-                    deleteSelectedEntries: deleteSelectedEntries,
-                    openProfileSettings: openProfileSettings,
-                    openCategoryManager: openCategoryManager,
-                    addAnime: { openSearch(mode: .tmdb) }
-                )
-            }
-            .environment(interaction)
-            #if os(macOS)
-                .searchable(
-                    text: $libraryFindQuery,
-                    isPresented: $isLibraryFindFocused,
-                    placement: .toolbar,
-                    prompt: Text("Find in Library")
-                )
-                .navigationTitle(macWindowTitle)
-                .modifier(MacLibrarySubtitle(selection: macSelection, visibleCount: visibleDisplayItems.count))
-            #else
+                .environment(interaction)
+                .environment(interaction.actions)
                 .navigationTitle("")
                 .inlineNavigationTitle()
-            #endif
-            .animation(libraryViewStyleAnimation, value: libraryViewStyle)
-            .sensoryFeedback(.success, trigger: newEntriesAddedToggle)
-            .onChange(of: showsCategoryStrip) {
-                if !showsCategoryStrip { isReorderingCategories = false }
-            }
-            .onChange(of: interaction.isMultiSelecting) {
-                isReorderingCategories = false
-            }
-            .onChange(of: isSearching) {
-                if isSearching {
-                    isReorderingCategories = false
-                    isSearchSheetOnScreen = true
+                .animation(libraryViewStyleAnimation, value: libraryViewStyle)
+                .onChange(of: showsCategoryStrip) {
+                    if !showsCategoryStrip { isReorderingCategories = false }
                 }
+                .onChange(of: interaction.isMultiSelecting) {
+                    isReorderingCategories = false
+                }
+                .onChange(of: browse.isSearching) {
+                    if browse.isSearching { isReorderingCategories = false }
+                }
+                .sheet(isPresented: $showCategoryManager) {
+                    LibraryCategoryManagerSheet()
+                        .presentationDetents([.medium, .large])
+                }
+                .libraryBrowseSearch(browse, store: store, appReview: appReview, reveal: { _ in })
+                .allowsHitTesting(!showProfileSettings)
+                .accessibilityHidden(showProfileSettings)
             }
-            .sheet(isPresented: $showCategoryManager) {
-                LibraryCategoryManagerSheet()
-                    .presentationDetents([.medium, .large])
-            }
-            .librarySearchSheet(
-                isPresented: $isSearching,
-                checkDuplicate: store.containsEntry,
-                canRevealEntry: store.canRevealEntry,
-                resetFiltersToReveal: store.resetFiltersToReveal,
-                processTMDbSearchResults: processTMDbSearchResults,
-                jumpToEntryInLibrary: jumpToEntryInLibrary,
-                onDismiss: searchSheetDidDismiss,
-                initialMode: macSearchInitialMode
-            )
-            .allowsHitTesting(!showProfileSettings)
-            .accessibilityHidden(showProfileSettings)
         }
-    }
 
-    private var showsCategoryStrip: Bool {
-        #if os(macOS)
-            // The sidebar lists the categories on the Mac.
-            return false
-        #endif
-        // Stays during multi-selection; switching keeps only still-visible selections.
-        // With no categories yet, the toolbar capsule menu stands in for a lone "All" chip.
-        store.categoriesEnabled && store.categoryStripEnabled && !store.categories.isEmpty
-            && supportsMultiSelection
-    }
+        private var showsCategoryStrip: Bool {
+            // Stays during multi-selection; switching keeps only still-visible selections.
+            // With no categories yet, the toolbar capsule menu stands in for a lone "All" chip.
+            store.categoriesEnabled && store.categoryStripEnabled && !store.categories.isEmpty
+                && supportsMultiSelection
+        }
 
-    // MARK: - Content
+        // MARK: - Content
 
-    @ViewBuilder
-    private var libraryView: some View {
-        let displayItems = selectionDisplayItems ?? visibleDisplayItems
-        let layoutIDs = selectionLayoutIDs ?? displayItems.map(\.id)
-        let detailActions = LibraryEntryDetailActions(
-            open: openDetails,
-            edit: editDetails
-        )
+        @ViewBuilder
+        private var libraryView: some View {
+            let displayItems = selectionDisplayItems ?? store.libraryDisplayItems
+            let layoutIDs = selectionLayoutIDs ?? displayItems.map(\.id)
+            let detailActions = LibraryEntryDetailActions(
+                open: openDetails,
+                edit: editDetails
+            )
 
-        switch libraryViewStyle {
-        case .gallery:
-            #if os(macOS)
-                // Never reached: the Mac shows a stored Gallery preference as Grid.
-                EmptyView()
-            #else
-                libraryViewPage(id: .gallery, layoutIDs: layoutIDs) {
+            @Bindable var scrollState = browse.scrollState
+            switch libraryViewStyle {
+            case .gallery:
+                LibraryEntryPage(id: .gallery, layoutIDs: layoutIDs) {
                     LibraryGalleryView(
                         scrolledID: $scrollState.scrolledID,
-                        scrollRequest: scrollRequest,
+                        scrollRequest: browse.scrollRequest,
                         detailActions: detailActions
                     )
                     .scenePadding(.vertical)
                     .ignoresSafeArea(.keyboard, edges: .bottom)
                 }
-            #endif
-        case .list:
-            libraryViewPage(id: .list, layoutIDs: layoutIDs) {
-                LibraryListView(
-                    detailActions: detailActions,
-                    displayItems: displayItems,
-                    scrolledID: $scrollState.scrolledID,
-                    scrollRequest: scrollRequest,
-                    highlightRequest: highlightRequest
-                )
-                .safeAreaPadding(.bottom, 20)
-            }
-        case .grid:
-            libraryViewPage(id: .grid, layoutIDs: layoutIDs) {
-                LibraryGridView(
-                    detailActions: detailActions,
-                    displayItems: displayItems,
-                    scrolledID: $scrollState.scrolledID,
-                    scrollRequest: scrollRequest,
-                    highlightRequest: highlightRequest,
-                    isInspectorPresented: isInspectorShown
-                )
-                .safeAreaPadding(.bottom, 20)
-            }
-        }
-    }
-
-    private var libraryViewStyleBinding: Binding<LibraryViewStyle> {
-        Binding(
-            get: { libraryViewStyle },
-            set: { newValue in
-                guard newValue != libraryViewStyle else { return }
-                withAnimation(libraryViewStyleAnimation) {
-                    libraryViewStyle = newValue
+            case .list:
+                LibraryEntryPage(id: .list, layoutIDs: layoutIDs) {
+                    LibraryListView(
+                        detailActions: detailActions,
+                        displayItems: displayItems,
+                        scrolledID: $scrollState.scrolledID,
+                        scrollRequest: browse.scrollRequest,
+                        highlightRequest: browse.highlightRequest
+                    )
+                    .safeAreaPadding(.bottom, 20)
+                }
+            case .grid:
+                LibraryEntryPage(id: .grid, layoutIDs: layoutIDs) {
+                    LibraryGridView(
+                        detailActions: detailActions,
+                        displayItems: displayItems,
+                        scrolledID: $scrollState.scrolledID,
+                        scrollRequest: browse.scrollRequest,
+                        highlightRequest: browse.highlightRequest,
+                        isInspectorPresented: interaction.inspectorPresentation != nil
+                    )
+                    .safeAreaPadding(.bottom, 20)
                 }
             }
-        )
-    }
+        }
 
-    private var libraryViewStyleAnimation: Animation {
-        LibraryViewTransitions.libraryViewStyleAnimation()
-    }
+        private var libraryViewStyleBinding: Binding<LibraryViewStyle> {
+            Binding(
+                get: { libraryViewStyle },
+                set: { newValue in
+                    guard newValue != libraryViewStyle else { return }
+                    withAnimation(libraryViewStyleAnimation) {
+                        libraryViewStyle = newValue
+                    }
+                }
+            )
+        }
 
-    private var libraryViewTransition: AnyTransition {
-        LibraryViewTransitions.libraryViewTransition()
-    }
+        private var libraryViewStyleAnimation: Animation {
+            LibraryViewTransitions.libraryViewStyleAnimation()
+        }
 
-    private var profileSettingsAnimation: Animation {
-        LibraryViewTransitions.profileSettingsAnimation()
-    }
+        private var profileSettingsAnimation: Animation {
+            LibraryViewTransitions.profileSettingsAnimation()
+        }
 
-    private var profileSettingsTransition: AnyTransition {
-        LibraryViewTransitions.profileSettingsTransition()
-    }
+        private var profileSettingsTransition: AnyTransition {
+            LibraryViewTransitions.profileSettingsTransition()
+        }
 
-    // MARK: - Entry Actions
+        // MARK: - Entry Actions
 
-    #if !os(macOS)
         private var detailHostPolicy: LibraryEntryDetailHostPolicy {
             LibraryEntryDetailHostPolicy(horizontalSizeClass: horizontalSizeClass)
         }
@@ -555,61 +330,21 @@ struct LibraryView: View {
         }
 
         private var isRootPresentationActive: Bool {
-            isSearching
+            browse.isSearching
                 || showProfileSettings
-                || interaction.workflowPresentation != nil
+                || interaction.actions.workflowPresentation != nil
         }
-    #endif
 
-    func openDetails(_ entry: AnimeEntry) {
-        #if os(macOS)
-            revealInMacInspector(entry.libraryIdentity)
-        #else
+        func openDetails(_ entry: AnimeEntry) {
             prepareAndConfigureDetailHost(for: entry)
             interaction.openDetails(for: entry)
-        #endif
-    }
-
-    private func handleAiringReminderRoute() {
-        // A window whose scene is already disconnected is being torn down and must not consume the route.
-        if let windowSceneIdentifier, !WindowScenes.canReceiveRoute(windowSceneIdentifier) {
-            return
         }
-        guard
-            let entryIdentityRawID = airingReminders.claimPendingRoute(
-                forSceneIdentifier: windowSceneIdentifier,
-                isSceneConnected: WindowScenes.canReceiveRoute
-            )
-        else { return }
-        guard let entry = store.repository.existingEntry(identityRawID: entryIdentityRawID) else {
-            return
-        }
-        isSearching = false
-        showProfileSettings = false
-        openDetails(entry)
-    }
 
-    private var airingReminderWarningMessage: LocalizedStringResource {
-        airingReminders.presentedWarning?.localizedMessage
-            ?? "Some reminders could not be scheduled."
-    }
-
-    private var airingReminderWarningTitle: LocalizedStringResource {
-        airingReminders.presentedWarning?.localizedTitle
-            ?? "Reminder Scheduling Issue"
-    }
-
-    func editDetails(_ entry: AnimeEntry) {
-        #if os(macOS)
-            revealInMacInspector(entry.libraryIdentity)
-            macEditRequest = MacEntryEditRequest(entryIdentity: entry.libraryIdentity)
-        #else
+        func editDetails(_ entry: AnimeEntry) {
             prepareAndConfigureDetailHost(for: entry)
             interaction.setEditingEntry(entry)
-        #endif
-    }
+        }
 
-    #if !os(macOS)
         private func prepareAndConfigureDetailHost(for entry: AnimeEntry) {
             LibraryDetailHostCoordination.prepareDetailSession(
                 for: entry,
@@ -634,93 +369,37 @@ struct LibraryView: View {
             else { return nil }
             return interaction.detailEditRequest?.id
         }
-    #endif
 
-    func requestLibraryScroll(to entryID: LibraryEntryIdentity?) {
-        scrollState.scrolledID = entryID
-        scrollRequest = LibraryScrollRequest(entryID: entryID)
-    }
-
-    private func openProfileSettings() {
-        #if os(macOS)
-            openSettings()
-            return
-        #endif
-        isReorderingCategories = false
-        withAnimation(profileSettingsAnimation) {
-            showProfileSettings = true
-        }
-    }
-
-    func openCategoryManager() {
-        isReorderingCategories = false
-        showCategoryManager = true
-    }
-
-    private func closeProfileSettings() {
-        withAnimation(profileSettingsAnimation) {
-            showProfileSettings = false
-        }
-    }
-
-    private func libraryViewPage<Content: View>(
-        id: LibraryViewStyle,
-        layoutIDs: [LibraryEntryIdentity],
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        content()
-            .id(id)
-            .animation(.default, value: layoutIDs)
-            .transition(libraryViewTransition)
-    }
-
-    // MARK: - Types
-
-    enum LibraryViewStyle: String, CaseIterable {
-        case gallery
-        case list
-        case grid
-
-        /// The styles this platform offers; the Mac has no Gallery (see `libraryViewStyle`).
-        static var platformCases: [LibraryViewStyle] {
-            #if os(macOS)
-                [.list, .grid]
-            #else
-                allCases
-            #endif
-        }
-
-        var nameKey: LocalizedStringKey {
-            switch self {
-            case .gallery: "Gallery"
-            case .list: "List"
-            case .grid: "Grid"
+        private func openProfileSettings() {
+            isReorderingCategories = false
+            withAnimation(profileSettingsAnimation) {
+                showProfileSettings = true
             }
         }
 
-        var systemImageName: String {
-            switch self {
-            case .gallery: "photo.on.rectangle.angled"
-            case .list: "list.bullet.rectangle.portrait"
-            case .grid: "rectangle.grid.3x2.fill"
+        func openCategoryManager() {
+            isReorderingCategories = false
+            showCategoryManager = true
+        }
+
+        private func closeProfileSettings() {
+            withAnimation(profileSettingsAnimation) {
+                showProfileSettings = false
             }
         }
-
     }
-}
 
-#Preview {
-    // dataProvider could be changed to .forPreview for memory-only storage.
-    // Uncomment the task below to generate template entries.
-    @Previewable let store = LibraryStore(dataProvider: .forPreview)
-    LibraryView()
-        .onAppear {
-            DataProvider.forPreview.generateEntriesForPreview()
-        }
-        .environment(store)
-}
+    #Preview {
+        // dataProvider could be changed to .forPreview for memory-only storage.
+        // Uncomment the task below to generate template entries.
+        @Previewable let store = LibraryStore(dataProvider: .forPreview)
+        LibraryView()
+            .onAppear {
+                DataProvider.forPreview.generateEntriesForPreview()
+            }
+            .environment(store)
+    }
 
-#if !os(macOS)
     fileprivate struct LibraryEntryInspectorModifier: ViewModifier {
         let interaction: LibraryEntryInteractionState
         let detailSession: EntryDetailSession?

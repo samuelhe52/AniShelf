@@ -8,7 +8,7 @@
 import DataProvider
 import LibrarySync
 
-// iPad inspector restoration; the Mac restores its window selection in `LibraryView+Mac`.
+// iPad inspector restoration; the Mac restores its window selection in `MacLibraryView+Actions`.
 #if !os(macOS)
     enum LibraryInspectorDetailPersistenceAction: Equatable {
         case clear

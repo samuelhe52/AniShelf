@@ -65,14 +65,6 @@ extension View {
             self
         #endif
     }
-
-    @ViewBuilder func selectionEditMode(_ active: Bool) -> some View {
-        #if os(macOS)
-            self
-        #else
-            environment(\.editMode, .constant(active ? .active : .inactive))
-        #endif
-    }
 }
 
 extension ToolbarItemPlacement {
