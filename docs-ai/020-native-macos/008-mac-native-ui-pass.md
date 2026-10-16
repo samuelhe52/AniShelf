@@ -8,7 +8,7 @@ working from source) answered separately. Their findings were merged into a
 24-item list. After `71ab52f` the maintainer asked both to recheck the list
 against HEAD (`47fbfe5`), discuss it, and agree on the most critical items.
 Codex rechecked every item and inspected a snapshot build with computer use
-(round `u1`, screenshots in the untracked `.build/mac-review/u1/`). The two
+(round `u1`; its screenshots were local and not retained). The two
 agreed on the set below on 2026-10-16, before any code changed.
 
 Status: **Implemented and committed** (`b6ebfe9`..`c62364b`, listed under

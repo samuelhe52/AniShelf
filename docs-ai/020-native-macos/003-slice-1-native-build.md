@@ -44,8 +44,7 @@ tests.
 
 ## Validation
 
-Run by Codex on 2026-10-15; reports and logs are in the untracked
-`.build/mac-review/s1/` directory.
+Run by Codex on 2026-10-15; its reports and logs were local and not retained.
 
 - `make build-mac` and `make build` both passed.
 - `make test-app-sim APP_TEST_ONLY='MyAnimeListTests/AnimeSharingTests MyAnimeListTests/TMDbImageAndTranslationTests MyAnimeListTests/LibraryProfileSettingsLayoutPolicyTests'`:

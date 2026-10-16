@@ -6,8 +6,7 @@ Last slice of [002-implementation-decisions.md](002-implementation-decisions.md)
 keyboard and focus, windows and tabs, resizing, light and dark appearance,
 localization, the app icon, and the full regression runs. Roles are the same as
 in slices 2 and 3. Every computer-use round (`s4a`–`s4d`) ran against a copied
-snapshot under the untracked `.build/mac-review/` directory and left the
-library at 137 entries.
+snapshot build outside the source tree and left the library at 137 entries.
 
 ## Change
 

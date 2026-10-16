@@ -6,8 +6,8 @@ Second slice of [002-implementation-decisions.md](002-implementation-decisions.m
 Partway through slice 1 the maintainer changed the roles: Claude Code became the
 primary implementer, and one Codex session (GPT-6.1 Sol, high effort, Fast tier)
 drives the built app with computer use, returns screenshots, and reviews code.
-Every round below ran against a copied snapshot build under the untracked
-`.build/mac-review/` directory, so inspection never raced source edits.
+Every round below ran against a copied snapshot build outside the source tree,
+so inspection never raced source edits.
 
 ## Change
 
@@ -133,8 +133,8 @@ Slice 3 still has to validate these at runtime.
 - Builds: `make build-mac` and `make build` pass.
 - iOS tests: `make test-app-sim APP_TEST_ONLY='MyAnimeListTests/LibraryEntryInteractionStateTests MyAnimeListTests/LibraryProfileSettingsLayoutPolicyTests MyAnimeListTests/LibraryProfileSettingsStateTests MyAnimeListTests/LibrarySyncNotificationBridgeTests MyAnimeListTests/AppLifecycleEventGateTests MyAnimeListTests/AnimeSharingTests MyAnimeListTests/LibraryGalleryLayoutPolicyTests'`
   passed on the already booted iPhone 18 Pro simulator.
-- Computer-use rounds `s2a`–`s2g` (screenshots and reports in
-  `.build/mac-review/`):
+- Computer-use rounds `s2a`–`s2g` (screenshots and reports were local and not
+  retained):
   - Sidebar scopes and two-window scope sync.
   - Grid and List selection, including ⌘ and ⇧ clicks and arrow keys.
   - Inspector open/close at minimum and wide widths, without crashing.

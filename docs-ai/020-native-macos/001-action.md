@@ -53,8 +53,8 @@ Key source paths:
    blockers were few. SHContainers was removed because it was unused and
    UIKit-only. The rest were handled with small shims; see 003.
 2. **Feature exercise:** every listed area was exercised through computer use
-   against snapshot builds (rounds `s1`–`s4d`, reports in the untracked
-   `.build/mac-review/`). Purchases went only as far as loading prices.
+   against snapshot builds (rounds `s1`–`s4d`; screenshots and reports were
+   local and not retained). Purchases went only as far as loading prices.
 3. **Desktop behavior:** keyboard focus, menus, ⇧/⌘ selection, resizing, sheets,
    multiple windows and tabs, last-window close and reopen, and quit were
    checked manually. Sleep/wake and the quit-time flush timeout were reviewed in

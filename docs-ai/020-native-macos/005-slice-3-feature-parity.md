@@ -36,7 +36,7 @@ turned off again.
 - `make test-app-sim APP_TEST_ONLY='MyAnimeListTests/TMDbImageAndTranslationTests MyAnimeListTests/AnimeSharingTests MyAnimeListTests/UserEntryInfoAndLibraryStatsTests MyAnimeListTests/LibrarySyncNotificationBridgeTests'`
   passed on the booted iPhone 18 Pro simulator.
 - `make build` and `make build-mac` pass.
-- Rounds `s3a`–`s3c` (screenshots and reports in `.build/mac-review/`)
+- Rounds `s3a`–`s3c` (screenshots and reports were local and not retained)
   confirmed these flows:
   - Add (single, and Batch Add navigation).
   - Inspector editing: status, score, favorite, dates, episode stepper, notes
