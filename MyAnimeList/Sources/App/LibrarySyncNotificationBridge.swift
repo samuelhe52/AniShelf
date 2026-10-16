@@ -62,16 +62,6 @@
             now.addingTimeInterval(6 * 60 * 60)
         }
 
-        nonisolated static func airingReminderRoute(
-            requestIdentifier: String,
-            userInfo: [AnyHashable: Any]
-        ) -> String? {
-            guard requestIdentifier.hasPrefix(AiringReminderManager.requestIdentifierPrefix) else {
-                return nil
-            }
-            return userInfo[AiringReminderPayloadKey.subscriptionID] as? String
-        }
-
         func application(
             _ application: UIApplication,
             didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -151,33 +141,11 @@
         }
     }
 
-    extension LibrarySyncNotificationBridge: UNUserNotificationCenterDelegate {
-        nonisolated func userNotificationCenter(
-            _ center: UNUserNotificationCenter,
-            willPresent notification: UNNotification
-        ) async -> UNNotificationPresentationOptions {
-            guard
-                notification.request.identifier.hasPrefix(
-                    AiringReminderManager.requestIdentifierPrefix
-                )
-            else {
-                return []
-            }
-            return [.banner, .list, .sound]
-        }
-
-        nonisolated func userNotificationCenter(
-            _ center: UNUserNotificationCenter,
-            didReceive response: UNNotificationResponse
+    extension LibrarySyncNotificationBridge {
+        nonisolated func openAiringReminder(
+            entryIdentityRawID: String,
+            response: UNNotificationResponse
         ) async {
-            guard
-                let entryIdentityRawID = Self.airingReminderRoute(
-                    requestIdentifier: response.notification.request.identifier,
-                    userInfo: response.notification.request.content.userInfo
-                )
-            else {
-                return
-            }
             // The response is immutable; its target scene is only read on the main actor below.
             nonisolated(unsafe) let response = response
             await MainActor.run {

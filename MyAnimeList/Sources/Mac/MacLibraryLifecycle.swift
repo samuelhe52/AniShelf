@@ -89,16 +89,6 @@
             reminderRefreshActivity = activity
         }
 
-        nonisolated static func airingReminderRoute(
-            requestIdentifier: String,
-            userInfo: [AnyHashable: Any]
-        ) -> String? {
-            guard requestIdentifier.hasPrefix(AiringReminderManager.requestIdentifierPrefix) else {
-                return nil
-            }
-            return userInfo[AiringReminderPayloadKey.subscriptionID] as? String
-        }
-
         func applicationWillFinishLaunching(_ notification: Notification) {
             // Set before launch finishes so a click that launched the app is still delivered.
             UNUserNotificationCenter.current().delegate = self
@@ -169,33 +159,11 @@
         }
     }
 
-    extension LibrarySyncNotificationBridge: UNUserNotificationCenterDelegate {
-        nonisolated func userNotificationCenter(
-            _ center: UNUserNotificationCenter,
-            willPresent notification: UNNotification
-        ) async -> UNNotificationPresentationOptions {
-            guard
-                notification.request.identifier.hasPrefix(
-                    AiringReminderManager.requestIdentifierPrefix
-                )
-            else {
-                return []
-            }
-            return [.banner, .list, .sound]
-        }
-
-        nonisolated func userNotificationCenter(
-            _ center: UNUserNotificationCenter,
-            didReceive response: UNNotificationResponse
+    extension LibrarySyncNotificationBridge {
+        nonisolated func openAiringReminder(
+            entryIdentityRawID: String,
+            response: UNNotificationResponse
         ) async {
-            guard
-                let entryIdentityRawID = Self.airingReminderRoute(
-                    requestIdentifier: response.notification.request.identifier,
-                    userInfo: response.notification.request.content.userInfo
-                )
-            else {
-                return
-            }
             await MainActor.run {
                 // macOS reports no target scene: the frontmost library window opens the entry,
                 // or a new one does when every library window is closed.
