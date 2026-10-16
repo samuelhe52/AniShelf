@@ -13,7 +13,7 @@ snapshot build outside the source tree and left the library at 137 entries.
 | Area | Mac behavior and reason |
 | --- | --- |
 | Grid keyboard | The grid scroll view takes focus on click. ←/→ move the inspected entry by one card and ↑/↓ by one row. The row length is computed from the measured width with the same rule as the adaptive `GridItem`. Moves go through the click path (`click(id, .replace)`), so a later ⇧-click extends from the keyboard position. Escape clears the selection. List and Gallery already had arrow keys; the grid, the default Mac view, did not. |
-| Scope and inspector | A sidebar or filter change that hides the inspected entry closes the inspector (`dismissInspectorOutsideScope`), as a Finder selection does not survive changing folders. Only scope changes trigger it: changing the entry's own status in the inspector leaves it open even when the entry leaves the current scope. A batch selection already dropped hidden entries through the multi-select snapshot. Found when a scope change in one tab left the other tab inspecting an out-of-scope entry. |
+| Scope and inspector | A sidebar or filter change that hides the inspected entry closes the inspector (`dismissInspectorOutsideScope`), as a Finder selection does not survive changing folders. Only scope changes trigger it: changing the entry's own status in the inspector leaves it open even when the entry leaves the current scope. A batch selection already dropped hidden entries through the multi-select snapshot. Found when a scope change in one tab left the other tab inspecting an out-of-scope entry. (Superseded by [021](../021-mac-selection-model/000-plan.md): a scope change now narrows the selection, and the inspector stays.) |
 | Toolbar browse menu | On the Mac, the sort/group/filter capsule shows only its glyphs. AppKit sizes a toolbar item once, so a label that grew from "All" to "Watching" collapsed to "…". The scope is already the window title. Combined filters, which match no sidebar row, now title the window "N Filters" instead of "Library". |
 | Picker labels | Segmented pickers that sit under their own heading hide their label (sharing Language and Export Size, reminder timing, anime info language). macOS draws a picker's label beside the control; iOS never did for segmented pickers, so iOS is unchanged. |
 | App icon | The `AppIcon` set gains the ten macOS sizes, generated from the iOS artwork in the macOS icon template: an 824pt continuous-corner squircle centered on a 1024pt canvas with a soft shadow. macOS does not mask a full-bleed square as iOS does. The build now emits `AppIcon.icns`. |
@@ -78,7 +78,7 @@ iOS behavior as it is:
 ## Refs
 
 - `MyAnimeList/Sources/Views/Library/LibraryGridView.swift`
-- `MyAnimeList/Sources/Views/Library/LibraryView+Desktop.swift`
+- `LibraryView+Desktop.swift`, since split ([007](007-platform-boundary-refactor.md))
 - `MyAnimeList/Sources/Views/Library/LibraryView.swift`
 - `MyAnimeList/Sources/Views/Library/LibraryNavigationTitleCapsule.swift`
 - `MyAnimeList/Sources/Views/Library/LibraryToolbar.swift`

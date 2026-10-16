@@ -25,14 +25,18 @@ so inspection never raced source edits.
 - The toolbar (`LibraryToolbar.macContent`) holds the view-style segmented
   control, the existing sort/group/filter menu, Add Anime, Search, and an
   inspector toggle. During a batch selection it shows the batch actions instead.
+  (008 removed Search and moved the batch actions into the inspector.)
 
 ### Selection
+
+(Superseded by [021](../021-mac-selection-model/000-plan.md): the Mac now has its own per-window selection, and the
+inspector follows it without opening or closing.)
 
 - Grid: a click inspects one entry. ⌘-click toggles and ⇧-click extends a batch
   selection; the modifiers are read from the click event itself. Selected cards
   get an accent ring instead of the iOS dimming.
 - List: native `List` selection drives the same state machine
-  (`LibraryView+Desktop.swift`, `applyMacSelection`). Arrow keys move the
+  (`applyMacSelection`). Arrow keys move the
   inspected entry. The row's inert tap overlay is omitted on the Mac because it
   stole clicks and focus from the table. iOS keeps the overlay; see
   [014](../014-multiselect-invariants/000-plan.md).
@@ -43,12 +47,10 @@ so inspection never raced source edits.
 
 Entry detail stays in the trailing inspector. On the Mac the inspector is
 attached to the library column inside the split view
-(`LibraryEntryInspectorModifier`). The column's minimum width is 520pt, or 1000pt
-while the inspector is open, and its ideal width stays constant. (The
-inspector-open minimum was removed in [010](010-system-window-sizing.md); the
-loop did not reproduce with the smaller toolbar.)
+(`LibraryEntryInspectorModifier`). In this slice the column's minimum width was
+520pt, or 1000pt while the inspector was open, with a constant ideal width.
 
-Two failures led to this layout. Both were measured, not inferred:
+Three measurements led to this layout:
 
 - With the inspector attached outside the split view, AppKit counted the
   inspector's width twice in the window's minimum (1550pt on a 1512pt display).
@@ -58,19 +60,20 @@ Two failures led to this layout. Both were measured, not inferred:
   inspector put AppKit into an endless layout loop: 300 layout passes, then
   `NSGenericException`. The crash reproduced at launch with a restored
   inspector. Launch-flag bisection showed that only "fewer toolbar items" or "a
-  narrower inspector" avoided it, so the fix guarantees the column width rather
+  narrower inspector" avoided it, so the fix guaranteed the column width rather
   than removing toolbar items. A changing ideal width was rejected because it
   resized the window on every inspector open.
-- Even with the column inside the split view, AppKit widened the window when
-  the inspector opened near the minimum width, by up to 590pt and past the
-  screen edge. A temporary headless harness toggled the inspector and logged
-  window frames to confirm this. The library side needs about 600pt next to the
-  inspector before AppKit stops widening, which is where the 1000pt
-  inspector-open minimum comes from. (Superseded: [008](008-mac-native-ui-pass.md) lowered it
-  to 720pt once the toolbar lost Gallery and the Search button.)
-  `keepWindowWidthForInspector()` then restored the user's width, grew it only
-  to the new minimum, and clamped it to the visible screen. (Removed in
-  [010](010-system-window-sizing.md); AppKit's default sizing now applies.)
+- Even with the column inside the split view, AppKit widened the window when the
+  inspector opened near the minimum width, by up to 590pt and past the screen
+  edge. A temporary headless harness toggled the inspector and logged window
+  frames. About 600pt of library next to the inspector stopped the widening,
+  which set the 1000pt inspector-open minimum. `keepWindowWidthForInspector()`
+  then restored the user's width.
+
+[008](008-mac-native-ui.md) later removed the inspector-open minimum and the
+width correction once the smaller toolbar no longer triggered the loop. AppKit's
+default sizing applies, and [021](../021-mac-selection-model/000-plan.md) moved
+the inspector out of `LibraryEntryInspectorModifier`.
 
 ### Commands, Settings, sheets
 
@@ -87,7 +90,8 @@ Two failures led to this layout. Both were measured, not inferred:
   `SearchPage` initial mode.
 - The Settings scene (⌘,) hosts `LibraryProfileSettingsView`, which on the Mac
   becomes a System Settings–style split view: Overview (the library statistics
-  and App Info) plus the six settings pages. This replaces the planned tabbed
+  and App Info) plus the six settings pages. (008 moved App Info to the app and
+  Help menus.) This replaces the planned tabbed
   window; the settings pages already exist as sections, so the sidebar reuses
   them unchanged.
 - Settings text and controls that only apply to iOS are hidden on the Mac:
@@ -98,7 +102,8 @@ Two failures led to this layout. Both were measured, not inferred:
 - Mac sheets use `macSheetFrame(width:height:)`, because macOS sizes a sheet to
   its content's ideal size, which collapses lists. They also get a text Close
   button (`SheetCloseLabel`). The gallery gets hover arrows and ←/→ paging,
-  because a mouse wheel cannot scroll it sideways.
+  because a mouse wheel cannot scroll it sideways. (008 removed Gallery from the
+  Mac.)
 
 ### Early slice-3 work in this slice
 
@@ -152,7 +157,9 @@ Slice 3 still has to validate these at runtime.
   - `MyAnimeList/Sources/Mac/MacLibrarySidebar.swift`
   - `MyAnimeList/Sources/Mac/MacLibraryCommands.swift`
   - `MyAnimeList/Sources/Mac/MacSettingsRoot.swift`
-  - `MyAnimeList/Sources/Views/Library/LibraryView+Desktop.swift`
+  - `LibraryView+Desktop.swift`, since split into
+    `MyAnimeList/Sources/Views/Library/LibraryView+Commands.swift` and
+    `MyAnimeList/Sources/Mac/LibraryView+Mac.swift` ([007](007-platform-boundary-refactor.md))
 - Main changes:
   - `MyAnimeList/Sources/Views/Library/LibraryView.swift`
   - `LibraryToolbar.swift`, `LibraryGridView.swift`, `LibraryListView.swift`, `LibraryGalleryView.swift`

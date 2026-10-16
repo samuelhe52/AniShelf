@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Implemented (branch `feat/native-macos`, not merged); see [001-action.md](001-action.md) |
+| Status | Implemented on `feat/native-macos` (not merged); see [001-action.md](001-action.md) |
 | Anchor date | 2026-10-15 |
 | Origin | Maintainer requested a whole-app native macOS feasibility assessment, then asked to preserve it on the existing Mac branch |
 | Related | [Adaptive library](../005-adaptive-library/000-plan.md), [Background sync safety](../007-background-sync-safety/000-plan.md), [Multi-window presentation](../008-multi-window-presentation/000-plan.md), [Multi-selection invariants](../014-multiselect-invariants/000-plan.md) |
@@ -13,8 +13,9 @@ The question is whether AniShelf can gain a native SwiftUI macOS target with
 AppKit integration while retaining iPhone and iPad support. This differs from
 Mac Catalyst, which runs the UIKit-based application on macOS.
 
-The existing Mac branch already contains Catalyst configuration (`7f72f3f`) and
-Makefile targets (`8fffcfb`). It was renamed from `feature/mac-catalyst` to
+When this assessment was written, the Mac branch held Catalyst configuration and
+Makefile targets in two commits. The 2026-10-17 history cleanup folded those
+into the native build commit (`2e2c49c`). The branch was renamed from `feature/mac-catalyst` to
 `feature/native-macos` when this assessment was saved. The branch name expresses
 the proposed direction; the application remains configured for Catalyst.
 At this assessment's snapshot, `main` still uses Designed for iPhone/iPad on Mac.
@@ -81,7 +82,7 @@ Concrete new target and file names remain undecided.
 | Window ownership | `MyAnimeList/Sources/Views/Gadgets/WindowSceneIdentifierReader.swift`, `MyAnimeList/Sources/Utils/ShareSheetPresenter.swift`, `MyAnimeList/Sources/Views/Library/LibraryProfileSettings/LibraryProfileCloudSyncController.swift` | Replace UIKit scene identifiers and controller traversal with macOS window and presentation ownership | Medium–high |
 | Sync and notifications | `MyAnimeList/Sources/App/MyAnimeListApp.swift`, `MyAnimeList/Sources/App/LibrarySyncNotificationBridge.swift`, `MyAnimeList/Sources/App/LibrarySyncBackgroundExecutionController.swift` | Adapt delegate callbacks, APNs routing, termination/sleep behavior, pending sync, and reminder refresh | Medium–high |
 | Images and sharing | `MyAnimeList/Sources/ViewModels/Sharing/SharingCardExportPipeline.swift`, `MyAnimeList/Sources/ViewModels/Sharing/SharingCardRenderer.swift`, `MyAnimeList/Sources/Extensions/UserEntryInfo+Pasteboard.swift` | Adapt image representation, pixel-scale handling, rendering/encoding, pasteboard, and share presentation | Medium |
-| Existing-user continuity | `DataProvider/Sources/DataProvider/DataProvider.swift`, `MyAnimeList/Sources/Utils/TMDbAPIKeyStorage.swift`, `MyAnimeList/MyAnimeList-macCatalyst.entitlements` | Verify store location, sandbox access, preferences, Keychain, CloudKit metadata, and offline changes under the intended app identity | High validation importance |
+| Existing-user continuity | `DataProvider/Sources/DataProvider/DataProvider.swift`, `MyAnimeList/Sources/Utils/TMDbAPIKeyStorage.swift`, the Catalyst entitlements file (since renamed `MyAnimeList/MyAnimeList-macOS.entitlements`) | Verify store location, sandbox access, preferences, Keychain, CloudKit metadata, and offline changes under the intended app identity | High validation importance |
 
 Two examples explain why this exceeds mechanical API substitution:
 
@@ -171,7 +172,6 @@ No action record is warranted until implementation proceeds.
 - Updated 2026-10-16: Slice 3 — feature parity (save panels, sheet buttons, SVG rasters, native Mac tests, lifecycle and sync validation) — see [005-slice-3-feature-parity.md](005-slice-3-feature-parity.md)
 - Updated 2026-10-16: Slice 4 — polish and validation (grid keyboard, scope-bound inspector, toolbar menu, app icon, light/localization/regression runs) — see [006-slice-4-polish.md](006-slice-4-polish.md)
 - Updated 2026-10-16: Platform boundary refactor and two fixes (search host during batch selection, Save Poster window) — see [007-platform-boundary-refactor.md](007-platform-boundary-refactor.md)
-- Updated 2026-10-16: Mac-native UI pass (compact inspector, episode controls, inline Find, inspector batch panel, compact List row, no Gallery, Settings forms, 720pt inspector minimum) — see [008-mac-native-ui-pass.md](008-mac-native-ui-pass.md)
-
-- Updated 2026-10-16: Inspector and settings regression follow-up — see [009-inspector-and-settings-follow-up.md](009-inspector-and-settings-follow-up.md)
-- Updated 2026-10-16: System window sizing (removed the inspector width correction, sidebar auto-collapse, and inspector-open column minimum) — see [010-system-window-sizing.md](010-system-window-sizing.md)
+- Updated 2026-10-16: Mac-native UI (compact inspector, episode controls, inline Find, batch panel, compact List rows, no Gallery, Settings forms, system window sizing; later the Mac app-info windows) — see [008-mac-native-ui.md](008-mac-native-ui.md)
+- Updated 2026-10-16: The Mac selection and inspector model was redesigned in its own entry, superseding the selection parts of 004, 006, and 008 — see [021](../021-mac-selection-model/000-plan.md)
+- Updated 2026-10-17: Records consolidated after the branch history was rewritten. The UI pass, its inspector and settings follow-up, and the window-sizing record were merged into 008; commit references now point to the rewritten history — see [001-action.md](001-action.md)
