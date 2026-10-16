@@ -66,40 +66,34 @@ struct EntryDetailView: View {
     }
 
     var body: some View {
+        pageWithPrompts
+            .task(id: "\(session.instanceID)-\(currentLanguage.rawValue)") {
+                await session.model.load(
+                    for: session.entry,
+                    language: currentLanguage
+                )
+                await session.refreshEpisodeCountsIfEligible(language: currentLanguage)
+            }
+            .task(id: broadcastActivationTaskID) {
+                session.broadcast.update(broadcastActivationTaskID.activation)
+            }
+            .onChange(of: session.instanceID) {
+                cancelConversionTask()
+            }
+            .onDisappear {
+                cancelConversionTask()
+            }
+    }
+
+    /// The scrolling page and its chrome.
+    private var page: some View {
         ZStack {
             ScrollViewReader { proxy in
                 ScrollView(showsIndicators: false) {
                     #if os(macOS)
                         macInspectorContent(proxy)
                     #else
-                    VStack(spacing: 0) {
-                        EntryDetailHeroSection(
-                            imageURL: session.model.heroImageURL
-                                ?? session.entry.backdropURL
-                                ?? session.entry.posterURL,
-                            logoImageURL: session.model.logoImageURL,
-                            displayTitle: session.model.displayTitle,
-                            subtitleText: session.model.subtitleText,
-                            metadataLineItems: session.model.metadataLineItems,
-                            genreNames: session.model.genreNames,
-                            accentColor: session.entry.favorite ? .orange : .blue,
-                            pageBackground: detailHost.pageBackground,
-                            scrollCoordinateSpaceName: scrollCoordinateSpaceName,
-                            height: heroHeight
-                        )
-
-                        VStack(alignment: .leading, spacing: 20) {
-                            quickActionsRow
-                                .padding(.top, -20)
-                                .padding(.bottom, 4)
-                            detailsContent(proxy)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 4)
-                        .padding(.bottom, 40)
-                        .frame(maxWidth: 1_000)
-                        .frame(maxWidth: .infinity)
-                    }
+                        iOSPageContent(proxy)
                     #endif
                 }
                 .scrollPosition($session.scrollPosition)
@@ -128,130 +122,99 @@ struct EntryDetailView: View {
         .interactiveDismissDisabled(
             session.entry.userInfoHasChanges(comparedTo: session.originalUserInfo)
         )
-        .sheet(item: activeSheetBinding, onDismiss: session.activeSheetDidDismiss) { activeSheet in
-            switch activeSheet {
-            case .broadcastValidation:
-                EntryDetailBroadcastValidationSheet(
-                    model: session.broadcast,
-                    searchTitle: broadcastTitleFallbackName,
-                    displayTitle: session.model.displayTitle
-                )
-                .presentationBackground(Color.platformSystemGroupedBackground)
-                .macSheetFrame(width: 600, height: 620)
-            case .changePoster:
-                NavigationStack {
-                    PosterSelectionView(
-                        tmdbID: session.entry.tmdbID,
-                        type: session.entry.type,
-                        originalPosterLanguageCode: session.entry.originalLanguageCode
-                            ?? session.entry.parentSeriesEntry?.originalLanguageCode
-                    ) { url in
-                        if url != session.entry.posterURL || !session.entry.usingCustomPoster {
-                            session.entry.updateCustomPosterURL(url)
-                        }
-                    }
-                    .navigationTitle(EntryDetailL10n.changePoster)
-                }
-            case .sharing:
-                AnimeSharingSheet(entry: session.entry)
+    }
+
+    /// The page with its sheets and the season conversion dialogs.
+    private var pageWithSheets: some View {
+        page
+            .sheet(item: activeSheetBinding, onDismiss: session.activeSheetDidDismiss) { activeSheet in
+                activeSheetContent(activeSheet)
             }
-        }
-        .confirmationDialog(
-            EntryDetailL10n.convertToWhichSeason,
-            isPresented: showSeasonPickerBinding,
-            titleVisibility: .visible
-        ) {
-            if session.conversion.isFetchingSeasons {
-                ProgressView()
-            } else if session.conversion.seasonNumberOptions.isEmpty {
-                Button(EntryDetailL10n.noSeasonsAvailable, role: .cancel) {}
-            } else {
-                ForEach(session.conversion.seasonNumberOptions, id: \.self) { seasonNumber in
-                    Button("Season \(seasonNumber)") {
-                        startConversionTask {
-                            await convertSeriesToSeason(seasonNumber: seasonNumber)
+            .confirmationDialog(
+                EntryDetailL10n.convertToWhichSeason,
+                isPresented: showSeasonPickerBinding,
+                titleVisibility: .visible
+            ) {
+                if session.conversion.isFetchingSeasons {
+                    ProgressView()
+                } else if session.conversion.seasonNumberOptions.isEmpty {
+                    Button(EntryDetailL10n.noSeasonsAvailable, role: .cancel) {}
+                } else {
+                    ForEach(session.conversion.seasonNumberOptions, id: \.self) { seasonNumber in
+                        Button("Season \(seasonNumber)") {
+                            startConversionTask {
+                                await convertSeriesToSeason(seasonNumber: seasonNumber)
+                            }
                         }
                     }
                 }
+                Button(EntryDetailL10n.cancel, role: .cancel) {}
             }
-            Button(EntryDetailL10n.cancel, role: .cancel) {}
-        }
-        .alert(
-            EntryDetailL10n.siblingSeasonExists,
-            isPresented: showSiblingSeasonWarningBinding
-        ) {
-            Button(EntryDetailL10n.convertAnyway, role: .destructive) {
-                startConversionTask {
-                    await convertSeasonToSeries()
+            .alert(
+                EntryDetailL10n.siblingSeasonExists,
+                isPresented: showSiblingSeasonWarningBinding
+            ) {
+                Button(EntryDetailL10n.convertAnyway, role: .destructive) {
+                    startConversionTask {
+                        await convertSeasonToSeries()
+                    }
                 }
+                Button(EntryDetailL10n.cancel, role: .cancel) {}
+            } message: {
+                Text(EntryDetailL10n.siblingSeasonExistsMessage)
             }
-            Button(EntryDetailL10n.cancel, role: .cancel) {}
-        } message: {
-            Text(EntryDetailL10n.siblingSeasonExistsMessage)
-        }
-        .alert(
-            EntryDetailL10n.markAsWatchedPromptTitle,
-            isPresented: isEpisodeProgressCompletionPromptPresented,
-            presenting: session.presentation.episodeProgressCompletionPrompt
-        ) { _ in
-            Button(EntryDetailL10n.markAsWatched) {
-                updatePresentation { $0.episodeProgressCompletionPrompt = nil }
-                requestWatchStatusChange(.watched)
-            }
-            Button(EntryDetailL10n.notNow, role: .cancel) {
-                updatePresentation { $0.episodeProgressCompletionPrompt = nil }
-            }
-        } message: { prompt in
-            Text(episodeProgressCompletionPromptMessage(for: prompt))
-        }
-        .alert(
-            EntryDetailL10n.updateDatesPromptTitle,
-            isPresented: isDateUpdateSuggestionPresented,
-            presenting: session.presentation.dateUpdateSuggestion
-        ) { suggestion in
-            Button(EntryDetailL10n.dateSuggestionActionTitle(for: suggestion)) {
-                updatePresentation { $0.dateUpdateSuggestion = nil }
-                withAnimation(.default) {
-                    session.entry.applyDateUpdateSuggestion(suggestion)
+    }
+
+    /// The page with the tracking prompts that follow status and progress changes.
+    private var pageWithPrompts: some View {
+        pageWithSheets
+            .alert(
+                EntryDetailL10n.markAsWatchedPromptTitle,
+                isPresented: isEpisodeProgressCompletionPromptPresented,
+                presenting: session.presentation.episodeProgressCompletionPrompt
+            ) { _ in
+                Button(EntryDetailL10n.markAsWatched) {
+                    updatePresentation { $0.episodeProgressCompletionPrompt = nil }
+                    requestWatchStatusChange(.watched)
                 }
-                schedulePendingWatchedReviewOpportunity()
+                Button(EntryDetailL10n.notNow, role: .cancel) {
+                    updatePresentation { $0.episodeProgressCompletionPrompt = nil }
+                }
+            } message: { prompt in
+                Text(episodeProgressCompletionPromptMessage(for: prompt))
             }
-            Button(EntryDetailL10n.later, role: .cancel) {
-                updatePresentation { $0.dateUpdateSuggestion = nil }
-                schedulePendingWatchedReviewOpportunity()
+            .alert(
+                EntryDetailL10n.updateDatesPromptTitle,
+                isPresented: isDateUpdateSuggestionPresented,
+                presenting: session.presentation.dateUpdateSuggestion
+            ) { suggestion in
+                Button(EntryDetailL10n.dateSuggestionActionTitle(for: suggestion)) {
+                    updatePresentation { $0.dateUpdateSuggestion = nil }
+                    withAnimation(.default) {
+                        session.entry.applyDateUpdateSuggestion(suggestion)
+                    }
+                    schedulePendingWatchedReviewOpportunity()
+                }
+                Button(EntryDetailL10n.later, role: .cancel) {
+                    updatePresentation { $0.dateUpdateSuggestion = nil }
+                    schedulePendingWatchedReviewOpportunity()
+                }
+            } message: { suggestion in
+                Text(EntryDetailL10n.dateSuggestionMessage(for: suggestion))
             }
-        } message: { suggestion in
-            Text(EntryDetailL10n.dateSuggestionMessage(for: suggestion))
-        }
-        .alert(
-            EntryDetailL10n.rewatchPromptTitle,
-            isPresented: showRewatchPromptBinding
-        ) {
-            Button(EntryDetailL10n.startRewatch) {
-                resolveRewatchPrompt(isRewatching: true)
+            .alert(
+                EntryDetailL10n.rewatchPromptTitle,
+                isPresented: showRewatchPromptBinding
+            ) {
+                Button(EntryDetailL10n.startRewatch) {
+                    resolveRewatchPrompt(isRewatching: true)
+                }
+                Button(EntryDetailL10n.notARewatch, role: .cancel) {
+                    resolveRewatchPrompt(isRewatching: false)
+                }
+            } message: {
+                Text(rewatchPromptMessage)
             }
-            Button(EntryDetailL10n.notARewatch, role: .cancel) {
-                resolveRewatchPrompt(isRewatching: false)
-            }
-        } message: {
-            Text(rewatchPromptMessage)
-        }
-        .task(id: "\(session.instanceID)-\(currentLanguage.rawValue)") {
-            await session.model.load(
-                for: session.entry,
-                language: currentLanguage
-            )
-            await session.refreshEpisodeCountsIfEligible(language: currentLanguage)
-        }
-        .task(id: broadcastActivationTaskID) {
-            session.broadcast.update(broadcastActivationTaskID.activation)
-        }
-        .onChange(of: session.instanceID) {
-            cancelConversionTask()
-        }
-        .onDisappear {
-            cancelConversionTask()
-        }
     }
 
     private var broadcastActivation: EntryDetailBroadcastModel.Activation {
@@ -349,6 +312,74 @@ struct EntryDetailView: View {
             onToggleDroppedStatus: toggleDroppedStatus
         )
     }
+
+    // MARK: - Sheets
+
+    @ViewBuilder
+    private func activeSheetContent(_ activeSheet: EntryDetailSheet) -> some View {
+        switch activeSheet {
+        case .broadcastValidation:
+            EntryDetailBroadcastValidationSheet(
+                model: session.broadcast,
+                searchTitle: broadcastTitleFallbackName,
+                displayTitle: session.model.displayTitle
+            )
+            .presentationBackground(Color.platformSystemGroupedBackground)
+            .macSheetFrame(width: 600, height: 620)
+        case .changePoster:
+            NavigationStack {
+                PosterSelectionView(
+                    tmdbID: session.entry.tmdbID,
+                    type: session.entry.type,
+                    originalPosterLanguageCode: session.entry.originalLanguageCode
+                        ?? session.entry.parentSeriesEntry?.originalLanguageCode
+                ) { url in
+                    if url != session.entry.posterURL || !session.entry.usingCustomPoster {
+                        session.entry.updateCustomPosterURL(url)
+                    }
+                }
+                .navigationTitle(EntryDetailL10n.changePoster)
+            }
+        case .sharing:
+            AnimeSharingSheet(entry: session.entry)
+        }
+    }
+
+    // MARK: - iOS Page
+
+    #if !os(macOS)
+        /// The iOS page: a hero with the title and quick actions, then the detail cards.
+        private func iOSPageContent(_ proxy: ScrollViewProxy) -> some View {
+            VStack(spacing: 0) {
+                EntryDetailHeroSection(
+                    imageURL: session.model.heroImageURL
+                        ?? session.entry.backdropURL
+                        ?? session.entry.posterURL,
+                    logoImageURL: session.model.logoImageURL,
+                    displayTitle: session.model.displayTitle,
+                    subtitleText: session.model.subtitleText,
+                    metadataLineItems: session.model.metadataLineItems,
+                    genreNames: session.model.genreNames,
+                    accentColor: session.entry.favorite ? .orange : .blue,
+                    pageBackground: detailHost.pageBackground,
+                    scrollCoordinateSpaceName: scrollCoordinateSpaceName,
+                    height: heroHeight
+                )
+
+                VStack(alignment: .leading, spacing: 20) {
+                    quickActionsRow
+                        .padding(.top, -20)
+                        .padding(.bottom, 4)
+                    detailsContent(proxy)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
+                .padding(.bottom, 40)
+                .frame(maxWidth: 1_000)
+                .frame(maxWidth: .infinity)
+            }
+        }
+    #endif
 
     // MARK: - Mac Inspector
 
