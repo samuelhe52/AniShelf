@@ -116,6 +116,8 @@ final class EntryDetailSession {
                 forKey: .entryDetailStaffExpandedByDefault,
                 defaultValue: false
             )
+        // The first frame shows the stored detail; the view's load task only refreshes it.
+        model.prepare(for: entry, language: .resolvedAnimeInfoLanguage())
     }
 
     func save() throws {

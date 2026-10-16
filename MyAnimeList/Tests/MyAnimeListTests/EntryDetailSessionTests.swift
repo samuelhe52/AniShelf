@@ -12,6 +12,25 @@ import Testing
 @testable import MyAnimeList
 
 struct EntryDetailSessionTests {
+    @Test @MainActor func newSessionShowsStoredDetailBeforeLoading() {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let entry = AnimeEntry(
+            name: "Series",
+            type: .series,
+            tmdbID: 42,
+            detail: AnimeEntryDetail(
+                language: Language.resolvedAnimeInfoLanguage().rawValue,
+                title: "Stored Detail",
+                subtitle: "Stored Subtitle"
+            )
+        )
+
+        let session = EntryDetailSession(entry: entry, repository: repository)
+
+        #expect(session.model.displayTitle == "Stored Detail")
+        #expect(session.model.subtitleText == "Stored Subtitle")
+    }
+
     @Test @MainActor func airingSeriesRefreshesPersistedSeasonCountWithoutRepeatingTheRequest()
         async throws
     {

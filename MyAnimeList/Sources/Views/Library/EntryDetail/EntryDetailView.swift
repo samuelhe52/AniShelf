@@ -112,6 +112,8 @@ struct EntryDetailView: View {
                     onEditingRequestHandled?(requestID)
                 }
             }
+            // A fetched detail fills in place; switching entries is not animated here.
+            .animation(fetchedDetailAnimation, value: session.model.fetchedDetailRevision)
             .id(session.instanceID)
             .transition(.opacity)
         }
@@ -274,8 +276,20 @@ struct EntryDetailView: View {
 
     // MARK: - Hero
 
-    private var entryReplacementAnimation: Animation {
-        .easeInOut(duration: 0.18)
+    /// The iPad inspector cross-fades to another entry.
+    ///
+    /// The Mac inspector swaps instantly, as Mail and Finder do; a fade there also draws its
+    /// material cards flat dark.
+    private var entryReplacementAnimation: Animation? {
+        #if os(macOS)
+            nil
+        #else
+            .easeInOut(duration: 0.18)
+        #endif
+    }
+
+    private var fetchedDetailAnimation: Animation {
+        .smooth(duration: 0.25)
     }
 
     private let editingSectionRevealDelay: Duration = .milliseconds(150)
