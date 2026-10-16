@@ -60,4 +60,4 @@ and grid modes.
 
 ## Amendments
 
-None yet.
+- Updated 2026-10-17: the selection snapshot (mechanism 1) is replaced by a store-owned display cache — see [002-store-display-cache.md](002-store-display-cache.md)
