@@ -136,12 +136,54 @@ class LibraryStore {
     /// The category the library is narrowed to; `nil` means All. Shared across windows, like `filters`.
     var activeCategoryID: LibraryCategory.ID?
 
-    var libraryOnDisplay: [AnimeEntry] {
-        filterAndSort(library)
+    /// Bumped when the cached display list goes stale, so views reading it re-render.
+    private var libraryDisplayGeneration = 0
+    @ObservationIgnored private var libraryDisplayCache: LibraryDisplayCache?
+    @ObservationIgnored private var isInvalidatingLibraryDisplay = false
+    /// How many times the display list was computed; tests use it to catch spurious invalidation.
+    @ObservationIgnored private(set) var libraryDisplayComputeCount = 0
+
+    var libraryDisplayItems: [LibraryEntryDisplayItem] { libraryDisplay.items }
+
+    var libraryDisplayIDs: [LibraryEntryIdentity] { libraryDisplay.ids }
+
+    var libraryOnDisplay: [AnimeEntry] { libraryDisplay.items.map(\.entry) }
+
+    /// The shown entry with this identity, if the current scope and filters show it.
+    func displayedEntry(for identity: LibraryEntryIdentity) -> AnimeEntry? {
+        libraryDisplay.entriesByID[identity]
     }
 
-    var libraryDisplayItems: [LibraryEntryDisplayItem] {
-        libraryOnDisplay.map(LibraryEntryDisplayItem.init)
+    /// The filtered, sorted display list, recomputed only after something it read changes.
+    ///
+    /// Observation tracking covers every input the computation reads, including the entries'
+    /// own properties, so unsaved edits such as favorite toggles invalidate it like saves do.
+    /// The cache is cleared in the input's `willSet` and rebuilt on the next read, which runs in
+    /// the mutating caller's transaction and keeps its animation.
+    private var libraryDisplay: LibraryDisplayCache {
+        _ = libraryDisplayGeneration
+        if let libraryDisplayCache { return libraryDisplayCache }
+        libraryDisplayComputeCount += 1
+        let cache = withObservationTracking {
+            LibraryDisplayCache(items: filterAndSort(library).map(LibraryEntryDisplayItem.init))
+        } onChange: { [weak self] in
+            if Thread.isMainThread {
+                MainActor.assumeIsolated { self?.invalidateLibraryDisplay() }
+            } else {
+                Task { @MainActor in self?.invalidateLibraryDisplay() }
+            }
+        }
+        if !isInvalidatingLibraryDisplay {
+            libraryDisplayCache = cache
+        }
+        return cache
+    }
+
+    private func invalidateLibraryDisplay() {
+        isInvalidatingLibraryDisplay = true
+        defer { isInvalidatingLibraryDisplay = false }
+        libraryDisplayCache = nil
+        libraryDisplayGeneration &+= 1
     }
 
     /// Whether the library already holds an entry, regardless of the active category or filters.

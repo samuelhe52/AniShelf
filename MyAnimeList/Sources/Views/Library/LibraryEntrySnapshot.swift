@@ -14,6 +14,24 @@ struct LibraryEntryDisplayItem: Identifiable {
     }
 }
 
+/// One computed library display list with the lookups its readers need.
+struct LibraryDisplayCache {
+    let items: [LibraryEntryDisplayItem]
+    let ids: [LibraryEntryIdentity]
+    let entriesByID: [LibraryEntryIdentity: AnimeEntry]
+
+    init(items: [LibraryEntryDisplayItem]) {
+        self.items = items
+        self.ids = items.map(\.id)
+        self.entriesByID = Dictionary(
+            items.map { ($0.id, $0.entry) },
+            uniquingKeysWith: { existing, candidate in
+                AnimeEntryDuplicateResolver.prefers(candidate, existing) ? candidate : existing
+            }
+        )
+    }
+}
+
 struct LibraryEntrySnapshot: Identifiable, Equatable {
     let id: LibraryEntryIdentity
     private let posterPath: String?

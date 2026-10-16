@@ -43,6 +43,36 @@ struct LibraryEntryInteractionStateTests {
             #expect(state.presentedDetailEntryID == nil)
         }
 
+        // Selection must never invalidate the store's display cache; see docs-ai 023.
+        @Test @MainActor func selectionTogglesReuseTheCachedDisplayList() throws {
+            let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+            let first = makeLibraryEntry(name: "First", tmdbID: 401, daySaved: 1)
+            let second = makeLibraryEntry(name: "Second", tmdbID: 402, daySaved: 2)
+            try store.repository.newEntry(first)
+            try store.repository.newEntry(second)
+            try store.refreshLibrary()
+            let state = LibraryEntryInteractionState()
+
+            _ = store.libraryDisplayItems
+            let computeCount = store.libraryDisplayComputeCount
+
+            state.enterMultiSelection()
+            state.toggleSelection(for: first.libraryIdentity)
+            state.toggleSelection(for: second.libraryIdentity)
+            state.toggleSelection(for: first.libraryIdentity)
+            _ = state.selectedEntryIDs.compactMap(store.displayedEntry(for:))
+            _ = store.libraryDisplayItems
+            state.exitMultiSelection()
+            _ = store.libraryDisplayIDs
+
+            #expect(store.libraryDisplayComputeCount == computeCount)
+
+            store.sortReversed.toggle()
+            _ = store.libraryDisplayItems
+            _ = store.libraryDisplayItems
+            #expect(store.libraryDisplayComputeCount == computeCount + 1)
+        }
+
         @Test @MainActor func replacingAnInspectorDetailKeepsTheInspectorHostPresented() throws {
             let state = LibraryEntryInteractionState(initialDetailHost: .inspector)
             let first = AnimeEntry.template(id: 42)

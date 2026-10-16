@@ -11,20 +11,18 @@ import SwiftUI
 extension View {
     /// Window-level library behavior both library roots share. `openRoutedEntry` shows the
     /// entry an airing-reminder notification opened in this window, after the root dismisses
-    /// whatever covers the library. `scopeDidChange` runs when the library's shown entries may
-    /// have changed, so the root can narrow its selection.
+    /// whatever covers the library. Selection pruning stays with each root, since only the root
+    /// knows which entries its window shows.
     func libraryWindowBehaviors(
         store: LibraryStore,
         browse: LibraryBrowseState,
-        openRoutedEntry: @escaping (AnimeEntry) -> Void,
-        scopeDidChange: @escaping () -> Void
+        openRoutedEntry: @escaping (AnimeEntry) -> Void
     ) -> some View {
         modifier(
             LibraryWindowBehaviors(
                 store: store,
                 browse: browse,
-                openRoutedEntry: openRoutedEntry,
-                scopeDidChange: scopeDidChange
+                openRoutedEntry: openRoutedEntry
             )
         )
     }
@@ -34,7 +32,6 @@ fileprivate struct LibraryWindowBehaviors: ViewModifier {
     let store: LibraryStore
     let browse: LibraryBrowseState
     let openRoutedEntry: (AnimeEntry) -> Void
-    let scopeDidChange: () -> Void
 
     @Environment(\.windowSceneIdentifier) private var windowSceneIdentifier
     @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
@@ -45,17 +42,6 @@ fileprivate struct LibraryWindowBehaviors: ViewModifier {
             .onChange(of: scoringEnabled) { _, newValue in
                 guard !newValue, store.groupStrategy == .score else { return }
                 store.groupStrategy = .none
-            }
-            .onChange(of: store.libraryRevision) { scopeDidChange() }
-            .onChange(of: store.filters) { scopeDidChange() }
-            .onChange(of: store.groupStrategy) { scopeDidChange() }
-            .onChange(of: store.sortStrategy) { scopeDidChange() }
-            .onChange(of: store.sortReversed) { scopeDidChange() }
-            .onChange(of: store.hideDroppedByDefault) { scopeDidChange() }
-            .onChange(of: store.activeCategoryID) {
-                // onChange does not reliably inherit the switch's animation, and
-                // the selection snapshot is what the list renders while selecting.
-                withAnimation(.snappy) { scopeDidChange() }
             }
             .task(id: browse.highlightRequest?.token) {
                 // Expire the request so rows recreated later by scrolling or filtering do not pulse again.

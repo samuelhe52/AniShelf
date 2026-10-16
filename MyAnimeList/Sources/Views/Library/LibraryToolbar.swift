@@ -15,7 +15,6 @@ import SwiftUI
         @Binding var libraryViewStyle: LibraryViewStyle
         let scoringEnabled: Bool
         @Binding var isSearching: Bool
-        let selectionEntriesByID: [LibraryEntryIdentity: AnimeEntry]
         let supportsMultiSelection: Bool
         let showsCategoryStrip: Bool
         @Binding var isReorderingCategories: Bool
@@ -85,7 +84,7 @@ import SwiftUI
         }
 
         private var selectedEntries: [AnimeEntry] {
-            interaction.selectedEntryIDs.compactMap { selectionEntriesByID[$0] }
+            interaction.selectedEntryIDs.compactMap(store.displayedEntry(for:))
         }
 
         @ToolbarContentBuilder

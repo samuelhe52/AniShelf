@@ -28,12 +28,6 @@ import SwiftUI
         @State private var isReorderingCategories = false
         @State private var inspectorDetailWorkspaceState = LibraryInspectorDetailWorkspaceState()
 
-        // Multi-selection snapshot: decouples selection rendering from live store
-        // recomputation so toggling items stays cheap. See LibraryView+MultiSelection.
-        @State var selectionDisplayItems: [LibraryEntryDisplayItem]?
-        @State var selectionLayoutIDs: [LibraryEntryIdentity]?
-        @State var selectionEntriesByID: [LibraryEntryIdentity: AnimeEntry] = [:]
-
         // Persistent UI preference
         @AppStorage(.libraryViewStyle) var libraryViewStyle: LibraryViewStyle = .gallery
         @AppStorage(.libraryScoringEnabled) var scoringEnabled = true
@@ -74,9 +68,9 @@ import SwiftUI
                 openRoutedEntry: { entry in
                     showProfileSettings = false
                     openDetails(entry)
-                },
-                scopeDidChange: refreshSelectionDisplayItemsIfNeeded
+                }
             )
+            .onChange(of: store.libraryDisplayIDs) { pruneSelection() }
         }
 
         /// Hosts entry detail in the iPad's trailing inspector.
@@ -194,7 +188,6 @@ import SwiftUI
                         libraryViewStyle: libraryViewStyleBinding,
                         scoringEnabled: scoringEnabled,
                         isSearching: $browse.isSearching,
-                        selectionEntriesByID: selectionEntriesByID,
                         supportsMultiSelection: supportsMultiSelection,
                         showsCategoryStrip: showsCategoryStrip,
                         isReorderingCategories: $isReorderingCategories,
@@ -241,8 +234,8 @@ import SwiftUI
 
         @ViewBuilder
         private var libraryView: some View {
-            let displayItems = selectionDisplayItems ?? store.libraryDisplayItems
-            let layoutIDs = selectionLayoutIDs ?? displayItems.map(\.id)
+            let displayItems = store.libraryDisplayItems
+            let layoutIDs = store.libraryDisplayIDs
             let detailActions = LibraryEntryDetailActions(
                 open: openDetails,
                 edit: editDetails

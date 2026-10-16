@@ -15,7 +15,7 @@ import SwiftUI
         }
 
         var selectedEntries: [AnimeEntry] {
-            interaction.selectedEntryIDs.compactMap { selectionEntriesByID[$0] }
+            interaction.selectedEntryIDs.compactMap(store.displayedEntry(for:))
         }
 
         func applyBatchAction(_ action: LibraryBatchAction) {
@@ -37,10 +37,9 @@ import SwiftUI
                 return
             }
 
-            let remainingEntries = store.libraryDisplayItems.map(\.entry).filter { entry in
-                !interaction.selectedEntryIDs.contains(entry.libraryIdentity)
+            let scrollTarget = store.libraryDisplayIDs.first { id in
+                !interaction.selectedEntryIDs.contains(id)
             }
-            let scrollTarget = remainingEntries.first?.libraryIdentity
 
             guard store.deleteEntries(entries) else { return }
 
@@ -49,7 +48,6 @@ import SwiftUI
         }
 
         func enterMultiSelection() {
-            updateSelectionDisplayItems()
             withAnimation(LibraryViewTransitions.selectionModeAnimation()) {
                 interaction.enterMultiSelection()
             }
@@ -59,30 +57,12 @@ import SwiftUI
             withAnimation(LibraryViewTransitions.selectionModeAnimation()) {
                 interaction.exitMultiSelection()
             }
-            selectionDisplayItems = nil
-            selectionLayoutIDs = nil
-            selectionEntriesByID.removeAll(keepingCapacity: true)
         }
 
         /// Keeps the selection to the entries still shown after a library or scope change.
-        func refreshSelectionDisplayItemsIfNeeded() {
+        func pruneSelection() {
             guard interaction.isMultiSelecting else { return }
-            updateSelectionDisplayItems()
-        }
-
-        private func updateSelectionDisplayItems() {
-            let items = store.libraryDisplayItems
-            let layoutIDs = items.map(\.id)
-            let displayedIDs = Set(layoutIDs)
-            interaction.selectedEntryIDs.formIntersection(displayedIDs)
-            selectionDisplayItems = items
-            selectionLayoutIDs = layoutIDs
-            selectionEntriesByID = Dictionary(
-                items.map { ($0.id, $0.entry) },
-                uniquingKeysWith: { existing, candidate in
-                    AnimeEntryDuplicateResolver.prefers(candidate, existing) ? candidate : existing
-                }
-            )
+            interaction.selectedEntryIDs.formIntersection(store.libraryDisplayIDs)
         }
     }
 #endif

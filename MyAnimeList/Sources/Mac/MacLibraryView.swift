@@ -108,14 +108,10 @@
                 },
                 resolveEntry: { store.repository.existingEntry(identity: $0) }
             )
-            .onChange(of: libraryFindQuery) {
-                pruneSelection()
-            }
             .libraryWindowBehaviors(
                 store: store,
                 browse: browse,
-                openRoutedEntry: openDetails,
-                scopeDidChange: pruneSelection
+                openRoutedEntry: openDetails
             )
         }
 
@@ -163,6 +159,11 @@
                     initialMode: searchInitialMode,
                     reveal: revealSearchTarget
                 )
+            }
+            // Find narrows the shared list per window, and saved or unsaved edits can change
+            // what it matches, so prune against what this window shows, not the store's IDs.
+            .onChange(of: displayItems.map(\.id)) { _, shownIDs in
+                selection.prune(keeping: Set(shownIDs))
             }
         }
 
@@ -220,7 +221,7 @@
             return store.libraryDisplayItems.filter { matches($0.entry) }
         }
 
-        /// Keeps the selection to the entries still shown after a library, scope, or Find change.
+        /// Keeps the selection to the entries this window still shows.
         func pruneSelection() {
             selection.prune(keeping: Set(visibleDisplayItems.map(\.id)))
         }
