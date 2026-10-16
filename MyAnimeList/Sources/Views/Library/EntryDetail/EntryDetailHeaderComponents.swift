@@ -239,7 +239,6 @@ struct EntryDetailQuickActionsRow: View {
                     PopupActionButtonLabel(systemImage: "safari")
                 }
                 .popupActionButtonChrome()
-                .tint(.primary)
                 .macHelp(Text(verbatim: detailURL.host() ?? detailURL.absoluteString))
             }
 
@@ -300,7 +299,6 @@ struct EntryDetailQuickActionsRow: View {
             .popupActionButtonChrome()
             .menuIndicator(isCompact ? .hidden : .automatic)
             .macHelp(Text("More"))
-            .tint(.primary)
 
             Spacer(minLength: 0)
         }

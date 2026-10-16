@@ -74,8 +74,7 @@ struct PopupActionCircleButton: View {
         Button(action: action) {
             PopupActionButtonLabel(systemImage: systemImage, verticalOffset: verticalOffset)
         }
-        .popupActionButtonChrome()
-        .tint(tint)
+        .popupActionButtonChrome(tint: tint)
     }
 }
 
@@ -103,13 +102,14 @@ struct PopupActionButtonLabel: View {
 }
 
 extension View {
-    func popupActionButtonChrome() -> some View {
-        modifier(PopupActionButtonChrome())
+    func popupActionButtonChrome(tint: Color = .primary) -> some View {
+        modifier(PopupActionButtonChrome(tint: tint))
     }
 }
 
 private struct PopupActionButtonChrome: ViewModifier {
     @Environment(\.popupPanelStyle) private var panelStyle
+    let tint: Color
 
     func body(content: Content) -> some View {
         switch panelStyle {
@@ -117,8 +117,12 @@ private struct PopupActionButtonChrome: ViewModifier {
             content
                 .buttonStyle(.glass)
                 .buttonBorderShape(.circle)
+                .tint(tint)
         case .grouped:
+            // On macOS a bordered button's tint fills its bezel, and only while the
+            // window is key, so color the glyph instead to keep the bezel consistent.
             content
+                .foregroundStyle(tint)
                 .buttonStyle(.bordered)
                 .controlSize(.large)
         }
