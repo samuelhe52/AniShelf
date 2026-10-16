@@ -11,6 +11,42 @@ import SwiftUI
 
 struct LibrarySearchButton: View {
     @Binding var isSearching: Bool
+
+    var body: some View {
+        Button("Search...", systemImage: "magnifyingglass") { isSearching = true }
+    }
+}
+
+extension View {
+    /// Hosts the search page. Attach it to a view that outlives toolbar changes: menu commands
+    /// open search during batch selection, when the toolbar shows no search button.
+    func librarySearchSheet(
+        isPresented: Binding<Bool>,
+        checkDuplicate: @escaping (LibraryEntryIdentity) -> Bool,
+        canRevealEntry: @escaping (LibraryEntryIdentity) -> Bool,
+        resetFiltersToReveal: @escaping (LibraryEntryIdentity) -> Void,
+        processTMDbSearchResults: @escaping (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void,
+        jumpToEntryInLibrary: @escaping (LibraryEntryIdentity) -> Void,
+        onDismiss: @escaping () -> Void,
+        initialMode: SearchMode? = nil
+    ) -> some View {
+        modifier(
+            LibrarySearchSheet(
+                isSearching: isPresented,
+                checkDuplicate: checkDuplicate,
+                canRevealEntry: canRevealEntry,
+                resetFiltersToReveal: resetFiltersToReveal,
+                processTMDbSearchResults: processTMDbSearchResults,
+                jumpToEntryInLibrary: jumpToEntryInLibrary,
+                onDismiss: onDismiss,
+                initialMode: initialMode
+            )
+        )
+    }
+}
+
+fileprivate struct LibrarySearchSheet: ViewModifier {
+    @Binding var isSearching: Bool
     let checkDuplicate: (LibraryEntryIdentity) -> Bool
     let canRevealEntry: (LibraryEntryIdentity) -> Bool
     let resetFiltersToReveal: (LibraryEntryIdentity) -> Void
@@ -18,13 +54,13 @@ struct LibrarySearchButton: View {
     let jumpToEntryInLibrary: (LibraryEntryIdentity) -> Void
     let onDismiss: () -> Void
     /// Opens the page in this mode instead of the last-used one.
-    var initialMode: SearchMode? = nil
+    let initialMode: SearchMode?
 
     @State private var hiddenEntryID: LibraryEntryIdentity?
 
-    var body: some View {
-        Button("Search...", systemImage: "magnifyingglass") { isSearching = true }
-            .sheet(isPresented: $isSearching, onDismiss: onDismiss) {
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $isSearching, onDismiss: sheetDidDismiss) {
                 NavigationStack {
                     SearchPage(
                         onDuplicateTapped: jumpIfRevealable,
@@ -53,6 +89,12 @@ struct LibrarySearchButton: View {
                     }
                 }
             }
+    }
+
+    private func sheetDidDismiss() {
+        // The modifier outlives the sheet, so a stale alert must not reappear on the next opening.
+        hiddenEntryID = nil
+        onDismiss()
     }
 
     // Keep search open when the jump could not show the entry, instead of dismissing to nothing.

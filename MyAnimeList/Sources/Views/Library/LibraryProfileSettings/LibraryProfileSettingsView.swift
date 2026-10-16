@@ -178,140 +178,140 @@ struct LibraryProfileSettingsView: View {
 
     var body: some View {
         settingsNavigation
-        .onAppear(perform: handleAppear)
-        .onChange(of: effectiveLanguage, handleEffectiveLanguageChange)
-        .onChange(of: posterLanguage, handlePosterLanguageChange)
-        .task { await reloadReminders() }
-        .onChange(of: scenePhase) { _, phase in
-            guard phase == .active else { return }
-            Task { await reloadReminders() }
-        }
-        .task(id: store.libraryCloudSyncStatus.bootstrapState) {
-            await presentPendingCloudConflict()
-        }
-        .alert("Resolve iCloud Sync Conflict", isPresented: $cloudSync.showConflictAlert) {
-            Button("Use iCloud") { resolveLibraryCloudSyncConflicts(.preferCloud) }
-            Button("Use This Device") { resolveLibraryCloudSyncConflicts(.preferLocal) }
-            Button("Cancel", role: .cancel, action: cancelLibraryCloudSyncEnablement)
-        } message: {
-            Text(store.libraryCloudSyncStatus.conflictSummaryResource)
-        }
-        .alert("Restore Unavailable", isPresented: $cloudSync.showRestoreUnavailableAlert) {
-            Button("OK") {}
-        } message: {
-            Text("Turn off iCloud Sync before restoring a backup. You can turn it on again after restore.")
-        }
-        .alert("Rebuild iCloud Sync?", isPresented: $cloudSync.showRebuildAlert) {
-            Button("Rebuild", action: rebuildLibraryCloudSync)
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(
-                "Refetch and reconcile your iCloud library with your local library. This may resolve some iCloud sync issues."
-            )
-        }
-        .alert("Upload This Library?", isPresented: $cloudSync.showUploadLibraryAlert) {
-            Button("Upload", action: uploadLibraryToDeletedCloud)
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(
-                "AniShelf will re-create its iCloud data from the library on this device. Your other devices will sync with it again."
-            )
-        }
-        .alert("Delete all animes?", isPresented: $showClearAllAlert) {
-            Button("Delete", role: .destructive, action: confirmClearLibrary)
-            Button("Cancel", role: .cancel) {}
-        }
-        .alert(
-            "Refresh Info Language?",
-            isPresented: $showRefreshInfoOnLanguageUpdateAlert
-        ) {
-            Button("Refresh", action: confirmRefreshInfos)
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            let message: LocalizedStringResource = """
-                Changing the metadata language setting will not refresh existing infos.
-                Refresh all anime infos now? This may take considerable time.
-                """
-
-            Text(message)
-        }
-        .alert(
-            "Refresh Default Posters?",
-            isPresented: $showRefreshInfoOnPosterLanguageUpdateAlert
-        ) {
-            Button("Refresh", action: confirmRefreshInfos)
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            let message: LocalizedStringResource = """
-                Changing the default poster setting will not update existing entries.
-                Refresh all anime infos now? This may take considerable time. Custom posters are kept.
-                """
-
-            Text(message)
-        }
-        .alert(
-            "Refresh all anime infos?",
-            isPresented: $showRefreshInfoAlert
-        ) {
-            Button("Refresh", action: confirmRefreshInfos)
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This may take considerable time.")
-        }
-        .alert(
-            "Error exporting library",
-            isPresented: $showExportError,
-            presenting: exportError
-        ) { _ in
-            Button("Cancel", role: .cancel) {}
-        } message: { error in
-            Text(error.localizedDescription)
-        }
-        .alert(
-            "Error restoring library",
-            isPresented: $showRestoreError,
-            presenting: restoreError
-        ) { _ in
-            Button("Cancel", role: .cancel) {}
-        } message: { error in
-            Text(error.localizedDescription)
-        }
-        .alert("Overwrite the current library?", isPresented: $showRestoreConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Confirm", role: .destructive, action: confirmRestore)
-        } message: {
-            Text("Please backup the current library before proceeding.")
-        }
-        .alert(
-            "Metadata Cache Size",
-            isPresented: $showCacheAlert,
-            presenting: cacheSizeResult,
-            actions: { result in
-                switch result {
-                case .success:
-                    Button("Clear Cache", action: clearMetadataCache)
-                    Button("Cancel", role: .cancel) {}
-                case .failure:
-                    Button("OK") {}
-                }
-            },
-            message: { result in
-                switch result {
-                case .success(let size):
-                    Text("Size: \(Double(size) / 1024 / 1024, specifier: "%.2f") MB")
-                case .failure(let error):
-                    Text(error.localizedDescription)
-                }
+            .onAppear(perform: handleAppear)
+            .onChange(of: effectiveLanguage, handleEffectiveLanguageChange)
+            .onChange(of: posterLanguage, handlePosterLanguageChange)
+            .task { await reloadReminders() }
+            .onChange(of: scenePhase) { _, phase in
+                guard phase == .active else { return }
+                Task { await reloadReminders() }
             }
-        )
-        .fileImporter(
-            isPresented: $showFileImporter,
-            allowedContentTypes: [.mallib],
-            onCompletion: handleFileImport
-        )
-        .sheet(item: $presentationState.presentedSheet) { sheet in
-            sheetView(for: sheet)
-        }
+            .task(id: store.libraryCloudSyncStatus.bootstrapState) {
+                await presentPendingCloudConflict()
+            }
+            .alert("Resolve iCloud Sync Conflict", isPresented: $cloudSync.showConflictAlert) {
+                Button("Use iCloud") { resolveLibraryCloudSyncConflicts(.preferCloud) }
+                Button("Use This Device") { resolveLibraryCloudSyncConflicts(.preferLocal) }
+                Button("Cancel", role: .cancel, action: cancelLibraryCloudSyncEnablement)
+            } message: {
+                Text(store.libraryCloudSyncStatus.conflictSummaryResource)
+            }
+            .alert("Restore Unavailable", isPresented: $cloudSync.showRestoreUnavailableAlert) {
+                Button("OK") {}
+            } message: {
+                Text("Turn off iCloud Sync before restoring a backup. You can turn it on again after restore.")
+            }
+            .alert("Rebuild iCloud Sync?", isPresented: $cloudSync.showRebuildAlert) {
+                Button("Rebuild", action: rebuildLibraryCloudSync)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(
+                    "Refetch and reconcile your iCloud library with your local library. This may resolve some iCloud sync issues."
+                )
+            }
+            .alert("Upload This Library?", isPresented: $cloudSync.showUploadLibraryAlert) {
+                Button("Upload", action: uploadLibraryToDeletedCloud)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(
+                    "AniShelf will re-create its iCloud data from the library on this device. Your other devices will sync with it again."
+                )
+            }
+            .alert("Delete all animes?", isPresented: $showClearAllAlert) {
+                Button("Delete", role: .destructive, action: confirmClearLibrary)
+                Button("Cancel", role: .cancel) {}
+            }
+            .alert(
+                "Refresh Info Language?",
+                isPresented: $showRefreshInfoOnLanguageUpdateAlert
+            ) {
+                Button("Refresh", action: confirmRefreshInfos)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                let message: LocalizedStringResource = """
+                    Changing the metadata language setting will not refresh existing infos.
+                    Refresh all anime infos now? This may take considerable time.
+                    """
+
+                Text(message)
+            }
+            .alert(
+                "Refresh Default Posters?",
+                isPresented: $showRefreshInfoOnPosterLanguageUpdateAlert
+            ) {
+                Button("Refresh", action: confirmRefreshInfos)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                let message: LocalizedStringResource = """
+                    Changing the default poster setting will not update existing entries.
+                    Refresh all anime infos now? This may take considerable time. Custom posters are kept.
+                    """
+
+                Text(message)
+            }
+            .alert(
+                "Refresh all anime infos?",
+                isPresented: $showRefreshInfoAlert
+            ) {
+                Button("Refresh", action: confirmRefreshInfos)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This may take considerable time.")
+            }
+            .alert(
+                "Error exporting library",
+                isPresented: $showExportError,
+                presenting: exportError
+            ) { _ in
+                Button("Cancel", role: .cancel) {}
+            } message: { error in
+                Text(error.localizedDescription)
+            }
+            .alert(
+                "Error restoring library",
+                isPresented: $showRestoreError,
+                presenting: restoreError
+            ) { _ in
+                Button("Cancel", role: .cancel) {}
+            } message: { error in
+                Text(error.localizedDescription)
+            }
+            .alert("Overwrite the current library?", isPresented: $showRestoreConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Confirm", role: .destructive, action: confirmRestore)
+            } message: {
+                Text("Please backup the current library before proceeding.")
+            }
+            .alert(
+                "Metadata Cache Size",
+                isPresented: $showCacheAlert,
+                presenting: cacheSizeResult,
+                actions: { result in
+                    switch result {
+                    case .success:
+                        Button("Clear Cache", action: clearMetadataCache)
+                        Button("Cancel", role: .cancel) {}
+                    case .failure:
+                        Button("OK") {}
+                    }
+                },
+                message: { result in
+                    switch result {
+                    case .success(let size):
+                        Text("Size: \(Double(size) / 1024 / 1024, specifier: "%.2f") MB")
+                    case .failure(let error):
+                        Text(error.localizedDescription)
+                    }
+                }
+            )
+            .fileImporter(
+                isPresented: $showFileImporter,
+                allowedContentTypes: [.mallib],
+                onCompletion: handleFileImport
+            )
+            .sheet(item: $presentationState.presentedSheet) { sheet in
+                sheetView(for: sheet)
+            }
     }
 
     private var profileContent: some View {

@@ -170,3 +170,4 @@ No action record is warranted until implementation proceeds.
 - Updated 2026-10-16: Slice 2 — Mac shell (sidebar split view, desktop selection, inspector layout, commands, Settings window) — see [004-slice-2-mac-shell.md](004-slice-2-mac-shell.md)
 - Updated 2026-10-16: Slice 3 — feature parity (save panels, sheet buttons, SVG rasters, native Mac tests, lifecycle and sync validation) — see [005-slice-3-feature-parity.md](005-slice-3-feature-parity.md)
 - Updated 2026-10-16: Slice 4 — polish and validation (grid keyboard, scope-bound inspector, toolbar menu, app icon, light/localization/regression runs) — see [006-slice-4-polish.md](006-slice-4-polish.md)
+- Updated 2026-10-16: Platform boundary refactor and two fixes (search host during batch selection, Save Poster window) — see [007-platform-boundary-refactor.md](007-platform-boundary-refactor.md)

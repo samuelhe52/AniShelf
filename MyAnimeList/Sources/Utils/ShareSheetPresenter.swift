@@ -56,6 +56,13 @@
             }
         }
 
+        /// Downloads a remote file into a save panel on the window of `sceneIdentifier`. The window
+        /// is resolved before the download starts, so focus moving meanwhile cannot redirect it.
+        static func saveDownload(of remoteURL: URL, sceneIdentifier: String?) {
+            guard let window = presentationWindow(sceneIdentifier) else { return }
+            Task { await saveDownload(of: remoteURL, in: window) }
+        }
+
         /// Downloads a remote file, such as a poster, and offers to save it.
         static func saveDownload(of remoteURL: URL, in window: NSWindow) async {
             let fileManager = FileManager.default

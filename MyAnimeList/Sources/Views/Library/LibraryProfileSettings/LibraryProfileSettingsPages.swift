@@ -34,17 +34,17 @@ struct LibraryProfileSettingsPage<Content: View>: View {
         .toolbar {
             // The Settings window closes like any Mac window.
             #if !os(macOS)
-            ToolbarItem(placement: .platformTrailing) {
-                Button(action: onClose) {
-                    Image(systemName: "xmark")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(.primary)
-                        .padding(8)
-                        .contentShape(Rectangle())
+                ToolbarItem(placement: .platformTrailing) {
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.primary)
+                            .padding(8)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text(LocalizedStringResource("Close")))
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text(LocalizedStringResource("Close")))
-            }
             #endif
         }
     }

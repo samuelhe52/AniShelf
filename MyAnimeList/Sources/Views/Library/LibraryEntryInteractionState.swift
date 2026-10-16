@@ -10,12 +10,6 @@ import LibrarySync
 import Observation
 import SwiftUI
 
-#if os(macOS)
-    import AppKit
-#else
-    import UIKit
-#endif
-
 enum LibraryEntryWorkflow: Equatable, Sendable {
     case posterSelection(LibraryEntryIdentity)
     case sharing(LibraryEntryIdentity)
@@ -54,22 +48,6 @@ struct LibraryEntryDetailActions {
     #endif
 }
 
-#if os(macOS)
-    /// How a click changes the desktop selection, from the modifier keys held during the click.
-    enum MacSelectionClick {
-        case replace
-        case toggle
-        case extend
-
-        @MainActor static var current: MacSelectionClick {
-            // The click's own flags; the global state can miss modifiers on synthesized events.
-            let flags = NSApp.currentEvent?.modifierFlags ?? NSEvent.modifierFlags
-            if flags.contains(.command) { return .toggle }
-            if flags.contains(.shift) { return .extend }
-            return .replace
-        }
-    }
-#endif
 
 struct LibraryEntryDetailHostPolicy: Equatable, Sendable {
     let host: LibraryEntryDetailHost
@@ -429,14 +407,6 @@ final class LibraryEntryInteractionState {
         ToastCenter.global.pasted = true
     }
 
-    private static var hasUserEntryPasteboardContent: Bool {
-        #if os(macOS)
-            NSPasteboard.general.availableType(from: [.init(UserEntryInfo.pasteboardUTType.identifier)]) != nil
-        #else
-            UIPasteboard.general.contains(pasteboardTypes: [UserEntryInfo.pasteboardUTType.identifier])
-        #endif
-    }
-
     func clearPasteRequest(requestID: UUID) {
         guard pendingPasteRequest?.id == requestID else { return }
         pendingPasteRequest = nil
@@ -503,20 +473,7 @@ extension LibraryEntryInteractionState {
     @ViewBuilder
     func savePosterButton(for entry: AnimeEntry) -> some View {
         if let posterURL = entry.posterURL {
-            #if os(macOS)
-                // The Mac share menu cannot save a file, so download it into a save panel.
-                Button("Save Poster…", systemImage: "photo.badge.arrow.down") {
-                    let window = NSApplication.shared.keyWindow
-                    Task {
-                        guard let window else { return }
-                        await ShareSheetPresenter.saveDownload(of: posterURL, in: window)
-                    }
-                }
-            #else
-                ShareLink(item: posterURL) {
-                    Label("Save Poster", systemImage: "photo.badge.arrow.down")
-                }
-            #endif
+            SavePosterButton(posterURL: posterURL)
         }
     }
 
@@ -530,7 +487,7 @@ extension LibraryEntryInteractionState {
                 self.pasteInfo(for: entry)
             }
             .disabled(
-                !Self.hasUserEntryPasteboardContent
+                !UserEntryInfo.hasPasteboardContent
             )
         }
     }
@@ -616,5 +573,23 @@ extension View {
             } message: { _ in
                 Text("This anime already has edits. Pasting will overwrite current info.")
             }
+    }
+}
+
+fileprivate struct SavePosterButton: View {
+    let posterURL: URL
+    @Environment(\.windowSceneIdentifier) private var windowSceneIdentifier
+
+    var body: some View {
+        #if os(macOS)
+            // The Mac share menu cannot save a file, so download it into a save panel.
+            Button("Save Poster…", systemImage: "photo.badge.arrow.down") {
+                ShareSheetPresenter.saveDownload(of: posterURL, sceneIdentifier: windowSceneIdentifier)
+            }
+        #else
+            ShareLink(item: posterURL) {
+                Label("Save Poster", systemImage: "photo.badge.arrow.down")
+            }
+        #endif
     }
 }

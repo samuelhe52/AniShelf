@@ -22,24 +22,24 @@ struct LibraryProfileInterfaceSettingsSection: View {
         VStack(spacing: 16) {
             // A click always opens the inspector on the Mac, and its toolbar has no soft edge option.
             #if !os(macOS)
-            LibraryProfileSettingsSection(
-                "Library", systemImage: "hand.tap", tint: LibraryProfileSettingsDestination.appearance.tint
-            ) {
-                LibraryProfileSettingsToggleRow(
-                    title: "Open Detail with Single Tap",
-                    subtitle: "By default, double tap opens detail. Turn this on to use single tap instead.",
-                    isOn: $openDetailWithSingleTap
-                )
-
-                if #available(iOS 27, *) {
+                LibraryProfileSettingsSection(
+                    "Library", systemImage: "hand.tap", tint: LibraryProfileSettingsDestination.appearance.tint
+                ) {
                     LibraryProfileSettingsToggleRow(
-                        title: "Use Soft Navigation Bar Edges",
-                        subtitle:
-                            "Available on iOS 27 or later. Turn off to use the system appearance.",
-                        isOn: $useSoftNavigationBarEdges
+                        title: "Open Detail with Single Tap",
+                        subtitle: "By default, double tap opens detail. Turn this on to use single tap instead.",
+                        isOn: $openDetailWithSingleTap
                     )
+
+                    if #available(iOS 27, *) {
+                        LibraryProfileSettingsToggleRow(
+                            title: "Use Soft Navigation Bar Edges",
+                            subtitle:
+                                "Available on iOS 27 or later. Turn off to use the system appearance.",
+                            isOn: $useSoftNavigationBarEdges
+                        )
+                    }
                 }
-            }
             #endif
             LibraryProfileSettingsSection(
                 "Entry Details", systemImage: "rectangle.3.group.fill",

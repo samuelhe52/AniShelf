@@ -5,7 +5,6 @@
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/7/25.
 //
 
-import Collections
 import DataProvider
 import SwiftUI
 
@@ -25,11 +24,6 @@ struct LibraryToolbar: ToolbarContent {
     let deleteSelectedEntries: () -> Void
     let openProfileSettings: () -> Void
     let openCategoryManager: () -> Void
-    let checkDuplicate: (LibraryEntryIdentity) -> Bool
-    let processTMDbSearchResults: (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void
-    let jumpToEntryInLibrary: (LibraryEntryIdentity) -> Void
-    let onSearchDismissed: () -> Void
-    var searchInitialMode: SearchMode? = nil
     var addAnime: () -> Void = {}
     var isInspectorPresented = false
     var toggleInspector: () -> Void = {}
@@ -95,17 +89,8 @@ struct LibraryToolbar: ToolbarContent {
                 ToolbarItemGroup(placement: .primaryAction) {
                     Button("Add Anime…", systemImage: "plus", action: addAnime)
                         .help(Text("Add anime from TMDb"))
-                    LibrarySearchButton(
-                        isSearching: $isSearching,
-                        checkDuplicate: checkDuplicate,
-                        canRevealEntry: store.canRevealEntry,
-                        resetFiltersToReveal: store.resetFiltersToReveal,
-                        processTMDbSearchResults: processTMDbSearchResults,
-                        jumpToEntryInLibrary: jumpToEntryInLibrary,
-                        onDismiss: onSearchDismissed,
-                        initialMode: searchInitialMode
-                    )
-                    .help(Text("Search"))
+                    LibrarySearchButton(isSearching: $isSearching)
+                        .help(Text("Search"))
                 }
             }
             // An open inspector has its own Done button; dropping the toggle then keeps
@@ -213,15 +198,7 @@ struct LibraryToolbar: ToolbarContent {
                 LibraryBrowseSummaryMenu(store: store, scoringEnabled: scoringEnabled)
             }
             ToolbarItem(placement: .platformBottomBar) {
-                LibrarySearchButton(
-                    isSearching: $isSearching,
-                    checkDuplicate: checkDuplicate,
-                    canRevealEntry: store.canRevealEntry,
-                    resetFiltersToReveal: store.resetFiltersToReveal,
-                    processTMDbSearchResults: processTMDbSearchResults,
-                    jumpToEntryInLibrary: jumpToEntryInLibrary,
-                    onDismiss: onSearchDismissed
-                )
+                LibrarySearchButton(isSearching: $isSearching)
             }
         }
     }

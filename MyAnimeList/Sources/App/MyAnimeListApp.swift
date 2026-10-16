@@ -185,67 +185,67 @@ struct MyAnimeListApp: App {
     }
 
     private var libraryWindowContent: some View {
-            ZStack {
-                if let newerLibraryStoreVersion {
-                    NewerLibraryStoreView(storeVersion: newerLibraryStoreVersion)
-                } else if let startupRecovery {
-                    StartupRecoveryView(
-                        recovery: startupRecovery,
-                        onContinue: continueAfterStartupRecovery
-                    )
-                } else if let key = keyStorage.key, !key.isEmpty {
-                    LibraryView()
-                        .onAppear {
-                            libraryStore.language = followsSystemLanguage ? .current : preferredLanguage
-                        }
-                        .transition(.opacity.animation(.easeInOut(duration: 1)))
-                } else if keyStorage.lookupState == .checking {
-                    ProgressView(checkingTMDbAPIKeyResource)
-                        .transition(.opacity.animation(.easeInOut(duration: 0.2)))
-                } else {
-                    TMDbAPIOnboardingView()
-                        .transition(.opacity.animation(.easeInOut(duration: 1)))
-                }
+        ZStack {
+            if let newerLibraryStoreVersion {
+                NewerLibraryStoreView(storeVersion: newerLibraryStoreVersion)
+            } else if let startupRecovery {
+                StartupRecoveryView(
+                    recovery: startupRecovery,
+                    onContinue: continueAfterStartupRecovery
+                )
+            } else if let key = keyStorage.key, !key.isEmpty {
+                LibraryView()
+                    .onAppear {
+                        libraryStore.language = followsSystemLanguage ? .current : preferredLanguage
+                    }
+                    .transition(.opacity.animation(.easeInOut(duration: 1)))
+            } else if keyStorage.lookupState == .checking {
+                ProgressView(checkingTMDbAPIKeyResource)
+                    .transition(.opacity.animation(.easeInOut(duration: 0.2)))
+            } else {
+                TMDbAPIOnboardingView()
+                    .transition(.opacity.animation(.easeInOut(duration: 1)))
             }
-            .environment(libraryStore)
-            .environment(keyStorage)
-            .environment(whatsNew)
-            .environment(supportStore)
-            .environment(appReview)
-            .onAppear {
-                guard lifecycleEventGate.shouldHandleLaunch() else { return }
-                keyStorage.retryInitialLookupIfNeeded()
-                if !isLibraryBlocked {
-                    requestSync(trigger: .appLaunch)
-                    recordActiveLibraryDayIfUsable()
-                    refreshAiringReminders()
-                }
-            }
-            .onChange(of: scenePhase) { _, newPhase in
-                // scenePhase here is the app-level phase; every window delivers each transition.
-                guard lifecycleEventGate.shouldHandlePhaseChange(to: newPhase) else { return }
-                if newPhase == .active {
-                    keyStorage.retryInitialLookupIfNeeded()
-                    requestSync(trigger: .foreground)
-                    recordActiveLibraryDayIfUsable()
-                    refreshAiringReminders()
-                } else if newPhase == .background {
-                    flushPendingLocalSync()
-                }
-            }
-            .modifier(WhatsNewPresenter(whatsNew: whatsNew, libraryStore: libraryStore))
-            .onAppear(perform: updateWhatsNewPresentation)
-            .onChange(of: keyStorage.key) { _, newKey in
-                guard lifecycleEventGate.shouldHandleKeyChange(to: newKey) else { return }
-                updateWhatsNewPresentation()
+        }
+        .environment(libraryStore)
+        .environment(keyStorage)
+        .environment(whatsNew)
+        .environment(supportStore)
+        .environment(appReview)
+        .onAppear {
+            guard lifecycleEventGate.shouldHandleLaunch() else { return }
+            keyStorage.retryInitialLookupIfNeeded()
+            if !isLibraryBlocked {
+                requestSync(trigger: .appLaunch)
                 recordActiveLibraryDayIfUsable()
-                if hasTMDbAPIKey {
-                    requestSync(trigger: .foreground)
-                }
+                refreshAiringReminders()
             }
-            .modifier(AppReviewPromptPresenter(appReview: appReview))
-            .globalToasts()
-            .providesWindowSceneIdentifier()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            // scenePhase here is the app-level phase; every window delivers each transition.
+            guard lifecycleEventGate.shouldHandlePhaseChange(to: newPhase) else { return }
+            if newPhase == .active {
+                keyStorage.retryInitialLookupIfNeeded()
+                requestSync(trigger: .foreground)
+                recordActiveLibraryDayIfUsable()
+                refreshAiringReminders()
+            } else if newPhase == .background {
+                flushPendingLocalSync()
+            }
+        }
+        .modifier(WhatsNewPresenter(whatsNew: whatsNew, libraryStore: libraryStore))
+        .onAppear(perform: updateWhatsNewPresentation)
+        .onChange(of: keyStorage.key) { _, newKey in
+            guard lifecycleEventGate.shouldHandleKeyChange(to: newKey) else { return }
+            updateWhatsNewPresentation()
+            recordActiveLibraryDayIfUsable()
+            if hasTMDbAPIKey {
+                requestSync(trigger: .foreground)
+            }
+        }
+        .modifier(AppReviewPromptPresenter(appReview: appReview))
+        .globalToasts()
+        .providesWindowSceneIdentifier()
     }
 
     private func updateWhatsNewPresentation() {

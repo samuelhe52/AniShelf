@@ -18,6 +18,16 @@ import UniformTypeIdentifiers
 extension UserEntryInfo {
     static let pasteboardUTType = UTType("com.samuelhe.myanimelist.userentryinfo")!
 
+    /// Whether the general pasteboard holds copied user info. Checks the type only, without
+    /// reading the contents, so menus can call it cheaply.
+    @MainActor static var hasPasteboardContent: Bool {
+        #if os(macOS)
+            NSPasteboard.general.availableType(from: [.init(pasteboardUTType.identifier)]) != nil
+        #else
+            UIPasteboard.general.contains(pasteboardTypes: [pasteboardUTType.identifier])
+        #endif
+    }
+
     /// Copies the UserEntryInfo to the general pasteboard using both a custom UTI and plain text.
     func copyToPasteboard() {
         guard let data = try? JSONEncoder().encode(self),

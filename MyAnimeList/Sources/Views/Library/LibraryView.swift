@@ -9,12 +9,6 @@ import DataProvider
 import LibrarySync
 import SwiftUI
 
-#if os(macOS)
-    import AppKit
-#else
-    import UIKit
-#endif
-
 struct LibraryScrollRequest: Equatable {
     // Keep repeated explicit requests to the same entry observable.
     let token = UUID()
@@ -74,7 +68,7 @@ struct LibraryView: View {
 
     #if os(macOS)
         @Environment(\.openSettings) private var openSettings
-        @Environment(\.openWindow) private var openWindow
+        @Environment(\.openWindow) var openWindow
         @State var searchInitialMode: SearchMode?
         @State var macSelectionAnchor: LibraryEntryIdentity?
         @State var showRefreshAllMetadataAlert = false
@@ -157,26 +151,10 @@ struct LibraryView: View {
         .onChange(of: windowSceneIdentifier) {
             handleAiringReminderRoute()
         }
-        #if os(macOS)
-            .onChange(of: windowSceneIdentifier, initial: true) { _, identifier in
-                MacLibraryWindows.register(identifier, openWindow: openWindow)
-            }
-            .onReceive(NotificationCenter.default.publisher(for: NSWindow.willCloseNotification)) { notification in
-                let closedIdentifier = (notification.object as? NSWindow)?.sceneIdentifier
-                guard closedIdentifier != windowSceneIdentifier else { return }
-                Task { @MainActor in handleAiringReminderRoute() }
-            }
-        #else
-            .onReceive(NotificationCenter.default.publisher(for: UIScene.didDisconnectNotification)) {
-                notification in
-                // The disconnecting window still receives this before it is purged; only survivors retry.
-                let disconnectedSceneIdentifier = (notification.object as? UIScene)?.session.persistentIdentifier
-                guard disconnectedSceneIdentifier != windowSceneIdentifier else { return }
-                // A route targeting the closed window falls back to the remaining windows. Retry on the
-                // next turn so the disconnected scene has left `connectedScenes`.
-                Task { @MainActor in handleAiringReminderRoute() }
-            }
-        #endif
+        // A route targeting the closed window falls back to the remaining windows.
+        .onOtherWindowSceneClosed(than: windowSceneIdentifier) {
+            handleAiringReminderRoute()
+        }
         .alert(
             airingReminderWarningTitle,
             isPresented: Binding(
@@ -332,39 +310,7 @@ struct LibraryView: View {
     @ViewBuilder
     private var libraryNavigationStack: some View {
         #if os(macOS)
-            NavigationSplitView {
-                MacLibrarySidebar(openCategoryManager: openCategoryManager)
-            } detail: {
-                // The column holds the library and the inspector, so its minimum grows while the
-                // inspector is open. A library squeezed narrower than its toolbar put AppKit into an
-                // endless layout loop, and narrow rows clip under the inspector.
-                libraryBrowserStack
-                    .modifier(entryInspector)
-                    .navigationSplitViewColumnWidth(
-                        min: interaction.inspectorPresentation == nil ? 520 : 1000,
-                        // A changing ideal would resize the window every time the inspector opens.
-                        ideal: 900
-                    )
-            }
-            .focusedSceneValue(\.macLibraryCommands, macCommandActions)
-            .onChange(of: interaction.inspectorPresentation != nil) { _, isPresented in
-                guard isPresented else { return }
-                keepWindowWidthForInspector()
-            }
-            .alert("Refresh all anime infos?", isPresented: $showRefreshAllMetadataAlert) {
-                Button("Refresh") { LibraryProfileSettingsActions(store: store).refreshInfos() }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This may take considerable time.")
-            }
-            .alert(LocalizedStringResource("Delete Selected Anime?"), isPresented: $showDeleteSelectionAlert) {
-                Button("Delete", role: .destructive, action: deleteSelectedEntries)
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text(
-                    LocalizedStringResource(
-                        "This will delete \(interaction.selectedEntryCount) selected anime from your library."))
-            }
+            macLibrarySplitView(detail: libraryBrowserStack.modifier(entryInspector))
         #else
             libraryBrowserStack
         #endif
@@ -404,11 +350,6 @@ struct LibraryView: View {
                     deleteSelectedEntries: deleteSelectedEntries,
                     openProfileSettings: openProfileSettings,
                     openCategoryManager: openCategoryManager,
-                    checkDuplicate: store.containsEntry,
-                    processTMDbSearchResults: processTMDbSearchResults,
-                    jumpToEntryInLibrary: jumpToEntryInLibrary,
-                    onSearchDismissed: searchSheetDidDismiss,
-                    searchInitialMode: macSearchInitialMode,
                     addAnime: { openSearch(mode: .tmdb) },
                     isInspectorPresented: interaction.inspectorPresentation != nil,
                     toggleInspector: toggleInspector
@@ -440,6 +381,16 @@ struct LibraryView: View {
                 LibraryCategoryManagerSheet()
                     .presentationDetents([.medium, .large])
             }
+            .librarySearchSheet(
+                isPresented: $isSearching,
+                checkDuplicate: store.containsEntry,
+                canRevealEntry: store.canRevealEntry,
+                resetFiltersToReveal: store.resetFiltersToReveal,
+                processTMDbSearchResults: processTMDbSearchResults,
+                jumpToEntryInLibrary: jumpToEntryInLibrary,
+                onDismiss: searchSheetDidDismiss,
+                initialMode: macSearchInitialMode
+            )
             .allowsHitTesting(!showProfileSettings)
             .accessibilityHidden(showProfileSettings)
         }
@@ -572,13 +523,13 @@ struct LibraryView: View {
 
     private func handleAiringReminderRoute() {
         // A window whose scene is already disconnected is being torn down and must not consume the route.
-        if let windowSceneIdentifier, !Self.isSceneConnected(windowSceneIdentifier) {
+        if let windowSceneIdentifier, !WindowScenes.canReceiveRoute(windowSceneIdentifier) {
             return
         }
         guard
             let entryIdentityRawID = airingReminders.claimPendingRoute(
                 forSceneIdentifier: windowSceneIdentifier,
-                isSceneConnected: Self.isSceneConnected
+                isSceneConnected: WindowScenes.canReceiveRoute
             )
         else { return }
         guard let entry = store.repository.existingEntry(identityRawID: entryIdentityRawID) else {
@@ -587,16 +538,6 @@ struct LibraryView: View {
         isSearching = false
         showProfileSettings = false
         openDetails(entry)
-    }
-
-    private static func isSceneConnected(_ identifier: String) -> Bool {
-        #if os(macOS)
-            NSApplication.shared.windows.contains { $0.sceneIdentifier == identifier && $0.isVisible }
-        #else
-            UIApplication.shared.connectedScenes.contains {
-                $0.session.persistentIdentifier == identifier
-            }
-        #endif
     }
 
     private var airingReminderWarningMessage: LocalizedStringResource {

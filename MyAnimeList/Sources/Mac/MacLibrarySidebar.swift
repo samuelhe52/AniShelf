@@ -65,10 +65,18 @@
                 }
 
                 Section("Status") {
-                    filterRow(.watching, systemImage: "play.circle", tint: AnimeEntry.WatchStatus.watching.libraryTintColor, counts: counts)
-                    filterRow(.planToWatch, systemImage: "bookmark", tint: AnimeEntry.WatchStatus.planToWatch.libraryTintColor, counts: counts)
-                    filterRow(.watched, systemImage: "checkmark.circle", tint: AnimeEntry.WatchStatus.watched.libraryTintColor, counts: counts)
-                    filterRow(.dropped, systemImage: "xmark.circle", tint: AnimeEntry.WatchStatus.dropped.libraryTintColor, counts: counts)
+                    filterRow(
+                        .watching, systemImage: "play.circle", tint: AnimeEntry.WatchStatus.watching.libraryTintColor,
+                        counts: counts)
+                    filterRow(
+                        .planToWatch, systemImage: "bookmark",
+                        tint: AnimeEntry.WatchStatus.planToWatch.libraryTintColor, counts: counts)
+                    filterRow(
+                        .watched, systemImage: "checkmark.circle",
+                        tint: AnimeEntry.WatchStatus.watched.libraryTintColor, counts: counts)
+                    filterRow(
+                        .dropped, systemImage: "xmark.circle", tint: AnimeEntry.WatchStatus.dropped.libraryTintColor,
+                        counts: counts)
                 }
 
                 Section("Collections") {

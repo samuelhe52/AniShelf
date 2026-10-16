@@ -79,26 +79,26 @@ struct AnimeSharingSheet: View {
                         }
                     }
                 #else
-                ToolbarItem(placement: .primaryAction) {
-                    if let url = viewModel.renderedImageURL {
-                        ShareLink(item: url) {
-                            Image(systemName: "square.and.arrow.up")
-                        }
-                        .labelStyle(.iconOnly)
-                        .simultaneousGesture(
-                            TapGesture().onEnded {
-                                didActivateShare = true
-                                appReview.record(
-                                    .entryShare(entryID: viewModel.entry.libraryIdentity),
-                                    scheduleRequest: false
-                                )
+                    ToolbarItem(placement: .primaryAction) {
+                        if let url = viewModel.renderedImageURL {
+                            ShareLink(item: url) {
+                                Image(systemName: "square.and.arrow.up")
                             }
-                        )
-                    } else {
-                        Label("Rendering…", systemImage: "hourglass")
-                            .foregroundStyle(.secondary)
+                            .labelStyle(.iconOnly)
+                            .simultaneousGesture(
+                                TapGesture().onEnded {
+                                    didActivateShare = true
+                                    appReview.record(
+                                        .entryShare(entryID: viewModel.entry.libraryIdentity),
+                                        scheduleRequest: false
+                                    )
+                                }
+                            )
+                        } else {
+                            Label("Rendering…", systemImage: "hourglass")
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                }
                 #endif
             }
             .navigationDestination(isPresented: $showPosterSelection) {

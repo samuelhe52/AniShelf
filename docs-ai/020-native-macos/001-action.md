@@ -10,6 +10,7 @@
 | 2026-10-16 | Slice 2: Mac shell ([004](004-slice-2-mac-shell.md)) | `533206a` |
 | 2026-10-16 | Slice 3: feature parity ([005](005-slice-3-feature-parity.md)) | `ff73ed0` |
 | 2026-10-16 | Slice 4: polish, validation, and final review fixes ([006](006-slice-4-polish.md)) | `dc6f46b` |
+| 2026-10-16 | Platform boundary refactor ([007](007-platform-boundary-refactor.md)) | `71ab52f` |
 
 Work is on `feat/native-macos`; it is not pushed or merged. `main` was not
 changed.
@@ -35,8 +36,9 @@ intentionally.
 Key source paths:
 
 - `MyAnimeList/Sources/Mac/`: lifecycle, sidebar, commands, Settings root.
-- `MyAnimeList/Sources/Views/Library/LibraryView+Desktop.swift`: the selection
-  state machine and inspector width handling.
+- `MyAnimeList/Sources/Mac/LibraryView+Mac.swift`: the split view, the selection
+  state machine, and inspector width handling. These lived in
+  `LibraryView+Desktop.swift` until [007](007-platform-boundary-refactor.md).
 - `MyAnimeList/Sources/Utils/PlatformViewModifiers.swift` and
   `PlatformImage.swift`: platform shims.
 - `MyAnimeList/Sources/Utils/ShareSheetPresenter.swift`: sharing and save

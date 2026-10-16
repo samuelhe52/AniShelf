@@ -70,17 +70,17 @@ struct LibraryListView: View {
             )
         }
     #else
-    private var listSelection: Binding<Set<LibraryEntryIdentity>> {
-        // Keep native selection configured while edit mode animates out.
-        // Browsing taps must not add items to the batch selection.
-        Binding(
-            get: { interaction.selectedEntryIDs },
-            set: { selectedEntryIDs in
-                guard interaction.isMultiSelecting else { return }
-                interaction.selectedEntryIDs = selectedEntryIDs
-            }
-        )
-    }
+        private var listSelection: Binding<Set<LibraryEntryIdentity>> {
+            // Keep native selection configured while edit mode animates out.
+            // Browsing taps must not add items to the batch selection.
+            Binding(
+                get: { interaction.selectedEntryIDs },
+                set: { selectedEntryIDs in
+                    guard interaction.isMultiSelecting else { return }
+                    interaction.selectedEntryIDs = selectedEntryIDs
+                }
+            )
+        }
     #endif
 
     @ViewBuilder
@@ -101,16 +101,16 @@ struct LibraryListView: View {
             onToggleFavorite: toggleFavorite
         )
         #if !os(macOS)
-        .opacity(
-            !interaction.isMultiSelecting || interaction.isSelected(item.id) ? 1 : 0.48
-        )
-        .scaleEffect(
-            !interaction.isMultiSelecting || interaction.isSelected(item.id) ? 1 : 0.985
-        )
-        .animation(
-            .smooth(duration: 0.18),
-            value: !interaction.isMultiSelecting || interaction.isSelected(item.id)
-        )
+            .opacity(
+                !interaction.isMultiSelecting || interaction.isSelected(item.id) ? 1 : 0.48
+            )
+            .scaleEffect(
+                !interaction.isMultiSelecting || interaction.isSelected(item.id) ? 1 : 0.985
+            )
+            .animation(
+                .smooth(duration: 0.18),
+                value: !interaction.isMultiSelecting || interaction.isSelected(item.id)
+            )
         #endif
         .highlightEffect(trigger: highlightRequest?.trigger(for: item.id))
         .tag(item.id)
@@ -118,7 +118,7 @@ struct LibraryListView: View {
         .listRowSeparator(.visible)
         .listRowSeparatorTint(.white.opacity(0.06))
         #if !os(macOS)
-        .listRowBackground(Color.clear)
+            .listRowBackground(Color.clear)
         #endif
         .contextMenu {
             interaction.contextMenu(
