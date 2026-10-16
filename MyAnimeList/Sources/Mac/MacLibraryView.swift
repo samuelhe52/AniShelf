@@ -28,8 +28,8 @@
         @State var browse = LibraryBrowseState()
         @State private var showCategoryManager = false
         @State private var searchInitialMode: SearchMode?
-        /// The toolbar Find text. Per window, unlike the sidebar scope.
-        @State var libraryFindQuery = ""
+        /// The toolbar Find. Per window, unlike the sidebar scope.
+        @State var find = MacLibraryFind()
         @State var isLibraryFindFocused = false
         @State private var sidebarVisibility: NavigationSplitViewVisibility = .automatic
         /// This window's selection. Only views that depend on it read it (see `MacLibrarySelection`).
@@ -128,6 +128,7 @@
 
         private var libraryBrowserStack: some View {
             let displayItems = visibleDisplayItems
+            @Bindable var find = find
             return NavigationStack {
                 libraryPage(displayItems: displayItems)
                 .toolbar {
@@ -140,7 +141,7 @@
                 }
                 .environment(actions)
                 .searchable(
-                    text: $libraryFindQuery,
+                    text: $find.text,
                     isPresented: $isLibraryFindFocused,
                     placement: .toolbar,
                     prompt: Text("Find in Library")
@@ -215,7 +216,7 @@
 
         /// The entries this window shows: the shared scope, narrowed by the toolbar Find.
         var visibleDisplayItems: [LibraryEntryDisplayItem] {
-            let query = libraryFindQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+            let query = find.query
             guard !query.isEmpty else { return store.libraryDisplayItems }
             let matches = LibrarySearchService.matcher(for: query)
             return store.libraryDisplayItems.filter { matches($0.entry) }
@@ -251,8 +252,8 @@
         /// Makes the entry search found or added the selection, shown in the inspector. An
         /// explicit reveal wins over this window's Find text.
         private func revealSearchTarget(_ id: LibraryEntryIdentity) {
-            if !libraryFindQuery.isEmpty, !visibleDisplayItems.contains(where: { $0.id == id }) {
-                libraryFindQuery = ""
+            if !find.query.isEmpty, !visibleDisplayItems.contains(where: { $0.id == id }) {
+                find.clear()
             }
             showInInspector(id)
         }

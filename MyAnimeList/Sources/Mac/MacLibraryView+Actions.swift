@@ -93,7 +93,7 @@
         /// an airing reminder do. Scope and Find give way when they hide the entry.
         func revealInInspector(_ id: LibraryEntryIdentity) {
             if !visibleDisplayItems.contains(where: { $0.id == id }) {
-                libraryFindQuery = ""
+                find.clear()
                 if store.activeCategoryID != nil,
                     !store.libraryOnDisplay.contains(where: { $0.libraryIdentity == id })
                 {
