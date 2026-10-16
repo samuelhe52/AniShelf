@@ -29,6 +29,9 @@
         let applyBatchAction: ([AnimeEntry], LibraryBatchAction) -> Void
         let deleteEntries: ([AnimeEntry]) -> Void
         @Binding var isPresented: Bool
+        /// The last entry selected alone, for the batch panel to open its stack on.
+        @State private var lastSingleID: LibraryEntryIdentity?
+        @State private var posterFlight = MacInspectorPosterFlight()
 
         var body: some View {
             let selectedEntries = selectedEntries
@@ -38,6 +41,7 @@
                         store: store,
                         selectedEntries: selectedEntries,
                         lastClickedID: selection.anchor,
+                        enteringFromID: lastSingleID,
                         scoringEnabled: scoringEnabled,
                         apply: applyBatchAction,
                         deleteSelectedEntries: { deleteEntries(selectedEntries) }
@@ -53,6 +57,13 @@
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .environment(\.macInspectorPosterFlight, posterFlight)
+            .overlay { MacInspectorPosterFlightOverlay(posterFlight: posterFlight) }
+            .onGeometryChange(for: CGRect.self) {
+                $0.frame(in: .global)
+            } action: { frame in
+                posterFlight.bounds = frame
+            }
             // The window's one inspector toggle. Items in the inspector's toolbar stay in the
             // window toolbar while the inspector is collapsed, at its trailing edge.
             .toolbar {
@@ -66,6 +77,17 @@
             }
             .onChange(of: selection.single, initial: true) { _, identity in
                 synchronizeDetailSession(identity)
+            }
+            .onChange(of: selection.ids, initial: true) {
+                // A batch keeps the entry it grew from; clearing the selection forgets it.
+                if let single = selection.single {
+                    lastSingleID = single
+                    posterFlight.cancel()
+                } else if selection.isEmpty {
+                    lastSingleID = nil
+                    posterFlight.sourceFrame = nil
+                    posterFlight.cancel()
+                }
             }
             .onChange(of: store.libraryRevision) {
                 // Sync can replace the entry object behind an unchanged identity.

@@ -19,6 +19,10 @@
         let selectedEntries: [AnimeEntry]
         /// The entry the last click selected, which goes on top of the stack.
         let lastClickedID: LibraryEntryIdentity?
+        /// The entry the inspector showed before the batch began.
+        ///
+        /// The stack opens on it, and the rest of the selection drops onto it.
+        let enteringFromID: LibraryEntryIdentity?
         let scoringEnabled: Bool
         /// Applies an action to the given entries, which are all or one of the selection.
         let apply: ([AnimeEntry], LibraryBatchAction) -> Void
@@ -28,6 +32,11 @@
         /// The selection in the order it was made, oldest first, as of the last change.
         @State private var selectionOrder: [LibraryEntryIdentity] = []
         @State private var namePrompt: LibraryCategoryNamePrompt?
+        @Environment(\.macInspectorPosterFlight) private var posterFlight
+        /// Whether the stack shows the whole selection rather than only the entering poster.
+        @State private var hasEntered = false
+        /// Whether the entering poster is flying in from the detail.
+        @State private var isEntering = false
 
         var body: some View {
             Form {
@@ -93,6 +102,10 @@
             }
             .onChange(of: selectedEntries.map(\.libraryIdentity), initial: true) {
                 selectionOrder = currentOrder
+            }
+            .task {
+                // With no poster flying in, the rest of the selection drops in at once.
+                if !isEntering { hasEntered = true }
             }
         }
 
@@ -206,37 +219,45 @@
             return Array(currentOrder.reversed().compactMap { byID[$0] }.prefix(Self.posterLimit))
         }
 
+        /// The posters the stack shows: until the panel has entered, only the entry the
+        /// inspector showed before.
+        private var stackedEntries: [AnimeEntry] {
+            let newest = newestEntries
+            guard !hasEntered else { return newest }
+            return newest.filter { $0.libraryIdentity == enteringFromID }
+        }
+
         /// A stack of the newest posters: the latest selection lies flat on top, and older
         /// ones fan out behind it.
         private var posterStack: some View {
-            let shown = newestEntries
+            let shown = stackedEntries
             return ZStack {
                 ForEach(Array(shown.enumerated()), id: \.element.libraryIdentity) { depth, entry in
                     let spread = CGFloat(depth)
-                    // The grid's poster variant, which is usually still in the memory cache,
-                    // so a newly selected poster is ready before its insertion animates.
-                    KFImageView(
-                        url: entry.selectedPosterPath.flatMap {
-                            TMDbImageURLResolver.current.url(
-                                for: $0, role: .poster, idealWidth: TMDbPosterDisplayType.grid.idealWidth)
-                        },
-                        targetWidth: 360,
-                        diskCacheExpiration: .longTerm
-                    )
-                    .scaledToFill()
-                    .frame(width: 96, height: 144)
-                    .background(.fill.tertiary)
-                    .clipShape(.rect(cornerRadius: 8, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(.separator, lineWidth: 0.5)
-                    }
-                    .shadow(color: .black.opacity(depth == 0 ? 0.20 : 0.10), radius: 3, y: 2)
-                    .modifier(PosterFanStep(steps: spread))
-                    // Count from the selection size, not the poster limit, so a deselected
-                    // front poster stays above the one that takes its place while it leaves.
-                    .zIndex(Double(selectedEntries.count - depth))
-                    .transition(posterTransition(depth: depth))
+                    KFImageView(url: posterURL(for: entry), targetWidth: 360, diskCacheExpiration: .longTerm)
+                        .scaledToFill()
+                        .frame(width: 96, height: 144)
+                        .background(.fill.tertiary)
+                        .clipShape(.rect(cornerRadius: 8, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(.separator, lineWidth: 0.5)
+                        }
+                        .shadow(color: .black.opacity(depth == 0 ? 0.20 : 0.10), radius: 3, y: 2)
+                        // The flying copy stands in for this poster; it shows again the moment the
+                        // copy lands, without fading.
+                        .opacity(isEntering && entry.libraryIdentity == enteringFromID ? 0 : 1)
+                        .animation(nil, value: isEntering)
+                        .onGeometryChange(for: CGRect.self) {
+                            $0.frame(in: .global)
+                        } action: { frame in
+                            beginEntrance(of: entry, at: frame)
+                        }
+                        .modifier(PosterFanStep(steps: spread))
+                        // Count from the selection size, not the poster limit, so a deselected
+                        // front poster stays above the one that takes its place while it leaves.
+                        .zIndex(Double(selectedEntries.count - depth))
+                        .transition(posterTransition(depth: depth))
                 }
             }
             // Center the whole fan, rather than placing the front poster at the center
@@ -245,6 +266,30 @@
             .animation(.snappy(duration: 0.3), value: shown.map(\.libraryIdentity))
             .frame(height: 170)
             .accessibilityHidden(true)
+        }
+
+        /// The grid's poster variant, which is usually still in the memory cache, so a newly
+        /// selected poster is ready before its insertion animates.
+        private func posterURL(for entry: AnimeEntry) -> URL? {
+            entry.selectedPosterPath.flatMap {
+                TMDbImageURLResolver.current.url(
+                    for: $0, role: .poster, idealWidth: TMDbPosterDisplayType.grid.idealWidth)
+            }
+        }
+
+        /// Flies the entry the detail showed into its place on the stack, then lets the rest of
+        /// the selection drop onto it.
+        private func beginEntrance(of entry: AnimeEntry, at frame: CGRect) {
+            guard !hasEntered, !isEntering, entry.libraryIdentity == enteringFromID else { return }
+            guard let posterFlight else {
+                hasEntered = true
+                return
+            }
+            isEntering = true
+            posterFlight.fly(posterURL: posterURL(for: entry), to: frame) {
+                isEntering = false
+                hasEntered = true
+            }
         }
 
         /// The newest poster drops onto the pile and slides off it when deselected. Any other

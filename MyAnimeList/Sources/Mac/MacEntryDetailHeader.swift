@@ -17,6 +17,7 @@
         let metadataLineItems: [String]
         let genreNames: [String]
         @ViewBuilder let actions: Actions
+        @Environment(\.macInspectorPosterFlight) private var posterFlight
 
         private let posterSize = CGSize(width: 96, height: 144)
 
@@ -74,6 +75,12 @@
                     .stroke(.separator, lineWidth: 0.5)
             }
             .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+            // Where the poster flies from if this selection grows into a batch.
+            .onGeometryChange(for: CGRect.self) {
+                $0.frame(in: .global)
+            } action: { frame in
+                posterFlight?.sourceFrame = frame
+            }
             .accessibilityHidden(true)
         }
     }
