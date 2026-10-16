@@ -34,6 +34,7 @@ historical runtime scenario was rerun. Entry 010 remains an unimplemented propos
 | 018 | 2026-10-15 | [Default poster language and onboarding language step](018-poster-language/000-plan.md) | Implemented | [Action](018-poster-language/001-action.md), [language page](018-poster-language/002-language-page.md) |
 | 020 | 2026-10-15 | [Native macOS feasibility and migration options](020-native-macos/000-plan.md) | Implemented on `feat/native-macos` | [Action](020-native-macos/001-action.md), [002](020-native-macos/002-implementation-decisions.md), [slice 1](020-native-macos/003-slice-1-native-build.md), [slice 2](020-native-macos/004-slice-2-mac-shell.md), [slice 3](020-native-macos/005-slice-3-feature-parity.md), [slice 4](020-native-macos/006-slice-4-polish.md), [boundary refactor](020-native-macos/007-platform-boundary-refactor.md), [Mac-native UI](020-native-macos/008-mac-native-ui.md) |
 | 021 | 2026-10-16 | [Mac selection and inspector model](021-mac-selection-model/000-plan.md) | Implemented on `feat/native-macos` | [Action](021-mac-selection-model/001-action.md) |
+| 022 | 2026-10-17 | [Separate Mac and iOS library roots](022-mac-library-root-split/000-plan.md) | Implemented on `feat/native-macos` (`129150c`) | [Action](022-mac-library-root-split/001-action.md) |
 
 ## Find a contract or source
 
