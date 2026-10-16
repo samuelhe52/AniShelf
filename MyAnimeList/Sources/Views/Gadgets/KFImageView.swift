@@ -45,6 +45,23 @@ struct KFImageView: View {
         self.targetSize = targetSize ?? targetWidth.map(PosterImageSize.targetSize(width:))
         self.cacheOriginalImage = cacheOriginalImage
         self._imageLoaded = imageLoaded
+        // Lazy grids and lists recreate their cells, for example when a window resize changes the
+        // column count. Starting from the memory cache keeps those cells from flashing a spinner.
+        if let cachedImage = Self.memoryCachedImage(url: url, targetSize: self.targetSize) {
+            self._loadState = State(initialValue: .loaded(cachedImage))
+        }
+    }
+
+    private static func memoryCachedImage(url: URL?, targetSize: CGSize?) -> PlatformImage? {
+        guard let url else { return nil }
+        var options = KingfisherParsedOptionsInfo(nil)
+        if let processor = LibraryImageProcessorFactory.processor(for: url, targetSize: targetSize) {
+            options.processor = processor
+        }
+        return KingfisherManager.shared.cache.retrieveImageInMemoryCache(
+            forKey: url.cacheKey,
+            options: options
+        )
     }
 
     var body: some View {
@@ -80,6 +97,12 @@ struct KFImageView: View {
         guard let url else {
             loadState = .fallback
             imageLoaded = false
+            return
+        }
+
+        if let cachedImage = Self.memoryCachedImage(url: url, targetSize: targetSize) {
+            loadState = .loaded(cachedImage)
+            imageLoaded = true
             return
         }
 
