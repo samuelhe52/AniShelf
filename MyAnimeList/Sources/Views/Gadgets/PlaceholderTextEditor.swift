@@ -13,6 +13,18 @@ import SwiftUI
     import UIKit
 #endif
 
+/// Where the placeholder sits so it lines up with the editor's caret. UITextView here has an
+/// 8pt top inset and 4pt line padding; NSTextView has none on top and 5pt line padding.
+fileprivate enum PlaceholderTextEditorMetrics {
+    #if os(macOS)
+        static let top: CGFloat = 0
+        static let leading: CGFloat = 5
+    #else
+        static let top: CGFloat = 8
+        static let leading: CGFloat = 4
+    #endif
+}
+
 struct PlaceholderTextEditor: View {
     @Binding var text: String
     var placeholder: LocalizedStringResource
@@ -22,8 +34,9 @@ struct PlaceholderTextEditor: View {
             if text.isEmpty {
                 Text(placeholder)
                     .foregroundStyle(.tertiary)
-                    .padding(.top, 8)
-                    .padding(.leading, 4)
+                    .padding(.top, PlaceholderTextEditorMetrics.top)
+                    .padding(.leading, PlaceholderTextEditorMetrics.leading)
+                    .allowsHitTesting(false)
             }
             TextEditor(text: $text)
         }
@@ -40,8 +53,9 @@ struct ScrollIsolatedPlaceholderTextEditor: View {
             if text.isEmpty {
                 Text(placeholder)
                     .foregroundStyle(.tertiary)
-                    .padding(.top, 8)
-                    .padding(.leading, 4)
+                    .padding(.top, PlaceholderTextEditorMetrics.top)
+                    .padding(.leading, PlaceholderTextEditorMetrics.leading)
+                    .allowsHitTesting(false)
             }
             ScrollIsolatedTextView(text: $text)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

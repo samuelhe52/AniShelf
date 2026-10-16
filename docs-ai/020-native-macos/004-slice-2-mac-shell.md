@@ -44,7 +44,9 @@ Every round below ran against a copied snapshot build under the untracked
 Entry detail stays in the trailing inspector. On the Mac the inspector is
 attached to the library column inside the split view
 (`LibraryEntryInspectorModifier`). The column's minimum width is 520pt, or 1000pt
-while the inspector is open, and its ideal width stays constant.
+while the inspector is open, and its ideal width stays constant. (The
+inspector-open minimum was removed in [010](010-system-window-sizing.md); the
+loop did not reproduce with the smaller toolbar.)
 
 Two failures led to this layout. Both were measured, not inferred:
 
@@ -64,9 +66,11 @@ Two failures led to this layout. Both were measured, not inferred:
   screen edge. A temporary headless harness toggled the inspector and logged
   window frames to confirm this. The library side needs about 600pt next to the
   inspector before AppKit stops widening, which is where the 1000pt
-  inspector-open minimum comes from.
-  `keepWindowWidthForInspector()` then restores the user's width, grows it only
-  to the new minimum, and clamps it to the visible screen.
+  inspector-open minimum comes from. (Superseded: [008](008-mac-native-ui-pass.md) lowered it
+  to 720pt once the toolbar lost Gallery and the Search button.)
+  `keepWindowWidthForInspector()` then restored the user's width, grew it only
+  to the new minimum, and clamped it to the visible screen. (Removed in
+  [010](010-system-window-sizing.md); AppKit's default sizing now applies.)
 
 ### Commands, Settings, sheets
 

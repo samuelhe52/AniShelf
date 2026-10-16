@@ -68,7 +68,7 @@
             CommandGroup(before: .sidebar) {
                 if let library {
                     Picker("View As", selection: library.viewStyle) {
-                        ForEach(Array(LibraryView.LibraryViewStyle.allCases.enumerated()), id: \.element) {
+                        ForEach(Array(LibraryView.LibraryViewStyle.platformCases.enumerated()), id: \.element) {
                             index, style in
                             Text(style.nameKey)
                                 .tag(style)
@@ -78,7 +78,7 @@
                     .pickerStyle(.inline)
                 } else {
                     // Keeps the menu's layout stable while no library window is key.
-                    ForEach(LibraryView.LibraryViewStyle.allCases, id: \.self) { style in
+                    ForEach(LibraryView.LibraryViewStyle.platformCases, id: \.self) { style in
                         Button(style.nameKey) {}.disabled(true)
                     }
                 }

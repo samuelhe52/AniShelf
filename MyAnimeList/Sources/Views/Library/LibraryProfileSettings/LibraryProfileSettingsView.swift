@@ -129,13 +129,14 @@ struct LibraryProfileSettingsView: View {
             } detail: {
                 switch macPane ?? .overview {
                 case .overview:
-                    ZStack {
-                        LibraryProfileBackdrop()
-                        ScrollView {
-                            macOverviewContent
-                        }
-                        .scrollContentBackground(.hidden)
-                    }
+                    MacSettingsOverview(
+                        stats: stats,
+                        animeTitleResource: animeTitleResource,
+                        whatsNewVersion: whatsNew.currentEntry?.version,
+                        onShowWhatsNew: presentWhatsNewSheet,
+                        onShowSupport: presentSupportSheet,
+                        onShowAbout: presentAboutSheet
+                    )
                     .navigationTitle(Text("Overview"))
                 case .destination(let destination):
                     settingsPage(for: destination)
@@ -144,32 +145,15 @@ struct LibraryProfileSettingsView: View {
             }
         }
 
-        private var macOverviewContent: some View {
-            VStack(spacing: 16) {
-                LibraryProfileHeroCard(stats: stats, animeTitleResource: animeTitleResource)
-                HStack(alignment: .top, spacing: 20) {
-                    LibraryProfilePrimaryStatsGrid(stats: stats, layout: .fillsSummaryHeight)
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                    LibraryProfileLibraryDetailsCard(stats: stats)
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                }
-                LibraryProfileAppInfoCard(
-                    whatsNewVersion: whatsNew.currentEntry?.version, onShowWhatsNew: presentWhatsNewSheet,
-                    onShowSupport: presentSupportSheet, onShowAbout: presentAboutSheet
-                )
-            }
-            .frame(maxWidth: 900)
-            .padding(24)
-            .frame(maxWidth: .infinity)
-        }
-
         private func macPaneLabel(_ title: Text, systemImage: String, tint: Color) -> some View {
             Label {
                 title
             } icon: {
                 Image(systemName: systemImage)
-                    .font(.system(size: 11, weight: .semibold))
+                    .resizable()
+                    .scaledToFit()
                     .foregroundStyle(.white)
+                    .frame(width: 14, height: 14)
                     .frame(width: 22, height: 22)
                     .background(tint.gradient, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
             }
@@ -503,16 +487,24 @@ struct LibraryProfileSettingsView: View {
                 onExportLibrary: exportLibrary,
                 onRestoreButtonPress: handleRestoreButtonPress
             )
-            LibraryProfileActionRow(
-                title: "Delete All Animes", subtitle: "Remove every saved library entry.",
-                systemImage: "trash", role: .destructive, tint: LibraryProfileSettingsPalette.destructive,
-                horizontalPadding: 0,
-                action: requestClearLibrary
-            )
-            .padding(.horizontal, 14)
-            .padding(.vertical, 3)
-            .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsPalette.destructive)
+            #if os(macOS)
+                Section { deleteAllRow }
+            #else
+                deleteAllRow
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 3)
+                    .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsPalette.destructive)
+            #endif
         }
+    }
+
+    private var deleteAllRow: some View {
+        LibraryProfileActionRow(
+            title: "Delete All Animes", subtitle: "Remove every saved library entry.",
+            systemImage: "trash", role: .destructive, tint: LibraryProfileSettingsPalette.destructive,
+            horizontalPadding: 0,
+            action: requestClearLibrary
+        )
     }
 
     private func reloadReminders() async {

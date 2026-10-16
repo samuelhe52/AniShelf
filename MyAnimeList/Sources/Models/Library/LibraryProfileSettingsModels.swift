@@ -158,7 +158,7 @@ struct LibraryProfileStats: Equatable {
     }
 }
 
-enum LibraryProfileRuntimeMode: Equatable {
+enum LibraryProfileRuntimeMode: Hashable {
     case total
     case watched
     case planned

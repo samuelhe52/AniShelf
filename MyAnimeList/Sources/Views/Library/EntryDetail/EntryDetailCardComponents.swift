@@ -11,14 +11,22 @@ import SwiftUI
 
 struct PersonCardView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.popupPanelStyle) private var panelStyle
 
     let card: EntryDetailPersonCard
 
     private let cardWidth: CGFloat = 146
     private let portraitHeight: CGFloat = 168
 
+    private var cornerRadius: CGFloat {
+        panelStyle == .grouped ? 12 : 22
+    }
+
     private var backgroundStyle: AnyShapeStyle {
-        colorScheme == .dark
+        // The portrait supplies the contrast; keep its caption surface quiet while a
+        // hairline defines the card against the enclosing inspector section.
+        if panelStyle == .grouped { return AnyShapeStyle(Color.primary.opacity(0.035)) }
+        return colorScheme == .dark
             ? AnyShapeStyle(Color.platformQuaternarySystemFill)
             : AnyShapeStyle(.thinMaterial)
     }
@@ -57,7 +65,13 @@ struct PersonCardView: View {
         }
         .frame(width: cardWidth, alignment: .leading)
         .background(backgroundStyle)
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .overlay {
+            if panelStyle == .grouped {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(.separator, lineWidth: 0.5)
+            }
+        }
     }
 }
 
@@ -117,8 +131,7 @@ struct EpisodeRowView: View {
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
         .accessibilityValue(Text(verbatim: isWatched ? String(localized: EntryDetailL10n.watched) : ""))
-        .onLongPressGesture {
-            guard previewContext != nil else { return }
+        .previewTrigger(isEnabled: previewContext != nil) {
             previewHapticTrigger.toggle()
             showPreview = true
         }
@@ -142,5 +155,30 @@ struct EpisodeRowView: View {
         } else {
             EmptyView()
         }
+    }
+}
+
+extension View {
+    /// Opens an episode preview: a long press on iOS; on the Mac, where a held click is
+    /// undiscoverable, a click or the row's context menu.
+    @ViewBuilder
+    fileprivate func previewTrigger(isEnabled: Bool, action: @escaping () -> Void) -> some View {
+        #if os(macOS)
+            if isEnabled {
+                contentShape(Rectangle())
+                    .onTapGesture(perform: action)
+                    .contextMenu {
+                        Button("Preview", systemImage: "eye", action: action)
+                    }
+                    .accessibilityAction(named: Text("Preview"), action)
+            } else {
+                self
+            }
+        #else
+            onLongPressGesture {
+                guard isEnabled else { return }
+                action()
+            }
+        #endif
     }
 }

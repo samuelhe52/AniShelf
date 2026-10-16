@@ -29,9 +29,13 @@ struct LibraryListView: View {
             ) { item in
                 rowContent(for: item)
             }
-            .listStyle(.plain)
             #if os(macOS)
+                // The inset style draws a rounded, inset selection like Mail's instead of an
+                // edge-to-edge bar.
+                .listStyle(.inset)
                 .focused($isListFocused)
+            #else
+                .listStyle(.plain)
             #endif
             .preferredNavigationBarScrollEdgeEffect()
             .selectionEditMode(interaction.isMultiSelecting)
@@ -114,7 +118,7 @@ struct LibraryListView: View {
         #endif
         .highlightEffect(trigger: highlightRequest?.trigger(for: item.id))
         .tag(item.id)
-        .listRowInsets(.init(top: 8, leading: 10, bottom: 8, trailing: 10))
+        .listRowInsets(rowInsets)
         .listRowSeparator(.visible)
         .listRowSeparatorTint(.white.opacity(0.06))
         #if !os(macOS)
@@ -150,6 +154,14 @@ struct LibraryListView: View {
                     .tint(.indigo)
             }
         }
+    }
+
+    private var rowInsets: EdgeInsets {
+        #if os(macOS)
+            .init(top: 4, leading: 8, bottom: 4, trailing: 8)
+        #else
+            .init(top: 8, leading: 10, bottom: 8, trailing: 10)
+        #endif
     }
 
     /// Desktop rows leave clicks to the list's native selection.

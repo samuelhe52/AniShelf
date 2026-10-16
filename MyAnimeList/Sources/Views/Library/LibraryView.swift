@@ -61,8 +61,21 @@ struct LibraryView: View {
     @State var selectionEntriesByID: [LibraryEntryIdentity: AnimeEntry] = [:]
 
     // Persistent UI preference
-    @AppStorage(.libraryViewStyle) var libraryViewStyle: LibraryViewStyle = .gallery
-    @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
+    @AppStorage(.libraryViewStyle) private var storedLibraryViewStyle: LibraryViewStyle = .gallery
+    /// The library's view style. The Mac has no Gallery: a shelf paged one poster at a time
+    /// works against mouse and trackpad scrolling, and Grid with the inspector already shows
+    /// the artwork. A stored Gallery preference shows as Grid there.
+    var libraryViewStyle: LibraryViewStyle {
+        get {
+            #if os(macOS)
+                storedLibraryViewStyle == .gallery ? .grid : storedLibraryViewStyle
+            #else
+                storedLibraryViewStyle
+            #endif
+        }
+        nonmutating set { storedLibraryViewStyle = newValue }
+    }
+    @AppStorage(.libraryScoringEnabled) var scoringEnabled = true
     @AppStorage(.libraryLastInspectorDetailEntryIdentity)
     private var persistedLastInspectorDetailEntryIdentity: String?
 
@@ -70,6 +83,12 @@ struct LibraryView: View {
         @Environment(\.openSettings) private var openSettings
         @Environment(\.openWindow) var openWindow
         @State var searchInitialMode: SearchMode?
+        /// The toolbar Find text. Per window, unlike the sidebar scope.
+        @State var libraryFindQuery = ""
+        @State var isLibraryFindFocused = false
+        /// Hides the batch-selection panel the inspector shows during a batch selection.
+        @State var isBatchInspectorHidden = false
+        @State var macSidebarVisibility: NavigationSplitViewVisibility = .automatic
         @State var macSelectionAnchor: LibraryEntryIdentity?
         @State var showRefreshAllMetadataAlert = false
         @State var showDeleteSelectionAlert = false
@@ -128,6 +147,12 @@ struct LibraryView: View {
         .onChange(of: store.hideDroppedByDefault) {
             refreshSelectionDisplayItemsIfNeeded()
         }
+        #if os(macOS)
+            .onChange(of: libraryFindQuery) {
+                refreshSelectionDisplayItemsIfNeeded()
+                dismissInspectorOutsideScope()
+            }
+        #endif
         .onChange(of: store.activeCategoryID) {
             // onChange does not reliably inherit the switch's animation, and
             // the selection snapshot is what the list renders while selecting.
@@ -189,12 +214,24 @@ struct LibraryView: View {
     /// column inside the split view: attached outside it, AppKit counted the inspector's width
     /// twice in the window's minimum size.
     private var entryInspector: LibraryEntryInspectorModifier {
-        LibraryEntryInspectorModifier(
+        #if os(macOS)
+            let batchContent: AnyView? = isMacBatchInspectorShown ? AnyView(macBatchSelectionPanel) : nil
+            let isBatchShown = { isMacBatchInspectorShown }
+            let batchDidHide = { hideBatchInspector() }
+        #else
+            let batchContent: AnyView? = nil
+            let isBatchShown = { false }
+            let batchDidHide = {}
+        #endif
+        return LibraryEntryInspectorModifier(
             interaction: interaction,
             detailSession: detailSessionStore.session(for: interaction.presentedDetailEntryID),
             content: { presentation, session in
                 AnyView(detailHostContent(presentation: presentation, session: session))
-            }
+            },
+            batchContent: batchContent,
+            isBatchShown: isBatchShown,
+            batchDidHide: batchDidHide
         )
     }
 
@@ -351,12 +388,18 @@ struct LibraryView: View {
                     openProfileSettings: openProfileSettings,
                     openCategoryManager: openCategoryManager,
                     addAnime: { openSearch(mode: .tmdb) },
-                    isInspectorPresented: interaction.inspectorPresentation != nil,
+                    isInspectorPresented: isInspectorShown,
                     toggleInspector: toggleInspector
                 )
             }
             .environment(interaction)
             #if os(macOS)
+                .searchable(
+                    text: $libraryFindQuery,
+                    isPresented: $isLibraryFindFocused,
+                    placement: .toolbar,
+                    prompt: Text("Find in Library")
+                )
                 .navigationTitle(macWindowTitle)
                 .navigationSubtitle(macWindowSubtitle)
             #else
@@ -370,6 +413,10 @@ struct LibraryView: View {
             }
             .onChange(of: interaction.isMultiSelecting) {
                 isReorderingCategories = false
+                #if os(macOS)
+                    // Each new batch selection shows its panel again.
+                    if !interaction.isMultiSelecting { isBatchInspectorHidden = false }
+                #endif
             }
             .onChange(of: isSearching) {
                 if isSearching {
@@ -411,7 +458,7 @@ struct LibraryView: View {
 
     @ViewBuilder
     private var libraryView: some View {
-        let displayItems = selectionDisplayItems ?? store.libraryDisplayItems
+        let displayItems = selectionDisplayItems ?? visibleDisplayItems
         let layoutIDs = selectionLayoutIDs ?? displayItems.map(\.id)
         #if os(macOS)
             let detailActions = LibraryEntryDetailActions(
@@ -456,7 +503,8 @@ struct LibraryView: View {
                     displayItems: displayItems,
                     scrolledID: $scrollState.scrolledID,
                     scrollRequest: scrollRequest,
-                    highlightRequest: highlightRequest
+                    highlightRequest: highlightRequest,
+                    inspectorIsVisible: isInspectorShown
                 )
                 .safeAreaPadding(.bottom, 20)
             }
@@ -517,6 +565,7 @@ struct LibraryView: View {
     }
 
     func openDetails(_ entry: AnimeEntry) {
+        endMacBatchForEntryRequest()
         prepareAndConfigureDetailHost(for: entry)
         interaction.openDetails(for: entry)
     }
@@ -551,8 +600,18 @@ struct LibraryView: View {
     }
 
     func editDetails(_ entry: AnimeEntry) {
+        endMacBatchForEntryRequest()
         prepareAndConfigureDetailHost(for: entry)
         interaction.setEditingEntry(entry)
+    }
+
+    /// On the Mac a batch panel occupies the inspector, so a request for one entry, such as
+    /// a context-menu Edit during a batch, ends the batch to show that entry.
+    private func endMacBatchForEntryRequest() {
+        #if os(macOS)
+            guard interaction.isMultiSelecting else { return }
+            exitMultiSelection()
+        #endif
     }
 
     private func prepareAndConfigureDetailHost(for entry: AnimeEntry) {
@@ -625,6 +684,15 @@ struct LibraryView: View {
         case list
         case grid
 
+        /// The styles this platform offers; the Mac has no Gallery (see `libraryViewStyle`).
+        static var platformCases: [LibraryViewStyle] {
+            #if os(macOS)
+                [.list, .grid]
+            #else
+                allCases
+            #endif
+        }
+
         var nameKey: LocalizedStringKey {
             switch self {
             case .gallery: "Gallery"
@@ -659,34 +727,68 @@ fileprivate struct LibraryEntryInspectorModifier: ViewModifier {
     let interaction: LibraryEntryInteractionState
     let detailSession: EntryDetailSession?
     let content: (LibraryEntryDetailHostPresentation, EntryDetailSession) -> AnyView
+    /// The Mac batch-selection panel, shown in place of entry detail; always `nil` on iOS.
+    let batchContent: AnyView?
+    /// Read current batch visibility when reconciling the native presentation state.
+    let isBatchShown: () -> Bool
+    let batchDidHide: () -> Void
+
+    #if os(macOS)
+        @State private var macInspectorPresented = false
+    #endif
 
     func body(content base: Content) -> some View {
         let inspectorPresentation = interaction.inspectorPresentation
-        base
-            .inspector(
-                isPresented: Binding(
-                    get: {
-                        guard let inspectorPresentation else { return false }
-                        return interaction.inspectorPresentation?.id == inspectorPresentation.id
-                    },
-                    set: { isPresented in
-                        guard !isPresented, let inspectorPresentation else { return }
+        #if os(macOS)
+            base
+                .inspector(isPresented: $macInspectorPresented) {
+                    Group {
+                        if let batchContent {
+                            batchContent
+                        } else if let inspectorPresentation, let detailSession {
+                            content(inspectorPresentation, detailSession)
+                                .presentationBackground(inspectorPresentation.host.pageBackground)
+                        }
+                    }
+                    .inspectorColumnWidth(min: 340, ideal: 400, max: 560)
+                }
+                .onChange(of: isBatchShown() || inspectorPresentation != nil, initial: true) { _, shown in
+                    withAnimation(.smooth(duration: 0.3)) { macInspectorPresented = shown }
+                }
+                .onChange(of: macInspectorPresented) { old, shown in
+                    guard old, !shown else { return }
+                    if isBatchShown() {
+                        batchDidHide()
+                    } else if let inspectorPresentation {
                         interaction.detailHostDidDismiss(inspectorPresentation)
                     }
-                )
-            ) {
-                if let inspectorPresentation,
-                    let detailSession
-                {
-                    content(inspectorPresentation, detailSession)
-                        .presentationBackground(inspectorPresentation.host.pageBackground)
-                        #if os(macOS)
-                            // Narrower than iPad so the library column keeps room for its toolbar.
-                            .inspectorColumnWidth(min: 340, ideal: 400, max: 560)
-                        #else
-                            .inspectorColumnWidth(min: 400, ideal: 480, max: 520)
-                        #endif
                 }
-            }
+        #else
+            base
+                .inspector(
+                    isPresented: Binding(
+                        get: {
+                            if isBatchShown() { return true }
+                            guard let inspectorPresentation else { return false }
+                            return interaction.inspectorPresentation?.id == inspectorPresentation.id
+                        },
+                        set: { isPresented in
+                            guard !isPresented else { return }
+                            if isBatchShown() {
+                                batchDidHide()
+                                return
+                            }
+                            guard let inspectorPresentation else { return }
+                            interaction.detailHostDidDismiss(inspectorPresentation)
+                        }
+                    )
+                ) {
+                    if let inspectorPresentation, let detailSession {
+                        content(inspectorPresentation, detailSession)
+                            .presentationBackground(inspectorPresentation.host.pageBackground)
+                            .inspectorColumnWidth(min: 400, ideal: 480, max: 520)
+                    }
+                }
+        #endif
     }
 }

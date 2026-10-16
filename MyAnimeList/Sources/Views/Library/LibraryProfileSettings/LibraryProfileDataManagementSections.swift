@@ -28,13 +28,13 @@ struct LibraryProfileICloudSyncSection: View {
     var onTurnOffLibraryCloudSync: () -> Void = {}
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            LibraryProfileSettingHeader(
-                title: "iCloud Sync",
-                subtitle: "Keep your library available across devices.",
-                systemImage: "icloud",
-                tint: LibraryProfileSettingsDestination.syncData.tint
-            )
+        LibraryProfileSettingsGroup(
+            "iCloud Sync",
+            subtitle: "Keep your library available across devices.",
+            systemImage: "icloud",
+            tint: LibraryProfileSettingsDestination.syncData.tint,
+            spacing: 10
+        ) {
 
             LibraryProfileSettingsToggleRow(
                 title: "Master Switch",
@@ -63,8 +63,6 @@ struct LibraryProfileICloudSyncSection: View {
             }
         }
         .animation(.default, value: cloudSyncIsBusy)
-        .padding(14)
-        .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsDestination.syncData.tint)
         .sheet(isPresented: $showSyncIssues) {
             LibraryCloudSyncIssuesSheet(
                 issues: syncIssues,
@@ -235,28 +233,34 @@ struct LibraryProfileICloudSyncSection: View {
         )
     }
 
+    @ViewBuilder
     private func capsuleButton(
         _ title: LocalizedStringResource,
         systemImage: String,
         tint: Color,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: systemImage)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(tint.opacity(colorScheme == .dark ? 0.92 : 0.82))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-        }
-        .buttonStyle(.plain)
-        .background {
-            Capsule(style: .continuous)
-                .fill(tint.opacity(colorScheme == .dark ? 0.12 : 0.07))
-        }
-        .overlay {
-            Capsule(style: .continuous)
-                .stroke(tint.opacity(0.14), lineWidth: 1)
-        }
+        #if os(macOS)
+            Button(action: action) { Text(title) }
+                .buttonStyle(.bordered)
+        #else
+            Button(action: action) {
+                Label(title, systemImage: systemImage)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(tint.opacity(colorScheme == .dark ? 0.92 : 0.82))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+            }
+            .buttonStyle(.plain)
+            .background {
+                Capsule(style: .continuous)
+                    .fill(tint.opacity(colorScheme == .dark ? 0.12 : 0.07))
+            }
+            .overlay {
+                Capsule(style: .continuous)
+                    .stroke(tint.opacity(0.14), lineWidth: 1)
+            }
+        #endif
     }
 }
 
@@ -551,14 +555,76 @@ struct LibraryProfileBackupExportSection: View {
     let onRestoreButtonPress: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            LibraryProfileSettingHeader(
-                title: "Backup & Restore",
-                subtitle:
-                    "App backups keep AniShelf data and settings for restore. Library exports create user-facing files in standard formats.",
-                systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90",
-                tint: LibraryProfileSettingsDestination.syncData.tint
-            )
+        #if os(macOS)
+            macBody
+        #else
+            iOSBody
+        #endif
+    }
+
+    #if os(macOS)
+        /// Description rows with standard push buttons, matching the other Mac settings
+        /// pages, instead of wide tinted command buttons.
+        private var macBody: some View {
+            Section {
+                LabeledContent {
+                    LazyShareLink(prepareData: createBackupItems) {
+                        Text("Backup")
+                    }
+                } label: {
+                    Text("Back up AniShelf data and settings to restore later.")
+                }
+                .disabled(restoreCompleted)
+
+                LabeledContent {
+                    Button(role: .destructive, action: onRestoreButtonPress) {
+                        Text("Restore")
+                    }
+                    .accessibilityHint(Text(restoreButtonAccessibilityHint))
+                } label: {
+                    Text(restoreButtonAccessibilityHint)
+                }
+                .disabled(restoreCompleted)
+
+                if restoreCompleted {
+                    Label("Restore completed!", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                }
+
+                LabeledContent {
+                    Menu("Export as...") {
+                        ForEach(LibraryExportFormat.allCases) { format in
+                            Button {
+                                onExportLibrary(format)
+                            } label: {
+                                Label(format.menuTitleResource, systemImage: format.menuSystemImage)
+                            }
+                        }
+                    }
+                    .fixedSize()
+                } label: {
+                    Text("Save your library as a file in a standard format.")
+                }
+            } header: {
+                Text("Backup & Restore")
+            } footer: {
+                Text("Your TMDb API key is never included in backups or exports.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    #endif
+
+    private var iOSBody: some View {
+        LibraryProfileSettingsGroup(
+            "Backup & Restore",
+            subtitle:
+                "App backups keep AniShelf data and settings for restore. Library exports create user-facing files in standard formats.",
+            systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90",
+            tint: LibraryProfileSettingsDestination.syncData.tint,
+            spacing: 12
+        ) {
 
             HStack(spacing: 10) {
                 backupButton
@@ -585,8 +651,6 @@ struct LibraryProfileBackupExportSection: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
-        .padding(14)
-        .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsDestination.syncData.tint)
     }
 
     @ViewBuilder

@@ -68,11 +68,16 @@ struct SearchPage: View {
         self.processTMDbSearchResults = processTMDbSearchResults
         self.jumpToEntryInLibrary = jumpToEntryInLibrary
         let defaults = UserDefaults.standard
-        _mode = State(
-            initialValue: initialMode
-                ?? defaults.string(forKey: .searchMode).flatMap(SearchMode.init(rawValue:))
-                ?? .tmdb
-        )
+        #if os(macOS)
+            // The Mac page only adds from TMDb; the toolbar's Find filters the library itself.
+            _mode = State(initialValue: .tmdb)
+        #else
+            _mode = State(
+                initialValue: initialMode
+                    ?? defaults.string(forKey: .searchMode).flatMap(SearchMode.init(rawValue:))
+                    ?? .tmdb
+            )
+        #endif
         _query = State(initialValue: defaults.string(forKey: .searchPageQuery) ?? "")
     }
 
@@ -135,6 +140,60 @@ struct SearchPage: View {
         .macSheetFrame(width: 760, height: 680)
     }
 
+    #if os(macOS)
+        @FocusState private var isQueryFocused: Bool
+
+        /// The Mac add page: a wide search field with the language beside it, above the results.
+        private var regularSearchContent: some View {
+            VStack(spacing: 0) {
+                HStack(spacing: 10) {
+                    TextField(text: $query, prompt: Text(searchPrompt)) {
+                        Text("Search")
+                    }
+                    .textFieldStyle(.roundedBorder)
+                    .controlSize(.large)
+                    .focused($isQueryFocused)
+                    .onSubmit(performSearch)
+
+                    Picker("Language", selection: $tmdbLanguage) {
+                        ForEach(Language.allCases, id: \.rawValue) { language in
+                            Text(language.localizedStringResource).tag(language)
+                        }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    .macHelp(Text("Language"))
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+
+                TMDbSearchContent(
+                    language: $tmdbLanguage,
+                    onRetry: performSearch,
+                    onDuplicateTapped: onDuplicateTapped,
+                    checkDuplicate: checkDuplicate
+                )
+                .environment(tmdbSearchService)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .onAppear { isQueryFocused = true }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(action: dismiss.callAsFunction) { SheetCloseLabel() }
+                        .keyboardShortcut(.cancelAction)
+                }
+                // The leading slot keeps Batch Add secondary; the confirm slot made it look like
+                // the sheet's default action.
+                ToolbarItem(placement: .destructiveAction) {
+                    Button {
+                        isShowingBatchAddEntryAlert = true
+                    } label: {
+                        Label(batchAddButtonTitleResource, systemImage: "text.badge.plus")
+                    }
+                }
+            }
+        }
+    #else
     private var regularSearchContent: some View {
         VStack(spacing: 0) {
             Picker("Scope", selection: $mode) {
@@ -167,10 +226,6 @@ struct SearchPage: View {
                     .transition(.move(edge: .trailing))
             }
         }
-        #if os(macOS)
-            // Keeps the mode picker at the top when the results are an empty state.
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        #endif
         .searchable(
             text: $query,
             placement: .platformDrawerAutomatic,
@@ -180,12 +235,6 @@ struct SearchPage: View {
             performSearch()
         }
         .toolbar {
-            #if os(macOS)
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(action: dismiss.callAsFunction) { SheetCloseLabel() }
-                        .keyboardShortcut(.cancelAction)
-                }
-            #endif
             DefaultToolbarItem(kind: .search, placement: .platformBottomBar)
             if mode == .tmdb {
                 ToolbarItem(placement: .sheetTrailing) {
@@ -198,6 +247,7 @@ struct SearchPage: View {
             }
         }
     }
+    #endif
 
     private var searchPrompt: LocalizedStringKey {
         switch mode {

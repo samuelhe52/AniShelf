@@ -102,22 +102,27 @@
                             }
                         }
                     } header: {
-                        HStack {
-                            Text("Categories")
-                            Spacer()
-                            Button {
-                                namePrompt = .init(purpose: .create(memberCount: 0))
-                            } label: {
-                                Image(systemName: "plus")
-                            }
-                            .buttonStyle(.borderless)
-                            .help(Text("New Category…"))
-                            .accessibilityLabel(Text("New Category…"))
-                        }
+                        Text("Categories")
                     }
                 }
             }
             .listStyle(.sidebar)
+            // New Category sits at the foot of the sidebar, as Add List does in Reminders,
+            // instead of a bare plus in the section header.
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if store.categoriesEnabled {
+                    Button {
+                        namePrompt = .init(purpose: .create(memberCount: 0))
+                    } label: {
+                        Label("New Category…", systemImage: "plus.circle")
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                }
+            }
             .navigationSplitViewColumnWidth(min: 190, ideal: 220, max: 300)
             .libraryCategoryNamePrompt($namePrompt) { prompt, name in
                 switch prompt.purpose {

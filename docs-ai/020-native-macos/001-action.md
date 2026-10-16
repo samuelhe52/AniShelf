@@ -11,6 +11,7 @@
 | 2026-10-16 | Slice 3: feature parity ([005](005-slice-3-feature-parity.md)) | `ff73ed0` |
 | 2026-10-16 | Slice 4: polish, validation, and final review fixes ([006](006-slice-4-polish.md)) | `dc6f46b` |
 | 2026-10-16 | Platform boundary refactor ([007](007-platform-boundary-refactor.md)) | `71ab52f` |
+| 2026-10-16 | System window sizing: removed the inspector width correction, sidebar auto-collapse, and inspector-open column minimum ([010](010-system-window-sizing.md)) | "refactor: Let AppKit size the Mac window when the inspector opens" |
 
 Work is on `feat/native-macos`; it is not pushed or merged. `main` was not
 changed.
@@ -37,7 +38,7 @@ Key source paths:
 
 - `MyAnimeList/Sources/Mac/`: lifecycle, sidebar, commands, Settings root.
 - `MyAnimeList/Sources/Mac/LibraryView+Mac.swift`: the split view, the selection
-  state machine, and inspector width handling. These lived in
+  state machine, and the split view's column widths. These lived in
   `LibraryView+Desktop.swift` until [007](007-platform-boundary-refactor.md).
 - `MyAnimeList/Sources/Utils/PlatformViewModifiers.swift` and
   `PlatformImage.swift`: platform shims.

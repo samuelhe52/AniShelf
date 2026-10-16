@@ -69,6 +69,9 @@ struct EntryDetailView: View {
         ZStack {
             ScrollViewReader { proxy in
                 ScrollView(showsIndicators: false) {
+                    #if os(macOS)
+                        macInspectorContent(proxy)
+                    #else
                     VStack(spacing: 0) {
                         EntryDetailHeroSection(
                             imageURL: session.model.heroImageURL
@@ -97,6 +100,7 @@ struct EntryDetailView: View {
                         .frame(maxWidth: 1_000)
                         .frame(maxWidth: .infinity)
                     }
+                    #endif
                 }
                 .scrollPosition($session.scrollPosition)
                 .coordinateSpace(name: scrollCoordinateSpaceName)
@@ -109,10 +113,20 @@ struct EntryDetailView: View {
                 }
             }
             .id(session.instanceID)
-            .transition(.opacity)
+            #if os(macOS)
+                // A fresh scroll view sizes its content in a later pass of the same transaction;
+                // animated, the content grew in from the leading edge. Resolving it as one
+                // group and swapping entries without animation, as Mac inspectors do, keeps
+                // the content in place.
+                .geometryGroup()
+            #else
+                .transition(.opacity)
+            #endif
         }
-        .animation(entryReplacementAnimation, value: session.instanceID)
-        .ignoresSafeArea(edges: .top)
+        #if !os(macOS)
+            .animation(entryReplacementAnimation, value: session.instanceID)
+        #endif
+        .heroIgnoresTopSafeArea()
         .hiddenNavigationBarBackground()
         .toolbar { toolbarContent }
         .presentationDragIndicator(.visible)
@@ -329,6 +343,33 @@ struct EntryDetailView: View {
         )
     }
 
+    // MARK: - Mac Inspector
+
+    #if os(macOS)
+        /// The Mac inspector: a compact header with the tracking controls right below it,
+        /// drawn as grouped boxes instead of the iOS hero and glass cards.
+        private func macInspectorContent(_ proxy: ScrollViewProxy) -> some View {
+            VStack(alignment: .leading, spacing: 12) {
+                MacEntryDetailHeader(
+                    posterURL: session.entry.posterURL,
+                    displayTitle: session.model.displayTitle,
+                    subtitleText: session.model.subtitleText,
+                    metadataLineItems: session.model.metadataLineItems,
+                    genreNames: session.model.genreNames
+                ) {
+                    quickActionsRow
+                }
+                .padding(.bottom, 4)
+
+                detailsContent(proxy)
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 12)
+            .padding(.bottom, 24)
+            .environment(\.popupPanelStyle, .grouped)
+        }
+    #endif
+
     // MARK: - Details Content
 
     @ViewBuilder
@@ -457,6 +498,7 @@ struct EntryDetailView: View {
     private var editingSection: some View {
         EntryDetailTrackingSection(
             entry: session.entry,
+            originalNotes: session.originalUserInfo.notes,
             scoringEnabled: scoringEnabled,
             episodeProgressTrackingEnabled: episodeProgressTrackingEnabled,
             onWatchStatusSelected: requestWatchStatusChange,
@@ -539,6 +581,18 @@ struct EntryDetailView: View {
 
     @ViewBuilder
     private var doneToolbarControl: some View {
+        #if os(macOS)
+            // Edits are already written to the entry, so the Mac inspector closes like any
+            // inspector; rewritten notes get Revert Notes beside the editor instead of a menu here.
+            Button("Hide Inspector", systemImage: "sidebar.trailing", action: closePresentation)
+                .macHelp(Text("Hide Inspector"))
+        #else
+            iOSDoneToolbarControl
+        #endif
+    }
+
+    @ViewBuilder
+    private var iOSDoneToolbarControl: some View {
         if !shouldConfirmBeforeSaving {
             Button(String(localized: EntryDetailL10n.done)) {
                 closePresentation()
@@ -758,9 +812,12 @@ struct EntryDetailView: View {
         } catch {
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
-            session.isEditingDetails = false
-        }
+        #if !os(macOS)
+            // The Mac inspector keeps Tracking open; it is the inspector's main content.
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                session.isEditingDetails = false
+            }
+        #endif
     }
 
     private func handleConvertTap() async {

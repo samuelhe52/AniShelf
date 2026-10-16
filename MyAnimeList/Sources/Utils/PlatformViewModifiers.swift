@@ -32,6 +32,15 @@ extension View {
         #endif
     }
 
+    /// Lets the iOS hero artwork run under the navigation bar. The Mac inspector has no hero.
+    @ViewBuilder func heroIgnoresTopSafeArea() -> some View {
+        #if os(macOS)
+            self
+        #else
+            ignoresSafeArea(edges: .top)
+        #endif
+    }
+
     @ViewBuilder func hiddenNavigationBarBackground() -> some View {
         #if os(macOS)
             self
@@ -45,6 +54,15 @@ extension View {
             self
         #else
             textInputAutocapitalization(.never)
+        #endif
+    }
+
+    /// A pointer tooltip on the Mac; iOS keeps its existing accessibility output unchanged.
+    @ViewBuilder func macHelp(_ text: Text) -> some View {
+        #if os(macOS)
+            help(text)
+        #else
+            self
         #endif
     }
 

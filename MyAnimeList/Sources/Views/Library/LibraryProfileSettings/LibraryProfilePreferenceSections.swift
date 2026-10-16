@@ -19,19 +19,24 @@ struct LibraryProfileLanguageSettingsSections: View {
     var body: some View {
         // The pushed page and onboarding don't inherit the toggle binding's transaction, so the
         // stack animates its own layout: the picker slides in and the poster card moves with it.
-        VStack(spacing: 16) {
+        LibraryProfileSettingsRows(alignment: .center, spacing: 16) {
             LibraryProfileSettingsSection("Anime Info Language", systemImage: "globe", tint: tint) {
-                HStack {
-                    Text("Follow System")
-                        .font(.subheadline.weight(.semibold))
-                    Spacer(minLength: 12)
+                #if os(macOS)
                     Toggle("Follow System", isOn: $followsSystemLanguage)
-                        .labelsHidden()
-                        .tint(tint)
-                        .scaleEffect(0.78, anchor: .trailing)
-                        .frame(width: 42, height: 26, alignment: .trailing)
-                }
-                .padding(.vertical, 2)
+                        .toggleStyle(.switch)
+                #else
+                    HStack {
+                        Text("Follow System")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer(minLength: 12)
+                        Toggle("Follow System", isOn: $followsSystemLanguage)
+                            .labelsHidden()
+                            .tint(tint)
+                            .scaleEffect(0.78, anchor: .trailing)
+                            .frame(width: 42, height: 26, alignment: .trailing)
+                    }
+                    .padding(.vertical, 2)
+                #endif
 
                 if !followsSystemLanguage {
                     Picker("Anime Info Language", selection: $preferredLanguage) {
@@ -75,7 +80,7 @@ struct LibraryProfileLanguageSettingsSections: View {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
-                        .font(.subheadline.weight(.semibold))
+                        .settingsRowTitleFont()
                         .foregroundStyle(.primary)
                     if let subtitle {
                         Text(subtitle)
@@ -113,12 +118,12 @@ struct LibraryProfilePreferencesSection: View {
     @Binding var defaultFilters: Set<LibraryStore.AnimeFilter>
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            LibraryProfileSettingHeader(
-                title: "Defaults",
-                systemImage: "slider.horizontal.3",
-                tint: LibraryProfileSettingsDestination.libraryTracking.tint
-            )
+        LibraryProfileSettingsGroup(
+            "Defaults",
+            systemImage: "slider.horizontal.3",
+            tint: LibraryProfileSettingsDestination.libraryTracking.tint,
+            spacing: 10
+        ) {
 
             defaultWatchStatusRow
             defaultFiltersRow
@@ -129,36 +134,44 @@ struct LibraryProfilePreferencesSection: View {
                 isOn: $hideDroppedByDefault
             )
         }
-        .padding(14)
-        .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsDestination.libraryTracking.tint)
     }
 
+    @ViewBuilder
     private var defaultWatchStatusRow: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text("New Entries Start As")
-                .font(.subheadline.weight(.semibold))
-            Spacer(minLength: 12)
-            Menu {
-                Picker("New Entries Start As", selection: $defaultNewEntryWatchStatus) {
-                    ForEach(AnimeEntry.WatchStatus.allCases, id: \.self) { status in
-                        Text(status.localizedStringResource).tag(status)
-                    }
+        #if os(macOS)
+            Picker("New Entries Start As", selection: $defaultNewEntryWatchStatus) {
+                ForEach(AnimeEntry.WatchStatus.allCases, id: \.self) { status in
+                    Text(status.localizedStringResource).tag(status)
                 }
-            } label: {
-                LibraryProfileSelectionCapsule(
-                    title: defaultNewEntryWatchStatus.localizedStringResource,
-                    tint: LibraryProfileSettingsDestination.libraryTracking.tint
-                )
             }
-            .customLabeledMenu()
-        }
-        .padding(.vertical, 2)
+            .pickerStyle(.menu)
+        #else
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text("New Entries Start As")
+                    .settingsRowTitleFont()
+                Spacer(minLength: 12)
+                Menu {
+                    Picker("New Entries Start As", selection: $defaultNewEntryWatchStatus) {
+                        ForEach(AnimeEntry.WatchStatus.allCases, id: \.self) { status in
+                            Text(status.localizedStringResource).tag(status)
+                        }
+                    }
+                } label: {
+                    LibraryProfileSelectionCapsule(
+                        title: defaultNewEntryWatchStatus.localizedStringResource,
+                        tint: LibraryProfileSettingsDestination.libraryTracking.tint
+                    )
+                }
+                .customLabeledMenu()
+            }
+            .padding(.vertical, 2)
+        #endif
     }
 
     private var defaultFiltersRow: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             Text("Default Filters")
-                .font(.subheadline.weight(.semibold))
+                .settingsRowTitleFont()
             Spacer(minLength: 12)
             Menu {
                 Toggle("All", isOn: allDefaultFiltersBinding)
@@ -172,12 +185,18 @@ struct LibraryProfilePreferencesSection: View {
                 }
                 defaultFilterToggle(for: .favorited)
             } label: {
-                LibraryProfileSelectionCapsule(
-                    title: defaultFiltersSummaryResource,
-                    tint: LibraryProfileSettingsDestination.libraryTracking.tint
-                )
+                #if os(macOS)
+                    Text(defaultFiltersSummaryResource)
+                #else
+                    LibraryProfileSelectionCapsule(
+                        title: defaultFiltersSummaryResource,
+                        tint: LibraryProfileSettingsDestination.libraryTracking.tint
+                    )
+                #endif
             }
-            .customLabeledMenu()
+            #if !os(macOS)
+                .customLabeledMenu()
+            #endif
             .keepsMenuPresentedAfterAction()
         }
         .padding(.vertical, 2)
@@ -258,7 +277,7 @@ struct LibraryProfileCategorySettingsRows: View {
     var body: some View {
         @Bindable var store = store
 
-        VStack(alignment: .leading, spacing: 10) {
+        LibraryProfileSettingsRows {
             LibraryProfileSettingsToggleRow(
                 title: "Library Categories",
                 subtitle: "Group anime into your own categories and switch between them in the library.",
@@ -276,30 +295,47 @@ struct LibraryProfileCategorySettingsRows: View {
                     .transition(.opacity)
                 #endif
 
-                Button {
-                    showCategoryManager = true
-                } label: {
-                    HStack(spacing: 8) {
-                        Text("Manage Categories")
-                            .font(.subheadline.weight(.semibold))
-                        Spacer(minLength: 12)
-                        Text("\(store.categories.count)")
-                            .font(.subheadline)
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(.tertiary)
+                #if os(macOS)
+                    // A push button opens the manager; a chevron row reads as navigation.
+                    LabeledContent {
+                        HStack(spacing: 10) {
+                            Text("\(store.categories.count)")
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                            Button("Manage Categories") { showCategoryManager = true }
+                        }
+                    } label: {
+                        Text("Categories")
                     }
-                    .padding(.vertical, 4)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .transition(.opacity)
-                .sheet(isPresented: $showCategoryManager) {
-                    LibraryCategoryManagerSheet()
-                        .presentationDetents([.medium, .large])
-                }
+                    .sheet(isPresented: $showCategoryManager) {
+                        LibraryCategoryManagerSheet()
+                    }
+                #else
+                    Button {
+                        showCategoryManager = true
+                    } label: {
+                        HStack(spacing: 8) {
+                            Text("Manage Categories")
+                                .settingsRowTitleFont()
+                            Spacer(minLength: 12)
+                            Text("\(store.categories.count)")
+                                .font(.subheadline)
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.vertical, 4)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.opacity)
+                    .sheet(isPresented: $showCategoryManager) {
+                        LibraryCategoryManagerSheet()
+                            .presentationDetents([.medium, .large])
+                    }
+                #endif
             }
         }
     }

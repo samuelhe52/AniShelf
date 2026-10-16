@@ -74,6 +74,9 @@ struct KFImageView: View {
                 fallbackImage
             case .loading:
                 ProgressView()
+                    #if os(macOS)
+                        .controlSize(.small)
+                    #endif
                     .frame(minWidth: 100, minHeight: 100)
             }
         }

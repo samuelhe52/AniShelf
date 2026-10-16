@@ -16,17 +16,25 @@ struct LibraryProfileAiringReminderSettingsSection: View {
     @State private var isRefreshFeedbackVisible = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            LibraryProfileSettingHeader(
-                title: "Airing Reminders",
-                subtitle: "Get reminders for upcoming episodes.",
-                systemImage: "bell.badge.fill",
-                tint: LibraryProfileSettingsDestination.reminders.tint
-            )
+        #if os(macOS)
+            MacAiringReminderSettings()
+        #else
+            iOSBody
+        #endif
+    }
+
+    private var iOSBody: some View {
+        LibraryProfileSettingsGroup(
+            "Airing Reminders",
+            subtitle: "Get reminders for upcoming episodes.",
+            systemImage: "bell.badge.fill",
+            tint: LibraryProfileSettingsDestination.reminders.tint,
+            spacing: 10
+        ) {
 
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Text("Default Timing")
-                    .font(.subheadline.weight(.semibold))
+                    .settingsRowTitleFont()
                 Spacer(minLength: 12)
                 Menu {
                     Picker("Default Timing", selection: defaultTimingBinding) {
@@ -100,8 +108,6 @@ struct LibraryProfileAiringReminderSettingsSection: View {
                 .disabled(airingReminders.snapshot.subscriptions.isEmpty)
             }
         }
-        .padding(14)
-        .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsDestination.reminders.tint)
         .confirmationDialog(
             "Remove All Airing Reminders?",
             isPresented: $showRemoveAllConfirmation,
@@ -141,7 +147,7 @@ struct LibraryProfileAiringReminderSettingsSection: View {
                     .foregroundStyle(.orange)
 
                 Text("Reminders")
-                    .font(.subheadline.weight(.semibold))
+                    .settingsRowTitleFont()
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
                     .lineLimit(2)

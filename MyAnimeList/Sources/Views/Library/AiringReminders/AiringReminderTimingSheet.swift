@@ -30,6 +30,81 @@ struct AiringReminderTimingSheet: View {
     private var offset: Int { (hours * 60 + minutes) * (isAfter ? 1 : -1) }
 
     var body: some View {
+        #if os(macOS)
+            macBody
+        #else
+            mobileBody
+        #endif
+    }
+
+    #if os(macOS)
+        private var macBody: some View {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Reminder Timing").font(.headline)
+                    Text(subscription.displayTitle)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                Form {
+                    Picker("Reminder Timing", selection: $isAfter) {
+                        Text("Before Airtime").tag(false)
+                        Text("After Airtime").tag(true)
+                    }
+                    .pickerStyle(.menu)
+                    Stepper(value: $hours, in: 0...23) {
+                        LabeledContent("Hours") {
+                            TextField("Hours", value: $hours, format: .number)
+                                .labelsHidden()
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 52)
+                        }
+                    }
+                    Stepper(value: $minutes, in: 0...59) {
+                        LabeledContent("Minutes") {
+                            TextField("Minutes", value: $minutes, format: .number)
+                                .labelsHidden()
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 52)
+                        }
+                    }
+                }
+                .formStyle(.columns)
+                if saveFailed {
+                    Text("Reminder timing could not be fully updated. Please try again.")
+                        .font(.callout)
+                        .foregroundStyle(.red)
+                }
+                HStack {
+                    Spacer()
+                    Button("Cancel") { dismiss() }
+                        .keyboardShortcut(.cancelAction)
+                    Button("Save") { saveTiming(useDefault: false) }
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(!(0...23).contains(hours) || !(0...59).contains(minutes))
+                }
+            }
+            .padding(20)
+            .frame(width: 400)
+            .disabled(airingReminders.isRefreshing)
+            .interactiveDismissDisabled(airingReminders.isRefreshing)
+        }
+    #endif
+
+    private func saveTiming(useDefault: Bool) {
+        Task {
+            if await airingReminders.setTimingOffset(
+                useDefault ? nil : offset,
+                entryIdentityRawID: subscription.id
+            ) {
+                dismiss()
+            } else {
+                saveFailed = true
+            }
+        }
+    }
+
+    private var mobileBody: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
@@ -83,16 +158,7 @@ struct AiringReminderTimingSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        Task {
-                            if await airingReminders.setTimingOffset(
-                                useDefault ? nil : offset,
-                                entryIdentityRawID: subscription.id
-                            ) {
-                                dismiss()
-                            } else {
-                                saveFailed = true
-                            }
-                        }
+                        saveTiming(useDefault: useDefault)
                     }
                     .disabled(airingReminders.isRefreshing)
                 }

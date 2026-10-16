@@ -18,6 +18,18 @@ extension LibraryView {
         #endif
     }
 
+    /// The entries this window shows: the shared scope, narrowed on the Mac by the toolbar Find.
+    var visibleDisplayItems: [LibraryEntryDisplayItem] {
+        #if os(macOS)
+            let query = libraryFindQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !query.isEmpty else { return store.libraryDisplayItems }
+            let matches = LibrarySearchService.matcher(for: query)
+            return store.libraryDisplayItems.filter { matches($0.entry) }
+        #else
+            store.libraryDisplayItems
+        #endif
+    }
+
     func openSearch(mode: SearchMode) {
         #if os(macOS)
             searchInitialMode = mode
@@ -25,15 +37,27 @@ extension LibraryView {
         isSearching = true
     }
 
+    /// Whether the trailing inspector is showing, with entry detail or the Mac batch panel.
+    var isInspectorShown: Bool {
+        #if os(macOS)
+            interaction.inspectorPresentation != nil || isMacBatchInspectorShown
+        #else
+            interaction.inspectorPresentation != nil
+        #endif
+    }
+
+    func hideBatchInspector() {
+        #if os(macOS)
+            isBatchInspectorHidden = true
+        #endif
+    }
+
     /// Shows the inspector for the targeted entry, or hides it.
     func toggleInspector() {
         #if os(macOS)
-            // Inspecting during a batch selection narrows it to one entry first.
+            // During a batch selection the inspector holds the batch panel.
             if interaction.isMultiSelecting {
-                let id =
-                    macSelectionAnchor.flatMap { interaction.selectedEntryIDs.contains($0) ? $0 : nil }
-                    ?? interaction.selectedEntryIDs.first
-                if let id { applyMacSelection([id]) }
+                isBatchInspectorHidden.toggle()
                 return
             }
         #endif
@@ -62,7 +86,7 @@ extension LibraryView {
     private var inspectorReopenTarget: AnimeEntry? {
         #if os(macOS)
             // Reopen the last inspected entry while it is still shown.
-            let displayed = store.libraryOnDisplay
+            let displayed = visibleDisplayItems.map(\.entry)
             return interaction.focusedEntryID.flatMap { id in
                 displayed.first { $0.libraryIdentity == id }
             } ?? displayed.first

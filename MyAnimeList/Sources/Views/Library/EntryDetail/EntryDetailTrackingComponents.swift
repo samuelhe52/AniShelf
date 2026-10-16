@@ -93,7 +93,9 @@ struct EntryScoreCard: View {
 }
 
 struct EntryDetailTrackingSection: View {
+    @Environment(\.popupPanelStyle) private var panelStyle
     let entry: AnimeEntry
+    var originalNotes: String? = nil
     let scoringEnabled: Bool
     let episodeProgressTrackingEnabled: Bool
     let onWatchStatusSelected: (AnimeEntry.WatchStatus) -> Void
@@ -114,13 +116,14 @@ struct EntryDetailTrackingSection: View {
                     ) {
                         EntryDetailTrackingEditor(
                             entry: entry,
+                            originalNotes: originalNotes,
                             episodeProgressTrackingEnabled: episodeProgressTrackingEnabled,
                             onWatchStatusSelected: onWatchStatusSelected,
                             onEpisodeProgressCompletionSuggested: onEpisodeProgressCompletionSuggested
                         )
                     }
                 }
-                .padding(18)
+                .padding(panelStyle.contentPadding)
                 .popupGlassPanel(cornerRadius: 24)
             } else {
                 PopupDisclosureCard(
@@ -130,6 +133,7 @@ struct EntryDetailTrackingSection: View {
                 ) {
                     EntryDetailTrackingEditor(
                         entry: entry,
+                        originalNotes: originalNotes,
                         episodeProgressTrackingEnabled: episodeProgressTrackingEnabled,
                         onWatchStatusSelected: onWatchStatusSelected,
                         onEpisodeProgressCompletionSuggested: onEpisodeProgressCompletionSuggested
@@ -142,9 +146,19 @@ struct EntryDetailTrackingSection: View {
 
 fileprivate struct EntryDetailTrackingEditor: View {
     @Bindable var entry: AnimeEntry
+    /// The notes when the inspector opened; the Mac offers Revert Notes after a rewrite.
+    let originalNotes: String?
     let episodeProgressTrackingEnabled: Bool
     let onWatchStatusSelected: (AnimeEntry.WatchStatus) -> Void
     let onEpisodeProgressCompletionSuggested: (AnimeEntryEpisodeProgressCompletionPrompt) -> Void
+
+    private var notesEditorHeight: CGFloat {
+        #if os(macOS)
+            120
+        #else
+            180
+        #endif
+    }
 
     private var dateTrackingButtonLabel: LocalizedStringResource {
         entry.isDateTrackingEnabled ? EntryDetailL10n.hideDates : EntryDetailL10n.trackDates
@@ -226,9 +240,22 @@ fileprivate struct EntryDetailTrackingEditor: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 10) {
-                Text(EntryDetailL10n.notes)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                HStack {
+                    Text(EntryDetailL10n.notes)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    #if os(macOS)
+                        Spacer(minLength: 8)
+                        // Edits save as they happen. A rewrite, unlike an append, may lose text,
+                        // so it can be reverted here; iOS offers Discard from its Done menu.
+                        if let originalNotes, !entry.notes.hasPrefix(originalNotes) {
+                            Button(EntryDetailL10n.revertNotes) {
+                                entry.updateNotes(originalNotes)
+                            }
+                            .controlSize(.small)
+                        }
+                    #endif
+                }
                 ScrollIsolatedPlaceholderTextEditor(
                     text: Binding(
                         get: { entry.notes },
@@ -236,16 +263,31 @@ fileprivate struct EntryDetailTrackingEditor: View {
                     ),
                     placeholder: EntryDetailL10n.writeSomeThoughts
                 )
-                .frame(height: 180)
-                .padding(12)
-                .background(
-                    .thinMaterial,
-                    in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                )
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                #if os(macOS)
+                    // A quiet inset surface keeps the editor legible without a bright
+                    // white panel competing with the surrounding inspector content.
+                    .font(.body)
+                    .lineSpacing(3)
+                    .frame(height: notesEditorHeight)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 4)
+                    .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(.separator, lineWidth: 0.5)
+                    }
+                #else
+                    .frame(height: notesEditorHeight)
+                    .padding(12)
+                    .background(
+                        .thinMaterial,
+                        in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    )
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .stroke(.white.opacity(0.1), lineWidth: 0.5)
-                }
+                    }
+                #endif
             }
         }
         .animation(.default, value: entry.watchStatus)
@@ -465,61 +507,69 @@ fileprivate struct EntryEpisodeProgressControl: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 24) {
-                        progressButton(
-                            systemImage: "minus",
-                            disabled: summary.watchedThroughEpisode == 0
-                        ) {
-                            adjustProgress(for: selectedSeason, by: -1)
-                        } longPressAction: {
-                            guard summary.watchedThroughEpisode > 0 else { return }
-                            adjustProgress(
-                                for: selectedSeason,
-                                by: -summary.watchedThroughEpisode
-                            )
-                        }
+                    #if os(macOS)
+                        macProgressRow(
+                            seasonNumber: selectedSeason,
+                            summary: summary,
+                            displayedEpisode: displayedEpisode
+                        )
+                    #else
+                        HStack(spacing: 24) {
+                            progressButton(
+                                systemImage: "minus",
+                                disabled: summary.watchedThroughEpisode == 0
+                            ) {
+                                adjustProgress(for: selectedSeason, by: -1)
+                            } longPressAction: {
+                                guard summary.watchedThroughEpisode > 0 else { return }
+                                adjustProgress(
+                                    for: selectedSeason,
+                                    by: -summary.watchedThroughEpisode
+                                )
+                            }
 
-                        HStack(alignment: .lastTextBaseline, spacing: 4) {
-                            Text("\(displayedEpisode)")
-                                .font(.system(size: 30, weight: .bold, design: .rounded))
-                                .monospacedDigit()
-                                .contentTransition(.numericText(value: Double(displayedEpisode)))
-
-                            if let episodeCount = summary.episodeCount {
-                                Text(verbatim: "/\(episodeCount)")
-                                    .font(.title3.weight(.semibold))
+                            HStack(alignment: .lastTextBaseline, spacing: 4) {
+                                Text("\(displayedEpisode)")
+                                    .font(.system(size: 30, weight: .bold, design: .rounded))
                                     .monospacedDigit()
-                                    .foregroundStyle(.secondary)
-                                    .contentTransition(.numericText())
+                                    .contentTransition(.numericText(value: Double(displayedEpisode)))
+
+                                if let episodeCount = summary.episodeCount {
+                                    Text(verbatim: "/\(episodeCount)")
+                                        .font(.title3.weight(.semibold))
+                                        .monospacedDigit()
+                                        .foregroundStyle(.secondary)
+                                        .contentTransition(.numericText())
+                                }
+                            }
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .frame(minWidth: 132, minHeight: 54)
+                            .animation(progressAnimation, value: displayedEpisode)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(
+                                progressAccessibilityText(
+                                    watchedThroughEpisode: displayedEpisode,
+                                    episodeCount: summary.episodeCount
+                                )
+                            )
+
+                            progressButton(
+                                systemImage: "plus",
+                                disabled: isAtLimit(summary)
+                            ) {
+                                adjustProgress(for: selectedSeason, by: 1)
+                            } longPressAction: {
+                                guard !isAtLimit(summary) else { return }
+                                guard let episodeCount = summary.episodeCount else { return }
+                                adjustProgress(
+                                    for: selectedSeason,
+                                    by: episodeCount - summary.watchedThroughEpisode
+                                )
                             }
                         }
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                        .frame(minWidth: 132, minHeight: 54)
-                        .animation(progressAnimation, value: displayedEpisode)
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(
-                            progressAccessibilityText(
-                                watchedThroughEpisode: displayedEpisode,
-                                episodeCount: summary.episodeCount
-                            )
-                        )
-
-                        progressButton(
-                            systemImage: "plus",
-                            disabled: isAtLimit(summary)
-                        ) {
-                            adjustProgress(for: selectedSeason, by: 1)
-                        } longPressAction: {
-                            guard !isAtLimit(summary) else { return }
-                            guard let episodeCount = summary.episodeCount else { return }
-                            adjustProgress(
-                                for: selectedSeason,
-                                by: episodeCount - summary.watchedThroughEpisode
-                            )
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
+                        .frame(maxWidth: .infinity)
+                    #endif
 
                     if let episodeCount = summary.episodeCount, episodeCount > 0 {
                         EntryEpisodeProgressSlider(
@@ -582,6 +632,74 @@ fileprivate struct EntryEpisodeProgressControl: View {
         }
         .foregroundStyle(.secondary)
     }
+
+    #if os(macOS)
+        /// An editable episode number with a stepper, plus the reset and complete actions
+        /// that iOS hides behind long presses on its − and + buttons.
+        private func macProgressRow(
+            seasonNumber: Int,
+            summary: AnimeEntryEpisodeProgressSummary,
+            displayedEpisode: Int
+        ) -> some View {
+            let episode = Binding<Int>(
+                get: { displayedEpisode },
+                set: { setProgress(for: seasonNumber, to: $0) }
+            )
+            let accessibilityText = progressAccessibilityText(
+                watchedThroughEpisode: displayedEpisode,
+                episodeCount: summary.episodeCount
+            )
+
+            return HStack(spacing: 6) {
+                TextField(value: episode, format: .number) {
+                    Text(EntryDetailL10n.episodeProgress)
+                }
+                .labelsHidden()
+                .multilineTextAlignment(.trailing)
+                .monospacedDigit()
+                .frame(width: 52)
+                .accessibilityLabel(Text(EntryDetailL10n.episodeProgress))
+                .accessibilityValue(Text(accessibilityText))
+
+                if let episodeCount = summary.episodeCount {
+                    Text(verbatim: "/ \(episodeCount)")
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                }
+
+                Stepper(
+                    value: episode,
+                    in: 0...(summary.episodeCount ?? Int.max)
+                ) {
+                    Text(EntryDetailL10n.episodeProgress)
+                }
+                .labelsHidden()
+
+                Spacer(minLength: 8)
+
+                Menu {
+                    Button(EntryDetailL10n.markSeasonWatched, systemImage: "checkmark.circle") {
+                        guard let episodeCount = summary.episodeCount else { return }
+                        setProgress(for: seasonNumber, to: episodeCount)
+                    }
+                    .disabled(summary.episodeCount == nil || isAtLimit(summary))
+
+                    Button(EntryDetailL10n.resetProgress, systemImage: "arrow.counterclockwise") {
+                        setProgress(for: seasonNumber, to: 0)
+                    }
+                    .disabled(summary.watchedThroughEpisode == 0)
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .macHelp(Text("More"))
+                .accessibilityLabel(Text("More"))
+            }
+        }
+    #endif
 
     private func progressButton(
         systemImage: String,

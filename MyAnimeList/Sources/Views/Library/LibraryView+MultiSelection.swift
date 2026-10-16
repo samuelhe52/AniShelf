@@ -22,7 +22,23 @@ extension LibraryView {
         guard !entries.isEmpty else { return }
 
         action.apply(to: entries)
-        guard action.endsMultiSelection else { return }
+        #if os(macOS)
+            // A desktop selection stays until the user changes it, as in Finder, so several
+            // actions can apply to it. Entries the action moves out of scope leave it through
+            // the snapshot refresh.
+            let endsSelection = false
+        #else
+            let endsSelection = action.endsMultiSelection
+        #endif
+        guard endsSelection else {
+            #if os(macOS)
+                // The snapshot holds the old badges, and entries the action moved out of the
+                // filter must leave the selection before another action reaches them.
+                refreshSelectionDisplayItemsIfNeeded()
+                if entries.count >= 3 { appReview.record(.multiSelectAction) }
+            #endif
+            return
+        }
         exitMultiSelection()
         if entries.count >= 3 {
             appReview.record(.multiSelectAction)
@@ -36,7 +52,7 @@ extension LibraryView {
             return
         }
 
-        let remainingEntries = store.libraryOnDisplay.filter { entry in
+        let remainingEntries = visibleDisplayItems.map(\.entry).filter { entry in
             !interaction.selectedEntryIDs.contains(entry.libraryIdentity)
         }
         let scrollTarget = remainingEntries.first?.libraryIdentity
@@ -66,10 +82,18 @@ extension LibraryView {
     func refreshSelectionDisplayItemsIfNeeded() {
         guard interaction.isMultiSelecting else { return }
         updateSelectionDisplayItems()
+        #if os(macOS)
+            // A scope or Find change can leave one or no selected entries; the Mac then shows
+            // that entry, or nothing, instead of a batch of one or zero. iOS keeps its
+            // explicit selection mode.
+            if interaction.selectedEntryIDs.count <= 1 {
+                applyMacSelection(interaction.selectedEntryIDs)
+            }
+        #endif
     }
 
     private func updateSelectionDisplayItems() {
-        let items = store.libraryDisplayItems
+        let items = visibleDisplayItems
         let layoutIDs = items.map(\.id)
         let displayedIDs = Set(layoutIDs)
         interaction.selectedEntryIDs.formIntersection(displayedIDs)

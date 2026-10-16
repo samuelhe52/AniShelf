@@ -146,11 +146,41 @@ struct EntryDetailHeroSection: View {
 }
 
 struct DetailStatCard: View {
+    @Environment(\.popupPanelStyle) private var panelStyle
     let card: EntryDetailStatCard
 
     private var valueIsShrinkable: Bool { card.valueIsShrinkable }
 
     var body: some View {
+        switch panelStyle {
+        case .glass: tile
+        case .grouped: compactTile
+        }
+    }
+
+    /// A label/value row for the Mac inspector; the stat grid stacks the rows in one box.
+    private var compactTile: some View {
+        HStack(spacing: 8) {
+            Label {
+                Text(String(localized: card.title))
+            } icon: {
+                Image(systemName: card.symbolName)
+                    .foregroundStyle(.blue)
+            }
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            Spacer(minLength: 12)
+            Text(card.value)
+                .fontWeight(.semibold)
+                .lineLimit(1)
+                .allowsTightening(valueIsShrinkable)
+                .minimumScaleFactor(valueIsShrinkable ? 0.7 : 1)
+        }
+        .padding(.vertical, 7)
+        .contentShape(Rectangle())
+    }
+
+    private var tile: some View {
         VStack(alignment: .leading) {
             Image(systemName: card.symbolName)
                 .font(.headline)
@@ -172,6 +202,7 @@ struct DetailStatCard: View {
 }
 
 struct EntryDetailQuickActionsRow: View {
+    @Environment(\.popupPanelStyle) private var panelStyle
     @State private var editingReminder: AiringReminderSubscription?
 
     let detailURL: URL?
@@ -193,20 +224,23 @@ struct EntryDetailQuickActionsRow: View {
     let onConvert: () async -> Void
     let onToggleDroppedStatus: () -> Void
 
+    /// The Mac inspector lines compact bordered buttons up under the title instead of
+    /// centering large glass circles.
+    private var isCompact: Bool { panelStyle == .grouped }
+
     var body: some View {
-        HStack(spacing: 10) {
-            Spacer(minLength: 0)
+        HStack(spacing: isCompact ? 6 : 10) {
+            if !isCompact {
+                Spacer(minLength: 0)
+            }
 
             if let detailURL {
                 Link(destination: detailURL) {
-                    Image(systemName: "safari")
-                        .font(.title2)
-                        .frame(width: 20, height: 20)
-                        .padding(10)
+                    PopupActionButtonLabel(systemImage: "safari")
                 }
-                .buttonStyle(.glass)
-                .buttonBorderShape(.circle)
+                .popupActionButtonChrome()
                 .tint(.primary)
+                .macHelp(Text(verbatim: detailURL.host() ?? detailURL.absoluteString))
             }
 
             PopupActionCircleButton(
@@ -214,12 +248,14 @@ struct EntryDetailQuickActionsRow: View {
                 verticalOffset: -1,
                 action: onShare
             )
+            .macHelp(Text("Share…"))
 
             PopupActionCircleButton(
                 systemImage: isFavorite ? "heart.fill" : "heart",
                 tint: isFavorite ? .pink : .primary,
                 action: onToggleFavorite
             )
+            .macHelp(Text(isFavorite ? "Remove from Favorites" : "Add to Favorites"))
 
             Menu {
                 let broadcastMenuContent = EntryDetailBroadcastMenuContent(
@@ -259,13 +295,11 @@ struct EntryDetailQuickActionsRow: View {
                 )
                 .tint(dropActionIsDestructive ? .red : .primary)
             } label: {
-                Image(systemName: "ellipsis")
-                    .font(.title2)
-                    .frame(width: 20, height: 20)
-                    .padding(10)
+                PopupActionButtonLabel(systemImage: "ellipsis")
             }
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
+            .popupActionButtonChrome()
+            .menuIndicator(isCompact ? .hidden : .automatic)
+            .macHelp(Text("More"))
             .tint(.primary)
 
             Spacer(minLength: 0)

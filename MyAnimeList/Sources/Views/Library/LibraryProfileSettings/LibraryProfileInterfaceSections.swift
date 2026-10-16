@@ -19,7 +19,16 @@ struct LibraryProfileInterfaceSettingsSection: View {
     private var showProductionCompanyInsteadOfRuntime = false
 
     var body: some View {
-        VStack(spacing: 16) {
+        #if os(macOS)
+            sections
+        #else
+            VStack(spacing: 16) { sections }
+        #endif
+    }
+
+    @ViewBuilder
+    private var sections: some View {
+        Group {
             // A click always opens the inspector on the Mac, and its toolbar has no soft edge option.
             #if !os(macOS)
                 LibraryProfileSettingsSection(
@@ -74,13 +83,13 @@ struct LibraryProfileTMDbConnectionSection: View {
     @State private var showRestartAlert = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            LibraryProfileSettingHeader(
-                title: "TMDb Connection",
-                subtitle: "Turn this on if direct TMDb access is unstable on your network.",
-                systemImage: "network",
-                tint: LibraryProfileSettingsDestination.metadataImages.tint
-            )
+        LibraryProfileSettingsGroup(
+            "TMDb Connection",
+            subtitle: "Turn this on if direct TMDb access is unstable on your network.",
+            systemImage: "network",
+            tint: LibraryProfileSettingsDestination.metadataImages.tint,
+            spacing: 10
+        ) {
 
             LibraryProfileSettingsToggleRow(
                 title: "Use TMDb Proxy",
@@ -97,8 +106,6 @@ struct LibraryProfileTMDbConnectionSection: View {
                 action: onChangeAPIKey
             )
         }
-        .padding(14)
-        .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsDestination.metadataImages.tint)
         .alert("TMDb Proxy Updated", isPresented: $showRestartAlert) {
             Button("OK") {}
         } message: {

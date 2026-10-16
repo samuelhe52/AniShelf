@@ -6,7 +6,6 @@
 //
 
 #if os(macOS)
-    import AppKit
     import DataProvider
     import SwiftUI
 
@@ -14,26 +13,21 @@
         /// The library window's sidebar and detail column. `detail` already carries the inspector:
         /// attached outside the split view, AppKit counted its width twice in the window's minimum.
         func macLibrarySplitView(detail: some View) -> some View {
-            NavigationSplitView {
+            NavigationSplitView(columnVisibility: $macSidebarVisibility) {
                 MacLibrarySidebar(openCategoryManager: openCategoryManager)
             } detail: {
-                // The column holds the library and the inspector, so its minimum grows while the
-                // inspector is open. A library squeezed narrower than its toolbar put AppKit into an
-                // endless layout loop, and narrow rows clip under the inspector.
                 detail
-                    .navigationSplitViewColumnWidth(
-                        min: interaction.inspectorPresentation == nil ? 520 : 1000,
-                        // A changing ideal would resize the window every time the inspector opens.
-                        ideal: 900
-                    )
+                    .navigationSplitViewColumnWidth(min: 520, ideal: 900)
+            }
+            // Escape ends a batch selection from anywhere in the window, including List and the
+            // batch panel; the grid also clears a single selection itself. A focused field or
+            // open menu consumes Escape first.
+            .onExitCommand {
+                if interaction.isMultiSelecting { applyMacSelection([]) }
             }
             .focusedSceneValue(\.macLibraryCommands, macCommandActions)
             .onChange(of: windowSceneIdentifier, initial: true) { _, identifier in
                 MacLibraryWindows.register(identifier, openWindow: openWindow)
-            }
-            .onChange(of: interaction.inspectorPresentation != nil) { _, isPresented in
-                guard isPresented else { return }
-                keepWindowWidthForInspector()
             }
             .alert("Refresh all anime infos?", isPresented: $showRefreshAllMetadataAlert) {
                 Button("Refresh") { LibraryProfileSettingsActions(store: store).refreshInfos() }
@@ -49,6 +43,28 @@
                     LocalizedStringResource(
                         "This will delete \(interaction.selectedEntryCount) selected anime from your library."))
             }
+        }
+
+        var isMacBatchInspectorShown: Bool {
+            interaction.isMultiSelecting && !isBatchInspectorHidden
+        }
+
+        var macBatchSelectionPanel: some View {
+            let ids = selectionLayoutIDs ?? visibleDisplayItems.map(\.id)
+            let selected = ids.filter(interaction.selectedEntryIDs.contains).compactMap {
+                selectionEntriesByID[$0]
+            }
+            return MacBatchSelectionPanel(
+                store: store,
+                interaction: interaction,
+                selectedEntries: selected,
+                lastClickedID: macSelectionAnchor,
+                entriesByID: selectionEntriesByID,
+                scoringEnabled: scoringEnabled,
+                applyBatchAction: applyBatchAction,
+                deleteSelectedEntries: deleteSelectedEntries,
+                hideInspector: hideBatchInspector
+            )
         }
 
         var macWindowTitle: Text {
@@ -73,14 +89,14 @@
             if interaction.isMultiSelecting {
                 Text("\(interaction.selectedEntryCount) Selected")
             } else {
-                Text("\(store.libraryOnDisplay.count) Anime")
+                Text("\(visibleDisplayItems.count) Anime")
             }
         }
 
         var macCommandActions: MacLibraryCommandActions {
             MacLibraryCommandActions(
                 addAnime: { openSearch(mode: .tmdb) },
-                findInLibrary: { openSearch(mode: .library) },
+                findInLibrary: { isLibraryFindFocused = true },
                 viewStyle: Binding(
                     get: { libraryViewStyle },
                     set: { style in
@@ -89,7 +105,7 @@
                         }
                     }
                 ),
-                isInspectorPresented: interaction.inspectorPresentation != nil,
+                isInspectorPresented: isInspectorShown,
                 toggleInspector: toggleInspector,
                 isMultiSelecting: interaction.isMultiSelecting,
                 selectAll: selectAllDisplayedEntries,
@@ -168,12 +184,19 @@
                     openDetails(entry)
                 }
             default:
-                guard supportsMultiSelection else { return }
                 if !interaction.isMultiSelecting {
-                    interaction.dismissDetails()
-                    enterMultiSelection()
+                    // Establish the replacement content before clearing the detail. Clearing
+                    // detail first publishes a closed inspector between animation transactions,
+                    // and its dismissal callback hides the newly opened batch panel.
+                    withAnimation(LibraryViewTransitions.selectionModeAnimation()) {
+                        isBatchInspectorHidden = false
+                        enterMultiSelection()
+                        interaction.selectedEntryIDs = ids
+                        interaction.dismissDetails()
+                    }
+                } else {
+                    interaction.selectedEntryIDs = ids
                 }
-                interaction.selectedEntryIDs = ids
             }
         }
 
@@ -183,67 +206,15 @@
         func dismissInspectorOutsideScope() {
             guard !interaction.isMultiSelecting,
                 let id = interaction.inspectorPresentation?.entryIdentity,
-                !store.libraryDisplayItems.contains(where: { $0.id == id })
+                !visibleDisplayItems.contains(where: { $0.id == id })
             else { return }
             interaction.dismissDetails()
         }
 
-        /// AppKit widens the window by the inspector's width when it opens, even past the
-        /// screen edge. Keep the user's width unless the column's larger minimum needs more,
-        /// and never exceed the visible screen.
-        func keepWindowWidthForInspector() {
-            guard
-                let window = NSApplication.shared.windows.first(where: {
-                    $0.sceneIdentifier == windowSceneIdentifier
-                })
-            else { return }
-            let widthBeforeInspector = window.frame.width
-            // A resize the user makes meanwhile wins over the correction.
-            let userResize = MacUserResizeFlag(window: window)
-            Task { @MainActor in
-                defer { userResize.stop() }
-                // AppKit resizes in steps after the inspector appears; settle after each one.
-                for delay in [350, 900] {
-                    try? await Task.sleep(for: .milliseconds(delay))
-                    guard !userResize.didResize, !window.inLiveResize else { return }
-                    var frame = window.frame
-                    let visible = window.screen?.visibleFrame ?? frame
-                    let width = min(max(widthBeforeInspector, window.minSize.width), visible.width)
-                    guard abs(frame.width - width) > 0.5 else { continue }
-                    frame.size.width = width
-                    frame.origin.x = min(max(frame.origin.x, visible.minX), visible.maxX - width)
-                    window.setFrame(frame, display: true, animate: false)
-                }
-            }
-        }
-
         func selectAllDisplayedEntries() {
-            guard supportsMultiSelection else { return }
-            let ids = Set(store.libraryDisplayItems.map(\.id))
+            let ids = Set(visibleDisplayItems.map(\.id))
             guard ids.count > 1 else { return }
             applyMacSelection(ids)
-        }
-    }
-
-    /// Records whether the user live-resizes a window while it is being observed.
-    @MainActor
-    final class MacUserResizeFlag {
-        private(set) var didResize = false
-        private var observer: NSObjectProtocol?
-
-        init(window: NSWindow) {
-            observer = NotificationCenter.default.addObserver(
-                forName: NSWindow.willStartLiveResizeNotification,
-                object: window,
-                queue: .main
-            ) { [weak self] _ in
-                MainActor.assumeIsolated { self?.didResize = true }
-            }
-        }
-
-        func stop() {
-            if let observer { NotificationCenter.default.removeObserver(observer) }
-            observer = nil
         }
     }
 #endif

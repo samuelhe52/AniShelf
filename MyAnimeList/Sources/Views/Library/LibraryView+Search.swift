@@ -126,6 +126,12 @@ extension LibraryView {
     }
 
     private func performJump(to id: LibraryEntryIdentity) {
+        #if os(macOS)
+            // An explicit reveal wins over this window's Find text.
+            if !libraryFindQuery.isEmpty, !visibleDisplayItems.contains(where: { $0.id == id }) {
+                libraryFindQuery = ""
+            }
+        #endif
         // Search spans the whole library, so leave a category that hides the entry.
         if store.activeCategoryID != nil,
             !store.libraryOnDisplay.contains(where: { $0.libraryIdentity == id })

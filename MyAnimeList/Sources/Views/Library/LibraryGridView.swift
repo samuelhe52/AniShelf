@@ -19,9 +19,10 @@ struct LibraryGridView: View {
     @Binding var scrolledID: LibraryEntryIdentity?
     let scrollRequest: LibraryScrollRequest?
     let highlightRequest: LibraryHighlightRequest?
+    var inspectorIsVisible: Bool? = nil
     #if os(macOS)
-        private static let minimumColumnWidth: CGFloat = 132
-        private static let columnSpacing: CGFloat = 18
+        nonisolated private static let minimumColumnWidth: CGFloat = 132
+        nonisolated private static let columnSpacing: CGFloat = 18
         private let columns = [
             GridItem(.adaptive(minimum: minimumColumnWidth, maximum: 168), spacing: columnSpacing)
         ]
@@ -75,7 +76,7 @@ struct LibraryGridView: View {
 
     #if os(macOS)
         /// The number of columns an adaptive grid item fits into this width.
-        private static func columnCount(forWidth width: CGFloat) -> Int {
+        nonisolated private static func columnCount(forWidth width: CGFloat) -> Int {
             max(1, Int((width + columnSpacing) / (minimumColumnWidth + columnSpacing)))
         }
 
@@ -108,7 +109,7 @@ struct LibraryGridView: View {
     #endif
 
     private var isInspectorPresented: Bool {
-        interaction.inspectorPresentation != nil
+        inspectorIsVisible ?? (interaction.inspectorPresentation != nil)
     }
 
     private func handleScrollRequest(proxy: ScrollViewProxy) {

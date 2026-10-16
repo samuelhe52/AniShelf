@@ -171,3 +171,7 @@ No action record is warranted until implementation proceeds.
 - Updated 2026-10-16: Slice 3 — feature parity (save panels, sheet buttons, SVG rasters, native Mac tests, lifecycle and sync validation) — see [005-slice-3-feature-parity.md](005-slice-3-feature-parity.md)
 - Updated 2026-10-16: Slice 4 — polish and validation (grid keyboard, scope-bound inspector, toolbar menu, app icon, light/localization/regression runs) — see [006-slice-4-polish.md](006-slice-4-polish.md)
 - Updated 2026-10-16: Platform boundary refactor and two fixes (search host during batch selection, Save Poster window) — see [007-platform-boundary-refactor.md](007-platform-boundary-refactor.md)
+- Updated 2026-10-16: Mac-native UI pass (compact inspector, episode controls, inline Find, inspector batch panel, compact List row, no Gallery, Settings forms, 720pt inspector minimum) — see [008-mac-native-ui-pass.md](008-mac-native-ui-pass.md)
+
+- Updated 2026-10-16: Inspector and settings regression follow-up — see [009-inspector-and-settings-follow-up.md](009-inspector-and-settings-follow-up.md)
+- Updated 2026-10-16: System window sizing (removed the inspector width correction, sidebar auto-collapse, and inspector-open column minimum) — see [010-system-window-sizing.md](010-system-window-sizing.md)

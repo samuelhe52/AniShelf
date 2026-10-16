@@ -41,60 +41,32 @@ struct LibraryToolbar: ToolbarContent {
     #if os(macOS)
         @ToolbarContentBuilder
         private var macContent: some ToolbarContent {
-            if interaction.isMultiSelecting {
-                ToolbarItemGroup(placement: .primaryAction) {
-                    LibrarySelectionStatusMenu(interaction: interaction, applyBatchAction: applyBatchAction)
-                    LibrarySelectionFavoriteButton(
-                        interaction: interaction,
-                        entriesByID: selectionEntriesByID,
-                        applyBatchAction: applyBatchAction
-                    )
-                    if store.categoriesEnabled {
-                        LibrarySelectionCategoryMenu(
-                            store: store,
-                            interaction: interaction,
-                            entriesByID: selectionEntriesByID,
-                            applyBatchAction: applyBatchAction
-                        )
+            // A batch selection keeps these browsing controls; its actions live in the
+            // inspector's batch panel (`MacBatchSelectionPanel`), not in a toolbar mode.
+            ToolbarItem(placement: .primaryAction) {
+                Picker("View Style", selection: $libraryViewStyle) {
+                    ForEach(LibraryView.LibraryViewStyle.platformCases, id: \.self) { style in
+                        Label(style.nameKey, systemImage: style.systemImageName)
+                            .labelStyle(.iconOnly)
+                            .help(Text(style.nameKey))
+                            .tag(style)
                     }
-                    LibrarySelectionActionsMenu(
-                        interaction: interaction,
-                        scoringEnabled: scoringEnabled,
-                        applyBatchAction: applyBatchAction
-                    )
-                    LibrarySelectionDeleteButton(interaction: interaction, deleteSelectedEntries: deleteSelectedEntries)
                 }
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Done", action: exitMultiSelection)
-                        .help(Text("End the selection"))
-                }
-            } else {
-                ToolbarItem(placement: .primaryAction) {
-                    Picker("View Style", selection: $libraryViewStyle) {
-                        ForEach(LibraryView.LibraryViewStyle.allCases, id: \.self) { style in
-                            Label(style.nameKey, systemImage: style.systemImageName)
-                                .labelStyle(.iconOnly)
-                                .help(Text(style.nameKey))
-                                .tag(style)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    LibraryBrowseSummaryMenu(store: store, scoringEnabled: scoringEnabled)
-                        .help(Text("Sort, group, and filter"))
-                        .accessibilityLabel(Text("Sort, group, and filter"))
-                }
-                ToolbarItemGroup(placement: .primaryAction) {
-                    Button("Add Anime…", systemImage: "plus", action: addAnime)
-                        .help(Text("Add anime from TMDb"))
-                    LibrarySearchButton(isSearching: $isSearching)
-                        .help(Text("Search"))
-                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
             }
-            // An open inspector has its own Done button; dropping the toggle then keeps
-            // Add and Search out of the overflow menu in narrow windows.
+            ToolbarItem(placement: .primaryAction) {
+                LibraryBrowseSummaryMenu(store: store, scoringEnabled: scoringEnabled)
+                    .help(Text("Sort, group, and filter"))
+                    .accessibilityLabel(Text("Sort, group, and filter"))
+            }
+            // Find is the window's toolbar search field (`.searchable` in LibraryView).
+            ToolbarItem(placement: .primaryAction) {
+                Button("Add Anime…", systemImage: "plus", action: addAnime)
+                    .help(Text("Add anime from TMDb"))
+            }
+            // An open inspector has its own Hide Inspector button; dropping the toggle then
+            // keeps Add and Find out of the overflow menu in narrow windows.
             if !isInspectorPresented {
                 ToolbarItem(placement: .primaryAction) {
                     Button("Show Inspector", systemImage: "sidebar.trailing", action: toggleInspector)
@@ -249,15 +221,29 @@ fileprivate struct LibraryToolbarTitle: View {
     }
 }
 
-fileprivate struct LibrarySelectionDeleteButton: View {
+/// How a batch-selection control draws: as a toolbar item, or as a full-width row in the
+/// Mac inspector's batch panel.
+enum LibrarySelectionControlPresentation {
+    case toolbar
+    case row
+}
+
+struct LibrarySelectionDeleteButton: View {
     let interaction: LibraryEntryInteractionState
     let deleteSelectedEntries: () -> Void
+    var presentation: LibrarySelectionControlPresentation = .toolbar
     @State private var isShowingConfirmation = false
 
     var body: some View {
-        Button("Delete", systemImage: "trash", role: .destructive) {
+        Button(role: .destructive) {
             isShowingConfirmation = true
+        } label: {
+            switch presentation {
+            case .toolbar: Label("Delete", systemImage: "trash")
+            case .row: LibrarySelectionActionRow("Delete", systemImage: "trash", tint: .red)
+            }
         }
+        .selectionControlStyle(presentation)
         .disabled(interaction.selectedEntryIDs.isEmpty)
         .tint(.red)
         .alert(LocalizedStringResource("Delete Selected Anime?"), isPresented: $isShowingConfirmation) {
@@ -271,12 +257,13 @@ fileprivate struct LibrarySelectionDeleteButton: View {
     }
 }
 
-fileprivate struct LibrarySelectionStatusMenu: View {
+struct LibrarySelectionStatusMenu: View {
     let interaction: LibraryEntryInteractionState
     let applyBatchAction: (LibraryBatchAction) -> Void
+    var presentation: LibrarySelectionControlPresentation = .toolbar
 
     var body: some View {
-        Menu("Mark Status", systemImage: "checklist") {
+        Menu {
             ForEach(AnimeEntry.WatchStatus.allCases, id: \.self) { status in
                 Button {
                     applyBatchAction(.watchStatus(status))
@@ -284,15 +271,22 @@ fileprivate struct LibrarySelectionStatusMenu: View {
                     Label(status.localizedStringResource, systemImage: status.batchActionSystemImage)
                 }
             }
+        } label: {
+            switch presentation {
+            case .toolbar: Label("Mark Status", systemImage: "checklist")
+            case .row: LibrarySelectionActionRow("Mark Status", systemImage: "checklist", isMenu: true)
+            }
         }
+        .selectionControlStyle(presentation)
         .disabled(interaction.selectedEntryIDs.isEmpty)
     }
 }
 
-fileprivate struct LibrarySelectionFavoriteButton: View {
+struct LibrarySelectionFavoriteButton: View {
     let interaction: LibraryEntryInteractionState
     let entriesByID: [LibraryEntryIdentity: AnimeEntry]
     let applyBatchAction: (LibraryBatchAction) -> Void
+    var presentation: LibrarySelectionControlPresentation = .toolbar
 
     private var allFavorite: Bool {
         !interaction.selectedEntryIDs.isEmpty
@@ -301,22 +295,28 @@ fileprivate struct LibrarySelectionFavoriteButton: View {
 
     var body: some View {
         let allFavorite = allFavorite
-        Button(
-            allFavorite ? "Unfavorite" : "Favorite",
-            systemImage: allFavorite ? "heart.slash.fill" : "heart.fill"
-        ) {
+        let title: LocalizedStringKey = allFavorite ? "Unfavorite" : "Favorite"
+        let systemImage = allFavorite ? "heart.slash.fill" : "heart.fill"
+        Button {
             applyBatchAction(.favorite(!allFavorite))
+        } label: {
+            switch presentation {
+            case .toolbar: Label(title, systemImage: systemImage)
+            case .row: LibrarySelectionActionRow(title, systemImage: systemImage, tint: .pink)
+            }
         }
+        .selectionControlStyle(presentation)
         .disabled(interaction.selectedEntryIDs.isEmpty)
         .animation(.snappy(duration: 0.3), value: allFavorite)
     }
 }
 
-fileprivate struct LibrarySelectionCategoryMenu: View {
+struct LibrarySelectionCategoryMenu: View {
     let store: LibraryStore
     let interaction: LibraryEntryInteractionState
     let entriesByID: [LibraryEntryIdentity: AnimeEntry]
     let applyBatchAction: (LibraryBatchAction) -> Void
+    var presentation: LibrarySelectionControlPresentation = .toolbar
 
     @State private var namePrompt: LibraryCategoryNamePrompt?
 
@@ -348,8 +348,12 @@ fileprivate struct LibrarySelectionCategoryMenu: View {
                 }
             }
         } label: {
-            Label("Category", systemImage: "folder")
+            switch presentation {
+            case .toolbar: Label("Category", systemImage: "folder")
+            case .row: LibrarySelectionActionRow("Category", systemImage: "folder", isMenu: true)
+            }
         }
+        .selectionControlStyle(presentation)
         .disabled(interaction.selectedEntryIDs.isEmpty)
         .libraryCategoryNamePrompt($namePrompt) { _, name in
             guard let category = store.createCategory(named: name) else { return }
@@ -365,6 +369,62 @@ fileprivate struct LibrarySelectionCategoryMenu: View {
         let memberCount = entries.count { $0.categoryIDs.contains(id) }
         if memberCount == 0 { return .none }
         return memberCount == entries.count ? .all : .some
+    }
+}
+
+extension View {
+    @ViewBuilder
+    fileprivate func selectionControlStyle(_ presentation: LibrarySelectionControlPresentation) -> some View {
+        switch presentation {
+        case .toolbar:
+            self
+        case .row:
+            // A plain button-style menu draws the full-width row label as is on the Mac.
+            menuStyle(.button)
+                .buttonStyle(.plain)
+                .menuIndicator(.hidden)
+        }
+    }
+}
+
+/// A full-width action row for the Mac batch panel, highlighted under the pointer.
+struct LibrarySelectionActionRow: View {
+    let title: LocalizedStringKey
+    let systemImage: String
+    var tint: Color? = nil
+    var isMenu = false
+    @State private var isHovering = false
+
+    init(_ title: LocalizedStringKey, systemImage: String, tint: Color? = nil, isMenu: Bool = false) {
+        self.title = title
+        self.systemImage = systemImage
+        self.tint = tint
+        self.isMenu = isMenu
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .foregroundStyle(tint ?? .secondary)
+                .frame(width: 20)
+            Text(title)
+                .foregroundStyle(tint == .red ? AnyShapeStyle(.red) : AnyShapeStyle(.primary))
+            Spacer(minLength: 8)
+            if isMenu {
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(.rect(cornerRadius: 6))
+        .background(
+            isHovering ? AnyShapeStyle(.fill.tertiary) : AnyShapeStyle(.clear),
+            in: .rect(cornerRadius: 6)
+        )
+        .onHover { isHovering = $0 }
     }
 }
 
@@ -394,10 +454,11 @@ fileprivate enum Membership {
     #endif
 }
 
-fileprivate struct LibrarySelectionActionsMenu: View {
+struct LibrarySelectionActionsMenu: View {
     let interaction: LibraryEntryInteractionState
     let scoringEnabled: Bool
     let applyBatchAction: (LibraryBatchAction) -> Void
+    var presentation: LibrarySelectionControlPresentation = .toolbar
 
     var body: some View {
         Menu {
@@ -421,8 +482,12 @@ fileprivate struct LibrarySelectionActionsMenu: View {
                 }
             }
         } label: {
-            Label("Actions", systemImage: "ellipsis")
+            switch presentation {
+            case .toolbar: Label("Actions", systemImage: "ellipsis")
+            case .row: LibrarySelectionActionRow("Actions", systemImage: "ellipsis.circle", isMenu: true)
+            }
         }
+        .selectionControlStyle(presentation)
         .disabled(interaction.selectedEntryIDs.isEmpty)
     }
 }

@@ -17,9 +17,6 @@ struct LibraryGalleryView: View {
     let scrollRequest: LibraryScrollRequest?
     let detailActions: LibraryEntryDetailActions
     @State private var localScrolledID: LibraryEntryIdentity?
-    #if os(macOS)
-        @State private var isHoveringShelf = false
-    #endif
 
     init(
         scrolledID: Binding<LibraryEntryIdentity?>,
@@ -114,17 +111,6 @@ struct LibraryGalleryView: View {
                 .accessibilityHidden(true)
             }
         }
-        #if os(macOS)
-            .overlay {
-                MacGalleryPager(
-                    itemIDs: store.libraryDisplayItems.map(\.id),
-                    currentID: $localScrolledID,
-                    trailingInset: interaction.inspectorPresentation != nil ? 36 : 0,
-                    isVisible: isHoveringShelf
-                )
-            }
-            .onHover { isHoveringShelf = $0 }
-        #endif
         .scrollPosition(id: $localScrolledID)
         .scrollTargetBehavior(.viewAligned)
         .onChange(of: localScrolledID, initial: true) { _, entryID in
@@ -220,64 +206,3 @@ fileprivate struct AnimeEntryCardWrapper: View {
         detailActions.edit(entry)
     }
 }
-
-#if os(macOS)
-    /// Desktop paging for the horizontal shelf: a mouse wheel cannot scroll it sideways,
-    /// so hover buttons and the arrow keys step one card at a time.
-    fileprivate struct MacGalleryPager: View {
-        let itemIDs: [LibraryEntryIdentity]
-        @Binding var currentID: LibraryEntryIdentity?
-        var trailingInset: CGFloat = 0
-        /// Whether the pointer is over the shelf; the buttons only show then.
-        var isVisible: Bool
-
-        @FocusState private var isFocused: Bool
-
-        var body: some View {
-            HStack {
-                pageButton(offset: -1, systemImage: "chevron.left", label: "Previous")
-                Spacer()
-                pageButton(offset: 1, systemImage: "chevron.right", label: "Next")
-            }
-            .padding(.leading, 16)
-            .padding(.trailing, 16 + trailingInset)
-            .opacity(isVisible ? 1 : 0)
-            .animation(.easeOut(duration: 0.18), value: isVisible)
-            .focusable()
-            .focusEffectDisabled()
-            .focused($isFocused)
-            .onKeyPress(.leftArrow) { step(by: -1) ? .handled : .ignored }
-            .onKeyPress(.rightArrow) { step(by: 1) ? .handled : .ignored }
-            .onAppear { isFocused = true }
-        }
-
-        private func pageButton(offset: Int, systemImage: String, label: LocalizedStringResource) -> some View {
-            Button {
-                step(by: offset)
-            } label: {
-                Image(systemName: systemImage)
-                    .font(.title2.weight(.semibold))
-                    .frame(width: 44, height: 44)
-            }
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
-            .disabled(target(by: offset) == nil)
-            .accessibilityLabel(Text(label))
-        }
-
-        private func target(by offset: Int) -> LibraryEntryIdentity? {
-            guard !itemIDs.isEmpty else { return nil }
-            let index = currentID.flatMap { itemIDs.firstIndex(of: $0) } ?? 0
-            let targetIndex = index + offset
-            guard itemIDs.indices.contains(targetIndex) else { return nil }
-            return itemIDs[targetIndex]
-        }
-
-        @discardableResult
-        private func step(by offset: Int) -> Bool {
-            guard let id = target(by: offset) else { return false }
-            withAnimation(.snappy) { currentID = id }
-            return true
-        }
-    }
-#endif
