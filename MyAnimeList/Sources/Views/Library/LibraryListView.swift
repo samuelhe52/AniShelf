@@ -18,6 +18,7 @@ struct LibraryListView: View {
     let scrollRequest: LibraryScrollRequest?
     let highlightRequest: LibraryHighlightRequest?
     #if os(macOS)
+        @Environment(MacLibrarySelection.self) private var selection
         @FocusState private var isListFocused: Bool
     #endif
 
@@ -34,6 +35,15 @@ struct LibraryListView: View {
                 // edge-to-edge bar.
                 .listStyle(.inset)
                 .focused($isListFocused)
+                // The native List menu and open action act on the clicked row or the
+                // selection; double-click and Return show the entry in the inspector.
+                .contextMenu(forSelectionType: LibraryEntryIdentity.self) { ids in
+                    if ids.count == 1, let entry = entry(for: ids.first) {
+                        interaction.contextMenu(for: entry, toggleFavorite: toggleFavorite, editEntry: editEntry)
+                    }
+                } primaryAction: { ids in
+                    if ids.count == 1, let entry = entry(for: ids.first) { openDetails(for: entry) }
+                }
             #else
                 .listStyle(.plain)
             #endif
@@ -58,20 +68,20 @@ struct LibraryListView: View {
     }
 
     #if os(macOS)
-        /// Desktop lists always select natively: one selected row is the inspected entry,
-        /// several form the batch selection.
+        /// Desktop lists select natively into the window's selection.
         private var listSelection: Binding<Set<LibraryEntryIdentity>> {
             Binding(
-                get: {
-                    if interaction.isMultiSelecting { return interaction.selectedEntryIDs }
-                    return interaction.inspectorPresentation.map { [$0.entryIdentity] } ?? []
-                },
-                set: { selectedEntryIDs in
+                get: { selection.ids },
+                set: { ids in
                     // Keep arrow keys in the list after a click instead of the sidebar.
                     isListFocused = true
-                    detailActions.select?(selectedEntryIDs)
+                    selection.select(ids)
                 }
             )
+        }
+
+        private func entry(for id: LibraryEntryIdentity?) -> AnimeEntry? {
+            displayItems.first { $0.id == id }?.entry
         }
     #else
         private var listSelection: Binding<Set<LibraryEntryIdentity>> {
@@ -123,17 +133,17 @@ struct LibraryListView: View {
         .listRowSeparatorTint(.white.opacity(0.06))
         #if !os(macOS)
             .listRowBackground(Color.clear)
-        #endif
-        .contextMenu {
-            interaction.contextMenu(
-                for: item.entry,
-                toggleFavorite: toggleFavorite,
-                editEntry: editEntry
-            )
-        } preview: {
-            EntryContextMenuPreview(snapshot: item.snapshot)
+            .contextMenu {
+                interaction.contextMenu(
+                    for: item.entry,
+                    toggleFavorite: toggleFavorite,
+                    editEntry: editEntry
+                )
+            } preview: {
+                EntryContextMenuPreview(snapshot: item.snapshot)
                 .onAppear { scrolledID = item.id }
-        }
+            }
+        #endif
 
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             if !interaction.isMultiSelecting {

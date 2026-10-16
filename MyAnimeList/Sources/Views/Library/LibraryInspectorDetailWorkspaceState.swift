@@ -8,49 +8,52 @@
 import DataProvider
 import LibrarySync
 
-enum LibraryInspectorDetailPersistenceAction: Equatable {
-    case clear
-    case persist(LibraryEntryIdentity)
-    case preserve
-}
-
-enum LibraryInspectorDetailLaunchRestorationAction: Equatable {
-    case clearInvalidSavedIdentity
-    case none
-    case restore(String)
-}
-
-struct LibraryInspectorDetailWorkspaceState {
-    private(set) var hasCompletedLaunchRestoration = false
-
-    static func persistenceAction(
-        for presentedDetailEntryIdentity: LibraryEntryIdentity?,
-        committedHostPresentation: LibraryEntryDetailHostPresentation?
-    ) -> LibraryInspectorDetailPersistenceAction {
-        guard let presentedDetailEntryIdentity else { return .clear }
-        guard committedHostPresentation?.host == .inspector,
-            committedHostPresentation?.isHostPresented == true
-        else { return .preserve }
-        return .persist(presentedDetailEntryIdentity)
+// iPad inspector restoration; the Mac restores its window selection in `LibraryView+Mac`.
+#if !os(macOS)
+    enum LibraryInspectorDetailPersistenceAction: Equatable {
+        case clear
+        case persist(LibraryEntryIdentity)
+        case preserve
     }
 
-    mutating func initialRestorationAction(
-        for host: LibraryEntryDetailHost,
-        presentedDetailEntryIdentity: LibraryEntryIdentity?,
-        savedIdentityRawID: String?,
-        isRestorableIdentity: (String) -> Bool
-    ) -> LibraryInspectorDetailLaunchRestorationAction {
-        guard !hasCompletedLaunchRestoration else { return .none }
-        hasCompletedLaunchRestoration = true
+    enum LibraryInspectorDetailLaunchRestorationAction: Equatable {
+        case clearInvalidSavedIdentity
+        case none
+        case restore(String)
+    }
 
-        guard host == .inspector,
-            presentedDetailEntryIdentity == nil,
-            let savedIdentityRawID,
-            !savedIdentityRawID.isEmpty
-        else { return .none }
-        guard isRestorableIdentity(savedIdentityRawID) else {
-            return .clearInvalidSavedIdentity
+    struct LibraryInspectorDetailWorkspaceState {
+        private(set) var hasCompletedLaunchRestoration = false
+
+        static func persistenceAction(
+            for presentedDetailEntryIdentity: LibraryEntryIdentity?,
+            committedHostPresentation: LibraryEntryDetailHostPresentation?
+        ) -> LibraryInspectorDetailPersistenceAction {
+            guard let presentedDetailEntryIdentity else { return .clear }
+            guard committedHostPresentation?.host == .inspector,
+                committedHostPresentation?.isHostPresented == true
+            else { return .preserve }
+            return .persist(presentedDetailEntryIdentity)
         }
-        return .restore(savedIdentityRawID)
+
+        mutating func initialRestorationAction(
+            for host: LibraryEntryDetailHost,
+            presentedDetailEntryIdentity: LibraryEntryIdentity?,
+            savedIdentityRawID: String?,
+            isRestorableIdentity: (String) -> Bool
+        ) -> LibraryInspectorDetailLaunchRestorationAction {
+            guard !hasCompletedLaunchRestoration else { return .none }
+            hasCompletedLaunchRestoration = true
+
+            guard host == .inspector,
+                presentedDetailEntryIdentity == nil,
+                let savedIdentityRawID,
+                !savedIdentityRawID.isEmpty
+            else { return .none }
+            guard isRestorableIdentity(savedIdentityRawID) else {
+                return .clearInvalidSavedIdentity
+            }
+            return .restore(savedIdentityRawID)
+        }
     }
-}
+#endif

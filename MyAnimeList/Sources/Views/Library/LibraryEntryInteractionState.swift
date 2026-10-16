@@ -40,35 +40,30 @@ enum LibraryEntryDetailHost: Equatable, Sendable {
 struct LibraryEntryDetailActions {
     let open: @MainActor (AnimeEntry) -> Void
     let edit: @MainActor (AnimeEntry) -> Void
-    #if os(macOS)
-        /// Desktop selection: a click with its modifier keys, routed through the library view.
-        var click: (@MainActor (LibraryEntryIdentity, MacSelectionClick) -> Void)? = nil
-        /// Desktop selection made natively by a list.
-        var select: (@MainActor (Set<LibraryEntryIdentity>) -> Void)? = nil
-    #endif
 }
 
+#if !os(macOS)
+    struct LibraryEntryDetailHostPolicy: Equatable, Sendable {
+        let host: LibraryEntryDetailHost
+        let activation: LibraryEntryDetailActivation
 
-struct LibraryEntryDetailHostPolicy: Equatable, Sendable {
-    let host: LibraryEntryDetailHost
-    let activation: LibraryEntryDetailActivation
-
-    init(horizontalSizeClass: PlatformHorizontalSizeClass?) {
-        if horizontalSizeClass == .regular {
-            host = .inspector
-            activation = .singleTap
-        } else {
-            host = .sheet
-            activation = .userPreference
+        init(horizontalSizeClass: PlatformHorizontalSizeClass?) {
+            if horizontalSizeClass == .regular {
+                host = .inspector
+                activation = .singleTap
+            } else {
+                host = .sheet
+                activation = .userPreference
+            }
         }
     }
-}
 
-struct LibraryEntryDetailEditRequest: Equatable, Sendable {
-    let id = UUID()
-    let entryIdentity: LibraryEntryIdentity
-    var hostPresentationID: UUID?
-}
+    struct LibraryEntryDetailEditRequest: Equatable, Sendable {
+        let id = UUID()
+        let entryIdentity: LibraryEntryIdentity
+        var hostPresentationID: UUID?
+    }
+#endif
 
 struct LibraryEntryPasteRequest: Identifiable, Equatable {
     let id = UUID()
@@ -76,18 +71,20 @@ struct LibraryEntryPasteRequest: Identifiable, Equatable {
     let userInfo: UserEntryInfo
 }
 
-struct LibraryEntryDetailPresentation: Identifiable, Equatable, Sendable {
-    let id = UUID()
-    let entryIdentity: LibraryEntryIdentity
-}
+#if !os(macOS)
+    struct LibraryEntryDetailPresentation: Identifiable, Equatable, Sendable {
+        let id = UUID()
+        let entryIdentity: LibraryEntryIdentity
+    }
 
-struct LibraryEntryDetailHostPresentation: Identifiable, Equatable, Sendable {
-    let id = UUID()
-    var detailPresentationID: UUID
-    var entryIdentity: LibraryEntryIdentity
-    let host: LibraryEntryDetailHost
-    var isHostPresented = true
-}
+    struct LibraryEntryDetailHostPresentation: Identifiable, Equatable, Sendable {
+        let id = UUID()
+        var detailPresentationID: UUID
+        var entryIdentity: LibraryEntryIdentity
+        let host: LibraryEntryDetailHost
+        var isHostPresented = true
+    }
+#endif
 
 struct LibraryEntryWorkflowPresentation: Identifiable, Equatable, Sendable {
     let id = UUID()
@@ -95,12 +92,16 @@ struct LibraryEntryWorkflowPresentation: Identifiable, Equatable, Sendable {
 }
 
 enum LibraryEntrySheetRoute: Identifiable, Equatable, Sendable {
-    case detail(LibraryEntryDetailHostPresentation)
+    #if !os(macOS)
+        case detail(LibraryEntryDetailHostPresentation)
+    #endif
     case workflow(LibraryEntryWorkflowPresentation)
 
     var id: UUID {
         switch self {
-        case .detail(let presentation): presentation.id
+        #if !os(macOS)
+            case .detail(let presentation): presentation.id
+        #endif
         case .workflow(let presentation): presentation.id
         }
     }
@@ -110,54 +111,37 @@ enum LibraryEntrySheetRoute: Identifiable, Equatable, Sendable {
 @MainActor
 final class LibraryEntryInteractionState {
     var focusedEntryID: LibraryEntryIdentity?
-    private(set) var detailEditRequest: LibraryEntryDetailEditRequest?
     var deletingEntryID: LibraryEntryIdentity?
     private(set) var pendingPasteRequest: LibraryEntryPasteRequest?
     var isMultiSelecting: Bool = false
     var selectedEntryIDs: Set<LibraryEntryIdentity> = []
-    private(set) var desiredDetailHost: LibraryEntryDetailHost
-    private(set) var detailPresentation: LibraryEntryDetailPresentation?
-    private(set) var detailHostPresentation: LibraryEntryDetailHostPresentation?
     private(set) var workflowPresentation: LibraryEntryWorkflowPresentation?
-    private(set) var isInteractivelyResizing = false
-    private(set) var isDetailDormantUntilInspector = false
 
-    init(initialDetailHost: LibraryEntryDetailHost = .sheet) {
-        desiredDetailHost = initialDetailHost
-    }
+    #if !os(macOS)
+        // iOS presents entry detail as a sheet or an iPad inspector. The Mac inspector
+        // follows the window selection instead (`MacLibrarySelection`).
+        private(set) var detailEditRequest: LibraryEntryDetailEditRequest?
+        private(set) var desiredDetailHost: LibraryEntryDetailHost
+        private(set) var detailPresentation: LibraryEntryDetailPresentation?
+        private(set) var detailHostPresentation: LibraryEntryDetailHostPresentation?
+        private(set) var isInteractivelyResizing = false
+        private(set) var isDetailDormantUntilInspector = false
 
-    var presentedDetailEntryID: LibraryEntryIdentity? {
-        detailPresentation?.entryIdentity
-    }
-
-    var detailSheetPresentation: LibraryEntryDetailHostPresentation? {
-        guard detailHostPresentation?.host == .sheet,
-            detailHostPresentation?.isHostPresented == true
-        else { return nil }
-        return detailHostPresentation
-    }
-
-    var inspectorPresentation: LibraryEntryDetailHostPresentation? {
-        guard detailHostPresentation?.host == .inspector,
-            detailHostPresentation?.isHostPresented == true
-        else { return nil }
-        return detailHostPresentation
-    }
+        init(initialDetailHost: LibraryEntryDetailHost = .sheet) {
+            desiredDetailHost = initialDetailHost
+        }
+    #endif
 
     var activeSheetRoute: LibraryEntrySheetRoute? {
         if let workflowPresentation {
             return .workflow(workflowPresentation)
         }
-        if let detailSheetPresentation {
-            return .detail(detailSheetPresentation)
-        }
+        #if !os(macOS)
+            if let detailSheetPresentation {
+                return .detail(detailSheetPresentation)
+            }
+        #endif
         return nil
-    }
-
-    var hasPendingDetailHostMigration: Bool {
-        detailPresentation != nil
-            && (detailHostPresentation?.host != desiredDetailHost
-                || detailHostPresentation?.isHostPresented != true)
     }
 
     var selectedEntryCount: Int {
@@ -172,145 +156,28 @@ final class LibraryEntryInteractionState {
         focusedEntryID = entry.libraryIdentity
     }
 
-    func openDetails(for entry: AnimeEntry) {
-        isDetailDormantUntilInspector = false
-        if detailEditRequest?.entryIdentity != entry.libraryIdentity {
-            detailEditRequest = nil
-        }
-        focus(entry)
-        let presentation = LibraryEntryDetailPresentation(entryIdentity: entry.libraryIdentity)
-        detailPresentation = presentation
-
-        if detailHostPresentation?.isHostPresented == true {
-            detailHostPresentation?.detailPresentationID = presentation.id
-            detailHostPresentation?.entryIdentity = entry.libraryIdentity
-        } else {
-            detailHostPresentation = LibraryEntryDetailHostPresentation(
-                detailPresentationID: presentation.id,
-                entryIdentity: entry.libraryIdentity,
-                host: desiredDetailHost
-            )
-        }
-        retargetDetailEditRequest()
-    }
-
-    func dismissDetails() {
-        detailPresentation = nil
-        detailHostPresentation = nil
-        detailEditRequest = nil
-        isDetailDormantUntilInspector = false
-    }
-
-    func dismissDetails(ifHostPresentationID hostPresentationID: UUID) {
-        guard detailHostPresentation?.id == hostPresentationID else { return }
-        dismissDetails()
-    }
-
-    func requestDetailHost(
-        _ host: LibraryEntryDetailHost,
-        migrationBlocked: Bool,
-        rootPresentationActive: Bool = false
-    ) {
-        desiredDetailHost = host
-
-        if rootPresentationActive,
-            host == .sheet,
-            detailPresentation != nil,
-            detailHostPresentation?.host == .inspector
-        {
-            isDetailDormantUntilInspector = true
-            detailHostPresentation?.isHostPresented = false
-            return
-        }
-
-        if isDetailDormantUntilInspector {
-            guard host == .inspector else { return }
-            isDetailDormantUntilInspector = false
-        }
-
-        guard !migrationBlocked else { return }
-        guard !isInteractivelyResizing else { return }
-        reconcileDetailHostPresentation()
-    }
-
-    func interactiveResizeDidChange(
-        _ isResizing: Bool,
-        migrationBlocked: Bool
-    ) {
-        isInteractivelyResizing = isResizing
-        if !isResizing {
-            reconcileDetailHostIfPossible(migrationBlocked: migrationBlocked)
-        }
-    }
-
-    func reconcileDetailHostIfPossible(migrationBlocked: Bool) {
-        guard !isInteractivelyResizing,
-            !migrationBlocked,
-            !isDetailDormantUntilInspector
-        else { return }
-        reconcileDetailHostPresentation()
-    }
-
-    func detailHostDidDismiss(_ presentation: LibraryEntryDetailHostPresentation) {
-        guard detailHostPresentation?.id == presentation.id else { return }
-        if isInteractivelyResizing
-            || isDetailDormantUntilInspector
-            || hasPendingDetailHostMigration
-        {
-            detailHostPresentation?.isHostPresented = false
-        } else {
-            dismissDetails()
-        }
-    }
-
     func sheetRouteDidDismiss(_ route: LibraryEntrySheetRoute) {
         switch route {
-        case .detail(let presentation):
-            guard workflowPresentation == nil else { return }
-            detailHostDidDismiss(presentation)
+        #if !os(macOS)
+            case .detail(let presentation):
+                guard workflowPresentation == nil else { return }
+                detailHostDidDismiss(presentation)
+        #endif
         case .workflow(let presentation):
             workflowPresentationDidDismiss(presentation)
         }
     }
 
     func presentWorkflow(_ workflow: LibraryEntryWorkflow) {
-        detailEditRequest = nil
+        #if !os(macOS)
+            detailEditRequest = nil
+        #endif
         workflowPresentation = LibraryEntryWorkflowPresentation(workflow: workflow)
     }
 
     func workflowPresentationDidDismiss(_ presentation: LibraryEntryWorkflowPresentation) {
         guard workflowPresentation?.id == presentation.id else { return }
         workflowPresentation = nil
-    }
-
-    func isCurrentDetailHostPresentation(_ presentationID: UUID) -> Bool {
-        detailHostPresentation?.id == presentationID
-    }
-
-    private func reconcileDetailHostPresentation() {
-        guard let detailPresentation else {
-            detailHostPresentation = nil
-            return
-        }
-
-        if detailHostPresentation?.detailPresentationID == detailPresentation.id,
-            detailHostPresentation?.host == desiredDetailHost,
-            detailHostPresentation?.isHostPresented == true
-        {
-            return
-        }
-
-        detailHostPresentation = LibraryEntryDetailHostPresentation(
-            detailPresentationID: detailPresentation.id,
-            entryIdentity: detailPresentation.entryIdentity,
-            host: desiredDetailHost
-        )
-        retargetDetailEditRequest()
-    }
-
-    private func retargetDetailEditRequest() {
-        guard detailEditRequest?.entryIdentity == detailPresentation?.entryIdentity else { return }
-        detailEditRequest?.hostPresentationID = detailHostPresentation?.id
     }
 
     func enterMultiSelection() {
@@ -352,22 +219,6 @@ final class LibraryEntryInteractionState {
 
     func clearDeletionRequest() {
         deletingEntryID = nil
-    }
-
-    func setEditingEntry(_ entry: AnimeEntry) {
-        openDetails(for: entry)
-        detailEditRequest = LibraryEntryDetailEditRequest(
-            entryIdentity: entry.libraryIdentity,
-            hostPresentationID: detailHostPresentation?.id
-        )
-    }
-
-    func consumeDetailEditRequest(_ requestID: UUID, fromHostPresentationID: UUID) {
-        guard detailEditRequest?.id == requestID,
-            detailEditRequest?.hostPresentationID == fromHostPresentationID,
-            detailHostPresentation?.id == fromHostPresentationID
-        else { return }
-        detailEditRequest = nil
     }
 
     func pasteInfo(for entry: AnimeEntry) {
@@ -412,6 +263,171 @@ final class LibraryEntryInteractionState {
         pendingPasteRequest = nil
     }
 }
+
+#if !os(macOS)
+    extension LibraryEntryInteractionState {
+        var presentedDetailEntryID: LibraryEntryIdentity? {
+            detailPresentation?.entryIdentity
+        }
+
+        var detailSheetPresentation: LibraryEntryDetailHostPresentation? {
+            guard detailHostPresentation?.host == .sheet,
+                detailHostPresentation?.isHostPresented == true
+            else { return nil }
+            return detailHostPresentation
+        }
+
+        var inspectorPresentation: LibraryEntryDetailHostPresentation? {
+            guard detailHostPresentation?.host == .inspector,
+                detailHostPresentation?.isHostPresented == true
+            else { return nil }
+            return detailHostPresentation
+        }
+
+        var hasPendingDetailHostMigration: Bool {
+            detailPresentation != nil
+                && (detailHostPresentation?.host != desiredDetailHost
+                    || detailHostPresentation?.isHostPresented != true)
+        }
+
+        func openDetails(for entry: AnimeEntry) {
+            isDetailDormantUntilInspector = false
+            if detailEditRequest?.entryIdentity != entry.libraryIdentity {
+                detailEditRequest = nil
+            }
+            focus(entry)
+            let presentation = LibraryEntryDetailPresentation(entryIdentity: entry.libraryIdentity)
+            detailPresentation = presentation
+
+            if detailHostPresentation?.isHostPresented == true {
+                detailHostPresentation?.detailPresentationID = presentation.id
+                detailHostPresentation?.entryIdentity = entry.libraryIdentity
+            } else {
+                detailHostPresentation = LibraryEntryDetailHostPresentation(
+                    detailPresentationID: presentation.id,
+                    entryIdentity: entry.libraryIdentity,
+                    host: desiredDetailHost
+                )
+            }
+            retargetDetailEditRequest()
+        }
+
+        func dismissDetails() {
+            detailPresentation = nil
+            detailHostPresentation = nil
+            detailEditRequest = nil
+            isDetailDormantUntilInspector = false
+        }
+
+        func dismissDetails(ifHostPresentationID hostPresentationID: UUID) {
+            guard detailHostPresentation?.id == hostPresentationID else { return }
+            dismissDetails()
+        }
+
+        func requestDetailHost(
+            _ host: LibraryEntryDetailHost,
+            migrationBlocked: Bool,
+            rootPresentationActive: Bool = false
+        ) {
+            desiredDetailHost = host
+
+            if rootPresentationActive,
+                host == .sheet,
+                detailPresentation != nil,
+                detailHostPresentation?.host == .inspector
+            {
+                isDetailDormantUntilInspector = true
+                detailHostPresentation?.isHostPresented = false
+                return
+            }
+
+            if isDetailDormantUntilInspector {
+                guard host == .inspector else { return }
+                isDetailDormantUntilInspector = false
+            }
+
+            guard !migrationBlocked else { return }
+            guard !isInteractivelyResizing else { return }
+            reconcileDetailHostPresentation()
+        }
+
+        func interactiveResizeDidChange(
+            _ isResizing: Bool,
+            migrationBlocked: Bool
+        ) {
+            isInteractivelyResizing = isResizing
+            if !isResizing {
+                reconcileDetailHostIfPossible(migrationBlocked: migrationBlocked)
+            }
+        }
+
+        func reconcileDetailHostIfPossible(migrationBlocked: Bool) {
+            guard !isInteractivelyResizing,
+                !migrationBlocked,
+                !isDetailDormantUntilInspector
+            else { return }
+            reconcileDetailHostPresentation()
+        }
+
+        func detailHostDidDismiss(_ presentation: LibraryEntryDetailHostPresentation) {
+            guard detailHostPresentation?.id == presentation.id else { return }
+            if isInteractivelyResizing
+                || isDetailDormantUntilInspector
+                || hasPendingDetailHostMigration
+            {
+                detailHostPresentation?.isHostPresented = false
+            } else {
+                dismissDetails()
+            }
+        }
+
+        func isCurrentDetailHostPresentation(_ presentationID: UUID) -> Bool {
+            detailHostPresentation?.id == presentationID
+        }
+
+        private func reconcileDetailHostPresentation() {
+            guard let detailPresentation else {
+                detailHostPresentation = nil
+                return
+            }
+
+            if detailHostPresentation?.detailPresentationID == detailPresentation.id,
+                detailHostPresentation?.host == desiredDetailHost,
+                detailHostPresentation?.isHostPresented == true
+            {
+                return
+            }
+
+            detailHostPresentation = LibraryEntryDetailHostPresentation(
+                detailPresentationID: detailPresentation.id,
+                entryIdentity: detailPresentation.entryIdentity,
+                host: desiredDetailHost
+            )
+            retargetDetailEditRequest()
+        }
+
+        private func retargetDetailEditRequest() {
+            guard detailEditRequest?.entryIdentity == detailPresentation?.entryIdentity else { return }
+            detailEditRequest?.hostPresentationID = detailHostPresentation?.id
+        }
+
+        func setEditingEntry(_ entry: AnimeEntry) {
+            openDetails(for: entry)
+            detailEditRequest = LibraryEntryDetailEditRequest(
+                entryIdentity: entry.libraryIdentity,
+                hostPresentationID: detailHostPresentation?.id
+            )
+        }
+
+        func consumeDetailEditRequest(_ requestID: UUID, fromHostPresentationID: UUID) {
+            guard detailEditRequest?.id == requestID,
+                detailEditRequest?.hostPresentationID == fromHostPresentationID,
+                detailHostPresentation?.id == fromHostPresentationID
+            else { return }
+            detailEditRequest = nil
+        }
+    }
+#endif
 
 enum LibraryEntryDetailActivation: Equatable, Sendable {
     case userPreference
@@ -458,9 +474,11 @@ extension LibraryEntryInteractionState {
         Button("Edit", systemImage: "pencil") {
             if let editEntry {
                 editEntry(entry)
-            } else {
-                self.setEditingEntry(entry)
+                return
             }
+            #if !os(macOS)
+                self.setEditingEntry(entry)
+            #endif
         }
     }
 

@@ -32,13 +32,15 @@ struct LibraryView: View {
     // MARK: - Stored Properties
 
     @Environment(LibraryStore.self) var store
-    @Environment(\.platformHorizontalSizeClass) private var horizontalSizeClass
+    #if !os(macOS)
+        @Environment(\.platformHorizontalSizeClass) private var horizontalSizeClass
+    #endif
     @Environment(\.windowSceneIdentifier) var windowSceneIdentifier
     @Environment(AppReviewPromptController.self) var appReview
     private let airingReminders = AiringReminderCoordinator.shared
 
     @State var interaction = LibraryEntryInteractionState()
-    @State private var detailSessionStore = EntryDetailSessionStore()
+    @State var detailSessionStore = EntryDetailSessionStore()
 
     // UI state
     @State var isSearching = false
@@ -52,7 +54,9 @@ struct LibraryView: View {
     @State var isSearchSheetOnScreen = false
     @State var pendingJumpEntryID: LibraryEntryIdentity?
     @State var scrollRequest: LibraryScrollRequest?
-    @State private var inspectorDetailWorkspaceState = LibraryInspectorDetailWorkspaceState()
+    #if !os(macOS)
+        @State private var inspectorDetailWorkspaceState = LibraryInspectorDetailWorkspaceState()
+    #endif
 
     // Multi-selection snapshot: decouples selection rendering from live store
     // recomputation so toggling items stays cheap. See LibraryView+MultiSelection.
@@ -77,7 +81,7 @@ struct LibraryView: View {
     }
     @AppStorage(.libraryScoringEnabled) var scoringEnabled = true
     @AppStorage(.libraryLastInspectorDetailEntryIdentity)
-    private var persistedLastInspectorDetailEntryIdentity: String?
+    var persistedLastInspectorDetailEntryIdentity: String?
 
     #if os(macOS)
         @Environment(\.openSettings) private var openSettings
@@ -86,12 +90,15 @@ struct LibraryView: View {
         /// The toolbar Find text. Per window, unlike the sidebar scope.
         @State var libraryFindQuery = ""
         @State var isLibraryFindFocused = false
-        /// Hides the batch-selection panel the inspector shows during a batch selection.
-        @State var isBatchInspectorHidden = false
         @State var macSidebarVisibility: NavigationSplitViewVisibility = .automatic
-        @State var macSelectionAnchor: LibraryEntryIdentity?
+        /// This window's selection. Only views that depend on it read it (see `MacLibrarySelection`).
+        @State var macSelection = MacLibrarySelection()
+        /// Whether this window shows its inspector, independent of the selection.
+        @SceneStorage("libraryInspectorShown") var isMacInspectorShown = true
+        @State var macEditRequest: MacEntryEditRequest?
         @State var showRefreshAllMetadataAlert = false
-        @State var showDeleteSelectionAlert = false
+        /// The batch the Delete menu command asked to delete, awaiting confirmation.
+        @State var macPendingBatchDeletion: [AnimeEntry]?
     #endif
 
     // MARK: - Body
@@ -116,24 +123,24 @@ struct LibraryView: View {
             guard !newValue, store.groupStrategy == .score else { return }
             store.groupStrategy = .none
         }
-        .libraryDetailHostCoordination(
-            store: store,
-            interaction: interaction,
-            detailSessionStore: detailSessionStore,
-            horizontalSizeClass: horizontalSizeClass,
-            isSearching: isSearching,
-            isShowingProfileSettings: showProfileSettings,
-            workspaceState: $inspectorDetailWorkspaceState,
-            persistedLastInspectorDetailEntryIdentity: $persistedLastInspectorDetailEntryIdentity
-        )
+        #if !os(macOS)
+            // The Mac inspector follows the window's selection instead (`MacLibraryInspector`).
+            .libraryDetailHostCoordination(
+                store: store,
+                interaction: interaction,
+                detailSessionStore: detailSessionStore,
+                horizontalSizeClass: horizontalSizeClass,
+                isSearching: isSearching,
+                isShowingProfileSettings: showProfileSettings,
+                workspaceState: $inspectorDetailWorkspaceState,
+                persistedLastInspectorDetailEntryIdentity: $persistedLastInspectorDetailEntryIdentity
+            )
+        #endif
         .onChange(of: store.libraryRevision) {
             refreshSelectionDisplayItemsIfNeeded()
         }
         .onChange(of: store.filters) {
             refreshSelectionDisplayItemsIfNeeded()
-            #if os(macOS)
-                dismissInspectorOutsideScope()
-            #endif
         }
         .onChange(of: store.groupStrategy) {
             refreshSelectionDisplayItemsIfNeeded()
@@ -150,7 +157,6 @@ struct LibraryView: View {
         #if os(macOS)
             .onChange(of: libraryFindQuery) {
                 refreshSelectionDisplayItemsIfNeeded()
-                dismissInspectorOutsideScope()
             }
         #endif
         .onChange(of: store.activeCategoryID) {
@@ -159,9 +165,6 @@ struct LibraryView: View {
             withAnimation(.snappy) {
                 refreshSelectionDisplayItemsIfNeeded()
             }
-            #if os(macOS)
-                dismissInspectorOutsideScope()
-            #endif
         }
         .task(id: highlightRequest?.token) {
             // Expire the request so rows recreated later by scrolling or filtering do not pulse again.
@@ -210,37 +213,28 @@ struct LibraryView: View {
         )
     }
 
-    /// Hosts entry detail in the trailing inspector. On the Mac it is attached to the library
-    /// column inside the split view: attached outside it, AppKit counted the inspector's width
-    /// twice in the window's minimum size.
-    private var entryInspector: LibraryEntryInspectorModifier {
-        #if os(macOS)
-            let batchContent: AnyView? = isMacBatchInspectorShown ? AnyView(macBatchSelectionPanel) : nil
-            let isBatchShown = { isMacBatchInspectorShown }
-            let batchDidHide = { hideBatchInspector() }
-        #else
-            let batchContent: AnyView? = nil
-            let isBatchShown = { false }
-            let batchDidHide = {}
-        #endif
-        return LibraryEntryInspectorModifier(
-            interaction: interaction,
-            detailSession: detailSessionStore.session(for: interaction.presentedDetailEntryID),
-            content: { presentation, session in
-                AnyView(detailHostContent(presentation: presentation, session: session))
-            },
-            batchContent: batchContent,
-            isBatchShown: isBatchShown,
-            batchDidHide: batchDidHide
-        )
-    }
+    #if !os(macOS)
+        /// Hosts entry detail in the iPad's trailing inspector.
+        private var entryInspector: LibraryEntryInspectorModifier {
+            LibraryEntryInspectorModifier(
+                interaction: interaction,
+                detailSession: detailSessionStore.session(for: interaction.presentedDetailEntryID),
+                content: { presentation, session in
+                    AnyView(detailHostContent(presentation: presentation, session: session))
+                }
+            )
+        }
+    #endif
 
     private var libraryNavigation: some View {
-        let detailSession = detailSessionStore.session(
-            for: interaction.presentedDetailEntryID
-        )
+        #if os(macOS)
+            let detailSession: EntryDetailSession? = nil
+        #else
+            let detailSession = detailSessionStore.session(
+                for: interaction.presentedDetailEntryID
+            )
+        #endif
         let presentedSheetRoute = interaction.activeSheetRoute
-        let detailActivation = currentDetailActivation
         let activeSheetRoute = Binding<LibraryEntrySheetRoute?>(
             get: { interaction.activeSheetRoute },
             set: { route in
@@ -251,8 +245,8 @@ struct LibraryView: View {
 
         return
             libraryNavigationStack
-            .environment(\.libraryEntryDetailActivation, detailActivation)
             #if !os(macOS)
+                .environment(\.libraryEntryDetailActivation, currentDetailActivation)
                 .modifier(entryInspector)
             #endif
             .sheet(item: activeSheetRoute) { route in
@@ -273,50 +267,54 @@ struct LibraryView: View {
         detailSession: EntryDetailSession?
     ) -> some View {
         switch route {
-        case .detail(let presentation):
-            if let detailSession {
-                detailHostContent(
-                    presentation: presentation,
-                    session: detailSession
-                )
-                .presentationBackground(presentation.host.pageBackground)
-            }
+        #if !os(macOS)
+            case .detail(let presentation):
+                if let detailSession {
+                    detailHostContent(
+                        presentation: presentation,
+                        session: detailSession
+                    )
+                    .presentationBackground(presentation.host.pageBackground)
+                }
+        #endif
         case .workflow(let presentation):
             workflowContent(for: presentation)
         }
     }
 
-    private func detailHostContent(
-        presentation: LibraryEntryDetailHostPresentation,
-        session: EntryDetailSession
-    ) -> some View {
-        NavigationStack {
-            EntryDetailView(
-                session: session,
-                detailHost: presentation.host,
-                onClose: { _ in
-                    interaction.dismissDetails(
-                        ifHostPresentationID: presentation.id
-                    )
-                },
-                editingRequestID: detailEditingRequestID(
-                    for: presentation.entryIdentity,
-                    hostPresentationID: presentation.id
-                ),
-                onEditingRequestHandled: { requestID in
-                    interaction.consumeDetailEditRequest(
-                        requestID,
-                        fromHostPresentationID: presentation.id
-                    )
-                },
-                hostPresentationID: presentation.id,
-                isCurrentHostPresentation: {
-                    interaction.isCurrentDetailHostPresentation($0)
-                }
-            )
+    #if !os(macOS)
+        private func detailHostContent(
+            presentation: LibraryEntryDetailHostPresentation,
+            session: EntryDetailSession
+        ) -> some View {
+            NavigationStack {
+                EntryDetailView(
+                    session: session,
+                    detailHost: presentation.host,
+                    onClose: { _ in
+                        interaction.dismissDetails(
+                            ifHostPresentationID: presentation.id
+                        )
+                    },
+                    editingRequestID: detailEditingRequestID(
+                        for: presentation.entryIdentity,
+                        hostPresentationID: presentation.id
+                    ),
+                    onEditingRequestHandled: { requestID in
+                        interaction.consumeDetailEditRequest(
+                            requestID,
+                            fromHostPresentationID: presentation.id
+                        )
+                    },
+                    hostPresentationID: presentation.id,
+                    isCurrentHostPresentation: {
+                        interaction.isCurrentDetailHostPresentation($0)
+                    }
+                )
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
+    #endif
 
     @ViewBuilder
     private func workflowContent(for presentation: LibraryEntryWorkflowPresentation) -> some View {
@@ -347,7 +345,14 @@ struct LibraryView: View {
     @ViewBuilder
     private var libraryNavigationStack: some View {
         #if os(macOS)
-            macLibrarySplitView(detail: libraryBrowserStack.modifier(entryInspector))
+            // The inspector is attached to the library column inside the split view: attached
+            // outside it, AppKit counted the inspector's width twice in the window's minimum.
+            macLibrarySplitView(
+                detail:
+                    libraryBrowserStack
+                    .inspector(isPresented: $isMacInspectorShown) { macInspector }
+                    .environment(macSelection)
+            )
         #else
             libraryBrowserStack
         #endif
@@ -387,9 +392,7 @@ struct LibraryView: View {
                     deleteSelectedEntries: deleteSelectedEntries,
                     openProfileSettings: openProfileSettings,
                     openCategoryManager: openCategoryManager,
-                    addAnime: { openSearch(mode: .tmdb) },
-                    isInspectorPresented: isInspectorShown,
-                    toggleInspector: toggleInspector
+                    addAnime: { openSearch(mode: .tmdb) }
                 )
             }
             .environment(interaction)
@@ -401,7 +404,7 @@ struct LibraryView: View {
                     prompt: Text("Find in Library")
                 )
                 .navigationTitle(macWindowTitle)
-                .navigationSubtitle(macWindowSubtitle)
+                .modifier(MacLibrarySubtitle(selection: macSelection, visibleCount: visibleDisplayItems.count))
             #else
                 .navigationTitle("")
                 .inlineNavigationTitle()
@@ -413,10 +416,6 @@ struct LibraryView: View {
             }
             .onChange(of: interaction.isMultiSelecting) {
                 isReorderingCategories = false
-                #if os(macOS)
-                    // Each new batch selection shows its panel again.
-                    if !interaction.isMultiSelecting { isBatchInspectorHidden = false }
-                #endif
             }
             .onChange(of: isSearching) {
                 if isSearching {
@@ -460,31 +459,27 @@ struct LibraryView: View {
     private var libraryView: some View {
         let displayItems = selectionDisplayItems ?? visibleDisplayItems
         let layoutIDs = selectionLayoutIDs ?? displayItems.map(\.id)
-        #if os(macOS)
-            let detailActions = LibraryEntryDetailActions(
-                open: openDetails,
-                edit: editDetails,
-                click: { id, click in handleMacClick(on: id, click, layoutIDs: layoutIDs) },
-                select: applyMacSelection
-            )
-        #else
-            let detailActions = LibraryEntryDetailActions(
-                open: openDetails,
-                edit: editDetails
-            )
-        #endif
+        let detailActions = LibraryEntryDetailActions(
+            open: openDetails,
+            edit: editDetails
+        )
 
         switch libraryViewStyle {
         case .gallery:
-            libraryViewPage(id: .gallery, layoutIDs: layoutIDs) {
-                LibraryGalleryView(
-                    scrolledID: $scrollState.scrolledID,
-                    scrollRequest: scrollRequest,
-                    detailActions: detailActions
-                )
-                .scenePadding(.vertical)
-                .ignoresSafeArea(.keyboard, edges: .bottom)
-            }
+            #if os(macOS)
+                // Never reached: the Mac shows a stored Gallery preference as Grid.
+                EmptyView()
+            #else
+                libraryViewPage(id: .gallery, layoutIDs: layoutIDs) {
+                    LibraryGalleryView(
+                        scrolledID: $scrollState.scrolledID,
+                        scrollRequest: scrollRequest,
+                        detailActions: detailActions
+                    )
+                    .scenePadding(.vertical)
+                    .ignoresSafeArea(.keyboard, edges: .bottom)
+                }
+            #endif
         case .list:
             libraryViewPage(id: .list, layoutIDs: layoutIDs) {
                 LibraryListView(
@@ -504,7 +499,7 @@ struct LibraryView: View {
                     scrolledID: $scrollState.scrolledID,
                     scrollRequest: scrollRequest,
                     highlightRequest: highlightRequest,
-                    inspectorIsVisible: isInspectorShown
+                    isInspectorPresented: isInspectorShown
                 )
                 .safeAreaPadding(.bottom, 20)
             }
@@ -541,33 +536,38 @@ struct LibraryView: View {
 
     // MARK: - Entry Actions
 
-    private var detailHostPolicy: LibraryEntryDetailHostPolicy {
-        LibraryEntryDetailHostPolicy(horizontalSizeClass: horizontalSizeClass)
-    }
-
-    private var currentDetailActivation: LibraryEntryDetailActivation {
-        guard let committedHost = interaction.detailHostPresentation?.host else {
-            return detailHostPolicy.activation
+    #if !os(macOS)
+        private var detailHostPolicy: LibraryEntryDetailHostPolicy {
+            LibraryEntryDetailHostPolicy(horizontalSizeClass: horizontalSizeClass)
         }
-        return committedHost == .inspector ? .singleTap : .userPreference
-    }
 
-    private var detailHostMigrationBlocked: Bool {
-        detailSessionStore.session(
-            for: interaction.presentedDetailEntryID
-        )?.blocksHostMigration == true
-    }
+        private var currentDetailActivation: LibraryEntryDetailActivation {
+            guard let committedHost = interaction.detailHostPresentation?.host else {
+                return detailHostPolicy.activation
+            }
+            return committedHost == .inspector ? .singleTap : .userPreference
+        }
 
-    private var isRootPresentationActive: Bool {
-        isSearching
-            || showProfileSettings
-            || interaction.workflowPresentation != nil
-    }
+        private var detailHostMigrationBlocked: Bool {
+            detailSessionStore.session(
+                for: interaction.presentedDetailEntryID
+            )?.blocksHostMigration == true
+        }
+
+        private var isRootPresentationActive: Bool {
+            isSearching
+                || showProfileSettings
+                || interaction.workflowPresentation != nil
+        }
+    #endif
 
     func openDetails(_ entry: AnimeEntry) {
-        endMacBatchForEntryRequest()
-        prepareAndConfigureDetailHost(for: entry)
-        interaction.openDetails(for: entry)
+        #if os(macOS)
+            revealInMacInspector(entry.libraryIdentity)
+        #else
+            prepareAndConfigureDetailHost(for: entry)
+            interaction.openDetails(for: entry)
+        #endif
     }
 
     private func handleAiringReminderRoute() {
@@ -600,44 +600,41 @@ struct LibraryView: View {
     }
 
     func editDetails(_ entry: AnimeEntry) {
-        endMacBatchForEntryRequest()
-        prepareAndConfigureDetailHost(for: entry)
-        interaction.setEditingEntry(entry)
-    }
-
-    /// On the Mac a batch panel occupies the inspector, so a request for one entry, such as
-    /// a context-menu Edit during a batch, ends the batch to show that entry.
-    private func endMacBatchForEntryRequest() {
         #if os(macOS)
-            guard interaction.isMultiSelecting else { return }
-            exitMultiSelection()
+            revealInMacInspector(entry.libraryIdentity)
+            macEditRequest = MacEntryEditRequest(entryIdentity: entry.libraryIdentity)
+        #else
+            prepareAndConfigureDetailHost(for: entry)
+            interaction.setEditingEntry(entry)
         #endif
     }
 
-    private func prepareAndConfigureDetailHost(for entry: AnimeEntry) {
-        LibraryDetailHostCoordination.prepareDetailSession(
-            for: entry,
-            detailSessionStore: detailSessionStore,
-            repository: store.repository
-        )
-        LibraryDetailHostCoordination.updateDetailHost(
-            interaction: interaction,
-            detailSessionStore: detailSessionStore,
-            desiredHost: detailHostPolicy.host,
-            migrationBlocked: detailHostMigrationBlocked,
-            rootPresentationActive: isRootPresentationActive
-        )
-    }
+    #if !os(macOS)
+        private func prepareAndConfigureDetailHost(for entry: AnimeEntry) {
+            LibraryDetailHostCoordination.prepareDetailSession(
+                for: entry,
+                detailSessionStore: detailSessionStore,
+                repository: store.repository
+            )
+            LibraryDetailHostCoordination.updateDetailHost(
+                interaction: interaction,
+                detailSessionStore: detailSessionStore,
+                desiredHost: detailHostPolicy.host,
+                migrationBlocked: detailHostMigrationBlocked,
+                rootPresentationActive: isRootPresentationActive
+            )
+        }
 
-    private func detailEditingRequestID(
-        for identity: LibraryEntryIdentity,
-        hostPresentationID: UUID
-    ) -> UUID? {
-        guard interaction.detailEditRequest?.entryIdentity == identity,
-            interaction.detailEditRequest?.hostPresentationID == hostPresentationID
-        else { return nil }
-        return interaction.detailEditRequest?.id
-    }
+        private func detailEditingRequestID(
+            for identity: LibraryEntryIdentity,
+            hostPresentationID: UUID
+        ) -> UUID? {
+            guard interaction.detailEditRequest?.entryIdentity == identity,
+                interaction.detailEditRequest?.hostPresentationID == hostPresentationID
+            else { return nil }
+            return interaction.detailEditRequest?.id
+        }
+    #endif
 
     func requestLibraryScroll(to entryID: LibraryEntryIdentity?) {
         scrollState.scrolledID = entryID
@@ -723,62 +720,23 @@ struct LibraryView: View {
         .environment(store)
 }
 
-fileprivate struct LibraryEntryInspectorModifier: ViewModifier {
-    let interaction: LibraryEntryInteractionState
-    let detailSession: EntryDetailSession?
-    let content: (LibraryEntryDetailHostPresentation, EntryDetailSession) -> AnyView
-    /// The Mac batch-selection panel, shown in place of entry detail; always `nil` on iOS.
-    let batchContent: AnyView?
-    /// Read current batch visibility when reconciling the native presentation state.
-    let isBatchShown: () -> Bool
-    let batchDidHide: () -> Void
+#if !os(macOS)
+    fileprivate struct LibraryEntryInspectorModifier: ViewModifier {
+        let interaction: LibraryEntryInteractionState
+        let detailSession: EntryDetailSession?
+        let content: (LibraryEntryDetailHostPresentation, EntryDetailSession) -> AnyView
 
-    #if os(macOS)
-        @State private var macInspectorPresented = false
-    #endif
-
-    func body(content base: Content) -> some View {
-        let inspectorPresentation = interaction.inspectorPresentation
-        #if os(macOS)
-            base
-                .inspector(isPresented: $macInspectorPresented) {
-                    Group {
-                        if let batchContent {
-                            batchContent
-                        } else if let inspectorPresentation, let detailSession {
-                            content(inspectorPresentation, detailSession)
-                                .presentationBackground(inspectorPresentation.host.pageBackground)
-                        }
-                    }
-                    .inspectorColumnWidth(min: 340, ideal: 400, max: 560)
-                }
-                .onChange(of: isBatchShown() || inspectorPresentation != nil, initial: true) { _, shown in
-                    withAnimation(.smooth(duration: 0.3)) { macInspectorPresented = shown }
-                }
-                .onChange(of: macInspectorPresented) { old, shown in
-                    guard old, !shown else { return }
-                    if isBatchShown() {
-                        batchDidHide()
-                    } else if let inspectorPresentation {
-                        interaction.detailHostDidDismiss(inspectorPresentation)
-                    }
-                }
-        #else
+        func body(content base: Content) -> some View {
+            let inspectorPresentation = interaction.inspectorPresentation
             base
                 .inspector(
                     isPresented: Binding(
                         get: {
-                            if isBatchShown() { return true }
                             guard let inspectorPresentation else { return false }
                             return interaction.inspectorPresentation?.id == inspectorPresentation.id
                         },
                         set: { isPresented in
-                            guard !isPresented else { return }
-                            if isBatchShown() {
-                                batchDidHide()
-                                return
-                            }
-                            guard let inspectorPresentation else { return }
+                            guard !isPresented, let inspectorPresentation else { return }
                             interaction.detailHostDidDismiss(inspectorPresentation)
                         }
                     )
@@ -789,6 +747,6 @@ fileprivate struct LibraryEntryInspectorModifier: ViewModifier {
                             .inspectorColumnWidth(min: 400, ideal: 480, max: 520)
                     }
                 }
-        #endif
+        }
     }
-}
+#endif

@@ -142,8 +142,7 @@ extension LibraryView {
         highlightRequest = LibraryHighlightRequest(entryID: id)
         #if os(macOS)
             // On the Mac the found or added entry becomes the selection, shown in the inspector.
-            macSelectionAnchor = id
-            applyMacSelection([id])
+            showInMacInspector(id)
         #endif
     }
 

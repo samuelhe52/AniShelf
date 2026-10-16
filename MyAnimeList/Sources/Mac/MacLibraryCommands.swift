@@ -19,12 +19,14 @@
         var viewStyle: Binding<LibraryView.LibraryViewStyle>
         var isInspectorPresented: Bool
         var toggleInspector: () -> Void
-        var isMultiSelecting: Bool
+        var hasSelection: Bool
+        /// Whether several entries are selected; entry commands then act on none of them.
+        var hasBatchSelection: Bool
         var selectAll: () -> Void
         var clearSelection: () -> Void
         var openCategoryManager: () -> Void
         var refreshAllMetadata: () -> Void
-        /// The entry that entry commands act on: the inspected or last-clicked entry.
+        /// The entry that entry commands act on: the single selected entry.
         var targetEntry: AnimeEntry?
         var openDetails: (AnimeEntry) -> Void
         var editEntry: (AnimeEntry) -> Void
@@ -62,7 +64,7 @@
                     .keyboardShortcut("a", modifiers: [.command, .shift])
                     .disabled(library == nil)
                 Button("Deselect All") { library?.clearSelection() }
-                    .disabled(library?.isMultiSelecting != true)
+                    .disabled(library?.hasSelection != true)
             }
 
             CommandGroup(before: .sidebar) {
@@ -119,14 +121,14 @@
                     .disabled(entry == nil)
                 Divider()
                 Button("Delete…") {
-                    if library?.isMultiSelecting == true {
+                    if library?.hasBatchSelection == true {
                         library?.deleteSelection()
                     } else if let entry {
                         library?.deleteEntry(entry)
                     }
                 }
                 .keyboardShortcut(.delete)
-                .disabled(entry == nil && library?.isMultiSelecting != true)
+                .disabled(entry == nil && library?.hasBatchSelection != true)
                 Divider()
                 Button("Edit Categories…") { library?.openCategoryManager() }
                     .disabled(library == nil)

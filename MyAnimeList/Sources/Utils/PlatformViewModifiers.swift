@@ -203,18 +203,12 @@ extension View {
 }
 
 extension View {
-    /// Gives a sheet a desktop size. Sheets on macOS otherwise shrink to their content's ideal
-    /// size, which collapses lists and geometry-driven layouts.
+    /// Gives a sheet its desktop size. A macOS sheet opens at its content's ideal size, and
+    /// lists and geometry-driven layouts have almost none, so state it. Minimum and maximum
+    /// sizes are left to the content and `presentationSizing`.
     @ViewBuilder func macSheetFrame(width: CGFloat, height: CGFloat) -> some View {
         #if os(macOS)
-            frame(
-                minWidth: width,
-                idealWidth: width,
-                maxWidth: .infinity,
-                minHeight: height,
-                idealHeight: height,
-                maxHeight: .infinity
-            )
+            frame(idealWidth: width, idealHeight: height)
         #else
             self
         #endif

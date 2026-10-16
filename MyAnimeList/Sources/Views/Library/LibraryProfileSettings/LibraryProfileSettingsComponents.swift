@@ -183,25 +183,13 @@ struct LibraryProfileSettingIcon: View {
     }
 }
 
-struct LibraryProfileSelectionCapsule: View {
-    let title: LocalizedStringResource
-    let tint: Color
+/// The iOS menu label for a settings choice. The Mac uses native pop-up pickers instead.
+#if !os(macOS)
+    struct LibraryProfileSelectionCapsule: View {
+        let title: LocalizedStringResource
+        let tint: Color
 
-    var body: some View {
-        #if os(macOS)
-            // A pop-up button's look, which a form row expects, instead of a tinted chip.
-            HStack(spacing: 5) {
-                Text(title)
-                    .lineLimit(1)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.leading, 8)
-            .padding(.trailing, 5)
-            .padding(.vertical, 3)
-            .background(.fill.tertiary, in: .rect(cornerRadius: 5))
-        #else
+        var body: some View {
             capsuleContent(title: title)
                 .foregroundStyle(tint)
                 .padding(.horizontal, 10)
@@ -214,20 +202,32 @@ struct LibraryProfileSelectionCapsule: View {
                     Capsule(style: .continuous)
                         .stroke(tint.opacity(0.18), lineWidth: 1)
                 }
-        #endif
-    }
-
-    @ViewBuilder
-    private func capsuleContent(title: LocalizedStringResource) -> some View {
-        HStack(spacing: 6) {
-            Text(title)
-                .font(.footnote.weight(.semibold))
-                .lineLimit(1)
-
-            Image(systemName: "chevron.down")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(tint)
         }
+
+        @ViewBuilder
+        private func capsuleContent(title: LocalizedStringResource) -> some View {
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(.footnote.weight(.semibold))
+                    .lineLimit(1)
+
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(tint)
+            }
+        }
+    }
+#endif
+
+extension View {
+    /// A settings command button: the standard push button on the Mac, the tinted touch
+    /// button on iOS.
+    @ViewBuilder func libraryProfileCommandButtonStyle(tint: Color) -> some View {
+        #if os(macOS)
+            buttonStyle(.bordered)
+        #else
+            buttonStyle(LibraryProfileCommandButtonStyle(tint: tint, filled: false))
+        #endif
     }
 }
 
@@ -239,21 +239,7 @@ struct LibraryProfileCommandButtonStyle: ButtonStyle {
     let filled: Bool
 
     func makeBody(configuration: Configuration) -> some View {
-        #if os(macOS)
-            // A desktop push button: regular text in a quiet rounded bezel.
-            configuration.label
-                .foregroundStyle(filled ? .white : tint)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 5)
-                .background(
-                    filled ? AnyShapeStyle(tint) : AnyShapeStyle(.fill.tertiary),
-                    in: .rect(cornerRadius: 6)
-                )
-                .opacity(isEnabled ? (configuration.isPressed ? 0.7 : 1) : 0.42)
-        #else
-            touchBody(configuration: configuration)
-        #endif
+        touchBody(configuration: configuration)
     }
 
     private func touchBody(configuration: Configuration) -> some View {

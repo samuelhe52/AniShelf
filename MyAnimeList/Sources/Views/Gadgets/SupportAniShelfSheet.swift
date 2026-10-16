@@ -165,7 +165,7 @@ struct SupportAniShelfSheet: View {
                         await supportStore.loadProducts(forceReload: true)
                     }
                 }
-                .buttonStyle(LibraryProfileCommandButtonStyle(tint: .orange, filled: false))
+                .libraryProfileCommandButtonStyle(tint: .orange)
             }
         }
         .transition(contentTransition)

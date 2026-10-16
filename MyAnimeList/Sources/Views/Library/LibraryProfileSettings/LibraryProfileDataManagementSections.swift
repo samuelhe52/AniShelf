@@ -658,15 +658,14 @@ struct LibraryProfileBackupExportSection: View {
         LazyShareLink(prepareData: createBackupItems) {
             Label("Backup", systemImage: "archivebox")
         }
-        .buttonStyle(
-            LibraryProfileCommandButtonStyle(tint: LibraryProfileSettingsDestination.syncData.tint, filled: false))
+        .libraryProfileCommandButtonStyle(tint: LibraryProfileSettingsDestination.syncData.tint)
     }
 
     private var restoreButton: some View {
         Button(role: .destructive, action: onRestoreButtonPress) {
             Label("Restore", systemImage: restoreButtonSystemImage)
         }
-        .buttonStyle(LibraryProfileCommandButtonStyle(tint: LibraryProfileSettingsPalette.destructive, filled: false))
+        .libraryProfileCommandButtonStyle(tint: LibraryProfileSettingsPalette.destructive)
         .opacity(libraryCloudSyncStatus.blocksBackupRestore ? 0.52 : 1)
         .accessibilityHint(Text(restoreButtonAccessibilityHint))
     }
@@ -695,7 +694,6 @@ struct LibraryProfileBackupExportSection: View {
         } label: {
             Label("Export as...", systemImage: "square.and.arrow.up.on.square")
         }
-        .buttonStyle(
-            LibraryProfileCommandButtonStyle(tint: LibraryProfileSettingsDestination.syncData.tint, filled: false))
+        .libraryProfileCommandButtonStyle(tint: LibraryProfileSettingsDestination.syncData.tint)
     }
 }

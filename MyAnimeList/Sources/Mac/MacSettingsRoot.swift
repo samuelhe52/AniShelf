@@ -25,7 +25,10 @@
                     LibraryProfileSettingsView()
                 }
             }
-            .frame(minWidth: 820, idealWidth: 960, minHeight: 560, idealHeight: 720)
+            // A fixed width with a resizable height, as System Settings has. The Settings scene
+            // sizes its window to this content.
+            .frame(width: 900)
+            .frame(minHeight: 560, idealHeight: 720)
         }
     }
 #endif

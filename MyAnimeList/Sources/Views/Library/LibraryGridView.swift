@@ -19,8 +19,10 @@ struct LibraryGridView: View {
     @Binding var scrolledID: LibraryEntryIdentity?
     let scrollRequest: LibraryScrollRequest?
     let highlightRequest: LibraryHighlightRequest?
-    var inspectorIsVisible: Bool? = nil
+    /// Whether the trailing inspector is showing; the grid reflows smoothly when it changes.
+    var isInspectorPresented = false
     #if os(macOS)
+        @Environment(MacLibrarySelection.self) private var selection
         nonisolated private static let minimumColumnWidth: CGFloat = 132
         nonisolated private static let columnSpacing: CGFloat = 18
         private let columns = [
@@ -69,7 +71,7 @@ struct LibraryGridView: View {
                 .onKeyPress(keys: [.leftArrow, .rightArrow, .upArrow, .downArrow]) { press in
                     moveSelection(press.key, proxy: proxy) ? .handled : .ignored
                 }
-                .onExitCommand { detailActions.select?([]) }
+                .onExitCommand { selection.select([]) }
             #endif
         }
     }
@@ -80,9 +82,9 @@ struct LibraryGridView: View {
             max(1, Int((width + columnSpacing) / (minimumColumnWidth + columnSpacing)))
         }
 
-        /// Arrow keys move the inspected entry by one card, or by one row vertically.
+        /// Arrow keys move the selection by one card, or by one row vertically.
         private func moveSelection(_ key: KeyEquivalent, proxy: ScrollViewProxy) -> Bool {
-            guard let click = detailActions.click, !displayItems.isEmpty else { return false }
+            guard !displayItems.isEmpty else { return false }
             let offset =
                 switch key {
                 case .leftArrow: -1
@@ -90,27 +92,15 @@ struct LibraryGridView: View {
                 case .upArrow: -columnCount
                 default: columnCount
                 }
-            let ids = displayItems.map(\.id)
-            let currentID = interaction.inspectorPresentation?.entryIdentity ?? scrolledID
-            let targetIndex: Int
-            if let currentID, let index = ids.firstIndex(of: currentID) {
-                targetIndex = index + offset
-            } else {
-                targetIndex = 0
-            }
             // At an edge the key is still consumed so the scroll view does not jump.
-            guard ids.indices.contains(targetIndex) else { return true }
-            let id = ids[targetIndex]
-            scrolledID = id
-            click(id, .replace)
-            proxy.scrollTo(id)
+            if let id = selection.move(by: offset, in: displayItems.map(\.id)) {
+                scrolledID = id
+                proxy.scrollTo(id)
+            }
             return true
         }
     #endif
 
-    private var isInspectorPresented: Bool {
-        inspectorIsVisible ?? (interaction.inspectorPresentation != nil)
-    }
 
     private func handleScrollRequest(proxy: ScrollViewProxy) {
         guard let entryID = scrollRequest?.entryID else { return }
@@ -130,9 +120,7 @@ struct LibraryGridView: View {
             // Desktop selection marks the chosen cards instead of dimming the others.
             let baseItem = LibraryGridItem(
                 snapshot: item.snapshot,
-                showsSelectionRing: interaction.isMultiSelecting
-                    ? interaction.isSelected(item.id)
-                    : interaction.inspectorPresentation?.entryIdentity == item.id
+                showsSelectionRing: selection.ids.contains(item.id)
             )
             .highlightEffect(trigger: highlightRequest?.trigger(for: item.id))
         #else
@@ -165,11 +153,7 @@ struct LibraryGridView: View {
                 onClick: {
                     isGridFocused = true
                     scrolledID = item.id
-                    if let click = detailActions.click {
-                        click(item.id, .current)
-                    } else {
-                        openDetails(for: item.entry)
-                    }
+                    selection.click(item.id, .current, layoutIDs: displayItems.map(\.id))
                 },
                 onDoubleClick: {
                     scrolledID = item.id
@@ -388,4 +372,7 @@ fileprivate struct LibraryGridItem: View {
         DataProvider.forPreview.generateEntriesForPreview()
     }
     .environment(store)
+    #if os(macOS)
+        .environment(MacLibrarySelection())
+    #endif
 }

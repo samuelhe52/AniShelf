@@ -9,110 +9,184 @@
     import DataProvider
     import SwiftUI
 
-    /// The inspector during a batch selection: the selection at a glance and its actions.
-    /// The toolbar keeps its browsing controls, as Finder and Photos do with a selection,
-    /// instead of switching to an edit mode with a Done button.
+    /// The inspector during a batch selection, as Finder's Get Info or a Keynote inspector
+    /// shows several items: each property is a native control showing the shared value, or a
+    /// mixed state, and changing it applies to every selected entry. The toolbar keeps its
+    /// browsing controls, as Finder and Photos do with a selection.
     struct MacBatchSelectionPanel: View {
         let store: LibraryStore
-        let interaction: LibraryEntryInteractionState
         /// The selection in layout order.
         let selectedEntries: [AnimeEntry]
         /// The entry the last click selected, which goes on top of the stack.
         let lastClickedID: LibraryEntryIdentity?
-        let entriesByID: [LibraryEntryIdentity: AnimeEntry]
         let scoringEnabled: Bool
-        let applyBatchAction: (LibraryBatchAction) -> Void
+        /// Applies an action to the given entries, which are all or one of the selection.
+        let apply: ([AnimeEntry], LibraryBatchAction) -> Void
         let deleteSelectedEntries: () -> Void
-        let hideInspector: () -> Void
 
         private static let posterLimit = 4
-        /// The selection in the order it was made, oldest first.
+        /// The selection in the order it was made, oldest first, as of the last change.
         @State private var selectionOrder: [LibraryEntryIdentity] = []
-        // Update the visible collection in the same transaction as its order. Filtering
-        // live selection here would remove a poster before the removal animation begins.
-        @State private var newestEntries: [AnimeEntry] = []
+        @State private var namePrompt: LibraryCategoryNamePrompt?
 
         var body: some View {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    posterStack
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 8)
+            Form {
+                Section {
+                    header
+                }
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("\(interaction.selectedEntryCount) Selected")
-                            .font(.title2.weight(.bold))
-                            .contentTransition(.numericText(value: Double(interaction.selectedEntryCount)))
-                            .animation(.snappy, value: interaction.selectedEntryCount)
-                        Text(titleSummary)
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                    }
-
-                    actionGroup {
-                        LibrarySelectionStatusMenu(
-                            interaction: interaction,
-                            applyBatchAction: applyBatchAction,
-                            presentation: .row
-                        )
-                        LibrarySelectionFavoriteButton(
-                            interaction: interaction,
-                            entriesByID: entriesByID,
-                            applyBatchAction: applyBatchAction,
-                            presentation: .row
-                        )
-                        if store.categoriesEnabled {
-                            LibrarySelectionCategoryMenu(
-                                store: store,
-                                interaction: interaction,
-                                entriesByID: entriesByID,
-                                applyBatchAction: applyBatchAction,
-                                presentation: .row
-                            )
+                Section {
+                    Picker("Status", selection: statusBinding) {
+                        if statusBinding.wrappedValue == nil {
+                            Text("Mixed").tag(AnimeEntry.WatchStatus?.none)
                         }
-                        LibrarySelectionActionsMenu(
-                            interaction: interaction,
-                            scoringEnabled: scoringEnabled,
-                            applyBatchAction: applyBatchAction,
-                            presentation: .row
-                        )
+                        ForEach(AnimeEntry.WatchStatus.allCases, id: \.self) { status in
+                            Text(status.localizedStringResource).tag(Optional(status))
+                        }
                     }
+                    if scoringEnabled {
+                        Picker("Score", selection: scoreBinding) {
+                            if scoreBinding.wrappedValue == .mixed {
+                                Text("Mixed").tag(ScoreChoice.mixed)
+                            }
+                            Text("None").tag(ScoreChoice.unscored)
+                            ForEach(Array(AnimeEntry.validScoreRange), id: \.self) { score in
+                                Text(verbatim: "\(score)/5").tag(ScoreChoice.score(score))
+                            }
+                        }
+                    }
+                    Toggle("Favorite", sources: sources(\.favorite, action: LibraryBatchAction.favorite), isOn: \.self)
+                    Toggle(
+                        "Track Dates",
+                        sources: sources(\.isDateTrackingEnabled, action: LibraryBatchAction.dateTracking),
+                        isOn: \.self
+                    )
+                }
 
-                    actionGroup {
-                        LibrarySelectionDeleteButton(
-                            interaction: interaction,
-                            deleteSelectedEntries: deleteSelectedEntries,
-                            presentation: .row
-                        )
+                if store.categoriesEnabled {
+                    Section("Categories") {
+                        ForEach(store.categories) { category in
+                            Toggle(sources: categorySources(category.id), isOn: \.self) {
+                                Text(verbatim: category.name)
+                            }
+                        }
+                        Button("New Category…") {
+                            namePrompt = .init(purpose: .create(memberCount: selectedEntries.count))
+                        }
                     }
                 }
-                .padding(16)
-            }
-            .onChange(of: interaction.selectedEntryIDs, initial: true) { _, ids in
-                updateSelectionOrder(ids)
-            }
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Hide Inspector", systemImage: "sidebar.trailing", action: hideInspector)
-                        .help(Text("Hide Inspector"))
+
+                Section {
+                    LibrarySelectionDeleteButton(
+                        selectedEntries: selectedEntries,
+                        deleteSelectedEntries: deleteSelectedEntries
+                    )
                 }
+            }
+            .formStyle(.grouped)
+            .libraryCategoryNamePrompt($namePrompt) { _, name in
+                guard let category = store.createCategory(named: name) else { return }
+                apply(
+                    selectedEntries,
+                    .category(category.id, isMember: true, knownCategoryIDs: store.knownCategoryIDs)
+                )
+            }
+            .onChange(of: selectedEntries.map(\.libraryIdentity), initial: true) {
+                selectionOrder = currentOrder
             }
         }
 
-        /// Rows in one grouped box, as in a Mac inspector.
-        private func actionGroup(@ViewBuilder rows: () -> some View) -> some View {
-            VStack(spacing: 2) {
-                rows()
+        private var header: some View {
+            VStack(spacing: 12) {
+                posterStack
+                VStack(spacing: 2) {
+                    Text("\(selectedEntries.count) Selected")
+                        .font(.title2.weight(.bold))
+                        .contentTransition(.numericText(value: Double(selectedEntries.count)))
+                        .animation(.snappy, value: selectedEntries.count)
+                    Text(titleSummary)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                }
             }
-            .padding(4)
-            .background(.fill.quaternary, in: .rect(cornerRadius: 10))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
         }
 
-        /// Keeps entries in the order they joined the selection. Entries that join together,
-        /// as with a ⇧-click range, keep their layout order, except that the clicked entry
-        /// comes last.
-        private func updateSelectionOrder(_ ids: Set<LibraryEntryIdentity>) {
+        // MARK: - Shared values
+
+        /// The status every selected entry shares, or `nil` when they differ.
+        private var statusBinding: Binding<AnimeEntry.WatchStatus?> {
+            Binding(
+                get: { sharedValue(\.watchStatus) },
+                set: { status in
+                    if let status { apply(selectedEntries, .watchStatus(status)) }
+                }
+            )
+        }
+
+        private enum ScoreChoice: Hashable {
+            case mixed
+            case unscored
+            case score(Int)
+        }
+
+        private var scoreBinding: Binding<ScoreChoice> {
+            Binding(
+                get: {
+                    guard let first = selectedEntries.first,
+                        selectedEntries.allSatisfy({ $0.score == first.score })
+                    else { return .mixed }
+                    return first.score.map(ScoreChoice.score) ?? .unscored
+                },
+                set: { choice in
+                    switch choice {
+                    case .mixed: break
+                    case .unscored: apply(selectedEntries, .score(nil))
+                    case .score(let score): apply(selectedEntries, .score(score))
+                    }
+                }
+            )
+        }
+
+        private func sharedValue<Value: Equatable>(_ keyPath: KeyPath<AnimeEntry, Value>) -> Value? {
+            guard let first = selectedEntries.first?[keyPath: keyPath],
+                selectedEntries.allSatisfy({ $0[keyPath: keyPath] == first })
+            else { return nil }
+            return first
+        }
+
+        /// One binding per selected entry, so a toggle shows the mixed state natively. Turning
+        /// it on or off writes each entry through the same batch action.
+        private func sources(
+            _ keyPath: KeyPath<AnimeEntry, Bool>,
+            action: @escaping (Bool) -> LibraryBatchAction
+        ) -> [Binding<Bool>] {
+            selectedEntries.map { entry in
+                Binding(
+                    get: { entry[keyPath: keyPath] },
+                    set: { apply([entry], action($0)) }
+                )
+            }
+        }
+
+        private func categorySources(_ id: LibraryCategory.ID) -> [Binding<Bool>] {
+            selectedEntries.map { entry in
+                Binding(
+                    get: { entry.categoryIDs.contains(id) },
+                    set: { isMember in
+                        apply([entry], .category(id, isMember: isMember, knownCategoryIDs: store.knownCategoryIDs))
+                    }
+                )
+            }
+        }
+
+        /// The selection in the order entries joined it. Entries that join together, as with
+        /// a ⇧-click range, keep their layout order, except that the clicked entry comes last.
+        private var currentOrder: [LibraryEntryIdentity] {
+            let ids = Set(selectedEntries.map(\.libraryIdentity))
             var order = selectionOrder.filter(ids.contains)
             let known = Set(order)
             var added = selectedEntries.map(\.libraryIdentity).filter { !known.contains($0) }
@@ -120,14 +194,16 @@
                 added.append(added.remove(at: index))
             }
             order.append(contentsOf: added)
+            return order
+        }
+
+        /// The most recently selected entries, newest first.
+        private var newestEntries: [AnimeEntry] {
             let byID = Dictionary(
                 selectedEntries.map { ($0.libraryIdentity, $0) },
                 uniquingKeysWith: { first, _ in first }
             )
-            withAnimation(.snappy(duration: 0.3)) {
-                selectionOrder = order
-                newestEntries = Array(order.reversed().compactMap { byID[$0] }.prefix(Self.posterLimit))
-            }
+            return Array(currentOrder.reversed().compactMap { byID[$0] }.prefix(Self.posterLimit))
         }
 
         /// A stack of the newest posters: the latest selection lies flat on top, and older

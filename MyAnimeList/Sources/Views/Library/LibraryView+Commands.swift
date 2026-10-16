@@ -37,61 +37,37 @@ extension LibraryView {
         isSearching = true
     }
 
-    /// Whether the trailing inspector is showing, with entry detail or the Mac batch panel.
+    /// Whether the trailing inspector is showing.
     var isInspectorShown: Bool {
         #if os(macOS)
-            interaction.inspectorPresentation != nil || isMacBatchInspectorShown
+            isMacInspectorShown
         #else
             interaction.inspectorPresentation != nil
         #endif
     }
 
-    func hideBatchInspector() {
-        #if os(macOS)
-            isBatchInspectorHidden = true
-        #endif
-    }
-
-    /// Shows the inspector for the targeted entry, or hides it.
+    /// Shows or hides the inspector. On the Mac it is the window's setting; on iPad it shows
+    /// the focused entry, or hides the shown one.
     func toggleInspector() {
         #if os(macOS)
-            // During a batch selection the inspector holds the batch panel.
-            if interaction.isMultiSelecting {
-                isBatchInspectorHidden.toggle()
-                return
+            withAnimation { isMacInspectorShown.toggle() }
+        #else
+            if interaction.inspectorPresentation != nil {
+                interaction.dismissDetails()
+            } else if let entry = inspectorReopenTarget {
+                openDetails(entry)
             }
         #endif
-        if interaction.inspectorPresentation != nil {
-            interaction.dismissDetails()
-        } else if let entry = inspectorReopenTarget {
-            openDetails(entry)
+    }
+
+    #if !os(macOS)
+        /// The entry that showing the inspector inspects.
+        private var inspectorReopenTarget: AnimeEntry? {
+            let identity =
+                interaction.isMultiSelecting
+                ? nil : interaction.presentedDetailEntryID ?? interaction.focusedEntryID
+            return identity.flatMap { store.repository.existingEntry(identity: $0) }
+                ?? store.libraryOnDisplay.first
         }
-    }
-
-    /// The entry that menu commands act on.
-    var commandTargetEntry: AnimeEntry? {
-        guard !interaction.isMultiSelecting else { return nil }
-        #if os(macOS)
-            // Desktop commands act only on the visible selection, which is the inspected entry;
-            // the last focused entry may since have been deselected or left the scope.
-            let identity = interaction.presentedDetailEntryID
-        #else
-            let identity = interaction.presentedDetailEntryID ?? interaction.focusedEntryID
-        #endif
-        guard let identity else { return nil }
-        return store.repository.existingEntry(identity: identity)
-    }
-
-    /// The entry that showing the inspector inspects.
-    private var inspectorReopenTarget: AnimeEntry? {
-        #if os(macOS)
-            // Reopen the last inspected entry while it is still shown.
-            let displayed = visibleDisplayItems.map(\.entry)
-            return interaction.focusedEntryID.flatMap { id in
-                displayed.first { $0.libraryIdentity == id }
-            } ?? displayed.first
-        #else
-            commandTargetEntry ?? store.libraryOnDisplay.first
-        #endif
-    }
+    #endif
 }

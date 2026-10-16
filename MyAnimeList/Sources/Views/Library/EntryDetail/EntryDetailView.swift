@@ -113,22 +113,15 @@ struct EntryDetailView: View {
                 }
             }
             .id(session.instanceID)
-            #if os(macOS)
-                // A fresh scroll view sizes its content in a later pass of the same transaction;
-                // animated, the content grew in from the leading edge. Resolving it as one
-                // group and swapping entries without animation, as Mac inspectors do, keeps
-                // the content in place.
-                .geometryGroup()
-            #else
-                .transition(.opacity)
-            #endif
+            .transition(.opacity)
         }
-        #if !os(macOS)
-            .animation(entryReplacementAnimation, value: session.instanceID)
-        #endif
+        .animation(entryReplacementAnimation, value: session.instanceID)
         .heroIgnoresTopSafeArea()
         .hiddenNavigationBarBackground()
-        .toolbar { toolbarContent }
+        #if !os(macOS)
+            // On the Mac the inspector's root view owns Hide Inspector.
+            .toolbar { toolbarContent }
+        #endif
         .presentationDragIndicator(.visible)
         .interactiveDismissDisabled(
             session.entry.userInfoHasChanges(comparedTo: session.originalUserInfo)
@@ -581,18 +574,6 @@ struct EntryDetailView: View {
 
     @ViewBuilder
     private var doneToolbarControl: some View {
-        #if os(macOS)
-            // Edits are already written to the entry, so the Mac inspector closes like any
-            // inspector; rewritten notes get Revert Notes beside the editor instead of a menu here.
-            Button("Hide Inspector", systemImage: "sidebar.trailing", action: closePresentation)
-                .macHelp(Text("Hide Inspector"))
-        #else
-            iOSDoneToolbarControl
-        #endif
-    }
-
-    @ViewBuilder
-    private var iOSDoneToolbarControl: some View {
         if !shouldConfirmBeforeSaving {
             Button(String(localized: EntryDetailL10n.done)) {
                 closePresentation()
