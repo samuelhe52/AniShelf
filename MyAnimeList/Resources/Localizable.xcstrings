@@ -12663,6 +12663,38 @@
         }
       }
     },
+    "What's New in AniShelf" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfの新機能"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf更新内容"
+          }
+        }
+      }
+    },
+    "Support AniShelf…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfをサポート…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "支持AniShelf…"
+          }
+        }
+      }
+    },
     "No Selection" : {
       "localizations" : {
         "ja" : {

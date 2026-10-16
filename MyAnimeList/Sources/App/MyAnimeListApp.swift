@@ -162,8 +162,27 @@ struct MyAnimeListApp: App {
             .defaultSize(width: 1180, height: 760)
             .commands {
                 SidebarCommands()
-                MacLibraryCommands()
+                MacLibraryCommands(whatsNew: whatsNew)
             }
+
+            Window("About AniShelf", id: MacWindowID.about) {
+                MacAboutView()
+            }
+            .windowStyle(.hiddenTitleBar)
+            .windowResizability(.contentSize)
+            .defaultPosition(.center)
+            .restorationBehavior(.disabled)
+            .commandsRemoved()
+
+            Window("Support AniShelf", id: MacWindowID.support) {
+                MacSupportView()
+                    .environment(supportStore)
+                    .globalToasts()
+            }
+            .windowResizability(.contentSize)
+            .defaultPosition(.center)
+            .restorationBehavior(.disabled)
+            .commandsRemoved()
 
             Settings {
                 MacSettingsRoot(isLibraryBlocked: isLibraryBlocked || !hasTMDbAPIKey)
@@ -419,11 +438,20 @@ fileprivate struct WhatsNewRootSheet: View {
     }
 
     var body: some View {
-        WhatsNewView(
-            entry: entry,
-            pastEntries: pastEntries,
-            actionRunner: actionRunner,
-            onDismiss: onDismiss
-        )
+        #if os(macOS)
+            MacWhatsNewView(
+                entry: entry,
+                pastEntries: pastEntries,
+                actionRunner: actionRunner,
+                onDismiss: onDismiss
+            )
+        #else
+            WhatsNewView(
+                entry: entry,
+                pastEntries: pastEntries,
+                actionRunner: actionRunner,
+                onDismiss: onDismiss
+            )
+        #endif
     }
 }

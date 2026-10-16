@@ -6,6 +6,7 @@
 //
 
 #if os(macOS)
+    import AppKit
     import DataProvider
     import SwiftUI
 
@@ -43,10 +44,17 @@
     }
 
     struct MacLibraryCommands: Commands {
+        let whatsNew: WhatsNewController
         @FocusedValue(\.macLibraryCommands) private var library
         @Environment(\.openWindow) private var openWindow
 
         var body: some Commands {
+            // About and Support live in the app menu, as on other Mac apps, instead of rows
+            // in Settings.
+            CommandGroup(replacing: .appInfo) {
+                Button("About AniShelf") { openWindow(id: MacWindowID.about) }
+                Button("Support AniShelf…") { openWindow(id: MacWindowID.support) }
+            }
             CommandGroup(replacing: .newItem) {
                 Button("Add Anime…") { library?.addAnime() }
                     .keyboardShortcut("n")
@@ -97,6 +105,9 @@
 
             // AniShelf has no Help Book; point Help at the website and its guides.
             CommandGroup(replacing: .help) {
+                Button("What's New in AniShelf", action: showWhatsNew)
+                    .disabled(whatsNew.currentEntry == nil)
+                Divider()
                 Link("AniShelf Website", destination: URL(string: "https://anishelf.konakona.dev")!)
                 Link("Privacy Policy", destination: URL(string: "https://anishelf.konakona.dev/privacy/")!)
             }
@@ -138,7 +149,23 @@
         }
     }
 
+    extension MacLibraryCommands {
+        /// What's New is a sheet on a library window, where it also appears after an update.
+        @MainActor private func showWhatsNew() {
+            if let window = MacLibraryWindows.frontmost {
+                whatsNew.presentCurrentEntry(inSceneIdentifier: window.sceneIdentifier)
+                window.makeKeyAndOrderFront(nil)
+            } else {
+                // The new window claims the unclaimed presentation when it appears.
+                whatsNew.presentCurrentEntry(inSceneIdentifier: nil)
+                MacLibraryWindows.openNew()
+            }
+        }
+    }
+
     enum MacWindowID {
         static let library = "library"
+        static let about = "about"
+        static let support = "support"
     }
 #endif

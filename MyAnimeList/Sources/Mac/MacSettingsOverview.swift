@@ -9,15 +9,12 @@
     import DataProvider
     import SwiftUI
 
-    /// The Settings window's Overview page: library statistics and app links as a grouped
-    /// form, like the other pages, instead of the iOS hero and metric cards.
+    /// The Settings window's Overview page: library statistics as a grouped form, like the
+    /// other pages, instead of the iOS hero and metric cards. About, Support, and What's New
+    /// are in the app and Help menus.
     struct MacSettingsOverview: View {
         let stats: LibraryProfileStats
         let animeTitleResource: LocalizedStringResource
-        let whatsNewVersion: String?
-        let onShowWhatsNew: () -> Void
-        let onShowSupport: () -> Void
-        let onShowAbout: () -> Void
 
         var body: some View {
             Form {
@@ -73,15 +70,6 @@
                         }
                     }
                 }
-
-                Section("App Info") {
-                    if let whatsNewVersion {
-                        linkRow("What's New", systemImage: "sparkles.rectangle.stack", value: whatsNewVersion,
-                            action: onShowWhatsNew)
-                    }
-                    linkRow("Support AniShelf", systemImage: "heart.circle", action: onShowSupport)
-                    linkRow("About AniShelf", systemImage: "info.circle", action: onShowAbout)
-                }
             }
             .formStyle(.grouped)
         }
@@ -103,34 +91,6 @@
                         .foregroundStyle(tint)
                 }
             }
-        }
-
-        private func linkRow(
-            _ title: LocalizedStringResource,
-            systemImage: String,
-            value: String? = nil,
-            action: @escaping () -> Void
-        ) -> some View {
-            Button(action: action) {
-                HStack {
-                    Label {
-                        Text(title)
-                    } icon: {
-                        Image(systemName: systemImage)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    if let value {
-                        Text(verbatim: value)
-                            .foregroundStyle(.secondary)
-                    }
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
         }
     }
 #endif

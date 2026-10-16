@@ -131,11 +131,7 @@ struct LibraryProfileSettingsView: View {
                 case .overview:
                     MacSettingsOverview(
                         stats: stats,
-                        animeTitleResource: animeTitleResource,
-                        whatsNewVersion: whatsNew.currentEntry?.version,
-                        onShowWhatsNew: presentWhatsNewSheet,
-                        onShowSupport: presentSupportSheet,
-                        onShowAbout: presentAboutSheet
+                        animeTitleResource: animeTitleResource
                     )
                     .navigationTitle(Text("Overview"))
                 case .destination(let destination):
