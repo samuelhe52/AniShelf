@@ -7,26 +7,17 @@
 
 import SwiftUI
 
-struct LibraryProfileAiringReminderSettingsSection: View {
-    private static let minimumRefreshFeedbackDuration = Duration.milliseconds(600)
-    private let airingReminders = AiringReminderCoordinator.shared
+#if !os(macOS)
+    /// The Mac pane is `MacAiringReminderSettings`.
+    struct LibraryProfileAiringReminderSettingsSection: View {
+        private static let minimumRefreshFeedbackDuration = Duration.milliseconds(600)
+        private let airingReminders = AiringReminderCoordinator.shared
 
-    #if !os(macOS)
         @State private var showRemoveAllConfirmation = false
         @State private var showReminderManagement = false
         @State private var isRefreshFeedbackVisible = false
-    #endif
 
-    var body: some View {
-        #if os(macOS)
-            MacAiringReminderSettings()
-        #else
-            iOSBody
-        #endif
-    }
-
-    #if !os(macOS)
-        private var iOSBody: some View {
+        var body: some View {
             LibraryProfileSettingsGroup(
                 "Airing Reminders",
                 subtitle: "Get reminders for upcoming episodes.",
@@ -200,5 +191,5 @@ struct LibraryProfileAiringReminderSettingsSection: View {
                 }
             )
         }
-    #endif
-}
+    }
+#endif

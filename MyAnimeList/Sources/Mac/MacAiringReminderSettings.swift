@@ -92,7 +92,7 @@
                 Text("Every reminder on this device will be removed.")
             }
             .sheet(item: $editingSubscription) { subscription in
-                AiringReminderTimingSheet(
+                MacAiringReminderTimingSheet(
                     subscription: subscription,
                     defaultTiming: airingReminders.snapshot.defaultTiming
                 )

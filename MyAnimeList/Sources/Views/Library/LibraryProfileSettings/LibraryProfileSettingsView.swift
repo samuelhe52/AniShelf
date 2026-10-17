@@ -445,7 +445,11 @@ struct LibraryProfileSettingsView: View {
             LibraryProfileInterfaceSettingsSection()
         case .reminders:
             LibraryProfileBroadcastSettingsSection()
-            LibraryProfileAiringReminderSettingsSection()
+            #if os(macOS)
+                MacAiringReminderSettings()
+            #else
+                LibraryProfileAiringReminderSettingsSection()
+            #endif
         case .metadataImages:
             LibraryProfileMetadataImagesPage(
                 autoPrefetchImagesOnAddAndRestore: $store.autoPrefetchImagesOnAddAndRestore,

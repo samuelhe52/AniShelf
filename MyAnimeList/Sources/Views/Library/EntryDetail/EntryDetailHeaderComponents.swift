@@ -301,10 +301,17 @@ struct EntryDetailQuickActionsRow: View {
             Spacer(minLength: 0)
         }
         .sheet(item: $editingReminder) { subscription in
-            AiringReminderTimingSheet(
-                subscription: subscription,
-                defaultTiming: AiringReminderCoordinator.shared.snapshot.defaultTiming
-            )
+            #if os(macOS)
+                MacAiringReminderTimingSheet(
+                    subscription: subscription,
+                    defaultTiming: AiringReminderCoordinator.shared.snapshot.defaultTiming
+                )
+            #else
+                AiringReminderTimingSheet(
+                    subscription: subscription,
+                    defaultTiming: AiringReminderCoordinator.shared.snapshot.defaultTiming
+                )
+            #endif
         }
     }
 }
