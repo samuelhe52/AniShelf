@@ -9,7 +9,9 @@ import DataProvider
 import SwiftUI
 
 extension View {
-    /// Window-level library behavior both library roots share. `openRoutedEntry` shows the
+    /// Window-level library behavior both library roots share.
+    ///
+    /// `openRoutedEntry` shows the
     /// entry an airing-reminder notification opened in this window, after the root dismisses
     /// whatever covers the library. Selection pruning stays with each root, since only the root
     /// knows which entries its window shows.

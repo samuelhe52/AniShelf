@@ -72,7 +72,9 @@ struct AnimeEntryListRow: View {
 
     #if os(macOS)
         /// A dense desktop row: a small poster, title and metadata on two lines, and the
-        /// badges trailing. The synopsis stays in the inspector.
+        /// badges trailing.
+        ///
+        /// The synopsis stays in the inspector.
         private var compactRow: some View {
             HStack(spacing: 10) {
                 KFImageView(

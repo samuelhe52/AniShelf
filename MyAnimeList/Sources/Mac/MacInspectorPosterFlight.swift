@@ -32,7 +32,9 @@
         private(set) var current: Flight?
 
         /// Flies a poster from the detail header to `destination`, in global coordinates, and
-        /// calls `landed` when it arrives. Without a visible detail poster it lands at once.
+        /// calls `landed` when it arrives.
+        ///
+        /// Without a visible detail poster it lands at once.
         func fly(posterURL: URL?, to destination: CGRect, landed: @escaping () -> Void) {
             guard let source = sourceFrame, source.intersects(bounds) else {
                 landed()

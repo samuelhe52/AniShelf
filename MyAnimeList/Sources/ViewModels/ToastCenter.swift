@@ -27,7 +27,9 @@ class ToastCenter {
     var loadingMessage: LoadingMessage? = nil
     var progressState: ProgressWithMessage? = nil
 
-    /// The window that shows toasts on the Mac: the one most recently active. Every window
+    /// The window that shows toasts on the Mac: the one most recently active.
+    ///
+    /// Every window
     /// attaches the toasts, and without this each would show the same toast.
     private(set) var presentingSceneIdentifier: String?
 
@@ -36,7 +38,9 @@ class ToastCenter {
         presentingSceneIdentifier = sceneIdentifier
     }
 
-    /// Whether the window with `sceneIdentifier` shows toasts. Every window does on iOS, and
+    /// Whether the window with `sceneIdentifier` shows toasts.
+    ///
+    /// Every window does on iOS, and
     /// on the Mac until one becomes active.
     func presentsToasts(inSceneIdentifier sceneIdentifier: String?) -> Bool {
         #if os(macOS)

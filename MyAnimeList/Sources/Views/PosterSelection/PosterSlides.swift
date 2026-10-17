@@ -366,7 +366,9 @@ struct PosterSlides: View {
 /// ScrollView paging does not
 /// provide them, and disabling interaction keeps swipe ownership in the ScrollView.
 #if os(macOS)
-    /// Page dots that also jump to a page when clicked. The arrows and ←/→ carry the
+    /// Page dots that also jump to a page when clicked.
+    ///
+    /// The arrows and ←/→ carry the
     /// accessible paging, so the dots stay hidden from accessibility.
     fileprivate struct PosterPageIndicator: View {
         let numberOfPages: Int

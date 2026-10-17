@@ -15,7 +15,9 @@
         let entryIdentity: LibraryEntryIdentity
     }
 
-    /// The library window's inspector. Its content follows the selection: nothing selected,
+    /// The library window's inspector.
+    ///
+    /// Its content follows the selection: nothing selected,
     /// one entry's detail, or the batch panel. Swapping content presents or dismisses
     /// nothing; whether the inspector shows is the window's own setting.
     struct MacLibraryInspector: View {

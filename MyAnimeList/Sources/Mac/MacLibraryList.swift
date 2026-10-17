@@ -9,7 +9,9 @@
     import DataProvider
     import SwiftUI
 
-    /// The Mac library list. It selects natively into the window's `MacLibrarySelection`;
+    /// The Mac library list.
+    ///
+    /// It selects natively into the window's `MacLibrarySelection`;
     /// double-click and Return show the entry in the inspector. The iOS list is
     /// `LibraryListView`.
     struct MacLibraryList: View {

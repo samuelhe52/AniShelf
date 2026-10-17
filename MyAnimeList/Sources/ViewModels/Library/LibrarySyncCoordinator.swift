@@ -344,7 +344,9 @@ final class LibrarySyncCoordinator {
     }
 
     /// `recreatingDeletedZone` lets this bootstrap save a zone the user deleted
-    /// in iCloud settings. Only the explicit upload action passes `true`.
+    /// in iCloud settings.
+    ///
+    /// Only the explicit upload action passes `true`.
     func bootstrapFirstEnablementOutcome(
         preference: LibraryCloudSyncConflictPreference?,
         isUserRetry: Bool = false,

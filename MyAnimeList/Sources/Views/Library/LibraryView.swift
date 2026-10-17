@@ -9,7 +9,9 @@ import DataProvider
 import SwiftUI
 
 #if !os(macOS)
-    /// The iOS and iPadOS library root. Entry detail opens as a sheet or an iPad inspector,
+    /// The iOS and iPadOS library root.
+    ///
+    /// Entry detail opens as a sheet or an iPad inspector,
     /// and batch actions use the multi-selection mode. The Mac root is `MacLibraryView`.
     struct LibraryView: View {
         // MARK: - Stored Properties

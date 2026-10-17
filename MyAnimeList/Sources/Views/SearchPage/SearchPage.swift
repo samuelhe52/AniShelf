@@ -194,59 +194,59 @@ struct SearchPage: View {
             }
         }
     #else
-    private var regularSearchContent: some View {
-        VStack(spacing: 0) {
-            Picker("Scope", selection: $mode) {
-                ForEach(SearchMode.allCases, id: \.self) { scope in
-                    Text(scope.localizedStringResource)
-                        .font(.title2)
-                        .tag(scope)
+        private var regularSearchContent: some View {
+            VStack(spacing: 0) {
+                Picker("Scope", selection: $mode) {
+                    ForEach(SearchMode.allCases, id: \.self) { scope in
+                        Text(scope.localizedStringResource)
+                            .font(.title2)
+                            .tag(scope)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .glassEffect(.regular)
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+
+                switch mode {
+                case .tmdb:
+                    TMDbSearchContent(
+                        language: $tmdbLanguage,
+                        onRetry: performSearch,
+                        onDuplicateTapped: onDuplicateTapped,
+                        checkDuplicate: checkDuplicate
+                    )
+                    .environment(tmdbSearchService)
+                    .transition(.move(edge: .leading))
+
+                case .library:
+                    LibrarySearchContent(onRetry: performSearch)
+                        .environment(librarySearchService)
+                        .transition(.move(edge: .trailing))
                 }
             }
-            .labelsHidden()
-            .pickerStyle(.segmented)
-            .glassEffect(.regular)
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-
-            switch mode {
-            case .tmdb:
-                TMDbSearchContent(
-                    language: $tmdbLanguage,
-                    onRetry: performSearch,
-                    onDuplicateTapped: onDuplicateTapped,
-                    checkDuplicate: checkDuplicate
-                )
-                .environment(tmdbSearchService)
-                .transition(.move(edge: .leading))
-
-            case .library:
-                LibrarySearchContent(onRetry: performSearch)
-                    .environment(librarySearchService)
-                    .transition(.move(edge: .trailing))
+            .searchable(
+                text: $query,
+                placement: .platformDrawerAutomatic,
+                prompt: searchPrompt
+            )
+            .onSubmit(of: .search) {
+                performSearch()
             }
-        }
-        .searchable(
-            text: $query,
-            placement: .platformDrawerAutomatic,
-            prompt: searchPrompt
-        )
-        .onSubmit(of: .search) {
-            performSearch()
-        }
-        .toolbar {
-            DefaultToolbarItem(kind: .search, placement: .platformBottomBar)
-            if mode == .tmdb {
-                ToolbarItem(placement: .sheetTrailing) {
-                    Button {
-                        isShowingBatchAddEntryAlert = true
-                    } label: {
-                        Label(batchAddButtonTitleResource, systemImage: "text.badge.plus")
+            .toolbar {
+                DefaultToolbarItem(kind: .search, placement: .platformBottomBar)
+                if mode == .tmdb {
+                    ToolbarItem(placement: .sheetTrailing) {
+                        Button {
+                            isShowingBatchAddEntryAlert = true
+                        } label: {
+                            Label(batchAddButtonTitleResource, systemImage: "text.badge.plus")
+                        }
                     }
                 }
             }
         }
-    }
     #endif
 
     private var searchPrompt: LocalizedStringKey {

@@ -83,7 +83,9 @@ fileprivate struct WindowSceneIdentifierProvider: ViewModifier {
 
 #if os(macOS)
     extension NSWindow {
-        /// Stable for the window's lifetime and unique among live windows. Unlike
+        /// Stable for the window's lifetime and unique among live windows.
+        ///
+        /// Unlike
         /// `windowNumber`, it is valid before the window has a window device.
         var sceneIdentifier: String {
             String(UInt(bitPattern: ObjectIdentifier(self).hashValue), radix: 16)

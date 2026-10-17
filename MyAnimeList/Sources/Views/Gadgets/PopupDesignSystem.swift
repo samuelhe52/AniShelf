@@ -7,7 +7,9 @@
 
 import SwiftUI
 
-/// How popup panels draw. The Mac inspector uses `.grouped`: flat grouped boxes
+/// How popup panels draw.
+///
+/// The Mac inspector uses `.grouped`: flat grouped boxes
 /// with headline titles, as in Mac inspectors, instead of the iOS glass cards.
 enum PopupPanelStyle {
     case glass
@@ -107,7 +109,7 @@ extension View {
     }
 }
 
-private struct PopupActionButtonChrome: ViewModifier {
+fileprivate struct PopupActionButtonChrome: ViewModifier {
     @Environment(\.popupPanelStyle) private var panelStyle
     let tint: Color
 
@@ -291,7 +293,7 @@ extension View {
     }
 }
 
-private struct PopupGlassPanelModifier: ViewModifier {
+fileprivate struct PopupGlassPanelModifier: ViewModifier {
     @Environment(\.popupPanelStyle) private var panelStyle
     let cornerRadius: CGFloat
     let padding: CGFloat

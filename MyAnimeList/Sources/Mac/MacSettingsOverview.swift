@@ -10,7 +10,9 @@
     import SwiftUI
 
     /// The Settings window's Overview page: library statistics as a grouped form, like the
-    /// other pages, instead of the iOS hero and metric cards. About, Support, and What's New
+    /// other pages, instead of the iOS hero and metric cards.
+    ///
+    /// About, Support, and What's New
     /// are in the app and Help menus.
     struct MacSettingsOverview: View {
         let stats: LibraryProfileStats
@@ -41,11 +43,14 @@
                 }
 
                 Section("Status") {
-                    countRow("Watched", stats.watchedCount, systemImage: "checkmark.circle.fill",
+                    countRow(
+                        "Watched", stats.watchedCount, systemImage: "checkmark.circle.fill",
                         tint: AnimeEntry.WatchStatus.watched.libraryTintColor)
-                    countRow("Watching", stats.watchingCount, systemImage: "play.circle.fill",
+                    countRow(
+                        "Watching", stats.watchingCount, systemImage: "play.circle.fill",
                         tint: AnimeEntry.WatchStatus.watching.libraryTintColor)
-                    countRow("Planned", stats.planToWatchCount, systemImage: "bookmark.fill",
+                    countRow(
+                        "Planned", stats.planToWatchCount, systemImage: "bookmark.fill",
                         tint: AnimeEntry.WatchStatus.planToWatch.libraryTintColor)
                     countRow("Favorites", stats.favoriteCount, systemImage: "heart.fill", tint: .pink)
                 }

@@ -51,7 +51,9 @@ struct TMDbBatchAddView: View {
 
     #if os(macOS)
         /// The Mac input step: the instructions and one bordered editor filling the sheet,
-        /// without the nested iOS panel. Search sits in the bar's confirm slot.
+        /// without the nested iOS panel.
+        ///
+        /// Search sits in the bar's confirm slot.
         private var inputStep: some View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {

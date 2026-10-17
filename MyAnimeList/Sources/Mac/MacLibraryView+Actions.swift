@@ -90,7 +90,9 @@
         }
 
         /// Selects an entry and shows it in the inspector, as double-click, Show Details, and
-        /// an airing reminder do. Scope and Find give way when they hide the entry.
+        /// an airing reminder do.
+        ///
+        /// Scope and Find give way when they hide the entry.
         func revealInInspector(_ id: LibraryEntryIdentity) {
             if !visibleDisplayItems.contains(where: { $0.id == id }) {
                 find.clear()
@@ -154,8 +156,9 @@
         }
     }
 
-    /// The window state that depends on the selection, kept out of `MacLibraryView`'s body so a
-    /// click does not recompute the library's display items.
+    /// The window state that depends on the selection.
+    ///
+    /// Kept out of `MacLibraryView`'s body so a click does not recompute the library's display items.
     struct MacLibrarySelectionObservers: ViewModifier {
         let selection: MacLibrarySelection
         let makeCommandActions: () -> MacLibraryCommandActions

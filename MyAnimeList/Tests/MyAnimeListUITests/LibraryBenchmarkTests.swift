@@ -138,7 +138,9 @@ final class LibraryBenchmarkTests: XCTestCase {
         button.tap()
     }
 
-    /// Keeps the iteration open briefly after a measured action. Without it, XCTest sometimes
+    /// Keeps the iteration open briefly after a measured action.
+    ///
+    /// Without it, XCTest sometimes
     /// dropped an interval the app had emitted and, with it, the whole iteration (seen in the
     /// batch test, and in category switches at 2,000 entries). The cause is unconfirmed.
     private func settle(seconds: TimeInterval = 0.5) {

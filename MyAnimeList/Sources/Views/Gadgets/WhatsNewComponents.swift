@@ -8,7 +8,9 @@
 import SwiftUI
 
 /// How a What's New entry's primary action looks: its own title, or the metadata refresh's
-/// progress and result while the action is a refresh. Shared by the iOS and Mac layouts.
+/// progress and result while the action is a refresh.
+///
+/// Shared by the iOS and Mac layouts.
 struct WhatsNewPrimaryActionPresentation {
     let title: LocalizedStringResource
     let systemImage: String?

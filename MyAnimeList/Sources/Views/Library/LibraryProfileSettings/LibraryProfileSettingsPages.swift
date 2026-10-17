@@ -17,25 +17,25 @@ struct LibraryProfileSettingsPage<Content: View>: View {
     var body: some View {
         pageBody
             .environment(\.libraryProfilePageTint, destination.tint)
-        .navigationTitle(destination.title)
-        .inlineNavigationTitle()
-        .hiddenNavigationBarBackground()
-        .toolbar {
-            // The Settings window closes like any Mac window.
-            #if !os(macOS)
-                ToolbarItem(placement: .platformTrailing) {
-                    Button(action: onClose) {
-                        Image(systemName: "xmark")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(.primary)
-                            .padding(8)
-                            .contentShape(Rectangle())
+            .navigationTitle(destination.title)
+            .inlineNavigationTitle()
+            .hiddenNavigationBarBackground()
+            .toolbar {
+                // The Settings window closes like any Mac window.
+                #if !os(macOS)
+                    ToolbarItem(placement: .platformTrailing) {
+                        Button(action: onClose) {
+                            Image(systemName: "xmark")
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(.primary)
+                                .padding(8)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Text(LocalizedStringResource("Close")))
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(Text(LocalizedStringResource("Close")))
-                }
-            #endif
-        }
+                #endif
+            }
     }
 }
 
@@ -86,7 +86,9 @@ struct LibraryProfileSettingsSection<Content: View>: View {
 }
 
 /// A settings section: a tinted card with an icon header on iOS, a grouped form section on
-/// the Mac. A subtitle becomes the Mac section's footer.
+/// the Mac.
+///
+/// A subtitle becomes the Mac section's footer.
 struct LibraryProfileSettingsGroup<Content: View>: View {
     let title: LocalizedStringResource?
     var subtitle: LocalizedStringResource? = nil
@@ -190,22 +192,22 @@ struct LibraryProfileMetadataImagesPage: View {
 
     @ViewBuilder
     private var maintenanceRows: some View {
-            LibraryProfileActionRow(
-                title: "Prefetch Images",
-                subtitle: "Cache posters and artwork without refreshing metadata.",
-                systemImage: "photo.stack", tint: tint, action: onPrefetchImages
-            )
-            LibraryProfileActionDivider()
-            LibraryProfileActionRow(
-                title: "Check Metadata Cache Size",
-                subtitle: "Review image and metadata cache usage.",
-                systemImage: "archivebox", tint: tint, action: onCheckMetadataCacheSize
-            )
-            LibraryProfileActionDivider()
-            LibraryProfileActionRow(
-                title: "Refresh Infos",
-                subtitle: "Fetch latest TMDb metadata for every entry.",
-                systemImage: "arrow.clockwise", tint: tint, action: onRefreshInfos
-            )
+        LibraryProfileActionRow(
+            title: "Prefetch Images",
+            subtitle: "Cache posters and artwork without refreshing metadata.",
+            systemImage: "photo.stack", tint: tint, action: onPrefetchImages
+        )
+        LibraryProfileActionDivider()
+        LibraryProfileActionRow(
+            title: "Check Metadata Cache Size",
+            subtitle: "Review image and metadata cache usage.",
+            systemImage: "archivebox", tint: tint, action: onCheckMetadataCacheSize
+        )
+        LibraryProfileActionDivider()
+        LibraryProfileActionRow(
+            title: "Refresh Infos",
+            subtitle: "Fetch latest TMDb metadata for every entry.",
+            systemImage: "arrow.clockwise", tint: tint, action: onRefreshInfos
+        )
     }
 }

@@ -51,7 +51,9 @@ struct SVGImageProcessor: ImageProcessor {
 
     #if os(macOS)
         /// SwiftDraw's macOS `rasterize` returns a lazily drawn image whose point size is the
-        /// pixel size. Draw into a bitmap instead, so the image has the requested point size
+        /// pixel size.
+        ///
+        /// Draw into a bitmap instead, so the image has the requested point size
         /// and `scale` pixels per point, like the iOS raster.
         private static func bitmapImage(of svg: SVG, pointSize: CGSize, scale: CGFloat) -> NSImage? {
             let pixelsWide = max(Int((pointSize.width * scale).rounded()), 1)

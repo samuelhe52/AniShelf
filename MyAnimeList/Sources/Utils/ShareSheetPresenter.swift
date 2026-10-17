@@ -56,7 +56,9 @@
             }
         }
 
-        /// Downloads a remote file into a save panel on the window of `sceneIdentifier`. The window
+        /// Downloads a remote file into a save panel on the window of `sceneIdentifier`.
+        ///
+        /// The window
         /// is resolved before the download starts, so focus moving meanwhile cannot redirect it.
         static func saveDownload(of remoteURL: URL, sceneIdentifier: String?) {
             guard let window = presentationWindow(sceneIdentifier) else { return }

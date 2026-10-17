@@ -32,7 +32,9 @@ extension View {
         #endif
     }
 
-    /// Lets the iOS hero artwork run under the navigation bar. The Mac inspector has no hero.
+    /// Lets the iOS hero artwork run under the navigation bar.
+    ///
+    /// The Mac inspector has no hero.
     @ViewBuilder func heroIgnoresTopSafeArea() -> some View {
         #if os(macOS)
             self
@@ -195,7 +197,9 @@ extension View {
 }
 
 extension View {
-    /// Gives a sheet its desktop size. A macOS sheet opens at its content's ideal size, and
+    /// Gives a sheet its desktop size.
+    ///
+    /// A macOS sheet opens at its content's ideal size, and
     /// lists and geometry-driven layouts have almost none, so state it. Minimum and maximum
     /// sizes are left to the content and `presentationSizing`.
     @ViewBuilder func macSheetFrame(width: CGFloat, height: CGFloat) -> some View {

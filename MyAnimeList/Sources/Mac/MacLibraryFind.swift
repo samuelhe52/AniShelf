@@ -9,11 +9,15 @@
     import Foundation
     import Observation
 
-    /// A library window's toolbar Find. The field edits `text`; the library filters by `query`,
+    /// A library window's toolbar Find.
+    ///
+    /// The field edits `text`; the library filters by `query`,
     /// which follows `text` once typing pauses so each keystroke doesn't re-filter the library.
     @Observable @MainActor
     final class MacLibraryFind {
-        /// The trimmed text the library is filtered by. Empty shows the whole scope.
+        /// The trimmed text the library is filtered by.
+        ///
+        /// Empty shows the whole scope.
         private(set) var query = ""
 
         private var storedText = ""

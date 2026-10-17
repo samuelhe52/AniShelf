@@ -81,6 +81,7 @@ class LibrarySearchService {
     }
 
     /// Matches entries by the same rules as the search page, without its ranking.
+    ///
     /// The Mac toolbar's Find filters the visible library with it.
     static func matcher(for query: String) -> (AnimeEntry) -> Bool {
         let predicates = matchPredicates(lowercasedQuery: query.lowercased())
@@ -121,7 +122,7 @@ class LibrarySearchService {
             { entry in
                 guard let onAirDate = entry.onAirDate else { return false }
                 return dateFormatter.string(from: onAirDate).lowercased().contains(lowercasedQuery)
-            },
+            }
         ]
     }
 }

@@ -10,7 +10,9 @@
     import Observation
 
     /// The selection of one library window, as in Finder or Mail: a set of entries that clicks,
-    /// arrow keys, and the list change. The inspector shows whatever is selected; selecting
+    /// arrow keys, and the list change.
+    ///
+    /// The inspector shows whatever is selected; selecting
     /// never opens or closes it.
     ///
     /// Views that depend on the selection read it themselves, so a click does not re-run the
@@ -19,7 +21,9 @@
     @MainActor
     final class MacLibrarySelection {
         private(set) var ids: Set<LibraryEntryIdentity> = []
-        /// Where a ⇧-click range starts: the entry of the last plain or ⌘-click. It is also
+        /// Where a ⇧-click range starts: the entry of the last plain or ⌘-click.
+        ///
+        /// It is also
         /// the entry the batch panel puts on top of its stack.
         private(set) var anchor: LibraryEntryIdentity?
 
@@ -64,7 +68,9 @@
         }
 
         /// Moves a single selection by `offset` places in layout order, as the grid's arrow
-        /// keys do, and returns the newly selected entry. With nothing selected the first
+        /// keys do, and returns the newly selected entry.
+        ///
+        /// With nothing selected the first
         /// entry is selected; at an edge the selection stays put.
         @discardableResult
         func move(by offset: Int, in layoutIDs: [LibraryEntryIdentity]) -> LibraryEntryIdentity? {

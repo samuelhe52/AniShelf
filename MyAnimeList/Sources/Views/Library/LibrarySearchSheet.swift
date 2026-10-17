@@ -10,7 +10,9 @@ import DataProvider
 import SwiftUI
 
 extension View {
-    /// Hosts the search page. Attach it to a view that outlives toolbar changes: menu commands
+    /// Hosts the search page.
+    ///
+    /// Attach it to a view that outlives toolbar changes: menu commands
     /// open search during batch selection, when the toolbar shows no search button.
     func librarySearchSheet(
         isPresented: Binding<Bool>,

@@ -114,14 +114,16 @@
                 .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(.separator, lineWidth: 0.5)
+                        .strokeBorder(.separator, lineWidth: 0.5)
                 }
             }
         }
     }
 
     /// A label/control row for the Mac tracking card: the label on the leading side and
-    /// the control on the trailing side. Labels use the primary color, as in System
+    /// the control on the trailing side.
+    ///
+    /// Labels use the primary color, as in System
     /// Settings, so the controls do not read as disabled. An
     /// optional accessory, such as the rewatch badge, follows the label.
     struct EntryTrackingRow<Accessory: View, Content: View>: View {
@@ -152,7 +154,9 @@
     }
 
     /// Completed rewatches as a number field and stepper, the same control as episode
-    /// progress. The Rewatching flag lives in the status row's context menu instead.
+    /// progress.
+    ///
+    /// The Rewatching flag lives in the status row's context menu instead.
     struct EntryRewatchCountRow: View {
         @Bindable var entry: AnimeEntry
 
@@ -189,7 +193,9 @@
         }
     }
 
-    /// Start and finish rows. An unset date is a placeholder rather than a dimmed copy of
+    /// Start and finish rows.
+    ///
+    /// An unset date is a placeholder rather than a dimmed copy of
     /// today, and a date the status does not expect stays hidden until it has a value.
     ///
     /// Hiding dates is rare, so it lives in the rows' context menu rather than its own
@@ -286,7 +292,9 @@
         }
     }
 
-    /// One date as a quiet capsule. A click opens a calendar with Today and Clear.
+    /// One date as a quiet capsule.
+    ///
+    /// A click opens a calendar with Today and Clear.
     fileprivate struct EntryDateToken: View {
         @Binding var date: Date?
         let range: ClosedRange<Date>
@@ -368,7 +376,9 @@
         }
     }
 
-    /// The AppKit month calendar without its bezel. SwiftUI's graphical `DatePicker` keeps
+    /// The AppKit month calendar without its bezel.
+    ///
+    /// SwiftUI's graphical `DatePicker` keeps
     /// the bezel, which drew a second panel inside the popover's glass.
     fileprivate struct PlainCalendarPicker: NSViewRepresentable {
         @Binding var selection: Date

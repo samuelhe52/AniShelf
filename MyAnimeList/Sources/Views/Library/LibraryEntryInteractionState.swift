@@ -58,7 +58,9 @@
     }
 
     /// The iOS library's entry interaction: detail presented as a sheet or an iPad inspector,
-    /// the multi-selection mode, and the focused entry. The Mac inspector follows the window
+    /// the multi-selection mode, and the focused entry.
+    ///
+    /// The Mac inspector follows the window
     /// selection instead (`MacLibrarySelection`).
     @Observable
     @MainActor

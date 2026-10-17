@@ -8,7 +8,9 @@
 #if os(macOS)
     import SwiftUI
 
-    /// The Airing Reminders settings as form sections. The reminder list sits inline,
+    /// The Airing Reminders settings as form sections.
+    ///
+    /// The reminder list sits inline,
     /// where iOS opens it in a popover from a summary row, and each reminder's timing is
     /// a pop-up menu with the presets, keeping the timing sheet for custom offsets.
     struct MacAiringReminderSettings: View {

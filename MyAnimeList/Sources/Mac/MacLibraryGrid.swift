@@ -9,7 +9,9 @@
     import DataProvider
     import SwiftUI
 
-    /// The Mac library grid. `LazyVGrid` has no selection API, so clicks and arrow keys go
+    /// The Mac library grid.
+    ///
+    /// `LazyVGrid` has no selection API, so clicks and arrow keys go
     /// through the window's `MacLibrarySelection`. The iOS grid is `LibraryGridView`.
     struct MacLibraryGrid: View {
         @Environment(\.macLibraryInspectorLayout) private var inspectorLayout

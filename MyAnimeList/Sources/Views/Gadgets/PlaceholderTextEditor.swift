@@ -13,7 +13,9 @@ import SwiftUI
     import UIKit
 #endif
 
-/// Where the placeholder sits so it lines up with the editor's caret. UITextView here has an
+/// Where the placeholder sits so it lines up with the editor's caret.
+///
+/// UITextView here has an
 /// 8pt top inset and 4pt line padding; NSTextView has none on top and 5pt line padding.
 fileprivate enum PlaceholderTextEditorMetrics {
     #if os(macOS)

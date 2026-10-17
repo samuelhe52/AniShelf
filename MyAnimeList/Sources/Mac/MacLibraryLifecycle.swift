@@ -67,6 +67,7 @@
         }
 
         /// macOS has no BGTaskScheduler; refresh periodically while the app runs instead.
+        ///
         /// Notifications already scheduled are delivered even after the app quits.
         static func updateAiringReminderBackgroundRefresh(hasSubscriptions: Bool) {
             reminderRefreshActivity?.invalidate()

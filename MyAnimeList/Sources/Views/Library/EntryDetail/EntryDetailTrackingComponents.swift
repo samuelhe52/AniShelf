@@ -202,7 +202,9 @@ extension AnimeEntry {
         watchStatus == .watching || watchStatus == .watched || rewatchCount > 0
     }
 
-    /// The status picker's selection. A dropped entry shows Watching under the locked picker.
+    /// The status picker's selection.
+    ///
+    /// A dropped entry shows Watching under the locked picker.
     @MainActor func activeWatchStatusBinding(onSelect: @escaping (WatchStatus) -> Void) -> Binding<WatchStatus> {
         Binding(
             get: {

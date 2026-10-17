@@ -83,7 +83,9 @@ struct LibraryProfileActionRow: View {
     }
 
     #if os(macOS)
-        /// A form row with a push button, as in System Settings. A chevron would read as
+        /// A form row with a push button, as in System Settings.
+        ///
+        /// A chevron would read as
         /// navigation, but every action row runs a command or opens a sheet.
         private var macRow: some View {
             LabeledContent {

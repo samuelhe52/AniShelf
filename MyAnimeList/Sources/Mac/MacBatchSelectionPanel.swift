@@ -11,7 +11,9 @@
 
     /// The inspector during a batch selection, as Finder's Get Info or a Keynote inspector
     /// shows several items: each property is a native control showing the shared value, or a
-    /// mixed state, and changing it applies to every selected entry. The toolbar keeps its
+    /// mixed state, and changing it applies to every selected entry.
+    ///
+    /// The toolbar keeps its
     /// browsing controls, as Finder and Photos do with a selection.
     struct MacBatchSelectionPanel: View {
         let store: LibraryStore
@@ -171,7 +173,9 @@
             return first
         }
 
-        /// One binding per selected entry, so a toggle shows the mixed state natively. Turning
+        /// One binding per selected entry, so a toggle shows the mixed state natively.
+        ///
+        /// Turning
         /// it on or off writes each entry through the same batch action.
         private func sources(
             _ keyPath: KeyPath<AnimeEntry, Bool>,
@@ -196,7 +200,9 @@
             }
         }
 
-        /// The selection in the order entries joined it. Entries that join together, as with
+        /// The selection in the order entries joined it.
+        ///
+        /// Entries that join together, as with
         /// a ⇧-click range, keep their layout order, except that the clicked entry comes last.
         private var currentOrder: [LibraryEntryIdentity] {
             let ids = Set(selectedEntries.map(\.libraryIdentity))
@@ -292,7 +298,9 @@
             }
         }
 
-        /// The newest poster drops onto the pile and slides off it when deselected. Any other
+        /// The newest poster drops onto the pile and slides off it when deselected.
+        ///
+        /// Any other
         /// poster comes and goes one step further back in the fan, so a poster backfilling the
         /// stack, or pushed past its limit, moves through the back instead of popping in place.
         private func posterTransition(depth: Int) -> AnyTransition {
@@ -314,7 +322,7 @@
 
     /// Moves a poster the given number of steps back in the fan: smaller, tilted further, and
     /// farther left and down.
-    private struct PosterFanStep: ViewModifier {
+    fileprivate struct PosterFanStep: ViewModifier {
         let steps: CGFloat
 
         func body(content: Content) -> some View {

@@ -16,7 +16,9 @@
     }
 
     /// The Mac library window: a sidebar of scopes, the List or Grid, and an inspector that
-    /// follows the window's selection (`MacLibrarySelection`). The iOS root is `LibraryView`.
+    /// follows the window's selection (`MacLibrarySelection`).
+    ///
+    /// The iOS root is `LibraryView`.
     struct MacLibraryView: View {
         @Environment(LibraryStore.self) var store
         @Environment(\.windowSceneIdentifier) var windowSceneIdentifier
@@ -28,11 +30,15 @@
         @State var browse = LibraryBrowseState()
         @State private var showCategoryManager = false
         @State private var searchInitialMode: SearchMode?
-        /// The toolbar Find. Per window, unlike the sidebar scope.
+        /// The toolbar Find.
+        ///
+        /// Per window, unlike the sidebar scope.
         @State var find = MacLibraryFind()
         @State var isLibraryFindFocused = false
         @State private var sidebarVisibility: NavigationSplitViewVisibility = .automatic
-        /// This window's selection. Only views that depend on it read it (see `MacLibrarySelection`).
+        /// This window's selection.
+        ///
+        /// Only views that depend on it read it (see `MacLibrarySelection`).
         @State var selection = MacLibrarySelection()
         @State private var inspectorLayout = MacLibraryInspectorLayout()
         /// Whether this window shows its inspector, independent of the selection.
@@ -47,7 +53,9 @@
         @AppStorage(.libraryLastInspectorDetailEntryIdentity)
         var persistedLastInspectorDetailEntryIdentity: String?
 
-        /// The library's view style. A stored Gallery preference shows as Grid (see `macCases`).
+        /// The library's view style.
+        ///
+        /// A stored Gallery preference shows as Grid (see `macCases`).
         var libraryViewStyle: LibraryViewStyle {
             get { storedLibraryViewStyle == .gallery ? .grid : storedLibraryViewStyle }
             nonmutating set { storedLibraryViewStyle = newValue }
@@ -133,35 +141,35 @@
             @Bindable var find = find
             return NavigationStack {
                 libraryPage(displayItems: displayItems)
-                .toolbar {
-                    MacLibraryToolbar(
-                        store: store,
-                        libraryViewStyle: libraryViewStyleBinding,
-                        scoringEnabled: scoringEnabled,
-                        addAnime: { openSearch(mode: .tmdb) }
+                    .toolbar {
+                        MacLibraryToolbar(
+                            store: store,
+                            libraryViewStyle: libraryViewStyleBinding,
+                            scoringEnabled: scoringEnabled,
+                            addAnime: { openSearch(mode: .tmdb) }
+                        )
+                    }
+                    .environment(actions)
+                    .searchable(
+                        text: $find.text,
+                        isPresented: $isLibraryFindFocused,
+                        placement: .toolbar,
+                        prompt: Text("Find in Library")
                     )
-                }
-                .environment(actions)
-                .searchable(
-                    text: $find.text,
-                    isPresented: $isLibraryFindFocused,
-                    placement: .toolbar,
-                    prompt: Text("Find in Library")
-                )
-                .navigationTitle(windowTitle)
-                .modifier(MacLibrarySubtitle(selection: selection, visibleCount: displayItems.count))
-                .animation(LibraryViewTransitions.libraryViewStyleAnimation(), value: libraryViewStyle)
-                .sheet(isPresented: $showCategoryManager) {
-                    MacLibraryCategoryManagerSheet()
-                        .presentationDetents([.medium, .large])
-                }
-                .libraryBrowseSearch(
-                    browse,
-                    store: store,
-                    appReview: appReview,
-                    initialMode: searchInitialMode,
-                    reveal: revealSearchTarget
-                )
+                    .navigationTitle(windowTitle)
+                    .modifier(MacLibrarySubtitle(selection: selection, visibleCount: displayItems.count))
+                    .animation(LibraryViewTransitions.libraryViewStyleAnimation(), value: libraryViewStyle)
+                    .sheet(isPresented: $showCategoryManager) {
+                        MacLibraryCategoryManagerSheet()
+                            .presentationDetents([.medium, .large])
+                    }
+                    .libraryBrowseSearch(
+                        browse,
+                        store: store,
+                        appReview: appReview,
+                        initialMode: searchInitialMode,
+                        reveal: revealSearchTarget
+                    )
             }
             // Find narrows the shared list per window, and saved or unsaved edits can change
             // what it matches, so prune against what this window shows, not the store's IDs.
@@ -251,7 +259,9 @@
             showCategoryManager = true
         }
 
-        /// Makes the entry search found or added the selection, shown in the inspector. An
+        /// Makes the entry search found or added the selection, shown in the inspector.
+        ///
+        /// An
         /// explicit reveal wins over this window's Find text.
         private func revealSearchTarget(_ id: LibraryEntryIdentity) {
             if !find.query.isEmpty, !visibleDisplayItems.contains(where: { $0.id == id }) {

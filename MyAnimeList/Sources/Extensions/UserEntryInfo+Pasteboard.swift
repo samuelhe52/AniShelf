@@ -18,7 +18,9 @@ import UniformTypeIdentifiers
 extension UserEntryInfo {
     static let pasteboardUTType = UTType("com.samuelhe.myanimelist.userentryinfo")!
 
-    /// Whether the general pasteboard holds copied user info. Checks the type only, without
+    /// Whether the general pasteboard holds copied user info.
+    ///
+    /// Checks the type only, without
     /// reading the contents, so menus can call it cheaply.
     @MainActor static var hasPasteboardContent: Bool {
         #if os(macOS)

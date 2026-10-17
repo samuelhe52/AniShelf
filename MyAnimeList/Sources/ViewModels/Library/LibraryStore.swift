@@ -113,7 +113,9 @@ class LibraryStore {
 
     // MARK: - Categories State
 
-    /// Opt-in switch for library categories. Turning it off keeps categories and memberships.
+    /// Opt-in switch for library categories.
+    ///
+    /// Turning it off keeps categories and memberships.
     var categoriesEnabled: Bool = false {
         willSet {
             preferences.saveCategoriesEnabled(newValue)
@@ -127,7 +129,9 @@ class LibraryStore {
     var categoryStripEnabled: Bool = false {
         willSet { preferences.saveCategoryStripEnabled(newValue) }
     }
-    /// Category definitions in display order. Write through the category operations.
+    /// Category definitions in display order.
+    ///
+    /// Write through the category operations.
     var categories: [LibraryCategory] = [] {
         willSet { preferences.saveCategories(newValue) }
         didSet {

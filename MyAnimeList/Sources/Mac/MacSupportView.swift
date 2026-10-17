@@ -10,7 +10,9 @@
     import SwiftUI
 
     /// The Support window (AniShelf ▸ Support AniShelf…): a grouped form with the tips as
-    /// rows, each with a price button. Purchasing and the thank-you state are shared with the
+    /// rows, each with a price button.
+    ///
+    /// Purchasing and the thank-you state are shared with the
     /// iOS sheet (`SupportPurchaseFlow`, `SupportThankYouView`).
     struct MacSupportView: View {
         @Environment(SupportStore.self) private var supportStore

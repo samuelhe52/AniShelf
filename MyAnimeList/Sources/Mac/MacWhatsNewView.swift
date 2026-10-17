@@ -9,7 +9,9 @@
     import SwiftUI
 
     /// What's New on the Mac: a grouped form with this version's summary, highlights, and
-    /// actions, then one section per earlier version. It is a sheet on a library window, both
+    /// actions, then one section per earlier version.
+    ///
+    /// It is a sheet on a library window, both
     /// after an update and from Help ▸ What's New in AniShelf.
     struct MacWhatsNewView: View {
         let entry: WhatsNewEntry
