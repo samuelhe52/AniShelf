@@ -140,8 +140,14 @@ struct AnimeSharingSheet: View {
                 )
             }
         }
-        .presentationSizing(.page)
-        .macSheetFrame(width: 980, height: 700)
+        #if os(macOS)
+            // Fit the preferred desktop size so the initial width enables both columns.
+            // Keep resizing available, including the compact layout in smaller windows.
+            .frame(minWidth: 600, idealWidth: 980, minHeight: 500, idealHeight: 700)
+            .presentationSizing(.fitted)
+        #else
+            .presentationSizing(.page)
+        #endif
     }
 
     #if os(macOS)
