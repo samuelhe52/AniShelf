@@ -37,6 +37,7 @@ historical runtime scenario was rerun. Entry 010 remains an unimplemented propos
 | 022 | 2026-10-17 | [Separate Mac and iOS library roots](022-mac-library-root-split/000-plan.md) | Implemented on `feat/native-macos` (`129150c`) | [Action](022-mac-library-root-split/001-action.md) |
 | 023 | 2026-10-17 | [Store-owned library display cache](023-library-display-cache/000-plan.md) | Implemented on `feat/native-macos` (`80300c5`) | [Action](023-library-display-cache/001-action.md) |
 | 024 | 2026-10-17 | [Mac inspector entry switch without a flash](024-inspector-entry-switch/000-plan.md) | Implemented on `feat/native-macos` (`c4cab57`) | [Action](024-inspector-entry-switch/001-action.md) |
+| 026 | 2026-10-17 | [Library fixture and performance benchmarks](026-library-performance-benchmarks/000-plan.md) | Implemented on `feat/native-macos` (`1622953`) | [Action](026-library-performance-benchmarks/001-action.md) |
 
 ## Find a contract or source
 
