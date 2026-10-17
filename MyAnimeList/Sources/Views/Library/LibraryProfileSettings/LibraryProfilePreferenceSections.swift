@@ -308,7 +308,7 @@ struct LibraryProfileCategorySettingsRows: View {
                         Text("Categories")
                     }
                     .sheet(isPresented: $showCategoryManager) {
-                        LibraryCategoryManagerSheet()
+                        MacLibraryCategoryManagerSheet()
                     }
                 #else
                     Button {
