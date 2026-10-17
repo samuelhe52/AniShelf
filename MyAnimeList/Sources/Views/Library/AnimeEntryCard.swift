@@ -1,3 +1,10 @@
+//
+//  AnimeEntryCard.swift
+//  AniShelf
+//
+//  Created by OpenAI Codex on behalf of Samuel He on 2025/3/30.
+//
+
 import DataProvider
 import Kingfisher
 import SwiftUI

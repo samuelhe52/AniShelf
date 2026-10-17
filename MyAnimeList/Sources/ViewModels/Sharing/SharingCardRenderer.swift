@@ -1,3 +1,10 @@
+//
+//  SharingCardRenderer.swift
+//  AniShelf
+//
+//  Created by OpenAI Codex on behalf of Samuel He on 2025/11/22.
+//
+
 import Foundation
 import SwiftUI
 import os

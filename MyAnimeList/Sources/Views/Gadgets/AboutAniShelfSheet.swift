@@ -1,3 +1,10 @@
+//
+//  AboutAniShelfSheet.swift
+//  AniShelf
+//
+//  Created by OpenAI Codex on behalf of Samuel He on 2026/5/1.
+//
+
 import SwiftUI
 
 struct AboutAniShelfSheet: View {
