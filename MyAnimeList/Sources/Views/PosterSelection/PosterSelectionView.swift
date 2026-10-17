@@ -56,6 +56,11 @@ struct PosterSelectionView: View {
                 }
             )
             .padding(.horizontal, 16)
+            #if os(macOS)
+                // iOS gets this gap from the navigation bar; the Mac title bar ends flush with
+                // the content.
+                .padding(.vertical, 16)
+            #endif
             .frame(maxWidth: 1_100)
             .frame(maxWidth: .infinity)
         }
