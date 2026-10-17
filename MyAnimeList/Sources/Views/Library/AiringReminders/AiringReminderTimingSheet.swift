@@ -39,57 +39,85 @@ struct AiringReminderTimingSheet: View {
 
     #if os(macOS)
         private var macBody: some View {
-            VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Reminder Timing").font(.headline)
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Reminder Timing")
+                        .font(.title2.weight(.semibold))
                     Text(subscription.displayTitle)
+                        .font(.callout)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Form {
-                    Picker("Reminder Timing", selection: $isAfter) {
+
+                VStack(spacing: 16) {
+                    Picker("Remind Me", selection: $isAfter) {
                         Text("Before Airtime").tag(false)
                         Text("After Airtime").tag(true)
                     }
-                    .pickerStyle(.menu)
-                    Stepper(value: $hours, in: 0...23) {
-                        LabeledContent("Hours") {
-                            TextField("Hours", value: $hours, format: .number)
-                                .labelsHidden()
-                                .multilineTextAlignment(.trailing)
-                                .frame(width: 52)
-                        }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+
+                    MacReminderOffsetPicker(hours: $hours, minutes: $minutes)
+                        .padding(.vertical, 4)
+
+                    Divider()
+
+                    HStack(spacing: 6) {
+                        Image(systemName: "bell")
+                            .accessibilityHidden(true)
+                        offsetSummary
+                            .monospacedDigit()
+                            .contentTransition(.numericText())
+                            .animation(.default, value: offset)
                     }
-                    Stepper(value: $minutes, in: 0...59) {
-                        LabeledContent("Minutes") {
-                            TextField("Minutes", value: $minutes, format: .number)
-                                .labelsHidden()
-                                .multilineTextAlignment(.trailing)
-                                .frame(width: 52)
-                        }
-                    }
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
                 }
-                .formStyle(.columns)
+                .padding(16)
+                .background(.background, in: RoundedRectangle(cornerRadius: 10))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(.quaternary, lineWidth: 0.5)
+                }
+
                 if saveFailed {
                     Text("Reminder timing could not be fully updated. Please try again.")
                         .font(.callout)
                         .foregroundStyle(.red)
                 }
-                HStack {
+
+                HStack(spacing: 8) {
                     Spacer()
                     Button("Cancel") { dismiss() }
                         .keyboardShortcut(.cancelAction)
                     Button("Save") { saveTiming(useDefault: false) }
+                        .buttonStyle(.borderedProminent)
                         .keyboardShortcut(.defaultAction)
                         .disabled(!(0...23).contains(hours) || !(0...59).contains(minutes))
                 }
+                .buttonStyle(.bordered)
             }
-            .padding(20)
-            .frame(width: 400)
+            .padding(24)
+            .frame(width: 420)
+            .fixedSize(horizontal: false, vertical: true)
             .disabled(airingReminders.isRefreshing)
             .interactiveDismissDisabled(airingReminders.isRefreshing)
         }
+
     #endif
+
+    @ViewBuilder
+    private var offsetSummary: some View {
+        if offset == 0 {
+            Text("At airtime")
+        } else if offset > 0 {
+            Text("\(offset) min after")
+        } else {
+            Text("\(-offset) min before")
+        }
+    }
 
     private func saveTiming(useDefault: Bool) {
         Task {
@@ -199,23 +227,153 @@ struct AiringReminderTimingSheet: View {
 
             Divider()
 
-            Group {
-                if offset == 0 {
-                    Text("At airtime")
-                } else if offset > 0 {
-                    Text("\(offset) min after")
-                } else {
-                    Text("\(-offset) min before")
-                }
-            }
-            .font(.subheadline.weight(.semibold))
-            .monospacedDigit()
-            .foregroundStyle(.orange)
-            .contentTransition(.numericText())
-            .animation(.default, value: offset)
-            .frame(maxWidth: .infinity)
+            offsetSummary
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(.orange)
+                .contentTransition(.numericText())
+                .animation(.default, value: offset)
+                .frame(maxWidth: .infinity)
         }
         .padding(16)
     }
 
 }
+
+#if os(macOS)
+    /// A duration editor whose selected component is replaced as a whole, like Clock.
+    fileprivate struct MacReminderOffsetPicker: View {
+        @Binding var hours: Int
+        @Binding var minutes: Int
+
+        private enum Component: Hashable {
+            case hours, minutes
+
+            var title: LocalizedStringResource {
+                switch self {
+                case .hours: "Hours"
+                case .minutes: "Minutes"
+                }
+            }
+
+            var upperBound: Int { self == .hours ? 23 : 59 }
+        }
+
+        @FocusState private var selection: Component?
+        @State private var enteredDigits = ""
+
+        var body: some View {
+            VStack(spacing: 6) {
+                HStack(spacing: 24) {
+                    Text(Component.hours.title).frame(width: 100)
+                    Text(Component.minutes.title).frame(width: 100)
+                }
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+
+                HStack(alignment: .center, spacing: 2) {
+                    segment(.hours)
+                    VStack(spacing: 12) {
+                        Circle().frame(width: 4, height: 4)
+                        Circle().frame(width: 4, height: 4)
+                    }
+                    .foregroundStyle(.secondary)
+                    .frame(width: 20, height: 80)
+                    .accessibilityHidden(true)
+                    segment(.minutes)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .onAppear { selection = .hours }
+            .onChange(of: selection) { enteredDigits = "" }
+        }
+
+        private func segment(_ component: Component) -> some View {
+            Text(value(for: component), format: .number.precision(.integerLength(2)).grouping(.never))
+                .font(.system(size: 64, weight: .light))
+                .monospacedDigit()
+                .foregroundStyle(selection == component ? Color.white : Color.primary)
+                .frame(width: 100, height: 80)
+                .background(
+                    selection == component ? Color.accentColor : Color.clear,
+                    in: RoundedRectangle(cornerRadius: 4)
+                )
+                .contentShape(Rectangle())
+                .focusable(interactions: .edit)
+                .focused($selection, equals: component)
+                .focusEffectDisabled()
+                .onTapGesture {
+                    selection = component
+                    enteredDigits = ""
+                }
+                .help(Text(LocalizedStringResource("Type a value, or use the Up and Down arrow keys.")))
+                .accessibilityLabel(Text(component.title))
+                .accessibilityValue(Text(value(for: component), format: .number))
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction {
+                    selection = component
+                    enteredDigits = ""
+                }
+                .accessibilityAdjustableAction { direction in
+                    switch direction {
+                    case .increment: adjust(component, by: 1)
+                    case .decrement: adjust(component, by: -1)
+                    @unknown default: break
+                    }
+                }
+                .onKeyPress(characters: .decimalDigits) { press in
+                    guard press.characters.count == 1, let digit = Int(press.characters) else { return .ignored }
+                    let candidate = enteredDigits + String(digit)
+                    let number = Int(candidate) ?? digit
+                    if number <= component.upperBound {
+                        setValue(number, for: component)
+                        enteredDigits = candidate
+                    } else {
+                        setValue(digit, for: component)
+                        enteredDigits = String(digit)
+                    }
+                    if enteredDigits.count == 2 {
+                        enteredDigits = ""
+                        if component == .hours { selection = .minutes }
+                    }
+                    return .handled
+                }
+                .onKeyPress(.upArrow) {
+                    adjust(component, by: 1)
+                    return .handled
+                }
+                .onKeyPress(.downArrow) {
+                    adjust(component, by: -1)
+                    return .handled
+                }
+                .onKeyPress(.leftArrow) {
+                    selection = .hours
+                    return .handled
+                }
+                .onKeyPress(.rightArrow) {
+                    selection = .minutes
+                    return .handled
+                }
+                .onKeyPress(.delete) {
+                    setValue(0, for: component)
+                    enteredDigits = ""
+                    return .handled
+                }
+        }
+
+        private func value(for component: Component) -> Int {
+            component == .hours ? hours : minutes
+        }
+
+        private func setValue(_ value: Int, for component: Component) {
+            if component == .hours { hours = value } else { minutes = value }
+        }
+
+        private func adjust(_ component: Component, by amount: Int) {
+            let current = min(max(value(for: component), 0), component.upperBound)
+            setValue(min(max(current + amount, 0), component.upperBound), for: component)
+            enteredDigits = ""
+        }
+    }
+#endif

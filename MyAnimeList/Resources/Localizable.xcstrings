@@ -4413,6 +4413,22 @@
         }
       }
     },
+    "Double-click to rename. Drag to reorder." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダブルクリックで名前を変更、ドラッグで並べ替え。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "双击以重命名，拖移以调整顺序。"
+          }
+        }
+      }
+    },
     "Done" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5698,6 +5714,22 @@
     },
     "Hold deletions until Retry" : {
 
+    },
+    "Type a value, or use the Up and Down arrow keys." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "数値を入力するか、上下の矢印キーで調整します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "输入数值，或使用上下方向键调整。"
+          }
+        }
+      }
     },
     "Hours" : {
       "localizations" : {
@@ -12902,18 +12934,18 @@
         }
       }
     },
-    "Add anime by selecting several in List or Grid view and choosing Category in the toolbar. Drag categories to reorder them." : {
+    "Select anime in List or Grid view, then choose Category in the toolbar." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "リスト表示またはグリッド表示で複数のアニメを選択し、ツールバーの「カテゴリ」から追加します。カテゴリはドラッグで並べ替えられます。"
+            "value" : "リスト表示またはグリッド表示でアニメを選択し、ツールバーの「カテゴリ」から追加します。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在列表或网格视图中选择多部动画，然后在工具栏中选择“分类”即可添加。拖移分类可调整顺序。"
+            "value" : "在列表或网格视图中选择动画，然后在工具栏中选择“分类”。"
           }
         }
       }
