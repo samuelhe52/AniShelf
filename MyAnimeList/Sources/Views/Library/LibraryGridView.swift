@@ -44,6 +44,7 @@ import SwiftUI
                     .padding(.top, 6)
                     .padding(.bottom, 104)
                 }
+                .accessibilityIdentifier("library-grid")
                 .preferredNavigationBarScrollEdgeEffect()
                 .animation(.spring, value: store.groupStrategy)
                 .animation(.spring, value: store.sortReversed)
@@ -70,6 +71,7 @@ import SwiftUI
                 snapshot: item.snapshot,
                 isSelected: !interaction.isMultiSelecting || interaction.isSelected(item.id)
             )
+            .accessibilityIdentifier("library-grid-item")
             .highlightEffect(trigger: highlightRequest?.trigger(for: item.id))
             .contextMenu {
                 actions.contextMenu(

@@ -91,6 +91,55 @@ test-mac:
 	@$(MAKE) --no-print-directory test-dataprovider $(TEST_DATAPROVIDER_MAKE_ARGS)
 	@echo "All tests completed."
 
+# Benchmarks (docs-ai 026): Release plus the fixture flag, in separate derived data.
+# One size takes about 8.5 minutes. Check scaling with BENCH_SIZES='100 800 2000', or run
+# part of the suite with BENCH_ONLY='testScrollList testCategorySwitchGrid'.
+BENCH_SIZES ?= 800
+BENCH_ONLY ?=
+BENCH_DIR ?= $(CURDIR)/.build/benchmarks
+BENCH_TESTS ?= $(if $(strip $(BENCH_ONLY)),$(foreach test,$(BENCH_ONLY),MyAnimeListUITests/LibraryBenchmarkTests/$(test)),MyAnimeListUITests/LibraryBenchmarkTests)
+BENCH_SCHEME ?= MyAnimeList-Benchmarks
+# `full` builds like the App Store (whole-module optimization) and runs 10 iterations.
+# `quick` (`make bench-quick`) builds file by file for fast incremental rebuilds and runs 5,
+# so its numbers go in their own baseline and are only compared with other quick runs.
+BENCH_MODE ?= full
+BENCH_ITERATIONS ?= $(if $(filter quick,$(BENCH_MODE)),5,10)
+BENCH_SUFFIX = $(if $(filter quick,$(BENCH_MODE)),-quick)
+BENCH_BASELINE = $(BENCH_DIR)/baseline$(BENCH_SUFFIX).json
+BENCH_LATEST = $(BENCH_DIR)/latest$(BENCH_SUFFIX)
+BENCH_XCODEBUILD_ARGS = -project $(PROJECT) -scheme $(BENCH_SCHEME) -configuration Release -destination "id=$(BOOTED_SIMULATOR_ID)" -derivedDataPath "$(BENCH_DIR)/DerivedData$(BENCH_SUFFIX)" 'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$$(inherited) LIBRARY_FIXTURES' $(if $(filter quick,$(BENCH_MODE)),SWIFT_COMPILATION_MODE=singlefile)
+
+.PHONY: bench-sim
+bench-sim:
+	@[ -n "$(BOOTED_SIMULATOR_ID)" ] || { echo "No booted simulator found."; exit 1; }
+	@echo "Using simulator $(BOOTED_SIMULATOR_ID) ($(BENCH_MODE) mode, $(BENCH_ITERATIONS) iterations)"
+	@set -o pipefail; \
+	run_dir="$(BENCH_DIR)/runs/$$(date +%Y%m%d-%H%M%S)$(BENCH_SUFFIX)"; \
+	mkdir -p "$$run_dir"; \
+	NSUnbufferedIO=YES xcodebuild $(BENCH_XCODEBUILD_ARGS) build-for-testing 2>&1 | xcbeautify --disable-logging || exit 1; \
+	for size in $(BENCH_SIZES); do \
+		echo "Benchmarking a $$size-entry library..."; \
+		TEST_RUNNER_LIBRARY_FIXTURE_SIZE=$$size TEST_RUNNER_LIBRARY_BENCH_ITERATIONS=$(BENCH_ITERATIONS) NSUnbufferedIO=YES xcodebuild $(BENCH_XCODEBUILD_ARGS) test-without-building $(foreach test,$(BENCH_TESTS),-only-testing:$(test)) -resultBundlePath "$$run_dir/$$size.xcresult" -collect-test-diagnostics never 2>&1 | xcbeautify --disable-logging || exit 1; \
+	done; \
+	python3 scripts/library_benchmarks.py summarize "$$run_dir" $(BENCH_MODE) $(BENCH_ITERATIONS) || exit 1; \
+	ln -sfn "$$run_dir" "$(BENCH_LATEST)"; \
+	echo; \
+	python3 scripts/library_benchmarks.py compare "$(BENCH_BASELINE)" "$$run_dir/summary.json"
+
+.PHONY: bench-baseline
+bench-baseline:
+	@[ -f "$(BENCH_LATEST)/summary.json" ] || { echo "No $(BENCH_MODE) benchmark run yet; run make bench-$(if $(filter quick,$(BENCH_MODE)),quick,sim) first."; exit 1; }
+	@python3 scripts/library_benchmarks.py save-baseline "$(BENCH_BASELINE)" "$(BENCH_LATEST)/summary.json"
+
+# Fast iteration loop: `make bench-quick BENCH_ONLY=testCategorySwitchGrid`, then
+# `make bench-quick-baseline` to accept a result as the new reference.
+.PHONY: bench-quick bench-quick-baseline
+bench-quick:
+	@$(MAKE) --no-print-directory bench-sim BENCH_MODE=quick
+
+bench-quick-baseline:
+	@$(MAKE) --no-print-directory bench-baseline BENCH_MODE=quick
+
 # Build and Run
 .PHONY: release-testing
 release-testing:

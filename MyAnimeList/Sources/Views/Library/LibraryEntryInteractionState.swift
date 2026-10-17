@@ -66,7 +66,9 @@
         let actions: LibraryEntryActionState
         var focusedEntryID: LibraryEntryIdentity?
         var isMultiSelecting: Bool = false
-        var selectedEntryIDs: Set<LibraryEntryIdentity> = []
+        var selectedEntryIDs: Set<LibraryEntryIdentity> = [] {
+            didSet { LibraryBenchmarkSignposts.selectionDidChange() }
+        }
         private(set) var detailEditRequest: LibraryEntryDetailEditRequest?
         private(set) var desiredDetailHost: LibraryEntryDetailHost
         private(set) var detailPresentation: LibraryEntryDetailPresentation?

@@ -96,6 +96,7 @@ import SwiftUI
                 .scrollTargetLayout()
             }
             .contentMargins(.horizontal, horizontalContentMargin, for: .scrollContent)
+            .accessibilityIdentifier("library-gallery")
             .animation(.default, value: store.groupStrategy)
             .animation(.default, value: store.sortReversed)
             .animation(.default, value: store.sortStrategy)

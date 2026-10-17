@@ -33,6 +33,9 @@ struct MyAnimeListApp: App {
     private let newerLibraryStoreVersion: Schema.Version?
     /// A DEBUG launch argument replaced the real store; library and sync work stay off for this launch.
     private let isSimulatedStartup: Bool
+    /// A DEBUG or `LIBRARY_FIXTURES` launch argument replaced the store with a generated library;
+    /// sync, reminders, and prompts stay off for this launch (docs-ai 026).
+    private let isLibraryFixture: Bool
     @State private var backgroundSyncExecution: LibrarySyncBackgroundExecutionController
     private let recoveryActivityGate: StartupRecoveryActivityGate
     private let lifecycleEventGate = AppLifecycleEventGate()
@@ -42,7 +45,9 @@ struct MyAnimeListApp: App {
         Language.followsSystemPreference()
 
     init() {
-        let (startupBootstrap, isSimulatedStartup) = Self.startupBootstrap()
+        let startup = Self.startupEnvironment()
+        let startupBootstrap = startup.bootstrap
+        let isSimulatedStartup = startup.isSimulated
         let startupRecovery = startupBootstrap.recovery
         let newerLibraryStoreVersion: Schema.Version? =
             if case .requiresNewerApp(let storeVersion) = startupBootstrap.status {
@@ -52,20 +57,24 @@ struct MyAnimeListApp: App {
             }
         let keyStorage = TMDbAPIKeyStorage()
         // A newer-store block never lifts: only an app update can open the library.
+        // A fixture library stays blocked too, so sync and reminders never act on it.
         let recoveryActivityGate = StartupRecoveryActivityGate(
-            isBlocked: startupRecovery != nil || newerLibraryStoreVersion != nil
+            isBlocked: startupRecovery != nil || newerLibraryStoreVersion != nil || startup.isLibraryFixture
         )
         let libraryStore = LibraryStore(
             dataProvider: startupBootstrap.provider,
+            preferences: LibraryPreferences(defaults: startup.defaults),
             hasTMDbAPIKey: {
                 guard let key = keyStorage.key else { return false }
                 return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             },
-            airingReminderPruningEnabled: recoveryActivityGate.allowsLibraryActivity
+            airingReminderPruningEnabled: recoveryActivityGate.allowsLibraryActivity,
+            allowsCloudSync: !startup.isLibraryFixture
         )
-        let whatsNew = WhatsNewController()
+        let whatsNew = WhatsNewController(defaults: startup.defaults)
         let supportStore = SupportStore()
-        let appReview = AppReviewPromptController()
+        let appReview = AppReviewPromptController(defaults: startup.defaults)
+        self.isLibraryFixture = startup.isLibraryFixture
 
         _libraryStore = State(initialValue: libraryStore)
         _keyStorage = State(initialValue: keyStorage)
@@ -133,25 +142,40 @@ struct MyAnimeListApp: App {
         }
     #endif
 
-    private static func startupBootstrap() -> (
-        result: DataProviderBootstrapResult, isSimulated: Bool
-    ) {
+    private struct StartupEnvironment {
+        var bootstrap: DataProviderBootstrapResult
+        var isSimulated = false
+        var isLibraryFixture = false
+        var defaults: UserDefaults = .standard
+    }
+
+    private static func startupEnvironment() -> StartupEnvironment {
         #if DEBUG
             // Preview startup screens without opening or touching the real store.
             let arguments = ProcessInfo.processInfo.arguments
             if arguments.contains("-simulate-newer-library-store") {
-                return (
-                    DataProvider.newerStorePlaceholderBootstrap(
+                return StartupEnvironment(
+                    bootstrap: DataProvider.newerStorePlaceholderBootstrap(
                         storeVersion: Schema.Version(99, 0, 0)
                     ),
-                    true
+                    isSimulated: true
                 )
             }
             if arguments.contains("-simulate-startup-recovery") {
-                return (DataProvider.simulatedRecoveryBootstrap(), true)
+                return StartupEnvironment(bootstrap: DataProvider.simulatedRecoveryBootstrap(), isSimulated: true)
             }
         #endif
-        return (DataProvider.startupBootstrap, false)
+        #if DEBUG || LIBRARY_FIXTURES
+            // A generated library for scale checks and the UI benchmarks; never opens the real store.
+            if let fixture = LibraryFixture.fromLaunchArguments() {
+                return StartupEnvironment(
+                    bootstrap: fixture.makeBootstrap(),
+                    isLibraryFixture: true,
+                    defaults: fixture.defaults
+                )
+            }
+        #endif
+        return StartupEnvironment(bootstrap: DataProvider.startupBootstrap)
     }
 
     var body: some Scene {
@@ -235,6 +259,14 @@ struct MyAnimeListApp: App {
                     .transition(.opacity.animation(.easeInOut(duration: 1)))
             }
         }
+        #if (DEBUG || LIBRARY_FIXTURES) && os(iOS)
+            .overlay(alignment: .topLeading) {
+                if isLibraryFixture {
+                    LibraryFrameStatsElement()
+                    .frame(width: 1, height: 1)
+                }
+            }
+        #endif
         .environment(libraryStore)
         .environment(keyStorage)
         .environment(whatsNew)
@@ -277,7 +309,7 @@ struct MyAnimeListApp: App {
     }
 
     private func updateWhatsNewPresentation() {
-        guard !isLibraryBlocked else { return }
+        guard !isLibraryBlocked, !isLibraryFixture else { return }
         whatsNew.presentIfNeeded(allowsAutoPresentation: hasTMDbAPIKey)
     }
 
@@ -302,7 +334,7 @@ struct MyAnimeListApp: App {
     }
 
     private func requestSync(trigger: LibrarySyncCoordinator.Trigger) {
-        guard !isLibraryBlocked else { return }
+        guard !isLibraryBlocked, !isLibraryFixture else { return }
         guard !libraryStore.requiresDuplicateRepair else { return }
         libraryStore.syncLibrary(trigger: trigger)
     }
@@ -331,12 +363,13 @@ struct MyAnimeListApp: App {
     }
 
     private func recordActiveLibraryDayIfUsable() {
-        guard scenePhase == .active, !isLibraryBlocked, hasTMDbAPIKey else { return }
+        guard scenePhase == .active, !isLibraryBlocked, !isLibraryFixture, hasTMDbAPIKey else { return }
         guard !libraryStore.requiresDuplicateRepair else { return }
         appReview.recordActiveLibraryDay()
     }
 
     private func refreshAiringReminders() {
+        guard !isLibraryFixture else { return }
         Task { @MainActor in
             await AiringReminderCoordinator.shared.reloadState()
             _ = await AiringReminderCoordinator.shared.refreshAll()

@@ -218,6 +218,7 @@ import SwiftUI
             } label: {
                 Label(title, systemImage: systemImage)
             }
+            .accessibilityIdentifier("library-batch-favorite")
             .disabled(selectedEntries.isEmpty)
             .animation(.snappy(duration: 0.3), value: allFavorite)
         }

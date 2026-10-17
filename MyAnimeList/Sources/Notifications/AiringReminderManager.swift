@@ -919,8 +919,18 @@ struct AiringReminderNotificationRoute: Equatable {
 @Observable
 final class AiringReminderCoordinator {
     static let shared = AiringReminderCoordinator(
-        manager: AiringReminderManager()
+        manager: makeSharedManager()
     )
+
+    private static func makeSharedManager() -> AiringReminderManager {
+        #if DEBUG || LIBRARY_FIXTURES
+            // Fixture launches must not touch real subscriptions or notifications (docs-ai 026).
+            if let fixture = LibraryFixture.active {
+                return fixture.makeAiringReminderManager()
+            }
+        #endif
+        return AiringReminderManager()
+    }
 
     private let manager: AiringReminderManager
     private(set) var snapshot = AiringReminderSnapshot()

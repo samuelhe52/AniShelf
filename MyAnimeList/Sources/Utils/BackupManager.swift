@@ -158,6 +158,12 @@ class BackupManager {
     /// - Throws: A `BackupError` if the process fails.
     /// - Note: This function will likely require you to restart the app to see the changes.
     func restoreBackup(from sourceURL: URL) throws {
+        #if DEBUG || LIBRARY_FIXTURES
+            // Restoring writes the backup's settings into the real defaults (docs-ai 026).
+            if LibraryFixture.active != nil {
+                throw BackupError.restoreFailed(reason: "Restore is unavailable in a fixture library.")
+            }
+        #endif
         // 1. Create a temporary directory for extraction.
         let restoreDirectoryURL = fileManager.temporaryDirectory.appendingPathComponent(
             UUID().uuidString)

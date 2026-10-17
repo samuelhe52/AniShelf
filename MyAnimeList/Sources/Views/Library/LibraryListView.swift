@@ -30,6 +30,7 @@ import SwiftUI
                     rowContent(for: item)
                 }
                 .listStyle(.plain)
+                .accessibilityIdentifier("library-list")
                 .preferredNavigationBarScrollEdgeEffect()
                 .environment(\.editMode, .constant(interaction.isMultiSelecting ? .active : .inactive))
                 .animation(LibraryViewTransitions.selectionModeAnimation(), value: interaction.isMultiSelecting)

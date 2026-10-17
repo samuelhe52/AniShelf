@@ -22,6 +22,7 @@ import SwiftUI
             let entries = selectedEntries
             guard !entries.isEmpty else { return }
 
+            LibraryBenchmarkSignposts.batchActionWillApply()
             action.apply(to: entries)
             guard action.endsMultiSelection else { return }
             exitMultiSelection()

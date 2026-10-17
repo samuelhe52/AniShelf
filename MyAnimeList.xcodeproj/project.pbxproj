@@ -110,6 +110,7 @@
 				Tests/MyAnimeListTests/TVMazeResolverTests.swift,
 				Tests/MyAnimeListTests/UserEntryInfoAndLibraryStatsTests.swift,
 				Tests/MyAnimeListTests/WhatsNewAndRefreshTests.swift,
+				Tests/MyAnimeListUITests/LibraryBenchmarkTests.swift,
 				Tests/MyAnimeListUITests/MyAnimeListUITests.swift,
 				Tests/MyAnimeListUITests/MyAnimeListUITestsLaunchTests.swift,
 			);
@@ -184,6 +185,7 @@
 		9F93FC192DE1FD800071FB56 /* Exceptions for "MyAnimeList" folder in "MyAnimeListUITests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Tests/MyAnimeListUITests/LibraryBenchmarkTests.swift,
 				Tests/MyAnimeListUITests/MyAnimeListUITests.swift,
 				Tests/MyAnimeListUITests/MyAnimeListUITestsLaunchTests.swift,
 			);

@@ -36,6 +36,9 @@ class LibraryStore {
     @ObservationIgnored private var deferredLibraryRefreshDepth = 0
     @ObservationIgnored private var needsDeferredLibraryRefresh = false
     @ObservationIgnored private var airingReminderPruningEnabled: Bool
+    /// False for generated fixture libraries (docs-ai 026): no sync coordinator or scheduler
+    /// exists, so every sync path, including Settings' enable and retry, does nothing.
+    @ObservationIgnored let allowsCloudSync: Bool
     private(set) var libraryRevision = 0
 
     // MARK: - State
@@ -184,6 +187,7 @@ class LibraryStore {
         defer { isInvalidatingLibraryDisplay = false }
         libraryDisplayCache = nil
         libraryDisplayGeneration &+= 1
+        LibraryBenchmarkSignposts.displayDidInvalidate()
     }
 
     /// Whether the library already holds an entry, regardless of the active category or filters.
@@ -202,9 +206,11 @@ class LibraryStore {
             guard let key = TMDbAPIKeyStorage().retrieveKey() else { return false }
             return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         },
-        airingReminderPruningEnabled: Bool = false
+        airingReminderPruningEnabled: Bool = false,
+        allowsCloudSync: Bool = true
     ) {
         self.dataProvider = dataProvider
+        self.allowsCloudSync = allowsCloudSync
         let syncChangeRecorder = LibrarySyncChangeRecorder(dataProvider: dataProvider)
         let repository = LibraryRepository(
             dataProvider: dataProvider,
@@ -239,8 +245,10 @@ class LibraryStore {
                 "Initial library fetch failed: \(String(describing: error), privacy: .public)"
             )
         }
-        self.syncCoordinator = LibrarySyncCoordinator(store: self)
-        setupLibrarySyncScheduling()
+        if allowsCloudSync {
+            self.syncCoordinator = LibrarySyncCoordinator(store: self)
+            setupLibrarySyncScheduling()
+        }
     }
 
     func reloadPersistedPreferences() {
@@ -927,6 +935,7 @@ class LibraryStore {
             LibrarySyncCoordinator.hydrateMissingEntry,
         dateProvider: @escaping @MainActor @Sendable () -> Date = { .now }
     ) {
+        guard allowsCloudSync else { return }
         syncCoordinator = LibrarySyncCoordinator(
             store: self,
             client: client,
