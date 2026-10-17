@@ -149,9 +149,9 @@
             // The response is immutable; its target scene is only read on the main actor below.
             nonisolated(unsafe) let response = response
             await MainActor.run {
-                AiringReminderCoordinator.shared.receiveNotificationRoute(
-                    entryIdentityRawID: entryIdentityRawID,
-                    targetSceneIdentifier: response.targetScene?.session.persistentIdentifier
+                LibraryEntryRouter.shared.requestEntry(
+                    entryIdentityRawID,
+                    inSceneIdentifiedBy: response.targetScene?.session.persistentIdentifier
                 )
             }
         }

@@ -15,14 +15,12 @@ import AppIntents
 /// entries themselves open the entry from Spotlight.
 struct AniShelfShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
-        #if !os(macOS)
-            AppShortcut(
-                intent: OpenLibraryEntryIntent(),
-                phrases: ["Open an entry in \(.applicationName)"],
-                shortTitle: "Open Entry",
-                systemImageName: "rectangle.portrait.on.rectangle.portrait"
-            )
-        #endif
+        AppShortcut(
+            intent: OpenLibraryEntryIntent(),
+            phrases: ["Open an entry in \(.applicationName)"],
+            shortTitle: "Open Entry",
+            systemImageName: "rectangle.portrait.on.rectangle.portrait"
+        )
         AppShortcut(
             intent: MarkNextEpisodeWatchedIntent(),
             phrases: ["Watched the next episode in \(.applicationName)"],

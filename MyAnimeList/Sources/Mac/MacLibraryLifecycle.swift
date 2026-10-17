@@ -179,21 +179,8 @@
             response: UNNotificationResponse
         ) async {
             await MainActor.run {
-                // macOS reports no target scene: the most recently active library window opens
-                // the entry, even when hidden or minimized, or a new one does when every library
-                // window is closed.
-                let window = MacLibraryWindows.frontmost
-                AiringReminderCoordinator.shared.receiveNotificationRoute(
-                    entryIdentityRawID: entryIdentityRawID,
-                    targetSceneIdentifier: window?.sceneIdentifier
-                )
-                NSApplication.shared.activate()
-                if let window {
-                    if window.isMiniaturized { window.deminiaturize(nil) }
-                    window.makeKeyAndOrderFront(nil)
-                } else {
-                    MacLibraryWindows.openNew()
-                }
+                // macOS reports no target scene for a notification response.
+                MacLibraryWindows.openEntry(entryIdentityRawID: entryIdentityRawID)
             }
         }
     }
@@ -218,6 +205,25 @@
 
         static func openNew() {
             openWindow?(id: MacWindowID.library)
+        }
+
+        /// Opens an entry in the frontmost library window.
+        ///
+        /// A new window opens the entry when every library window is closed. Airing reminders
+        /// and the Open Entry intent both route through here.
+        static func openEntry(entryIdentityRawID: String) {
+            let window = frontmost
+            LibraryEntryRouter.shared.requestEntry(
+                entryIdentityRawID,
+                inSceneIdentifiedBy: window?.sceneIdentifier
+            )
+            NSApplication.shared.activate()
+            if let window {
+                if window.isMiniaturized { window.deminiaturize(nil) }
+                window.makeKeyAndOrderFront(nil)
+            } else {
+                openNew()
+            }
         }
     }
 

@@ -12,10 +12,11 @@ import SwiftUI
 extension View {
     /// Window-level library behavior both library roots share.
     ///
-    /// `openRoutedEntry` shows the
-    /// entry an airing-reminder notification or, on iOS, an Open Entry intent opened in this
-    /// window, after the root dismisses whatever covers the library. Selection pruning stays with each root, since only the root
-    /// knows which entries its window shows.
+    /// `openRoutedEntry` shows the entry an airing-reminder notification or an Open Entry intent
+    /// opened in this window, after the root dismisses whatever covers the library. Both arrive
+    /// through `LibraryEntryRouter`, except the intent on iOS, which `onAppIntentExecution`
+    /// delivers. Selection pruning stays with each root, since only the root knows which
+    /// entries its window shows.
     func libraryWindowBehaviors(
         store: LibraryStore,
         browse: LibraryBrowseState,
@@ -39,6 +40,7 @@ fileprivate struct LibraryWindowBehaviors: ViewModifier {
     @Environment(\.windowSceneIdentifier) private var windowSceneIdentifier
     private let airingReminders = AiringReminderCoordinator.shared
     private let windows = AppWindowCoordinator.shared
+    private let entryRouter = LibraryEntryRouter.shared
 
     func body(content: Content) -> some View {
         content
@@ -49,16 +51,16 @@ fileprivate struct LibraryWindowBehaviors: ViewModifier {
                 else { return }
                 browse.highlightRequest = nil
             }
-            .onChange(of: airingReminders.pendingRoute, initial: true) {
-                handleAiringReminderRoute()
+            .onChange(of: entryRouter.pendingRoute, initial: true) {
+                handlePendingEntryRoute()
             }
             .onChange(of: windowSceneIdentifier) {
-                handleAiringReminderRoute()
+                handlePendingEntryRoute()
             }
             // A route targeting a closed window falls back to the remaining windows. Deferring
             // lets a disconnected iOS scene leave `connectedScenes` first.
             .onChange(of: windows.registeredWindowIDs) {
-                Task { @MainActor in handleAiringReminderRoute() }
+                Task { @MainActor in handlePendingEntryRoute() }
             }
             #if !os(macOS)
                 .onAppIntentExecution(OpenLibraryEntryIntent.self) { intent in
@@ -106,13 +108,13 @@ fileprivate struct LibraryWindowBehaviors: ViewModifier {
         )
     }
 
-    private func handleAiringReminderRoute() {
+    private func handlePendingEntryRoute() {
         // A window whose scene is already disconnected is being torn down and must not consume the route.
         if let windowSceneIdentifier, !WindowScenes.canReceiveRoute(windowSceneIdentifier) {
             return
         }
         guard
-            let entryIdentityRawID = airingReminders.claimPendingRoute(
+            let entryIdentityRawID = entryRouter.claimPendingRoute(
                 forSceneIdentifier: windowSceneIdentifier,
                 isSceneConnected: WindowScenes.canReceiveRoute
             )
