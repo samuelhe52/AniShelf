@@ -1,0 +1,281 @@
+//
+//  EntryDetailMacTrackingRows.swift
+//  MyAnimeList
+//
+//  Created by Claude Code on behalf of Samuel He on 2026/10/17.
+//
+
+#if os(macOS)
+    import DataProvider
+    import SwiftUI
+
+    /// A label/control row for the Mac tracking card: the label on the leading side and
+    /// the control on the trailing side. Labels use the primary color, as in System
+    /// Settings, so the controls do not read as disabled. An
+    /// optional accessory, such as the rewatch badge, follows the label.
+    struct EntryTrackingRow<Accessory: View, Content: View>: View {
+        let title: LocalizedStringResource
+        @ViewBuilder let accessory: Accessory
+        @ViewBuilder let content: Content
+
+        init(
+            _ title: LocalizedStringResource,
+            @ViewBuilder accessory: () -> Accessory = { EmptyView() },
+            @ViewBuilder content: () -> Content
+        ) {
+            self.title = title
+            self.accessory = accessory()
+            self.content = content()
+        }
+
+        var body: some View {
+            HStack(alignment: .center, spacing: 8) {
+                Text(title)
+                    .lineLimit(1)
+                accessory
+                Spacer(minLength: 12)
+                content
+            }
+            .padding(.vertical, 7)
+        }
+    }
+
+    /// Completed rewatches as a number field and stepper, the same control as episode
+    /// progress. The Rewatching flag lives in the status row's context menu instead.
+    struct EntryRewatchCountRow: View {
+        @Bindable var entry: AnimeEntry
+
+        private static let range = 0...999
+
+        private var count: Binding<Int> {
+            Binding(
+                get: { entry.rewatchCount },
+                set: { newValue in
+                    withAnimation(.default) {
+                        _ = entry.updateRewatchCount(min(max(newValue, Self.range.lowerBound), Self.range.upperBound))
+                    }
+                }
+            )
+        }
+
+        var body: some View {
+            EntryTrackingRow(EntryDetailL10n.timesRewatched) {
+                HStack(spacing: 6) {
+                    TextField(value: count, format: .number) {
+                        Text(EntryDetailL10n.timesRewatched)
+                    }
+                    .labelsHidden()
+                    .multilineTextAlignment(.trailing)
+                    .monospacedDigit()
+                    .frame(width: 52)
+
+                    Stepper(value: count, in: Self.range) {
+                        Text(EntryDetailL10n.timesRewatched)
+                    }
+                    .labelsHidden()
+                }
+            }
+        }
+    }
+
+    /// Start and finish rows. An unset date is a placeholder rather than a dimmed copy of
+    /// today, and a date the status does not expect stays hidden until it has a value.
+    ///
+    /// Hiding dates is rare, so it lives in the rows' context menu rather than its own
+    /// row; while dates are hidden, one Dates row offers to track them again.
+    struct EntryDateRows: View {
+        @Bindable var entry: AnimeEntry
+
+        private var isLocked: Bool {
+            entry.watchStatus == .dropped
+        }
+
+        var body: some View {
+            if entry.isDateTrackingEnabled {
+                trackedRows
+            } else {
+                Divider()
+                EntryTrackingRow(EntryDetailL10n.dates) {
+                    Button(EntryDetailL10n.trackDates) {
+                        setDateTracking(true)
+                    }
+                    .buttonStyle(.link)
+                }
+            }
+        }
+
+        @ViewBuilder
+        private var trackedRows: some View {
+            let slots = entry.visibleDateSlots
+            if slots.start {
+                Divider()
+                EntryTrackingRow(EntryDetailL10n.dateStarted) {
+                    EntryDateToken(
+                        date: $entry.dateStarted.onSet { entry.markTrackingModified() },
+                        range: Date.distantPast...(entry.dateFinished ?? .now),
+                        isLocked: isLocked
+                    )
+                }
+                .contextMenu { dateMenu(clearing: $entry.dateStarted) }
+            }
+            if slots.finish {
+                Divider()
+                EntryTrackingRow(EntryDetailL10n.dateFinished) {
+                    HStack(spacing: 8) {
+                        if let duration {
+                            Text(duration)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        EntryDateToken(
+                            date: $entry.dateFinished.onSet { entry.markTrackingModified() },
+                            range: (entry.dateStarted ?? .distantPast)...Date.distantFuture,
+                            isLocked: isLocked
+                        )
+                    }
+                }
+                .contextMenu { dateMenu(clearing: $entry.dateFinished) }
+            }
+            if isLocked {
+                Label(EntryDetailL10n.droppedDatesLocked, systemImage: "lock.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 7)
+            }
+        }
+
+        @ViewBuilder
+        private func dateMenu(clearing date: Binding<Date?>) -> some View {
+            if date.wrappedValue != nil, !isLocked {
+                Button(EntryDetailL10n.clear) {
+                    date.wrappedValue = nil
+                    entry.markTrackingModified()
+                }
+                Divider()
+            }
+            Button(EntryDetailL10n.hideDates) {
+                setDateTracking(false)
+            }
+        }
+
+        private func setDateTracking(_ isEnabled: Bool) {
+            withAnimation(.default) {
+                _ = entry.updateDateTrackingEnabled(isEnabled)
+            }
+        }
+
+        /// Whole days between the two dates, shown only once both exist.
+        private var duration: String? {
+            guard let start = entry.dateStarted, let finish = entry.dateFinished else { return nil }
+            let calendar = Calendar.current
+            let startDay = calendar.startOfDay(for: start)
+            let finishDay = calendar.startOfDay(for: finish)
+            guard finishDay > startDay else { return nil }
+            return (startDay..<finishDay).formatted(.components(style: .wide, fields: [.day]))
+        }
+    }
+
+    /// One date as a quiet capsule. A click opens a calendar with Today and Clear.
+    fileprivate struct EntryDateToken: View {
+        @Binding var date: Date?
+        let range: ClosedRange<Date>
+        let isLocked: Bool
+
+        @State private var isEditing = false
+        @State private var isHovering = false
+
+        var body: some View {
+            Button {
+                isEditing = true
+            } label: {
+                Group {
+                    if let date {
+                        Text(date, format: .dateTime.year().month(.twoDigits).day(.twoDigits))
+                            .monospacedDigit()
+                    } else {
+                        Label {
+                            Text(EntryDetailL10n.notSet)
+                        } icon: {
+                            Image(systemName: "plus")
+                        }
+                        .labelStyle(.titleAndIcon)
+                        .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+                .background {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Color.primary.opacity(isHovering && !isLocked ? 0.1 : 0.05))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .onHover { isHovering = $0 }
+            .disabled(isLocked)
+            .opacity(isLocked ? 0.5 : 1)
+            .popover(isPresented: $isEditing, arrowEdge: .bottom) {
+                EntryDateCalendar(date: $date, range: range) {
+                    isEditing = false
+                }
+            }
+        }
+    }
+
+    fileprivate struct EntryDateCalendar: View {
+        @Binding var date: Date?
+        let range: ClosedRange<Date>
+        let dismiss: () -> Void
+
+        private var selection: Binding<Date> {
+            Binding(
+                get: { date ?? min(max(.now, range.lowerBound), range.upperBound) },
+                set: { date = $0 }
+            )
+        }
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 10) {
+                DatePicker(selection: selection, in: range, displayedComponents: [.date]) {
+                    EmptyView()
+                }
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+                // The calendar takes focus when the popover opens; its ring framed the
+                // whole month in accent blue.
+                .focusEffectDisabled()
+
+                HStack {
+                    Button(EntryDetailL10n.today) {
+                        date = .now
+                        dismiss()
+                    }
+                    .disabled(!range.contains(.now))
+                    Spacer(minLength: 12)
+                    Button(EntryDetailL10n.clear) {
+                        date = nil
+                        dismiss()
+                    }
+                    .disabled(date == nil)
+                }
+                .controlSize(.small)
+            }
+            .padding(12)
+        }
+    }
+
+    extension AnimeEntry {
+        /// Which date rows show: a date shows when it has a value or when the status
+        /// expects one.
+        fileprivate var visibleDateSlots: (start: Bool, finish: Bool) {
+            switch watchStatus {
+            case .planToWatch:
+                (true, dateFinished != nil)
+            case .watching, .watched:
+                (true, true)
+            case .dropped:
+                (dateStarted != nil || dateFinished == nil, dateFinished != nil)
+            }
+        }
+    }
+#endif

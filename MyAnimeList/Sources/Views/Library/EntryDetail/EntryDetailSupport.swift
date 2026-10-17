@@ -44,6 +44,8 @@ enum EntryDetailL10n {
     static let hideDates: LocalizedStringResource = "Hide Dates"
     static let dateStarted: LocalizedStringResource = "Date Started"
     static let dateFinished: LocalizedStringResource = "Date Finished"
+    static let today: LocalizedStringResource = "Today"
+    static let dates: LocalizedStringResource = "Dates"
     static let droppedDatesLocked: LocalizedStringResource =
         "Dates are locked while this entry is dropped."
     static let notes: LocalizedStringResource = "Notes"

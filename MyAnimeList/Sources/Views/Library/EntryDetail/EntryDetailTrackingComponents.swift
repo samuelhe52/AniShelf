@@ -18,40 +18,62 @@ struct EntryScoreCard: View {
     private let bounceInAnimation = Animation.spring(response: 0.18, dampingFraction: 0.42)
     private let bounceOutAnimation = Animation.spring(response: 0.28, dampingFraction: 0.72)
 
+    /// Inline drops the title row and the Clear button for the Mac tracking row; a click
+    /// on the current score clears it there.
+    var isInline = false
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 12) {
-                Label {
-                    Text(EntryDetailL10n.score)
-                        .font(.subheadline.weight(.semibold))
-                } icon: {
-                    Image(systemName: "star")
-                        .font(.subheadline.weight(.semibold))
-                }
-                .foregroundStyle(.secondary)
-
-                Spacer(minLength: 12)
-
-                Button {
+        if isInline {
+            HStack(spacing: 2) {
+                scoreButtons
+            }
+            .contextMenu {
+                Button(EntryDetailL10n.clear) {
                     withAnimation(selectionAnimation) {
                         onSetScore(nil)
                     }
-                } label: {
-                    Text(EntryDetailL10n.clear)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.plain)
                 .disabled(score == nil)
-                .opacity(score == nil ? 0.42 : 1)
             }
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .center, spacing: 12) {
+                    Label {
+                        Text(EntryDetailL10n.score)
+                            .font(.subheadline.weight(.semibold))
+                    } icon: {
+                        Image(systemName: "star")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .foregroundStyle(.secondary)
 
-            HStack(spacing: 10) {
-                ForEach(Array(AnimeEntry.validScoreRange), id: \.self) { value in
-                    scoreButton(for: value)
+                    Spacer(minLength: 12)
+
+                    Button {
+                        withAnimation(selectionAnimation) {
+                            onSetScore(nil)
+                        }
+                    } label: {
+                        Text(EntryDetailL10n.clear)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(score == nil)
+                    .opacity(score == nil ? 0.42 : 1)
                 }
+
+                HStack(spacing: 10) {
+                    scoreButtons
+                }
+                .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private var scoreButtons: some View {
+        ForEach(Array(AnimeEntry.validScoreRange), id: \.self) { value in
+            scoreButton(for: value)
         }
     }
 
@@ -60,15 +82,21 @@ struct EntryScoreCard: View {
         let isBouncing = bouncingScore == value
 
         return Button {
-            setScore(value)
+            if isInline, score == value {
+                withAnimation(selectionAnimation) {
+                    onSetScore(nil)
+                }
+            } else {
+                setScore(value)
+            }
         } label: {
             Image(systemName: isFilled ? "star.fill" : "star")
-                .font(.title3.weight(isFilled ? .semibold : .regular))
+                .font((isInline ? Font.body : .title3).weight(isFilled ? .semibold : .regular))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(isFilled ? .yellow : Color.secondary)
                 .opacity(isFilled ? 1 : 0.8)
                 .scaleEffect(isBouncing ? 1.34 : 1)
-                .frame(width: 36, height: 36)
+                .frame(width: isInline ? 22 : 36, height: isInline ? 22 : 36)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -103,13 +131,51 @@ struct EntryDetailTrackingSection: View {
     @Binding var isEditingDetails: Bool
 
     var body: some View {
-        Group {
-            if scoringEnabled {
-                VStack(alignment: .leading, spacing: 16) {
-                    EntryScoreCard(score: entry.score) { entry.updateScore($0) }
-                    Divider()
+        #if os(macOS)
+            // The Mac inspector keeps Tracking open, so there is no disclosure header; the
+            // card uses the same label/value rows as the stat card above it.
+            EntryDetailTrackingEditor(
+                entry: entry,
+                originalNotes: originalNotes,
+                scoringEnabled: scoringEnabled,
+                episodeProgressTrackingEnabled: episodeProgressTrackingEnabled,
+                onWatchStatusSelected: onWatchStatusSelected,
+                onEpisodeProgressCompletionSuggested: onEpisodeProgressCompletionSuggested
+            )
+            .padding(.horizontal, 12)
+            .padding(.vertical, 2)
+            .popupGlassPanel(cornerRadius: 24)
+        #else
+            disclosureBody
+        #endif
+    }
 
-                    PopupNestedDisclosureSection(
+    #if !os(macOS)
+        private var disclosureBody: some View {
+            Group {
+                if scoringEnabled {
+                    VStack(alignment: .leading, spacing: 16) {
+                        EntryScoreCard(score: entry.score) { entry.updateScore($0) }
+                        Divider()
+
+                        PopupNestedDisclosureSection(
+                            EntryDetailL10n.tracking,
+                            systemImage: "checklist",
+                            isExpanded: $isEditingDetails
+                        ) {
+                            EntryDetailTrackingEditor(
+                                entry: entry,
+                                originalNotes: originalNotes,
+                                episodeProgressTrackingEnabled: episodeProgressTrackingEnabled,
+                                onWatchStatusSelected: onWatchStatusSelected,
+                                onEpisodeProgressCompletionSuggested: onEpisodeProgressCompletionSuggested
+                            )
+                        }
+                    }
+                    .padding(panelStyle.contentPadding)
+                    .popupGlassPanel(cornerRadius: 24)
+                } else {
+                    PopupDisclosureCard(
                         EntryDetailL10n.tracking,
                         systemImage: "checklist",
                         isExpanded: $isEditingDetails
@@ -123,45 +189,27 @@ struct EntryDetailTrackingSection: View {
                         )
                     }
                 }
-                .padding(panelStyle.contentPadding)
-                .popupGlassPanel(cornerRadius: 24)
-            } else {
-                PopupDisclosureCard(
-                    EntryDetailL10n.tracking,
-                    systemImage: "checklist",
-                    isExpanded: $isEditingDetails
-                ) {
-                    EntryDetailTrackingEditor(
-                        entry: entry,
-                        originalNotes: originalNotes,
-                        episodeProgressTrackingEnabled: episodeProgressTrackingEnabled,
-                        onWatchStatusSelected: onWatchStatusSelected,
-                        onEpisodeProgressCompletionSuggested: onEpisodeProgressCompletionSuggested
-                    )
-                }
             }
         }
-    }
+    #endif
 }
 
 fileprivate struct EntryDetailTrackingEditor: View {
     @Bindable var entry: AnimeEntry
     /// The notes when the inspector opened; the Mac offers Revert Notes after a rewrite.
     let originalNotes: String?
+    /// The Mac puts the score in the editor's rows; iOS shows it in its own card above.
+    var scoringEnabled = false
     let episodeProgressTrackingEnabled: Bool
     let onWatchStatusSelected: (AnimeEntry.WatchStatus) -> Void
     let onEpisodeProgressCompletionSuggested: (AnimeEntryEpisodeProgressCompletionPrompt) -> Void
 
     private var notesEditorHeight: CGFloat {
         #if os(macOS)
-            120
+            200
         #else
             180
         #endif
-    }
-
-    private var dateTrackingButtonLabel: LocalizedStringResource {
-        entry.isDateTrackingEnabled ? EntryDetailL10n.hideDates : EntryDetailL10n.trackDates
     }
 
     private var isDateTrackingLocked: Bool {
@@ -189,217 +237,303 @@ fileprivate struct EntryDetailTrackingEditor: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .center, spacing: 12) {
-                    Text(EntryDetailL10n.watchStatus)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+        #if os(macOS)
+            macBody
+        #else
+            mobileBody
+        #endif
+    }
 
-                    if showsRewatchControls {
-                        EntryRewatchControls(entry: entry)
+    #if os(macOS)
+        /// Label/value rows with dividers, matching the stat card above the tracking card.
+        private var macBody: some View {
+            VStack(alignment: .leading, spacing: 0) {
+                if scoringEnabled {
+                    EntryTrackingRow(EntryDetailL10n.score) {
+                        EntryScoreCard(score: entry.score, onSetScore: { entry.updateScore($0) }, isInline: true)
                     }
+                    Divider()
+                }
 
-                    Spacer(minLength: 12)
-
-                    Button {
-                        withAnimation(.default) {
-                            _ = entry.updateDateTrackingEnabled(!entry.isDateTrackingEnabled)
+                EntryTrackingRow(EntryDetailL10n.watchStatus) {
+                    AnimeEntryWatchedStatusPicker(
+                        selection: activeWatchStatusBinding,
+                        isDisabled: isDateTrackingLocked,
+                        isRewatching: entry.isRewatching
+                    )
+                    .pickerStyle(.segmented)
+                }
+                // Usually set by the rewatch prompt; the menu is for corrections. The
+                // middle segment reads "Rewatching" while the flag is on.
+                .contextMenu {
+                    if entry.watchStatus == .watching {
+                        Toggle(isOn: rewatchingBinding) {
+                            Text(EntryDetailL10n.rewatching)
                         }
-                    } label: {
-                        Text(dateTrackingButtonLabel)
+                    }
+                }
+
+                if showsRewatchControls {
+                    Divider()
+                    EntryRewatchCountRow(entry: entry)
+                }
+
+                EntryDateRows(entry: entry)
+
+                if episodeProgressTrackingEnabled, entry.watchStatus == .watching {
+                    Divider()
+                    EntryEpisodeProgressControl(
+                        entry: entry,
+                        onCompletionPromptRequested: onEpisodeProgressCompletionSuggested
+                    )
+                    .id(entry.libraryIdentity.rawID)
+                    .padding(.vertical, 7)
+                }
+
+                Divider()
+                notesSection
+                    .padding(.vertical, 10)
+            }
+            .animation(.default, value: entry.watchStatus)
+            .animation(.default, value: entry.isDateTrackingEnabled)
+        }
+
+        private var rewatchingBinding: Binding<Bool> {
+            Binding(
+                get: { entry.isRewatching },
+                set: { isRewatching in
+                    withAnimation(.default) {
+                        _ = entry.updateRewatching(isRewatching)
+                    }
+                }
+            )
+        }
+    #else
+        private var dateTrackingButtonLabel: LocalizedStringResource {
+            entry.isDateTrackingEnabled ? EntryDetailL10n.hideDates : EntryDetailL10n.trackDates
+        }
+
+        private var mobileBody: some View {
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .center, spacing: 12) {
+                        Text(EntryDetailL10n.watchStatus)
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
+
+                        if showsRewatchControls {
+                            EntryRewatchControls(entry: entry)
+                        }
+
+                        Spacer(minLength: 12)
+
+                        Button {
+                            withAnimation(.default) {
+                                _ = entry.updateDateTrackingEnabled(!entry.isDateTrackingEnabled)
+                            }
+                        } label: {
+                            Text(dateTrackingButtonLabel)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
-                }
-                AnimeEntryWatchedStatusPicker(
-                    selection: activeWatchStatusBinding,
-                    isDisabled: isDateTrackingLocked,
-                    isRewatching: entry.isRewatching
-                )
-                .pickerStyle(.segmented)
-
-                if entry.isDateTrackingEnabled {
-                    AnimeEntryDatePickers(
-                        dateStarted: $entry.dateStarted.onSet { entry.markTrackingModified() },
-                        dateFinished: $entry.dateFinished.onSet { entry.markTrackingModified() },
-                        isLocked: isDateTrackingLocked
+                    AnimeEntryWatchedStatusPicker(
+                        selection: activeWatchStatusBinding,
+                        isDisabled: isDateTrackingLocked,
+                        isRewatching: entry.isRewatching
                     )
+                    .pickerStyle(.segmented)
+
+                    if entry.isDateTrackingEnabled {
+                        AnimeEntryDatePickers(
+                            dateStarted: $entry.dateStarted.onSet { entry.markTrackingModified() },
+                            dateFinished: $entry.dateFinished.onSet { entry.markTrackingModified() },
+                            isLocked: isDateTrackingLocked
+                        )
+                    }
                 }
+
+                if episodeProgressTrackingEnabled, entry.watchStatus == .watching {
+                    EntryEpisodeProgressControl(
+                        entry: entry,
+                        onCompletionPromptRequested: onEpisodeProgressCompletionSuggested
+                    )
+                    .id(entry.libraryIdentity.rawID)
+                }
+
+                Divider()
+
+                notesSection
             }
+            .animation(.default, value: entry.watchStatus)
+        }
+    #endif
 
-            if episodeProgressTrackingEnabled, entry.watchStatus == .watching {
-                EntryEpisodeProgressControl(
-                    entry: entry,
-                    onCompletionPromptRequested: onEpisodeProgressCompletionSuggested
-                )
-                .id(entry.libraryIdentity.rawID)
-            }
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text(EntryDetailL10n.notes)
+    private var notesSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(EntryDetailL10n.notes)
+                    #if !os(macOS)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
-                    #if os(macOS)
-                        Spacer(minLength: 8)
-                        // Edits save as they happen. A rewrite, unlike an append, may lose text,
-                        // so it can be reverted here; iOS offers Discard from its Done menu.
-                        if let originalNotes, !entry.notes.hasPrefix(originalNotes) {
-                            Button(EntryDetailL10n.revertNotes) {
-                                entry.updateNotes(originalNotes)
-                            }
-                            .controlSize(.small)
-                        }
                     #endif
-                }
-                ScrollIsolatedPlaceholderTextEditor(
-                    text: Binding(
-                        get: { entry.notes },
-                        set: { entry.updateNotes($0) }
-                    ),
-                    placeholder: EntryDetailL10n.writeSomeThoughts
-                )
                 #if os(macOS)
-                    // A quiet inset surface keeps the editor legible without a bright
-                    // white panel competing with the surrounding inspector content.
-                    .font(.body)
-                    .lineSpacing(3)
-                    .frame(height: notesEditorHeight)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 4)
-                    .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .strokeBorder(.separator, lineWidth: 0.5)
-                    }
-                #else
-                    .frame(height: notesEditorHeight)
-                    .padding(12)
-                    .background(
-                        .thinMaterial,
-                        in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    )
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(.white.opacity(0.1), lineWidth: 0.5)
+                    Spacer(minLength: 8)
+                    // Edits save as they happen. A rewrite, unlike an append, may lose text,
+                    // so it can be reverted here; iOS offers Discard from its Done menu.
+                    if let originalNotes, !entry.notes.hasPrefix(originalNotes) {
+                        Button(EntryDetailL10n.revertNotes) {
+                            entry.updateNotes(originalNotes)
+                        }
+                        .controlSize(.small)
                     }
                 #endif
             }
+            ScrollIsolatedPlaceholderTextEditor(
+                text: Binding(
+                    get: { entry.notes },
+                    set: { entry.updateNotes($0) }
+                ),
+                placeholder: EntryDetailL10n.writeSomeThoughts
+            )
+            #if os(macOS)
+                // A quiet inset surface keeps the editor legible without a bright
+                // white panel competing with the surrounding inspector content.
+                .font(.body)
+                .lineSpacing(3)
+                .frame(height: notesEditorHeight)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 4)
+                .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(.separator, lineWidth: 0.5)
+                }
+            #else
+                .frame(height: notesEditorHeight)
+                .padding(12)
+                .background(
+                    .thinMaterial,
+                    in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(.white.opacity(0.1), lineWidth: 0.5)
+                }
+            #endif
         }
-        .animation(.default, value: entry.watchStatus)
     }
 }
 
-fileprivate struct EntryRewatchControls: View {
-    @Bindable var entry: AnimeEntry
-    @State private var showingEditor = false
+#if !os(macOS)
+    fileprivate struct EntryRewatchControls: View {
+        @Bindable var entry: AnimeEntry
+        @State private var showingEditor = false
 
-    private static let rewatchCountRange = 0...999
+        private static let rewatchCountRange = 0...999
 
-    private var badgeTint: Color {
-        entry.isRewatching ? .accentColor : .secondary
-    }
-
-    var body: some View {
-        Button {
-            showingEditor = true
-        } label: {
-            badge
+        private var badgeTint: Color {
+            entry.isRewatching ? .accentColor : .secondary
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(entry.isRewatching ? EntryDetailL10n.rewatching : EntryDetailL10n.timesRewatched)
-        .accessibilityValue(accessibilityValue)
-        .popover(isPresented: $showingEditor) {
-            editor
-                .padding(16)
-                .presentationCompactAdaptation(.popover)
-        }
-    }
 
-    private var badge: some View {
-        HStack(spacing: 3) {
-            Image(systemName: "repeat")
-            if entry.isRewatching {
-                Text(EntryDetailL10n.watchNumber(entry.rewatchCount + 1))
-                    .monospacedDigit()
-                    .contentTransition(.numericText(value: Double(entry.rewatchCount + 1)))
-            } else if entry.rewatchCount > 0 {
-                Text(verbatim: "×\(entry.rewatchCount.formatted())")
-                    .monospacedDigit()
-                    .contentTransition(.numericText(value: Double(entry.rewatchCount)))
+        var body: some View {
+            Button {
+                showingEditor = true
+            } label: {
+                badge
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(entry.isRewatching ? EntryDetailL10n.rewatching : EntryDetailL10n.timesRewatched)
+            .accessibilityValue(accessibilityValue)
+            .popover(isPresented: $showingEditor) {
+                editor
+                    .padding(16)
+                    .presentationCompactAdaptation(.popover)
             }
         }
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(badgeTint)
-        .lineLimit(1)
-        .fixedSize()
-        .padding(.horizontal, 7)
-        .padding(.vertical, 3)
-        .background {
-            Capsule()
-                .fill(badgeTint.opacity(0.14))
-        }
-        .contentShape(Rectangle())
-    }
 
-    private var accessibilityValue: Text {
-        entry.isRewatching
-            ? Text(EntryDetailL10n.watchNumber(entry.rewatchCount + 1))
-            : Text(entry.rewatchCount, format: .number)
-    }
-
-    private var editor: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if entry.watchStatus == .watching {
-                Toggle(isOn: rewatchingBinding) {
-                    Text(EntryDetailL10n.rewatching)
-                        .font(.subheadline)
-                }
-            }
-
-            Stepper(value: rewatchCountBinding, in: Self.rewatchCountRange) {
-                HStack(spacing: 12) {
-                    Text(EntryDetailL10n.timesRewatched)
-                        .font(.subheadline)
-                    Spacer(minLength: 12)
-                    Text(entry.rewatchCount, format: .number)
-                        .font(.subheadline.weight(.semibold))
+        private var badge: some View {
+            HStack(spacing: 3) {
+                Image(systemName: "repeat")
+                if entry.isRewatching {
+                    Text(EntryDetailL10n.watchNumber(entry.rewatchCount + 1))
                         .monospacedDigit()
-                        .foregroundStyle(.secondary)
+                        .contentTransition(.numericText(value: Double(entry.rewatchCount + 1)))
+                } else if entry.rewatchCount > 0 {
+                    Text(verbatim: "×\(entry.rewatchCount.formatted())")
+                        .monospacedDigit()
                         .contentTransition(.numericText(value: Double(entry.rewatchCount)))
                 }
             }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(badgeTint)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background {
+                Capsule()
+                    .fill(badgeTint.opacity(0.14))
+            }
+            .contentShape(Rectangle())
         }
-        .frame(idealWidth: 280, maxWidth: 320)
-        .fixedSize(horizontal: false, vertical: true)
-    }
 
-    private var rewatchingBinding: Binding<Bool> {
-        Binding(
-            get: { entry.isRewatching },
-            set: { isRewatching in
-                withAnimation(.default) {
-                    _ = entry.updateRewatching(isRewatching)
+        private var accessibilityValue: Text {
+            entry.isRewatching
+                ? Text(EntryDetailL10n.watchNumber(entry.rewatchCount + 1))
+                : Text(entry.rewatchCount, format: .number)
+        }
+
+        private var editor: some View {
+            VStack(alignment: .leading, spacing: 10) {
+                if entry.watchStatus == .watching {
+                    Toggle(isOn: rewatchingBinding) {
+                        Text(EntryDetailL10n.rewatching)
+                            .font(.subheadline)
+                    }
+                }
+
+                Stepper(value: rewatchCountBinding, in: Self.rewatchCountRange) {
+                    HStack(spacing: 12) {
+                        Text(EntryDetailL10n.timesRewatched)
+                            .font(.subheadline)
+                        Spacer(minLength: 12)
+                        Text(entry.rewatchCount, format: .number)
+                            .font(.subheadline.weight(.semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                            .contentTransition(.numericText(value: Double(entry.rewatchCount)))
+                    }
                 }
             }
-        )
-    }
+            .frame(idealWidth: 280, maxWidth: 320)
+            .fixedSize(horizontal: false, vertical: true)
+        }
 
-    private var rewatchCountBinding: Binding<Int> {
-        Binding(
-            get: { entry.rewatchCount },
-            set: { count in
-                withAnimation(.default) {
-                    _ = entry.updateRewatchCount(count)
+        private var rewatchingBinding: Binding<Bool> {
+            Binding(
+                get: { entry.isRewatching },
+                set: { isRewatching in
+                    withAnimation(.default) {
+                        _ = entry.updateRewatching(isRewatching)
+                    }
                 }
-            }
-        )
+            )
+        }
+
+        private var rewatchCountBinding: Binding<Int> {
+            Binding(
+                get: { entry.rewatchCount },
+                set: { count in
+                    withAnimation(.default) {
+                        _ = entry.updateRewatchCount(count)
+                    }
+                }
+            )
+        }
     }
-}
+#endif
 
 fileprivate struct EntryEpisodeProgressControl: View {
     private struct EpisodeProgressFeedbackTrigger: Equatable {
@@ -471,49 +605,36 @@ fileprivate struct EntryEpisodeProgressControl: View {
         if let selectedSeason, let summary {
             let displayedEpisode = displayedWatchedThroughEpisode(for: summary)
 
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .center, spacing: 12) {
-                    Text(EntryDetailL10n.episodeProgress)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-
-                    Spacer(minLength: 12)
-
-                    if seasonOptions.count > 1 {
-                        Menu {
-                            ForEach(seasonOptions, id: \.self) { seasonNumber in
-                                Button {
-                                    withAnimation(progressAnimation) {
-                                        selectedSeasonNumber = seasonNumber
-                                        progressInteractionState = .idle
-                                    }
-                                } label: {
-                                    if seasonNumber == selectedSeason {
-                                        Label(seasonTitle(for: seasonNumber), systemImage: "checkmark")
-                                    } else {
-                                        Text(seasonTitle(for: seasonNumber))
-                                    }
-                                }
-                            }
-                        } label: {
-                            seasonPickerLabel(title: seasonTitle(for: selectedSeason))
+            VStack(alignment: .leading, spacing: progressSectionSpacing) {
+                #if os(macOS)
+                    // The tracking card's row style: label and season leading, count trailing.
+                    HStack(alignment: .center, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(EntryDetailL10n.episodeProgress)
+                                .lineLimit(1)
+                            seasonControl(selectedSeason: selectedSeason)
                         }
-                        .buttonStyle(.plain)
-                    } else {
-                        Text(seasonTitle(for: selectedSeason))
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    #if os(macOS)
+                        Spacer(minLength: 12)
                         macProgressRow(
                             seasonNumber: selectedSeason,
                             summary: summary,
                             displayedEpisode: displayedEpisode
                         )
-                    #else
+                    }
+                #else
+                    HStack(alignment: .center, spacing: 12) {
+                        Text(EntryDetailL10n.episodeProgress)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        Spacer(minLength: 12)
+
+                        seasonControl(selectedSeason: selectedSeason)
+                    }
+                #endif
+
+                VStack(alignment: .leading, spacing: 4) {
+                    #if !os(macOS)
                         HStack(spacing: 24) {
                             progressButton(
                                 systemImage: "minus",
@@ -586,7 +707,9 @@ fileprivate struct EntryEpisodeProgressControl: View {
                                 commitSliderInteraction(for: selectedSeason, summary: summary)
                             }
                         )
-                        .padding(.horizontal, 18)
+                        #if !os(macOS)
+                            .padding(.horizontal, 18)
+                        #endif
                         .accessibilityLabel(Text(EntryDetailL10n.episodeProgress))
                         .accessibilityValue(
                             Text("Episode \(displayedEpisode) of \(episodeCount)")
@@ -619,6 +742,44 @@ fileprivate struct EntryEpisodeProgressControl: View {
 
     private func seasonTitle(for seasonNumber: Int) -> String {
         seasonNumber == 0 ? String(localized: "Specials") : String(localized: "Season \(seasonNumber)")
+    }
+
+    private var progressSectionSpacing: CGFloat {
+        #if os(macOS)
+            6
+        #else
+            14
+        #endif
+    }
+
+    @ViewBuilder
+    private func seasonControl(selectedSeason: Int) -> some View {
+        if seasonOptions.count > 1 {
+            Menu {
+                ForEach(seasonOptions, id: \.self) { seasonNumber in
+                    Button {
+                        withAnimation(progressAnimation) {
+                            selectedSeasonNumber = seasonNumber
+                            progressInteractionState = .idle
+                        }
+                    } label: {
+                        if seasonNumber == selectedSeason {
+                            Label(seasonTitle(for: seasonNumber), systemImage: "checkmark")
+                        } else {
+                            Text(seasonTitle(for: seasonNumber))
+                        }
+                    }
+                }
+            } label: {
+                seasonPickerLabel(title: seasonTitle(for: selectedSeason))
+            }
+            .buttonStyle(.plain)
+            .fixedSize()
+        } else {
+            Text(seasonTitle(for: selectedSeason))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
     }
 
     private func seasonPickerLabel(title: String) -> some View {
@@ -675,8 +836,6 @@ fileprivate struct EntryEpisodeProgressControl: View {
                     Text(EntryDetailL10n.episodeProgress)
                 }
                 .labelsHidden()
-
-                Spacer(minLength: 8)
 
                 Menu {
                     Button(EntryDetailL10n.markSeasonWatched, systemImage: "checkmark.circle") {

@@ -26,10 +26,9 @@ struct AnimeEntryWatchedStatusPicker: View {
             .lineLimit(1)
             #if os(macOS)
                 // An empty label still took space and pushed the first segment out of view;
-                // the control keeps its natural width, centered.
+                // the control keeps its natural width, trailing in the tracking row.
                 .labelsHidden()
                 .fixedSize()
-                .frame(maxWidth: .infinity)
             #endif
             .transaction { transaction in
                 transaction.animation = nil
@@ -75,58 +74,8 @@ struct AnimeEntryDatePickers: View {
     }
 
     var body: some View {
-        #if os(macOS)
-            macBody
-        #else
-            verticalBody
-        #endif
+        verticalBody
     }
-
-    #if os(macOS)
-        /// Label/value rows, as in a Mac inspector, instead of two captioned pickers.
-        private var macBody: some View {
-            VStack(alignment: .leading, spacing: 8) {
-                Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 6) {
-                    GridRow {
-                        Text(EntryDetailL10n.dateStarted)
-                            .foregroundStyle(.secondary)
-                            .gridColumnAlignment(.trailing)
-                        DatePicker(
-                            selection: dateStartedPickerBinding,
-                            in: dateStartedRange,
-                            displayedComponents: [.date]
-                        ) {
-                            Text(EntryDetailL10n.dateStarted)
-                        }
-                        .labelsHidden()
-                        .opacity(dateStarted == nil ? 0.5 : 1)
-                    }
-                    GridRow {
-                        Text(EntryDetailL10n.dateFinished)
-                            .foregroundStyle(.secondary)
-                        DatePicker(
-                            selection: dateFinishedPickerBinding,
-                            in: dateFinishedRange,
-                            displayedComponents: [.date]
-                        ) {
-                            Text(EntryDetailL10n.dateFinished)
-                        }
-                        .labelsHidden()
-                        .opacity(dateFinished == nil ? 0.5 : 1)
-                    }
-                }
-                .datePickerStyle(.stepperField)
-                .disabled(isLocked)
-                .animation(.default, value: isLocked)
-
-                if isLocked {
-                    Label(EntryDetailL10n.droppedDatesLocked, systemImage: "lock.fill")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-    #endif
 
     private var verticalBody: some View {
         VStack(alignment: .leading, spacing: 8) {
