@@ -236,14 +236,7 @@
 
         var body: some View {
             VStack(alignment: .leading, spacing: 10) {
-                DatePicker(selection: selection, in: range, displayedComponents: [.date]) {
-                    EmptyView()
-                }
-                .datePickerStyle(.graphical)
-                .labelsHidden()
-                // The calendar takes focus when the popover opens; its ring framed the
-                // whole month in accent blue.
-                .focusEffectDisabled()
+                PlainCalendarPicker(selection: selection, range: range)
 
                 HStack {
                     Button(EntryDetailL10n.today) {
@@ -261,6 +254,56 @@
                 .controlSize(.small)
             }
             .padding(12)
+        }
+    }
+
+    /// The AppKit month calendar without its bezel. SwiftUI's graphical `DatePicker` keeps
+    /// the bezel, which drew a second panel inside the popover's glass.
+    fileprivate struct PlainCalendarPicker: NSViewRepresentable {
+        @Binding var selection: Date
+        let range: ClosedRange<Date>
+
+        func makeNSView(context: Context) -> NSDatePicker {
+            let picker = NSDatePicker()
+            picker.datePickerStyle = .clockAndCalendar
+            picker.datePickerElements = .yearMonthDay
+            picker.isBezeled = false
+            picker.isBordered = false
+            picker.drawsBackground = false
+            // The calendar takes focus when the popover opens; its ring framed the whole
+            // month in accent blue.
+            picker.focusRingType = .none
+            picker.target = context.coordinator
+            picker.action = #selector(Coordinator.dateChanged(_:))
+            return picker
+        }
+
+        func updateNSView(_ picker: NSDatePicker, context: Context) {
+            context.coordinator.selection = $selection
+            picker.locale = context.environment.locale
+            picker.calendar = context.environment.calendar
+            picker.timeZone = context.environment.timeZone
+            picker.minDate = range.lowerBound
+            picker.maxDate = range.upperBound
+            if picker.dateValue != selection {
+                picker.dateValue = selection
+            }
+        }
+
+        func makeCoordinator() -> Coordinator {
+            Coordinator(selection: $selection)
+        }
+
+        @MainActor final class Coordinator: NSObject {
+            var selection: Binding<Date>
+
+            init(selection: Binding<Date>) {
+                self.selection = selection
+            }
+
+            @objc func dateChanged(_ sender: NSDatePicker) {
+                selection.wrappedValue = sender.dateValue
+            }
         }
     }
 
