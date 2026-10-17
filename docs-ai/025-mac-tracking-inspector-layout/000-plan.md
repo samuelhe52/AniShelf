@@ -72,4 +72,4 @@ rewatch badge, and it did not match the stat card directly above it.
 
 ## Amendments
 
-None yet.
+- Updated 2026-10-18: Stabilize the Mac status picker's initial placement — see [002-status-picker-layout.md](002-status-picker-layout.md).

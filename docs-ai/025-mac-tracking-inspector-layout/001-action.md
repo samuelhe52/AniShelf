@@ -33,5 +33,6 @@ None known.
 - `make run-mac`: launched; maintainer visual pass on the first row version led to the review fixes. After the fixes: `make build` and `make run-mac` succeeded; not yet re-reviewed.
 
 ## Open questions
+- 2026-10-18 follow-up: the Mac watch-status picker now uses an explicitly sized native control; see [002-status-picker-layout.md](002-status-picker-layout.md) for failed alternatives and current runtime/test evidence.
 - Badge root cause is inferred: the snapshot updated (test passes) and only argument-only changes of the interpolated resource failed to redraw on macOS. Not confirmed against SwiftUI internals.
 - Unverified visually after the review fixes: the hidden-dates row and the focus-ring fix.

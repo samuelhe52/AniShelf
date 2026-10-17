@@ -14,26 +14,26 @@ struct AnimeEntryWatchedStatusPicker: View {
     var isRewatching = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Picker(selection: $selection) {
-                Text(EntryDetailL10n.planned).tag(AnimeEntry.WatchStatus.planToWatch)
-                Text(isRewatching ? EntryDetailL10n.rewatching : EntryDetailL10n.watching).tag(
-                    AnimeEntry.WatchStatus.watching)
-                Text(EntryDetailL10n.watched).tag(AnimeEntry.WatchStatus.watched)
-            } label: {
-            }
-            .disabled(isDisabled)
-            .lineLimit(1)
-            #if os(macOS)
-                // An empty label still took space and pushed the first segment out of view;
-                // the control keeps its natural width, trailing in the tracking row.
-                .labelsHidden()
+        #if os(macOS)
+            MacWatchStatusPicker(selection: $selection, isRewatching: isRewatching)
+                .disabled(isDisabled)
                 .fixedSize()
-            #endif
-            .transaction { transaction in
-                transaction.animation = nil
+        #else
+            VStack(alignment: .leading, spacing: 12) {
+                Picker(selection: $selection) {
+                    Text(EntryDetailL10n.planned).tag(AnimeEntry.WatchStatus.planToWatch)
+                    Text(isRewatching ? EntryDetailL10n.rewatching : EntryDetailL10n.watching).tag(
+                        AnimeEntry.WatchStatus.watching)
+                    Text(EntryDetailL10n.watched).tag(AnimeEntry.WatchStatus.watched)
+                } label: {
+                }
+                .disabled(isDisabled)
+                .lineLimit(1)
+                .transaction { transaction in
+                    transaction.animation = nil
+                }
             }
-        }
+        #endif
     }
 }
 
