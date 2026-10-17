@@ -10,6 +10,8 @@ import SwiftUI
 
 // The Mac grid is `MacLibraryGrid`.
 #if !os(macOS)
+    import UIKit
+
     struct LibraryGridView: View {
         @AppStorage(.libraryOpenDetailWithSingleTap) private var openDetailWithSingleTap = false
         @Environment(\.libraryEntryDetailActivation) private var detailActivation
@@ -24,7 +26,12 @@ import SwiftUI
         let highlightRequest: LibraryHighlightRequest?
         /// Whether the trailing inspector is showing; the grid reflows smoothly when it changes.
         var isInspectorPresented = false
-        private let columns = [GridItem(.adaptive(minimum: 104, maximum: 132), spacing: 10)]
+        private var columns: [GridItem] {
+            // Larger iPad cards spread column thresholds farther apart during window resizing.
+            // Use device idiom so a narrow iPad window does not switch density at a size-class boundary.
+            let isPad = UIDevice.current.userInterfaceIdiom == .pad
+            return [GridItem(.adaptive(minimum: isPad ? 132 : 104, maximum: isPad ? 168 : 132), spacing: 10)]
+        }
 
         var body: some View {
             ScrollViewReader { proxy in
