@@ -125,6 +125,16 @@
                 }
                 .keyboardShortcut("l")
                 .disabled(entry == nil)
+                // The same flag as the inspector's status context menu; it only applies
+                // while watching.
+                Toggle(
+                    "Rewatching",
+                    isOn: Binding(
+                        get: { entry?.isRewatching == true },
+                        set: { isRewatching in _ = entry?.updateRewatching(isRewatching) }
+                    )
+                )
+                .disabled(entry?.watchStatus != .watching)
                 Divider()
                 Button("Switch Poster…") { if let entry { library?.switchPoster(entry) } }
                     .disabled(entry == nil)
