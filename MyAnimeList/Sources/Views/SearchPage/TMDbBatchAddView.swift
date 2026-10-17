@@ -125,68 +125,68 @@ struct TMDbBatchAddView: View {
             }
         }
     #else
-    private var inputStep: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                TMDbSetupPanel {
-                    VStack(alignment: .leading, spacing: 14) {
-                        Label {
-                            Text(inputSectionTitleResource)
-                        } icon: {
-                            Image(systemName: "text.badge.plus")
-                        }
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+        private var inputStep: some View {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    TMDbSetupPanel {
+                        VStack(alignment: .leading, spacing: 14) {
+                            Label {
+                                Text(inputSectionTitleResource)
+                            } icon: {
+                                Image(systemName: "text.badge.plus")
+                            }
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
 
-                        HStack(alignment: .firstTextBaseline, spacing: 6) {
-                            Text(inputSectionMessageResource)
-                                .fixedSize(horizontal: false, vertical: true)
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                Text(inputSectionMessageResource)
+                                    .fixedSize(horizontal: false, vertical: true)
 
-                            InfoTip(
-                                title: inputTipTitleResource,
-                                message: inputTipMessageResource,
-                                copyText: inputTipCopyText,
-                                width: 300,
-                                iconFont: .caption
+                                InfoTip(
+                                    title: inputTipTitleResource,
+                                    message: inputTipMessageResource,
+                                    copyText: inputTipCopyText,
+                                    width: 300,
+                                    iconFont: .caption
+                                )
+                            }
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+
+                            PlaceholderTextEditor(
+                                text: $promptInput,
+                                placeholder: inputPlaceholderResource
+                            )
+                            .noInputAutocapitalization()
+                            .autocorrectionDisabled(true)
+                            .frame(height: TMDbBatchAddLayout.promptHeight)
+                            .padding(12)
+                            .background(
+                                Color.platformSecondarySystemBackground,
+                                in: RoundedRectangle(cornerRadius: 18, style: .continuous)
                             )
                         }
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-
-                        PlaceholderTextEditor(
-                            text: $promptInput,
-                            placeholder: inputPlaceholderResource
-                        )
-                        .noInputAutocapitalization()
-                        .autocorrectionDisabled(true)
-                        .frame(height: TMDbBatchAddLayout.promptHeight)
-                        .padding(12)
-                        .background(
-                            Color.platformSecondarySystemBackground,
-                            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        )
                     }
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
-            .padding(.bottom, 12)
-        }
-        .scrollBounceBehavior(.basedOnSize)
-        .scrollDismissesKeyboard(.interactively)
-        .navigationTitle(Text(batchAddTitleResource))
-        .inlineNavigationTitle()
-        .toolbar {
-            ToolbarItem(placement: .sheetLeading) {
-                Button {
-                    exitBatchAdd()
-                } label: {
-                    backLabel
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollDismissesKeyboard(.interactively)
+            .navigationTitle(Text(batchAddTitleResource))
+            .inlineNavigationTitle()
+            .toolbar {
+                ToolbarItem(placement: .sheetLeading) {
+                    Button {
+                        exitBatchAdd()
+                    } label: {
+                        backLabel
+                    }
+                    .accessibilityLabel(Text(backTitleResource))
                 }
-                .accessibilityLabel(Text(backTitleResource))
             }
         }
-    }
     #endif
 
     private var resultsStep: some View {
@@ -248,42 +248,32 @@ struct TMDbBatchAddView: View {
         #if os(macOS)
             .toolbar { macSheetActions }
         #else
-        .toolbar {
-            ToolbarItem(placement: .sheetLeading) {
-                Button {
-                    exitBatchAdd()
-                } label: {
-                    backLabel
+            .toolbar {
+                ToolbarItem(placement: .sheetLeading) {
+                    Button {
+                        exitBatchAdd()
+                    } label: {
+                        backLabel
+                    }
+                    .accessibilityLabel(Text(backTitleResource))
                 }
-                .accessibilityLabel(Text(backTitleResource))
-            }
 
-            ToolbarItem(placement: .sheetTrailing) {
-                Button {
-                    returnToInputStep()
-                } label: {
-                    #if os(macOS)
-                        Text(editTitleResource)
-                    #else
+                ToolbarItem(placement: .sheetTrailing) {
+                    Button {
+                        returnToInputStep()
+                    } label: {
                         Image(systemName: "square.and.pencil")
-                    #endif
+                    }
+                    .accessibilityLabel(Text(editTitleResource))
                 }
-                .accessibilityLabel(Text(editTitleResource))
             }
-        }
         #endif
         .animation(batchResultsAnimation, value: tmdbSearchService.batchStatus)
         .animation(batchResultsAnimation, value: batchResultsAnimationKey)
     }
 
-    /// Mac sheet bar buttons are text buttons; iOS keeps the chevron.
-    @ViewBuilder
     private var backLabel: some View {
-        #if os(macOS)
-            Text(backTitleResource)
-        #else
-            Image(systemName: "chevron.backward")
-        #endif
+        Image(systemName: "chevron.backward")
     }
 
     @ViewBuilder
