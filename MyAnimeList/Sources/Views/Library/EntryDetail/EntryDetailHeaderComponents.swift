@@ -158,26 +158,24 @@ struct DetailStatCard: View {
         }
     }
 
-    /// A label/value row for the Mac inspector; the stat grid stacks the rows in one box.
+    /// One column of the Mac inspector's metric strip: a bold value over a gray caption.
     private var compactTile: some View {
-        HStack(spacing: 8) {
-            Label {
-                Text(String(localized: card.title))
-            } icon: {
-                Image(systemName: card.symbolName)
-                    .foregroundStyle(.blue)
-            }
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-            Spacer(minLength: 12)
+        VStack(spacing: 2) {
             Text(card.value)
-                .fontWeight(.semibold)
+                .font(.title3.weight(.semibold))
                 .lineLimit(1)
                 .allowsTightening(valueIsShrinkable)
-                .minimumScaleFactor(valueIsShrinkable ? 0.7 : 1)
+                .minimumScaleFactor(valueIsShrinkable ? 0.6 : 1)
+            Text(String(localized: card.title))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
         }
-        .padding(.vertical, 7)
+        .padding(.horizontal, 6)
+        .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
     }
 
     private var tile: some View {

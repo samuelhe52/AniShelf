@@ -32,18 +32,19 @@ struct EntryDetailStatGrid: View {
                 }
             }
         case .grouped:
-            // Label/value rows fit a narrow inspector without truncating the labels.
-            VStack(spacing: 0) {
+            // A borderless metric strip, like the App Store header metrics, so the stats
+            // read as a summary rather than another grouped box of rows.
+            HStack(spacing: 0) {
                 ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
                     if index > 0 {
                         Divider()
+                            .padding(.vertical, 6)
                     }
                     statCard(card)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 2)
-            .popupGlassPanel(cornerRadius: 24)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.vertical, 4)
         }
     }
 
