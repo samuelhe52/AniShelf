@@ -39,6 +39,7 @@ historical runtime scenario was rerun. Entry 010 remains an unimplemented propos
 | 024 | 2026-10-17 | [Mac inspector entry switch without a flash](024-inspector-entry-switch/000-plan.md) | Implemented on `feat/native-macos` (`c4cab57`) | [Action](024-inspector-entry-switch/001-action.md) |
 | 025 | 2026-10-17 | [Mac tracking inspector layout](025-mac-tracking-inspector-layout/000-plan.md) | Implemented on `feat/native-macos` (`ab61824`) | [Action](025-mac-tracking-inspector-layout/001-action.md) |
 | 026 | 2026-10-17 | [Library fixture and performance benchmarks](026-library-performance-benchmarks/000-plan.md) | Implemented on `feat/native-macos` (`1622953`) | [Action](026-library-performance-benchmarks/001-action.md) |
+| 027 | 2026-10-17 | [Mac inspector grid reflow](027-mac-inspector-grid-reflow/000-plan.md) | Implemented — maintainer accepted | [Runtime diagnosis](027-mac-inspector-grid-reflow/001-action.md), [Endpoint reflow](027-mac-inspector-grid-reflow/004-endpoint-transition.md) |
 
 ## Find a contract or source
 

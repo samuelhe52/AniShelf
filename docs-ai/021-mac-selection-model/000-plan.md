@@ -149,3 +149,4 @@ Workflows (Share, Switch Poster), the delete and paste alerts, and focus stay in
 
 - Updated 2026-10-17: The follow-ups on this entry were folded into [001-action.md](001-action.md) when the records were consolidated: native controls and sizing cleanup, the multi-item batch inspector, iOS-only presentation code, and the animation baseline.
 - Updated 2026-10-17: The rejected "fully separate Mac library view" alternative was adopted for the library root and interaction model once the platforms had diverged; see [022](../022-mac-library-root-split/000-plan.md).
+- Updated 2026-10-17: Corrected the action record's attribution of grid jitter to shared behavior after Mac/iPad runtime tracing; the maintainer requested a separate diagnosis and prospective fix record in [027](../027-mac-inspector-grid-reflow/000-plan.md).

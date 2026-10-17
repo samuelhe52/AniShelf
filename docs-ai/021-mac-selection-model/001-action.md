@@ -90,9 +90,15 @@ what iPad already has:
   The opacity transition is back on the Mac.
 - The batch panel's stored copy of the shown posters.
 
-The grid keeps the iPad's scoped reflow animation (`f2ef101`), now fed by
-`LibraryView.isInspectorShown`. Any jitter seen now comes from that shared
-behavior, and it is the baseline for future jitter work.
+The grid kept the iPad's scoped reflow animation (`f2ef101`), then fed by
+`LibraryView.isInspectorShown`. This established a shared animation technique,
+not equivalent runtime behavior across platforms. The 2026-10-17
+[runtime diagnosis](../027-mac-inspector-grid-reflow/001-action.md) found repeated
+unanimated Mac layout updates during inspector resizing, versus one animated
+destination-width update on iPad. A subsequent Mac width-driven animation candidate was
+[rejected and removed](../027-mac-inspector-grid-reflow/003-reject-width-retargeting.md)
+after maintainer review. The subsequent [direct endpoint fix](../027-mac-inspector-grid-reflow/004-endpoint-transition.md)
+was accepted for opening/closing and live window/divider resizing.
 
 ### Key source files
 
@@ -141,4 +147,5 @@ behavior, and it is the baseline for future jitter work.
 - A batch checkbox writes each entry separately, so the three-or-more-entries
   review signal (`appReview.record(.multiSelectAction)`) is recorded only by the
   Status and Score pickers.
-- The grid's reflow jitter while the inspector animates is open.
+- Entry 027 records the accepted endpoint reflow fix and its remaining OS-version
+  and interaction coverage limits.

@@ -19,6 +19,7 @@
     /// one entry's detail, or the batch panel. Swapping content presents or dismisses
     /// nothing; whether the inspector shows is the window's own setting.
     struct MacLibraryInspector: View {
+        @Environment(\.macLibraryInspectorLayout) private var inspectorLayout
         let store: LibraryStore
         let selection: MacLibrarySelection
         /// The entries the window shows, in layout order.
@@ -57,6 +58,11 @@
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onGeometryChange(for: CGFloat.self) {
+                $0.size.width
+            } action: { width in
+                if width > 0 { inspectorLayout?.width = width }
+            }
             .environment(\.macInspectorPosterFlight, posterFlight)
             .overlay { MacInspectorPosterFlightOverlay(posterFlight: posterFlight) }
             .onGeometryChange(for: CGRect.self) {

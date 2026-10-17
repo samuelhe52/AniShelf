@@ -34,6 +34,7 @@
         @State private var sidebarVisibility: NavigationSplitViewVisibility = .automatic
         /// This window's selection. Only views that depend on it read it (see `MacLibrarySelection`).
         @State var selection = MacLibrarySelection()
+        @State private var inspectorLayout = MacLibraryInspectorLayout()
         /// Whether this window shows its inspector, independent of the selection.
         @SceneStorage("libraryInspectorShown") var isInspectorShown = true
         @State var editRequest: MacEntryEditRequest?
@@ -63,6 +64,7 @@
                 libraryBrowserStack
                     .inspector(isPresented: $isInspectorShown) { inspector }
                     .environment(selection)
+                    .environment(\.macLibraryInspectorLayout, inspectorLayout)
                     .navigationSplitViewColumnWidth(min: 520, ideal: 900)
             }
             // Escape clears the selection from anywhere in the window. A focused field or open
