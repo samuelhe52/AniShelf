@@ -17,6 +17,7 @@ import SwiftUI
         @Environment(\.libraryEntryDetailActivation) private var detailActivation
 
         @Environment(LibraryStore.self) private var store
+        @Environment(LibraryBrowseScope.self) private var scope
         @Environment(LibraryEntryInteractionState.self) private var interaction
         @Environment(LibraryEntryActionState.self) private var actions
         let detailActions: LibraryEntryDetailActions
@@ -53,10 +54,10 @@ import SwiftUI
                 }
                 .accessibilityIdentifier("library-grid")
                 .preferredNavigationBarScrollEdgeEffect()
-                .animation(.spring, value: store.groupStrategy)
-                .animation(.spring, value: store.sortReversed)
-                .animation(.spring, value: store.sortStrategy)
-                .animation(.spring, value: store.filters)
+                .animation(.spring, value: scope.groupStrategy)
+                .animation(.spring, value: scope.sortReversed)
+                .animation(.spring, value: scope.sortStrategy)
+                .animation(.spring, value: scope.filters)
             }
         }
 
@@ -177,7 +178,7 @@ import SwiftUI
                 open: { _ in },
                 edit: { _ in }
             ),
-            displayItems: store.libraryDisplayItems,
+            displayItems: LibraryBrowseScope(store: store).displayItems,
             scrolledID: .constant(nil),
             scrollRequest: nil,
             highlightRequest: nil
@@ -186,6 +187,7 @@ import SwiftUI
             DataProvider.forPreview.generateEntriesForPreview()
         }
         .environment(store)
+        .environment(LibraryBrowseScope(store: store))
         .environment(interaction)
         .environment(interaction.actions)
     }

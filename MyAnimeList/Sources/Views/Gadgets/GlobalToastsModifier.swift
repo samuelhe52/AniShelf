@@ -12,9 +12,6 @@ struct GlobalToastsModifier: ViewModifier {
     var center: ToastCenter
 
     @Environment(\.windowSceneIdentifier) private var windowSceneIdentifier
-    #if os(macOS)
-        @Environment(\.appearsActive) private var appearsActive
-    #endif
 
     func body(content: Content) -> some View {
         @Bindable var center = center
@@ -130,10 +127,6 @@ struct GlobalToastsModifier: ViewModifier {
                         titleResource: "Unfavorited")
                 }
             )
-            #if os(macOS)
-                .onChange(of: appearsActive, initial: true) { claimIfActive() }
-                .onChange(of: windowSceneIdentifier) { claimIfActive() }
-            #endif
     }
 
     private var isPresentingWindow: Bool {
@@ -155,12 +148,6 @@ struct GlobalToastsModifier: ViewModifier {
             set: { if isPresentingWindow { binding.wrappedValue = $0 } }
         )
     }
-
-    #if os(macOS)
-        private func claimIfActive() {
-            if appearsActive { center.windowBecameActive(sceneIdentifier: windowSceneIdentifier) }
-        }
-    #endif
 }
 
 extension View {

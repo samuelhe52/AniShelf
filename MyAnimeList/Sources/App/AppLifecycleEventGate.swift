@@ -16,6 +16,7 @@ import SwiftUI
 final class AppLifecycleEventGate {
     private var hasHandledLaunch = false
     private var lastHandledPhase: ScenePhase?
+    private var hasSeenActivation = false
     private var hasHandledKeyChange = false
     private var lastHandledKey: String?
 
@@ -30,6 +31,16 @@ final class AppLifecycleEventGate {
     func shouldHandlePhaseChange(to phase: ScenePhase) -> Bool {
         guard phase != lastHandledPhase else { return false }
         lastHandledPhase = phase
+        return true
+    }
+
+    /// Passes every app activation after the first, whose sync and refresh the launch handling
+    /// already covers.
+    func shouldHandleActivation() -> Bool {
+        guard hasSeenActivation else {
+            hasSeenActivation = true
+            return false
+        }
         return true
     }
 

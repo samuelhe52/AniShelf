@@ -8,11 +8,6 @@
 import Foundation
 
 extension LibraryStore {
-    var activeCategory: LibraryCategory? {
-        guard categoriesEnabled, let activeCategoryID else { return nil }
-        return categories.first { $0.id == activeCategoryID }
-    }
-
     var knownCategoryIDs: Set<LibraryCategory.ID> {
         Set(categories.map(\.id))
     }

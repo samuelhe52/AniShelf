@@ -16,6 +16,7 @@
     struct MacLibraryGrid: View {
         @Environment(\.macLibraryInspectorLayout) private var inspectorLayout
         @Environment(LibraryStore.self) private var store
+        @Environment(LibraryBrowseScope.self) private var scope
         @Environment(LibraryEntryActionState.self) private var actions
         @Environment(MacLibrarySelection.self) private var selection
         let detailActions: LibraryEntryDetailActions
@@ -66,10 +67,10 @@
                         // the visible scroll viewport. Do not animate either sizing proposal.
                         .transaction(value: hasInspectorInset) { $0.animation = nil }
                         .preferredNavigationBarScrollEdgeEffect()
-                        .animation(.spring, value: store.groupStrategy)
-                        .animation(.spring, value: store.sortReversed)
-                        .animation(.spring, value: store.sortStrategy)
-                        .animation(.spring, value: store.filters)
+                        .animation(.spring, value: scope.groupStrategy)
+                        .animation(.spring, value: scope.sortReversed)
+                        .animation(.spring, value: scope.sortStrategy)
+                        .animation(.spring, value: scope.filters)
                         .focusable()
                         .focusEffectDisabled()
                         .focused($isGridFocused)
@@ -190,7 +191,7 @@
                 open: { _ in },
                 edit: { _ in }
             ),
-            displayItems: store.libraryDisplayItems,
+            displayItems: LibraryBrowseScope(store: store).displayItems,
             scrolledID: .constant(nil),
             scrollRequest: nil,
             highlightRequest: nil
@@ -199,6 +200,7 @@
             DataProvider.forPreview.generateEntriesForPreview()
         }
         .environment(store)
+        .environment(LibraryBrowseScope(store: store))
         .environment(LibraryEntryActionState())
         .environment(MacLibrarySelection())
     }

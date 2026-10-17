@@ -46,6 +46,7 @@ struct LibraryEntryInteractionStateTests {
         // Selection must never invalidate the store's display cache; see docs-ai 023.
         @Test @MainActor func selectionTogglesReuseTheCachedDisplayList() throws {
             let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+            let scope = LibraryBrowseScope(store: store)
             let first = makeLibraryEntry(name: "First", tmdbID: 401, daySaved: 1)
             let second = makeLibraryEntry(name: "Second", tmdbID: 402, daySaved: 2)
             try store.repository.newEntry(first)
@@ -53,24 +54,24 @@ struct LibraryEntryInteractionStateTests {
             try store.refreshLibrary()
             let state = LibraryEntryInteractionState()
 
-            _ = store.libraryDisplayItems
-            let computeCount = store.libraryDisplayComputeCount
+            _ = scope.displayItems
+            let computeCount = scope.displayComputeCount
 
             state.enterMultiSelection()
             state.toggleSelection(for: first.libraryIdentity)
             state.toggleSelection(for: second.libraryIdentity)
             state.toggleSelection(for: first.libraryIdentity)
-            _ = state.selectedEntryIDs.compactMap(store.displayedEntry(for:))
-            _ = store.libraryDisplayItems
+            _ = state.selectedEntryIDs.compactMap(scope.displayedEntry(for:))
+            _ = scope.displayItems
             state.exitMultiSelection()
-            _ = store.libraryDisplayIDs
+            _ = scope.displayIDs
 
-            #expect(store.libraryDisplayComputeCount == computeCount)
+            #expect(scope.displayComputeCount == computeCount)
 
-            store.sortReversed.toggle()
-            _ = store.libraryDisplayItems
-            _ = store.libraryDisplayItems
-            #expect(store.libraryDisplayComputeCount == computeCount + 1)
+            scope.sortReversed.toggle()
+            _ = scope.displayItems
+            _ = scope.displayItems
+            #expect(scope.displayComputeCount == computeCount + 1)
         }
 
         @Test @MainActor func replacingAnInspectorDetailKeepsTheInspectorHostPresented() throws {
@@ -136,13 +137,14 @@ struct LibraryEntryInteractionStateTests {
     // Entry edits from the inspector must reach the cached row snapshots; see docs-ai 023.
     @Test @MainActor func rewatchCountEditRefreshesTheCachedSnapshot() throws {
         let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let scope = LibraryBrowseScope(store: store)
         let entry = makeLibraryEntry(name: "Rewatched", tmdbID: 403, daySaved: 1)
         try store.repository.newEntry(entry)
         try store.refreshLibrary()
 
-        #expect(store.libraryDisplayItems.first?.snapshot.rewatchCount == 0)
+        #expect(scope.displayItems.first?.snapshot.rewatchCount == 0)
         _ = entry.updateRewatchCount(2)
-        #expect(store.libraryDisplayItems.first?.snapshot.rewatchCount == 2)
+        #expect(scope.displayItems.first?.snapshot.rewatchCount == 2)
     }
 
     #if !os(macOS)

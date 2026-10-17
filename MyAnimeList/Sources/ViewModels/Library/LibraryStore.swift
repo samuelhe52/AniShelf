@@ -59,9 +59,11 @@ class LibraryStore {
     var posterLanguage: PosterLanguagePreference { preferences.loadPosterLanguage() }
     private(set) var libraryCloudSyncStatus: LibraryCloudSyncStatus
 
-    // MARK: - Filtering & Sorting State
+    // MARK: - Browse Preferences
 
-    var filters: Set<AnimeFilter> = []
+    // Filters, category, and the display list are per window (`LibraryBrowseScope`, docs-ai
+    // 028). Sort and group here are the preferences new windows start from.
+
     var hideDroppedByDefault: Bool = false {
         willSet {
             preferences.saveHideDroppedByDefault(newValue)
@@ -78,10 +80,6 @@ class LibraryStore {
         willSet {
             preferences.saveDefaultFilters(newValue)
             libraryStoreLogger.debug("Updated default filters to \(newValue.map(\.id).sorted())")
-        }
-        didSet {
-            guard defaultFilters != oldValue else { return }
-            applyDefaultFilters()
         }
     }
     var autoPrefetchImagesOnAddAndRestore: Bool = false {
@@ -125,9 +123,6 @@ class LibraryStore {
             preferences.saveCategoriesEnabled(newValue)
             libraryStoreLogger.debug("Updated categories enabled to \(newValue)")
         }
-        didSet {
-            if !categoriesEnabled { activeCategoryID = nil }
-        }
     }
     /// Optional pinned switcher for List and Grid; retained when categories are disabled.
     var categoryStripEnabled: Bool = false {
@@ -138,64 +133,6 @@ class LibraryStore {
     /// Write through the category operations.
     var categories: [LibraryCategory] = [] {
         willSet { preferences.saveCategories(newValue) }
-        didSet {
-            if let activeCategoryID, !categories.contains(where: { $0.id == activeCategoryID }) {
-                self.activeCategoryID = nil
-            }
-        }
-    }
-    /// The category the library is narrowed to; `nil` means All. Shared across windows, like `filters`.
-    var activeCategoryID: LibraryCategory.ID?
-
-    /// Bumped when the cached display list goes stale, so views reading it re-render.
-    private var libraryDisplayGeneration = 0
-    @ObservationIgnored private var libraryDisplayCache: LibraryDisplayCache?
-    @ObservationIgnored private var isInvalidatingLibraryDisplay = false
-    /// How many times the display list was computed; tests use it to catch spurious invalidation.
-    @ObservationIgnored private(set) var libraryDisplayComputeCount = 0
-
-    var libraryDisplayItems: [LibraryEntryDisplayItem] { libraryDisplay.items }
-
-    var libraryDisplayIDs: [LibraryEntryIdentity] { libraryDisplay.ids }
-
-    var libraryOnDisplay: [AnimeEntry] { libraryDisplay.items.map(\.entry) }
-
-    /// The shown entry with this identity, if the current scope and filters show it.
-    func displayedEntry(for identity: LibraryEntryIdentity) -> AnimeEntry? {
-        libraryDisplay.entriesByID[identity]
-    }
-
-    /// The filtered, sorted display list, recomputed only after something it read changes.
-    ///
-    /// Observation tracking covers every input the computation reads, including the entries'
-    /// own properties, so unsaved edits such as favorite toggles invalidate it like saves do.
-    /// The cache is cleared in the input's `willSet` and rebuilt on the next read, which runs in
-    /// the mutating caller's transaction and keeps its animation.
-    private var libraryDisplay: LibraryDisplayCache {
-        _ = libraryDisplayGeneration
-        if let libraryDisplayCache { return libraryDisplayCache }
-        libraryDisplayComputeCount += 1
-        let cache = withObservationTracking {
-            LibraryDisplayCache(items: filterAndSort(library).map(LibraryEntryDisplayItem.init))
-        } onChange: { [weak self] in
-            if Thread.isMainThread {
-                MainActor.assumeIsolated { self?.invalidateLibraryDisplay() }
-            } else {
-                Task { @MainActor in self?.invalidateLibraryDisplay() }
-            }
-        }
-        if !isInvalidatingLibraryDisplay {
-            libraryDisplayCache = cache
-        }
-        return cache
-    }
-
-    private func invalidateLibraryDisplay() {
-        isInvalidatingLibraryDisplay = true
-        defer { isInvalidatingLibraryDisplay = false }
-        libraryDisplayCache = nil
-        libraryDisplayGeneration &+= 1
-        LibraryBenchmarkSignposts.displayDidInvalidate()
     }
 
     /// Whether the library already holds an entry, regardless of the active category or filters.
@@ -239,7 +176,6 @@ class LibraryStore {
         self.shouldResumeInterruptedCloudSyncBootstrap =
             snapshot.cloudSyncStatus.isEnabled && snapshot.cloudSyncStatus.bootstrapState == .running
         reloadPersistedPreferences()
-        applyDefaultFilters()
         lastObservedCloudSyncedPreferencesHash = preferences.cloudSyncedSettingsPayloadHash()
         setupUpdateLibrary()
         setupTMDbAPIConfigurationChangeMonitor()
@@ -298,8 +234,7 @@ class LibraryStore {
         if libraryCloudSyncStatus != snapshot.cloudSyncStatus {
             libraryCloudSyncStatus = snapshot.cloudSyncStatus
         }
-        // Browse filters reset only through `defaultFilters.didSet`, so unrelated
-        // preference writes (such as category edits) keep the current filters.
+        // Open windows keep their browse state; each applies new default filters itself.
     }
 
     func applyRemoteCloudSyncedPreferences(_ snapshot: LibrarySettingsSyncSnapshot) {
@@ -1074,10 +1009,6 @@ class LibraryStore {
         let now = Date.now
         entry.updateWatchStatus(defaultNewEntryWatchStatus, at: now)
         entry.markCreatedForLibrary(at: now)
-    }
-
-    func applyDefaultFilters() {
-        filters = defaultFilters
     }
 }
 

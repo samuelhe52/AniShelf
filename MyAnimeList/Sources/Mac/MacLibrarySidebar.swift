@@ -11,21 +11,20 @@
 
     /// One browse scope picked from the Mac sidebar.
     ///
-    /// A scope is a projection of the store's shared browse state (filters and active category),
-    /// so every window shows the same sidebar selection.
+    /// A scope is a projection of the window's browse state (filters and active category), so
+    /// each window has its own sidebar selection.
     enum MacLibraryScope: Hashable {
         case all
         case filter(String)
         case category(LibraryCategory.ID)
     }
 
-    extension LibraryStore {
+    extension LibraryBrowseScope {
         /// The sidebar row matching the current browse state, or `nil` for combinations the
         /// sidebar cannot express, such as several filters picked from the toolbar menu.
         var macLibraryScope: MacLibraryScope? {
             get {
-                let categoryID = categoriesEnabled ? activeCategoryID : nil
-                switch (categoryID, filters.count) {
+                switch (activeCategoryID, filters.count) {
                 case (nil, 0): return .all
                 case (let id?, 0): return .category(id)
                 case (nil, 1): return filters.first.map { .filter($0.id) }
@@ -40,7 +39,7 @@
                     filters = []
                 case .filter(let id):
                     activeCategoryID = nil
-                    filters = AnimeFilter(preferenceID: id).map { [$0] } ?? []
+                    filters = LibraryStore.AnimeFilter(preferenceID: id).map { [$0] } ?? []
                 case .category(let id):
                     filters = []
                     activeCategoryID = id
@@ -51,6 +50,7 @@
 
     struct MacLibrarySidebar: View {
         @Environment(LibraryStore.self) private var store
+        @Environment(LibraryBrowseScope.self) private var scope
         let openCategoryManager: () -> Void
 
         @State private var namePrompt: LibraryCategoryNamePrompt?
@@ -128,7 +128,7 @@
                 switch prompt.purpose {
                 case .create:
                     if let category = store.createCategory(named: name) {
-                        store.macLibraryScope = .category(category.id)
+                        scope.macLibraryScope = .category(category.id)
                     }
                 case .rename(let category):
                     _ = store.renameCategory(category.id, to: name)
@@ -139,9 +139,9 @@
 
         private var scopeBinding: Binding<MacLibraryScope?> {
             Binding(
-                get: { store.macLibraryScope },
-                set: { scope in
-                    store.macLibraryScope = scope
+                get: { scope.macLibraryScope },
+                set: { newScope in
+                    scope.macLibraryScope = newScope
                 }
             )
         }

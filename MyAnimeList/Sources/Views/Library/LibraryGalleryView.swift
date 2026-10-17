@@ -13,6 +13,7 @@ import SwiftUI
 #if !os(macOS)
     struct LibraryGalleryView: View {
         @Environment(LibraryStore.self) private var store
+        @Environment(LibraryBrowseScope.self) private var scope
         @Environment(LibraryEntryInteractionState.self) var interaction
         @Environment(\.dynamicTypeSize) private var dynamicTypeSize
         @Binding var scrolledID: LibraryEntryIdentity?
@@ -33,7 +34,7 @@ import SwiftUI
 
         var body: some View {
             Group {
-                if !store.libraryDisplayItems.isEmpty {
+                if !scope.displayItems.isEmpty {
                     libraryContent
                 } else {
                     Color.clear
@@ -82,7 +83,7 @@ import SwiftUI
         ) -> some View {
             ScrollView(.horizontal) {
                 LazyHStack(spacing: itemSpacing) {
-                    ForEach(store.libraryDisplayItems) { item in
+                    ForEach(scope.displayItems) { item in
                         AnimeEntryCardWrapper(
                             entry: item.entry,
                             snapshot: item.snapshot,
@@ -97,10 +98,10 @@ import SwiftUI
             }
             .contentMargins(.horizontal, horizontalContentMargin, for: .scrollContent)
             .accessibilityIdentifier("library-gallery")
-            .animation(.default, value: store.groupStrategy)
-            .animation(.default, value: store.sortReversed)
-            .animation(.default, value: store.sortStrategy)
-            .animation(.default, value: store.filters)
+            .animation(.default, value: scope.groupStrategy)
+            .animation(.default, value: scope.sortReversed)
+            .animation(.default, value: scope.sortStrategy)
+            .animation(.default, value: scope.filters)
             .scrollClipDisabled()
             .overlay(alignment: .trailing) {
                 if interaction.inspectorPresentation != nil {
@@ -118,7 +119,7 @@ import SwiftUI
             .scrollTargetBehavior(.viewAligned)
             .onChange(of: localScrolledID, initial: true) { _, entryID in
                 guard let entryID,
-                    let entry = store.libraryDisplayItems.first(where: { $0.id == entryID })?.entry
+                    let entry = scope.displayItems.first(where: { $0.id == entryID })?.entry
                 else { return }
                 interaction.focus(entry)
             }

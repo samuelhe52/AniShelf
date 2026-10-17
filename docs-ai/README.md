@@ -21,7 +21,7 @@ historical runtime scenario was rerun. Entry 010 remains an unimplemented propos
 | 005 | 2026-07-13 | [Adaptive library and detail ownership](005-adaptive-library/000-plan.md) | Implemented (retrospective) | [Action](005-adaptive-library/001-action.md) |
 | 006 | 2026-08-09 | [Broadcast resolution and device-local reminders](006-broadcast-and-reminders/000-plan.md) | Implemented (retrospective) | [Action](006-broadcast-and-reminders/001-action.md) |
 | 007 | 2026-08-25 | [Background sync suspension safety](007-background-sync-safety/000-plan.md) | Implemented (retrospective) | [Action](007-background-sync-safety/001-action.md) |
-| 008 | 2026-09-27 | [Multi-window presentation](008-multi-window-presentation/000-plan.md) | Implemented (retrospective) | [Action](008-multi-window-presentation/001-action.md) |
+| 008 | 2026-09-27 | [Multi-window presentation](008-multi-window-presentation/000-plan.md) | Implemented (retrospective); sharing boundary superseded by 028 | [Action](008-multi-window-presentation/001-action.md), [audit backlog](008-multi-window-presentation/002-audit-backlog.md) |
 | 009 | 2026-09-27 | [Cloud sync convergence and partial failures](009-cloud-sync-correctness/000-plan.md) | Implemented (retrospective) | [Action](009-cloud-sync-correctness/001-action.md) |
 | 010 | 2026-09-27 | [Reusable selective sync package](010-selective-sync-package/000-plan.md) | Planned | — |
 | 011 | 2026-09-28 | [Parent-preserving library deletion](011-parent-preserving-deletion/000-plan.md) | Implemented (retrospective) | [Action](011-parent-preserving-deletion/001-action.md) |
@@ -40,6 +40,7 @@ historical runtime scenario was rerun. Entry 010 remains an unimplemented propos
 | 025 | 2026-10-17 | [Mac tracking inspector layout](025-mac-tracking-inspector-layout/000-plan.md) | Implemented on `feat/native-macos` (`ab61824`) | [Action](025-mac-tracking-inspector-layout/001-action.md), [picker alignment](025-mac-tracking-inspector-layout/002-status-picker-layout.md) |
 | 026 | 2026-10-17 | [Library fixture and performance benchmarks](026-library-performance-benchmarks/000-plan.md) | Implemented on `feat/native-macos` (`1622953`) | [Action](026-library-performance-benchmarks/001-action.md) |
 | 027 | 2026-10-17 | [Mac inspector grid reflow](027-mac-inspector-grid-reflow/000-plan.md) | Implemented — maintainer accepted | [Runtime diagnosis](027-mac-inspector-grid-reflow/001-action.md), [Endpoint reflow](027-mac-inspector-grid-reflow/004-endpoint-transition.md) |
+| 028 | 2026-10-18 | [Window state ownership](028-window-state-ownership/000-plan.md) | Implemented — maintainer accepted | [Action](028-window-state-ownership/001-action.md) |
 
 ## Find a contract or source
 

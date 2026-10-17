@@ -10,7 +10,7 @@ import SwiftUI
 /// The library's layout.
 ///
 /// The Mac offers only List and Grid (`macCases`).
-enum LibraryViewStyle: String, CaseIterable {
+enum LibraryViewStyle: String, CaseIterable, Codable {
     case gallery
     case list
     case grid

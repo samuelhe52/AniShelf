@@ -17,6 +17,7 @@ import SwiftUI
         // MARK: - Stored Properties
 
         @Environment(LibraryStore.self) var store
+        @Environment(LibraryBrowseScope.self) var scope
         @Environment(\.platformHorizontalSizeClass) private var horizontalSizeClass
         @Environment(AppReviewPromptController.self) var appReview
 
@@ -31,10 +32,21 @@ import SwiftUI
         @State private var inspectorDetailWorkspaceState = LibraryInspectorDetailWorkspaceState()
 
         // Persistent UI preference
-        @AppStorage(.libraryViewStyle) var libraryViewStyle: LibraryViewStyle = .gallery
         @AppStorage(.libraryScoringEnabled) var scoringEnabled = true
+        /// The last-inspected entry across windows, which a window without its own saved
+        /// inspector entry restores.
         @AppStorage(.libraryLastInspectorDetailEntryIdentity)
-        var persistedLastInspectorDetailEntryIdentity: String?
+        var sharedLastInspectorDetailEntryIdentity: String?
+        /// This window's inspector entry; `nil` until the window saves one, and empty once it
+        /// closes its inspector.
+        @SceneStorage("libraryInspectorDetailEntryIdentity")
+        var sceneInspectorDetailEntryIdentity: String?
+
+        /// This window's view style.
+        var libraryViewStyle: LibraryViewStyle {
+            get { scope.viewStyle }
+            nonmutating set { scope.viewStyle = newValue }
+        }
 
         // MARK: - Body
 
@@ -62,7 +74,7 @@ import SwiftUI
                 isSearching: browse.isSearching,
                 isShowingProfileSettings: showProfileSettings,
                 workspaceState: $inspectorDetailWorkspaceState,
-                persistedLastInspectorDetailEntryIdentity: $persistedLastInspectorDetailEntryIdentity
+                persistedLastInspectorDetailEntryIdentity: persistedInspectorDetailEntryIdentity
             )
             .libraryWindowBehaviors(
                 store: store,
@@ -72,7 +84,24 @@ import SwiftUI
                     openDetails(entry)
                 }
             )
-            .onChange(of: store.libraryDisplayIDs) { pruneSelection() }
+            .onChange(of: scope.displayIDs) { pruneSelection() }
+        }
+
+        /// This window's inspector entry, falling back to the shared last-inspected entry for a
+        /// window that has not saved one; writes update both.
+        private var persistedInspectorDetailEntryIdentity: Binding<String?> {
+            Binding(
+                get: {
+                    guard let sceneInspectorDetailEntryIdentity else {
+                        return sharedLastInspectorDetailEntryIdentity
+                    }
+                    return sceneInspectorDetailEntryIdentity.isEmpty ? nil : sceneInspectorDetailEntryIdentity
+                },
+                set: { identity in
+                    sceneInspectorDetailEntryIdentity = identity ?? ""
+                    sharedLastInspectorDetailEntryIdentity = identity
+                }
+            )
         }
 
         /// Hosts entry detail in the iPad's trailing inspector.
@@ -109,7 +138,7 @@ import SwiftUI
                 .libraryEntryActionOverlays(
                     state: interaction.actions,
                     deleteEntry: { entry in
-                        store.deleteEntry(entry) { browse.requestScroll(to: $0) }
+                        scope.deleteEntry(entry) { browse.requestScroll(to: $0) }
                     },
                     resolveEntry: { store.repository.existingEntry(identity: $0) }
                 )
@@ -186,6 +215,7 @@ import SwiftUI
                 .toolbar {
                     LibraryToolbar(
                         store: store,
+                        scope: scope,
                         interaction: interaction,
                         libraryViewStyle: libraryViewStyleBinding,
                         scoringEnabled: scoringEnabled,
@@ -219,7 +249,7 @@ import SwiftUI
                     LibraryCategoryManagerSheet()
                         .presentationDetents([.medium, .large])
                 }
-                .libraryBrowseSearch(browse, store: store, appReview: appReview, reveal: { _ in })
+                .libraryBrowseSearch(browse, scope: scope, appReview: appReview, reveal: { _ in })
                 .allowsHitTesting(!showProfileSettings)
                 .accessibilityHidden(showProfileSettings)
             }
@@ -236,8 +266,8 @@ import SwiftUI
 
         @ViewBuilder
         private var libraryView: some View {
-            let displayItems = store.libraryDisplayItems
-            let layoutIDs = store.libraryDisplayIDs
+            let displayItems = scope.displayItems
+            let layoutIDs = scope.displayIDs
             let detailActions = LibraryEntryDetailActions(
                 open: openDetails,
                 edit: editDetails
@@ -392,6 +422,7 @@ import SwiftUI
             .onAppear {
                 DataProvider.forPreview.generateEntriesForPreview()
             }
+            .environment(LibraryBrowseScope(store: store))
             .environment(store)
     }
 

@@ -36,15 +36,11 @@ fileprivate struct LibraryWindowBehaviors: ViewModifier {
     let openRoutedEntry: (AnimeEntry) -> Void
 
     @Environment(\.windowSceneIdentifier) private var windowSceneIdentifier
-    @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
     private let airingReminders = AiringReminderCoordinator.shared
+    private let windows = AppWindowCoordinator.shared
 
     func body(content: Content) -> some View {
         content
-            .onChange(of: scoringEnabled) { _, newValue in
-                guard !newValue, store.groupStrategy == .score else { return }
-                store.groupStrategy = .none
-            }
             .task(id: browse.highlightRequest?.token) {
                 // Expire the request so rows recreated later by scrolling or filtering do not pulse again.
                 guard browse.highlightRequest != nil,
@@ -58,14 +54,20 @@ fileprivate struct LibraryWindowBehaviors: ViewModifier {
             .onChange(of: windowSceneIdentifier) {
                 handleAiringReminderRoute()
             }
-            // A route targeting the closed window falls back to the remaining windows.
-            .onOtherWindowSceneClosed(than: windowSceneIdentifier) {
-                handleAiringReminderRoute()
+            // A route targeting a closed window falls back to the remaining windows. Deferring
+            // lets a disconnected iOS scene leave `connectedScenes` first.
+            .onChange(of: windows.registeredWindowIDs) {
+                Task { @MainActor in handleAiringReminderRoute() }
             }
+            // The warning is app-wide, so only the most recently active library window shows it;
+            // Settings and Support have no presenter for it.
             .alert(
                 airingReminderWarningTitle,
                 isPresented: Binding(
-                    get: { airingReminders.presentedWarning != nil },
+                    get: {
+                        airingReminders.presentedWarning != nil
+                            && windows.isFrontmostLibraryWindow(windowSceneIdentifier)
+                    },
                     set: { isPresented in
                         if !isPresented {
                             airingReminders.dismissPresentedWarning()

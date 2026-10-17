@@ -26,7 +26,7 @@
         }
 
         var windowTitle: Text {
-            switch store.macLibraryScope {
+            switch scope.macLibraryScope {
             case .all:
                 Text("All Anime")
             case .filter(let id):
@@ -37,9 +37,9 @@
                     Text("Library")
                 }
             case .category:
-                Text(verbatim: store.activeCategory?.name ?? "")
+                Text(verbatim: scope.activeCategory?.name ?? "")
             case nil:
-                store.filters.count > 1 ? Text("\(store.filters.count) Filters") : Text("Library")
+                scope.filters.count > 1 ? Text("\(scope.filters.count) Filters") : Text("Library")
             }
         }
 
@@ -97,12 +97,8 @@
         func revealInInspector(_ id: LibraryEntryIdentity) {
             if !visibleDisplayItems.contains(where: { $0.id == id }) {
                 find.clear()
-                if store.activeCategoryID != nil,
-                    !store.libraryOnDisplay.contains(where: { $0.libraryIdentity == id })
-                {
-                    store.activeCategoryID = nil
-                }
-                if !store.canRevealEntry(id) { store.resetFiltersToReveal(id) }
+                scope.leaveCategoryToReveal(id)
+                if !scope.canRevealEntry(id) { scope.resetFiltersToReveal(id) }
             }
             showInInspector(id)
             browse.requestScroll(to: id)
@@ -138,9 +134,11 @@
             pruneSelection()
         }
 
-        /// Remembers a single selection as the last-inspected entry, as iPad does for its
-        /// inspector, so the next window opens on it.
+        /// Saves the selection for this window's restoration, and remembers a single selection
+        /// as the last-inspected entry, which a window without saved state opens on.
         func persistSelection(_ ids: Set<LibraryEntryIdentity>) {
+            if ids != lastAppliedSelection { selectionAcceptsRestoration = false }
+            storedSelection = Self.storedSelectionValue(ids)
             if ids.isEmpty {
                 persistedLastInspectorDetailEntryIdentity = nil
             } else if ids.count == 1, let id = ids.first {
@@ -148,12 +146,85 @@
             }
         }
 
-        func restoreSelection() {
-            guard selection.isEmpty,
-                let rawID = persistedLastInspectorDetailEntryIdentity,
-                let item = visibleDisplayItems.first(where: { $0.id.rawID == rawID })
-            else { return }
-            selection.select([item.id])
+        /// Restores this window's Find text and selection, falling back to the last-inspected
+        /// entry for a window that has never saved a selection.
+        func restoreWindowState() {
+            if find.text.isEmpty, !storedFindText.isEmpty {
+                find.text = storedFindText
+            }
+            lastAppliedFindText = find.text
+            if selection.isEmpty {
+                if let storedSelection {
+                    pendingRestoredSelection = Self.rawIDs(in: storedSelection)
+                    selectVisible(pendingRestoredSelection ?? [])
+                } else if let rawID = persistedLastInspectorDetailEntryIdentity {
+                    selectVisible([rawID])
+                }
+            }
+            lastAppliedSelection = selection.ids
+        }
+
+        /// Applies Find text restored after the window appeared; once the user has typed, the
+        /// live text replaces it instead.
+        func restoreFindText(_ text: String) {
+            guard find.text != text else { return }
+            if findAcceptsRestoration {
+                lastAppliedFindText = text
+                find.text = text
+            } else {
+                storedFindText = find.text
+            }
+        }
+
+        /// Applies a selection restored after the window appeared; once the user has changed the
+        /// selection, the live selection replaces it instead.
+        func restoreSelection(fromStored stored: String) {
+            let rawIDs = Self.rawIDs(in: stored)
+            // An echo of this window's own save, which may hold only the part of a restored
+            // selection shown so far, must not replace the pending restoration.
+            guard rawIDs != Set(selection.ids.map(\.rawID)) else { return }
+            if acceptsSelectionRestoration {
+                pendingRestoredSelection = rawIDs
+                applyPendingRestoredSelection()
+            } else {
+                storedSelection = Self.storedSelectionValue(selection.ids)
+            }
+        }
+
+        /// Whether a restored selection may still apply: the user has changed none of the
+        /// selection, the scope, or Find, all of which decide what the selection can show.
+        ///
+        /// The live comparison also catches a click whose persistence has not run yet.
+        private var acceptsSelectionRestoration: Bool {
+            selectionAcceptsRestoration && selection.ids == lastAppliedSelection
+                && findAcceptsRestoration && scope.acceptsSceneRestoration
+        }
+
+        /// Reselects the restored entries this window now shows, as its restored scope and Find
+        /// settle.
+        ///
+        /// Returns `false`, leaving ordinary pruning, once restoration has closed or when nothing
+        /// is pending.
+        @discardableResult
+        func applyPendingRestoredSelection() -> Bool {
+            guard acceptsSelectionRestoration, let pendingRestoredSelection else { return false }
+            selectVisible(pendingRestoredSelection)
+            lastAppliedSelection = selection.ids
+            return true
+        }
+
+        /// Selects the entries with these raw IDs that this window shows.
+        private func selectVisible(_ rawIDs: Set<String>) {
+            let ids = Set(visibleDisplayItems.lazy.map(\.id).filter { rawIDs.contains($0.rawID) })
+            if ids != selection.ids { selection.select(ids) }
+        }
+
+        private static func rawIDs(in stored: String) -> Set<String> {
+            Set(stored.split(separator: "\n").map(String.init))
+        }
+
+        private static func storedSelectionValue(_ ids: Set<LibraryEntryIdentity>) -> String {
+            ids.map(\.rawID).sorted().joined(separator: "\n")
         }
     }
 

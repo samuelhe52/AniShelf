@@ -10,7 +10,7 @@
     import SwiftUI
 
     struct MacLibraryToolbar: ToolbarContent {
-        let store: LibraryStore
+        let scope: LibraryBrowseScope
         @Binding var libraryViewStyle: LibraryViewStyle
         let scoringEnabled: Bool
         let addAnime: () -> Void
@@ -32,7 +32,7 @@
                 .labelsHidden()
             }
             ToolbarItem(placement: .primaryAction) {
-                LibraryBrowseSummaryMenu(store: store, scoringEnabled: scoringEnabled)
+                LibraryBrowseSummaryMenu(scope: scope, scoringEnabled: scoringEnabled)
                     .help(Text("Sort, group, and filter"))
                     .accessibilityLabel(Text("Sort, group, and filter"))
             }

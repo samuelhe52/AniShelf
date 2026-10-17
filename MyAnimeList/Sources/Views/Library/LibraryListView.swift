@@ -12,6 +12,7 @@ import SwiftUI
 #if !os(macOS)
     struct LibraryListView: View {
         @Environment(LibraryStore.self) private var store
+        @Environment(LibraryBrowseScope.self) private var scope
         @Environment(LibraryEntryInteractionState.self) private var interaction
         @Environment(LibraryEntryActionState.self) private var actions
 
@@ -34,10 +35,10 @@ import SwiftUI
                 .preferredNavigationBarScrollEdgeEffect()
                 .environment(\.editMode, .constant(interaction.isMultiSelecting ? .active : .inactive))
                 .animation(LibraryViewTransitions.selectionModeAnimation(), value: interaction.isMultiSelecting)
-                .animation(.default, value: store.groupStrategy)
-                .animation(.default, value: store.sortReversed)
-                .animation(.default, value: store.sortStrategy)
-                .animation(.default, value: store.filters)
+                .animation(.default, value: scope.groupStrategy)
+                .animation(.default, value: scope.sortReversed)
+                .animation(.default, value: scope.sortStrategy)
+                .animation(.default, value: scope.filters)
                 .onAppear {
                     if let scrolledID { proxy.scrollTo(scrolledID) }
                 }

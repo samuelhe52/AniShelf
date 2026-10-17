@@ -8,12 +8,6 @@
 import DataProvider
 import Foundation
 
-fileprivate enum DeletionScrollTarget: Equatable {
-    case preserveCurrent
-    case clear
-    case entry(LibraryEntryIdentity)
-}
-
 extension LibraryStore {
     /// Adds an entry from TMDb. `latestInfoFetcher` replaces the TMDb fetches in tests.
     @discardableResult
@@ -202,27 +196,6 @@ extension LibraryStore {
         }
     }
 
-    @discardableResult
-    func deleteEntry(
-        _ entry: AnimeEntry,
-        updateScrolledID: (LibraryEntryIdentity?) -> Void
-    ) -> Bool {
-        let scrollTarget = deletionScrollTarget(for: entry)
-
-        guard deleteEntry(entry) else { return false }
-
-        switch scrollTarget {
-        case .preserveCurrent:
-            break
-        case .clear:
-            updateScrolledID(nil)
-        case .entry(let targetID):
-            updateScrolledID(targetID)
-        }
-
-        return true
-    }
-
     func prefetchImagesForDefaultBehavior<C: Collection>(_ entries: C)
     where C.Element == AnimeEntry {
         guard autoPrefetchImagesOnAddAndRestore else { return }
@@ -230,22 +203,5 @@ extension LibraryStore {
             for: entries,
             longTermGalleryPosterCachingEnabled: longTermGalleryPosterCachingEnabled
         )
-    }
-
-    private func deletionScrollTarget(for entry: AnimeEntry) -> DeletionScrollTarget {
-        let entries = libraryOnDisplay
-        guard let index = entries.firstIndex(where: { $0.id == entry.id }) else {
-            return .preserveCurrent
-        }
-
-        if index > 0 {
-            return .entry(entries[index - 1].libraryIdentity)
-        }
-
-        let nextIndex = index + 1
-        guard nextIndex < entries.endIndex else {
-            return .clear
-        }
-        return .entry(entries[nextIndex].libraryIdentity)
     }
 }

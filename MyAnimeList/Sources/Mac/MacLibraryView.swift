@@ -21,6 +21,7 @@
     /// The iOS root is `LibraryView`.
     struct MacLibraryView: View {
         @Environment(LibraryStore.self) var store
+        @Environment(LibraryBrowseScope.self) var scope
         @Environment(\.windowSceneIdentifier) var windowSceneIdentifier
         @Environment(AppReviewPromptController.self) var appReview
         @Environment(\.openWindow) var openWindow
@@ -30,9 +31,7 @@
         @State var browse = LibraryBrowseState()
         @State private var showCategoryManager = false
         @State private var searchInitialMode: SearchMode?
-        /// The toolbar Find.
-        ///
-        /// Per window, unlike the sidebar scope.
+        /// The toolbar Find, which narrows this window's scope further.
         @State var find = MacLibraryFind()
         @State var isLibraryFindFocused = false
         @State private var sidebarVisibility: NavigationSplitViewVisibility = .automatic
@@ -43,22 +42,34 @@
         @State private var inspectorLayout = MacLibraryInspectorLayout()
         /// Whether this window shows its inspector, independent of the selection.
         @SceneStorage("libraryInspectorShown") var isInspectorShown = true
+        /// This window's selection as newline-separated raw IDs; `nil` until the window first
+        /// saves one, so a new window falls back to the last-inspected entry.
+        @SceneStorage("librarySelection") var storedSelection: String?
+        @SceneStorage("libraryFind") var storedFindText = ""
+        /// Find text and selection as the window started or last restored them. Scene storage
+        /// can arrive after the window appears; it applies until the user changes the value,
+        /// and after that the live value replaces it.
+        @State var lastAppliedFindText = ""
+        @State var findAcceptsRestoration = true
+        @State var lastAppliedSelection: Set<LibraryEntryIdentity> = []
+        @State var selectionAcceptsRestoration = true
+        /// The restored selection's raw IDs, reapplied while the restored scope settles.
+        @State var pendingRestoredSelection: Set<String>?
         @State var editRequest: MacEntryEditRequest?
         @State var showRefreshAllMetadataAlert = false
         /// The batch the Delete menu command asked to delete, awaiting confirmation.
         @State var pendingBatchDeletion: [AnimeEntry]?
 
-        @AppStorage(.libraryViewStyle) private var storedLibraryViewStyle: LibraryViewStyle = .gallery
         @AppStorage(.libraryScoringEnabled) var scoringEnabled = true
         @AppStorage(.libraryLastInspectorDetailEntryIdentity)
         var persistedLastInspectorDetailEntryIdentity: String?
 
-        /// The library's view style.
+        /// This window's view style.
         ///
-        /// A stored Gallery preference shows as Grid (see `macCases`).
+        /// A Gallery style, seeded from iOS, shows as Grid (see `macCases`).
         var libraryViewStyle: LibraryViewStyle {
-            get { storedLibraryViewStyle == .gallery ? .grid : storedLibraryViewStyle }
-            nonmutating set { storedLibraryViewStyle = newValue }
+            get { scope.viewStyle == .gallery ? .grid : scope.viewStyle }
+            nonmutating set { scope.viewStyle = newValue }
         }
 
         // MARK: - Body
@@ -85,10 +96,18 @@
                     persistSelection: persistSelection
                 )
             )
-            .onAppear(perform: restoreSelection)
-            .onChange(of: windowSceneIdentifier, initial: true) { _, identifier in
-                MacLibraryWindows.register(identifier, openWindow: openWindow)
+            .onAppear(perform: restoreWindowState)
+            .onChange(of: find.text) { _, text in
+                if text != lastAppliedFindText { findAcceptsRestoration = false }
+                storedFindText = text
             }
+            // Scene storage is restored a moment after the window appears.
+            .onChange(of: storedFindText) { _, text in restoreFindText(text) }
+            .onChange(of: storedSelection) { _, stored in
+                guard let stored else { return }
+                restoreSelection(fromStored: stored)
+            }
+            .onAppear { MacLibraryWindows.provideOpenWindow(openWindow) }
             .alert("Refresh all anime infos?", isPresented: $showRefreshAllMetadataAlert) {
                 Button("Refresh") { LibraryProfileSettingsActions(store: store).refreshInfos() }
                 Button("Cancel", role: .cancel) {}
@@ -114,7 +133,7 @@
             .libraryEntryActionOverlays(
                 state: actions,
                 deleteEntry: { entry in
-                    store.deleteEntry(entry) { browse.requestScroll(to: $0) }
+                    scope.deleteEntry(entry) { browse.requestScroll(to: $0) }
                 },
                 resolveEntry: { store.repository.existingEntry(identity: $0) }
             )
@@ -143,7 +162,7 @@
                 libraryPage(displayItems: displayItems)
                     .toolbar {
                         MacLibraryToolbar(
-                            store: store,
+                            scope: scope,
                             libraryViewStyle: libraryViewStyleBinding,
                             scoringEnabled: scoringEnabled,
                             addAnime: { openSearch(mode: .tmdb) }
@@ -165,7 +184,7 @@
                     }
                     .libraryBrowseSearch(
                         browse,
-                        store: store,
+                        scope: scope,
                         appReview: appReview,
                         initialMode: searchInitialMode,
                         reveal: revealSearchTarget
@@ -174,7 +193,9 @@
             // Find narrows the shared list per window, and saved or unsaved edits can change
             // what it matches, so prune against what this window shows, not the store's IDs.
             .onChange(of: displayItems.map(\.id)) { _, shownIDs in
-                selection.prune(keeping: Set(shownIDs))
+                if !applyPendingRestoredSelection() {
+                    selection.prune(keeping: Set(shownIDs))
+                }
             }
         }
 
@@ -224,12 +245,12 @@
 
         // MARK: - Actions
 
-        /// The entries this window shows: the shared scope, narrowed by the toolbar Find.
+        /// The entries this window shows: its scope, narrowed by the toolbar Find.
         var visibleDisplayItems: [LibraryEntryDisplayItem] {
             let query = find.query
-            guard !query.isEmpty else { return store.libraryDisplayItems }
+            guard !query.isEmpty else { return scope.displayItems }
             let matches = LibrarySearchService.matcher(for: query)
-            return store.libraryDisplayItems.filter { matches($0.entry) }
+            return scope.displayItems.filter { matches($0.entry) }
         }
 
         /// Keeps the selection to the entries this window still shows.

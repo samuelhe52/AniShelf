@@ -126,6 +126,13 @@ struct WhatsNewAndRefreshTests {
         controller.claimPresentation(forSceneIdentifier: "window-b")
         #expect(controller.presentedEntry(forSceneIdentifier: "window-a")?.version == entry.version)
         #expect(controller.presentedEntry(forSceneIdentifier: "window-b") == nil)
+        // Closing the claiming window frees the claim for another open window.
+        controller.releasePresentation(ifNotIn: ["window-a", "window-b"])
+        controller.claimPresentation(forSceneIdentifier: "window-b")
+        #expect(controller.presentedEntry(forSceneIdentifier: "window-a")?.version == entry.version)
+        controller.releasePresentation(ifNotIn: ["window-b"])
+        controller.claimPresentation(forSceneIdentifier: "window-b")
+        #expect(controller.presentedEntry(forSceneIdentifier: "window-b")?.version == entry.version)
         controller.dismissPresentedEntry()
         controller.presentCurrentEntry(inSceneIdentifier: "window-b")
 

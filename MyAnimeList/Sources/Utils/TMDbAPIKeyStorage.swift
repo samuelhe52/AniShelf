@@ -49,6 +49,12 @@ class TMDbAPIKeyStorage {
     var key: String?
     var lookupState: TMDbAPIKeyLookupState = .checking
 
+    /// Whether a non-blank key is stored.
+    var hasUsableKey: Bool {
+        guard let key else { return false }
+        return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     private static let defaultKeychainState = OSAllocatedUnfairLock(
         initialState: TMDbAPIKeyStorageKeychainClient.system)
 

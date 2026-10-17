@@ -34,6 +34,7 @@
         private static var needsTerminationFlush: @MainActor () -> Bool = { false }
         private static var reminderRefreshActivity: NSBackgroundActivityScheduler?
         private static var sleepWakeObservers: [NSObjectProtocol] = []
+        private static var activationObserver: NSObjectProtocol?
 
         static func configureSyncHandler(_ handler: @escaping @MainActor () async -> SyncResult) {
             syncHandler = handler
@@ -64,6 +65,18 @@
                     MainActor.assumeIsolated { didWake() }
                 }
             ]
+        }
+
+        /// Runs foreground work each time the app becomes active, whether or not any library
+        /// window is open; closing the last window keeps the app running (docs-ai 028).
+        static func configureActivation(didBecomeActive: @escaping @MainActor () -> Void) {
+            let center = NotificationCenter.default
+            activationObserver.map(center.removeObserver)
+            activationObserver = center.addObserver(
+                forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
+            ) { _ in
+                MainActor.assumeIsolated { didBecomeActive() }
+            }
         }
 
         /// macOS has no BGTaskScheduler; refresh periodically while the app runs instead.
@@ -166,8 +179,9 @@
             response: UNNotificationResponse
         ) async {
             await MainActor.run {
-                // macOS reports no target scene: the frontmost library window opens the entry,
-                // or a new one does when every library window is closed.
+                // macOS reports no target scene: the most recently active library window opens
+                // the entry, even when hidden or minimized, or a new one does when every library
+                // window is closed.
                 let window = MacLibraryWindows.frontmost
                 AiringReminderCoordinator.shared.receiveNotificationRoute(
                     entryIdentityRawID: entryIdentityRawID,
@@ -184,26 +198,22 @@
         }
     }
 
-    /// The open library windows, so app-level events can target one instead of the Settings
-    /// window, and can open one after the last is closed.
+    /// Library windows for app-level events: the one to target, and a way to open one after
+    /// the last is closed. Which windows are open comes from `AppWindowCoordinator`.
     @MainActor
     enum MacLibraryWindows {
-        private static var sceneIdentifiers: Set<String> = []
         /// SwiftUI only hands `openWindow` to views, so library windows provide it.
         private static var openWindow: OpenWindowAction?
 
-        static func register(_ sceneIdentifier: String?, openWindow: OpenWindowAction) {
+        static func provideOpenWindow(_ openWindow: OpenWindowAction) {
             self.openWindow = openWindow
-            if let sceneIdentifier { sceneIdentifiers.insert(sceneIdentifier) }
         }
 
-        /// The frontmost library window, else a minimized one.
+        /// The most recently active library window that is still open, even if it is
+        /// minimized or the app is hidden.
         static var frontmost: NSWindow? {
-            func isLibrary(_ window: NSWindow) -> Bool {
-                sceneIdentifiers.contains(window.sceneIdentifier)
-            }
-            return NSApplication.shared.orderedWindows.first { $0.isVisible && isLibrary($0) }
-                ?? NSApplication.shared.windows.first { $0.isMiniaturized && isLibrary($0) }
+            guard let identifier = AppWindowCoordinator.shared.frontmostLibraryWindowID else { return nil }
+            return NSApplication.shared.windows.first { $0.sceneIdentifier == identifier }
         }
 
         static func openNew() {

@@ -11,6 +11,7 @@ import SwiftUI
 #if !os(macOS)
     struct LibraryToolbar: ToolbarContent {
         let store: LibraryStore
+        let scope: LibraryBrowseScope
         let interaction: LibraryEntryInteractionState
         @Binding var libraryViewStyle: LibraryViewStyle
         let scoringEnabled: Bool
@@ -35,7 +36,7 @@ import SwiftUI
         private var topBarContent: some ToolbarContent {
             ToolbarItem(placement: .principal) {
                 LibraryToolbarTitle(
-                    store: store,
+                    scope: scope,
                     interaction: interaction,
                     showsCategoryStrip: showsCategoryStrip,
                     openCategoryManager: openCategoryManager
@@ -84,7 +85,7 @@ import SwiftUI
         }
 
         private var selectedEntries: [AnimeEntry] {
-            interaction.selectedEntryIDs.compactMap(store.displayedEntry(for:))
+            interaction.selectedEntryIDs.compactMap(scope.displayedEntry(for:))
         }
 
         @ToolbarContentBuilder
@@ -127,7 +128,7 @@ import SwiftUI
                     .labelsHidden()
                 }
                 ToolbarItem(placement: .status) {
-                    LibraryBrowseSummaryMenu(store: store, scoringEnabled: scoringEnabled)
+                    LibraryBrowseSummaryMenu(scope: scope, scoringEnabled: scoringEnabled)
                 }
                 ToolbarItem(placement: .platformBottomBar) {
                     LibrarySearchButton(isSearching: $isSearching)
@@ -139,10 +140,12 @@ import SwiftUI
     // Keep selection reads in view bodies so taps update the controls independently
     // of the library's display projection and layout animation.
     fileprivate struct LibraryToolbarTitle: View {
-        let store: LibraryStore
+        let scope: LibraryBrowseScope
         let interaction: LibraryEntryInteractionState
         let showsCategoryStrip: Bool
         let openCategoryManager: () -> Void
+
+        private var store: LibraryStore { scope.store }
 
         var body: some View {
             if store.categoriesEnabled && !showsCategoryStrip {
@@ -151,8 +154,8 @@ import SwiftUI
                     Picker(
                         "Category",
                         selection: Binding(
-                            get: { store.activeCategoryID },
-                            set: { id in withAnimation(.snappy) { store.activeCategoryID = id } }
+                            get: { scope.activeCategoryID },
+                            set: { id in withAnimation(.snappy) { scope.activeCategoryID = id } }
                         )
                     ) {
                         Text("All").tag(LibraryCategory.ID?.none)
@@ -175,8 +178,8 @@ import SwiftUI
 
         private var capsule: some View {
             LibraryNavigationTitleCapsule(
-                count: interaction.isMultiSelecting ? interaction.selectedEntryCount : store.libraryOnDisplay.count,
-                categoryName: interaction.isMultiSelecting || showsCategoryStrip ? nil : store.activeCategory?.name
+                count: interaction.isMultiSelecting ? interaction.selectedEntryCount : scope.displayIDs.count,
+                categoryName: interaction.isMultiSelecting || showsCategoryStrip ? nil : scope.activeCategory?.name
             )
         }
     }

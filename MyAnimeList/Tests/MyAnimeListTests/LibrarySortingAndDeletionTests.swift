@@ -15,6 +15,7 @@ import Testing
 struct LibrarySortingAndDeletionTests {
     @Test @MainActor func testRefreshLibraryCanonicalizesVisibleDuplicateIdentities() throws {
         let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let scope = LibraryBrowseScope(store: store)
         let olderEntry = AnimeEntry(
             name: "Duplicate Movie",
             type: .movie,
@@ -35,7 +36,7 @@ struct LibrarySortingAndDeletionTests {
         #expect(store.requiresDuplicateRepair)
         #expect(store.library.count == 1)
         #expect(store.library.first === newerEntry)
-        #expect(store.libraryDisplayItems.map(\.id) == [newerEntry.libraryIdentity])
+        #expect(scope.displayItems.map(\.id) == [newerEntry.libraryIdentity])
         #expect(store.duplicateEntryGroups.count == 1)
         #expect(store.duplicateEntryGroups.first?.entries.count == 2)
         #expect(store.duplicateEntryGroups.first?.recommendedEntry === newerEntry)
@@ -257,26 +258,27 @@ struct LibrarySortingAndDeletionTests {
             )
         }
 
-        func makeStore(with entries: [AnimeEntry]) throws -> LibraryStore {
+        func makeScope(with entries: [AnimeEntry]) throws -> LibraryBrowseScope {
             let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
-            store.sortStrategy = .dateSaved
-            store.sortReversed = false
+            let scope = LibraryBrowseScope(store: store)
+            scope.sortStrategy = .dateSaved
+            scope.sortReversed = false
 
             for entry in entries {
                 try store.repository.newEntry(entry)
             }
             try store.refreshLibrary()
-            return store
+            return scope
         }
 
         do {
             let first = makeEntry(name: "First", tmdbID: 1, day: 1)
             let second = makeEntry(name: "Second", tmdbID: 2, day: 2)
             let third = makeEntry(name: "Third", tmdbID: 3, day: 3)
-            let store = try makeStore(with: [first, second, third])
+            let scope = try makeScope(with: [first, second, third])
             var scrolledID: LibraryEntryIdentity?
 
-            #expect(store.deleteEntry(second) { scrolledID = $0 })
+            #expect(scope.deleteEntry(second) { scrolledID = $0 })
             #expect(scrolledID == first.libraryIdentity)
         }
 
@@ -284,10 +286,10 @@ struct LibrarySortingAndDeletionTests {
             let first = makeEntry(name: "First", tmdbID: 1, day: 1)
             let second = makeEntry(name: "Second", tmdbID: 2, day: 2)
             let third = makeEntry(name: "Third", tmdbID: 3, day: 3)
-            let store = try makeStore(with: [first, second, third])
+            let scope = try makeScope(with: [first, second, third])
             var scrolledID: LibraryEntryIdentity?
 
-            #expect(store.deleteEntry(first) { scrolledID = $0 })
+            #expect(scope.deleteEntry(first) { scrolledID = $0 })
             #expect(scrolledID == second.libraryIdentity)
         }
 
@@ -295,19 +297,19 @@ struct LibrarySortingAndDeletionTests {
             let first = makeEntry(name: "First", tmdbID: 1, day: 1)
             let second = makeEntry(name: "Second", tmdbID: 2, day: 2)
             let third = makeEntry(name: "Third", tmdbID: 3, day: 3)
-            let store = try makeStore(with: [first, second, third])
+            let scope = try makeScope(with: [first, second, third])
             var scrolledID: LibraryEntryIdentity?
 
-            #expect(store.deleteEntry(third) { scrolledID = $0 })
+            #expect(scope.deleteEntry(third) { scrolledID = $0 })
             #expect(scrolledID == second.libraryIdentity)
         }
 
         do {
             let solo = makeEntry(name: "Solo", tmdbID: 10, day: 10)
-            let store = try makeStore(with: [solo])
+            let scope = try makeScope(with: [solo])
             var scrolledID: LibraryEntryIdentity? = solo.libraryIdentity
 
-            #expect(store.deleteEntry(solo) { scrolledID = $0 })
+            #expect(scope.deleteEntry(solo) { scrolledID = $0 })
             #expect(scrolledID == nil)
         }
     }
@@ -315,9 +317,10 @@ struct LibrarySortingAndDeletionTests {
     @Test @MainActor func testWatchStatusGroupingUsesCurrentSortWithinBuckets() throws {
         try withRestoredLibrarySortingPreferences {
             let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
-            store.groupStrategy = .watchStatus
-            store.sortStrategy = .dateSaved
-            store.sortReversed = false
+            let scope = LibraryBrowseScope(store: store)
+            scope.groupStrategy = .watchStatus
+            scope.sortStrategy = .dateSaved
+            scope.sortReversed = false
             store.hideDroppedByDefault = false
 
             let entries = [
@@ -329,16 +332,17 @@ struct LibrarySortingAndDeletionTests {
                 makeLibraryEntry(name: "Watched Late", tmdbID: 32, watchStatus: .watched, daySaved: 6)
             ]
 
-            #expect(store.filterAndSort(entries).map(\.tmdbID) == [11, 12, 21, 31, 32, 41])
+            #expect(scope.filterAndSort(entries).map(\.tmdbID) == [11, 12, 21, 31, 32, 41])
         }
     }
 
     @Test @MainActor func testScoreGroupingPlacesUnscoredEntriesLast() throws {
         try withRestoredLibrarySortingPreferences {
             let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
-            store.groupStrategy = .score
-            store.sortStrategy = .dateSaved
-            store.sortReversed = false
+            let scope = LibraryBrowseScope(store: store)
+            scope.groupStrategy = .score
+            scope.sortStrategy = .dateSaved
+            scope.sortReversed = false
 
             let entries = [
                 makeLibraryEntry(name: "Unscored", tmdbID: 61, daySaved: 1),
@@ -350,16 +354,17 @@ struct LibrarySortingAndDeletionTests {
                 makeLibraryEntry(name: "Score One", tmdbID: 11, daySaved: 7, score: 1)
             ]
 
-            #expect(store.filterAndSort(entries).map(\.tmdbID) == [51, 52, 41, 31, 21, 11, 61])
+            #expect(scope.filterAndSort(entries).map(\.tmdbID) == [51, 52, 41, 31, 21, 11, 61])
         }
     }
 
     @Test @MainActor func testFavoriteGroupingKeepsBucketOrderWhenReversed() throws {
         try withRestoredLibrarySortingPreferences {
             let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
-            store.groupStrategy = .favorite
-            store.sortStrategy = .dateSaved
-            store.sortReversed = false
+            let scope = LibraryBrowseScope(store: store)
+            scope.groupStrategy = .favorite
+            scope.sortStrategy = .dateSaved
+            scope.sortReversed = false
 
             let favoriteEarly = makeLibraryEntry(
                 name: "Favorite Early",
@@ -377,19 +382,20 @@ struct LibrarySortingAndDeletionTests {
             let otherLate = makeLibraryEntry(name: "Other Late", tmdbID: 82, daySaved: 4)
             let entries = [favoriteEarly, otherEarly, favoriteLate, otherLate]
 
-            #expect(store.filterAndSort(entries).map(\.tmdbID) == [71, 72, 81, 82])
+            #expect(scope.filterAndSort(entries).map(\.tmdbID) == [71, 72, 81, 82])
 
-            store.sortReversed = true
-            #expect(store.filterAndSort(entries).map(\.tmdbID) == [72, 71, 82, 81])
+            scope.sortReversed = true
+            #expect(scope.filterAndSort(entries).map(\.tmdbID) == [72, 71, 82, 81])
         }
     }
 
     @Test @MainActor func testNoGroupingMatchesCurrentFlatSortBehavior() throws {
         try withRestoredLibrarySortingPreferences {
             let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
-            store.groupStrategy = .none
-            store.sortStrategy = .dateSaved
-            store.sortReversed = true
+            let scope = LibraryBrowseScope(store: store)
+            scope.groupStrategy = .none
+            scope.sortStrategy = .dateSaved
+            scope.sortReversed = true
 
             let entries = [
                 makeLibraryEntry(name: "Favorite", tmdbID: 91, daySaved: 1, favorite: true),
@@ -399,16 +405,17 @@ struct LibrarySortingAndDeletionTests {
             ]
 
             let expected = Array(entries.sorted(by: LibraryStore.AnimeSortStrategy.dateSaved.compare).reversed())
-            #expect(store.filterAndSort(entries).map(\.tmdbID) == expected.map(\.tmdbID))
+            #expect(scope.filterAndSort(entries).map(\.tmdbID) == expected.map(\.tmdbID))
         }
     }
 
     @Test @MainActor func testAlphabeticalSortUsesEntryNames() throws {
         try withRestoredLibrarySortingPreferences {
             let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
-            store.groupStrategy = .none
-            store.sortStrategy = .alphabetical
-            store.sortReversed = false
+            let scope = LibraryBrowseScope(store: store)
+            scope.groupStrategy = .none
+            scope.sortStrategy = .alphabetical
+            scope.sortReversed = false
 
             let entries = [
                 makeLibraryEntry(name: "Naruto", tmdbID: 101, daySaved: 4),
@@ -417,7 +424,7 @@ struct LibrarySortingAndDeletionTests {
                 makeLibraryEntry(name: "Bleach", tmdbID: 104, daySaved: 1)
             ]
 
-            #expect(store.filterAndSort(entries).map(\.tmdbID) == [103, 104, 102, 101])
+            #expect(scope.filterAndSort(entries).map(\.tmdbID) == [103, 104, 102, 101])
         }
     }
 
@@ -435,6 +442,7 @@ struct LibrarySortingAndDeletionTests {
         }
 
         let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let scope = LibraryBrowseScope(store: store)
         let favorite = makeLibraryEntry(
             name: "Favorite",
             tmdbID: 201,
@@ -454,33 +462,33 @@ struct LibrarySortingAndDeletionTests {
         try store.repository.newEntry(dropped)
         try store.refreshLibrary()
 
-        store.filters = [.favorited]
-        #expect(store.libraryOnDisplay.contains { $0.tmdbID == favorite.tmdbID })
-        #expect(!store.libraryOnDisplay.contains { $0.tmdbID == plain.tmdbID })
-        #expect(!store.libraryOnDisplay.contains { $0.tmdbID == dropped.tmdbID })
+        scope.filters = [.favorited]
+        #expect(scope.entriesOnDisplay.contains { $0.tmdbID == favorite.tmdbID })
+        #expect(!scope.entriesOnDisplay.contains { $0.tmdbID == plain.tmdbID })
+        #expect(!scope.entriesOnDisplay.contains { $0.tmdbID == dropped.tmdbID })
 
         // The cached display list follows unsaved entry edits, not only saves.
         store.repository.toggleFavorite(plain)
-        #expect(store.libraryOnDisplay.contains { $0.tmdbID == plain.tmdbID })
+        #expect(scope.entriesOnDisplay.contains { $0.tmdbID == plain.tmdbID })
         store.repository.toggleFavorite(plain)
-        #expect(!store.libraryOnDisplay.contains { $0.tmdbID == plain.tmdbID })
+        #expect(!scope.entriesOnDisplay.contains { $0.tmdbID == plain.tmdbID })
 
-        store.filters = []
+        scope.filters = []
         store.hideDroppedByDefault = true
-        #expect(!store.libraryOnDisplay.contains { $0.tmdbID == dropped.tmdbID })
+        #expect(!scope.entriesOnDisplay.contains { $0.tmdbID == dropped.tmdbID })
 
         // Resetting filters for a search jump opts into Dropped without changing the preference.
-        store.filters = [.favorited]
-        store.resetFiltersToReveal(plain.libraryIdentity)
-        #expect(store.filters.isEmpty)
-        store.filters = [.favorited]
-        store.resetFiltersToReveal(dropped.libraryIdentity)
-        #expect(store.filters == [.dropped])
+        scope.filters = [.favorited]
+        scope.resetFiltersToReveal(plain.libraryIdentity)
+        #expect(scope.filters.isEmpty)
+        scope.filters = [.favorited]
+        scope.resetFiltersToReveal(dropped.libraryIdentity)
+        #expect(scope.filters == [.dropped])
         #expect(store.hideDroppedByDefault)
-        store.filters = []
+        scope.filters = []
 
         store.hideDroppedByDefault = false
-        #expect(store.libraryOnDisplay.contains { $0.tmdbID == dropped.tmdbID })
+        #expect(scope.entriesOnDisplay.contains { $0.tmdbID == dropped.tmdbID })
     }
 
     @Test @MainActor func testActiveCategoryNarrowsLibraryBeforeFilters() throws {
@@ -490,6 +498,7 @@ struct LibrarySortingAndDeletionTests {
             dataProvider: DataProvider(inMemory: true),
             preferences: LibraryPreferences(defaults: defaults)
         )
+        let scope = LibraryBrowseScope(store: store)
         let favoriteMember = makeLibraryEntry(name: "Member", tmdbID: 301, daySaved: 1, favorite: true)
         let plainMember = makeLibraryEntry(name: "Plain Member", tmdbID: 302, daySaved: 2)
         let outsider = makeLibraryEntry(name: "Outsider", tmdbID: 303, daySaved: 3, favorite: true)
@@ -504,34 +513,76 @@ struct LibrarySortingAndDeletionTests {
         LibraryBatchAction.category(category.id, isMember: true, knownCategoryIDs: store.knownCategoryIDs)
             .apply(to: [favoriteMember, plainMember])
 
-        store.activeCategoryID = category.id
-        #expect(Set(store.libraryOnDisplay.map(\.tmdbID)) == [301, 302])
+        scope.activeCategoryID = category.id
+        #expect(Set(scope.entriesOnDisplay.map(\.tmdbID)) == [301, 302])
         // Search duplicate detection still sees entries the category hides.
         #expect(store.containsEntry(outsider.libraryIdentity))
-        store.filters = [.favorited]
-        #expect(store.libraryOnDisplay.map(\.tmdbID) == [301])
+        scope.filters = [.favorited]
+        #expect(scope.entriesOnDisplay.map(\.tmdbID) == [301])
         // A search jump leaves the category itself, so only the filters decide whether it can land.
-        #expect(store.canRevealEntry(outsider.libraryIdentity))
-        #expect(!store.canRevealEntry(plainMember.libraryIdentity))
+        #expect(scope.canRevealEntry(outsider.libraryIdentity))
+        #expect(!scope.canRevealEntry(plainMember.libraryIdentity))
 
         // Turning the feature off shows All again but keeps memberships.
-        store.filters = []
+        scope.filters = []
         store.categoriesEnabled = false
-        #expect(store.activeCategoryID == nil)
-        #expect(store.libraryOnDisplay.count == 3)
+        #expect(scope.activeCategoryID == nil)
+        #expect(scope.entriesOnDisplay.count == 3)
         #expect(favoriteMember.categoryIDs == [category.id])
 
         // Deleting a category leaves stale IDs; the next membership write drops them.
         store.categoriesEnabled = true
         let other = try #require(store.createCategory(named: "Comfort"))
-        store.activeCategoryID = category.id
+        scope.activeCategoryID = category.id
         store.deleteCategory(category.id)
-        #expect(store.activeCategoryID == nil)
+        #expect(scope.activeCategoryID == nil)
         #expect(store.categoryEntryCounts[category.id] == nil)
         LibraryBatchAction.category(other.id, isMember: true, knownCategoryIDs: store.knownCategoryIDs)
             .apply(to: [favoriteMember])
         #expect(favoriteMember.categoryIDs == [other.id])
         #expect(plainMember.categoryIDs == [category.id])
+    }
+
+    // Each window owns its browse state; preferences only seed new windows (docs-ai 028).
+    @Test @MainActor func testWindowScopesAreIndependentAndSeedFromPreferences() throws {
+        let defaults = UserDefaults(suiteName: #function)!
+        defer { defaults.removePersistentDomain(forName: #function) }
+        let store = LibraryStore(
+            dataProvider: DataProvider(inMemory: true),
+            preferences: LibraryPreferences(defaults: defaults)
+        )
+        store.defaultFilters = [.favorited]
+        store.sortStrategy = .dateSaved
+        let favorite = makeLibraryEntry(name: "Favorite", tmdbID: 501, daySaved: 1, favorite: true)
+        let plain = makeLibraryEntry(name: "Plain", tmdbID: 502, daySaved: 2)
+        try store.repository.newEntry(favorite)
+        try store.repository.newEntry(plain)
+        try store.refreshLibrary()
+
+        let first = LibraryBrowseScope(store: store)
+        let second = LibraryBrowseScope(store: store)
+        #expect(first.filters == [.favorited])
+        #expect(first.sortStrategy == .dateSaved)
+
+        // Narrowing or revealing in one window leaves the other alone.
+        second.resetFiltersToReveal(plain.libraryIdentity)
+        #expect(second.entriesOnDisplay.count == 2)
+        #expect(first.entriesOnDisplay.map(\.tmdbID) == [501])
+
+        // A window's sort choice seeds the next window without re-sorting open ones.
+        first.sortStrategy = .alphabetical
+        #expect(store.sortStrategy == .alphabetical)
+        #expect(second.sortStrategy == .dateSaved)
+        #expect(LibraryBrowseScope(store: store).sortStrategy == .alphabetical)
+
+        // A preference change from elsewhere, such as iCloud, does not rewrite open windows.
+        store.sortStrategy = .dateFinished
+        store.reloadPersistedPreferences()
+        #expect(first.sortStrategy == .alphabetical)
+
+        // Restored scene state wins over preferences.
+        let restored = LibraryBrowseScope(store: store, restoring: first.state)
+        #expect(restored.state == first.state)
     }
 
     @Test @MainActor func testCategoryNamesAndOrder() throws {

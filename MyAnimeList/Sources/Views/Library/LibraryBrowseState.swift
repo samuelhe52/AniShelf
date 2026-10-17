@@ -56,36 +56,32 @@ final class LibraryBrowseState {
     /// `reveal` makes the entry visible and selected the way the platform needs.
     func jump(
         to id: LibraryEntryIdentity,
-        store: LibraryStore,
+        scope: LibraryBrowseScope,
         reveal: (LibraryEntryIdentity) -> Void
     ) {
         // Defer a jump from search until the sheet has dismissed so the scroll and pulse play in view.
         if isSearchSheetOnScreen {
             pendingJumpEntryID = id
         } else {
-            performJump(to: id, store: store, reveal: reveal)
+            performJump(to: id, scope: scope, reveal: reveal)
         }
     }
 
-    func searchSheetDidDismiss(store: LibraryStore, reveal: (LibraryEntryIdentity) -> Void) {
+    func searchSheetDidDismiss(scope: LibraryBrowseScope, reveal: (LibraryEntryIdentity) -> Void) {
         isSearchSheetOnScreen = false
         guard let pendingJumpEntryID else { return }
         self.pendingJumpEntryID = nil
-        performJump(to: pendingJumpEntryID, store: store, reveal: reveal)
+        performJump(to: pendingJumpEntryID, scope: scope, reveal: reveal)
     }
 
     private func performJump(
         to id: LibraryEntryIdentity,
-        store: LibraryStore,
+        scope: LibraryBrowseScope,
         reveal: (LibraryEntryIdentity) -> Void
     ) {
         reveal(id)
         // Search spans the whole library, so leave a category that hides the entry.
-        if store.activeCategoryID != nil,
-            !store.libraryOnDisplay.contains(where: { $0.libraryIdentity == id })
-        {
-            withAnimation(.snappy) { store.activeCategoryID = nil }
-        }
+        withAnimation(.snappy) { scope.leaveCategoryToReveal(id) }
         requestScroll(to: id)
         highlightRequest = LibraryHighlightRequest(entryID: id)
     }
@@ -93,14 +89,14 @@ final class LibraryBrowseState {
     func processTMDbSearchResults(
         _ results: OrderedSet<SearchResult>,
         origin: SearchSubmissionOrigin,
-        store: LibraryStore,
+        scope: LibraryBrowseScope,
         appReview: AppReviewPromptController,
         reveal: @escaping (LibraryEntryIdentity) -> Void
     ) {
         isSearching = false
         Task {
             ToastCenter.global.loadingMessage = .message("Loading...")
-            let success = await store.newEntryFromSearchResults(results)
+            let success = await scope.store.newEntryFromSearchResults(results)
             // A failure shows its own toast; the loading toast never dismisses itself.
             ToastCenter.global.loadingMessage = nil
             if success {
@@ -108,7 +104,7 @@ final class LibraryBrowseState {
                 withAnimation {
                     newEntriesAddedToggle.toggle()
                     if let id = results.first?.libraryIdentity {
-                        jump(to: id, store: store, reveal: reveal)
+                        jump(to: id, scope: scope, reveal: reveal)
                     }
                 }
             }
@@ -120,7 +116,7 @@ extension View {
     /// The search sheet, the add-success haptic, and the jump to an entry search found or added.
     func libraryBrowseSearch(
         _ browse: LibraryBrowseState,
-        store: LibraryStore,
+        scope: LibraryBrowseScope,
         appReview: AppReviewPromptController,
         initialMode: SearchMode? = nil,
         reveal: @escaping (LibraryEntryIdentity) -> Void
@@ -134,15 +130,15 @@ extension View {
             }
             .librarySearchSheet(
                 isPresented: $browse.isSearching,
-                checkDuplicate: store.containsEntry,
-                canRevealEntry: store.canRevealEntry,
-                resetFiltersToReveal: store.resetFiltersToReveal,
+                checkDuplicate: scope.store.containsEntry,
+                canRevealEntry: scope.canRevealEntry,
+                resetFiltersToReveal: scope.resetFiltersToReveal,
                 processTMDbSearchResults: { results, origin in
                     browse.processTMDbSearchResults(
-                        results, origin: origin, store: store, appReview: appReview, reveal: reveal)
+                        results, origin: origin, scope: scope, appReview: appReview, reveal: reveal)
                 },
-                jumpToEntryInLibrary: { browse.jump(to: $0, store: store, reveal: reveal) },
-                onDismiss: { browse.searchSheetDidDismiss(store: store, reveal: reveal) },
+                jumpToEntryInLibrary: { browse.jump(to: $0, scope: scope, reveal: reveal) },
+                onDismiss: { browse.searchSheetDidDismiss(scope: scope, reveal: reveal) },
                 initialMode: initialMode
             )
     }

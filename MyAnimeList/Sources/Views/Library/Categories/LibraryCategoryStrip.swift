@@ -19,6 +19,7 @@ import SwiftUI
 /// so leaving List/Grid or entering multi-selection also ends reordering.
 struct LibraryCategoryStrip: View {
     @Environment(LibraryStore.self) private var store
+    @Environment(LibraryBrowseScope.self) private var scope
     let openCategoryManager: () -> Void
     let allowsCategoryActions: Bool
 
@@ -39,7 +40,7 @@ struct LibraryCategoryStrip: View {
     @State private var deletingCategory: LibraryCategory?
     @State private var viewportWidth: CGFloat = 0
 
-    private var selectedTabID: String { store.activeCategoryID ?? "all" }
+    private var selectedTabID: String { scope.activeCategoryID ?? "all" }
     private var reorderAnimation: Animation { .bouncy }
     private var displayedCategories: [LibraryCategory] {
         guard let draftOrder else { return store.categories }
@@ -59,8 +60,8 @@ struct LibraryCategoryStrip: View {
             ScrollView(.horizontal) {
                 HStack(spacing: 4) {
                     if isReordering {
-                        tabLabel(Text(LocalizedStringResource("All")), isSelected: store.activeCategoryID == nil)
-                            .accessibilityAddTraits(store.activeCategoryID == nil ? .isSelected : [])
+                        tabLabel(Text(LocalizedStringResource("All")), isSelected: scope.activeCategoryID == nil)
+                            .accessibilityAddTraits(scope.activeCategoryID == nil ? .isSelected : [])
                             .measureTabWidth("all", in: $tabWidths)
                             .id("all")
                     } else {
@@ -110,7 +111,7 @@ struct LibraryCategoryStrip: View {
                     ended: { finishDrag(commit: $0) }
                 )
             )
-            .onChange(of: store.activeCategoryID, initial: true) {
+            .onChange(of: scope.activeCategoryID, initial: true) {
                 withAnimation(.snappy) { proxy.scrollTo(selectedTabID, anchor: .center) }
             }
             .onChange(of: store.categories) {
@@ -132,7 +133,7 @@ struct LibraryCategoryStrip: View {
         .glassEffect(.regular, in: .capsule)
         .padding(.horizontal, 16)
         .padding(.bottom, 4)
-        .animation(.snappy, value: store.activeCategoryID)
+        .animation(.snappy, value: scope.activeCategoryID)
         .animation(reorderAnimation, value: store.categories)
         .sensoryFeedback(.impact(weight: .light), trigger: draggedCategoryID) { _, newValue in
             newValue != nil
@@ -155,9 +156,9 @@ struct LibraryCategoryStrip: View {
     @ViewBuilder
     private func categoryTab(_ category: LibraryCategory) -> some View {
         if isReordering {
-            tabLabel(Text(category.name), isSelected: store.activeCategoryID == category.id)
+            tabLabel(Text(category.name), isSelected: scope.activeCategoryID == category.id)
                 .modifier(CategoryTabWiggle(isActive: draggedCategoryID != category.id))
-                .accessibilityAddTraits(store.activeCategoryID == category.id ? .isSelected : [])
+                .accessibilityAddTraits(scope.activeCategoryID == category.id ? .isSelected : [])
                 .accessibilityHint(Text(LocalizedStringResource("Hold and drag to reorder.")))
                 .accessibilityAction(named: Text(LocalizedStringResource("Move Left"))) {
                     moveAccessibly(category.id, by: -1)
@@ -172,7 +173,7 @@ struct LibraryCategoryStrip: View {
 
     /// Tap selects; long press opens the category actions.
     private func menuTab(_ category: LibraryCategory?, title: Text) -> some View {
-        let isSelected = store.activeCategoryID == category?.id
+        let isSelected = scope.activeCategoryID == category?.id
         return Button {
             select(category?.id)
         } label: {
@@ -189,7 +190,7 @@ struct LibraryCategoryStrip: View {
     }
 
     private func select(_ id: LibraryCategory.ID?) {
-        withAnimation(.snappy) { store.activeCategoryID = id }
+        withAnimation(.snappy) { scope.activeCategoryID = id }
     }
 
     private func tabLabel(_ title: Text, isSelected: Bool) -> some View {

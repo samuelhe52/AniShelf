@@ -16,6 +16,7 @@
     /// `LibraryListView`.
     struct MacLibraryList: View {
         @Environment(LibraryStore.self) private var store
+        @Environment(LibraryBrowseScope.self) private var scope
         @Environment(LibraryEntryActionState.self) private var actions
         @Environment(MacLibrarySelection.self) private var selection
         @FocusState private var isListFocused: Bool
@@ -48,10 +49,10 @@
                     if ids.count == 1, let entry = entry(for: ids.first) { detailActions.open(entry) }
                 }
                 .preferredNavigationBarScrollEdgeEffect()
-                .animation(.default, value: store.groupStrategy)
-                .animation(.default, value: store.sortReversed)
-                .animation(.default, value: store.sortStrategy)
-                .animation(.default, value: store.filters)
+                .animation(.default, value: scope.groupStrategy)
+                .animation(.default, value: scope.sortReversed)
+                .animation(.default, value: scope.sortStrategy)
+                .animation(.default, value: scope.filters)
                 .onAppear {
                     if let scrolledID { proxy.scrollTo(scrolledID) }
                 }

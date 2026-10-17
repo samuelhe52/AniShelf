@@ -15,7 +15,7 @@ import SwiftUI
         }
 
         var selectedEntries: [AnimeEntry] {
-            interaction.selectedEntryIDs.compactMap(store.displayedEntry(for:))
+            interaction.selectedEntryIDs.compactMap(scope.displayedEntry(for:))
         }
 
         func applyBatchAction(_ action: LibraryBatchAction) {
@@ -38,7 +38,7 @@ import SwiftUI
                 return
             }
 
-            let scrollTarget = store.libraryDisplayIDs.first { id in
+            let scrollTarget = scope.displayIDs.first { id in
                 !interaction.selectedEntryIDs.contains(id)
             }
 
@@ -63,7 +63,7 @@ import SwiftUI
         /// Keeps the selection to the entries still shown after a library or scope change.
         func pruneSelection() {
             guard interaction.isMultiSelecting else { return }
-            interaction.selectedEntryIDs.formIntersection(store.libraryDisplayIDs)
+            interaction.selectedEntryIDs.formIntersection(scope.displayIDs)
         }
     }
 #endif

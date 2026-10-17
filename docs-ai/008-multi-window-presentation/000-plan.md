@@ -50,4 +50,5 @@ ownership. Two-window runtime checks remain distinct from builds and unit tests.
 
 ## Amendments
 
-None yet.
+- Updated 2026-10-18: multi-window audit backlog across iPad and native macOS (planned fixes, intended caveats, open product decisions) — see [002-audit-backlog.md](002-audit-backlog.md)
+- Updated 2026-10-18: the shared-versus-per-window boundary above is superseded by [028 window state ownership](../028-window-state-ownership/000-plan.md). Filters, category, sort, group, view style and the inspector entry are now window-owned and restored per scene. App-wide presentations are routed by `AppWindowCoordinator`.

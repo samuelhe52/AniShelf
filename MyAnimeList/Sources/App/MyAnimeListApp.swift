@@ -105,7 +105,10 @@ struct MyAnimeListApp: App {
         #if os(macOS)
             Self.configureMacLifecycle(
                 libraryStore: libraryStore,
+                keyStorage: keyStorage,
+                appReview: appReview,
                 recoveryActivityGate: recoveryActivityGate,
+                lifecycleEventGate: lifecycleEventGate,
                 backgroundSyncExecution: backgroundSyncExecution
             )
         #endif
@@ -116,11 +119,32 @@ struct MyAnimeListApp: App {
         /// here would hold stale `@State` once startup recovery finishes.
         private static func configureMacLifecycle(
             libraryStore: LibraryStore,
+            keyStorage: TMDbAPIKeyStorage,
+            appReview: AppReviewPromptController,
             recoveryActivityGate: StartupRecoveryActivityGate,
+            lifecycleEventGate: AppLifecycleEventGate,
             backgroundSyncExecution: LibrarySyncBackgroundExecutionController
         ) {
             let canSyncLibrary = { @MainActor in
                 recoveryActivityGate.allowsLibraryActivity && !libraryStore.requiresDuplicateRepair
+            }
+            // The Mac's foreground work; iOS runs it from the app-level scene phase instead,
+            // which needs a window and so misses activations while every window is closed.
+            LibrarySyncNotificationBridge.configureActivation {
+                // Launch handling already syncs and refreshes for the first activation, but it
+                // can run before the app is active, so every activation records the active day.
+                let isLaunchActivation = !lifecycleEventGate.shouldHandleActivation()
+                if !isLaunchActivation { keyStorage.retryInitialLookupIfNeeded() }
+                guard recoveryActivityGate.allowsLibraryActivity, keyStorage.hasUsableKey else { return }
+                if !libraryStore.requiresDuplicateRepair {
+                    appReview.recordActiveLibraryDay()
+                    if !isLaunchActivation { libraryStore.syncLibrary(trigger: .foreground) }
+                }
+                guard !isLaunchActivation else { return }
+                Task { @MainActor in
+                    await AiringReminderCoordinator.shared.reloadState()
+                    _ = await AiringReminderCoordinator.shared.refreshAll()
+                }
             }
             LibrarySyncNotificationBridge.configureTerminationFlush(
                 isNeeded: { canSyncLibrary() && libraryStore.needsBackgroundLibrarySyncProtection },
@@ -202,7 +226,7 @@ struct MyAnimeListApp: App {
                 MacSupportView()
                     .environment(supportStore)
                     .globalToasts()
-                    .providesWindowSceneIdentifier()
+                    .providesWindowSceneIdentifier(role: .auxiliary)
             }
             .windowResizability(.contentSize)
             .defaultPosition(.center)
@@ -219,7 +243,7 @@ struct MyAnimeListApp: App {
                     // What's New opened from Settings presents in the Settings window.
                     .modifier(WhatsNewPresenter(whatsNew: whatsNew, libraryStore: libraryStore))
                     .globalToasts()
-                    .providesWindowSceneIdentifier()
+                    .providesWindowSceneIdentifier(role: .auxiliary)
             }
         #else
             WindowGroup {
@@ -248,6 +272,7 @@ struct MyAnimeListApp: App {
                 )
             } else if let key = keyStorage.key, !key.isEmpty {
                 libraryRoot
+                    .libraryBrowseScope()
                     .onAppear {
                         libraryStore.language = followsSystemLanguage ? .current : preferredLanguage
                     }
@@ -286,10 +311,13 @@ struct MyAnimeListApp: App {
             // scenePhase here is the app-level phase; every window delivers each transition.
             guard lifecycleEventGate.shouldHandlePhaseChange(to: newPhase) else { return }
             if newPhase == .active {
-                keyStorage.retryInitialLookupIfNeeded()
-                requestSync(trigger: .foreground)
-                recordActiveLibraryDayIfUsable()
-                refreshAiringReminders()
+                // The Mac handles activation in its app delegate (`configureMacLifecycle`).
+                #if !os(macOS)
+                    keyStorage.retryInitialLookupIfNeeded()
+                    requestSync(trigger: .foreground)
+                    recordActiveLibraryDayIfUsable()
+                    refreshAiringReminders()
+                #endif
             } else if newPhase == .background {
                 flushPendingLocalSync()
             }
@@ -306,7 +334,7 @@ struct MyAnimeListApp: App {
         }
         .modifier(AppReviewPromptPresenter(appReview: appReview))
         .globalToasts()
-        .providesWindowSceneIdentifier()
+        .providesWindowSceneIdentifier(role: .library)
     }
 
     private func updateWhatsNewPresentation() {
@@ -359,8 +387,7 @@ struct MyAnimeListApp: App {
     }
 
     private var hasTMDbAPIKey: Bool {
-        guard let key = keyStorage.key else { return false }
-        return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        keyStorage.hasUsableKey
     }
 
     private func recordActiveLibraryDayIfUsable() {
@@ -405,6 +432,11 @@ fileprivate struct WhatsNewPresenter: ViewModifier {
         content
             .onChange(of: whatsNew.presentedEntry?.version, initial: true) { claimIfNeeded() }
             .onChange(of: windowSceneIdentifier) { claimIfNeeded() }
+            // A claim held by a closed window passes to the first open window that asks.
+            .onChange(of: AppWindowCoordinator.shared.registeredWindowIDs) { _, openWindows in
+                whatsNew.releasePresentation(ifNotIn: openWindows)
+                claimIfNeeded()
+            }
             .sheet(item: presentedEntry) { entry in
                 NavigationStack {
                     WhatsNewRootSheet(
