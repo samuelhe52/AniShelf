@@ -30,9 +30,9 @@
 - **Open Entry.** `OpenLibraryEntryIntent` is an `OpenIntent` and
   `TargetContentProvidingIntent`. `libraryWindowBehaviors` handles it with
   `.onAppIntentExecution`, sharing the root's `openRoutedEntry` with the
-  airing-reminder route. macOS has no `TargetContentProvidingIntent`, so the intent and
-  its App Shortcut are iOS-only; the Mac app has the tracking and Find actions but no
-  Open Entry. (Rebase onto native macOS, 2026-10-18.)
+  airing-reminder route. On macOS, which has no `TargetContentProvidingIntent`, the
+  intent's `perform()` routes through `LibraryEntryRouter` instead
+  ([003](003-mac-open-entry.md)).
 - **Tracking actions.** Set Watch Status, Mark Next Episode Watched, Set Episode
   Progress, Toggle Favorite, and Set Score return the updated entity and a dialog. They
   call the clocked mutators, save the main context, and post a
