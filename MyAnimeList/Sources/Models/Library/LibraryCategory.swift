@@ -17,7 +17,9 @@ struct LibraryCategory: Identifiable, Hashable, Sendable {
 
     static let maximumNameLength = 40
 
-    /// UUID string. IDs are never reused, so stale memberships of a deleted category stay inert.
+    /// UUID string.
+    ///
+    /// IDs are never reused, so stale memberships of a deleted category stay inert.
     let id: ID
     var name: String
 

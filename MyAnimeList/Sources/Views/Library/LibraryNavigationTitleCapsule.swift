@@ -1,3 +1,10 @@
+//
+//  LibraryNavigationTitleCapsule.swift
+//  AniShelf
+//
+//  Created by OpenAI Codex on behalf of Samuel He on 2026/5/1.
+//
+
 import SwiftUI
 
 fileprivate struct LibraryCapsuleSurface<Content: View>: View {

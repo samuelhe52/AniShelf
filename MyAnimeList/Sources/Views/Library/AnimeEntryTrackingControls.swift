@@ -14,20 +14,26 @@ struct AnimeEntryWatchedStatusPicker: View {
     var isRewatching = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Picker(selection: $selection) {
-                Text(EntryDetailL10n.planned).tag(AnimeEntry.WatchStatus.planToWatch)
-                Text(isRewatching ? EntryDetailL10n.rewatching : EntryDetailL10n.watching).tag(
-                    AnimeEntry.WatchStatus.watching)
-                Text(EntryDetailL10n.watched).tag(AnimeEntry.WatchStatus.watched)
-            } label: {
+        #if os(macOS)
+            MacWatchStatusPicker(selection: $selection, isRewatching: isRewatching)
+                .disabled(isDisabled)
+                .fixedSize()
+        #else
+            VStack(alignment: .leading, spacing: 12) {
+                Picker(selection: $selection) {
+                    Text(EntryDetailL10n.planned).tag(AnimeEntry.WatchStatus.planToWatch)
+                    Text(isRewatching ? EntryDetailL10n.rewatching : EntryDetailL10n.watching).tag(
+                        AnimeEntry.WatchStatus.watching)
+                    Text(EntryDetailL10n.watched).tag(AnimeEntry.WatchStatus.watched)
+                } label: {
+                }
+                .disabled(isDisabled)
+                .lineLimit(1)
+                .transaction { transaction in
+                    transaction.animation = nil
+                }
             }
-            .disabled(isDisabled)
-            .lineLimit(1)
-            .transaction { transaction in
-                transaction.animation = nil
-            }
-        }
+        #endif
     }
 }
 
@@ -68,6 +74,10 @@ struct AnimeEntryDatePickers: View {
     }
 
     var body: some View {
+        verticalBody
+    }
+
+    private var verticalBody: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Spacer()

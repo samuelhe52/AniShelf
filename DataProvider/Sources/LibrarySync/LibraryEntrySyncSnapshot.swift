@@ -89,7 +89,9 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     public var trackingUpdatedAt: Date?
     /// User category memberships (`LibraryCategory.id` values), in insertion order.
     public var categoryIDs: [String]
-    /// Clock for `categoryIDs`. Kept separate so older builds, which never
+    /// Clock for `categoryIDs`.
+    ///
+    /// Kept separate so older builds, which never
     /// send it, cannot win a merge with an empty membership list.
     public var categoriesUpdatedAt: Date?
     /// Newest sync clock used when deciding whether remote state can clear a

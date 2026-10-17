@@ -56,12 +56,17 @@ struct PosterSelectionView: View {
                 }
             )
             .padding(.horizontal, 16)
+            #if os(macOS)
+                // iOS gets this gap from the navigation bar; the Mac title bar ends flush with
+                // the content.
+                .padding(.vertical, 16)
+            #endif
             .frame(maxWidth: 1_100)
             .frame(maxWidth: .infinity)
         }
         .preferredNavigationBarScrollEdgeEffect()
-        .background(Color(.systemGroupedBackground))
-        .navigationBarTitleDisplayMode(.inline)
+        .background(Color.platformSystemGroupedBackground)
+        .inlineNavigationTitle()
         .presentationDragIndicator(.visible)
         .toolbar {
             if showsDismissButton {
@@ -69,7 +74,7 @@ struct PosterSelectionView: View {
                     Button {
                         dismiss()
                     } label: {
-                        Image(systemName: "xmark")
+                        SheetCloseLabel()
                     }
                     .accessibilityLabel(Text("Close"))
                 }
@@ -86,12 +91,15 @@ struct PosterSelectionView: View {
             )
             .presentationSizing(.page)
             .presentationCompactAdaptation(.fullScreenCover)
-            .navigationTransition(
-                .zoom(
-                    sourceID: selection.poster.metadata.filePath,
-                    in: preview))
+            #if !os(macOS)
+                .navigationTransition(
+                    .zoom(
+                        sourceID: selection.poster.metadata.filePath,
+                        in: preview))
+            #endif
         }
         .presentationSizing(.page)
+        .macSheetFrame(width: 900, height: 680)
     }
 
     private func finishPendingPosterSelection() {

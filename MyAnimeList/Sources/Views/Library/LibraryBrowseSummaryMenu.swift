@@ -85,9 +85,21 @@ struct LibraryBrowseSummaryMenu: View {
                 filterToggle(for: .favorited)
             }
         } label: {
-            LibraryToolbarSummaryCapsule(primary: filterSummaryResource)
+            #if os(macOS)
+                // One toolbar glyph with the system menu indicator, filled while a filter
+                // narrows the library, as in Mail.
+                Label(
+                    "Sort, group, and filter",
+                    systemImage: activeFilters.isEmpty
+                        ? "line.3.horizontal.decrease.circle"
+                        : "line.3.horizontal.decrease.circle.fill"
+                )
+                .labelStyle(.iconOnly)
+            #else
+                LibraryToolbarSummaryCapsule(primary: filterSummaryResource)
+            #endif
         }
-        .menuActionDismissBehavior(.disabled)
+        .keepsMenuPresentedAfterAction()
     }
 
     private var availableGroupStrategies: [LibraryStore.LibraryGroupStrategy] {

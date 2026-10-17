@@ -146,11 +146,39 @@ struct EntryDetailHeroSection: View {
 }
 
 struct DetailStatCard: View {
+    @Environment(\.popupPanelStyle) private var panelStyle
     let card: EntryDetailStatCard
 
     private var valueIsShrinkable: Bool { card.valueIsShrinkable }
 
     var body: some View {
+        switch panelStyle {
+        case .glass: tile
+        case .grouped: compactTile
+        }
+    }
+
+    /// One column of the Mac inspector's metric strip: a bold value over a gray caption.
+    private var compactTile: some View {
+        VStack(spacing: 2) {
+            Text(card.value)
+                .font(.title3.weight(.semibold))
+                .lineLimit(1)
+                .allowsTightening(valueIsShrinkable)
+                .minimumScaleFactor(valueIsShrinkable ? 0.6 : 1)
+            Text(String(localized: card.title))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+        }
+        .padding(.horizontal, 6)
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+    }
+
+    private var tile: some View {
         VStack(alignment: .leading) {
             Image(systemName: card.symbolName)
                 .font(.headline)
@@ -172,6 +200,7 @@ struct DetailStatCard: View {
 }
 
 struct EntryDetailQuickActionsRow: View {
+    @Environment(\.popupPanelStyle) private var panelStyle
     @State private var editingReminder: AiringReminderSubscription?
 
     let detailURL: URL?
@@ -193,20 +222,22 @@ struct EntryDetailQuickActionsRow: View {
     let onConvert: () async -> Void
     let onToggleDroppedStatus: () -> Void
 
+    /// The Mac inspector lines compact bordered buttons up under the title instead of
+    /// centering large glass circles.
+    private var isCompact: Bool { panelStyle == .grouped }
+
     var body: some View {
-        HStack(spacing: 10) {
-            Spacer(minLength: 0)
+        HStack(spacing: isCompact ? 6 : 10) {
+            if !isCompact {
+                Spacer(minLength: 0)
+            }
 
             if let detailURL {
                 Link(destination: detailURL) {
-                    Image(systemName: "safari")
-                        .font(.title2)
-                        .frame(width: 20, height: 20)
-                        .padding(10)
+                    PopupActionButtonLabel(systemImage: "safari")
                 }
-                .buttonStyle(.glass)
-                .buttonBorderShape(.circle)
-                .tint(.primary)
+                .popupActionButtonChrome()
+                .macHelp(Text(verbatim: detailURL.host() ?? detailURL.absoluteString))
             }
 
             PopupActionCircleButton(
@@ -214,12 +245,14 @@ struct EntryDetailQuickActionsRow: View {
                 verticalOffset: -1,
                 action: onShare
             )
+            .macHelp(Text("Share…"))
 
             PopupActionCircleButton(
                 systemImage: isFavorite ? "heart.fill" : "heart",
                 tint: isFavorite ? .pink : .primary,
                 action: onToggleFavorite
             )
+            .macHelp(Text(isFavorite ? "Remove from Favorites" : "Add to Favorites"))
 
             Menu {
                 let broadcastMenuContent = EntryDetailBroadcastMenuContent(
@@ -259,22 +292,26 @@ struct EntryDetailQuickActionsRow: View {
                 )
                 .tint(dropActionIsDestructive ? .red : .primary)
             } label: {
-                Image(systemName: "ellipsis")
-                    .font(.title2)
-                    .frame(width: 20, height: 20)
-                    .padding(10)
+                PopupActionButtonLabel(systemImage: "ellipsis")
             }
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
-            .tint(.primary)
+            .popupActionButtonChrome()
+            .menuIndicator(isCompact ? .hidden : .automatic)
+            .macHelp(Text("More"))
 
             Spacer(minLength: 0)
         }
         .sheet(item: $editingReminder) { subscription in
-            AiringReminderTimingSheet(
-                subscription: subscription,
-                defaultTiming: AiringReminderCoordinator.shared.snapshot.defaultTiming
-            )
+            #if os(macOS)
+                MacAiringReminderTimingSheet(
+                    subscription: subscription,
+                    defaultTiming: AiringReminderCoordinator.shared.snapshot.defaultTiming
+                )
+            #else
+                AiringReminderTimingSheet(
+                    subscription: subscription,
+                    defaultTiming: AiringReminderCoordinator.shared.snapshot.defaultTiming
+                )
+            #endif
         }
     }
 }

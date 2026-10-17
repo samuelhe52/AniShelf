@@ -49,8 +49,20 @@ class TMDbAPIKeyStorage {
     var key: String?
     var lookupState: TMDbAPIKeyLookupState = .checking
 
+    private static let defaultKeychainState = OSAllocatedUnfairLock(
+        initialState: TMDbAPIKeyStorageKeychainClient.system)
+
+    /// The keychain every `TMDbAPIKeyStorage()` uses, including the one each `InfoFetcher()` builds.
+    ///
+    /// The system keychain except in fixture launches, which replace it before anything reads
+    /// the key so no code path can read or delete the real key (docs-ai 026).
+    static var defaultKeychain: TMDbAPIKeyStorageKeychainClient {
+        get { defaultKeychainState.withLock { $0 } }
+        set { defaultKeychainState.withLock { $0 = newValue } }
+    }
+
     init(
-        keychain: TMDbAPIKeyStorageKeychainClient = .system,
+        keychain: TMDbAPIKeyStorageKeychainClient = defaultKeychain,
         processArguments: [String] = ProcessInfo.processInfo.arguments
     ) {
         self.keychain = keychain

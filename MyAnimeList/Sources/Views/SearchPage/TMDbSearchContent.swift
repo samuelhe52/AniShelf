@@ -22,12 +22,26 @@ struct TMDbSearchContent: View {
         VStack {
             switch tmdbSearchService.status {
             case .loaded:
-                List {
-                    languagePicker
-                        .listRowBackground(Color.clear)
-                    results
-                }
-                .scrollContentBackground(.hidden)
+                #if os(macOS)
+                    // The Mac search page shows the language beside its search field, and an
+                    // empty state centered in the sheet rather than as a list row.
+                    if hasNoResults {
+                        noResultsView
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        List {
+                            results
+                        }
+                        .scrollContentBackground(.hidden)
+                    }
+                #else
+                    List {
+                        languagePicker
+                            .listRowBackground(Color.clear)
+                        results
+                    }
+                    .scrollContentBackground(.hidden)
+                #endif
             case .loading:
                 Spacer()
                 ProgressView()
@@ -67,15 +81,23 @@ struct TMDbSearchContent: View {
         }
     }
 
+    private var hasNoResults: Bool {
+        tmdbSearchService.movieResults.isEmpty && tmdbSearchService.seriesResults.isEmpty
+    }
+
+    private var noResultsView: some View {
+        ContentUnavailableView(
+            "No Results",
+            systemImage: "magnifyingglass",
+            description: Text("Try a different search term")
+        )
+    }
+
     @ViewBuilder
     private var results: some View {
-        if tmdbSearchService.movieResults.isEmpty && tmdbSearchService.seriesResults.isEmpty {
-            ContentUnavailableView(
-                "No Results",
-                systemImage: "magnifyingglass",
-                description: Text("Try a different search term")
-            )
-            .listRowBackground(Color.clear)
+        if hasNoResults {
+            noResultsView
+                .listRowBackground(Color.clear)
         } else {
             seriesResults
             movieResults

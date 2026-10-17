@@ -19,25 +19,37 @@ struct LibraryProfileInterfaceSettingsSection: View {
     private var showProductionCompanyInsteadOfRuntime = false
 
     var body: some View {
-        VStack(spacing: 16) {
-            LibraryProfileSettingsSection(
-                "Library", systemImage: "hand.tap", tint: LibraryProfileSettingsDestination.appearance.tint
-            ) {
-                LibraryProfileSettingsToggleRow(
-                    title: "Open Detail with Single Tap",
-                    subtitle: "By default, double tap opens detail. Turn this on to use single tap instead.",
-                    isOn: $openDetailWithSingleTap
-                )
+        #if os(macOS)
+            sections
+        #else
+            VStack(spacing: 16) { sections }
+        #endif
+    }
 
-                if #available(iOS 27, *) {
+    @ViewBuilder
+    private var sections: some View {
+        Group {
+            // A click always opens the inspector on the Mac, and its toolbar has no soft edge option.
+            #if !os(macOS)
+                LibraryProfileSettingsSection(
+                    "Library", systemImage: "hand.tap", tint: LibraryProfileSettingsDestination.appearance.tint
+                ) {
                     LibraryProfileSettingsToggleRow(
-                        title: "Use Soft Navigation Bar Edges",
-                        subtitle:
-                            "Available on iOS 27 or later. Turn off to use the system appearance.",
-                        isOn: $useSoftNavigationBarEdges
+                        title: "Open Detail with Single Tap",
+                        subtitle: "By default, double tap opens detail. Turn this on to use single tap instead.",
+                        isOn: $openDetailWithSingleTap
                     )
+
+                    if #available(iOS 27, *) {
+                        LibraryProfileSettingsToggleRow(
+                            title: "Use Soft Navigation Bar Edges",
+                            subtitle:
+                                "Available on iOS 27 or later. Turn off to use the system appearance.",
+                            isOn: $useSoftNavigationBarEdges
+                        )
+                    }
                 }
-            }
+            #endif
             LibraryProfileSettingsSection(
                 "Entry Details", systemImage: "rectangle.3.group.fill",
                 tint: LibraryProfileSettingsDestination.appearance.tint
@@ -71,13 +83,13 @@ struct LibraryProfileTMDbConnectionSection: View {
     @State private var showRestartAlert = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            LibraryProfileSettingHeader(
-                title: "TMDb Connection",
-                subtitle: "Turn this on if direct TMDb access is unstable on your network.",
-                systemImage: "network",
-                tint: LibraryProfileSettingsDestination.metadataImages.tint
-            )
+        LibraryProfileSettingsGroup(
+            "TMDb Connection",
+            subtitle: "Turn this on if direct TMDb access is unstable on your network.",
+            systemImage: "network",
+            tint: LibraryProfileSettingsDestination.metadataImages.tint,
+            spacing: 10
+        ) {
 
             LibraryProfileSettingsToggleRow(
                 title: "Use TMDb Proxy",
@@ -94,8 +106,6 @@ struct LibraryProfileTMDbConnectionSection: View {
                 action: onChangeAPIKey
             )
         }
-        .padding(14)
-        .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsDestination.metadataImages.tint)
         .alert("TMDb Proxy Updated", isPresented: $showRestartAlert) {
             Button("OK") {}
         } message: {

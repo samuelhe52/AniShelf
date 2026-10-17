@@ -60,7 +60,13 @@ final class EntryDetailSession {
     private let broadcastEligibilityChecker: TMDbBroadcastEligibilityChecker
 
     var presentation = EntryDetailPresentationState()
-    var isEditingDetails = false
+    /// Whether Tracking is expanded. The Mac inspector opens with it expanded, since tracking
+    /// is what the inspector is for; iOS opens collapsed below the hero.
+    #if os(macOS)
+        var isEditingDetails = true
+    #else
+        var isEditingDetails = false
+    #endif
     var originalUserInfo: UserEntryInfo
     var originalTrackingUpdatedAt: Date?
     var conversion = EntryDetailConversionState()
@@ -110,6 +116,8 @@ final class EntryDetailSession {
                 forKey: .entryDetailStaffExpandedByDefault,
                 defaultValue: false
             )
+        // The first frame shows the stored detail; the view's load task only refreshes it.
+        model.prepare(for: entry, language: .resolvedAnimeInfoLanguage())
     }
 
     func save() throws {

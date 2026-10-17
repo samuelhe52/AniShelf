@@ -47,12 +47,16 @@ extension SchemaV2_8_3 {
         public var usingCustomPoster: Bool = false
         public var isRewatching: Bool = false
         public var rewatchCount: Int = 0
-        /// `LibraryCategory.id` values. IDs of deleted categories can remain until the next membership write.
+        /// `LibraryCategory.id` values.
+        ///
+        /// IDs of deleted categories can remain until the next membership write.
         public var categoryIDs: [String] = []
 
         public var libraryUpdatedAt: Date?
         public var trackingUpdatedAt: Date?
-        /// Sync clock for `categoryIDs`. Older builds never send it, so their uploads cannot clear memberships.
+        /// Sync clock for `categoryIDs`.
+        ///
+        /// Older builds never send it, so their uploads cannot clear memberships.
         public var categoriesUpdatedAt: Date?
 
         public var selectedPosterPath: String? {

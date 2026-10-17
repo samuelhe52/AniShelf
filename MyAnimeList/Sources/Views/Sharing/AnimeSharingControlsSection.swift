@@ -56,6 +56,7 @@ struct AnimeSharingExportSizeControl: View {
                 }
             }
             .pickerStyle(.segmented)
+            .labelsHidden()
         }
     }
 }
@@ -90,6 +91,7 @@ struct AnimeSharingLanguageControl: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                .labelsHidden()
             }
         }
     }

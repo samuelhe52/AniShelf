@@ -75,7 +75,7 @@ final class AnimeSharingViewModel {
     }
     private(set) var renderedImageURL: URL?
     private(set) var renderedPixelSize: CGSize?
-    private(set) var loadedImage: UIImage?
+    private(set) var loadedImage: PlatformImage?
     private(set) var previewRevision = 0
     /// Aspect ratio applied to previews and exports, sourced from renderer output.
     private(set) var posterAspectRatio: CGFloat = AnimeSharingViewModel.defaultAspectRatio

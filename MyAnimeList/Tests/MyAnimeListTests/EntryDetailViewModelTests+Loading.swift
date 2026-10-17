@@ -46,7 +46,7 @@ extension EntryDetailViewModelTests {
         #expect(await httpClient.requests.isEmpty)
     }
 
-    @Test @MainActor func testEntryDetailRefetchesCachedSameLanguageDetailWhenLogoIsMissing() async {
+    @Test @MainActor func testEntryDetailRefetchesMissingLogoOnlyWhereTheLogoIsShown() async {
         let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
         let httpClient = RecordingTMDbHTTPClient { _ in
             HTTPResponse(statusCode: 500, data: Data())
@@ -73,8 +73,14 @@ extension EntryDetailViewModelTests {
         await viewModel.load(for: entry, language: .english)
 
         #expect(viewModel.displayTitle == "Cached Detail")
-        #expect(viewModel.loadError != nil)
-        #expect(!(await httpClient.requests).isEmpty)
+        #if os(macOS)
+            // The Mac shows no title logo, so the stored detail is already current.
+            #expect(viewModel.loadError == nil)
+            #expect(await httpClient.requests.isEmpty)
+        #else
+            #expect(viewModel.loadError != nil)
+            #expect(!(await httpClient.requests).isEmpty)
+        #endif
     }
 
     @Test @MainActor func testEntryDetailRetriesSameRequestAfterFailure() async {
@@ -162,7 +168,9 @@ extension EntryDetailViewModelTests {
                     throw EntryDetailPersistenceError()
                 }
                 try dataProvider.dataHandler.modelContext.save()
-            }
+            },
+            // The logo-less stored detail is what makes this load fetch.
+            refetchesForMissingLogo: true
         )
 
         await viewModel.load(for: entry, language: .english)

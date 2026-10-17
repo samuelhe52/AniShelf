@@ -17,7 +17,9 @@ extension LibraryStore {
         Set(categories.map(\.id))
     }
 
-    /// Number of library entries in each category. IDs of deleted categories are not counted.
+    /// Number of library entries in each category.
+    ///
+    /// IDs of deleted categories are not counted.
     var categoryEntryCounts: [LibraryCategory.ID: Int] {
         let known = knownCategoryIDs
         var counts: [LibraryCategory.ID: Int] = [:]
@@ -61,7 +63,9 @@ extension LibraryStore {
         return true
     }
 
-    /// Removes only the definition. Entries keep the stale ID: reads ignore unknown IDs,
+    /// Removes only the definition.
+    ///
+    /// Entries keep the stale ID: reads ignore unknown IDs,
     /// and the next membership write on an entry drops them. This avoids rewriting and
     /// re-uploading every member entry.
     func deleteCategory(_ id: LibraryCategory.ID) {

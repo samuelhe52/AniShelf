@@ -13,7 +13,7 @@ struct AnimeSharingPreviewSection: View {
     let subtitle: AttributedString?
     let detail: String?
     let aspectRatio: CGFloat
-    let image: UIImage?
+    let image: PlatformImage?
     let renderedPixelSize: CGSize?
     let usesRoundedCorners: Bool
     @Binding var roundedExportFormat: SharingCardRoundedExportFormat

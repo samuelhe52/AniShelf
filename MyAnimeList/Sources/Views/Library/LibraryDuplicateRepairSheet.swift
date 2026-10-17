@@ -46,7 +46,7 @@ struct LibraryDuplicateRepairSheet: View {
             }
             // .animation(.snappy(duration: 0.4), value: currentGroup?.id)
             .navigationTitle(LocalizedStringResource("Repair Library"))
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
         }
         .interactiveDismissDisabled()
         .confirmationDialog(

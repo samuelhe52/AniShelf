@@ -61,7 +61,7 @@ struct PosterBrowserView: View {
     }
 
     var body: some View {
-        LazyVStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 16) {
             if case .season = type {
                 Picker(selection: $useSeriesPoster) {
                     Text("Season").tag(false)
@@ -72,7 +72,9 @@ struct PosterBrowserView: View {
             }
 
             browserContent
+                .frame(maxWidth: .infinity)
         }
+        .animation(.default, value: loadState)
         .task(id: selectedPosterSource) {
             let source = selectedPosterSource
             await loadPosters(for: source)

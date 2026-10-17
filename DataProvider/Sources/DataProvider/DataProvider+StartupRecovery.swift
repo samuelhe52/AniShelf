@@ -186,6 +186,19 @@ extension DataProvider {
         }
     }
 
+    /// An empty in-memory store for generated fixture libraries.
+    ///
+    /// Never opens or touches the real store.
+    public static func inMemoryFixtureBootstrap(fileManager: FileManager = .default) -> DataProviderBootstrapResult {
+        let storeURL = fileManager.temporaryDirectory
+            .appendingPathComponent("AniShelf-Library-Fixture", isDirectory: true)
+            .appendingPathComponent("mal.store")
+        return DataProviderBootstrapResult(
+            provider: DataProvider(inMemory: true, url: storeURL),
+            status: .opened
+        )
+    }
+
     /// The store's model version when it is newer than every schema this build knows.
     static func newerStoreModelVersion(
         at storeURL: URL,

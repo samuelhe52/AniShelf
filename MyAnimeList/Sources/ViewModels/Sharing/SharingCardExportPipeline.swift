@@ -5,6 +5,7 @@
 //  Created by Samuel He on 2025/11/22.
 //
 
+import CoreImage
 import Foundation
 import ImageIO
 import Kingfisher
@@ -118,8 +119,8 @@ fileprivate struct SharingCardWidthDownsamplingProcessor: ImageProcessor {
         switch item {
         case .image(let image):
             return CGSize(
-                width: image.size.width * image.scale,
-                height: image.size.height * image.scale
+                width: image.pixelSize.width,
+                height: image.pixelSize.height
             )
         case .data(let data):
             guard
@@ -164,7 +165,7 @@ struct SharingCardExportPipeline {
 
     /// Fetches an image through Kingfisher and converts it to sRGB for
     /// consistent downstream rendering.
-    func loadImage(from url: URL, exportSize: SharingCardExportSize) async throws -> UIImage {
+    func loadImage(from url: URL, exportSize: SharingCardExportSize) async throws -> PlatformImage {
         let result = try await KingfisherManager.shared.retrieveImage(
             with: url,
             options: imageLoadingOptions(for: exportSize)
@@ -178,7 +179,7 @@ struct SharingCardExportPipeline {
     /// Renders the SwiftUI sharing card to disk, returning the file
     /// location for later sharing.
     func renderPoster(
-        image: UIImage,
+        image: PlatformImage,
         metadata: PosterMetadata,
         aspectRatio: CGFloat,
         fileName: String,
@@ -201,14 +202,14 @@ struct SharingCardExportPipeline {
 
     /// Produces the normalized visual result independently of its output codec.
     func renderPosterImage(
-        image: UIImage,
+        image: PlatformImage,
         metadata: PosterMetadata,
         aspectRatio: CGFloat,
         usesRoundedCorners: Bool,
         exportSize: SharingCardExportSize
-    ) async throws -> UIImage {
+    ) async throws -> PlatformImage {
         let baseHeight = baseWidth / max(aspectRatio, 0.0001)
-        let sourcePixelWidth = Int((image.size.width * image.scale).rounded())
+        let sourcePixelWidth = Int((image.pixelSize.width).rounded())
         let outputPixelWidth = exportSize.outputPixelWidth(forSourceWidth: sourcePixelWidth)
         let scaleFactor = CGFloat(outputPixelWidth) / baseWidth
 
@@ -227,10 +228,17 @@ struct SharingCardExportPipeline {
         renderer.scale = scaleFactor
         renderer.isOpaque = !usesRoundedCorners
 
-        guard let renderedImage = renderer.uiImage else {
-            throw SharingCardRenderError.renderFailed
-        }
+        #if os(macOS)
+            guard let renderedCGImage = renderer.cgImage else {
+                throw SharingCardRenderError.renderFailed
+            }
+            let renderedImage = PlatformImage(cgImage: renderedCGImage, size: .zero)
+        #else
+            guard let renderedImage = renderer.uiImage else {
+                throw SharingCardRenderError.renderFailed
+            }
 
+        #endif
         let normalizedImage = try await SharingCardExportPipeline.convertToSRGB(renderedImage)
         try Task.checkCancellation()
         return normalizedImage
@@ -239,18 +247,18 @@ struct SharingCardExportPipeline {
     /// Encodes an already-rendered poster without repeating its SwiftUI render
     /// or color-space normalization.
     func persistRenderedPoster(
-        _ normalizedImage: UIImage,
+        _ normalizedImage: PlatformImage,
         fileName: String,
         style: SharingCardExportStyle
     ) async throws -> SharingCardExportResult {
         let imageURL = try await persist(normalizedImage, fileName: fileName, style: style)
         let pixelSize =
-            normalizedImage.cgImage.map {
+            normalizedImage.exportCGImage.map {
                 CGSize(width: $0.width, height: $0.height)
             }
             ?? CGSize(
-                width: normalizedImage.size.width * normalizedImage.scale,
-                height: normalizedImage.size.height * normalizedImage.scale
+                width: normalizedImage.pixelSize.width,
+                height: normalizedImage.pixelSize.height
             )
         return SharingCardExportResult(imageURL: imageURL, pixelSize: pixelSize)
     }
@@ -269,7 +277,7 @@ struct SharingCardExportPipeline {
 
     /// Persists the rendered image to a temporary file on a background queue.
     private func persist(
-        _ image: UIImage,
+        _ image: PlatformImage,
         fileName: String,
         style: SharingCardExportStyle
     ) async throws -> URL {
@@ -278,7 +286,7 @@ struct SharingCardExportPipeline {
             let tempDir = FileManager.default.temporaryDirectory
             let fileURL = tempDir.appendingPathComponent(fileName)
 
-            guard let cgImage = image.cgImage else {
+            guard let cgImage = image.exportCGImage else {
                 throw SharingCardRenderError.invalidImage
             }
 
@@ -341,8 +349,8 @@ struct SharingCardExportPipeline {
         .outputColorSpace: SharingCardExportPipeline.srgbColorSpace
     ])
 
-    /// Forces any UIImage into sRGB so colors match across devices/exports.
-    nonisolated private static func convertToSRGB(_ image: UIImage) async throws -> UIImage {
+    /// Forces any PlatformImage into sRGB so colors match across devices/exports.
+    nonisolated private static func convertToSRGB(_ image: PlatformImage) async throws -> PlatformImage {
         let conversionTask = Task.detached(priority: .userInitiated) {
             try Task.checkCancellation()
             let convertedImage = convertToSRGBSynchronously(image)
@@ -357,8 +365,13 @@ struct SharingCardExportPipeline {
         }
     }
 
-    nonisolated private static func convertToSRGBSynchronously(_ image: UIImage) -> UIImage {
-        guard let ciImage = CIImage(image: image) else { return image }
+    nonisolated private static func convertToSRGBSynchronously(_ image: PlatformImage) -> PlatformImage {
+        #if os(macOS)
+            guard let source = image.exportCGImage else { return image }
+            let ciImage = CIImage(cgImage: source)
+        #else
+            guard let ciImage = CIImage(image: image) else { return image }
+        #endif
         let extent = ciImage.extent.integral
         guard
             let cgImage = SharingCardExportPipeline
@@ -370,7 +383,11 @@ struct SharingCardExportPipeline {
                     colorSpace: SharingCardExportPipeline.srgbColorSpace
                 )
         else { return image }
-        return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
+        #if os(macOS)
+            return PlatformImage(cgImage: cgImage, size: .zero)
+        #else
+            return PlatformImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
+        #endif
     }
 }
 

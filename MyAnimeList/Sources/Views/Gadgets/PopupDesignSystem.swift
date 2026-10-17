@@ -7,6 +7,19 @@
 
 import SwiftUI
 
+/// How popup panels draw.
+///
+/// The Mac inspector uses `.grouped`: flat grouped boxes
+/// with headline titles, as in Mac inspectors, instead of the iOS glass cards.
+enum PopupPanelStyle {
+    case glass
+    case grouped
+}
+
+extension EnvironmentValues {
+    @Entry var popupPanelStyle: PopupPanelStyle = .glass
+}
+
 struct PopupSectionCard<Content: View>: View {
     let title: LocalizedStringResource
     var systemImage: String? = nil
@@ -28,8 +41,10 @@ struct PopupSectionCard<Content: View>: View {
         self.content = content()
     }
 
+    @Environment(\.popupPanelStyle) private var panelStyle
+
     var body: some View {
-        VStack(alignment: .leading, spacing: spacing) {
+        VStack(alignment: .leading, spacing: panelStyle == .grouped ? 10 : spacing) {
             HStack(spacing: 8) {
                 if let systemImage {
                     Image(systemName: systemImage)
@@ -37,12 +52,12 @@ struct PopupSectionCard<Content: View>: View {
                         .foregroundStyle(.secondary)
                 }
                 Text(title)
-                    .font(.title3.weight(.bold))
+                    .font(panelStyle.titleFont)
             }
             content
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
+        .padding(panelStyle.contentPadding)
         .popupGlassPanel(cornerRadius: 24, tint: resolvedPanelTint)
     }
 
@@ -59,19 +74,65 @@ struct PopupActionCircleButton: View {
 
     var body: some View {
         Button(action: action) {
+            PopupActionButtonLabel(systemImage: systemImage, verticalOffset: verticalOffset)
+        }
+        .popupActionButtonChrome(tint: tint)
+    }
+}
+
+/// The icon of a popup action button: a large glass-circle glyph, or a body-sized
+/// glyph inside a bordered button for `.grouped` panels.
+struct PopupActionButtonLabel: View {
+    @Environment(\.popupPanelStyle) private var panelStyle
+    let systemImage: String
+    var verticalOffset: CGFloat = 0
+
+    var body: some View {
+        switch panelStyle {
+        case .glass:
             Image(systemName: systemImage)
                 .font(.title2)
                 .frame(width: 20, height: 20)
                 .padding(10)
                 .offset(y: verticalOffset)
+        case .grouped:
+            Image(systemName: systemImage)
+                .frame(width: 18, height: 16)
+                .offset(y: verticalOffset / 2)
         }
-        .buttonStyle(.glass)
-        .buttonBorderShape(.circle)
-        .tint(tint)
+    }
+}
+
+extension View {
+    func popupActionButtonChrome(tint: Color = .primary) -> some View {
+        modifier(PopupActionButtonChrome(tint: tint))
+    }
+}
+
+fileprivate struct PopupActionButtonChrome: ViewModifier {
+    @Environment(\.popupPanelStyle) private var panelStyle
+    let tint: Color
+
+    func body(content: Content) -> some View {
+        switch panelStyle {
+        case .glass:
+            content
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+                .tint(tint)
+        case .grouped:
+            // On macOS a bordered button's tint fills its bezel, and only while the
+            // window is key, so color the glyph instead to keep the bezel consistent.
+            content
+                .foregroundStyle(tint)
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+        }
     }
 }
 
 struct PopupDisclosureCard<Content: View>: View {
+    @Environment(\.popupPanelStyle) private var panelStyle
     let title: LocalizedStringResource
     var systemImage: String? = nil
     @Binding var isExpanded: Bool
@@ -103,7 +164,7 @@ struct PopupDisclosureCard<Content: View>: View {
                             .foregroundStyle(.secondary)
                     }
                     Text(title)
-                        .font(.title3.weight(.bold))
+                        .font(panelStyle.titleFont)
                     Spacer(minLength: 12)
                     Image(systemName: "chevron.down")
                         .font(.footnote.weight(.bold))
@@ -135,12 +196,13 @@ struct PopupDisclosureCard<Content: View>: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
+        .padding(panelStyle.contentPadding)
         .popupGlassPanel(cornerRadius: 24)
     }
 }
 
 struct PopupNestedDisclosureSection<Content: View>: View {
+    @Environment(\.popupPanelStyle) private var panelStyle
     let title: LocalizedStringResource
     var systemImage: String? = nil
     @Binding var isExpanded: Bool
@@ -172,7 +234,7 @@ struct PopupNestedDisclosureSection<Content: View>: View {
                             .foregroundStyle(.secondary)
                     }
                     Text(title)
-                        .font(.title3.weight(.bold))
+                        .font(panelStyle.titleFont)
                     Spacer(minLength: 12)
                     Image(systemName: "chevron.down")
                         .font(.footnote.weight(.bold))
@@ -205,22 +267,59 @@ struct PopupNestedDisclosureSection<Content: View>: View {
     }
 }
 
+extension PopupPanelStyle {
+    var titleFont: Font {
+        switch self {
+        case .glass: .title3.weight(.bold)
+        case .grouped: .headline
+        }
+    }
+
+    var contentPadding: CGFloat {
+        switch self {
+        case .glass: 18
+        case .grouped: 12
+        }
+    }
+}
+
 extension View {
     func popupGlassPanel(
         cornerRadius: CGFloat,
         padding: CGFloat = 0,
         tint: Color = .white.opacity(0.05)
     ) -> some View {
-        self
-            .padding(padding)
-            .background {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(tint)
-            }
-            .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
-            .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(.white.opacity(0.22), lineWidth: 1)
-            }
+        modifier(PopupGlassPanelModifier(cornerRadius: cornerRadius, padding: padding, tint: tint))
+    }
+}
+
+fileprivate struct PopupGlassPanelModifier: ViewModifier {
+    @Environment(\.popupPanelStyle) private var panelStyle
+    let cornerRadius: CGFloat
+    let padding: CGFloat
+    let tint: Color
+
+    func body(content: Content) -> some View {
+        switch panelStyle {
+        case .glass:
+            content
+                .padding(padding)
+                .background {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(tint)
+                }
+                .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+                .overlay {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .stroke(.white.opacity(0.22), lineWidth: 1)
+                }
+        case .grouped:
+            content
+                .padding(padding)
+                .background {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(.fill.quaternary)
+                }
+        }
     }
 }

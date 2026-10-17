@@ -6,7 +6,12 @@
 //
 
 import SwiftUI
-import UIKit
+
+#if os(macOS)
+    import AppKit
+#else
+    import UIKit
+#endif
 
 struct InfoTip: View {
     @State private var showTip = false
@@ -46,7 +51,12 @@ struct InfoTip: View {
 
     private func copyTipText() {
         guard let copyText else { return }
-        UIPasteboard.general.string = String(localized: copyText)
+        #if os(macOS)
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(String(localized: copyText), forType: .string)
+        #else
+            UIPasteboard.general.string = String(localized: copyText)
+        #endif
         copyHapticTrigger.toggle()
     }
 }

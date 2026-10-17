@@ -17,9 +17,6 @@
 		9F8F3B3C3009D56A00812833 /* DataProvider in Frameworks */ = {isa = PBXBuildFile; productRef = 9F93FC212DE202E10071FB56 /* DataProvider */; };
 		9F93FC222DE202E10071FB56 /* DataProvider in Frameworks */ = {isa = PBXBuildFile; productRef = 9F93FC212DE202E10071FB56 /* DataProvider */; };
 		9FB6FEF12D8FCE5A00B423D0 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 9FB6FEF02D8FCE5A00B423D0 /* Kingfisher */; };
-		9FE2B51D2E0FE91900E4898C /* SHContainers in Frameworks */ = {isa = PBXBuildFile; productRef = 9FE2B51C2E0FE91900E4898C /* SHContainers */; };
-		9FE2B5202E0FE94300E4898C /* SHContainers in Frameworks */ = {isa = PBXBuildFile; productRef = 9FE2B51F2E0FE94300E4898C /* SHContainers */; };
-		9FE2B5252E0FEE4A00E4898C /* SHContainers in Frameworks */ = {isa = PBXBuildFile; productRef = 9FE2B5242E0FEE4A00E4898C /* SHContainers */; };
 		9FFCB76E2EC896520088FF36 /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = 9FFCB76D2EC896520088FF36 /* Collections */; };
 /* End PBXBuildFile section */
 
@@ -42,7 +39,7 @@
 
 /* Begin PBXFileReference section */
 		9F4164E02FCA044600934B66 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
-		9F8D66302D055FEF00CF355D /* MyAnimeList.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MyAnimeList.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9F8D66302D055FEF00CF355D /* AniShelf.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AniShelf.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9F8D66402D055FF000CF355D /* MyAnimeListTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MyAnimeListTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9F8D664A2D055FF000CF355D /* MyAnimeListUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MyAnimeListUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9F93FC0D2DE1FD520071FB56 /* DataProvider */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = DataProvider; sourceTree = "<group>"; };
@@ -71,6 +68,7 @@
 				Tests/MyAnimeListTests/LibraryBackupRestoreTests.swift,
 				Tests/MyAnimeListTests/LibraryCloudSyncPreferencesTests.swift,
 				Tests/MyAnimeListTests/LibraryEntryInteractionStateTests.swift,
+				Tests/MyAnimeListTests/MacWatchStatusPickerTests.swift,
 				Tests/MyAnimeListTests/LibraryExportManagerTests.swift,
 				Tests/MyAnimeListTests/LibraryGalleryLayoutPolicyTests.swift,
 				Tests/MyAnimeListTests/LibraryMetadataRefreshTests.swift,
@@ -97,6 +95,7 @@
 				Tests/MyAnimeListTests/LibrarySyncCoordinatorTestsSupport.swift,
 				Tests/MyAnimeListTests/LibrarySyncNotificationBridgeTests.swift,
 				Tests/MyAnimeListTests/LibrarySyncRecorderBehaviorTests.swift,
+				Tests/MyAnimeListTests/MacLibrarySelectionTests.swift,
 				Tests/MyAnimeListTests/MyAnimeListTestSupport.swift,
 				Tests/MyAnimeListTests/SupportStoreTests.swift,
 				Tests/MyAnimeListTests/TMDbAPIKeyStorageTests.swift,
@@ -112,6 +111,7 @@
 				Tests/MyAnimeListTests/TVMazeResolverTests.swift,
 				Tests/MyAnimeListTests/UserEntryInfoAndLibraryStatsTests.swift,
 				Tests/MyAnimeListTests/WhatsNewAndRefreshTests.swift,
+				Tests/MyAnimeListUITests/LibraryBenchmarkTests.swift,
 				Tests/MyAnimeListUITests/MyAnimeListUITests.swift,
 				Tests/MyAnimeListUITests/MyAnimeListUITestsLaunchTests.swift,
 			);
@@ -138,6 +138,7 @@
 				Tests/MyAnimeListTests/LibraryBackupRestoreTests.swift,
 				Tests/MyAnimeListTests/LibraryCloudSyncPreferencesTests.swift,
 				Tests/MyAnimeListTests/LibraryEntryInteractionStateTests.swift,
+				Tests/MyAnimeListTests/MacWatchStatusPickerTests.swift,
 				Tests/MyAnimeListTests/LibraryExportManagerTests.swift,
 				Tests/MyAnimeListTests/LibraryGalleryLayoutPolicyTests.swift,
 				Tests/MyAnimeListTests/LibraryMetadataRefreshTests.swift,
@@ -164,6 +165,7 @@
 				Tests/MyAnimeListTests/LibrarySyncCoordinatorTestsSupport.swift,
 				Tests/MyAnimeListTests/LibrarySyncNotificationBridgeTests.swift,
 				Tests/MyAnimeListTests/LibrarySyncRecorderBehaviorTests.swift,
+				Tests/MyAnimeListTests/MacLibrarySelectionTests.swift,
 				Tests/MyAnimeListTests/MyAnimeListTestSupport.swift,
 				Tests/MyAnimeListTests/SupportStoreTests.swift,
 				Tests/MyAnimeListTests/TMDbAPIKeyStorageTests.swift,
@@ -185,6 +187,7 @@
 		9F93FC192DE1FD800071FB56 /* Exceptions for "MyAnimeList" folder in "MyAnimeListUITests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Tests/MyAnimeListUITests/LibraryBenchmarkTests.swift,
 				Tests/MyAnimeListUITests/MyAnimeListUITests.swift,
 				Tests/MyAnimeListUITests/MyAnimeListUITestsLaunchTests.swift,
 			);
@@ -219,9 +222,6 @@
 				9FFCB76E2EC896520088FF36 /* Collections in Frameworks */,
 				9F6845BF2E7E4CFE007FC6CF /* AlertToast in Frameworks */,
 				9F8D665F2D05609200CF355D /* TMDb in Frameworks */,
-				9FE2B5252E0FEE4A00E4898C /* SHContainers in Frameworks */,
-				9FE2B5202E0FE94300E4898C /* SHContainers in Frameworks */,
-				9FE2B51D2E0FE91900E4898C /* SHContainers in Frameworks */,
 				9F720B892E584AD400C23949 /* ZIPFoundation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -257,7 +257,7 @@
 		9F8D66312D055FEF00CF355D /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				9F8D66302D055FEF00CF355D /* MyAnimeList.app */,
+				9F8D66302D055FEF00CF355D /* AniShelf.app */,
 				9F8D66402D055FF000CF355D /* MyAnimeListTests.xctest */,
 				9F8D664A2D055FF000CF355D /* MyAnimeListUITests.xctest */,
 			);
@@ -295,9 +295,6 @@
 				9F8D665E2D05609200CF355D /* TMDb */,
 				9FB6FEF02D8FCE5A00B423D0 /* Kingfisher */,
 				9F93FC212DE202E10071FB56 /* DataProvider */,
-				9FE2B51C2E0FE91900E4898C /* SHContainers */,
-				9FE2B51F2E0FE94300E4898C /* SHContainers */,
-				9FE2B5242E0FEE4A00E4898C /* SHContainers */,
 				9F720B882E584AD400C23949 /* ZIPFoundation */,
 				9F6845BE2E7E4CFE007FC6CF /* AlertToast */,
 				9F1BC6C92E7F024E00221B77 /* AlertToast */,
@@ -306,7 +303,7 @@
 				9F11BF6F2FF91280009372EF /* SwiftDraw */,
 			);
 			productName = MyAnimeList;
-			productReference = 9F8D66302D055FEF00CF355D /* MyAnimeList.app */;
+			productReference = 9F8D66302D055FEF00CF355D /* AniShelf.app */;
 			productType = "com.apple.product-type.application";
 		};
 		9F8D663F2D055FF000CF355D /* MyAnimeListTests */ = {
@@ -386,7 +383,6 @@
 			packageReferences = (
 				9F8D665D2D05609200CF355D /* XCRemoteSwiftPackageReference "TMDb" */,
 				9FB6FEEF2D8FCE5A00B423D0 /* XCRemoteSwiftPackageReference "Kingfisher" */,
-				9FE2B5232E0FEE4A00E4898C /* XCRemoteSwiftPackageReference "SHContainers" */,
 				9F720B872E584AD400C23949 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 				9F1BC6CB2E7F028100221B77 /* XCRemoteSwiftPackageReference "AlertToast" */,
 				9FFCB76C2EC896520088FF36 /* XCRemoteSwiftPackageReference "swift-collections" */,
@@ -599,6 +595,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = MyAnimeList/MyAnimeList.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "MyAnimeList/MyAnimeList-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"MyAnimeList/Preview Content\"";
@@ -623,11 +620,14 @@
 				);
 				MARKETING_VERSION = 1.103.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelhe.MyAnimeList;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = MyAnimeList;
+				PRODUCT_NAME = AniShelf;
 				REGISTER_APP_GROUPS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "$(inherited) @executable_path/../Frameworks";
 				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
@@ -641,6 +641,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = MyAnimeList/MyAnimeList.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "MyAnimeList/MyAnimeList-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"MyAnimeList/Preview Content\"";
@@ -665,11 +666,14 @@
 				);
 				MARKETING_VERSION = 1.103.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelhe.MyAnimeList;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_MODULE_NAME = MyAnimeList;
+				PRODUCT_NAME = AniShelf;
 				REGISTER_APP_GROUPS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "$(inherited) @executable_path/../Frameworks";
 				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
@@ -687,12 +691,14 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelhe.MyAnimeListTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MyAnimeList.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MyAnimeList";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AniShelf.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AniShelf";
 			};
 			name = Debug;
 		};
@@ -706,12 +712,14 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelhe.MyAnimeListTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MyAnimeList.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MyAnimeList";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AniShelf.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AniShelf";
 			};
 			name = Release;
 		};
@@ -833,14 +841,6 @@
 				minimumVersion = 8.3.1;
 			};
 		};
-		9FE2B5232E0FEE4A00E4898C /* XCRemoteSwiftPackageReference "SHContainers" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/samuelhe52/SHContainers.git";
-			requirement = {
-				branch = main;
-				kind = branch;
-			};
-		};
 		9FFCB76C2EC896520088FF36 /* XCRemoteSwiftPackageReference "swift-collections" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/apple/swift-collections.git";
@@ -888,19 +888,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 9FB6FEEF2D8FCE5A00B423D0 /* XCRemoteSwiftPackageReference "Kingfisher" */;
 			productName = Kingfisher;
-		};
-		9FE2B51C2E0FE91900E4898C /* SHContainers */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = SHContainers;
-		};
-		9FE2B51F2E0FE94300E4898C /* SHContainers */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = SHContainers;
-		};
-		9FE2B5242E0FEE4A00E4898C /* SHContainers */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 9FE2B5232E0FEE4A00E4898C /* XCRemoteSwiftPackageReference "SHContainers" */;
-			productName = SHContainers;
 		};
 		9FFCB76D2EC896520088FF36 /* Collections */ = {
 			isa = XCSwiftPackageProductDependency;

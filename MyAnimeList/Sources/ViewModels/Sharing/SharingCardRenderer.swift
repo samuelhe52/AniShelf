@@ -1,7 +1,19 @@
+//
+//  SharingCardRenderer.swift
+//  AniShelf
+//
+//  Created by OpenAI Codex on behalf of Samuel He on 2025/11/22.
+//
+
 import Foundation
 import SwiftUI
-import UIKit
 import os
+
+#if os(macOS)
+    import AppKit
+#else
+    import UIKit
+#endif
 
 /// Output payload returned after a poster render completes.
 @MainActor
@@ -29,9 +41,9 @@ final class SharingCardRenderer {
     }
 
     private var lastLoadedPosterKey: LoadedPosterKey?
-    private var cachedImage: UIImage?
+    private var cachedImage: PlatformImage?
     private var lastRenderedImageKey: SharingCardVisualRenderKey?
-    private var cachedRenderedImage: UIImage?
+    private var cachedRenderedImage: PlatformImage?
 
     private let logger = Logger(subsystem: "com.samuelhe.MyAnimeList", category: "SharingCardRenderer")
 
@@ -59,7 +71,7 @@ final class SharingCardRenderer {
         for trigger: SharingCardRenderTrigger,
         metadata: PosterMetadata,
         fileName: String,
-        onPosterLoaded: (UIImage, CGFloat) -> Void
+        onPosterLoaded: (PlatformImage, CGFloat) -> Void
     ) async -> SharingCardRenderOutcome? {
         guard let posterURL = trigger.posterURL else { return nil }
         guard !Task.isCancelled else { return nil }
@@ -136,7 +148,7 @@ final class SharingCardRenderer {
     private func loadImageIfNeeded(
         from url: URL,
         exportSize: SharingCardExportSize
-    ) async -> UIImage? {
+    ) async -> PlatformImage? {
         let key = LoadedPosterKey(url: url, exportSize: exportSize)
         if lastLoadedPosterKey == key, let cachedImage {
             return cachedImage
@@ -157,11 +169,11 @@ final class SharingCardRenderer {
 
     /// Reuses the normalized rounded bitmap when only PNG/HEIC encoding changes.
     private func renderImageIfNeeded(
-        from image: UIImage,
+        from image: PlatformImage,
         metadata: PosterMetadata,
         aspectRatio: CGFloat,
         for trigger: SharingCardRenderTrigger
-    ) async throws -> UIImage {
+    ) async throws -> PlatformImage {
         let key = trigger.visualRenderKey
         if lastRenderedImageKey == key, let cachedRenderedImage {
             return cachedRenderedImage
@@ -187,7 +199,7 @@ final class SharingCardRenderer {
     }
 
     /// Converts an image's intrinsic ratio into the nearest supported variant.
-    private func clampAspectRatio(for image: UIImage) -> CGFloat {
+    private func clampAspectRatio(for image: PlatformImage) -> CGFloat {
         let ratio = image.size.width / max(image.size.height, 1)
         return clampAspectRatio(ratio)
     }

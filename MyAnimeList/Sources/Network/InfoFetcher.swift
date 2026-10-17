@@ -179,7 +179,15 @@ final class InfoFetcher: Sendable {
         }
     }
 
-    /// - Parameter posterLanguage: Chooses the default poster; required so every library write path passes the current preference.
+    /// Fetches the latest metadata and detail for a library entry.
+    ///
+    /// - Parameters:
+    ///   - entryType: The kind of entry to fetch.
+    ///   - tmdbID: The TMDb identifier of the entry.
+    ///   - language: The language for the fetched metadata.
+    ///   - posterLanguage: Chooses the default poster; required so every library write path passes the current preference.
+    /// - Throws: The error from the TMDb request for the entry's type.
+    /// - Returns: The entry's metadata and detail.
     func latestInfo(
         entryType: AnimeType,
         tmdbID: Int,

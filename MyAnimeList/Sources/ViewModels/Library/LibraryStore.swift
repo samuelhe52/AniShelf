@@ -36,6 +36,9 @@ class LibraryStore {
     @ObservationIgnored private var deferredLibraryRefreshDepth = 0
     @ObservationIgnored private var needsDeferredLibraryRefresh = false
     @ObservationIgnored private var airingReminderPruningEnabled: Bool
+    /// False for generated fixture libraries (docs-ai 026): no sync coordinator or scheduler
+    /// exists, so every sync path, including Settings' enable and retry, does nothing.
+    @ObservationIgnored let allowsCloudSync: Bool
     private(set) var libraryRevision = 0
 
     // MARK: - State
@@ -110,7 +113,9 @@ class LibraryStore {
 
     // MARK: - Categories State
 
-    /// Opt-in switch for library categories. Turning it off keeps categories and memberships.
+    /// Opt-in switch for library categories.
+    ///
+    /// Turning it off keeps categories and memberships.
     var categoriesEnabled: Bool = false {
         willSet {
             preferences.saveCategoriesEnabled(newValue)
@@ -124,7 +129,9 @@ class LibraryStore {
     var categoryStripEnabled: Bool = false {
         willSet { preferences.saveCategoryStripEnabled(newValue) }
     }
-    /// Category definitions in display order. Write through the category operations.
+    /// Category definitions in display order.
+    ///
+    /// Write through the category operations.
     var categories: [LibraryCategory] = [] {
         willSet { preferences.saveCategories(newValue) }
         didSet {
@@ -136,12 +143,55 @@ class LibraryStore {
     /// The category the library is narrowed to; `nil` means All. Shared across windows, like `filters`.
     var activeCategoryID: LibraryCategory.ID?
 
-    var libraryOnDisplay: [AnimeEntry] {
-        filterAndSort(library)
+    /// Bumped when the cached display list goes stale, so views reading it re-render.
+    private var libraryDisplayGeneration = 0
+    @ObservationIgnored private var libraryDisplayCache: LibraryDisplayCache?
+    @ObservationIgnored private var isInvalidatingLibraryDisplay = false
+    /// How many times the display list was computed; tests use it to catch spurious invalidation.
+    @ObservationIgnored private(set) var libraryDisplayComputeCount = 0
+
+    var libraryDisplayItems: [LibraryEntryDisplayItem] { libraryDisplay.items }
+
+    var libraryDisplayIDs: [LibraryEntryIdentity] { libraryDisplay.ids }
+
+    var libraryOnDisplay: [AnimeEntry] { libraryDisplay.items.map(\.entry) }
+
+    /// The shown entry with this identity, if the current scope and filters show it.
+    func displayedEntry(for identity: LibraryEntryIdentity) -> AnimeEntry? {
+        libraryDisplay.entriesByID[identity]
     }
 
-    var libraryDisplayItems: [LibraryEntryDisplayItem] {
-        libraryOnDisplay.map(LibraryEntryDisplayItem.init)
+    /// The filtered, sorted display list, recomputed only after something it read changes.
+    ///
+    /// Observation tracking covers every input the computation reads, including the entries'
+    /// own properties, so unsaved edits such as favorite toggles invalidate it like saves do.
+    /// The cache is cleared in the input's `willSet` and rebuilt on the next read, which runs in
+    /// the mutating caller's transaction and keeps its animation.
+    private var libraryDisplay: LibraryDisplayCache {
+        _ = libraryDisplayGeneration
+        if let libraryDisplayCache { return libraryDisplayCache }
+        libraryDisplayComputeCount += 1
+        let cache = withObservationTracking {
+            LibraryDisplayCache(items: filterAndSort(library).map(LibraryEntryDisplayItem.init))
+        } onChange: { [weak self] in
+            if Thread.isMainThread {
+                MainActor.assumeIsolated { self?.invalidateLibraryDisplay() }
+            } else {
+                Task { @MainActor in self?.invalidateLibraryDisplay() }
+            }
+        }
+        if !isInvalidatingLibraryDisplay {
+            libraryDisplayCache = cache
+        }
+        return cache
+    }
+
+    private func invalidateLibraryDisplay() {
+        isInvalidatingLibraryDisplay = true
+        defer { isInvalidatingLibraryDisplay = false }
+        libraryDisplayCache = nil
+        libraryDisplayGeneration &+= 1
+        LibraryBenchmarkSignposts.displayDidInvalidate()
     }
 
     /// Whether the library already holds an entry, regardless of the active category or filters.
@@ -160,9 +210,11 @@ class LibraryStore {
             guard let key = TMDbAPIKeyStorage().retrieveKey() else { return false }
             return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         },
-        airingReminderPruningEnabled: Bool = false
+        airingReminderPruningEnabled: Bool = false,
+        allowsCloudSync: Bool = true
     ) {
         self.dataProvider = dataProvider
+        self.allowsCloudSync = allowsCloudSync
         let syncChangeRecorder = LibrarySyncChangeRecorder(dataProvider: dataProvider)
         let repository = LibraryRepository(
             dataProvider: dataProvider,
@@ -197,8 +249,10 @@ class LibraryStore {
                 "Initial library fetch failed: \(String(describing: error), privacy: .public)"
             )
         }
-        self.syncCoordinator = LibrarySyncCoordinator(store: self)
-        setupLibrarySyncScheduling()
+        if allowsCloudSync {
+            self.syncCoordinator = LibrarySyncCoordinator(store: self)
+            setupLibrarySyncScheduling()
+        }
     }
 
     func reloadPersistedPreferences() {
@@ -885,6 +939,7 @@ class LibraryStore {
             LibrarySyncCoordinator.hydrateMissingEntry,
         dateProvider: @escaping @MainActor @Sendable () -> Date = { .now }
     ) {
+        guard allowsCloudSync else { return }
         syncCoordinator = LibrarySyncCoordinator(
             store: self,
             client: client,

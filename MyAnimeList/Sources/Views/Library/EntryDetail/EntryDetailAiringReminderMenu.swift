@@ -7,7 +7,12 @@
 
 import DataProvider
 import SwiftUI
-import UIKit
+
+#if os(macOS)
+    import AppKit
+#else
+    import UIKit
+#endif
 
 struct EntryDetailAiringReminderContext {
     let entryIdentity: LibraryEntryIdentity
@@ -83,7 +88,7 @@ struct EntryDetailAiringReminderMenu: View {
         }
         .tint(hasReminder ? .green : .primary)
         .disabled(!hasReminder)
-        .menuActionDismissBehavior(.disabled)
+        .keepsMenuPresentedAfterAction()
     }
 
     private var nextEpisodeStatus: some View {
@@ -98,12 +103,19 @@ struct EntryDetailAiringReminderMenu: View {
             }
         }
         .disabled(!hasReminder)
-        .menuActionDismissBehavior(.disabled)
+        .keepsMenuPresentedAfterAction()
     }
 
     private var openNotificationSettingsButton: some View {
         Button {
-            guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else { return }
+            #if os(macOS)
+                guard
+                    let settingsURL = URL(
+                        string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")
+                else { return }
+            #else
+                guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else { return }
+            #endif
             openURL(settingsURL)
         } label: {
             Label(EntryDetailL10n.openNotificationSettings, systemImage: "gear")
@@ -125,7 +137,7 @@ struct EntryDetailAiringReminderMenu: View {
             Label(EntryDetailL10n.enable, systemImage: "bell.badge")
         }
         .disabled(context.resolvedShow == nil || airingReminders.isRefreshing)
-        .menuActionDismissBehavior(.disabled)
+        .keepsMenuPresentedAfterAction()
     }
 
     private var removeReminderButton: some View {
@@ -142,6 +154,6 @@ struct EntryDetailAiringReminderMenu: View {
         }
         .tint(.red)
         .disabled(airingReminders.isRefreshing)
-        .menuActionDismissBehavior(.disabled)
+        .keepsMenuPresentedAfterAction()
     }
 }

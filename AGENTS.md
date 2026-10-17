@@ -2,7 +2,7 @@
 
 ## Workflow
 
-- Use the Makefile for routine tasks: `make clean`, `make refresh-packages`, `make format`, `make lint`, `make build`, `make test-sim`, and `make run-sim`.
+- Use the Makefile for routine tasks: `make clean`, `make refresh-packages`, `make format`, `make lint`, `make build`, `make test-sim`, `make run-sim`, `make build-mac`, `make test-mac`, and `make run-mac`.
 - Use `make test-sim` for broad simulator-based validation. Use `make run-sim` when validating app runtime or UI behavior rather than relying only on `make build`, unless the user explicitly asks for device-based verification.
 - Use `make run-device` for build, install, and launch on a connected iPhone only when the user explicitly asks for device-based verification.
 - Prefer the smallest relevant build or test command before broad verification.

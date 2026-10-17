@@ -90,6 +90,7 @@ struct SeriesSeasonEpisodeGroupView: View {
     private let initialRenderedEpisodeCount = 24
     private let renderedEpisodeBatchSize = 24
 
+    @Environment(\.popupPanelStyle) private var panelStyle
     @State private var isExpanded: Bool
     @State private var episodeLoader = SeriesSeasonEpisodeLoader()
     @State private var renderedEpisodeCount = 24
@@ -124,7 +125,7 @@ struct SeriesSeasonEpisodeGroupView: View {
                             .foregroundStyle(.secondary)
                     }
                     Text(sectionTitle)
-                        .font(.title3.weight(.bold))
+                        .font(panelStyle.titleFont)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -163,7 +164,7 @@ struct SeriesSeasonEpisodeGroupView: View {
                     }
             }
         }
-        .padding(18)
+        .padding(panelStyle.contentPadding)
         .popupGlassPanel(cornerRadius: 24)
         .animation(loadingAnimation, value: episodeLoader.isLoading)
         .animation(loadingAnimation, value: episodeLoader.loadFailed)
@@ -307,6 +308,11 @@ struct EpisodePreviewCard: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .lineSpacing(3)
+                #if os(macOS)
+                    // A Mac popover otherwise proposes a one-line height.
+                    .lineLimit(14)
+                    .fixedSize(horizontal: false, vertical: true)
+                #endif
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentTransition(.opacity)
                 .animation(.easeInOut(duration: 0.2), value: previewModel.overviewText)

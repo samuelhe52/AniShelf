@@ -65,63 +65,64 @@ class LibrarySearchService {
         var results: [AnimeEntry] = []
         var processedIdentities = Set<LibraryEntryIdentity>()
 
-        func addToResults(evaluate: (AnimeEntry) -> Bool) {
+        // Earlier predicates rank higher: name, translations, parent series, overview,
+        // overview translations, notes, then air date.
+        for predicate in Self.matchPredicates(lowercasedQuery: lowercasedQuery) {
             for entry in entries where !processedIdentities.contains(entry.libraryIdentity) {
                 guard entry.onDisplay else { continue }
-                if evaluate(entry) {
+                if predicate(entry) {
                     results.append(entry)
                     processedIdentities.insert(entry.libraryIdentity)
                 }
             }
         }
 
-        // Priority 1: Name matches (displayName)
-        addToResults { $0.displayName.lowercased().contains(lowercasedQuery) }
+        return results
+    }
 
-        // Priority 2: Name translations
-        addToResults {
-            $0.nameTranslations.contains(where: { $0.value.lowercased().contains(lowercasedQuery) })
-        }
+    /// Matches entries by the same rules as the search page, without its ranking.
+    ///
+    /// The Mac toolbar's Find filters the visible library with it.
+    static func matcher(for query: String) -> (AnimeEntry) -> Bool {
+        let predicates = matchPredicates(lowercasedQuery: query.lowercased())
+        return { entry in predicates.contains { $0(entry) } }
+    }
 
-        // Priority 3: Parent series matches
-        addToResults { entry in
-            guard let parentSeries = entry.parentSeriesEntry else { return false }
-            return parentSeries.overview?.lowercased().contains(lowercasedQuery) ?? false
-                || parentSeries.displayName.lowercased().contains(lowercasedQuery)
-                || parentSeries.nameTranslations.contains(where: {
-                    $0.value.lowercased().contains(lowercasedQuery)
-                })
-                || parentSeries.overviewTranslations.contains(where: {
-                    $0.value.lowercased().contains(lowercasedQuery)
-                })
-        }
-
-        // Priority 4: Overview matches
-        addToResults { $0.overview?.lowercased().contains(lowercasedQuery) ?? false }
-
-        // Priority 5: Overview translations
-        addToResults {
-            $0.overviewTranslations.contains(where: {
-                $0.value.lowercased().contains(lowercasedQuery)
-            })
-        }
-
-        // Priority 6: Notes matches
-        addToResults { $0.notes.lowercased().contains(lowercasedQuery) }
-
-        // Priority 7: Date matches
+    private static func matchPredicates(lowercasedQuery: String) -> [(AnimeEntry) -> Bool] {
         let dateFormatter = DateFormatter()
         dateFormatter.dateStyle = .medium
-        addToResults { entry in
-            if let onAirDate = entry.onAirDate {
-                let dateString = dateFormatter.string(from: onAirDate).lowercased()
-                if dateString.contains(lowercasedQuery) {
-                    return true
-                }
+        return [
+            // Priority 1: Name matches (displayName)
+            { $0.displayName.lowercased().contains(lowercasedQuery) },
+            // Priority 2: Name translations
+            { $0.nameTranslations.contains(where: { $0.value.lowercased().contains(lowercasedQuery) }) },
+            // Priority 3: Parent series matches
+            { entry in
+                guard let parentSeries = entry.parentSeriesEntry else { return false }
+                return parentSeries.overview?.lowercased().contains(lowercasedQuery) ?? false
+                    || parentSeries.displayName.lowercased().contains(lowercasedQuery)
+                    || parentSeries.nameTranslations.contains(where: {
+                        $0.value.lowercased().contains(lowercasedQuery)
+                    })
+                    || parentSeries.overviewTranslations.contains(where: {
+                        $0.value.lowercased().contains(lowercasedQuery)
+                    })
+            },
+            // Priority 4: Overview matches
+            { $0.overview?.lowercased().contains(lowercasedQuery) ?? false },
+            // Priority 5: Overview translations
+            {
+                $0.overviewTranslations.contains(where: {
+                    $0.value.lowercased().contains(lowercasedQuery)
+                })
+            },
+            // Priority 6: Notes matches
+            { $0.notes.lowercased().contains(lowercasedQuery) },
+            // Priority 7: Date matches
+            { entry in
+                guard let onAirDate = entry.onAirDate else { return false }
+                return dateFormatter.string(from: onAirDate).lowercased().contains(lowercasedQuery)
             }
-            return false
-        }
-
-        return results
+        ]
     }
 }

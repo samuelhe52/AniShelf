@@ -1,3 +1,10 @@
+//
+//  LibraryEntrySnapshot.swift
+//  AniShelf
+//
+//  Created by OpenAI Codex on behalf of Samuel He on 2026/5/7.
+//
+
 import DataProvider
 import Foundation
 import SwiftUI
@@ -11,6 +18,24 @@ struct LibraryEntryDisplayItem: Identifiable {
     init(entry: AnimeEntry) {
         self.entry = entry
         self.snapshot = LibraryEntrySnapshot(entry: entry)
+    }
+}
+
+/// One computed library display list with the lookups its readers need.
+struct LibraryDisplayCache {
+    let items: [LibraryEntryDisplayItem]
+    let ids: [LibraryEntryIdentity]
+    let entriesByID: [LibraryEntryIdentity: AnimeEntry]
+
+    init(items: [LibraryEntryDisplayItem]) {
+        self.items = items
+        self.ids = items.map(\.id)
+        self.entriesByID = Dictionary(
+            items.map { ($0.id, $0.entry) },
+            uniquingKeysWith: { existing, candidate in
+                AnimeEntryDuplicateResolver.prefers(candidate, existing) ? candidate : existing
+            }
+        )
     }
 }
 

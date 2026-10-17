@@ -9,7 +9,6 @@ import Foundation
 import ImageIO
 import SwiftUI
 import Testing
-import UIKit
 import UniformTypeIdentifiers
 
 @testable import DataProvider
@@ -279,12 +278,7 @@ struct AnimeSharingTests {
         sourceSize: CGSize = CGSize(width: 180, height: 270)
     ) async throws -> SharingCardExportResult {
         let layoutSize = CGSize(width: 90, height: 135)
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1
-        let sourceImage = UIGraphicsImageRenderer(size: sourceSize, format: format).image { context in
-            UIColor.systemBlue.setFill()
-            context.cgContext.fill(CGRect(origin: .zero, size: sourceSize))
-        }
+        let sourceImage = try #require(solidImage(size: sourceSize))
         let pipeline = SharingCardExportPipeline(
             baseWidth: layoutSize.width,
             jpegQuality: 0.9,
@@ -304,6 +298,29 @@ struct AnimeSharingTests {
             style: style,
             exportSize: exportSize
         )
+    }
+
+    /// A one-scale solid image, built from a bitmap so iOS and macOS share it.
+    private func solidImage(size: CGSize) -> PlatformImage? {
+        guard
+            let context = CGContext(
+                data: nil,
+                width: Int(size.width),
+                height: Int(size.height),
+                bitsPerComponent: 8,
+                bytesPerRow: 0,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
+        else { return nil }
+        context.setFillColor(red: 0, green: 0.48, blue: 1, alpha: 1)
+        context.fill(CGRect(origin: .zero, size: size))
+        guard let cgImage = context.makeImage() else { return nil }
+        #if os(macOS)
+            return PlatformImage(cgImage: cgImage, size: .zero)
+        #else
+            return PlatformImage(cgImage: cgImage, scale: 1, orientation: .up)
+        #endif
     }
 
     private func cornerAlpha(of image: CGImage) -> UInt8 {

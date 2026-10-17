@@ -48,16 +48,103 @@ struct AnimeEntryListRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 11) {
-            poster
-            info
-        }
-        .frame(height: rowHeight, alignment: .top)
-        .padding(.vertical, 5)
-        .overlay {
-            rowTapSurface
-        }
+        #if os(macOS)
+            compactRow
+                .overlay {
+                    // Mac lists select natively; an inert overlay would still take the click
+                    // away from the table and leave keyboard focus elsewhere.
+                    if tapGesturesEnabled {
+                        rowTapSurface
+                    }
+                }
+        #else
+            HStack(alignment: .top, spacing: 11) {
+                poster
+                info
+            }
+            .frame(height: rowHeight, alignment: .top)
+            .padding(.vertical, 5)
+            .overlay {
+                rowTapSurface
+            }
+        #endif
     }
+
+    #if os(macOS)
+        /// A dense desktop row: a small poster, title and metadata on two lines, and the
+        /// badges trailing.
+        ///
+        /// The synopsis stays in the inspector.
+        private var compactRow: some View {
+            HStack(spacing: 10) {
+                KFImageView(
+                    url: snapshot.displayPosterURL(for: .list),
+                    targetWidth: 120,
+                    diskCacheExpiration: .longTerm
+                )
+                .scaledToFill()
+                .frame(width: 40, height: 60)
+                .clipShape(.rect(cornerRadius: 5, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .stroke(.separator, lineWidth: 0.5)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(snapshot.title)
+                        .font(.body.weight(.semibold))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Text(compactMetadataText)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(1)
+
+                HStack(spacing: 6) {
+                    statusBadge
+                    LibraryEpisodeProgressBadge(
+                        label: snapshot.episodeProgressLabel,
+                        fractionCompleted: snapshot.episodeProgressFraction
+                    )
+                    if !showsEpisodeProgress {
+                        LibraryRewatchCountBadge(count: snapshot.rewatchCount, status: snapshot.watchStatus)
+                    }
+                    LibraryScoreBadge(score: snapshot.score)
+                }
+                .fixedSize()
+
+                compactFavoriteButton
+            }
+            .padding(.vertical, 2)
+        }
+
+        private var compactMetadataText: String {
+            (primaryMetadata + [secondaryMetadataText].compactMap { $0 }).joined(separator: " · ")
+        }
+
+        private var compactFavoriteButton: some View {
+            LibraryFavoriteToggle(
+                entry: entry,
+                displayedIsFavorite: snapshot.isFavorite,
+                onToggleFavorite: onToggleFavorite
+            ) { isFavorite in
+                LibraryFavoriteSymbol(
+                    isFavorite: isFavorite,
+                    font: .body,
+                    shadowColor: .clear,
+                    shadowRadius: 0
+                )
+                .frame(width: 24, height: 24)
+                .contentShape(.rect)
+            }
+            .disabled(!favoriteButtonEnabled)
+            .macHelp(Text(snapshot.isFavorite ? "Remove from Favorites" : "Add to Favorites"))
+        }
+    #endif
 
     private var rowTapSurface: some View {
         HStack(spacing: 0) {

@@ -14,7 +14,7 @@ fileprivate let logger = Logger(subsystem: .bundleIdentifier, category: "PosterV
 struct KFImageView: View {
     private enum LoadState {
         case loading
-        case loaded(UIImage)
+        case loaded(PlatformImage)
         case fallback
     }
 
@@ -45,18 +45,38 @@ struct KFImageView: View {
         self.targetSize = targetSize ?? targetWidth.map(PosterImageSize.targetSize(width:))
         self.cacheOriginalImage = cacheOriginalImage
         self._imageLoaded = imageLoaded
+        // Lazy grids and lists recreate their cells, for example when a window resize changes the
+        // column count. Starting from the memory cache keeps those cells from flashing a spinner.
+        if let cachedImage = Self.memoryCachedImage(url: url, targetSize: self.targetSize) {
+            self._loadState = State(initialValue: .loaded(cachedImage))
+        }
+    }
+
+    private static func memoryCachedImage(url: URL?, targetSize: CGSize?) -> PlatformImage? {
+        guard let url else { return nil }
+        var options = KingfisherParsedOptionsInfo(nil)
+        if let processor = LibraryImageProcessorFactory.processor(for: url, targetSize: targetSize) {
+            options.processor = processor
+        }
+        return KingfisherManager.shared.cache.retrieveImageInMemoryCache(
+            forKey: url.cacheKey,
+            options: options
+        )
     }
 
     var body: some View {
         Group {
             switch loadState {
             case .loaded(let displayImage):
-                Image(uiImage: displayImage)
+                Image(platformImage: displayImage)
                     .resizable()
             case .fallback:
                 fallbackImage
             case .loading:
                 ProgressView()
+                    #if os(macOS)
+                        .controlSize(.small)
+                    #endif
                     .frame(minWidth: 100, minHeight: 100)
             }
         }
@@ -66,7 +86,7 @@ struct KFImageView: View {
     private var fallbackImage: some View {
         ZStack {
             Rectangle()
-                .fill(Color(.secondarySystemFill))
+                .fill(Color.platformSecondarySystemFill)
 
             Image(systemName: "photo.badge.exclamationmark")
                 .symbolRenderingMode(.hierarchical)
@@ -80,6 +100,12 @@ struct KFImageView: View {
         guard let url else {
             loadState = .fallback
             imageLoaded = false
+            return
+        }
+
+        if let cachedImage = Self.memoryCachedImage(url: url, targetSize: targetSize) {
+            loadState = .loaded(cachedImage)
+            imageLoaded = true
             return
         }
 

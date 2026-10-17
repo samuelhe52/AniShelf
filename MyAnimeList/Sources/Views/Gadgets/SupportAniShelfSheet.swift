@@ -13,10 +13,7 @@ struct SupportAniShelfSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.purchase) private var purchaseAction
 
-    @State private var purchaseErrorMessage: String?
-    @State private var purchaseSucceeded = false
-    @State private var celebrationParticles: [SupportThankYouParticle] = []
-    @State private var celebrationBirthDate: Date = .distantPast
+    @State private var purchaseFlow = SupportPurchaseFlow()
 
     private let contentTransitionAnimation = Animation.spring(response: 0.3, dampingFraction: 0.84)
     private let thankYouTransitionAnimation = Animation.spring(response: 0.55, dampingFraction: 0.92)
@@ -28,7 +25,7 @@ struct SupportAniShelfSheet: View {
             ScrollView {
                 VStack(spacing: 14) {
                     heroCard
-                    if let purchaseErrorMessage {
+                    if let purchaseErrorMessage = purchaseFlow.errorMessage {
                         purchaseErrorCard(message: purchaseErrorMessage)
                     }
                     contentCard
@@ -39,19 +36,19 @@ struct SupportAniShelfSheet: View {
                 .frame(maxWidth: 680)
                 .frame(maxWidth: .infinity)
                 .animation(contentTransitionAnimation, value: supportStore.loadState)
-                .animation(thankYouTransitionAnimation, value: purchaseSucceeded)
+                .animation(thankYouTransitionAnimation, value: purchaseFlow.didSucceed)
             }
             .scrollBounceBehavior(.basedOnSize)
             .preferredNavigationBarScrollEdgeEffect()
         }
-        .navigationTitle(supportTitleResource)
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle(SupportAniShelfCopy.title)
+        .inlineNavigationTitle()
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(doneTitleResource) { dismiss() }
+            ToolbarItem(placement: .sheetTrailing) {
+                Button(LocalizedStringResource("Done")) { dismiss() }
             }
         }
-        .sensoryFeedback(.success, trigger: purchaseSucceeded)
+        .sensoryFeedback(.success, trigger: purchaseFlow.didSucceed)
         .task {
             await supportStore.loadProducts()
         }
@@ -63,29 +60,20 @@ struct SupportAniShelfSheet: View {
             HStack(spacing: 14) {
                 Image(systemName: "heart.circle.fill")
                     .font(.system(size: 44, weight: .semibold))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 0.98, green: 0.64, blue: 0.28),
-                                Color(red: 0.95, green: 0.36, blue: 0.56)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .foregroundStyle(SupportAniShelfCopy.heartGradient)
 
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(heroTitleResource)
+                    Text(SupportAniShelfCopy.heroTitle)
                         .font(.title2.weight(.bold))
 
-                    Text(heroBodyResource)
+                    Text(SupportAniShelfCopy.heroBody)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
-            Text(disclosureBodyResource)
+            Text(SupportAniShelfCopy.disclosure)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -100,7 +88,7 @@ struct SupportAniShelfSheet: View {
         case .idle, .loading:
             loadingCard
         case .loaded:
-            if purchaseSucceeded {
+            if purchaseFlow.didSucceed {
                 thankYouCard
             } else {
                 productsCard
@@ -112,13 +100,13 @@ struct SupportAniShelfSheet: View {
 
     private var loadingCard: some View {
         PopupSectionCard(
-            productsTitleResource,
+            SupportAniShelfCopy.productsTitle,
             systemImage: "ellipsis.circle"
         ) {
             HStack(spacing: 12) {
                 ProgressView()
                     .controlSize(.regular)
-                Text(loadingBodyResource)
+                Text(SupportAniShelfCopy.loading)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -130,7 +118,7 @@ struct SupportAniShelfSheet: View {
 
     private var productsCard: some View {
         PopupSectionCard(
-            productsTitleResource,
+            SupportAniShelfCopy.productsTitle,
             systemImage: "star.circle.fill"
         ) {
             VStack(spacing: 12) {
@@ -149,116 +137,38 @@ struct SupportAniShelfSheet: View {
 
     private func retryCard(for failure: SupportProductLoadFailure) -> some View {
         PopupSectionCard(
-            productsTitleResource,
+            SupportAniShelfCopy.productsTitle,
             systemImage: "exclamationmark.triangle.fill",
             panelTint: Color.red.opacity(0.08)
         ) {
             VStack(alignment: .leading, spacing: 14) {
-                Text(messageResource(for: failure))
+                Text(SupportAniShelfCopy.message(for: failure))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Button(retryTitleResource) {
-                    purchaseErrorMessage = nil
-                    Task {
-                        await supportStore.loadProducts(forceReload: true)
-                    }
+                Button(SupportAniShelfCopy.retry) {
+                    purchaseFlow.retryLoading(store: supportStore)
                 }
-                .buttonStyle(LibraryProfileCommandButtonStyle(tint: .orange, filled: false))
+                .libraryProfileCommandButtonStyle(tint: .orange)
             }
         }
         .transition(contentTransition)
     }
 
     private var thankYouCard: some View {
-        VStack(spacing: 18) {
-            ZStack {
-                TimelineView(.animation) { timeline in
-                    Canvas { ctx, size in
-                        drawParticles(ctx: ctx, size: size, now: timeline.date)
-                    }
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
-                }
-
-                Image(systemName: "heart.fill")
-                    .font(.system(size: 60, weight: .bold))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 0.98, green: 0.64, blue: 0.28),
-                                Color(red: 0.95, green: 0.36, blue: 0.56)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .shadow(
-                        color: Color(red: 0.95, green: 0.36, blue: 0.56).opacity(0.40),
-                        radius: 20, y: 8
-                    )
-                    .symbolEffect(.bounce, value: purchaseSucceeded)
-            }
-            .frame(height: 120)
-
-            VStack(spacing: 6) {
-                Text(thankYouTitleResource)
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 0.98, green: 0.64, blue: 0.28),
-                                Color(red: 0.95, green: 0.36, blue: 0.56)
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-
-                Text(thankYouBodyResource)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.bottom, 24)
-            }
-        }
-        .padding(12)
-        .popupGlassPanel(
-            cornerRadius: 24,
-            tint: Color(red: 0.98, green: 0.64, blue: 0.28).opacity(0.06)
-        )
-        .transition(thankYouTransition)
-    }
-
-    private func drawParticles(ctx: GraphicsContext, size: CGSize, now: Date) {
-        let center = CGPoint(x: size.width / 2, y: size.height * 0.58)
-        for p in celebrationParticles {
-            let elapsed = max(0, now.timeIntervalSince(celebrationBirthDate) - p.delay)
-            guard elapsed > 0 else { continue }
-            let progress = elapsed / p.lifetime
-            guard progress < 1.0 else { continue }
-
-            let x = center.x + p.vx * elapsed
-            let y = center.y + p.vy * elapsed + 0.5 * 90.0 * elapsed * elapsed
-            let fadeIn = progress < 0.12 ? progress / 0.12 : 1.0
-            let fadeOut = 1.0 - progress
-            let scale = max(0.2, 1.0 - progress * 0.4)
-            let r = p.size * 0.5 * scale
-
-            var c = ctx
-            c.opacity = fadeIn * fadeOut
-            c.fill(
-                Path(ellipseIn: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2)),
-                with: .color(p.color)
+        SupportThankYouView()
+            .padding(12)
+            .popupGlassPanel(
+                cornerRadius: 24,
+                tint: Color(red: 0.98, green: 0.64, blue: 0.28).opacity(0.06)
             )
-        }
+            .transition(thankYouTransition)
     }
 
     private func purchaseErrorCard(message: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(purchaseProblemTitleResource)
+            Text(SupportAniShelfCopy.purchaseProblem)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.red)
 
@@ -273,86 +183,12 @@ struct SupportAniShelfSheet: View {
     }
 
     private func purchase(_ product: SupportCatalogProduct) {
-        purchaseErrorMessage = nil
-
-        Task { @MainActor in
-            let outcome = await supportStore.purchase(id: product.id) { try await purchaseAction($0) }
-            handlePurchaseOutcome(outcome)
-        }
-    }
-
-    private func handlePurchaseOutcome(_ outcome: SupportPurchaseOutcome) {
-        switch outcome {
-        case .success:
-            celebrationParticles = SupportThankYouParticle.burst()
-            celebrationBirthDate = .now + 0.35
-            withAnimation(contentTransitionAnimation) {
-                purchaseSucceeded = true
-            }
-        case .pending:
-            ToastCenter.global.completionState = .partialComplete(pendingBodyResource)
-        case .userCancelled:
-            break
-        case .failed(let message):
-            purchaseErrorMessage = message
-        }
-    }
-
-    private func messageResource(for failure: SupportProductLoadFailure) -> LocalizedStringResource {
-        switch failure {
-        case .unavailable:
-            "Support products are temporarily unavailable. Please try again in a moment."
-        case .incompleteProductSet:
-            "Some support options are not ready yet. Please try again after App Store Connect finishes syncing."
-        }
-    }
-
-    private var supportTitleResource: LocalizedStringResource {
-        "Support AniShelf"
-    }
-
-    private var doneTitleResource: LocalizedStringResource {
-        "Done"
-    }
-
-    private var heroTitleResource: LocalizedStringResource {
-        "Buy me a coffee"
-    }
-
-    private var heroBodyResource: LocalizedStringResource {
-        "Optional support for AniShelf if the app has been useful to you."
-    }
-
-    private var disclosureBodyResource: LocalizedStringResource {
-        "These are optional tips that unlock no features, content, or services. All purchases are processed by the App Store."
-    }
-
-    private var productsTitleResource: LocalizedStringResource {
-        "Support Options"
-    }
-
-    private var loadingBodyResource: LocalizedStringResource {
-        "Loading support options from the App Store..."
-    }
-
-    private var retryTitleResource: LocalizedStringResource {
-        "Try Again"
-    }
-
-    private var purchaseProblemTitleResource: LocalizedStringResource {
-        "Purchase problem"
-    }
-
-    private var thankYouTitleResource: LocalizedStringResource {
-        "Thank you!"
-    }
-
-    private var thankYouBodyResource: LocalizedStringResource {
-        "Thanks for supporting AniShelf."
-    }
-
-    private var pendingBodyResource: LocalizedStringResource {
-        "Purchase pending approval."
+        purchaseFlow.purchase(
+            product,
+            store: supportStore,
+            purchaseAction: purchaseAction,
+            successAnimation: contentTransitionAnimation
+        )
     }
 
     private var contentTransition: AnyTransition {
@@ -420,38 +256,5 @@ fileprivate struct SupportTipProductRow: View {
         .disabled(isInteractionDisabled)
         .opacity(isInteractionDisabled && !isPurchasing ? 0.65 : 1)
         .animation(.spring(response: 0.26, dampingFraction: 0.82), value: isPurchasing)
-    }
-}
-
-fileprivate struct SupportThankYouParticle {
-    let id: Int
-    let vx: CGFloat
-    let vy: CGFloat
-    let size: CGFloat
-    let color: Color
-    let delay: Double
-    let lifetime: Double
-
-    static func burst(count: Int = 48) -> [SupportThankYouParticle] {
-        let palette: [Color] = [
-            Color(red: 0.98, green: 0.64, blue: 0.28),
-            Color(red: 0.95, green: 0.36, blue: 0.56),
-            Color(red: 1.00, green: 0.84, blue: 0.30),
-            Color(red: 0.98, green: 0.52, blue: 0.38),
-            Color(red: 0.88, green: 0.30, blue: 0.68)
-        ]
-        return (0..<count).map { i in
-            let angle = Double(i) / Double(count) * .pi * 2
-            let speed = CGFloat.random(in: 55...135)
-            return SupportThankYouParticle(
-                id: i,
-                vx: CGFloat(cos(angle)) * speed,
-                vy: CGFloat(sin(angle)) * speed - CGFloat.random(in: 25...55),
-                size: CGFloat.random(in: 5...13),
-                color: palette[i % palette.count],
-                delay: Double(i % 5) * 0.025,
-                lifetime: Double.random(in: 0.9...1.6)
-            )
-        }
     }
 }

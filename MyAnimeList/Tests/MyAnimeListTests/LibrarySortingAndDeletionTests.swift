@@ -459,6 +459,12 @@ struct LibrarySortingAndDeletionTests {
         #expect(!store.libraryOnDisplay.contains { $0.tmdbID == plain.tmdbID })
         #expect(!store.libraryOnDisplay.contains { $0.tmdbID == dropped.tmdbID })
 
+        // The cached display list follows unsaved entry edits, not only saves.
+        store.repository.toggleFavorite(plain)
+        #expect(store.libraryOnDisplay.contains { $0.tmdbID == plain.tmdbID })
+        store.repository.toggleFavorite(plain)
+        #expect(!store.libraryOnDisplay.contains { $0.tmdbID == plain.tmdbID })
+
         store.filters = []
         store.hideDroppedByDefault = true
         #expect(!store.libraryOnDisplay.contains { $0.tmdbID == dropped.tmdbID })

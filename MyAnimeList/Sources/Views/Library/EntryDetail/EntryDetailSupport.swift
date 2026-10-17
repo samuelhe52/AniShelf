@@ -25,6 +25,9 @@ enum EntryDetailL10n {
     static let watching: LocalizedStringResource = "Watching"
     static let watched: LocalizedStringResource = "Watched"
     static let episodeProgress: LocalizedStringResource = "Episode Progress"
+    static let markSeasonWatched: LocalizedStringResource = "Mark Season Watched"
+    static let resetProgress: LocalizedStringResource = "Reset Progress"
+    static let revertNotes: LocalizedStringResource = "Revert Notes"
     static let rewatching: LocalizedStringResource = "Rewatching"
     static let timesRewatched: LocalizedStringResource = "Times Rewatched"
     static let rewatchPromptTitle: LocalizedStringResource = "Are You Rewatching?"
@@ -41,6 +44,8 @@ enum EntryDetailL10n {
     static let hideDates: LocalizedStringResource = "Hide Dates"
     static let dateStarted: LocalizedStringResource = "Date Started"
     static let dateFinished: LocalizedStringResource = "Date Finished"
+    static let today: LocalizedStringResource = "Today"
+    static let dates: LocalizedStringResource = "Dates"
     static let droppedDatesLocked: LocalizedStringResource =
         "Dates are locked while this entry is dropped."
     static let notes: LocalizedStringResource = "Notes"
