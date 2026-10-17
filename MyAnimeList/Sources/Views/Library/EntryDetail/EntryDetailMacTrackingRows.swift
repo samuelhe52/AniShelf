@@ -9,6 +9,117 @@
     import DataProvider
     import SwiftUI
 
+    /// The Mac tracking card: label/value rows with dividers, matching the stat card above
+    /// it. iOS uses the disclosure editor in `EntryDetailTrackingComponents.swift`.
+    struct MacEntryTrackingEditor: View {
+        @Bindable var entry: AnimeEntry
+        /// The notes when the inspector opened; a rewrite can be reverted to them.
+        let originalNotes: String?
+        let scoringEnabled: Bool
+        let episodeProgressTrackingEnabled: Bool
+        let onWatchStatusSelected: (AnimeEntry.WatchStatus) -> Void
+        let onEpisodeProgressCompletionSuggested: (AnimeEntryEpisodeProgressCompletionPrompt) -> Void
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 0) {
+                if scoringEnabled {
+                    EntryTrackingRow(EntryDetailL10n.score) {
+                        EntryScoreCard(score: entry.score, onSetScore: { entry.updateScore($0) }, isInline: true)
+                    }
+                    Divider()
+                }
+
+                EntryTrackingRow(EntryDetailL10n.watchStatus) {
+                    AnimeEntryWatchedStatusPicker(
+                        selection: entry.activeWatchStatusBinding(onSelect: onWatchStatusSelected),
+                        isDisabled: entry.isDateTrackingLocked,
+                        isRewatching: entry.isRewatching
+                    )
+                    .pickerStyle(.segmented)
+                }
+                // Usually set by the rewatch prompt; the menu is for corrections. The
+                // middle segment reads "Rewatching" while the flag is on.
+                .contextMenu {
+                    if entry.watchStatus == .watching {
+                        Toggle(isOn: rewatchingBinding) {
+                            Text(EntryDetailL10n.rewatching)
+                        }
+                    }
+                }
+
+                if entry.showsRewatchControls {
+                    Divider()
+                    EntryRewatchCountRow(entry: entry)
+                }
+
+                EntryDateRows(entry: entry)
+
+                if episodeProgressTrackingEnabled, entry.watchStatus == .watching {
+                    Divider()
+                    EntryEpisodeProgressControl(
+                        entry: entry,
+                        onCompletionPromptRequested: onEpisodeProgressCompletionSuggested
+                    )
+                    .id(entry.libraryIdentity.rawID)
+                    .padding(.vertical, 7)
+                }
+
+                Divider()
+                notesSection
+                    .padding(.vertical, 10)
+            }
+            .animation(.default, value: entry.watchStatus)
+            .animation(.default, value: entry.isDateTrackingEnabled)
+        }
+
+        private var rewatchingBinding: Binding<Bool> {
+            Binding(
+                get: { entry.isRewatching },
+                set: { isRewatching in
+                    withAnimation(.default) {
+                        _ = entry.updateRewatching(isRewatching)
+                    }
+                }
+            )
+        }
+
+        private var notesSection: some View {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text(EntryDetailL10n.notes)
+                    Spacer(minLength: 8)
+                    // Edits save as they happen. A rewrite, unlike an append, may lose text,
+                    // so it can be reverted here; iOS offers Discard from its Done menu.
+                    if let originalNotes, !entry.notes.hasPrefix(originalNotes) {
+                        Button(EntryDetailL10n.revertNotes) {
+                            entry.updateNotes(originalNotes)
+                        }
+                        .controlSize(.small)
+                    }
+                }
+                ScrollIsolatedPlaceholderTextEditor(
+                    text: Binding(
+                        get: { entry.notes },
+                        set: { entry.updateNotes($0) }
+                    ),
+                    placeholder: EntryDetailL10n.writeSomeThoughts
+                )
+                // A quiet inset surface keeps the editor legible without a bright
+                // white panel competing with the surrounding inspector content.
+                .font(.body)
+                .lineSpacing(3)
+                .frame(height: 200)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 4)
+                .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(.separator, lineWidth: 0.5)
+                }
+            }
+        }
+    }
+
     /// A label/control row for the Mac tracking card: the label on the leading side and
     /// the control on the trailing side. Labels use the primary color, as in System
     /// Settings, so the controls do not read as disabled. An
