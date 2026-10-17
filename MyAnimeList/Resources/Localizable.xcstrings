@@ -681,23 +681,6 @@
         }
       }
     },
-    "%@ ×%lld" : {
-      "comment" : "Library status followed by the completed rewatch count, combined into one compact badge.",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ ×%lld"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ ×%lld"
-          }
-        }
-      }
-    },
     "%@, times rewatched: %lld" : {
       "comment" : "Accessibility label for a combined library status and completed rewatch count badge.",
       "localizations" : {

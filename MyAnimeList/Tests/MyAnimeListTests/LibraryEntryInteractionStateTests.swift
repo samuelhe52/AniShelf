@@ -133,6 +133,18 @@ struct LibraryEntryInteractionStateTests {
         }
     #endif
 
+    // Entry edits from the inspector must reach the cached row snapshots; see docs-ai 023.
+    @Test @MainActor func rewatchCountEditRefreshesTheCachedSnapshot() throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let entry = makeLibraryEntry(name: "Rewatched", tmdbID: 403, daySaved: 1)
+        try store.repository.newEntry(entry)
+        try store.refreshLibrary()
+
+        #expect(store.libraryDisplayItems.first?.snapshot.rewatchCount == 0)
+        _ = entry.updateRewatchCount(2)
+        #expect(store.libraryDisplayItems.first?.snapshot.rewatchCount == 2)
+    }
+
     #if !os(macOS)
         @Test @MainActor func multiSelectionDoesNotReplaceFocusedEntry() {
             let state = LibraryEntryInteractionState()

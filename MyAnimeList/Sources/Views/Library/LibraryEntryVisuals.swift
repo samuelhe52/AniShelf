@@ -39,11 +39,11 @@ struct LibraryWatchStatusBadge: View {
         showsRewatching ? Self.rewatchingTitle : status.localizedStringResource
     }
 
-    private var title: LocalizedStringResource {
-        if rewatchCount > 0 {
-            return "\(String(localized: statusTitle)) ×\(rewatchCount)"
-        }
-        return statusTitle
+    /// Resolved to a plain string: an interpolated `LocalizedStringResource` keeps the same
+    /// key when only the count changes, and the Mac list row then kept the old count.
+    private var title: String {
+        let status = String(localized: statusTitle)
+        return rewatchCount > 0 ? "\(status) ×\(rewatchCount.formatted())" : status
     }
 
     private var accessibilityTitle: LocalizedStringResource {
@@ -62,7 +62,7 @@ struct LibraryWatchStatusBadge: View {
             } else {
                 LibraryWatchStatusIndicator(status: status, diameter: 5)
             }
-            Text(title)
+            Text(verbatim: title)
                 .font(Self.textFont)
                 .monospacedDigit()
                 .foregroundStyle(status.libraryTintColor.opacity(0.92))
