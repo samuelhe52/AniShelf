@@ -1,6 +1,22 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Metadata is already refreshing." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メタデータはすでに更新中です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "元数据已在刷新中。"
+          }
+        }
+      }
+    },
     "This release adds custom library categories and a default poster language preference, redesigns Settings, and improves iCloud Sync." : {
       "localizations" : {
         "ja" : {

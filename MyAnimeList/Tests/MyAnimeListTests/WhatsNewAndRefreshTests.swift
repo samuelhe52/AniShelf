@@ -185,6 +185,24 @@ struct WhatsNewAndRefreshTests {
         #expect(defaults.bool(forKey: key))
     }
 
+    // Every window and the menu bar share one refresh; a second request finishes its own
+    // caller instead of starting another run (docs-ai 028).
+    @Test @MainActor func testOverlappingRefreshRequestFinishesWithoutStartingAnother() {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        store.isRefreshingAllMetadata = true
+        let runner = LibraryProfileSettingsActions(store: store).makeWhatsNewActionRunner()
+
+        runner.run(.refreshMetadata) { _ in }
+
+        guard case .completed(let completion) = runner.refreshState else {
+            Issue.record("Expected the rejected refresh to complete, got \(runner.refreshState)")
+            return
+        }
+        #expect(completion.state == .partialComplete)
+        #expect(runner.canStartRefresh)
+        #expect(store.isRefreshingAllMetadata)
+    }
+
     @Test @MainActor func testWhatsNewRefreshActionTracksInlineProgressState() {
         var capturedOptions: LibraryRefreshOptions?
         var refreshRunCount = 0

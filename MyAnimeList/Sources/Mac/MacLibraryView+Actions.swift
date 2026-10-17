@@ -65,6 +65,7 @@
                 clearSelection: { selection.select([]) },
                 openCategoryManager: openCategoryManager,
                 refreshAllMetadata: { showRefreshAllMetadataAlert = true },
+                isRefreshingAllMetadata: store.isRefreshingAllMetadata,
                 targetEntry: selection.single.flatMap { store.repository.existingEntry(identity: $0) },
                 openDetails: openDetails,
                 editEntry: editDetails,

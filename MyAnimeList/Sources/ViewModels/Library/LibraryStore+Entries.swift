@@ -15,54 +15,81 @@ fileprivate enum DeletionScrollTarget: Equatable {
 }
 
 extension LibraryStore {
+    /// Adds an entry from TMDb. `latestInfoFetcher` replaces the TMDb fetches in tests.
     @discardableResult
     func createNewEntry(
         tmdbID id: Int,
-        type: AnimeType
+        type: AnimeType,
+        latestInfoFetcher: LibraryEntryLatestInfoFetcher? = nil
     ) async throws -> AnimeEntry? {
-        if let existingEntry = repository.existingEntry(
-            identity: .init(entryType: type, tmdbID: id)
-        ) {
+        let identity = LibraryEntryIdentity(entryType: type, tmdbID: id)
+        if let existingEntry = repository.existingEntry(identity: identity) {
             if !existingEntry.onDisplay {
                 try await hydrateExistingEntry(existingEntry, type: type)
                 return existingEntry
             }
-
-            existingEntry.updateDisplayState(true)
-            try repository.save()
-            libraryStoreLogger.warning(
-                "Entry with id \(id) already exists in the store. Setting `onDisplay` to `true` and returning..."
-            )
-            return nil
+            return try revealExistingEntry(existingEntry)
         }
         libraryStoreLogger.debug("Creating new entry with id: \(id), type: \(type)...")
-        let latestInfo = try await infoFetcher.latestInfo(
-            entryType: type,
-            tmdbID: id,
-            language: language,
-            posterLanguage: posterLanguage
-        )
-        let entry = AnimeEntry(fromInfo: latestInfo.0)
-        applyNewEntryDefaults(to: entry)
-        entry.replaceDetail(from: latestInfo.1)
-        if let parentSeriesID = entry.parentSeriesID {
-            if let parentSeriesEntry = repository.existingEntry(
-                identity: .init(entryType: .series, tmdbID: parentSeriesID)
-            ) {
-                entry.parentSeriesEntry = parentSeriesEntry
+        let latestInfo =
+            if let latestInfoFetcher {
+                try await latestInfoFetcher(type, id, language)
             } else {
-                let parentSeriesEntry =
+                try await infoFetcher.latestInfo(
+                    entryType: type,
+                    tmdbID: id,
+                    language: language,
+                    posterLanguage: posterLanguage
+                )
+            }
+        var generatedParentSeriesEntry: AnimeEntry?
+        if let parentSeriesID = type.parentSeriesID,
+            repository.existingEntry(identity: .init(entryType: .series, tmdbID: parentSeriesID)) == nil
+        {
+            if let latestInfoFetcher {
+                let parentInfo = try await latestInfoFetcher(.series, parentSeriesID, language).0
+                let parentSeriesEntry = AnimeEntry(fromInfo: parentInfo)
+                parentSeriesEntry.setDisplayState(false)
+                generatedParentSeriesEntry = parentSeriesEntry
+            } else {
+                generatedParentSeriesEntry =
                     try await AnimeEntry
                     .generateParentSeriesEntryForSeason(
                         parentSeriesID: parentSeriesID,
                         fetcher: infoFetcher,
                         infoLanguage: language,
                         posterLanguage: posterLanguage)
-                entry.parentSeriesEntry = parentSeriesEntry
             }
+        }
+
+        // Another window, or a second add of the same show, may have inserted the entry or its
+        // parent series while this one awaited TMDb. Recheck both before inserting; nothing
+        // suspends between here and the insert, so the check holds (docs-ai 028).
+        if let existingEntry = repository.existingEntry(identity: identity) {
+            guard !existingEntry.onDisplay else { return try revealExistingEntry(existingEntry) }
+            try hydrateExistingEntry(existingEntry, from: latestInfo.0, detail: latestInfo.1)
+            return existingEntry
+        }
+        let entry = AnimeEntry(fromInfo: latestInfo.0)
+        applyNewEntryDefaults(to: entry)
+        entry.replaceDetail(from: latestInfo.1)
+        if let parentSeriesID = entry.parentSeriesID {
+            entry.parentSeriesEntry =
+                repository.existingEntry(identity: .init(entryType: .series, tmdbID: parentSeriesID))
+                ?? generatedParentSeriesEntry
         }
         try repository.newEntry(entry)
         return entry
+    }
+
+    /// Shows an entry that already exists, returning `nil` because nothing new was created.
+    private func revealExistingEntry(_ existingEntry: AnimeEntry) throws -> AnimeEntry? {
+        existingEntry.updateDisplayState(true)
+        try repository.save()
+        libraryStoreLogger.warning(
+            "Entry with id \(existingEntry.tmdbID) already exists in the store. Setting `onDisplay` to `true` and returning..."
+        )
+        return nil
     }
 
     func hydrateExistingEntry(_ entry: AnimeEntry, type: AnimeType) async throws {

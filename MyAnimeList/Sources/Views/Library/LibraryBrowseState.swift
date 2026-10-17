@@ -101,9 +101,10 @@ final class LibraryBrowseState {
         Task {
             ToastCenter.global.loadingMessage = .message("Loading...")
             let success = await store.newEntryFromSearchResults(results)
+            // A failure shows its own toast; the loading toast never dismisses itself.
+            ToastCenter.global.loadingMessage = nil
             if success {
                 appReview.record(origin == .regular ? .regularSearchAdd : .batchSearchAdd)
-                ToastCenter.global.loadingMessage = nil
                 withAnimation {
                     newEntriesAddedToggle.toggle()
                     if let id = results.first?.libraryIdentity {

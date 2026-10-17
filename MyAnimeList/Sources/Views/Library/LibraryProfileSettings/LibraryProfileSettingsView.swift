@@ -457,6 +457,7 @@ struct LibraryProfileSettingsView: View {
                 onChangeAPIKey: requestAPIKeySheet,
                 onCheckMetadataCacheSize: checkMetadataCacheSize,
                 onRefreshInfos: requestRefreshInfos,
+                isRefreshingInfos: store.isRefreshingAllMetadata,
                 onPrefetchImages: { actions.prefetchAllImages() }
             )
         case .syncData:

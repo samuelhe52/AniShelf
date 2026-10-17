@@ -49,6 +49,10 @@ class LibraryStore {
     ///
     /// Only `resolveDuplicateEntryGroup` should write this.
     var isResolvingDuplicateEntryGroup = false
+    /// Store-wide so a Refresh All started from any window, Settings, or the menu bar runs once.
+    ///
+    /// Only `LibraryProfileSettingsActions` should write this.
+    var isRefreshingAllMetadata = false
     @ObservationIgnored var infoFetcher: InfoFetcher
     var language: Language = .resolvedAnimeInfoLanguage()
     /// Read at each fetch so a settings change applies to the next library write.

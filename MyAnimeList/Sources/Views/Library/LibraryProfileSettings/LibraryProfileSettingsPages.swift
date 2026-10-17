@@ -159,6 +159,8 @@ struct LibraryProfileMetadataImagesPage: View {
     let onChangeAPIKey: () -> Void
     let onCheckMetadataCacheSize: () -> Void
     let onRefreshInfos: () -> Void
+    /// A refresh is already running, from this or another window.
+    var isRefreshingInfos = false
     let onPrefetchImages: () -> Void
 
     private var tint: Color { LibraryProfileSettingsDestination.metadataImages.tint }
@@ -209,5 +211,6 @@ struct LibraryProfileMetadataImagesPage: View {
             subtitle: "Fetch latest TMDb metadata for every entry.",
             systemImage: "arrow.clockwise", tint: tint, action: onRefreshInfos
         )
+        .disabled(isRefreshingInfos)
     }
 }

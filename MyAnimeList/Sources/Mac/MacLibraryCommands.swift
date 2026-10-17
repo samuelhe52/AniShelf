@@ -27,6 +27,8 @@
         var clearSelection: () -> Void
         var openCategoryManager: () -> Void
         var refreshAllMetadata: () -> Void
+        /// A refresh is already running, from this or another window.
+        var isRefreshingAllMetadata: Bool
         /// The entry that entry commands act on: the single selected entry.
         var targetEntry: AnimeEntry?
         var openDetails: (AnimeEntry) -> Void
@@ -154,7 +156,7 @@
                 Button("Edit Categories…") { library?.openCategoryManager() }
                     .disabled(library == nil)
                 Button("Refresh All Metadata…") { library?.refreshAllMetadata() }
-                    .disabled(library == nil)
+                    .disabled(library == nil || library?.isRefreshingAllMetadata == true)
             }
         }
     }

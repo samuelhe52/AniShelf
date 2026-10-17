@@ -332,6 +332,88 @@ struct LibraryRelationshipAndConversionTests {
     }
 }
 
+extension LibraryRelationshipAndConversionTests {
+    // Two windows can add the same title, or two seasons of one show, while each add awaits
+    // TMDb; the insert must recheck what the other add created (docs-ai 028).
+    @Test @MainActor func testConcurrentAddsOfOneTitleCreateOneEntry() async throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let fetcher = makeBarrierFetcher(seasonFetches: FetchBarrier(count: 2), seriesFetches: FetchBarrier(count: 2))
+
+        let first = Task { @MainActor in
+            try await store.createNewEntry(tmdbID: 209_867, type: .series, latestInfoFetcher: fetcher) != nil
+        }
+        let second = Task { @MainActor in
+            try await store.createNewEntry(tmdbID: 209_867, type: .series, latestInfoFetcher: fetcher) != nil
+        }
+        let created = try await [first.value, second.value]
+
+        #expect(created.filter { $0 }.count == 1)
+        let rows = try store.dataProvider.getAllModels(ofType: AnimeEntry.self)
+        #expect(rows.filter { $0.tmdbID == 209_867 }.count == 1)
+    }
+
+    @Test @MainActor func testConcurrentSeasonAddsShareOneParentSeries() async throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let fetcher = makeBarrierFetcher(seasonFetches: FetchBarrier(count: 2), seriesFetches: FetchBarrier(count: 2))
+
+        let first = Task { @MainActor in
+            try await store.createNewEntry(
+                tmdbID: 400_234, type: .season(seasonNumber: 1, parentSeriesID: 209_867), latestInfoFetcher: fetcher
+            ) != nil
+        }
+        let second = Task { @MainActor in
+            try await store.createNewEntry(
+                tmdbID: 400_235, type: .season(seasonNumber: 2, parentSeriesID: 209_867), latestInfoFetcher: fetcher
+            ) != nil
+        }
+        let created = try await [first.value, second.value]
+
+        #expect(created == [true, true])
+        let rows = try store.dataProvider.getAllModels(ofType: AnimeEntry.self)
+        let parents = rows.filter { $0.type == .series && $0.tmdbID == 209_867 }
+        #expect(parents.count == 1)
+        let seasons = rows.filter { $0.parentSeriesID == 209_867 }
+        #expect(seasons.count == 2)
+        #expect(seasons.allSatisfy { $0.parentSeriesEntry === parents.first })
+    }
+}
+
+/// Holds each caller until `count` callers have arrived, so concurrent adds all pass their
+/// first existence check before any of them inserts.
+fileprivate actor FetchBarrier {
+    private let count: Int
+    private var arrived = 0
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    init(count: Int) {
+        self.count = count
+    }
+
+    func arrive() async {
+        arrived += 1
+        guard arrived < count else {
+            waiters.forEach { $0.resume() }
+            waiters = []
+            return
+        }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+}
+
+fileprivate func makeBarrierFetcher(
+    seasonFetches: FetchBarrier,
+    seriesFetches: FetchBarrier
+) -> LibraryEntryLatestInfoFetcher {
+    let base = makeLatestInfoFetcher()
+    return { entryType, tmdbID, language in
+        switch entryType {
+        case .series: await seriesFetches.arrive()
+        case .season, .movie: await seasonFetches.arrive()
+        }
+        return try await base(entryType, tmdbID, language)
+    }
+}
+
 fileprivate enum ConversionTransactionTestError: Error {
     case saveFailed
 }
