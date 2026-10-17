@@ -202,6 +202,7 @@ struct MyAnimeListApp: App {
                 MacSupportView()
                     .environment(supportStore)
                     .globalToasts()
+                    .providesWindowSceneIdentifier()
             }
             .windowResizability(.contentSize)
             .defaultPosition(.center)

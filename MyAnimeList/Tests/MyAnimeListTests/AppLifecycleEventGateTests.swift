@@ -39,4 +39,21 @@ struct AppLifecycleEventGateTests {
 
         #expect(handled == [nil, "key", nil])
     }
+
+    #if os(macOS)
+        @Test func toastsShowOnlyInTheMostRecentlyActiveWindow() {
+            let center = ToastCenter()
+            #expect(center.presentsToasts(inSceneIdentifier: "window-a"))
+            #expect(center.presentsToasts(inSceneIdentifier: "window-b"))
+
+            center.windowBecameActive(sceneIdentifier: "window-a")
+            center.windowBecameActive(sceneIdentifier: nil)
+            #expect(center.presentsToasts(inSceneIdentifier: "window-a"))
+            #expect(!center.presentsToasts(inSceneIdentifier: "window-b"))
+
+            center.windowBecameActive(sceneIdentifier: "window-b")
+            #expect(!center.presentsToasts(inSceneIdentifier: "window-a"))
+            #expect(center.presentsToasts(inSceneIdentifier: "window-b"))
+        }
+    #endif
 }
