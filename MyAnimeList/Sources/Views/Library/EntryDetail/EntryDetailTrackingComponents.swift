@@ -692,6 +692,9 @@ struct EntryEpisodeProgressControl: View {
                 .macHelp(Text("More"))
                 .accessibilityLabel(Text("More"))
             }
+            // The controls keep their ideal width in a narrow inspector; otherwise the
+            // HStack compresses "/ 13" until it wraps. The leading label truncates instead.
+            .fixedSize()
         }
     #else
         private func progressHeader(
