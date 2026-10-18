@@ -128,7 +128,7 @@ struct LibraryScoreBadge: View {
 
     @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
 
-    let score: Int?
+    let score: EntryScore?
     var style: Style = .inline
 
     var body: some View {
@@ -137,7 +137,7 @@ struct LibraryScoreBadge: View {
                 Image(systemName: "star.fill")
                     .font(iconFont)
                     .symbolRenderingMode(.hierarchical)
-                Text("\(score)")
+                Text(verbatim: score.formatted)
                     .font(textFont)
                     .monospacedDigit()
             }
@@ -149,7 +149,7 @@ struct LibraryScoreBadge: View {
                 Capsule(style: .continuous)
                     .fill(backgroundStyle)
             }
-            .accessibilityLabel(Text("Score \(score)"))
+            .accessibilityLabel(Text("Score \(score.formatted)"))
         }
     }
 

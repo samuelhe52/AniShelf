@@ -229,11 +229,11 @@ extension LibraryEntryActionState {
                 Picker(
                     "Score",
                     systemImage: "star",
-                    selection: Binding(get: { entry.score }, set: { entry.updateScore($0) })
+                    selection: Binding(get: { entry.entryScore }, set: { entry.updateEntryScore($0) })
                 ) {
-                    Text("None").tag(Int?.none)
-                    ForEach(Array(AnimeEntry.validScoreRange), id: \.self) { score in
-                        Text(verbatim: "\(score)/5").tag(Optional(score))
+                    Text("None").tag(EntryScore?.none)
+                    ForEach(EntryScore.all, id: \.self) { score in
+                        Text("\(score.formatted)/5").tag(Optional(score))
                     }
                 }
                 .pickerStyle(.menu)

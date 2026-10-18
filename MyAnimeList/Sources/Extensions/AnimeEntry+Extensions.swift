@@ -138,6 +138,7 @@ extension AnimeEntry {
         _ = isRewatching
         _ = favorite
         _ = score
+        _ = scoreHasHalf
         _ = dateSaved
         _ = dateStarted
         _ = dateFinished

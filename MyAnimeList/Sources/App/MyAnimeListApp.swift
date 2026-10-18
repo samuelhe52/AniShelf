@@ -177,6 +177,10 @@ struct MyAnimeListApp: App {
         #if DEBUG
             // Preview startup screens without opening or touching the real store.
             let arguments = ProcessInfo.processInfo.arguments
+            // Shows the half-star score hint again, for visual checks.
+            if arguments.contains("-reset-score-hint") {
+                UserDefaults.standard.removeObject(forKey: .entryScoreHalfHintSeen)
+            }
             if arguments.contains("-simulate-newer-library-store") {
                 return StartupEnvironment(
                     bootstrap: DataProvider.newerStorePlaceholderBootstrap(

@@ -9,32 +9,65 @@ import DataProvider
 import SwiftUI
 
 struct EntryScoreCard: View {
-    let score: Int?
-    let onSetScore: (Int?) -> Void
+    let score: EntryScore?
+    let onSetScore: (EntryScore?) -> Void
 
-    @State private var bouncingScore: Int?
+    @State private var bouncingStar: Int?
+    /// Frames of the five stars in the row's coordinate space, lowest first.
+    @State private var starFrames: [CGRect] = Array(repeating: .zero, count: 5)
+    /// The score under a touch drag, shown before it is saved. Resets on its own when
+    /// the drag ends or the system cancels it.
+    @GestureState private var dragHalves: Int?
+    /// The score a drag just dropped, shown until `score` catches up. The drag's reset
+    /// redraws this card before the parent passes the saved score back in, which would
+    /// otherwise flash the old score for a frame.
+    @State private var droppedHalves: Int?
+    /// The score under the Mac pointer, shown before a click.
+    @State private var hoverHalves: Int?
+    @AppStorage(.entryScoreHalfHintSeen) private var halfHintSeen = false
 
     private let selectionAnimation = Animation.spring(response: 0.28, dampingFraction: 0.82)
     private let bounceInAnimation = Animation.spring(response: 0.18, dampingFraction: 0.42)
     private let bounceOutAnimation = Animation.spring(response: 0.28, dampingFraction: 0.72)
+    private let starsSpace = "EntryScoreStars"
 
-    /// Inline drops the title row and the Clear button for the Mac tracking row; a click
-    /// on the current score clears it there.
+    /// Inline drops the title row and the Clear button for the Mac tracking row. There the
+    /// pointer picks a whole or a half star, and a click on the current score clears it.
     var isInline = false
 
     var body: some View {
         if isInline {
-            HStack(spacing: 2) {
-                scoreButtons
-            }
-            .contextMenu {
-                Button(EntryDetailL10n.clear) {
-                    withAnimation(selectionAnimation) {
-                        onSetScore(nil)
+            starRow(spacing: 2)
+                .onContinuousHover(coordinateSpace: .named(starsSpace)) { phase in
+                    switch phase {
+                    case .active(let location): hoverHalves = halves(atX: location.x)
+                    case .ended: hoverHalves = nil
                     }
                 }
-                .disabled(score == nil)
-            }
+                .onTapGesture(coordinateSpace: .named(starsSpace)) { location in
+                    guard let halves = halves(atX: location.x) else { return }
+                    let tapped = EntryScore(halves: halves)
+                    setScore(score == tapped ? nil : tapped, bounces: true)
+                }
+                // Keyboard navigation replaces the per-star buttons: arrows step by a
+                // half star, Delete clears. Like a button, the row takes focus only from
+                // keyboard navigation, so a click draws no focus ring.
+                .focusable(interactions: .activate)
+                .onKeyPress(keys: [.leftArrow, .rightArrow, .upArrow, .downArrow, .delete, .deleteForward]) {
+                    press in
+                    switch press.key {
+                    case .rightArrow, .upArrow: adjustScore(by: 1)
+                    case .leftArrow, .downArrow: adjustScore(by: -1)
+                    default: setScore(nil)
+                    }
+                    return .handled
+                }
+                .contextMenu {
+                    Button(EntryDetailL10n.clear) {
+                        setScore(nil)
+                    }
+                    .disabled(score == nil)
+                }
         } else {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .center, spacing: 12) {
@@ -47,12 +80,31 @@ struct EntryScoreCard: View {
                     }
                     .foregroundStyle(.secondary)
 
+                    if let displayed = displayedScore {
+                        Text(verbatim: displayed.formatted)
+                            .font(.footnote)
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                            .contentTransition(.numericText())
+                            // Drag previews change without a transaction animation.
+                            .animation(selectionAnimation, value: displayed)
+                    }
+
+                    // The hint sits in the gap before Clear, so it adds no height to the card.
                     Spacer(minLength: 12)
+                        .overlay(alignment: .trailing) {
+                            if let hint = halfHint {
+                                Text(EntryDetailL10n.scoreHalfHint(hint.formatted))
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                                    .transition(.opacity)
+                            }
+                        }
 
                     Button {
-                        withAnimation(selectionAnimation) {
-                            onSetScore(nil)
-                        }
+                        setScore(nil)
                     } label: {
                         Text(EntryDetailL10n.clear)
                             .font(.caption.weight(.semibold))
@@ -63,58 +115,144 @@ struct EntryScoreCard: View {
                     .opacity(score == nil ? 0.42 : 1)
                 }
 
-                HStack(spacing: 10) {
-                    scoreButtons
-                }
-                .frame(maxWidth: .infinity)
+                starRow(spacing: 10)
+                    .onTapGesture(coordinateSpace: .named(starsSpace)) { location in
+                        guard let halves = halves(atX: location.x) else { return }
+                        tapped(star: (halves + 1) / 2)
+                    }
+                    .simultaneousGesture(dragGesture)
+                    .sensoryFeedback(.selection, trigger: dragHalves) { _, new in new != nil }
+                    .onChange(of: score) { droppedHalves = nil }
+                    .frame(maxWidth: .infinity)
             }
         }
     }
 
-    private var scoreButtons: some View {
-        ForEach(Array(AnimeEntry.validScoreRange), id: \.self) { value in
-            scoreButton(for: value)
-        }
+    private var displayedScore: EntryScore? {
+        if let halves = dragHalves ?? droppedHalves ?? hoverHalves { return EntryScore(halves: halves) }
+        return score
     }
 
-    private func scoreButton(for value: Int) -> some View {
-        let isFilled = (score ?? 0) >= value
-        let isBouncing = bouncingScore == value
+    /// The half score that a second tap on the top star gives, until the user sets one.
+    private var halfHint: EntryScore? {
+        guard !halfHintSeen, let score, !score.hasHalf else { return nil }
+        return score.stepped(by: -1)
+    }
 
-        return Button {
-            if isInline, score == value {
-                withAnimation(selectionAnimation) {
-                    onSetScore(nil)
-                }
-            } else {
-                setScore(value)
+    private func starRow(spacing: CGFloat) -> some View {
+        HStack(spacing: spacing) {
+            ForEach(1...5, id: \.self) { star in
+                starImage(for: star)
+                    .onGeometryChange(for: CGRect.self) { proxy in
+                        proxy.frame(in: .named(starsSpace))
+                    } action: { frame in
+                        starFrames[star - 1] = frame
+                    }
             }
-        } label: {
-            Image(systemName: isFilled ? "star.fill" : "star")
-                .font((isInline ? Font.body : .title3).weight(isFilled ? .semibold : .regular))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(isFilled ? .yellow : Color.secondary)
-                .opacity(isFilled ? 1 : 0.8)
-                .scaleEffect(isBouncing ? 1.34 : 1)
-                .frame(width: isInline ? 22 : 36, height: isInline ? 22 : 36)
-                .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(value)/5")
+        .coordinateSpace(.named(starsSpace))
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(EntryDetailL10n.score))
+        .accessibilityValue(
+            score.map { Text(EntryDetailL10n.scoreValue($0.formatted)) } ?? Text(EntryDetailL10n.noScore)
+        )
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment:
+                adjustScore(by: 1)
+            case .decrement:
+                adjustScore(by: -1)
+            @unknown default:
+                break
+            }
+        }
+        .accessibilityAction(named: Text(EntryDetailL10n.clear)) {
+            setScore(nil)
+        }
     }
 
-    private func setScore(_ value: Int) {
+    private func starImage(for star: Int) -> some View {
+        let displayedHalves = displayedScore?.halves ?? 0
+        let isFilled = displayedHalves >= star * 2
+        let isHalf = displayedHalves == star * 2 - 1
+        let isLit = isFilled || isHalf
+        let isPreview = hoverHalves != nil && hoverHalves != score?.halves
+
+        return Image(systemName: isFilled ? "star.fill" : isHalf ? "star.leadinghalf.filled" : "star")
+            .font((isInline ? Font.body : .title3).weight(isLit ? .semibold : .regular))
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(isLit ? .yellow : Color.secondary)
+            .opacity(isLit ? (isPreview ? 0.7 : 1) : 0.8)
+            .scaleEffect(bouncingStar == star ? 1.34 : 1)
+            .frame(width: isInline ? 22 : 36, height: isInline ? 22 : 36)
+    }
+
+    /// A drag across the stars snaps to halves and saves on release.
+    private var dragGesture: some Gesture {
+        DragGesture(minimumDistance: 10, coordinateSpace: .named(starsSpace))
+            .updating($dragHalves) { drag, dragHalves, _ in
+                dragHalves = halves(atX: drag.location.x)
+            }
+            .onEnded { drag in
+                if let halves = halves(atX: drag.location.x) {
+                    // An unchanged score never fires `onChange(of: score)` to clear this.
+                    if halves != score?.halves {
+                        droppedHalves = halves
+                    }
+                    setScore(EntryScore(halves: halves))
+                }
+            }
+    }
+
+    /// Moves the score by half stars, staying within 1…5. An unscored entry starts at 1.
+    private func adjustScore(by steps: Int) {
+        guard let score else {
+            if steps > 0 { setScore(.lowest) }
+            return
+        }
+        setScore(score.stepped(by: steps) ?? score)
+    }
+
+    /// A tap on star N sets N. A tap on the star at the top of the score takes off its
+    /// half, or puts it back. Star 1 stays at 1.
+    private func tapped(star: Int) {
+        let whole = star * 2
+        let next: EntryScore? =
+            switch score?.halves {
+            case whole: EntryScore(halves: whole - 1) ?? score
+            default: EntryScore(halves: whole)
+            }
+        setScore(next, bounces: true)
+    }
+
+    /// Half-star units under `x`: each star's leading edge and center that `x` has
+    /// passed adds one half. Nil until the stars have been laid out.
+    private func halves(atX x: CGFloat) -> Int? {
+        guard starFrames.allSatisfy({ $0.width > 0 }) else { return nil }
+        let passed = starFrames.flatMap { [$0.minX, $0.midX] }.filter { x >= $0 }.count
+        let range = EntryScore.validHalvesRange
+        return min(max(passed, range.lowerBound), range.upperBound)
+    }
+
+    /// Saves `value`. Only taps and clicks bounce the top star.
+    private func setScore(_ value: EntryScore?, bounces: Bool = false) {
         withAnimation(selectionAnimation) {
             onSetScore(value)
+            if value?.hasHalf == true {
+                halfHintSeen = true
+            }
         }
-        withAnimation(bounceInAnimation) {
-            bouncingScore = value
-        }
+        guard bounces, let value else { return }
 
+        let star = (value.halves + 1) / 2
+        withAnimation(bounceInAnimation) {
+            bouncingStar = star
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
-            guard bouncingScore == value else { return }
+            guard bouncingStar == star else { return }
             withAnimation(bounceOutAnimation) {
-                bouncingScore = nil
+                bouncingStar = nil
             }
         }
     }
@@ -155,7 +293,7 @@ struct EntryDetailTrackingSection: View {
             Group {
                 if scoringEnabled {
                     VStack(alignment: .leading, spacing: 16) {
-                        EntryScoreCard(score: entry.score) { entry.updateScore($0) }
+                        EntryScoreCard(score: entry.entryScore) { entry.updateEntryScore($0) }
                         Divider()
 
                         PopupNestedDisclosureSection(

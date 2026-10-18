@@ -41,6 +41,7 @@ historical runtime scenario was rerun. Entry 010 remains an unimplemented propos
 | 026 | 2026-10-17 | [Library fixture and performance benchmarks](026-library-performance-benchmarks/000-plan.md) | Implemented on `feat/native-macos` (`1622953`) | [Action](026-library-performance-benchmarks/001-action.md) |
 | 027 | 2026-10-17 | [Mac inspector grid reflow](027-mac-inspector-grid-reflow/000-plan.md) | Implemented — maintainer accepted | [Runtime diagnosis](027-mac-inspector-grid-reflow/001-action.md), [Endpoint reflow](027-mac-inspector-grid-reflow/004-endpoint-transition.md) |
 | 028 | 2026-10-18 | [Window state ownership](028-window-state-ownership/000-plan.md) | Implemented — maintainer accepted | [Action](028-window-state-ownership/001-action.md), [local browse preferences](028-window-state-ownership/002-local-browse-preferences.md) |
+| 029 | 2026-10-18 | [Half-star scores](029-half-star-scores/000-plan.md) | Implemented — maintainer accepted | [Action](029-half-star-scores/001-action.md) |
 
 ## Find a contract or source
 

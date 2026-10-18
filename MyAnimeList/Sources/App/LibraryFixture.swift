@@ -130,6 +130,10 @@
                 dateSaved: saved,
                 score: generator.chance(0.6) ? Int(generator.next() % 5) + 1 : nil
             )
+            // Every third scored entry gets a half star, without another generator draw.
+            if index.isMultiple(of: 3), let half = entry.entryScore?.stepped(by: 1) {
+                entry.setEntryScore(half)
+            }
             let roll = generator.unit()
             switch roll {
             case ..<0.4:

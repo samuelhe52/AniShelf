@@ -61,8 +61,8 @@
                                 Text("Mixed").tag(ScoreChoice.mixed)
                             }
                             Text("None").tag(ScoreChoice.unscored)
-                            ForEach(Array(AnimeEntry.validScoreRange), id: \.self) { score in
-                                Text(verbatim: "\(score)/5").tag(ScoreChoice.score(score))
+                            ForEach(EntryScore.all, id: \.self) { score in
+                                Text("\(score.formatted)/5").tag(ScoreChoice.score(score))
                             }
                         }
                     }
@@ -145,16 +145,16 @@
         private enum ScoreChoice: Hashable {
             case mixed
             case unscored
-            case score(Int)
+            case score(EntryScore)
         }
 
         private var scoreBinding: Binding<ScoreChoice> {
             Binding(
                 get: {
                     guard let first = selectedEntries.first,
-                        selectedEntries.allSatisfy({ $0.score == first.score })
+                        selectedEntries.allSatisfy({ $0.entryScore == first.entryScore })
                     else { return .mixed }
-                    return first.score.map(ScoreChoice.score) ?? .unscored
+                    return first.entryScore.map(ScoreChoice.score) ?? .unscored
                 },
                 set: { choice in
                     switch choice {

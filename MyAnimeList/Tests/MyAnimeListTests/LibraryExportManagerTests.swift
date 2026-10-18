@@ -83,7 +83,7 @@ struct LibraryExportManagerTests {
             dateSaved: utcDate("2026-05-01T00:00:00Z")
         )
         entry.notes = "Line 1, with comma\nLine\t2"
-        entry.setScore(4)
+        entry.setEntryScore(EntryScore(halves: 9))
 
         let manager = LibraryExportManager(exportDate: utcDate("2026-05-09T12:00:00Z"))
 
@@ -93,7 +93,7 @@ struct LibraryExportManagerTests {
         #expect(!csv.contains("tmdb_id"))
         #expect(!csv.contains("parent_series_tmdb_id"))
         #expect(csv.contains("\"Line 1, with comma\nLine\t2\""))
-        #expect(csv.contains(",4,"))
+        #expect(csv.contains(",4.5,"))
 
         let tsvURL = try manager.createExport(for: [entry], format: .tsv)
         defer { try? FileManager.default.removeItem(at: tsvURL) }
@@ -101,7 +101,7 @@ struct LibraryExportManagerTests {
         #expect(!tsv.contains("tmdb_id"))
         #expect(!tsv.contains("parent_series_tmdb_id"))
         #expect(tsv.contains("\"Line 1, with comma\nLine\t2\""))
-        #expect(tsv.contains("\t4\t"))
+        #expect(tsv.contains("\t4.5\t"))
     }
 
     @Test func testExcelExportCreatesWorkbookArchive() throws {

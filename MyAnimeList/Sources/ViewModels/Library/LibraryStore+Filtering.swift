@@ -151,20 +151,9 @@ extension LibraryStore {
                     return 3
                 }
             case .score:
-                switch entry.score {
-                case 5:
-                    return 0
-                case 4:
-                    return 1
-                case 3:
-                    return 2
-                case 2:
-                    return 3
-                case 1:
-                    return 4
-                default:
-                    return 5
-                }
+                // 5 → 0, 4.5 → 1, … 1 → 8, no score → 9.
+                let highest = EntryScore.validHalvesRange.upperBound
+                return entry.entryScore.map { highest - $0.halves } ?? EntryScore.all.count
             case .favorite:
                 return entry.favorite ? 0 : 1
             case .entryType:

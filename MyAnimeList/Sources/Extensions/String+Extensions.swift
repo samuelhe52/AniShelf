@@ -26,6 +26,8 @@ extension String {
     static let entryDetailStaffExpandedByDefault = "EntryDetailStaffExpandedByDefault"
     static let showProductionCompanyInsteadOfRuntime = "ShowProductionCompanyInsteadOfRuntime"
     static let libraryScoringEnabled = "LibraryScoringEnabled"
+    // Device-local. Keep out of backup and CloudKit allowlists.
+    static let entryScoreHalfHintSeen = "EntryScoreHalfHintSeen"
     static let episodeProgressTrackingEnabled = "EpisodeProgressTrackingEnabled"
     static let broadcastScheduleEnabled = "BroadcastScheduleEnabled"
     // Device-local airing reminder state. Keep these out of backup and CloudKit allowlists.

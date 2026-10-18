@@ -316,8 +316,8 @@ import SwiftUI
 
                 if scoringEnabled {
                     Menu("Score", systemImage: "star") {
-                        ForEach(Array(AnimeEntry.validScoreRange), id: \.self) { score in
-                            Button("\(score)/5") {
+                        ForEach(EntryScore.all, id: \.self) { score in
+                            Button("\(score.formatted)/5") {
                                 applyBatchAction(.score(score))
                             }
                         }

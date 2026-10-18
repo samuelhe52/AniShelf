@@ -47,6 +47,7 @@ struct CloudLibrarySyncClientTests {
             dateFinished: referenceDate(year: 2026, month: 5, day: 9),
             isDateTrackingEnabled: false,
             score: 4,
+            scoreHasHalf: true,
             favorite: true,
             notes: "Round trip",
             usingCustomPoster: true,
@@ -71,6 +72,9 @@ struct CloudLibrarySyncClientTests {
         #expect(record.recordType == CloudLibrarySyncClient.recordType)
         #expect(record.recordID == client.recordID(for: snapshot.identity))
         #expect(record["customPosterPath"] as? String == "/custom.jpg")
+        // Version 3 records hold half scores; builds before it quarantine them.
+        #expect(record["schemaVersion"] as? Int == 3)
+        #expect(record["scoreHasHalf"] as? Bool == true)
         // The legacy `customPosterURL` is still written so retired-but-live old builds can read
         // it. It must mirror the path. Drop this expectation once the old build is retired.
         #expect(record["customPosterURL"] as? String == "https://image.tmdb.org/t/p/original/custom.jpg")
@@ -104,6 +108,19 @@ struct CloudLibrarySyncClientTests {
 
         #expect(decoded.categoryIDs.isEmpty)
         #expect(decoded.categoriesUpdatedAt == nil)
+    }
+
+    @Test func versionTwoRecordIgnoresLeftoverHalfStar() throws {
+        var snapshot = makeSnapshot()
+        snapshot.score = 4
+        snapshot.scoreHasHalf = true
+        let record = try client.record(from: snapshot)
+        // An older build rewrote the record at version 2 and left the key behind.
+        record["schemaVersion"] = 2
+
+        let decoded = try client.snapshot(from: record)
+
+        #expect(decoded.entryScore == EntryScore(whole: 4))
     }
 
     @Test func legacyCustomPosterURLDecodesToPathWhenPathFieldIsAbsent() throws {
@@ -149,6 +166,7 @@ struct CloudLibrarySyncClientTests {
         #expect(!record.allKeys().contains("episodeProgresses"))
         #expect(!record.allKeys().contains("watchStatus"))
         #expect(record.changedKeys().contains("notes"))
+        #expect(record.changedKeys().contains("scoreHasHalf"))
         #expect(record.changedKeys().contains("episodeProgresses"))
         #expect(record.changedKeys().contains("watchStatus"))
         #expect(change == .tombstone(tombstone))

@@ -351,10 +351,12 @@ struct LibrarySortingAndDeletionTests {
                 makeLibraryEntry(name: "Score Two", tmdbID: 21, daySaved: 4, score: 2),
                 makeLibraryEntry(name: "Score Five Late", tmdbID: 52, daySaved: 5, score: 5),
                 makeLibraryEntry(name: "Score Four", tmdbID: 41, daySaved: 6, score: 4),
-                makeLibraryEntry(name: "Score One", tmdbID: 11, daySaved: 7, score: 1)
+                makeLibraryEntry(name: "Score One", tmdbID: 11, daySaved: 7, score: 1),
+                makeLibraryEntry(name: "Score Four and a Half", tmdbID: 45, daySaved: 8, score: 4)
             ]
+            entries.last?.setEntryScore(EntryScore(halves: 9))
 
-            #expect(scope.filterAndSort(entries).map(\.tmdbID) == [51, 52, 41, 31, 21, 11, 61])
+            #expect(scope.filterAndSort(entries).map(\.tmdbID) == [51, 52, 45, 41, 31, 21, 11, 61])
         }
     }
 

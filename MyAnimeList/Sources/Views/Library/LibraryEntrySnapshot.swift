@@ -49,7 +49,7 @@ struct LibraryEntrySnapshot: Identifiable, Equatable {
     let watchStatus: AnimeEntry.WatchStatus
     let isRewatching: Bool
     let rewatchCount: Int
-    let score: Int?
+    let score: EntryScore?
     let isFavorite: Bool
     let episodeProgressLabel: String?
     let episodeProgressFraction: Double?
@@ -68,7 +68,7 @@ struct LibraryEntrySnapshot: Identifiable, Equatable {
         watchStatus = entry.watchStatus
         isRewatching = entry.isRewatching
         rewatchCount = entry.rewatchCount
-        score = entry.score
+        score = entry.entryScore
         isFavorite = entry.favorite
         episodeProgressLabel = episodeProgress.label
         episodeProgressFraction = episodeProgress.fraction

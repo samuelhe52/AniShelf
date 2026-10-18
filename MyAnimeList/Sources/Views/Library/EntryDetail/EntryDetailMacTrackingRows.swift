@@ -24,7 +24,7 @@
             VStack(alignment: .leading, spacing: 0) {
                 if scoringEnabled {
                     EntryTrackingRow(EntryDetailL10n.score) {
-                        EntryScoreCard(score: entry.score, onSetScore: { entry.updateScore($0) }, isInline: true)
+                        EntryScoreCard(score: entry.entryScore, onSetScore: { entry.updateEntryScore($0) }, isInline: true)
                     }
                     Divider()
                 }

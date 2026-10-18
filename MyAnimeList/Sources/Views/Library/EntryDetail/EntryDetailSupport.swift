@@ -52,6 +52,12 @@ enum EntryDetailL10n {
     static let writeSomeThoughts: LocalizedStringResource = "Write some thoughts..."
     static let score: LocalizedStringResource = "Score"
     static let noScore: LocalizedStringResource = "No score"
+    static func scoreValue(_ score: String) -> LocalizedStringResource {
+        "\(score) out of 5"
+    }
+    static func scoreHalfHint(_ score: String) -> LocalizedStringResource {
+        "Tap again for \(score)"
+    }
     static let clear: LocalizedStringResource = "Clear"
     static let episodes: LocalizedStringResource = "Episodes"
     static let jumpsToEpisodesSection: LocalizedStringResource =
