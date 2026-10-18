@@ -147,7 +147,44 @@
             }
             entry.favorite = generator.chance(0.12)
             entry.categoryIDs = categories.filter { _ in generator.chance(0.2) }.map(\.id)
+            if type == .series {
+                seedSeasons(of: entry, index: index, saved: saved)
+            }
             return entry
+        }
+
+        /// Gives a series one to three seasons, and a watching series progress in its latest one,
+        /// so the progress controls and badges have something to show.
+        ///
+        /// Derived from the index rather than the generator, so the entries' other values match
+        /// earlier fixtures.
+        private static func seedSeasons(of entry: AnimeEntry, index: Int, saved: Date) {
+            let seasonCount = 1 + index % 3
+            let seasons = (1...seasonCount).map { seasonNumber in
+                AnimeEntrySeasonSummary(
+                    id: (firstTMDbID + index) * 10 + seasonNumber,
+                    seasonNumber: seasonNumber,
+                    title: "Season \(seasonNumber)",
+                    episodeCount: seasonNumber.isMultiple(of: 2) ? 24 : 12
+                )
+            }
+            entry.detail = AnimeEntryDetail(
+                language: "en-US",
+                title: entry.name,
+                episodeCount: seasons.compactMap(\.episodeCount).reduce(0, +),
+                seasonCount: seasonCount,
+                seasons: seasons
+            )
+            guard entry.watchStatus == .watching else { return }
+            for season in seasons {
+                let episodeCount = season.episodeCount ?? 12
+                let watched = season.seasonNumber < seasonCount ? episodeCount : 1 + index % (episodeCount - 1)
+                entry.applyEpisodeProgressSnapshot(
+                    seasonNumber: season.seasonNumber,
+                    watchedThroughEpisode: watched,
+                    updatedAt: saved.addingTimeInterval(86_400 * Double(2 + season.seasonNumber))
+                )
+            }
         }
 
         private static let latinWords = [
