@@ -473,6 +473,13 @@ struct LibrarySortingAndDeletionTests {
         store.repository.toggleFavorite(plain)
         #expect(!scope.entriesOnDisplay.contains { $0.tmdbID == plain.tmdbID })
 
+        // Edits to child models can miss observation, so the entry's tracking clock alone
+        // must invalidate the list.
+        let computeCount = scope.displayComputeCount
+        favorite.markTrackingModified()
+        _ = scope.entriesOnDisplay
+        #expect(scope.displayComputeCount == computeCount + 1)
+
         scope.filters = []
         store.hideDroppedByDefault = true
         #expect(!scope.entriesOnDisplay.contains { $0.tmdbID == dropped.tmdbID })

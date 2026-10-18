@@ -165,7 +165,15 @@ final class LibraryBrowseScope {
         if let displayCache { return displayCache }
         displayComputeCount += 1
         let cache = withObservationTracking {
-            LibraryDisplayCache(items: filterAndSort(store.library).map(LibraryEntryDisplayItem.init))
+            LibraryDisplayCache(
+                items: filterAndSort(store.library).map { entry in
+                    // SwiftData can hand out new instances of child models such as episode
+                    // progress between reads, so edits to them may never reach this tracking.
+                    // Tracked edits also stamp the entry's own clock, which is observed reliably.
+                    _ = entry.trackingUpdatedAt
+                    return LibraryEntryDisplayItem(entry: entry)
+                }
+            )
         } onChange: { [weak self] in
             if Thread.isMainThread {
                 MainActor.assumeIsolated { self?.invalidateDisplay() }
