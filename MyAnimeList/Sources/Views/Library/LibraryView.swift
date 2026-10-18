@@ -104,21 +104,11 @@ import SwiftUI
             )
         }
 
-        /// Hosts entry detail in the iPad's trailing inspector.
-        private var entryInspector: LibraryEntryInspectorModifier {
-            LibraryEntryInspectorModifier(
-                interaction: interaction,
-                detailSession: detailSessionStore.session(for: interaction.presentedDetailEntryID),
-                content: { presentation, session in
-                    AnyView(detailHostContent(presentation: presentation, session: session))
-                }
-            )
-        }
-
         private var libraryNavigation: some View {
             let detailSession = detailSessionStore.session(
                 for: interaction.presentedDetailEntryID
             )
+            let inspectorPresentation = interaction.inspectorPresentation
             let presentedSheetRoute = interaction.activeSheetRoute
             let activeSheetRoute = Binding<LibraryEntrySheetRoute?>(
                 get: { interaction.activeSheetRoute },
@@ -131,7 +121,24 @@ import SwiftUI
             return
                 libraryBrowserStack
                 .environment(\.libraryEntryDetailActivation, currentDetailActivation)
-                .modifier(entryInspector)
+                .inspector(
+                    isPresented: Binding(
+                        get: {
+                            guard let inspectorPresentation else { return false }
+                            return interaction.inspectorPresentation?.id == inspectorPresentation.id
+                        },
+                        set: { isPresented in
+                            guard !isPresented, let inspectorPresentation else { return }
+                            interaction.detailHostDidDismiss(inspectorPresentation)
+                        }
+                    )
+                ) {
+                    if let inspectorPresentation, let detailSession {
+                        detailHostContent(presentation: inspectorPresentation, session: detailSession)
+                            .presentationBackground(inspectorPresentation.host.pageBackground)
+                            .inspectorColumnWidth(min: 400, ideal: 480, max: 520)
+                    }
+                }
                 .sheet(item: activeSheetRoute) { route in
                     sheetContent(for: route, detailSession: detailSession)
                 }
@@ -426,32 +433,4 @@ import SwiftUI
             .environment(store)
     }
 
-    fileprivate struct LibraryEntryInspectorModifier: ViewModifier {
-        let interaction: LibraryEntryInteractionState
-        let detailSession: EntryDetailSession?
-        let content: (LibraryEntryDetailHostPresentation, EntryDetailSession) -> AnyView
-
-        func body(content base: Content) -> some View {
-            let inspectorPresentation = interaction.inspectorPresentation
-            base
-                .inspector(
-                    isPresented: Binding(
-                        get: {
-                            guard let inspectorPresentation else { return false }
-                            return interaction.inspectorPresentation?.id == inspectorPresentation.id
-                        },
-                        set: { isPresented in
-                            guard !isPresented, let inspectorPresentation else { return }
-                            interaction.detailHostDidDismiss(inspectorPresentation)
-                        }
-                    )
-                ) {
-                    if let inspectorPresentation, let detailSession {
-                        content(inspectorPresentation, detailSession)
-                            .presentationBackground(inspectorPresentation.host.pageBackground)
-                            .inspectorColumnWidth(min: 400, ideal: 480, max: 520)
-                    }
-                }
-        }
-    }
 #endif
