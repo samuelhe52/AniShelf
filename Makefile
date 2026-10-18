@@ -157,10 +157,17 @@ release-testing-mac: ## Build a local macOS app with the production APS and iClo
 	@mkdir -p "$(RELEASE_TESTING_DIR)/mac"
 	xcodebuild -quiet -project "$(PROJECT)" -scheme "$(DEVICE_SCHEME)" -configuration "$(DEVICE_CONFIGURATION)" -destination 'generic/platform=macOS' -archivePath "$(RELEASE_TESTING_DIR)/mac/$(APP_NAME).xcarchive" -allowProvisioningUpdates archive
 	xcodebuild -exportArchive -archivePath "$(RELEASE_TESTING_DIR)/mac/$(APP_NAME).xcarchive" -exportOptionsPlist "$(RELEASE_TESTING_MAC_EXPORT_OPTIONS)" -exportPath "$(RELEASE_TESTING_DIR)/mac/export" -allowProvisioningUpdates
-	rm -rf "$(RELEASE_TESTING_DIR)/mac/expanded" "$(RELEASE_TESTING_DIR)/mac/app"
-	pkgutil --expand-full "$$(find "$(RELEASE_TESTING_DIR)/mac/export" -name "*.pkg" -print -quit)" "$(RELEASE_TESTING_DIR)/mac/expanded"
+	rm -rf "$(RELEASE_TESTING_DIR)/mac/app"
 	@mkdir -p "$(RELEASE_TESTING_DIR)/mac/app"
-	@app=$$(find "$(RELEASE_TESTING_DIR)/mac/expanded" -path "*/Payload/*.app" -maxdepth 4 -print -quit); ditto "$$app" "$(RELEASE_TESTING_DIR)/mac/app/$$(basename "$$app")"; echo "Local macOS app: $(RELEASE_TESTING_DIR)/mac/app/$$(basename "$$app")"
+	@app=$$(find "$(RELEASE_TESTING_DIR)/mac/export" -maxdepth 1 -type d -name '*.app' -print -quit); \
+	[ -n "$$app" ] || { echo "No exported macOS app found."; exit 1; }; \
+	codesign --verify --deep --strict "$$app" && \
+	codesign -d --entitlements - --xml "$$app" > "$(RELEASE_TESTING_DIR)/mac/entitlements.plist" && \
+	[ "$$(/usr/libexec/PlistBuddy -c 'Print :com.apple.developer.aps-environment' "$(RELEASE_TESTING_DIR)/mac/entitlements.plist")" = production ] && \
+	[ "$$(/usr/libexec/PlistBuddy -c 'Print :com.apple.developer.icloud-container-environment' "$(RELEASE_TESTING_DIR)/mac/entitlements.plist")" = Production ] && \
+	[ "$$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.app-sandbox' "$(RELEASE_TESTING_DIR)/mac/entitlements.plist")" = true ] && \
+	ditto "$$app" "$(RELEASE_TESTING_DIR)/mac/app/$$(basename "$$app")" && \
+	echo "Local macOS app: $(RELEASE_TESTING_DIR)/mac/app/$$(basename "$$app")"
 
 .PHONY: build
 build: ## Build the app for a generic iOS device
@@ -214,8 +221,9 @@ launch-mac: ## Relaunch the last built native macOS app, without building
 
 # Maintenance
 .PHONY: clean
-clean: ## Clean the Xcode build products
+clean: ## Clean the Xcode build products and local build artifacts
 	xcodebuild clean -project MyAnimeList.xcodeproj -scheme MyAnimeList
+	rm -rf "$(CURDIR)/.build"
 
 .PHONY: refresh-packages
 refresh-packages: ## Re-resolve Swift package dependencies

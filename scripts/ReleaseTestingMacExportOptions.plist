@@ -7,14 +7,12 @@
 	<key>iCloudContainerEnvironment</key>
 	<string>Production</string>
 	<key>method</key>
-	<string>app-store-connect</string>
+	<string>developer-id</string>
 	<key>signingStyle</key>
 	<string>automatic</string>
 	<key>stripSwiftSymbols</key>
 	<true/>
 	<key>teamID</key>
 	<string>768QBKMWKW</string>
-	<key>uploadSymbols</key>
-	<true/>
 </dict>
 </plist>

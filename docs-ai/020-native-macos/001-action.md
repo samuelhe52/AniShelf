@@ -95,8 +95,10 @@ Key source paths:
 
 ## Open questions
 
-- Release distribution: signing, notarization or App Store submission, and the
-  upgrade path from the iPad-on-Mac install are not set up or tested.
+- The local production export path was implemented and launch-tested on
+  2026-10-18 ([009](009-local-production-export.md)). Public distribution,
+  notarization, App Store submission, and the distributed upgrade path remain
+  outside that validation.
 - The grid's reflow jitter while the inspector animates (008, 021).
 - Light-appearance contrast in the detail header and list badges, shared with
   iOS (006).
