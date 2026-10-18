@@ -191,18 +191,56 @@ extension LibraryEntryActionState {
         toggleFavorite: @escaping (AnimeEntry) -> Void,
         editEntry: @escaping (AnimeEntry) -> Void
     ) -> some View {
-        ControlGroup {
+        #if os(macOS)
+            // A Mac menu turns a control group into a submenu, so the Mac lists each action.
             favoriteButton(for: entry, toggleFavorite: toggleFavorite)
+            EntryScoreMenu(entry: entry)
+            editButton(for: entry, editEntry: editEntry)
+            Divider()
             shareButton(for: entry)
-        }
-        editButton(for: entry, editEntry: editEntry)
-        switchPosterButton(for: entry)
-        Divider()
-        savePosterButton(for: entry)
-        userInfoMenu(for: entry)
-        deleteButton(for: entry)
+            switchPosterButton(for: entry)
+            savePosterButton(for: entry)
+            userInfoMenu(for: entry)
+            Divider()
+            deleteButton(for: entry)
+        #else
+            ControlGroup {
+                favoriteButton(for: entry, toggleFavorite: toggleFavorite)
+                shareButton(for: entry)
+            }
+            editButton(for: entry, editEntry: editEntry)
+            switchPosterButton(for: entry)
+            Divider()
+            savePosterButton(for: entry)
+            userInfoMenu(for: entry)
+            deleteButton(for: entry)
+        #endif
     }
 }
+
+#if os(macOS)
+    /// A Score submenu that checks the current score; hidden while scoring is turned off.
+    fileprivate struct EntryScoreMenu: View {
+        let entry: AnimeEntry
+        @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
+
+        var body: some View {
+            if scoringEnabled {
+                Picker(
+                    "Score",
+                    systemImage: "star",
+                    selection: Binding(get: { entry.score }, set: { entry.updateScore($0) })
+                ) {
+                    Text("None").tag(Int?.none)
+                    ForEach(Array(AnimeEntry.validScoreRange), id: \.self) { score in
+                        Text(verbatim: "\(score)/5").tag(Optional(score))
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+        }
+    }
+#endif
 
 extension View {
     func libraryEntryActionOverlays(
