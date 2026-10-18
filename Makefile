@@ -9,6 +9,7 @@ CONFIGURATION ?= Debug
 DEVICE_CONFIGURATION ?= Release
 RELEASE_TESTING_DIR ?= $(CURDIR)/.build/release-testing
 RELEASE_TESTING_EXPORT_OPTIONS ?= scripts/ReleaseTestingExportOptions.plist
+RELEASE_TESTING_MAC_EXPORT_OPTIONS ?= scripts/ReleaseTestingMacExportOptions.plist
 BUNDLE_ID ?= com.samuelhe.MyAnimeList
 APP_TEST_ONLY ?= MyAnimeListTests
 DATAPROVIDER_TEST_FILTER ?=
@@ -150,6 +151,16 @@ release-testing: ## Archive and export a Release Testing IPA
 	xcodebuild -quiet -project "$(PROJECT)" -scheme "$(DEVICE_SCHEME)" -configuration "$(DEVICE_CONFIGURATION)" -destination 'generic/platform=iOS' -archivePath "$(RELEASE_TESTING_DIR)/$(APP_NAME).xcarchive" -allowProvisioningUpdates archive
 	xcodebuild -exportArchive -archivePath "$(RELEASE_TESTING_DIR)/$(APP_NAME).xcarchive" -exportOptionsPlist "$(RELEASE_TESTING_EXPORT_OPTIONS)" -exportPath "$(RELEASE_TESTING_DIR)/export" -allowProvisioningUpdates
 	@echo "Release Testing IPA: $(RELEASE_TESTING_DIR)/export/$(APP_NAME).ipa"
+
+.PHONY: release-testing-mac
+release-testing-mac: ## Build a local macOS app with the production APS and iCloud environment
+	@mkdir -p "$(RELEASE_TESTING_DIR)/mac"
+	xcodebuild -quiet -project "$(PROJECT)" -scheme "$(DEVICE_SCHEME)" -configuration "$(DEVICE_CONFIGURATION)" -destination 'generic/platform=macOS' -archivePath "$(RELEASE_TESTING_DIR)/mac/$(APP_NAME).xcarchive" -allowProvisioningUpdates archive
+	xcodebuild -exportArchive -archivePath "$(RELEASE_TESTING_DIR)/mac/$(APP_NAME).xcarchive" -exportOptionsPlist "$(RELEASE_TESTING_MAC_EXPORT_OPTIONS)" -exportPath "$(RELEASE_TESTING_DIR)/mac/export" -allowProvisioningUpdates
+	rm -rf "$(RELEASE_TESTING_DIR)/mac/expanded" "$(RELEASE_TESTING_DIR)/mac/app"
+	pkgutil --expand-full "$$(find "$(RELEASE_TESTING_DIR)/mac/export" -name "*.pkg" -print -quit)" "$(RELEASE_TESTING_DIR)/mac/expanded"
+	@mkdir -p "$(RELEASE_TESTING_DIR)/mac/app"
+	@app=$$(find "$(RELEASE_TESTING_DIR)/mac/expanded" -path "*/Payload/*.app" -maxdepth 4 -print -quit); ditto "$$app" "$(RELEASE_TESTING_DIR)/mac/app/$$(basename "$$app")"; echo "Local macOS app: $(RELEASE_TESTING_DIR)/mac/app/$$(basename "$$app")"
 
 .PHONY: build
 build: ## Build the app for a generic iOS device
