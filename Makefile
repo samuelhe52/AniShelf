@@ -25,7 +25,8 @@ SIMULATOR_APP_PATH = $(shell if [ -n "$(BOOTED_SIMULATOR_ID)" ]; then xcodebuild
 MAC_DESTINATION ?= platform=macOS
 MAC_APP_PATH = $(shell xcodebuild -quiet -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "$(MAC_DESTINATION)" -showBuildSettings -json | /usr/bin/python3 -c 'import json, sys; data = json.load(sys.stdin); item = next(entry for entry in data if entry.get("target") == "$(APP_NAME)"); settings = item["buildSettings"]; print(settings["TARGET_BUILD_DIR"] + "/" + settings["FULL_PRODUCT_NAME"])')
 DEVICE_PROCESS_LAUNCH_ARGS ?=
-MAC_LAUNCH_ARGS ?=
+# Debug Mac launches boot a generated 800-entry library by default; pass MAC_LAUNCH_ARGS= for the real library.
+MAC_LAUNCH_ARGS ?= -library-fixture 800
 APP_ONLY_TESTING_ARGS = $(foreach test,$(APP_TEST_ONLY),-only-testing:$(test))
 SKIP_ONLY_TESTING_ARGS = $(foreach test,$(SKIP_APP_TESTS),-skip-testing:$(test))
 DATAPROVIDER_TEST_FILTER_ARG = $(if $(strip $(DATAPROVIDER_TEST_FILTER)),--filter "$(DATAPROVIDER_TEST_FILTER)",)
@@ -207,7 +208,7 @@ launch-sim: ## Install and launch the last built app on the booted simulator, wi
 	xcrun simctl launch --terminate-running-process "$(BOOTED_SIMULATOR_ID)" $(BUNDLE_ID) $(DEVICE_PROCESS_LAUNCH_ARGS)
 
 .PHONY: run-mac
-run-mac: build-mac ## Build, and relaunch the native macOS app
+run-mac: build-mac ## Build, and relaunch the native macOS app with the stub library
 	@$(MAKE) --no-print-directory launch-mac
 
 .PHONY: launch-mac
