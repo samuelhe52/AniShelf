@@ -107,14 +107,12 @@ extension String {
         .lastSeenWhatsNewVersion
     ]
 
+    // Sort, group and sort direction are per-window browse state, so they stay on this device.
     static let cloudSyncedPreferenceKeys: [String] = [
         .preferredAnimeInfoLanguage,
         .useCurrentLocaleForAnimeInfoLanguage,
         .defaultPosterLanguage,
         .searchTMDbLanguage,
-        .libraryGroupStrategy,
-        .librarySortStrategy,
-        .librarySortReversed,
         .libraryOpenDetailWithSingleTap,
         .entryDetailCharactersExpandedByDefault,
         .entryDetailStaffExpandedByDefault,

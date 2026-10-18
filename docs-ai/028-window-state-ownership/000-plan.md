@@ -72,10 +72,12 @@ loading toast on screen.
 | Window (`LibraryBrowseScope`, root view state) | Filters, active category, sort, group, sort direction, view style, display cache, selection, Mac Find text, inspector entry | `@SceneStorage`; new windows seed from preferences |
 | App window coordinator (`AppWindowCoordinator`) | Registered windows by stable ID, activation order, the primary window, routing targets | Memory only |
 
-Sort, group, sort direction and view style remain preferences, and the iCloud-synced
-settings keep carrying them. A change in a window also writes the preference, so
-the latest choice seeds the next new window and other devices. A preference change
-from elsewhere, whether iCloud or another window, does **not** rewrite open windows.
+Sort, group, sort direction and view style remain device-local preferences. A
+change in a window also writes the preference, so the latest choice seeds the next
+new window on this device. A preference change from elsewhere, such as another
+window, does **not** rewrite open windows. *(Corrected 2026-10-18 by
+[002](002-local-browse-preferences.md). This plan first kept sort, group and
+direction in the iCloud-synced settings.)*
 
 ## Design / approach
 
@@ -219,5 +221,9 @@ from elsewhere, whether iCloud or another window, does **not** rewrite open wind
 
 ## Amendments
 
-None yet. Deviations found during implementation, most importantly late Mac scene
-storage, are recorded in [001-action.md](001-action.md).
+Deviations found during implementation, most importantly late Mac scene storage,
+are recorded in [001-action.md](001-action.md).
+
+- Updated 2026-10-18: Sort, group and sort direction no longer sync through iCloud
+  settings. See [002-local-browse-preferences.md](002-local-browse-preferences.md).
+  The Ownership model text is corrected in place and marked.

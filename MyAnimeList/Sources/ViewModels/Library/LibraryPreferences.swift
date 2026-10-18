@@ -336,7 +336,6 @@ struct LibraryPreferences {
                     payload[key] = .objectArray(categories.map(\.syncObject))
                 }
             case .useCurrentLocaleForAnimeInfoLanguage,
-                .librarySortReversed,
                 .libraryOpenDetailWithSingleTap,
                 .entryDetailCharactersExpandedByDefault,
                 .entryDetailStaffExpandedByDefault,

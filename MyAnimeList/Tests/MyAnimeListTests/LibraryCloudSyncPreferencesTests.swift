@@ -68,7 +68,7 @@ struct LibraryCloudSyncPreferencesTests {
             status.lastSuccessfulSyncDate = Date(timeIntervalSince1970: 1_000)
             status.lastReconciledCloudSyncedSettingsUpdatedAt = Date(timeIntervalSince1970: 1_000)
         }
-        preferences.saveSortReversed(false)
+        preferences.saveHideDroppedByDefault(true)
         preferences.saveCloudSyncedDefaultsUpdatedAt(Date(timeIntervalSince1970: 2_000))
 
         #expect(store.hasPendingCloudSyncedSettingsSyncWork())
@@ -100,6 +100,7 @@ struct LibraryCloudSyncPreferencesTests {
         defaults.set(false, forKey: .useCurrentLocaleForAnimeInfoLanguage)
         defaults.set("query", forKey: .searchPageQuery)
         defaults.set("grid", forKey: .libraryViewStyle)
+        defaults.set(false, forKey: .librarySortReversed)
         defaults.set("entry-1", forKey: .persistedScrolledID)
         defaults.set("series:42", forKey: .libraryLastInspectorDetailEntryIdentity)
         defaults.set("version-1", forKey: .lastSeenWhatsNewVersion)
@@ -115,6 +116,7 @@ struct LibraryCloudSyncPreferencesTests {
 
         #expect(snapshot.payload[.preferredAnimeInfoLanguage] == .string("ja"))
         #expect(snapshot.payload[.libraryViewStyle] == nil)
+        #expect(snapshot.payload[.librarySortReversed] == nil)
         #expect(snapshot.payload[.showProductionCompanyInsteadOfRuntime] == .bool(true))
         #expect(snapshot.payload[.useTMDbRelayServer] == .bool(true))
         #expect(snapshot.payload[.broadcastScheduleEnabled] == .bool(true))

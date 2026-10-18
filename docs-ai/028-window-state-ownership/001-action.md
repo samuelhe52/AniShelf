@@ -27,7 +27,8 @@ Committed on `feat/window-state-ownership` at the maintainer's request. Not push
 
 `LibraryStore` no longer has `filters`, `activeCategoryID` or a display cache. Its
 `sortStrategy`, `sortReversed` and `groupStrategy` are now the preferences that seed
-new windows; they stay iCloud-synced. A window's sort, group or view-style change
+new windows; they are device-local since
+[002](002-local-browse-preferences.md) (they were iCloud-synced at first). A window's sort, group or view-style change
 also writes the preference. Remote or other-window preference changes never rewrite
 an open window. Changing Default Filters, disabling scoring, or disabling categories
 still applies to every open window.
