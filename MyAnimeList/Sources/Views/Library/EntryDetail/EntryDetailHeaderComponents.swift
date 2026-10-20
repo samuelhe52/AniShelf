@@ -203,7 +203,7 @@ struct EntryDetailQuickActionsRow: View {
     @Environment(\.popupPanelStyle) private var panelStyle
     @State private var editingReminder: AiringReminderSubscription?
 
-    let detailURL: URL?
+    let openInLinks: EntryOpenInLinks
     let isFavorite: Bool
     let showsConvertAction: Bool
     let conversionInProgress: Bool
@@ -232,13 +232,7 @@ struct EntryDetailQuickActionsRow: View {
                 Spacer(minLength: 0)
             }
 
-            if let detailURL {
-                Link(destination: detailURL) {
-                    PopupActionButtonLabel(systemImage: "safari")
-                }
-                .popupActionButtonChrome()
-                .macHelp(Text(verbatim: detailURL.host() ?? detailURL.absoluteString))
-            }
+            EntryDetailOpenInMenu(links: openInLinks)
 
             PopupActionCircleButton(
                 systemImage: "square.and.arrow.up",

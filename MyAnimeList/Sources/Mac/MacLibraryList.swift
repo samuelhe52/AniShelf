@@ -109,6 +109,9 @@
 
                 actions.shareButton(for: item.entry)
                     .tint(.indigo)
+
+                EntryOpenInSubmenu(entry: item.entry)
+                    .tint(.orange)
             }
         }
 

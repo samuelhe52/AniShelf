@@ -281,7 +281,10 @@ struct EntryDetailView: View {
 
     private var quickActionsRow: some View {
         EntryDetailQuickActionsRow(
-            detailURL: session.model.primaryLinkURL ?? session.entry.linkToDetails,
+            openInLinks: EntryOpenInLinks(
+                entry: session.entry,
+                homepageURL: session.model.primaryLinkURL ?? session.entry.linkToDetails
+            ),
             isFavorite: session.entry.favorite,
             showsConvertAction: session.entry.type != .movie,
             conversionInProgress: session.conversion.inProgress,

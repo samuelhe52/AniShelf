@@ -198,6 +198,7 @@ extension LibraryEntryActionState {
             editButton(for: entry, editEntry: editEntry)
             Divider()
             shareButton(for: entry)
+            EntryOpenInSubmenu(entry: entry)
             switchPosterButton(for: entry)
             savePosterButton(for: entry)
             userInfoMenu(for: entry)
@@ -209,6 +210,7 @@ extension LibraryEntryActionState {
                 shareButton(for: entry)
             }
             editButton(for: entry, editEntry: editEntry)
+            EntryOpenInSubmenu(entry: entry)
             switchPosterButton(for: entry)
             Divider()
             savePosterButton(for: entry)
