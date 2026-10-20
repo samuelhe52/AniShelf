@@ -50,4 +50,13 @@ struct EntryOpenInLinksTests {
                 == "kazumi://search?query=%E8%91%AC%E9%80%81%E7%9A%84%E8%8A%99%E8%8E%89%E8%8E%B2"
         )
     }
+
+    @Test func testSwipeDestinationRawValuesStayStableAndDeviceLocal() {
+        #expect(EntryOpenInSwipeDestination.allCases.map(\.rawValue) == ["ask", "infuse", "kazumi"])
+        #expect(EntryOpenInSwipeDestination(rawValue: "kazumi") == .app(.kazumi))
+        #expect(EntryOpenInSwipeDestination(rawValue: "removedFutureApp") == nil)
+
+        #expect(!String.allPreferenceKeys.contains(.libraryOpenInSwipeDestination))
+        #expect(!String.cloudSyncedPreferenceKeys.contains(.libraryOpenInSwipeDestination))
+    }
 }

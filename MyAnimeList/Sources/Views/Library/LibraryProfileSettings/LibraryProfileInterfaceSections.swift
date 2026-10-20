@@ -50,6 +50,7 @@ struct LibraryProfileInterfaceSettingsSection: View {
                     }
                 }
             #endif
+            LibraryProfileOpenInSettingsSection()
             LibraryProfileSettingsSection(
                 "Entry Details", systemImage: "rectangle.3.group.fill",
                 tint: LibraryProfileSettingsDestination.appearance.tint
@@ -161,6 +162,82 @@ struct LibraryProfileTrackingSettingsSection: View {
     private func handleScoringEnabledChange(old: Bool, new: Bool) {
         guard old != new, !new, store.groupStrategy == .score else { return }
         store.groupStrategy = .none
+    }
+}
+
+fileprivate struct LibraryProfileOpenInSettingsSection: View {
+    @AppStorage(.libraryOpenInSwipeDestination)
+    private var swipeDestination: EntryOpenInSwipeDestination = .ask
+
+    var body: some View {
+        // Capture the value before the section's escaping content closure so SwiftUI
+        // tracks this body's dependency and sees a changed value in the menu content.
+        let selection = swipeDestination
+
+        LibraryProfileSettingsSection(
+            "Open In", systemImage: EntryOpenInL10n.systemImage,
+            tint: LibraryProfileSettingsDestination.appearance.tint
+        ) {
+            #if os(macOS)
+                LabeledContent("Swipe Action Opens") {
+                    Menu {
+                        options(selection: selection)
+                    } label: {
+                        Text(selection.title)
+                    }
+                    .fixedSize()
+                }
+            #else
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    Text("Swipe Action Opens")
+                        .settingsRowTitleFont()
+                    Spacer(minLength: 12)
+                    Menu {
+                        options(selection: selection)
+                    } label: {
+                        LibraryProfileSelectionCapsule(
+                            title: selection.title,
+                            tint: LibraryProfileSettingsDestination.appearance.tint
+                        )
+                    }
+                    .customLabeledMenu()
+                }
+                .padding(.vertical, 2)
+            #endif
+        }
+    }
+
+    /// Menu toggles rather than a `Picker`, which ignores `.disabled` on individual options.
+    ///
+    /// Apps that aren't installed can't be chosen; the swipe still asks if a chosen app is removed later.
+    private func options(selection: EntryOpenInSwipeDestination) -> some View {
+        ForEach(EntryOpenInSwipeDestination.allCases, id: \.self) { destination in
+            let isInstalled = isAvailable(destination)
+            Toggle(
+                isOn: Binding(
+                    get: { selection == destination },
+                    set: { if $0 { swipeDestination = destination } }
+                )
+            ) {
+                optionTitle(destination, isInstalled: isInstalled)
+            }
+            .disabled(!isInstalled)
+        }
+    }
+
+    @ViewBuilder
+    private func optionTitle(_ destination: EntryOpenInSwipeDestination, isInstalled: Bool) -> some View {
+        Text(destination.title)
+        if !isInstalled {
+            Text(EntryOpenInL10n.notInstalled)
+        }
+    }
+
+    private func isAvailable(_ destination: EntryOpenInSwipeDestination) -> Bool {
+        switch destination {
+        case .ask: true
+        case .app(let app): app.isInstalled
+        }
     }
 }
 

@@ -14,6 +14,72 @@ import SwiftUI
     import UIKit
 #endif
 
+/// Apps the "Open In" menus can launch. Add a case here to offer another app.
+///
+/// Raw values are persisted by `EntryOpenInSwipeDestination`, so keep them stable.
+enum EntryOpenInApp: String, CaseIterable, Identifiable {
+    case infuse
+    case kazumi
+
+    var id: Self { self }
+
+    var name: LocalizedStringResource {
+        switch self {
+        case .infuse: "Infuse"
+        case .kazumi: "Kazumi"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .infuse: "play.rectangle"
+        case .kazumi: "magnifyingglass"
+        }
+    }
+
+    /// Whether the app is installed, checked without an entry-specific link.
+    @MainActor
+    var isInstalled: Bool {
+        guard let url = URL(string: "\(rawValue)://") else { return false }
+        return EntryOpenInLinks.hasHandler(for: url)
+    }
+}
+
+/// What a list row's Open swipe action does: ask with the alert, or open one app directly.
+///
+/// Stored by raw value, so cases can be added later; a value that no longer decodes
+/// reads as the `.ask` default.
+enum EntryOpenInSwipeDestination: Hashable, CaseIterable, RawRepresentable {
+    case ask
+    case app(EntryOpenInApp)
+
+    static var allCases: [Self] { [.ask] + EntryOpenInApp.allCases.map(Self.app) }
+
+    init?(rawValue: String) {
+        if rawValue == "ask" {
+            self = .ask
+        } else if let app = EntryOpenInApp(rawValue: rawValue) {
+            self = .app(app)
+        } else {
+            return nil
+        }
+    }
+
+    var rawValue: String {
+        switch self {
+        case .ask: "ask"
+        case .app(let app): app.rawValue
+        }
+    }
+
+    var title: LocalizedStringResource {
+        switch self {
+        case .ask: EntryOpenInL10n.askEveryTime
+        case .app(let app): app.name
+        }
+    }
+}
+
 /// Destinations offered by the "Open In" menus on entry details and library context menus.
 struct EntryOpenInLinks: Equatable {
     var infuseURL: URL?
@@ -72,8 +138,19 @@ struct EntryOpenInLinks: Equatable {
         return entry.displayName
     }
 
+    func url(for app: EntryOpenInApp) -> URL? {
+        switch app {
+        case .infuse: infuseURL
+        case .kazumi: kazumiURL
+        }
+    }
+
+    var hasAppLinks: Bool {
+        EntryOpenInApp.allCases.contains { url(for: $0) != nil }
+    }
+
     var isEmpty: Bool {
-        infuseURL == nil && kazumiURL == nil && homepageURL == nil
+        !hasAppLinks && homepageURL == nil
     }
 
     /// iOS only answers for schemes listed under `LSApplicationQueriesSchemes` in Info.plist.
@@ -93,6 +170,7 @@ enum EntryOpenInL10n {
     static let open: LocalizedStringResource = "Open"
     static let homepage: LocalizedStringResource = "Homepage"
     static let notInstalled: LocalizedStringResource = "Not Installed"
+    static let askEveryTime: LocalizedStringResource = "Ask Every Time"
     static let systemImage = "arrow.up.forward.app"
 }
 
@@ -102,16 +180,14 @@ struct EntryOpenInMenuItems: View {
     let links: EntryOpenInLinks
 
     var body: some View {
-        if let infuseURL = links.infuseURL {
-            AppItem(name: "Infuse", systemImage: "play.rectangle", url: infuseURL)
-        }
-
-        if let kazumiURL = links.kazumiURL {
-            AppItem(name: "Kazumi", systemImage: "magnifyingglass", url: kazumiURL)
+        ForEach(EntryOpenInApp.allCases) { app in
+            if let url = links.url(for: app) {
+                AppItem(app: app, url: url)
+            }
         }
 
         if let homepageURL = links.homepageURL {
-            if links.infuseURL != nil || links.kazumiURL != nil {
+            if links.hasAppLinks {
                 Divider()
             }
 
@@ -124,8 +200,7 @@ struct EntryOpenInMenuItems: View {
     private struct AppItem: View {
         @Environment(\.openURL) private var openURL
 
-        let name: String
-        let systemImage: String
+        let app: EntryOpenInApp
         let url: URL
 
         var body: some View {
@@ -134,12 +209,12 @@ struct EntryOpenInMenuItems: View {
                 openURL(url)
             } label: {
                 Label {
-                    Text(verbatim: name)
+                    Text(app.name)
                     if !isInstalled {
                         Text(EntryOpenInL10n.notInstalled)
                     }
                 } icon: {
-                    Image(systemName: systemImage)
+                    Image(systemName: app.systemImage)
                 }
             }
             .disabled(!isInstalled)
@@ -204,8 +279,9 @@ fileprivate struct EntryOpenInAlertModifier: ViewModifier {
 
     @ViewBuilder
     private func actions(for request: EntryOpenInRequest) -> some View {
-        appButton(name: "Infuse", url: request.links.infuseURL)
-        appButton(name: "Kazumi", url: request.links.kazumiURL)
+        ForEach(EntryOpenInApp.allCases) { app in
+            appButton(app: app, url: request.links.url(for: app))
+        }
         if let homepageURL = request.links.homepageURL {
             Button {
                 openURL(homepageURL)
@@ -219,12 +295,12 @@ fileprivate struct EntryOpenInAlertModifier: ViewModifier {
     }
 
     @ViewBuilder
-    private func appButton(name: String, url: URL?) -> some View {
+    private func appButton(app: EntryOpenInApp, url: URL?) -> some View {
         if let url {
             Button {
                 openURL(url)
             } label: {
-                Text(verbatim: name)
+                Text(app.name)
             }
             .disabled(!EntryOpenInLinks.hasHandler(for: url))
             .keyboardShortcut(nil)
@@ -232,14 +308,27 @@ fileprivate struct EntryOpenInAlertModifier: ViewModifier {
     }
 }
 
-/// A list row's Open In swipe action, which hands the request to its alert.
+/// A list row's Open In swipe action. It opens the default swipe destination directly
+/// when that app can open the entry, and otherwise hands the request to its alert.
 struct EntryOpenInSwipeButton: View {
+    @Environment(\.openURL) private var openURL
+    @AppStorage(.libraryOpenInSwipeDestination)
+    private var destination: EntryOpenInSwipeDestination = .ask
+
     let entry: AnimeEntry
     let action: (EntryOpenInRequest) -> Void
 
     var body: some View {
         Button {
-            action(EntryOpenInRequest(entry: entry))
+            let request = EntryOpenInRequest(entry: entry)
+            if case .app(let app) = destination,
+                let url = request.links.url(for: app),
+                EntryOpenInLinks.hasHandler(for: url)
+            {
+                openURL(url)
+            } else {
+                action(request)
+            }
         } label: {
             Label(EntryOpenInL10n.open, systemImage: EntryOpenInL10n.systemImage)
         }

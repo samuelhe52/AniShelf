@@ -52,6 +52,8 @@ extension String {
     static let shareSheetUsesRoundedCorners = "ShareSheetUsesRoundedCorners"
     static let shareSheetRoundedExportFormat = "ShareSheetRoundedExportFormat"
     static let shareSheetExportSize = "ShareSheetExportSize"
+    // Device-local, since installed apps differ per device. Keep out of backup and CloudKit allowlists.
+    static let libraryOpenInSwipeDestination = "LibraryOpenInSwipeDestination"
     static let libraryCloudSyncEnabled = "LibraryCloudSyncEnabled"
     static let libraryCloudSyncBootstrapState = "LibraryCloudSyncBootstrapState"
     static let libraryCloudSyncCloudKitAvailability = "LibraryCloudSyncCloudKitAvailability"

@@ -62,7 +62,7 @@ AniShelf stores TMDb IDs but no Bangumi IDs.
 - `EntryDetailOpenInMenu` is the quick actions button (`arrow.up.forward.app`).
   `EntryOpenInSubmenu` is the submenu used in `LibraryEntryActionState.contextMenu`.
 - On iOS, `LibraryListView` uses a plain `EntryOpenInSwipeButton` on the trailing
-  edge beside Delete, with full swipe disabled. The short label is "Open"
+  edge beside Delete. The short label is "Open"
   (開く / 打开). It creates an `EntryOpenInRequest`, and the originating row's
   `entryOpenInAlert` presents a native alert with the entry title, Infuse, Kazumi,
   Homepage when available, and Cancel. Unavailable apps remain visible but
@@ -81,7 +81,7 @@ AniShelf stores TMDb IDs but no Bangumi IDs.
 | Prefer the Chinese title, then Japanese, for the Kazumi query | Implementation inference: Kazumi searches Bangumi, whose titles are Chinese and Japanese, and Kazumi is primarily a Chinese-language app. Not measured against real search results. |
 | Show uninstalled apps grayed out with "Not Installed" | Maintainer decision. The first implementation hid uninstalled apps; the maintainer preferred discoverability. |
 | Swipe action and context menu both | Maintainer decision ("It should be available in both places"). Applies to the iOS and Mac lists alike. |
-| iOS trailing swipe edge beside Delete | Maintainer decision. Edit and Share stay on the leading edge; trailing full swipe is disabled. |
+| iOS trailing swipe edge beside Delete | Maintainer decision. Edit and Share stay on the leading edge. Open became the outermost, full-swipe action in amendment 002. |
 | Plain iOS swipe button with a native alert | The embedded Menu stretched the swipe actions and left a large gap on iPad in maintainer screenshots. A confirmation dialog omitted unavailable apps. The maintainer confirmed the alert looks good on iPhone and iPad. |
 | Short iOS swipe label | "Open" (開く / 打开) keeps the swipe action compact; "Open In…" remains on menus and the alert title. |
 | Disabled app choices without an alert message about installation | Maintainer decision. Menu subtitles retain "Not Installed"; the iOS alert uses disabled buttons alone. |
@@ -121,3 +121,7 @@ verified.
 - Updated 2026-10-20: Replace the non-presenting Mac swipe menu with the same
   plain button and native alert used by iOS. The maintainer explicitly excluded
   swipe-close animation changes from this minimal fix.
+- Updated 2026-10-21: Swap Open and Delete on the trailing swipe edge, enable full
+  swipe, and add a device-local default swipe destination; corrects the full-swipe
+  text above — see
+  [002-swipe-default-destination.md](002-swipe-default-destination.md)

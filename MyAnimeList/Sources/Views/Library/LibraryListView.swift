@@ -110,15 +110,15 @@ import SwiftUI
                     .onAppear { scrolledID = item.id }
             }
             .entryOpenInAlert(request: $openInRequest, entryID: item.id)
-            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            .swipeActions(edge: .trailing) {
                 if !interaction.isMultiSelecting {
+                    EntryOpenInSwipeButton(entry: item.entry) { openInRequest = $0 }
+                        .tint(.orange)
+
                     Button("Delete", systemImage: "trash") {
                         actions.prepareDeletion(for: item.entry)
                     }
                     .tint(.red)
-
-                    EntryOpenInSwipeButton(entry: item.entry) { openInRequest = $0 }
-                        .tint(.orange)
                 }
             }
             .swipeActions(edge: .leading) {
