@@ -176,3 +176,4 @@ No action record is warranted until implementation proceeds.
 - Updated 2026-10-16: The Mac selection and inspector model was redesigned in its own entry, superseding the selection parts of 004, 006, and 008 — see [021](../021-mac-selection-model/000-plan.md)
 - Updated 2026-10-17: Records consolidated after the branch history was rewritten. The UI pass, its inspector and settings follow-up, and the window-sizing record were merged into 008; commit references now point to the rewritten history — see [001-action.md](001-action.md)
 - Updated 2026-10-18: Correct local production release-testing signing after an extracted App Store app failed to launch — see [009-local-production-export.md](009-local-production-export.md).
+- Updated 2026-10-20: Align compact list poster prefetch with display sizes and move shared image-loader disk probes to the I/O queue; scrolling impact remains unmeasured — see [010-poster-cache-alignment.md](010-poster-cache-alignment.md).

@@ -32,6 +32,18 @@ enum TMDbPosterDisplayType: CaseIterable {
             return 360
         }
     }
+
+    /// The processed cache variant used by both display and prefetch.
+    ///
+    /// The Mac's compact list uses a smaller bitmap while retaining the same server rendition URL.
+    var targetSize: CGSize {
+        #if os(macOS)
+            if self == .list {
+                return PosterImageSize.targetSize(width: 120)
+            }
+        #endif
+        return PosterImageSize.targetSize(width: CGFloat(idealWidth))
+    }
 }
 
 struct TMDbImageURLResolver {

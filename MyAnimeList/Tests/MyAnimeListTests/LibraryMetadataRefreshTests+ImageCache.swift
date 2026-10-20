@@ -31,11 +31,20 @@ extension LibraryMetadataRefreshTests {
 
         let listPosterURL = try #require(URL(string: "https://image.tmdb.org/t/p/w342/poster.jpg"))
         let gridPosterURL = try #require(URL(string: "https://image.tmdb.org/t/p/w500/poster.jpg"))
+        #if os(macOS)
+            let listTargetSize = CGSize(width: 120, height: 180)
+        #else
+            let listTargetSize = CGSize(width: 240, height: 360)
+        #endif
+
+        // These are processor sizes as well as dimensions: a mismatch changes the cache key.
+        #expect(TMDbPosterDisplayType.list.targetSize == listTargetSize)
+        #expect(TMDbPosterDisplayType.grid.targetSize == CGSize(width: 360, height: 540))
 
         #expect(
             targets
                 == Set([
-                    .init(url: listPosterURL, targetSize: CGSize(width: 240, height: 360)),
+                    .init(url: listPosterURL, targetSize: listTargetSize),
                     .init(url: gridPosterURL, targetSize: CGSize(width: 360, height: 540)),
                     .init(url: backdropURL, targetSize: CGSize(width: 1_200, height: 675)),
                     .init(url: logoURL, targetSize: CGSize(width: 500, height: 500))

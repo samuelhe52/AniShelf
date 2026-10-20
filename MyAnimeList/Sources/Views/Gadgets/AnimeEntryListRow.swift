@@ -79,7 +79,7 @@ struct AnimeEntryListRow: View {
             HStack(spacing: 10) {
                 KFImageView(
                     url: snapshot.displayPosterURL(for: .list),
-                    targetWidth: 120,
+                    targetSize: TMDbPosterDisplayType.list.targetSize,
                     diskCacheExpiration: .longTerm
                 )
                 .scaledToFill()
@@ -222,7 +222,7 @@ struct AnimeEntryListRow: View {
     private var poster: some View {
         KFImageView(
             url: snapshot.displayPosterURL(for: .list),
-            targetWidth: 240,
+            targetSize: TMDbPosterDisplayType.list.targetSize,
             diskCacheExpiration: .longTerm
         )
         .scaledToFill()

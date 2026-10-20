@@ -113,6 +113,8 @@ struct KFImageView: View {
         imageLoaded = false
 
         var kfRetrieveOptions: KingfisherOptionsInfo = [
+            // Keep disk existence probes on Kingfisher's I/O queue after a memory miss.
+            .asyncCacheTypeCheck,
             .diskCacheExpiration(diskCacheExpiration)
         ]
 
