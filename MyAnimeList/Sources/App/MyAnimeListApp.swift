@@ -280,13 +280,13 @@ struct MyAnimeListApp: App {
                     .onAppear {
                         libraryStore.language = followsSystemLanguage ? .current : preferredLanguage
                     }
-                    .transition(.opacity.animation(.easeInOut(duration: 1)))
+                    .transition(.opacity.animation(.easeInOut(duration: 0.3)))
             } else if keyStorage.lookupState == .checking {
                 ProgressView(checkingTMDbAPIKeyResource)
                     .transition(.opacity.animation(.easeInOut(duration: 0.2)))
             } else {
                 TMDbAPIOnboardingView()
-                    .transition(.opacity.animation(.easeInOut(duration: 1)))
+                    .transition(.opacity.animation(.easeInOut(duration: 0.3)))
             }
         }
         #if (DEBUG || LIBRARY_FIXTURES) && os(iOS)
