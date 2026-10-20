@@ -15,6 +15,7 @@ import SwiftUI
         @Environment(LibraryBrowseScope.self) private var scope
         @Environment(LibraryEntryInteractionState.self) private var interaction
         @Environment(LibraryEntryActionState.self) private var actions
+        @State private var openInRequest: EntryOpenInRequest?
 
         let detailActions: LibraryEntryDetailActions
         let displayItems: [LibraryEntryDisplayItem]
@@ -108,12 +109,16 @@ import SwiftUI
                 EntryContextMenuPreview(snapshot: item.snapshot)
                     .onAppear { scrolledID = item.id }
             }
+            .entryOpenInAlert(request: $openInRequest, entryID: item.id)
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 if !interaction.isMultiSelecting {
                     Button("Delete", systemImage: "trash") {
                         actions.prepareDeletion(for: item.entry)
                     }
                     .tint(.red)
+
+                    EntryOpenInSwipeButton(entry: item.entry) { openInRequest = $0 }
+                        .tint(.orange)
                 }
             }
             .swipeActions(edge: .leading) {
@@ -125,9 +130,6 @@ import SwiftUI
 
                     actions.shareButton(for: item.entry)
                         .tint(.indigo)
-
-                    EntryOpenInSubmenu(entry: item.entry)
-                        .tint(.orange)
                 }
             }
         }

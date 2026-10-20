@@ -10,14 +10,25 @@
 | 2026-10-20 | Uninstalled apps changed from hidden to disabled with a "Not Installed" subtitle, at the maintainer's request. | — |
 | 2026-10-20 | Bangumi ID mapping deferred by the maintainer; this record written. | — |
 | 2026-10-20 | Review fix: Kazumi queries now encode `+` as `%2B`; `URLComponents` leaves it literal, and Kazumi's Dart parser would decode it as a space (`BLOOD+` → `BLOOD`). Added a punctuation regression test. | — |
+| 2026-10-20 | Moved the iOS Open In swipe action to the trailing edge beside Delete, with full swipe disabled. | — |
+| 2026-10-20 | Maintainer screenshots showed the embedded iOS swipe Menu stretched the actions and left a gap on iPad. Replaced it with a plain button and a request identifying the originating row. | — |
+| 2026-10-20 | Shortened the iOS swipe label to Open (開く / 打开), keeping Open In… for menus and the alert title. | — |
+| 2026-10-20 | The iOS confirmation dialog omitted disabled apps. Switched to a native alert with disabled app buttons, the entry title, and Cancel; removed the installation-status message at the maintainer's request. | — |
+| 2026-10-20 | Maintainer confirmed the resulting iPhone/iPad behavior and approved retaining these iOS changes. | — |
+| 2026-10-20 | Maintainer reported that the Mac swipe menu does nothing and confirmed Delete also resets without a slide-back animation. Replaced that menu with a plain button and the existing SwiftUI alert, then moved Open to the trailing edge beside Delete at the maintainer's request. Animation changes are out of scope. | — |
 
 ## Outcome and current state (as of 2026-10-20)
 
 - The detail quick actions row, the library context menu (iOS and Mac), and the iOS
-  and Mac list leading swipe actions all offer Open In… → Infuse, Kazumi, Homepage.
+  and Mac list swipe actions all offer Open In… → Infuse, Kazumi, Homepage.
+- On iOS the short Open button sits on the trailing edge beside Delete and opens a
+  native alert with the entry title and Cancel. Unavailable apps stay visible as
+  disabled choices. The Mac list uses the same plain button and native alert
+  on the trailing edge beside Delete, matching iOS.
 - Infuse links target the exact movie, series, or season by TMDb ID. Kazumi opens
   a title search (Chinese, then Japanese, then display title).
-- Uninstalled apps are listed, disabled, and labelled "Not Installed".
+- Uninstalled apps are listed and disabled. Menus retain the "Not Installed"
+  subtitle; the swipe alerts use disabled buttons without that message.
 
 Key files:
 
@@ -28,7 +39,7 @@ Key files:
 - `MyAnimeList/Sources/Views/Library/LibraryListView.swift`
 - `MyAnimeList/Sources/Mac/MacLibraryList.swift`
 - `MyAnimeList/Resources/Info.plist` (`LSApplicationQueriesSchemes`)
-- `MyAnimeList/Resources/Localizable.xcstrings` ("Open In…", "Homepage", "Not Installed")
+- `MyAnimeList/Resources/Localizable.xcstrings` ("Open In…", "Homepage", "Not Installed", "Open")
 - `MyAnimeList/Tests/MyAnimeListTests/EntryOpenInLinksTests.swift`
 
 ## Deviations from plan
@@ -39,18 +50,27 @@ are recorded in the timeline.
 
 ## Validation
 
-- `make test-app-sim APP_TEST_ONLY='MyAnimeListTests/EntryOpenInLinksTests'` on the
-  booted iPhone 18 Pro simulator: 3 tests passed, after the final change.
-- `make build-mac`: build completed, after the final change.
-- The first test run failed to compile because the new test file was compiled into
-  the app target. Fixed by adding it to both membership exception lists in
-  `MyAnimeList.xcodeproj/project.pbxproj`.
-- No runtime UI check was run.
+- Prior implementation record: the three `EntryOpenInLinksTests` passed on the
+  booted iPhone 18 Pro simulator, and the native Mac build passed. These are
+  earlier recorded results, not fresh validation for this commit.
+- The original test file initially compiled into the app target. Its membership
+  was corrected in both exception lists in `MyAnimeList.xcodeproj/project.pbxproj`.
+- Maintainer runtime checks: the embedded iOS swipe Menu stretched the action
+  group and left a gap on iPad; the confirmation dialog omitted disabled choices.
+  The maintainer confirmed the final native alert looks good on iPhone and iPad.
+- Focused iOS validation:
+  `make test-app-sim APP_TEST_ONLY='MyAnimeListTests/EntryOpenInLinksTests'`
+  passed all three tests on the already-booted iPhone 18 Pro simulator.
+- `make build-mac` passed with the request, alert, and swipe-button types shared
+  across iOS and macOS.
+- `git diff --check` passed. No additional agent visual checks were performed.
+- The minimal Mac fix adds only presentation wiring and reuses existing actions;
+  no new tests or repeat URL-test run were needed. Its visible behavior remains
+  for maintainer acceptance. `make run-mac` launched successfully with the
+  default 800-entry fixture, confirmed from the running process arguments.
 
 ## Open questions
 
-- Whether a `Menu` inside `.swipeActions` presents its items when tapped on every
-  supported iOS version. Unverified.
 - Whether the "Not Installed" subtitle (a second `Text` in the item's `Label`)
   renders as a subtitle in macOS menus. Unverified.
 - Whether the Chinese-first Kazumi query actually finds titles better than the

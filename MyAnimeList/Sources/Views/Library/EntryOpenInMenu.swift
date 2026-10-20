@@ -89,6 +89,8 @@ struct EntryOpenInLinks: Equatable {
 
 enum EntryOpenInL10n {
     static let openIn: LocalizedStringResource = "Open In…"
+    /// Swipe actions size to their labels, so the swipe uses a short label.
+    static let open: LocalizedStringResource = "Open"
     static let homepage: LocalizedStringResource = "Homepage"
     static let notInstalled: LocalizedStringResource = "Not Installed"
     static let systemImage = "arrow.up.forward.app"
@@ -145,7 +147,106 @@ struct EntryOpenInMenuItems: View {
     }
 }
 
-/// The "Open In" submenu for library context menus and list swipe actions.
+/// A pending choice from a list row's Open In swipe action.
+///
+/// A plain button preserves native swipe sizing. The alert keeps unavailable apps
+/// visible as disabled choices, unlike the confirmation dialog.
+struct EntryOpenInRequest: Identifiable {
+    let id = UUID()
+    let entryID: LibraryEntryIdentity
+    let title: String
+    let links: EntryOpenInLinks
+
+    init(entry: AnimeEntry) {
+        entryID = entry.libraryIdentity
+        title = entry.displayName
+        links = EntryOpenInLinks(entry: entry, homepageURL: entry.linkToDetails)
+    }
+}
+
+extension View {
+    /// Shows the Open In alert when `request` belongs to
+    /// `entryID`.
+    func entryOpenInAlert(
+        request: Binding<EntryOpenInRequest?>,
+        entryID: LibraryEntryIdentity
+    ) -> some View {
+        modifier(EntryOpenInAlertModifier(request: request, entryID: entryID))
+    }
+}
+
+fileprivate struct EntryOpenInAlertModifier: ViewModifier {
+    @Environment(\.openURL) private var openURL
+    @Binding var request: EntryOpenInRequest?
+    let entryID: LibraryEntryIdentity
+
+    func body(content: Content) -> some View {
+        let presentedRequest = request?.entryID == entryID ? request : nil
+        let isPresented = Binding(
+            get: { presentedRequest != nil && request?.id == presentedRequest?.id },
+            set: { isPresented in
+                if !isPresented, request?.id == presentedRequest?.id {
+                    request = nil
+                }
+            }
+        )
+
+        content.alert(
+            Text(EntryOpenInL10n.openIn),
+            isPresented: isPresented,
+            presenting: presentedRequest
+        ) { request in
+            actions(for: request)
+        } message: { request in
+            Text(verbatim: request.title)
+        }
+    }
+
+    @ViewBuilder
+    private func actions(for request: EntryOpenInRequest) -> some View {
+        appButton(name: "Infuse", url: request.links.infuseURL)
+        appButton(name: "Kazumi", url: request.links.kazumiURL)
+        if let homepageURL = request.links.homepageURL {
+            Button {
+                openURL(homepageURL)
+            } label: {
+                Text(EntryOpenInL10n.homepage)
+            }
+            .keyboardShortcut(nil)
+        }
+        Button("Cancel", role: .cancel) {}
+            .keyboardShortcut(.cancelAction)
+    }
+
+    @ViewBuilder
+    private func appButton(name: String, url: URL?) -> some View {
+        if let url {
+            Button {
+                openURL(url)
+            } label: {
+                Text(verbatim: name)
+            }
+            .disabled(!EntryOpenInLinks.hasHandler(for: url))
+            .keyboardShortcut(nil)
+        }
+    }
+}
+
+/// A list row's Open In swipe action, which hands the request to its alert.
+struct EntryOpenInSwipeButton: View {
+    let entry: AnimeEntry
+    let action: (EntryOpenInRequest) -> Void
+
+    var body: some View {
+        Button {
+            action(EntryOpenInRequest(entry: entry))
+        } label: {
+            Label(EntryOpenInL10n.open, systemImage: EntryOpenInL10n.systemImage)
+        }
+    }
+}
+
+/// The "Open In" submenu for library context menus.
 struct EntryOpenInSubmenu: View {
     let entry: AnimeEntry
 

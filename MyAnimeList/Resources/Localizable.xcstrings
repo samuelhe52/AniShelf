@@ -13238,6 +13238,22 @@
         }
       }
     },
+    "Open" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开"
+          }
+        }
+      }
+    },
     "Open In…" : {
       "localizations" : {
         "ja" : {

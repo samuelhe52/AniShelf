@@ -20,6 +20,7 @@
         @Environment(LibraryEntryActionState.self) private var actions
         @Environment(MacLibrarySelection.self) private var selection
         @FocusState private var isListFocused: Bool
+        @State private var openInRequest: EntryOpenInRequest?
 
         let detailActions: LibraryEntryDetailActions
         let displayItems: [LibraryEntryDisplayItem]
@@ -95,11 +96,15 @@
             .listRowInsets(.init(top: 4, leading: 8, bottom: 4, trailing: 8))
             .listRowSeparator(.visible)
             .listRowSeparatorTint(.white.opacity(0.06))
+            .entryOpenInAlert(request: $openInRequest, entryID: item.id)
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 Button("Delete", systemImage: "trash") {
                     actions.prepareDeletion(for: item.entry)
                 }
                 .tint(.red)
+
+                EntryOpenInSwipeButton(entry: item.entry) { openInRequest = $0 }
+                    .tint(.orange)
             }
             .swipeActions(edge: .leading) {
                 Button("Edit", systemImage: "pencil") {
@@ -109,9 +114,6 @@
 
                 actions.shareButton(for: item.entry)
                     .tint(.indigo)
-
-                EntryOpenInSubmenu(entry: item.entry)
-                    .tint(.orange)
             }
         }
 

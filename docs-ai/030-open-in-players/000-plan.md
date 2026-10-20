@@ -27,7 +27,7 @@ AniShelf stores TMDb IDs but no Bangumi IDs.
 ## Goals
 
 - One "Open In…" menu that lists Infuse, Kazumi, and Homepage.
-- The same menu in three places: the entry detail quick actions row (replacing the
+- The same destinations in three places: the entry detail quick actions row (replacing the
   Safari button), the library context menu (iOS list, grid, and gallery; Mac list and
   grid), and a list-row swipe action (iOS and Mac).
 - Infuse opens the exact movie, series, or season by TMDb ID.
@@ -60,9 +60,18 @@ AniShelf stores TMDb IDs but no Bangumi IDs.
   but is disabled, with a "Not Installed" subtitle. Homepage appears only when a URL
   exists.
 - `EntryDetailOpenInMenu` is the quick actions button (`arrow.up.forward.app`).
-  `EntryOpenInSubmenu` is the submenu used in `LibraryEntryActionState.contextMenu`
-  and in the leading swipe actions of `LibraryListView` and `MacLibraryList` (after
-  Edit and Share, so a full swipe still edits).
+  `EntryOpenInSubmenu` is the submenu used in `LibraryEntryActionState.contextMenu`.
+- On iOS, `LibraryListView` uses a plain `EntryOpenInSwipeButton` on the trailing
+  edge beside Delete, with full swipe disabled. The short label is "Open"
+  (開く / 打开). It creates an `EntryOpenInRequest`, and the originating row's
+  `entryOpenInAlert` presents a native alert with the entry title, Infuse, Kazumi,
+  Homepage when available, and Cancel. Unavailable apps remain visible but
+  disabled; the alert has no "Not Installed" message.
+- The Mac list reuses the same plain swipe button, request, and native SwiftUI
+  alert. Its Open button is on the trailing edge beside Delete, matching iOS. Native
+  Mac default-button styling is retained, and swipe-close behavior is left
+  unchanged as requested. There is no custom sheet, AppKit presenter, or
+  animation workaround.
 
 ## Alternatives & decisions
 
@@ -72,6 +81,11 @@ AniShelf stores TMDb IDs but no Bangumi IDs.
 | Prefer the Chinese title, then Japanese, for the Kazumi query | Implementation inference: Kazumi searches Bangumi, whose titles are Chinese and Japanese, and Kazumi is primarily a Chinese-language app. Not measured against real search results. |
 | Show uninstalled apps grayed out with "Not Installed" | Maintainer decision. The first implementation hid uninstalled apps; the maintainer preferred discoverability. |
 | Swipe action and context menu both | Maintainer decision ("It should be available in both places"). Applies to the iOS and Mac lists alike. |
+| iOS trailing swipe edge beside Delete | Maintainer decision. Edit and Share stay on the leading edge; trailing full swipe is disabled. |
+| Plain iOS swipe button with a native alert | The embedded Menu stretched the swipe actions and left a large gap on iPad in maintainer screenshots. A confirmation dialog omitted unavailable apps. The maintainer confirmed the alert looks good on iPhone and iPad. |
+| Short iOS swipe label | "Open" (開く / 打开) keeps the swipe action compact; "Open In…" remains on menus and the alert title. |
+| Disabled app choices without an alert message about installation | Maintainer decision. Menu subtitles retain "Not Installed"; the iOS alert uses disabled buttons alone. |
+| Plain Mac swipe button with the existing native alert | Maintainer reported the embedded Menu does nothing. Reuse the iOS presentation code and retain native styling; swipe-close animation is explicitly outside this fix. |
 | Rename the button to "Open In…" with `arrow.up.forward.app` | Maintainer asked for a rename and a new icon. The name and symbol were chosen during implementation to cover two apps and a website. |
 
 ## Future work: Bangumi mapping
@@ -96,9 +110,14 @@ verified.
 - Focused unit tests for URL construction: the Infuse season link and the Kazumi
   title choice and encoding (`EntryOpenInLinksTests`).
 - iOS simulator test run and native macOS build.
-- Maintainer visual pass: the detail button, the context menu, the list swipe menu,
-  and the disabled items with their "Not Installed" subtitle on iOS and macOS.
+- Maintainer visual pass: the detail button, the context menu, the list swipe action,
+  the disabled menu items with their "Not Installed" subtitle, and the iOS swipe
+  alert with disabled app choices and Cancel.
 
 ## Amendments
 
-None yet.
+- Updated 2026-10-20: Use a compact trailing swipe button and native alert on iOS;
+  see the iOS follow-up timeline and validation in [001-action.md](001-action.md).
+- Updated 2026-10-20: Replace the non-presenting Mac swipe menu with the same
+  plain button and native alert used by iOS. The maintainer explicitly excluded
+  swipe-close animation changes from this minimal fix.
