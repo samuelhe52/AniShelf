@@ -10,6 +10,7 @@
 | 2026-10-22 | Fixes from the maintainer's visual pass: the profile count on one line and the detail hero under the vertical bar. | `5ff92f7`, `ddfe075` |
 | 2026-10-23 | The native inspector carries detail across Duo folds, replacing the close-then-reopen migration there. | `b5cad7f`, [005](005-native-inspector-adaptation.md) |
 | 2026-10-23 | Gallery shelf dates fall back to a numeric format when the long format would wrap. | `3b15562` |
+| 2026-10-23 | The maintainer accepted flat gray glass in the folded native inspector as a known limitation after background and glass-container experiments. | [006](006-folded-inspector-glass-limitation.md) |
 
 From slice 2 onward, Claude Code implemented the slices directly. Codex contributed slice 1 and the
 investigation behind 005.
@@ -29,6 +30,10 @@ On iPhone Duo:
 - **Layout.** The detail hero artwork extends under the vertical bar. The profile count shrinks
   rather than wrapping beside the cover's bar. Gallery shelf dates switch to a numeric format
   only when the long format would wrap.
+- **Accepted visual limitation.** Detail glass surfaces look flat gray in the folded native
+  inspector and regain depth when unfolded. Both the grouped-background override and the
+  unsuccessful `GlassEffectContainer` experiment were reverted. The maintainer explicitly accepted
+  this appearance and requested retaining the established implementation — see [006](006-folded-inspector-glass-limitation.md).
 
 Other devices look as they did before this entry. The horizontal toolbar code is
 source-identical, and every Duo-specific change is gated on a vertical bar or on a layout that
@@ -68,7 +73,7 @@ Key source files:
 
 ## Validation
 
-Recorded per slice in 002–005. Summary:
+Recorded per slice in 002–005, with the accepted glass limitation investigated in 006. Summary:
 
 - **Duo simulator.** Runs used the iPhone Duo simulator (iOS 27.1, `sim-use`), plus Device Hub
   window captures where sim-use returned black cover screenshots. Fold paths were checked in
