@@ -170,6 +170,7 @@ extension LibrarySyncCoordinator {
             target.dateFinished = source.dateFinished
             target.isDateTrackingEnabled = source.isDateTrackingEnabled
             target.score = source.score
+            target.scoreHasHalf = source.scoreHasHalf
             target.favorite = source.favorite
             target.notes = source.notes
             target.usingCustomPoster = source.usingCustomPoster
@@ -230,7 +231,7 @@ fileprivate func trackingValuesDiffer(
         || lhs.dateStarted != rhs.dateStarted
         || lhs.dateFinished != rhs.dateFinished
         || lhs.isDateTrackingEnabled != rhs.isDateTrackingEnabled
-        || lhs.score != rhs.score
+        || lhs.entryScore != rhs.entryScore
         || lhs.favorite != rhs.favorite
         || lhs.notes != rhs.notes
         || lhs.usingCustomPoster != rhs.usingCustomPoster

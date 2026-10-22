@@ -246,6 +246,32 @@ struct LibraryEntrySyncTests {
         #expect(mergedFromFirst == mergedFromSecond)
     }
 
+    @Test func equalClockSnapshotsThatDifferOnlyInHalfStarConverge() throws {
+        var half = makeSnapshot(tmdbID: 304, score: 4)
+        half.scoreHasHalf = true
+        let whole = makeSnapshot(tmdbID: 304, score: 4)
+
+        #expect(try half.merged(with: whole) == whole.merged(with: half))
+    }
+
+    @Test func snapshotJSONKeepsHalfStarWhateverItsSchemaVersion() throws {
+        var snapshot = makeSnapshot(tmdbID: 305, score: 4)
+        snapshot.scoreHasHalf = true
+        // Only the CloudKit decoder gates the half on the record version.
+        snapshot.schemaVersion = 2
+        let data = try JSONEncoder().encode(snapshot)
+
+        let decoded = try JSONDecoder().decode(LibraryEntrySyncSnapshot.self, from: data)
+        #expect(decoded.entryScore == EntryScore(halves: 9))
+
+        // JSON saved before half scores has no key.
+        var object = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        object["scoreHasHalf"] = nil
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+        let legacy = try JSONDecoder().decode(LibraryEntrySyncSnapshot.self, from: legacyData)
+        #expect(legacy.entryScore == EntryScore(whole: 4))
+    }
+
     @Test func liveSnapshotWinsEqualClockTombstoneInEitherOrder() throws {
         let snapshot = makeSnapshot(tmdbID: 303)
         let tombstone = LibraryEntrySyncTombstone(

@@ -1,3 +1,10 @@
+//
+//  LibraryImageCacheService.swift
+//  AniShelf
+//
+//  Created by OpenAI Codex on behalf of Samuel He on 2026/5/7.
+//
+
 import DataProvider
 import Foundation
 import Kingfisher
@@ -212,7 +219,7 @@ enum LibraryImageCacheService {
                 else { return nil }
                 return ImagePrefetchTarget(
                     url: url,
-                    targetSize: PosterImageSize.targetSize(width: CGFloat(displayType.idealWidth))
+                    targetSize: displayType.targetSize
                 )
             }
         }
@@ -298,6 +305,7 @@ enum LibraryImageCacheService {
 
     private static let cachedImageProcessorIdentifiers: [String] = {
         let sizes = [
+            PosterImageSize.targetSize(width: 120),
             PosterImageSize.targetSize(width: 240),
             PosterImageSize.targetSize(width: 300),
             PosterImageSize.targetSize(width: 360),

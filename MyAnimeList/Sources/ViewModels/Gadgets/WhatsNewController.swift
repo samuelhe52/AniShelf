@@ -66,6 +66,14 @@ final class WhatsNewController {
         presentingSceneIdentifier = sceneIdentifier
     }
 
+    /// Frees a claim whose window has closed, so another open window can show the entry.
+    func releasePresentation(ifNotIn openSceneIdentifiers: Set<String>) {
+        guard let presentingSceneIdentifier, !openSceneIdentifiers.contains(presentingSceneIdentifier) else {
+            return
+        }
+        self.presentingSceneIdentifier = nil
+    }
+
     func presentedEntry(forSceneIdentifier sceneIdentifier: String?) -> WhatsNewEntry? {
         guard let sceneIdentifier, sceneIdentifier == presentingSceneIdentifier else { return nil }
         return presentedEntry

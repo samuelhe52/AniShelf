@@ -11,11 +11,13 @@ import SwiftUI
 struct GlobalToastsModifier: ViewModifier {
     var center: ToastCenter
 
+    @Environment(\.windowSceneIdentifier) private var windowSceneIdentifier
+
     func body(content: Content) -> some View {
         @Bindable var center = center
         content
             .toast(
-                isPresenting: $center.copied, duration: 1.5, offsetY: 20,
+                isPresenting: shown($center.copied), duration: 1.5, offsetY: 20,
                 alert: {
                     AlertToast(
                         displayMode: .hud,
@@ -25,7 +27,7 @@ struct GlobalToastsModifier: ViewModifier {
             )
             .sensoryFeedback(.lighterImpact, trigger: center.copied) { !$0 && $1 }
             .toast(
-                isPresenting: $center.pasted, duration: 1.5, offsetY: 20,
+                isPresenting: shown($center.pasted), duration: 1.5, offsetY: 20,
                 alert: {
                     AlertToast(
                         displayMode: .hud,
@@ -35,7 +37,7 @@ struct GlobalToastsModifier: ViewModifier {
             )
             .sensoryFeedback(.lighterImpact, trigger: center.pasted) { !$0 && $1 }
             .toast(
-                isPresenting: $center.regularCompleted, offsetY: 20,
+                isPresenting: shown($center.regularCompleted), offsetY: 20,
                 alert: {
                     AlertToast(
                         displayMode: .hud,
@@ -45,7 +47,7 @@ struct GlobalToastsModifier: ViewModifier {
             )
             .sensoryFeedback(.success, trigger: center.regularCompleted) { !$0 && $1 }
             .toast(
-                isPresenting: $center.regularFailed, offsetY: 20,
+                isPresenting: shown($center.regularFailed), offsetY: 20,
                 alert: {
                     AlertToast(
                         displayMode: .hud,
@@ -55,7 +57,7 @@ struct GlobalToastsModifier: ViewModifier {
             )
             .sensoryFeedback(.error, trigger: center.regularFailed) { !$0 && $1 }
             .toast(
-                item: $center.completionState, offsetY: 20,
+                item: shown($center.completionState), offsetY: 20,
                 alert: { completion in
                     var alertType: AlertToast.AlertType = .regular
                     if let state = completion?.state {
@@ -80,7 +82,7 @@ struct GlobalToastsModifier: ViewModifier {
                 }
             }
             .toast(
-                item: $center.progressState, offsetY: 20,
+                item: shown($center.progressState), offsetY: 20,
                 alert: { progress in
                     guard let progress else {
                         return AlertToast(
@@ -97,7 +99,7 @@ struct GlobalToastsModifier: ViewModifier {
                 }
             )
             .toast(
-                item: $center.loadingMessage,
+                item: shown($center.loadingMessage),
                 duration: 0,
                 tapToDismiss: false,
                 offsetY: 20
@@ -108,7 +110,7 @@ struct GlobalToastsModifier: ViewModifier {
                     titleResource: message?.messageResource)
             }
             .toast(
-                isPresenting: $center.favorited, duration: 1.5, offsetY: 35,
+                isPresenting: shown($center.favorited), duration: 1.5, offsetY: 35,
                 alert: {
                     AlertToast(
                         displayMode: .hud,
@@ -117,7 +119,7 @@ struct GlobalToastsModifier: ViewModifier {
                 }
             )
             .toast(
-                isPresenting: $center.unFavorited, duration: 1.5, offsetY: 35,
+                isPresenting: shown($center.unFavorited), duration: 1.5, offsetY: 35,
                 alert: {
                     AlertToast(
                         displayMode: .hud,
@@ -125,6 +127,26 @@ struct GlobalToastsModifier: ViewModifier {
                         titleResource: "Unfavorited")
                 }
             )
+    }
+
+    private var isPresentingWindow: Bool {
+        center.presentsToasts(inSceneIdentifier: windowSceneIdentifier)
+    }
+
+    /// Hides the toast in windows other than the presenting one, and keeps them from
+    /// dismissing it there.
+    private func shown(_ binding: Binding<Bool>) -> Binding<Bool> {
+        Binding(
+            get: { isPresentingWindow && binding.wrappedValue },
+            set: { if isPresentingWindow { binding.wrappedValue = $0 } }
+        )
+    }
+
+    private func shown<Item>(_ binding: Binding<Item?>) -> Binding<Item?> {
+        Binding(
+            get: { isPresentingWindow ? binding.wrappedValue : nil },
+            set: { if isPresentingWindow { binding.wrappedValue = $0 } }
+        )
     }
 }
 

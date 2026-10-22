@@ -8,11 +8,14 @@
 import SwiftUI
 
 struct LibraryBrowseSummaryMenu: View {
-    let store: LibraryStore
+    let scope: LibraryBrowseScope
     let scoringEnabled: Bool
+    var usesSymbolLabel = false
+
+    private var store: LibraryStore { scope.store }
 
     var body: some View {
-        @Bindable var store = store
+        @Bindable var scope = scope
 
         Menu {
             Section("View") {
@@ -48,12 +51,12 @@ struct LibraryBrowseSummaryMenu: View {
                 Toggle(
                     "Reversed",
                     systemImage: "arrow.counterclockwise.circle",
-                    isOn: $store.sortReversed
+                    isOn: $scope.sortReversed
                 )
                 Picker(
                     "Sort",
                     systemImage: "arrow.up.arrow.down",
-                    selection: $store.sortStrategy
+                    selection: $scope.sortStrategy
                 ) {
                     ForEach(LibraryStore.AnimeSortStrategy.allCases, id: \.self) { strategy in
                         Text(strategy.localizedStringResource).tag(strategy)
@@ -66,10 +69,10 @@ struct LibraryBrowseSummaryMenu: View {
                 Toggle(
                     "All",
                     isOn: .init(
-                        get: { store.filters.isEmpty },
+                        get: { scope.filters.isEmpty },
                         set: {
                             if $0 {
-                                store.filters.removeAll()
+                                scope.filters.removeAll()
                             }
                         }
                     )
@@ -85,9 +88,32 @@ struct LibraryBrowseSummaryMenu: View {
                 filterToggle(for: .favorited)
             }
         } label: {
-            LibraryToolbarSummaryCapsule(primary: filterSummaryResource)
+            #if os(macOS)
+                // One toolbar glyph with the system menu indicator, filled while a filter
+                // narrows the library, as in Mail.
+                Label(
+                    "Sort, group, and filter",
+                    systemImage: activeFilters.isEmpty
+                        ? "line.3.horizontal.decrease.circle"
+                        : "line.3.horizontal.decrease.circle.fill"
+                )
+                .labelStyle(.iconOnly)
+            #else
+                if usesSymbolLabel {
+                    Label(
+                        "Sort, group, and filter",
+                        systemImage: activeFilters.isEmpty
+                            ? "line.3.horizontal.decrease.circle"
+                            : "line.3.horizontal.decrease.circle.fill"
+                    )
+                    .labelStyle(.iconOnly)
+                    .accessibilityValue(Text(filterSummaryResource))
+                } else {
+                    LibraryToolbarSummaryCapsule(primary: filterSummaryResource)
+                }
+            #endif
         }
-        .menuActionDismissBehavior(.disabled)
+        .keepsMenuPresentedAfterAction()
     }
 
     private var availableGroupStrategies: [LibraryStore.LibraryGroupStrategy] {
@@ -99,7 +125,7 @@ struct LibraryBrowseSummaryMenu: View {
     }
 
     private var activeFilters: [LibraryStore.AnimeFilter] {
-        LibraryStore.AnimeFilter.allCases.filter { store.filters.contains($0) }
+        LibraryStore.AnimeFilter.allCases.filter { scope.filters.contains($0) }
     }
 
     private var filterSummaryResource: LocalizedStringResource {
@@ -142,12 +168,12 @@ struct LibraryBrowseSummaryMenu: View {
 
     private func binding(for filter: LibraryStore.AnimeFilter) -> Binding<Bool> {
         .init(
-            get: { store.filters.contains(filter) },
+            get: { scope.filters.contains(filter) },
             set: {
                 if $0 {
-                    store.filters.insert(filter)
+                    scope.filters.insert(filter)
                 } else {
-                    store.filters.remove(filter)
+                    scope.filters.remove(filter)
                 }
             }
         )
@@ -155,20 +181,20 @@ struct LibraryBrowseSummaryMenu: View {
 
     private var categoryBinding: Binding<LibraryCategory.ID?> {
         Binding(
-            get: { store.activeCategoryID },
-            set: { id in withAnimation(.snappy) { store.activeCategoryID = id } }
+            get: { scope.activeCategoryID },
+            set: { id in withAnimation(.snappy) { scope.activeCategoryID = id } }
         )
     }
 
     private var groupStrategyBinding: Binding<LibraryStore.LibraryGroupStrategy> {
         Binding(
             get: {
-                if !scoringEnabled, store.groupStrategy == .score {
+                if !scoringEnabled, scope.groupStrategy == .score {
                     return .none
                 }
-                return store.groupStrategy
+                return scope.groupStrategy
             },
-            set: { store.groupStrategy = $0 }
+            set: { scope.groupStrategy = $0 }
         )
     }
 }

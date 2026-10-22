@@ -1,0 +1,183 @@
+//
+//  MacLibraryCommands.swift
+//  AniShelf
+//
+//  Created by Claude Code on behalf of samuelhe52 on 2026/10/15.
+//
+
+#if os(macOS)
+    import AppKit
+    import DataProvider
+    import SwiftUI
+
+    /// Actions the key window's library publishes for the menu bar.
+    ///
+    /// Menu commands act on whichever window is key, so each `MacLibraryView` publishes its own
+    /// actions through `focusedSceneValue`.
+    struct MacLibraryCommandActions {
+        var addAnime: () -> Void
+        var findInLibrary: () -> Void
+        var viewStyle: Binding<LibraryViewStyle>
+        var isInspectorPresented: Bool
+        var toggleInspector: () -> Void
+        var hasSelection: Bool
+        /// Whether several entries are selected; entry commands then act on none of them.
+        var hasBatchSelection: Bool
+        var selectAll: () -> Void
+        var clearSelection: () -> Void
+        var openCategoryManager: () -> Void
+        var refreshAllMetadata: () -> Void
+        /// A refresh is already running, from this or another window.
+        var isRefreshingAllMetadata: Bool
+        /// The entry that entry commands act on: the single selected entry.
+        var targetEntry: AnimeEntry?
+        var openDetails: (AnimeEntry) -> Void
+        var editEntry: (AnimeEntry) -> Void
+        var toggleFavorite: (AnimeEntry) -> Void
+        var shareEntry: (AnimeEntry) -> Void
+        var switchPoster: (AnimeEntry) -> Void
+        var deleteEntry: (AnimeEntry) -> Void
+        /// Asks to delete the batch selection.
+        var deleteSelection: () -> Void
+    }
+
+    extension FocusedValues {
+        @Entry var macLibraryCommands: MacLibraryCommandActions?
+    }
+
+    struct MacLibraryCommands: Commands {
+        let whatsNew: WhatsNewController
+        @FocusedValue(\.macLibraryCommands) private var library
+        @Environment(\.openWindow) private var openWindow
+
+        var body: some Commands {
+            // About and Support live in the app menu, as on other Mac apps, instead of rows
+            // in Settings.
+            CommandGroup(replacing: .appInfo) {
+                Button("About AniShelf") { openWindow(id: MacWindowID.about) }
+                Button("Support AniShelf…") { openWindow(id: MacWindowID.support) }
+            }
+            CommandGroup(replacing: .newItem) {
+                Button("Add Anime…") { library?.addAnime() }
+                    .keyboardShortcut("n")
+                    .disabled(library == nil)
+                Button("New Window") { openWindow(id: MacWindowID.library) }
+                    .keyboardShortcut("n", modifiers: [.command, .option])
+            }
+
+            CommandGroup(after: .textEditing) {
+                Divider()
+                Button("Find in Library…") { library?.findInLibrary() }
+                    .keyboardShortcut("f")
+                    .disabled(library == nil)
+                Button("Select All Anime") { library?.selectAll() }
+                    .keyboardShortcut("a", modifiers: [.command, .shift])
+                    .disabled(library == nil)
+                Button("Deselect All") { library?.clearSelection() }
+                    .disabled(library?.hasSelection != true)
+            }
+
+            CommandGroup(before: .sidebar) {
+                if let library {
+                    Picker("View As", selection: library.viewStyle) {
+                        ForEach(Array(LibraryViewStyle.macCases.enumerated()), id: \.element) {
+                            index, style in
+                            Text(style.nameKey)
+                                .tag(style)
+                                .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")))
+                        }
+                    }
+                    .pickerStyle(.inline)
+                } else {
+                    // Keeps the menu's layout stable while no library window is key.
+                    ForEach(LibraryViewStyle.macCases, id: \.self) { style in
+                        Button(style.nameKey) {}.disabled(true)
+                    }
+                }
+                Divider()
+            }
+
+            CommandGroup(after: .sidebar) {
+                Button(library?.isInspectorPresented == true ? "Hide Inspector" : "Show Inspector") {
+                    library?.toggleInspector()
+                }
+                .keyboardShortcut("i", modifiers: [.command, .option])
+                .disabled(library == nil)
+            }
+
+            // AniShelf has no Help Book; point Help at the website and its guides.
+            CommandGroup(replacing: .help) {
+                Button("What's New in AniShelf", action: showWhatsNew)
+                    .disabled(whatsNew.currentEntry == nil)
+                Divider()
+                Link("AniShelf Website", destination: URL(string: "https://anishelf.konakona.dev")!)
+                Link("Privacy Policy", destination: URL(string: "https://anishelf.konakona.dev/privacy/")!)
+            }
+
+            CommandMenu("Anime") {
+                let entry = library?.targetEntry
+                Button("Show Details") { if let entry { library?.openDetails(entry) } }
+                    .keyboardShortcut(.return, modifiers: .command)
+                    .disabled(entry == nil)
+                Button("Edit…") { if let entry { library?.editEntry(entry) } }
+                    .keyboardShortcut("e")
+                    .disabled(entry == nil)
+                Button(entry?.favorite == true ? "Remove from Favorites" : "Add to Favorites") {
+                    if let entry { library?.toggleFavorite(entry) }
+                }
+                .keyboardShortcut("l")
+                .disabled(entry == nil)
+                // The same flag as the inspector's status context menu; it only applies
+                // while watching.
+                Toggle(
+                    "Rewatching",
+                    isOn: Binding(
+                        get: { entry?.isRewatching == true },
+                        set: { isRewatching in _ = entry?.updateRewatching(isRewatching) }
+                    )
+                )
+                .disabled(entry?.watchStatus != .watching)
+                Divider()
+                Button("Switch Poster…") { if let entry { library?.switchPoster(entry) } }
+                    .disabled(entry == nil)
+                Button("Share…") { if let entry { library?.shareEntry(entry) } }
+                    .disabled(entry == nil)
+                Divider()
+                Button("Delete…") {
+                    if library?.hasBatchSelection == true {
+                        library?.deleteSelection()
+                    } else if let entry {
+                        library?.deleteEntry(entry)
+                    }
+                }
+                .keyboardShortcut(.delete)
+                .disabled(entry == nil && library?.hasBatchSelection != true)
+                Divider()
+                Button("Edit Categories…") { library?.openCategoryManager() }
+                    .disabled(library == nil)
+                Button("Refresh All Metadata…") { library?.refreshAllMetadata() }
+                    .disabled(library == nil || library?.isRefreshingAllMetadata == true)
+            }
+        }
+    }
+
+    extension MacLibraryCommands {
+        /// What's New is a sheet on a library window, where it also appears after an update.
+        @MainActor private func showWhatsNew() {
+            if let window = MacLibraryWindows.frontmost {
+                whatsNew.presentCurrentEntry(inSceneIdentifier: window.sceneIdentifier)
+                window.makeKeyAndOrderFront(nil)
+            } else {
+                // The new window claims the unclaimed presentation when it appears.
+                whatsNew.presentCurrentEntry(inSceneIdentifier: nil)
+                MacLibraryWindows.openNew()
+            }
+        }
+    }
+
+    enum MacWindowID {
+        static let library = "library"
+        static let about = "about"
+        static let support = "support"
+    }
+#endif

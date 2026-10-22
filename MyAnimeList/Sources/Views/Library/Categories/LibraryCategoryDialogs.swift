@@ -34,7 +34,9 @@ extension View {
         modifier(LibraryCategoryNamePromptModifier(prompt: prompt, onSubmit: onSubmit))
     }
 
-    /// Confirms deletion of a category. The anime in it stay in the library.
+    /// Confirms deletion of a category.
+    ///
+    /// The anime in it stay in the library.
     func libraryCategoryDeleteConfirmation(_ category: Binding<LibraryCategory?>) -> some View {
         modifier(LibraryCategoryDeleteConfirmationModifier(category: category))
     }

@@ -171,16 +171,37 @@ final class EntryDetailViewModel {
     private(set) var characterSectionTitle: LocalizedStringResource =
         EntryDetailL10n.characters
 
+    /// Changes each time a fetched detail replaces the shown one, so the view can animate
+    /// refreshes without animating a switch to another entry.
+    private(set) var fetchedDetailRevision = 0
     private var loadedRequestKey: String?
+    /// The request whose stored values are showing; `loadedRequestKey` is set once they are
+    /// also current.
+    private var preparedRequestKey: String?
     private var loadGeneration = 0
+
+    /// Only the iOS hero shows the title logo, so only iOS refetches a stored detail that
+    /// predates logos.
+    #if os(macOS)
+        static let platformRefetchesForMissingLogo = false
+    #else
+        static let platformRefetchesForMissingLogo = true
+    #endif
+    private let refetchesForMissingLogo: Bool
+
+    private static func requestKey(for entry: AnimeEntry, language: Language) -> String {
+        "\(entry.tmdbID)-\(language.rawValue)"
+    }
 
     init(
         repository: LibraryRepository,
         infoFetcher: InfoFetcher = .init(),
         detailInfoLoader: EntryDetailInfoLoader? = nil,
-        detailPersistenceSaver: EntryDetailPersistenceSaver? = nil
+        detailPersistenceSaver: EntryDetailPersistenceSaver? = nil,
+        refetchesForMissingLogo: Bool = platformRefetchesForMissingLogo
     ) {
         self.repository = repository
+        self.refetchesForMissingLogo = refetchesForMissingLogo
         self.infoFetcher = infoFetcher
         self.detailInfoLoader =
             detailInfoLoader
@@ -196,14 +217,12 @@ final class EntryDetailViewModel {
             ?? repository.save
     }
 
-    func load(for entry: AnimeEntry, language: Language) async {
-        guard !Task.isCancelled else { return }
-
-        let requestKey = "\(entry.tmdbID)-\(language.rawValue)"
-        guard loadedRequestKey != requestKey else { return }
-
-        loadGeneration += 1
-        let generation = loadGeneration
+    /// Shows what the library already stores for `entry`, synchronously, so a new detail
+    /// renders complete on its first frame instead of filling in after `load` starts.
+    func prepare(for entry: AnimeEntry, language: Language) {
+        let requestKey = Self.requestKey(for: entry, language: language)
+        guard preparedRequestKey != requestKey else { return }
+        preparedRequestKey = requestKey
         loadedRequestKey = nil
 
         displayTitle = entry.displayName
@@ -225,13 +244,26 @@ final class EntryDetailViewModel {
         loadError = nil
         if let detail = entry.detail, detail.language == language.rawValue {
             apply(detail: detail, entry: entry, language: language)
-            if detail.logoImageURL != nil {
+            if detail.logoImageURL != nil || !refetchesForMissingLogo {
                 loadedRequestKey = requestKey
                 isLoading = false
-                return
             }
         }
+    }
 
+    func load(for entry: AnimeEntry, language: Language) async {
+        guard !Task.isCancelled else { return }
+
+        let requestKey = Self.requestKey(for: entry, language: language)
+        guard loadedRequestKey != requestKey else { return }
+
+        // A no-op when the session already prepared this entry and language.
+        prepare(for: entry, language: language)
+        guard loadedRequestKey != requestKey else { return }
+
+        loadGeneration += 1
+        let generation = loadGeneration
+        loadError = nil
         isLoading = true
         do {
             let detailDTO = try await detailInfoLoader(entry.type, entry.tmdbID, language)
@@ -246,6 +278,7 @@ final class EntryDetailViewModel {
                 with: detailDTO
             )
             apply(detail: detail, entry: entry, language: language)
+            fetchedDetailRevision += 1
             loadedRequestKey = requestKey
         } catch {
             guard loadGeneration == generation else { return }

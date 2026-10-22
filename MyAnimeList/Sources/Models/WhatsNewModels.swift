@@ -460,6 +460,28 @@ enum WhatsNewRegistry {
                     kind: .openURL(projectURL)
                 )
             ]
+        ),
+        "1.104.0": .init(
+            version: "1.104.0",
+            summary:
+                "This release brings AniShelf to macOS natively, adds half-star ratings and Open In shortcuts, and improves window and foldable layouts.",
+            highlights: [
+                "Added a native macOS app with a redesigned desktop interface and interactions.",
+                "Rate anime in half-star increments, such as 4.5 stars, and drag to adjust your score.",
+                "Open entries in Infuse, Kazumi, or bilibili from the detail page, and set up quick access with a swipe in List view.",
+                "Each window now keeps its own category, filters, sorting, and view mode without affecting other windows.",
+                "Added support for iPhone Duo.",
+                "Improved library search and poster loading, and fixed library rows not updating after episode progress changes."
+            ],
+            primaryAction: nil,
+            secondaryActions: [
+                .init(
+                    id: "project-github",
+                    title: "AniShelf on GitHub",
+                    systemImage: "arrow.up.right.square",
+                    kind: .openURL(projectURL)
+                )
+            ]
         )
     ]
 

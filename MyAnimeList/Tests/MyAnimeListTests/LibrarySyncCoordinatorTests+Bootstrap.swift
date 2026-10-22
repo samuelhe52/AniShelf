@@ -28,7 +28,7 @@ extension LibrarySyncCoordinatorTests {
         )
         try store.repository.newEntry(entry)
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([])
-        store.preferences.saveSortReversed(false)
+        store.preferences.saveHideDroppedByDefault(true)
         store.rebuildSyncChangeTracking()
 
         let client = CloudLibrarySyncClient()
@@ -58,7 +58,7 @@ extension LibrarySyncCoordinatorTests {
         )
         let savedSettings = try client.settingsSnapshot(from: savedSettingsRecord)
         #expect(savedSettings.updatedAt == exportDate)
-        #expect(savedSettings.payload[.librarySortReversed] == .bool(false))
+        #expect(savedSettings.payload[.libraryHideDroppedByDefault] == .bool(true))
         #expect(store.preferences.cloudSyncedDefaultsUpdatedAt() == exportDate)
         #expect(store.syncChangeRecorder.dirtyQueueStore.load().entries.isEmpty)
     }
@@ -403,7 +403,7 @@ extension LibrarySyncCoordinatorTests {
             try store.repository.newEntry(entry)
         }
         try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([])
-        store.preferences.saveSortReversed(false)
+        store.preferences.saveHideDroppedByDefault(true)
         store.rebuildSyncChangeTracking()
         let client = CloudLibrarySyncClient()
         let database = FakeCloudLibrarySyncDatabase(changes: [makeEmptyChangeBatch(), makeEmptyChangeBatch()])

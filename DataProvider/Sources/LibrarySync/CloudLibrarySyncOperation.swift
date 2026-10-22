@@ -9,7 +9,9 @@ import CloudKit
 import Foundation
 
 /// Bounds preparation even when CloudKit is waiting for authentication and its
-/// network request timeout has not started. Late callbacks cannot resume twice.
+/// network request timeout has not started.
+///
+/// Late callbacks cannot resume twice.
 final class CloudLibrarySyncOperation: @unchecked Sendable {
     private let operation: CKDatabaseOperation
     private let lock = NSLock()

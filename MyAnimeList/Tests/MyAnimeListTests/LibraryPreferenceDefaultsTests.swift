@@ -182,15 +182,16 @@ struct LibraryPreferenceDefaultsTests {
         defaults.set(false, forKey: .libraryAutoPrefetchImagesOnAddAndRestore)
 
         let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let scope = LibraryBrowseScope(store: store)
 
         #expect(store.defaultFilters == Set([.favorited, .watched]))
-        #expect(store.filters == Set([.favorited, .watched]))
+        #expect(scope.filters == Set([.favorited, .watched]))
         #expect(store.defaultNewEntryWatchStatus == .watching)
 
         // Unrelated preference writes, such as category edits, reload preferences without resetting browse filters.
-        store.filters = [.watched]
+        scope.filters = [.watched]
         store.reloadPersistedPreferences()
-        #expect(store.filters == [.watched])
+        #expect(scope.filters == [.watched])
 
         store.newEntryFromEntryMetadata(
             EntryMetadata(

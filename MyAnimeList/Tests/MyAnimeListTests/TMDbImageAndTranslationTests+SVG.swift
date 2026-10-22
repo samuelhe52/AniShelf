@@ -34,7 +34,7 @@ extension TMDbImageAndTranslationTests {
         )
 
         #expect(image.size == CGSize(width: 24, height: 24))
-        #expect(image.scale == 2)
+        #expect(rasterScale(of: image) == 2)
     }
 
     @Test func testSVGImageProcessorPreservesAspectRatioWithinTargetSize() throws {
@@ -70,8 +70,8 @@ extension TMDbImageAndTranslationTests {
 
         #expect(wideImage.size == CGSize(width: 24, height: 8))
         #expect(tallImage.size == CGSize(width: 8, height: 24))
-        #expect(wideImage.scale == 2)
-        #expect(tallImage.scale == 2)
+        #expect(rasterScale(of: wideImage) == 2)
+        #expect(rasterScale(of: tallImage) == 2)
     }
 
     @Test func testSVGImageProcessorIdentifiersIncludeSizeAndScale() {
@@ -94,4 +94,16 @@ extension TMDbImageAndTranslationTests {
         )
     }
 
+}
+
+/// The raster scale: `UIImage.scale` on iOS; pixels per point on macOS, where `NSImage` has no scale.
+fileprivate func rasterScale(of image: KFCrossPlatformImage) -> CGFloat {
+    #if os(macOS)
+        guard image.size.width > 0,
+            let bitmap = image.representations.first(where: { $0.pixelsWide > 0 })
+        else { return 0 }
+        return CGFloat(bitmap.pixelsWide) / image.size.width
+    #else
+        image.scale
+    #endif
 }

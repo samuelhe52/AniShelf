@@ -407,7 +407,7 @@ extension AnimeEntry {
             dateStarted = snapshot.dateStarted
             dateFinished = snapshot.dateFinished
             isDateTrackingEnabled = snapshot.isDateTrackingEnabled
-            score = snapshot.score
+            setEntryScore(snapshot.entryScore)
             favorite = snapshot.favorite
             notes = snapshot.notes
             let wasUsingCustomPoster = usingCustomPoster

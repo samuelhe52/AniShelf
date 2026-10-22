@@ -50,11 +50,11 @@ struct EntryDetailBroadcastSearchSheet: View {
         NavigationStack {
             searchContent
                 .navigationTitle(EntryDetailL10n.searchTVMaze)
-                .navigationBarTitleDisplayMode(.inline)
+                .inlineNavigationTitle()
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button(action: dismiss.callAsFunction) {
-                            Image(systemName: "xmark")
+                            SheetCloseLabel()
                         }
                         .accessibilityLabel(EntryDetailL10n.close)
                     }
@@ -62,7 +62,7 @@ struct EntryDetailBroadcastSearchSheet: View {
         }
         .searchable(
             text: $query,
-            placement: .navigationBarDrawer(displayMode: .always),
+            placement: .platformDrawerAlways,
             prompt: Text(EntryDetailL10n.searchAnimePrompt)
         )
         .onSubmit(of: .search, submitSearch)
@@ -102,6 +102,7 @@ struct EntryDetailBroadcastSearchSheet: View {
             Button(EntryDetailL10n.close, role: .cancel) {}
         }
         .presentationSizing(.page)
+        .macSheetFrame(width: 640, height: 640)
     }
 
     @ViewBuilder

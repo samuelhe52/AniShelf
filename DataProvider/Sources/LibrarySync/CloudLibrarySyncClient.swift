@@ -120,6 +120,7 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
         record[Field.dateFinished] = snapshot.dateFinished
         record[Field.isDateTrackingEnabled] = snapshot.isDateTrackingEnabled
         record[Field.score] = snapshot.score
+        record[Field.scoreHasHalf] = snapshot.scoreHasHalf
         record[Field.favorite] = snapshot.favorite
         record[Field.notes] = snapshot.notes
         record[Field.usingCustomPoster] = snapshot.usingCustomPoster
@@ -171,6 +172,7 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
         record[Field.dateFinished] = nil
         record[Field.isDateTrackingEnabled] = nil
         record[Field.score] = nil
+        record[Field.scoreHasHalf] = nil
         record[Field.favorite] = nil
         record[Field.notes] = nil
         record[Field.usingCustomPoster] = nil
@@ -336,6 +338,10 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
             in: record
         )
         let score: Int? = try Self.optionalValue(for: Field.score, in: record)
+        // A version 2 write from an older build can leave this key behind; ignore it.
+        let scoreHasHalf: Bool =
+            try schemaVersion >= 3
+            && (Self.optionalValue(for: Field.scoreHasHalf, in: record) ?? false)
         let favorite: Bool = try Self.requiredValue(for: Field.favorite, in: record)
         let notes: String = try Self.requiredValue(for: Field.notes, in: record)
         let usingCustomPoster: Bool = try Self.requiredValue(for: Field.usingCustomPoster, in: record)
@@ -364,6 +370,7 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
             dateFinished: dateFinished,
             isDateTrackingEnabled: isDateTrackingEnabled,
             score: score,
+            scoreHasHalf: scoreHasHalf,
             favorite: favorite,
             notes: notes,
             usingCustomPoster: usingCustomPoster,
@@ -485,6 +492,7 @@ extension CloudLibrarySyncClient {
         fileprivate static let dateFinished = "dateFinished"
         fileprivate static let isDateTrackingEnabled = "isDateTrackingEnabled"
         fileprivate static let score = "score"
+        fileprivate static let scoreHasHalf = "scoreHasHalf"
         fileprivate static let favorite = "favorite"
         fileprivate static let notes = "notes"
         fileprivate static let usingCustomPoster = "usingCustomPoster"

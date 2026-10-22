@@ -6,7 +6,7 @@
   <p>一款适用于 iPhone、iPad 和 Mac 的原生动漫收藏管理应用。</p>
 
   <p>
-    <img src="https://img.shields.io/badge/platform-iOS%20%C2%B7%20iPadOS%2026%2B-34C759" alt="支持 iOS 和 iPadOS 26 及以上版本" />
+    <img src="https://img.shields.io/badge/platform-iOS%20%C2%B7%20iPadOS%20%C2%B7%20macOS%2026%2B-34C759" alt="支持 iOS、iPadOS 和 macOS 26 及以上版本" />
     <img src="https://img.shields.io/badge/license-Apache%202.0-blue" alt="Apache 2.0 许可证" />
     <a href="https://apps.apple.com/app/id6759359144"><img src="https://img.shields.io/badge/App%20Store-%E7%AB%8B%E5%8D%B3%E4%B8%8B%E8%BD%BD-007AFF?logo=apple&logoColor=white" alt="从 App Store 下载 AniShelf" /></a>
   </p>
@@ -35,7 +35,7 @@
 
 ## 📱 获取方式
 
-AniShelf 现已上架 [App Store](https://apps.apple.com/app/id6759359144)，支持运行 iOS 或 iPadOS 26 及以上版本的 iPhone 和 iPad，以及搭载 Apple 芯片的 Mac（运行 iPad 版应用）。
+AniShelf 现已上架 [App Store](https://apps.apple.com/app/id6759359144)，支持运行 iOS 或 iPadOS 26 及以上版本的 iPhone 和 iPad，并提供适用于 macOS 26 及以上版本的原生 Mac 应用。
 
 新功能会先通过 TestFlight 发布，之后再推送到 App Store。你可以加入 [TestFlight 测试版](https://testflight.apple.com/join/ns3sR38X)，抢先体验新功能并提供反馈。
 
@@ -47,10 +47,12 @@ AniShelf 现已上架 [App Store](https://apps.apple.com/app/id6759359144)，支
 - **🔍 智能检索** - 依托 TMDb 数据库多语言检索动漫资源
 - **🎨 精致界面** - 基于原生 SwiftUI 搭建，视觉风格统一精致
 - **📊 进度追踪** - 标记观看状态、打分，精准记录单集观看进度和重看次数
+- **▶️ 打开方式** - 从条目直接跳转到 Infuse、Kazumi 或哔哩哔哩
 - **⏰ 播出与提醒** - 查看符合条件番剧的播出时间，并为新番每集设置播出前或播出后的提醒
 - **💾 备份还原** - 备份和恢复资料库与设置，也可以将资料库导出为常用文件格式
 - **☁️ iCloud同步** - 跨设备同步资料库数据与偏好设置
 - **🌍 多语言适配** - 动漫元数据支持英文、中文、日文
+- **🖥️ 原生 Mac 应用** - 为桌面设计的侧边栏与检查器，每个窗口独立保留各自的视图
 
 ## CLI 与 Agent 集成
 
@@ -64,7 +66,7 @@ AniShelf 还提供配套 CLI：[anishelf-cli](https://github.com/samuelhe52/anis
 
 ### 📋 构建与运行要求
 
-- iOS/iPadOS 26.0+
+- iOS/iPadOS 26.0+ 或 macOS 26.0+
 - Xcode 26.0+
 - Swift 6.0+
 - TMDb API 密钥（可从 [The Movie Database](https://www.themoviedb.org/settings/api) 免费获取）
@@ -85,7 +87,7 @@ AniShelf 还提供配套 CLI：[anishelf-cli](https://github.com/samuelhe52/anis
    ```
 
 3. **构建并运行**
-   - 选择目标设备或模拟器
+   - 选择目标设备、模拟器或 My Mac
    - 按下 `⌘R` 构建并运行
    - 首次启动时，系统会提示你输入 TMDb API 密钥
 

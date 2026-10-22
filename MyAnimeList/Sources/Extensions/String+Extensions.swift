@@ -26,6 +26,8 @@ extension String {
     static let entryDetailStaffExpandedByDefault = "EntryDetailStaffExpandedByDefault"
     static let showProductionCompanyInsteadOfRuntime = "ShowProductionCompanyInsteadOfRuntime"
     static let libraryScoringEnabled = "LibraryScoringEnabled"
+    // Device-local. Keep out of backup and CloudKit allowlists.
+    static let entryScoreHalfHintSeen = "EntryScoreHalfHintSeen"
     static let episodeProgressTrackingEnabled = "EpisodeProgressTrackingEnabled"
     static let broadcastScheduleEnabled = "BroadcastScheduleEnabled"
     // Device-local airing reminder state. Keep these out of backup and CloudKit allowlists.
@@ -50,6 +52,8 @@ extension String {
     static let shareSheetUsesRoundedCorners = "ShareSheetUsesRoundedCorners"
     static let shareSheetRoundedExportFormat = "ShareSheetRoundedExportFormat"
     static let shareSheetExportSize = "ShareSheetExportSize"
+    // Device-local, since installed apps differ per device. Keep out of backup and CloudKit allowlists.
+    static let libraryOpenInSwipeDestination = "LibraryOpenInSwipeDestination"
     static let libraryCloudSyncEnabled = "LibraryCloudSyncEnabled"
     static let libraryCloudSyncBootstrapState = "LibraryCloudSyncBootstrapState"
     static let libraryCloudSyncCloudKitAvailability = "LibraryCloudSyncCloudKitAvailability"
@@ -107,14 +111,12 @@ extension String {
         .lastSeenWhatsNewVersion
     ]
 
+    // Sort, group and sort direction are per-window browse state, so they stay on this device.
     static let cloudSyncedPreferenceKeys: [String] = [
         .preferredAnimeInfoLanguage,
         .useCurrentLocaleForAnimeInfoLanguage,
         .defaultPosterLanguage,
         .searchTMDbLanguage,
-        .libraryGroupStrategy,
-        .librarySortStrategy,
-        .librarySortReversed,
         .libraryOpenDetailWithSingleTap,
         .entryDetailCharactersExpandedByDefault,
         .entryDetailStaffExpandedByDefault,

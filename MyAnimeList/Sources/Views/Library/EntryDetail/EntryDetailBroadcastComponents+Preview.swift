@@ -110,7 +110,7 @@ fileprivate struct EntryDetailBroadcastConfirmationPreview: View {
                 searchTitle: searchTitle,
                 displayTitle: displayTitle
             )
-            .presentationBackground(Color(.systemGroupedBackground))
+            .presentationBackground(Color.platformSystemGroupedBackground)
         }
         .task {
             model.update(

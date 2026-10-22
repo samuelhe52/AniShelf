@@ -22,12 +22,16 @@ struct PosterSlides: View {
     @State private var fetchState: FetchState = .idle
     @State private var currentSlideID: String?
     @State private var showSelectionConfirmation = false
+    #if os(macOS)
+        @State private var isHoveringSlides = false
+        @FocusState private var slidesFocused: Bool
+    #endif
 
     private let contentTransitionAnimation = Animation.easeInOut(duration: 0.2)
 
     var body: some View {
         ZStack {
-            Color(.systemBackground)
+            Color.platformSystemBackground
                 .ignoresSafeArea()
 
             switch fetchState {
@@ -43,6 +47,10 @@ struct PosterSlides: View {
             case .loaded:
                 loadedView
                     .padding()
+                    #if os(macOS)
+                        // The Mac sheet has no navigation bar above the slides.
+                        .padding(.vertical, 12)
+                    #endif
                     .transition(.opacity)
             }
         }
@@ -75,15 +83,38 @@ struct PosterSlides: View {
                 }
                 .scrollTargetLayout()
             }
-            .scrollIndicators(.hidden)
             .scrollTargetBehavior(.paging)
             .scrollPosition(id: $currentSlideID)
+            #if os(macOS)
+                // The page dots, arrows, and ←/→ page on the Mac. The scroller would only
+                // repeat the dots, and `.hidden` still shows it when a mouse is connected.
+                .scrollIndicators(.never)
+                .overlay { pagingArrows }
+                .onHover { isHoveringSlides = $0 }
+                .focusable()
+                .focusEffectDisabled()
+                .focused($slidesFocused)
+                .onKeyPress(.leftArrow) {
+                    showSlide(at: currentSlideIndex - 1)
+                    return .handled
+                }
+                .onKeyPress(.rightArrow) {
+                    showSlide(at: currentSlideIndex + 1)
+                    return .handled
+                }
+                .onAppear { slidesFocused = true }
+            #else
+                .scrollIndicators(.hidden)
+            #endif
 
             PosterPageIndicator(
                 numberOfPages: loadedPosters.count,
-                currentPage: currentSlideIndex
+                currentPage: currentSlideIndex,
+                onSelectPage: showSlide(at:)
             )
-            .frame(height: 8)
+            #if !os(macOS)
+                .frame(height: 8)
+            #endif
 
             if let slide = currentSlide {
                 VStack(spacing: 15) {
@@ -116,6 +147,58 @@ struct PosterSlides: View {
         .containerRelativeFrame([.horizontal, .vertical])
         .id(item.poster.id)
     }
+
+    private func showSlide(at index: Int) {
+        guard loadedPosters.indices.contains(index) else { return }
+        withAnimation(.smooth) {
+            currentSlideID = loadedPosters[index].poster.id
+        }
+    }
+
+    #if os(macOS)
+        /// Previous and next buttons at the slides' edges, shown while the pointer is over them.
+        private var pagingArrows: some View {
+            HStack {
+                pagingArrow(
+                    "Previous",
+                    systemImage: "chevron.left",
+                    isAvailable: currentSlideIndex > 0
+                ) {
+                    showSlide(at: currentSlideIndex - 1)
+                }
+                Spacer()
+                pagingArrow(
+                    "Next",
+                    systemImage: "chevron.right",
+                    isAvailable: currentSlideIndex < loadedPosters.count - 1
+                ) {
+                    showSlide(at: currentSlideIndex + 1)
+                }
+            }
+            .padding(.horizontal, 12)
+            .opacity(isHoveringSlides ? 1 : 0)
+            .animation(.easeInOut(duration: 0.15), value: isHoveringSlides)
+        }
+
+        private func pagingArrow(
+            _ title: LocalizedStringResource,
+            systemImage: String,
+            isAvailable: Bool,
+            action: @escaping () -> Void
+        ) -> some View {
+            Button(action: action) {
+                Image(systemName: systemImage)
+                    .font(.title3.weight(.semibold))
+                    .frame(width: 36, height: 36)
+                    .background(.regularMaterial, in: .circle)
+                    .contentShape(.circle)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(title))
+            .opacity(isAvailable ? 1 : 0)
+            .disabled(!isAvailable)
+        }
+    #endif
 
     private var loadedPosters: [(poster: Poster, url: URL)] {
         posters.compactMap { poster in
@@ -282,21 +365,56 @@ struct PosterSlides: View {
 ///
 /// ScrollView paging does not
 /// provide them, and disabling interaction keeps swipe ownership in the ScrollView.
-fileprivate struct PosterPageIndicator: UIViewRepresentable {
-    let numberOfPages: Int
-    let currentPage: Int
+#if os(macOS)
+    /// Page dots that also jump to a page when clicked.
+    ///
+    /// The arrows and ←/→ carry the
+    /// accessible paging, so the dots stay hidden from accessibility.
+    fileprivate struct PosterPageIndicator: View {
+        let numberOfPages: Int
+        let currentPage: Int
+        let onSelectPage: (Int) -> Void
 
-    func makeUIView(context: Context) -> UIPageControl {
-        let pageControl = UIPageControl()
-        pageControl.isUserInteractionEnabled = false
-        pageControl.currentPageIndicatorTintColor = .secondaryLabel
-        pageControl.pageIndicatorTintColor = .tertiaryLabel
-        return pageControl
+        var body: some View {
+            if numberOfPages > 1 {
+                HStack(spacing: 0) {
+                    ForEach(0..<numberOfPages, id: \.self) { index in
+                        Button {
+                            onSelectPage(index)
+                        } label: {
+                            Circle()
+                                .fill(index == currentPage ? Color.secondary : Color.secondary.opacity(0.3))
+                                .frame(width: 6, height: 6)
+                                .frame(width: 14, height: 14)
+                                .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .accessibilityHidden(true)
+            }
+        }
+    }
+#else
+    fileprivate struct PosterPageIndicator: UIViewRepresentable {
+        let numberOfPages: Int
+        let currentPage: Int
+        /// Unused: the control ignores touches so swipes stay with the ScrollView.
+        let onSelectPage: (Int) -> Void
+
+        func makeUIView(context: Context) -> UIPageControl {
+            let pageControl = UIPageControl()
+            pageControl.isUserInteractionEnabled = false
+            pageControl.currentPageIndicatorTintColor = .secondaryLabel
+            pageControl.pageIndicatorTintColor = .tertiaryLabel
+            return pageControl
+        }
+
+        func updateUIView(_ pageControl: UIPageControl, context: Context) {
+            pageControl.numberOfPages = numberOfPages
+            pageControl.currentPage = currentPage
+            pageControl.hidesForSinglePage = true
+        }
     }
 
-    func updateUIView(_ pageControl: UIPageControl, context: Context) {
-        pageControl.numberOfPages = numberOfPages
-        pageControl.currentPage = currentPage
-        pageControl.hidesForSinglePage = true
-    }
-}
+#endif

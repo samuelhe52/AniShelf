@@ -19,7 +19,7 @@ struct LibraryProfileSettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.windowSceneIdentifier) private var windowSceneIdentifier
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.platformHorizontalSizeClass) private var horizontalSizeClass
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
     @AppStorage(.useCurrentLocaleForAnimeInfoLanguage) private var followsSystemLanguage: Bool =
         Language.followsSystemPreference()
@@ -46,6 +46,14 @@ struct LibraryProfileSettingsView: View {
     @State private var remindersLoaded = false
     private let airingReminders = AiringReminderCoordinator.shared
     @State private var restoreCompleted = false
+    #if os(macOS)
+        @State private var macPane: MacSettingsPane? = .overview
+
+        enum MacSettingsPane: Hashable {
+            case overview
+            case destination(LibraryProfileSettingsDestination)
+        }
+    #endif
 
     init(onDismiss: (() -> Void)? = nil) {
         self.onDismiss = onDismiss
@@ -59,171 +67,231 @@ struct LibraryProfileSettingsView: View {
         LibraryProfileSettingsActions(store: store)
     }
 
-    var body: some View {
-        NavigationStack(path: $path) {
-            ZStack {
-                LibraryProfileBackdrop()
+    @ViewBuilder
+    private var settingsNavigation: some View {
+        #if os(macOS)
+            macSettingsNavigation
+        #else
+            NavigationStack(path: $path) {
+                ZStack {
+                    LibraryProfileBackdrop()
 
-                ScrollView {
-                    profileContent
-                }
-                .scrollContentBackground(.hidden)
-                .preferredNavigationBarScrollEdgeEffect()
-            }
-            .navigationTitle(profileTitleResource)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: dismissSettings) {
-                        Image(systemName: "xmark")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(.primary)
-                            .padding(8)
-                            .contentShape(Rectangle())
+                    ScrollView {
+                        profileContent
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(Text(closeTitleResource))
+                    .scrollContentBackground(.hidden)
+                    .preferredNavigationBarScrollEdgeEffect()
+                }
+                .navigationTitle(profileTitleResource)
+                .inlineNavigationTitle()
+                .hiddenNavigationBarBackground()
+                .toolbar {
+                    ToolbarItem(placement: .platformTrailing) {
+                        Button(action: dismissSettings) {
+                            Image(systemName: "xmark")
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(.primary)
+                                .padding(8)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Text(closeTitleResource))
+                    }
+                }
+                .navigationDestination(for: LibraryProfileSettingsDestination.self) { destination in
+                    settingsPage(for: destination)
                 }
             }
-            .navigationDestination(for: LibraryProfileSettingsDestination.self) { destination in
-                settingsPage(for: destination)
-            }
-        }
-        .onAppear(perform: handleAppear)
-        .onChange(of: effectiveLanguage, handleEffectiveLanguageChange)
-        .onChange(of: posterLanguage, handlePosterLanguageChange)
-        .task { await reloadReminders() }
-        .onChange(of: scenePhase) { _, phase in
-            guard phase == .active else { return }
-            Task { await reloadReminders() }
-        }
-        .task(id: store.libraryCloudSyncStatus.bootstrapState) {
-            await presentPendingCloudConflict()
-        }
-        .alert("Resolve iCloud Sync Conflict", isPresented: $cloudSync.showConflictAlert) {
-            Button("Use iCloud") { resolveLibraryCloudSyncConflicts(.preferCloud) }
-            Button("Use This Device") { resolveLibraryCloudSyncConflicts(.preferLocal) }
-            Button("Cancel", role: .cancel, action: cancelLibraryCloudSyncEnablement)
-        } message: {
-            Text(store.libraryCloudSyncStatus.conflictSummaryResource)
-        }
-        .alert("Restore Unavailable", isPresented: $cloudSync.showRestoreUnavailableAlert) {
-            Button("OK") {}
-        } message: {
-            Text("Turn off iCloud Sync before restoring a backup. You can turn it on again after restore.")
-        }
-        .alert("Rebuild iCloud Sync?", isPresented: $cloudSync.showRebuildAlert) {
-            Button("Rebuild", action: rebuildLibraryCloudSync)
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(
-                "Refetch and reconcile your iCloud library with your local library. This may resolve some iCloud sync issues."
-            )
-        }
-        .alert("Upload This Library?", isPresented: $cloudSync.showUploadLibraryAlert) {
-            Button("Upload", action: uploadLibraryToDeletedCloud)
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(
-                "AniShelf will re-create its iCloud data from the library on this device. Your other devices will sync with it again."
-            )
-        }
-        .alert("Delete all animes?", isPresented: $showClearAllAlert) {
-            Button("Delete", role: .destructive, action: confirmClearLibrary)
-            Button("Cancel", role: .cancel) {}
-        }
-        .alert(
-            "Refresh Info Language?",
-            isPresented: $showRefreshInfoOnLanguageUpdateAlert
-        ) {
-            Button("Refresh", action: confirmRefreshInfos)
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            let message: LocalizedStringResource = """
-                Changing the metadata language setting will not refresh existing infos.
-                Refresh all anime infos now? This may take considerable time.
-                """
+        #endif
+    }
 
-            Text(message)
-        }
-        .alert(
-            "Refresh Default Posters?",
-            isPresented: $showRefreshInfoOnPosterLanguageUpdateAlert
-        ) {
-            Button("Refresh", action: confirmRefreshInfos)
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            let message: LocalizedStringResource = """
-                Changing the default poster setting will not update existing entries.
-                Refresh all anime infos now? This may take considerable time. Custom posters are kept.
-                """
-
-            Text(message)
-        }
-        .alert(
-            "Refresh all anime infos?",
-            isPresented: $showRefreshInfoAlert
-        ) {
-            Button("Refresh", action: confirmRefreshInfos)
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This may take considerable time.")
-        }
-        .alert(
-            "Error exporting library",
-            isPresented: $showExportError,
-            presenting: exportError
-        ) { _ in
-            Button("Cancel", role: .cancel) {}
-        } message: { error in
-            Text(error.localizedDescription)
-        }
-        .alert(
-            "Error restoring library",
-            isPresented: $showRestoreError,
-            presenting: restoreError
-        ) { _ in
-            Button("Cancel", role: .cancel) {}
-        } message: { error in
-            Text(error.localizedDescription)
-        }
-        .alert("Overwrite the current library?", isPresented: $showRestoreConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Confirm", role: .destructive, action: confirmRestore)
-        } message: {
-            Text("Please backup the current library before proceeding.")
-        }
-        .alert(
-            "Metadata Cache Size",
-            isPresented: $showCacheAlert,
-            presenting: cacheSizeResult,
-            actions: { result in
-                switch result {
-                case .success:
-                    Button("Clear Cache", action: clearMetadataCache)
-                    Button("Cancel", role: .cancel) {}
-                case .failure:
-                    Button("OK") {}
+    #if os(macOS)
+        /// The Settings window: a System Settings–style sidebar of pages, with the library
+        /// overview first, instead of the iPhone hub or the iPad two-column workspace.
+        private var macSettingsNavigation: some View {
+            NavigationSplitView {
+                List(selection: $macPane) {
+                    macPaneLabel(
+                        Text("Overview"), systemImage: "chart.bar.xaxis", tint: LibraryProfileSettingsPalette.appInfo
+                    )
+                    .tag(MacSettingsPane.overview)
+                    Section("Settings") {
+                        ForEach(LibraryProfileSettingsDestination.allCases, id: \.self) { destination in
+                            macPaneLabel(
+                                Text(destination.title), systemImage: destination.systemImage, tint: destination.tint
+                            )
+                            .tag(MacSettingsPane.destination(destination))
+                        }
+                    }
                 }
-            },
-            message: { result in
-                switch result {
-                case .success(let size):
-                    Text("Size: \(Double(size) / 1024 / 1024, specifier: "%.2f") MB")
-                case .failure(let error):
-                    Text(error.localizedDescription)
+                .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 280)
+                .toolbar(removing: .sidebarToggle)
+            } detail: {
+                switch macPane ?? .overview {
+                case .overview:
+                    MacSettingsOverview(
+                        stats: stats,
+                        animeTitleResource: animeTitleResource
+                    )
+                    .navigationTitle(Text("Overview"))
+                case .destination(let destination):
+                    settingsPage(for: destination)
+                        .id(destination)
                 }
             }
-        )
-        .fileImporter(
-            isPresented: $showFileImporter,
-            allowedContentTypes: [.mallib],
-            onCompletion: handleFileImport
-        )
-        .sheet(item: $presentationState.presentedSheet) { sheet in
-            sheetView(for: sheet)
         }
+
+        private func macPaneLabel(_ title: Text, systemImage: String, tint: Color) -> some View {
+            Label {
+                title
+            } icon: {
+                Image(systemName: systemImage)
+                    .resizable()
+                    .scaledToFit()
+                    .foregroundStyle(.white)
+                    .frame(width: 14, height: 14)
+                    .frame(width: 22, height: 22)
+                    .background(tint.gradient, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            }
+        }
+    #endif
+
+    var body: some View {
+        settingsNavigation
+            .onAppear(perform: handleAppear)
+            .onChange(of: effectiveLanguage, handleEffectiveLanguageChange)
+            .onChange(of: posterLanguage, handlePosterLanguageChange)
+            .task { await reloadReminders() }
+            .onChange(of: scenePhase) { _, phase in
+                guard phase == .active else { return }
+                Task { await reloadReminders() }
+            }
+            .task(id: store.libraryCloudSyncStatus.bootstrapState) {
+                await presentPendingCloudConflict()
+            }
+            .alert("Resolve iCloud Sync Conflict", isPresented: $cloudSync.showConflictAlert) {
+                Button("Use iCloud") { resolveLibraryCloudSyncConflicts(.preferCloud) }
+                Button("Use This Device") { resolveLibraryCloudSyncConflicts(.preferLocal) }
+                Button("Cancel", role: .cancel, action: cancelLibraryCloudSyncEnablement)
+            } message: {
+                Text(store.libraryCloudSyncStatus.conflictSummaryResource)
+            }
+            .alert("Restore Unavailable", isPresented: $cloudSync.showRestoreUnavailableAlert) {
+                Button("OK") {}
+            } message: {
+                Text("Turn off iCloud Sync before restoring a backup. You can turn it on again after restore.")
+            }
+            .alert("Rebuild iCloud Sync?", isPresented: $cloudSync.showRebuildAlert) {
+                Button("Rebuild", action: rebuildLibraryCloudSync)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(
+                    "Refetch and reconcile your iCloud library with your local library. This may resolve some iCloud sync issues."
+                )
+            }
+            .alert("Upload This Library?", isPresented: $cloudSync.showUploadLibraryAlert) {
+                Button("Upload", action: uploadLibraryToDeletedCloud)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(
+                    "AniShelf will re-create its iCloud data from the library on this device. Your other devices will sync with it again."
+                )
+            }
+            .alert("Delete all animes?", isPresented: $showClearAllAlert) {
+                Button("Delete", role: .destructive, action: confirmClearLibrary)
+                Button("Cancel", role: .cancel) {}
+            }
+            .alert(
+                "Refresh Info Language?",
+                isPresented: $showRefreshInfoOnLanguageUpdateAlert
+            ) {
+                Button("Refresh", action: confirmRefreshInfos)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                let message: LocalizedStringResource = """
+                    Changing the metadata language setting will not refresh existing infos.
+                    Refresh all anime infos now? This may take considerable time.
+                    """
+
+                Text(message)
+            }
+            .alert(
+                "Refresh Default Posters?",
+                isPresented: $showRefreshInfoOnPosterLanguageUpdateAlert
+            ) {
+                Button("Refresh", action: confirmRefreshInfos)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                let message: LocalizedStringResource = """
+                    Changing the default poster setting will not update existing entries.
+                    Refresh all anime infos now? This may take considerable time. Custom posters are kept.
+                    """
+
+                Text(message)
+            }
+            .alert(
+                "Refresh all anime infos?",
+                isPresented: $showRefreshInfoAlert
+            ) {
+                Button("Refresh", action: confirmRefreshInfos)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This may take considerable time.")
+            }
+            .alert(
+                "Error exporting library",
+                isPresented: $showExportError,
+                presenting: exportError
+            ) { _ in
+                Button("Cancel", role: .cancel) {}
+            } message: { error in
+                Text(error.localizedDescription)
+            }
+            .alert(
+                "Error restoring library",
+                isPresented: $showRestoreError,
+                presenting: restoreError
+            ) { _ in
+                Button("Cancel", role: .cancel) {}
+            } message: { error in
+                Text(error.localizedDescription)
+            }
+            .alert("Overwrite the current library?", isPresented: $showRestoreConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Confirm", role: .destructive, action: confirmRestore)
+            } message: {
+                Text("Please backup the current library before proceeding.")
+            }
+            .alert(
+                "Metadata Cache Size",
+                isPresented: $showCacheAlert,
+                presenting: cacheSizeResult,
+                actions: { result in
+                    switch result {
+                    case .success:
+                        Button("Clear Cache", action: clearMetadataCache)
+                        Button("Cancel", role: .cancel) {}
+                    case .failure:
+                        Button("OK") {}
+                    }
+                },
+                message: { result in
+                    switch result {
+                    case .success(let size):
+                        Text("Size: \(Double(size) / 1024 / 1024, specifier: "%.2f") MB")
+                    case .failure(let error):
+                        Text(error.localizedDescription)
+                    }
+                }
+            )
+            .fileImporter(
+                isPresented: $showFileImporter,
+                allowedContentTypes: [.mallib],
+                onCompletion: handleFileImport
+            )
+            .sheet(item: $presentationState.presentedSheet) { sheet in
+                sheetView(for: sheet)
+            }
     }
 
     private var profileContent: some View {
@@ -377,7 +445,11 @@ struct LibraryProfileSettingsView: View {
             LibraryProfileInterfaceSettingsSection()
         case .reminders:
             LibraryProfileBroadcastSettingsSection()
-            LibraryProfileAiringReminderSettingsSection()
+            #if os(macOS)
+                MacAiringReminderSettings()
+            #else
+                LibraryProfileAiringReminderSettingsSection()
+            #endif
         case .metadataImages:
             LibraryProfileMetadataImagesPage(
                 autoPrefetchImagesOnAddAndRestore: $store.autoPrefetchImagesOnAddAndRestore,
@@ -385,6 +457,7 @@ struct LibraryProfileSettingsView: View {
                 onChangeAPIKey: requestAPIKeySheet,
                 onCheckMetadataCacheSize: checkMetadataCacheSize,
                 onRefreshInfos: requestRefreshInfos,
+                isRefreshingInfos: store.isRefreshingAllMetadata,
                 onPrefetchImages: { actions.prefetchAllImages() }
             )
         case .syncData:
@@ -415,16 +488,24 @@ struct LibraryProfileSettingsView: View {
                 onExportLibrary: exportLibrary,
                 onRestoreButtonPress: handleRestoreButtonPress
             )
-            LibraryProfileActionRow(
-                title: "Delete All Animes", subtitle: "Remove every saved library entry.",
-                systemImage: "trash", role: .destructive, tint: LibraryProfileSettingsPalette.destructive,
-                horizontalPadding: 0,
-                action: requestClearLibrary
-            )
-            .padding(.horizontal, 14)
-            .padding(.vertical, 3)
-            .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsPalette.destructive)
+            #if os(macOS)
+                Section { deleteAllRow }
+            #else
+                deleteAllRow
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 3)
+                    .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsPalette.destructive)
+            #endif
         }
+    }
+
+    private var deleteAllRow: some View {
+        LibraryProfileActionRow(
+            title: "Delete All Animes", subtitle: "Remove every saved library entry.",
+            systemImage: "trash", role: .destructive, tint: LibraryProfileSettingsPalette.destructive,
+            horizontalPadding: 0,
+            action: requestClearLibrary
+        )
     }
 
     private func reloadReminders() async {

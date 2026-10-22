@@ -27,6 +27,24 @@ class ToastCenter {
     var loadingMessage: LoadingMessage? = nil
     var progressState: ProgressWithMessage? = nil
 
+    @ObservationIgnored private let windows: AppWindowCoordinator
+
+    init(windows: AppWindowCoordinator = .shared) {
+        self.windows = windows
+    }
+
+    /// Whether the window with `sceneIdentifier` shows toasts.
+    ///
+    /// Every window does on iOS. On the Mac, only the most recently active window does, so a
+    /// toast does not repeat in each window; a closed window hands this to the next one.
+    func presentsToasts(inSceneIdentifier sceneIdentifier: String?) -> Bool {
+        #if os(macOS)
+            windows.isPrimary(sceneIdentifier)
+        #else
+            true
+        #endif
+    }
+
     struct LoadingMessage: Identifiable, Equatable {
         var id = UUID()
         var messageResource: LocalizedStringResource

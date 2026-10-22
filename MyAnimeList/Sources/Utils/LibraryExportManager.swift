@@ -71,7 +71,7 @@ struct LibraryExportRecord: Codable, Equatable {
     let watchStatus: String
     let dateStarted: String?
     let dateFinished: String?
-    let score: Int?
+    let score: Double?
     let favorite: Bool
     let notes: String
     let usingCustomPoster: Bool
@@ -109,7 +109,7 @@ struct LibraryExportRecord: Codable, Equatable {
         watchStatus = Self.watchStatusString(for: entry.watchStatus)
         dateStarted = Self.optionalTimestampString(from: entry.dateStarted)
         dateFinished = Self.optionalTimestampString(from: entry.dateFinished)
-        score = entry.score
+        score = entry.entryScore?.value
         favorite = entry.favorite
         notes = entry.notes
         usingCustomPoster = entry.usingCustomPoster
@@ -126,6 +126,13 @@ struct LibraryExportRecord: Codable, Equatable {
         }
     }
 
+    /// "4" or "4.5" for the text formats. JSON carries the number.
+    fileprivate var scoreText: String? {
+        score.map {
+            $0.formatted(.number.precision(.fractionLength(0...1)).locale(Locale(identifier: "en_US_POSIX")))
+        }
+    }
+
     fileprivate var delimitedFields: [String] {
         [
             title,
@@ -139,7 +146,7 @@ struct LibraryExportRecord: Codable, Equatable {
             watchStatus,
             dateStarted ?? "",
             dateFinished ?? "",
-            score.map(String.init) ?? "",
+            scoreText ?? "",
             favorite ? "true" : "false",
             notes,
             usingCustomPoster ? "true" : "false",
@@ -319,7 +326,7 @@ final class LibraryExportManager {
                 "Rewatch Count: \(entry.rewatchCount)",
                 "Started At: \(entry.dateStarted ?? "N/A")",
                 "Finished At: \(entry.dateFinished ?? "N/A")",
-                "Score: \(entry.score.map(String.init) ?? "No score")",
+                "Score: \(entry.scoreText ?? "No score")",
                 "Favorite: \(entry.favorite ? "true" : "false")",
                 "Custom Poster: \(entry.usingCustomPoster ? "true" : "false")",
                 "Notes: \(entry.notes.isEmpty ? "N/A" : entry.notes)"

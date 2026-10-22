@@ -1,13 +1,14 @@
+//
+//  AboutAniShelfSheet.swift
+//  AniShelf
+//
+//  Created by OpenAI Codex on behalf of Samuel He on 2026/5/1.
+//
+
 import SwiftUI
 
 struct AboutAniShelfSheet: View {
     @Environment(\.dismiss) private var dismiss
-
-    private let websiteURL = URL(string: "https://anishelf.konakona.dev")!
-    private let privacyPolicyURL = URL(string: "https://anishelf.konakona.dev/privacy/")!
-    private let githubURL = URL(string: "https://github.com/samuelhe52/AniShelf")!
-    private let githubProfileURL = URL(string: "https://github.com/samuelhe52")!
-    private let tmdbURL = URL(string: "https://www.themoviedb.org/")!
 
     var body: some View {
         ScrollView {
@@ -24,11 +25,11 @@ struct AboutAniShelfSheet: View {
         }
         .scrollBounceBehavior(.basedOnSize)
         .preferredNavigationBarScrollEdgeEffect()
-        .navigationTitle(aboutTitleResource)
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle(AboutAniShelfContent.title)
+        .inlineNavigationTitle()
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(doneTitleResource) { dismiss() }
+            ToolbarItem(placement: .sheetTrailing) {
+                Button(LocalizedStringResource("Done")) { dismiss() }
             }
         }
         .presentationSizing(.form)
@@ -45,16 +46,16 @@ struct AboutAniShelfSheet: View {
                 .shadow(color: .black.opacity(0.14), radius: 12, y: 6)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(appNameResource)
+                Text(AboutAniShelfContent.appName)
                     .font(.title2.weight(.bold))
 
-                Text(taglineResource)
+                Text(AboutAniShelfContent.tagline)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
 
-                if let versionDescription {
+                if let versionDescription = AboutAniShelfContent.versionDescription {
                     Text(versionDescription)
                         .font(.footnote)
                         .foregroundStyle(.tertiary)
@@ -69,7 +70,7 @@ struct AboutAniShelfSheet: View {
 
     private var summaryCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(introductionBodyResource)
+            Text(AboutAniShelfContent.introduction)
                 .font(.subheadline)
                 .fixedSize(horizontal: false, vertical: true)
             featureRow
@@ -81,15 +82,15 @@ struct AboutAniShelfSheet: View {
     private var featureRow: some View {
         HStack(spacing: 10) {
             featureBadge(
-                title: trackingTitleResource,
+                title: AboutAniShelfContent.tracking,
                 systemImage: "checklist"
             )
             featureBadge(
-                title: notesTitleResource,
+                title: AboutAniShelfContent.notes,
                 systemImage: "note.text"
             )
             featureBadge(
-                title: syncTitleResource,
+                title: AboutAniShelfContent.backups,
                 systemImage: "externaldrive"
             )
         }
@@ -115,43 +116,43 @@ struct AboutAniShelfSheet: View {
 
     private var linksCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(linksTitleResource)
+            Text(AboutAniShelfContent.links)
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(.secondary)
 
             VStack(spacing: 10) {
                 aboutLinkRow(
-                    title: websiteTitleResource,
+                    title: AboutAniShelfContent.website,
                     systemImage: "globe",
-                    destination: websiteURL
+                    destination: AboutAniShelfContent.websiteURL
                 )
 
                 aboutLinkRow(
-                    title: privacyPolicyTitleResource,
+                    title: AboutAniShelfContent.privacyPolicy,
                     systemImage: "hand.raised",
-                    destination: privacyPolicyURL
+                    destination: AboutAniShelfContent.privacyPolicyURL
                 )
 
                 aboutLinkRow(
-                    title: sourceCodeTitleResource,
+                    title: AboutAniShelfContent.sourceCode,
                     systemImage: "chevron.left.forwardslash.chevron.right",
-                    destination: githubURL
+                    destination: AboutAniShelfContent.githubURL
                 )
 
                 aboutLinkRow(
-                    title: githubProfileTitleResource,
+                    title: AboutAniShelfContent.githubProfile,
                     systemImage: "person.crop.circle",
-                    destination: githubProfileURL
+                    destination: AboutAniShelfContent.githubProfileURL
                 )
 
                 aboutLinkRow(
-                    title: tmdbTitleResource,
+                    title: AboutAniShelfContent.tmdb,
                     systemImage: "film.stack",
-                    destination: tmdbURL
+                    destination: AboutAniShelfContent.tmdbURL
                 )
             }
 
-            Text(creditsBodyResource)
+            Text(AboutAniShelfContent.credits)
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -190,8 +191,39 @@ struct AboutAniShelfSheet: View {
         }
         .buttonStyle(.plain)
     }
+}
 
-    private var versionDescription: String? {
+#Preview {
+    NavigationStack {
+        AboutAniShelfSheet()
+    }
+}
+
+/// Links and copy shared by the iOS About sheet and the Mac About window.
+enum AboutAniShelfContent {
+    static let websiteURL = URL(string: "https://anishelf.konakona.dev")!
+    static let privacyPolicyURL = URL(string: "https://anishelf.konakona.dev/privacy/")!
+    static let githubURL = URL(string: "https://github.com/samuelhe52/AniShelf")!
+    static let githubProfileURL = URL(string: "https://github.com/samuelhe52")!
+    static let tmdbURL = URL(string: "https://www.themoviedb.org/")!
+
+    static let title: LocalizedStringResource = "About AniShelf"
+    static let appName: LocalizedStringResource = "AniShelf"
+    static let tagline: LocalizedStringResource = "A native anime tracker built around your own library."
+    static let introduction: LocalizedStringResource =
+        "AniShelf keeps watch status, dates, and quick notes together so your collection stays useful over time."
+    static let credits: LocalizedStringResource = "Made by Samuel He. Metadata and artwork are provided by TMDb."
+    static let tracking: LocalizedStringResource = "Tracking"
+    static let notes: LocalizedStringResource = "Notes"
+    static let backups: LocalizedStringResource = "Backups"
+    static let website: LocalizedStringResource = "Website"
+    static let privacyPolicy: LocalizedStringResource = "Privacy Policy"
+    static let sourceCode: LocalizedStringResource = "AniShelf on GitHub"
+    static let tmdb: LocalizedStringResource = "TMDb"
+    static let githubProfile: LocalizedStringResource = "Samuel He on GitHub"
+    static let links: LocalizedStringResource = "Links"
+
+    static var versionDescription: String? {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
 
@@ -203,71 +235,5 @@ struct AboutAniShelfSheet: View {
         default:
             return nil
         }
-    }
-
-    private var aboutTitleResource: LocalizedStringResource {
-        "About AniShelf"
-    }
-
-    private var doneTitleResource: LocalizedStringResource {
-        "Done"
-    }
-
-    private var appNameResource: LocalizedStringResource {
-        "AniShelf"
-    }
-
-    private var taglineResource: LocalizedStringResource {
-        "A native anime tracker built around your own library."
-    }
-
-    private var introductionBodyResource: LocalizedStringResource {
-        "AniShelf keeps watch status, dates, and quick notes together so your collection stays useful over time."
-    }
-
-    private var creditsBodyResource: LocalizedStringResource {
-        "Made by Samuel He. Metadata and artwork are provided by TMDb."
-    }
-
-    private var trackingTitleResource: LocalizedStringResource {
-        "Tracking"
-    }
-
-    private var notesTitleResource: LocalizedStringResource {
-        "Notes"
-    }
-
-    private var syncTitleResource: LocalizedStringResource {
-        "Backups"
-    }
-
-    private var websiteTitleResource: LocalizedStringResource {
-        "Website"
-    }
-
-    private var privacyPolicyTitleResource: LocalizedStringResource {
-        "Privacy Policy"
-    }
-
-    private var sourceCodeTitleResource: LocalizedStringResource {
-        "AniShelf on GitHub"
-    }
-
-    private var tmdbTitleResource: LocalizedStringResource {
-        "TMDb"
-    }
-
-    private var githubProfileTitleResource: LocalizedStringResource {
-        "Samuel He on GitHub"
-    }
-
-    private var linksTitleResource: LocalizedStringResource {
-        "Links"
-    }
-}
-
-#Preview {
-    NavigationStack {
-        AboutAniShelfSheet()
     }
 }

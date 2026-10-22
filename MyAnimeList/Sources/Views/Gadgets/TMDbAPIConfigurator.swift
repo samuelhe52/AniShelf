@@ -189,7 +189,7 @@ struct TMDbAPIKeyEntryCard: View {
                 .font(.callout.monospaced())
                 .focused($isTextFieldFocused)
                 .textContentType(.password)
-                .textInputAutocapitalization(.never)
+                .noInputAutocapitalization()
                 .autocorrectionDisabled(true)
                 .privacySensitive()
                 .submitLabel(.go)
@@ -218,7 +218,7 @@ struct TMDbAPIKeyEntryCard: View {
         .padding(.horizontal, 14)
         .frame(minHeight: 52)
         .background(
-            Color(.secondarySystemBackground),
+            Color.platformSecondarySystemBackground,
             in: RoundedRectangle(cornerRadius: 16, style: .continuous)
         )
         .animation(.easeOut(duration: 0.15), value: isFieldEmpty)
@@ -344,7 +344,7 @@ struct TMDbProminentButton: View {
             .frame(maxWidth: .infinity)
             .frame(height: 50)
             .background(
-                showsValidationState || effectiveIsEnabled ? effectiveTint : Color(.tertiarySystemFill),
+                showsValidationState || effectiveIsEnabled ? effectiveTint : Color.platformTertiarySystemFill,
                 in: RoundedRectangle(cornerRadius: 18, style: .continuous)
             )
             .foregroundStyle(showsValidationState || effectiveIsEnabled ? .white : .secondary)

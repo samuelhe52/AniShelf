@@ -14,7 +14,9 @@ import Foundation
 /// the library membership, display, tracking, poster override, note, episode
 /// progress fields needed to replay a user's library state on another device.
 public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
-    public static let currentSchemaVersion = 2
+    /// Version 3 adds `scoreHasHalf`. Builds before it quarantine version 3
+    /// records and never upload over them.
+    public static let currentSchemaVersion = 3
 
     private enum CodingKeys: String, CodingKey {
         case schemaVersion
@@ -30,6 +32,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         case dateFinished
         case isDateTrackingEnabled
         case score
+        case scoreHasHalf
         case favorite
         case notes
         case usingCustomPoster
@@ -78,6 +81,8 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     public var dateFinished: Date?
     public var isDateTrackingEnabled: Bool
     public var score: Int?
+    /// Adds 0.5 to `score`. Always false when `score` is nil or 5.
+    public var scoreHasHalf: Bool
     public var favorite: Bool
     public var notes: String
     public var usingCustomPoster: Bool
@@ -89,7 +94,9 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     public var trackingUpdatedAt: Date?
     /// User category memberships (`LibraryCategory.id` values), in insertion order.
     public var categoryIDs: [String]
-    /// Clock for `categoryIDs`. Kept separate so older builds, which never
+    /// Clock for `categoryIDs`.
+    ///
+    /// Kept separate so older builds, which never
     /// send it, cannot win a merge with an empty membership list.
     public var categoriesUpdatedAt: Date?
     /// Newest sync clock used when deciding whether remote state can clear a
@@ -139,6 +146,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     ///   - isDateTrackingEnabled: Whether automatic date suggestions are enabled.
     ///   - score: Optional user score. Values outside AniShelf's valid score
     ///     range are dropped.
+    ///   - scoreHasHalf: Adds 0.5 to `score`. Dropped without a score or at 5.
     ///   - favorite: Favorite flag.
     ///   - notes: User notes.
     ///   - usingCustomPoster: Whether `customPosterPath` should be applied.
@@ -169,6 +177,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         dateFinished: Date?,
         isDateTrackingEnabled: Bool,
         score: Int?,
+        scoreHasHalf: Bool = false,
         favorite: Bool,
         notes: String,
         usingCustomPoster: Bool,
@@ -193,7 +202,9 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         self.dateStarted = dateStarted.map(LibrarySyncTimestamp.normalized)
         self.dateFinished = dateFinished.map(LibrarySyncTimestamp.normalized)
         self.isDateTrackingEnabled = isDateTrackingEnabled
-        self.score = normalizedSyncScore(score)
+        let entryScore = EntryScore(whole: score, hasHalf: scoreHasHalf)
+        self.score = entryScore?.wholeStars
+        self.scoreHasHalf = entryScore?.hasHalf ?? false
         self.favorite = favorite
         self.notes = notes
         self.usingCustomPoster = usingCustomPoster
@@ -221,6 +232,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         dateFinished: Date?,
         isDateTrackingEnabled: Bool,
         score: Int?,
+        scoreHasHalf: Bool = false,
         favorite: Bool,
         notes: String,
         usingCustomPoster: Bool,
@@ -247,6 +259,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             dateFinished: dateFinished,
             isDateTrackingEnabled: isDateTrackingEnabled,
             score: score,
+            scoreHasHalf: scoreHasHalf,
             favorite: favorite,
             notes: notes,
             usingCustomPoster: usingCustomPoster,
@@ -276,6 +289,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             dateFinished: entry.dateFinished,
             isDateTrackingEnabled: entry.isDateTrackingEnabled,
             score: entry.score,
+            scoreHasHalf: entry.scoreHasHalf,
             favorite: entry.favorite,
             notes: entry.notes,
             usingCustomPoster: entry.usingCustomPoster,
@@ -314,6 +328,9 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             isDateTrackingEnabled: try container.decodeIfPresent(Bool.self, forKey: .isDateTrackingEnabled)
                 ?? true,
             score: try container.decodeIfPresent(Int.self, forKey: .score),
+            // Persisted JSON keeps the flag whatever its schemaVersion. Only the
+            // CloudKit decoder gates it on the record version.
+            scoreHasHalf: try container.decodeIfPresent(Bool.self, forKey: .scoreHasHalf) ?? false,
             favorite: try container.decode(Bool.self, forKey: .favorite),
             notes: try container.decode(String.self, forKey: .notes),
             usingCustomPoster: try container.decode(Bool.self, forKey: .usingCustomPoster),
@@ -347,6 +364,9 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         try container.encodeIfPresent(dateFinished, forKey: .dateFinished)
         try container.encode(isDateTrackingEnabled, forKey: .isDateTrackingEnabled)
         try container.encodeIfPresent(score, forKey: .score)
+        if scoreHasHalf {
+            try container.encode(true, forKey: .scoreHasHalf)
+        }
         try container.encode(favorite, forKey: .favorite)
         try container.encode(notes, forKey: .notes)
         try container.encode(usingCustomPoster, forKey: .usingCustomPoster)
@@ -411,6 +431,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             merged.dateFinished = candidate.dateFinished
             merged.isDateTrackingEnabled = candidate.isDateTrackingEnabled
             merged.score = candidate.score
+            merged.scoreHasHalf = candidate.scoreHasHalf
             merged.favorite = candidate.favorite
             merged.notes = candidate.notes
             merged.usingCustomPoster = candidate.usingCustomPoster
@@ -479,6 +500,8 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
                 dateFinished: snapshot.dateFinished,
                 isDateTrackingEnabled: snapshot.isDateTrackingEnabled,
                 score: snapshot.score,
+                // Omitted unless true, so whole-score payloads match older builds.
+                scoreHasHalf: snapshot.scoreHasHalf ? true : nil,
                 favorite: snapshot.favorite,
                 notes: snapshot.notes,
                 usingCustomPoster: snapshot.usingCustomPoster,
@@ -506,6 +529,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         var dateFinished: Date?
         var isDateTrackingEnabled: Bool
         var score: Int?
+        var scoreHasHalf: Bool?
         var favorite: Bool
         var notes: String
         var usingCustomPoster: Bool
@@ -630,7 +654,7 @@ extension AnimeEntry {
         dateStarted = merged.dateStarted
         dateFinished = merged.dateFinished
         isDateTrackingEnabled = merged.isDateTrackingEnabled
-        score = normalizedSyncScore(merged.score)
+        setEntryScore(merged.entryScore)
         favorite = merged.favorite
         notes = merged.notes
         let wasUsingCustomPoster = usingCustomPoster
@@ -676,7 +700,7 @@ extension AnimeEntry {
         dateStarted = snapshot.dateStarted
         dateFinished = snapshot.dateFinished
         isDateTrackingEnabled = snapshot.isDateTrackingEnabled
-        score = normalizedSyncScore(snapshot.score)
+        setEntryScore(snapshot.entryScore)
         favorite = snapshot.favorite
         notes = snapshot.notes
         usingCustomPoster = snapshot.usingCustomPoster
@@ -754,7 +778,9 @@ extension AnimeEntry {
     }
 }
 
-fileprivate func normalizedSyncScore(_ score: Int?) -> Int? {
-    guard let score else { return nil }
-    return AnimeEntry.validScoreRange.contains(score) ? score : nil
+extension LibraryEntrySyncSnapshot {
+    /// The full score, including the half star.
+    public var entryScore: EntryScore? {
+        EntryScore(whole: score, hasHalf: scoreHasHalf)
+    }
 }

@@ -24,6 +24,17 @@ import Testing
     #expect(entry.score == 4)
     #expect(entry.trackingUpdatedAt == scoreTimestamp)
     #expect(entry.libraryUpdatedAt == nil)
+
+    // A half-only change still stamps the clock, so the outbox uploads it.
+    let halfTimestamp = referenceDate(day: 3)
+    #expect(entry.updateEntryScore(EntryScore(halves: 9), at: halfTimestamp))
+    #expect(entry.score == 4)
+    #expect(entry.scoreHasHalf)
+    #expect(entry.trackingUpdatedAt == halfTimestamp)
+
+    // A whole-score write clears the half.
+    entry.updateScore(4, at: referenceDate(day: 4))
+    #expect(!entry.scoreHasHalf)
 }
 
 @Test func noOpTrackingUpdateHelpersDoNotStampTrackingClock() async throws {

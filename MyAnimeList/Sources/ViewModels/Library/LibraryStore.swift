@@ -36,6 +36,9 @@ class LibraryStore {
     @ObservationIgnored private var deferredLibraryRefreshDepth = 0
     @ObservationIgnored private var needsDeferredLibraryRefresh = false
     @ObservationIgnored private var airingReminderPruningEnabled: Bool
+    /// False for generated fixture libraries (docs-ai 026): no sync coordinator or scheduler
+    /// exists, so every sync path, including Settings' enable and retry, does nothing.
+    @ObservationIgnored let allowsCloudSync: Bool
     private(set) var libraryRevision = 0
 
     // MARK: - State
@@ -46,15 +49,21 @@ class LibraryStore {
     ///
     /// Only `resolveDuplicateEntryGroup` should write this.
     var isResolvingDuplicateEntryGroup = false
+    /// Store-wide so a Refresh All started from any window, Settings, or the menu bar runs once.
+    ///
+    /// Only `LibraryProfileSettingsActions` should write this.
+    var isRefreshingAllMetadata = false
     @ObservationIgnored var infoFetcher: InfoFetcher
     var language: Language = .resolvedAnimeInfoLanguage()
     /// Read at each fetch so a settings change applies to the next library write.
     var posterLanguage: PosterLanguagePreference { preferences.loadPosterLanguage() }
     private(set) var libraryCloudSyncStatus: LibraryCloudSyncStatus
 
-    // MARK: - Filtering & Sorting State
+    // MARK: - Browse Preferences
 
-    var filters: Set<AnimeFilter> = []
+    // Filters, category, and the display list are per window (`LibraryBrowseScope`, docs-ai
+    // 028). Sort and group here are the preferences new windows start from.
+
     var hideDroppedByDefault: Bool = false {
         willSet {
             preferences.saveHideDroppedByDefault(newValue)
@@ -71,10 +80,6 @@ class LibraryStore {
         willSet {
             preferences.saveDefaultFilters(newValue)
             libraryStoreLogger.debug("Updated default filters to \(newValue.map(\.id).sorted())")
-        }
-        didSet {
-            guard defaultFilters != oldValue else { return }
-            applyDefaultFilters()
         }
     }
     var autoPrefetchImagesOnAddAndRestore: Bool = false {
@@ -110,38 +115,24 @@ class LibraryStore {
 
     // MARK: - Categories State
 
-    /// Opt-in switch for library categories. Turning it off keeps categories and memberships.
+    /// Opt-in switch for library categories.
+    ///
+    /// Turning it off keeps categories and memberships.
     var categoriesEnabled: Bool = false {
         willSet {
             preferences.saveCategoriesEnabled(newValue)
             libraryStoreLogger.debug("Updated categories enabled to \(newValue)")
-        }
-        didSet {
-            if !categoriesEnabled { activeCategoryID = nil }
         }
     }
     /// Optional pinned switcher for List and Grid; retained when categories are disabled.
     var categoryStripEnabled: Bool = false {
         willSet { preferences.saveCategoryStripEnabled(newValue) }
     }
-    /// Category definitions in display order. Write through the category operations.
+    /// Category definitions in display order.
+    ///
+    /// Write through the category operations.
     var categories: [LibraryCategory] = [] {
         willSet { preferences.saveCategories(newValue) }
-        didSet {
-            if let activeCategoryID, !categories.contains(where: { $0.id == activeCategoryID }) {
-                self.activeCategoryID = nil
-            }
-        }
-    }
-    /// The category the library is narrowed to; `nil` means All. Shared across windows, like `filters`.
-    var activeCategoryID: LibraryCategory.ID?
-
-    var libraryOnDisplay: [AnimeEntry] {
-        filterAndSort(library)
-    }
-
-    var libraryDisplayItems: [LibraryEntryDisplayItem] {
-        libraryOnDisplay.map(LibraryEntryDisplayItem.init)
     }
 
     /// Whether the library already holds an entry, regardless of the active category or filters.
@@ -160,9 +151,11 @@ class LibraryStore {
             guard let key = TMDbAPIKeyStorage().retrieveKey() else { return false }
             return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         },
-        airingReminderPruningEnabled: Bool = false
+        airingReminderPruningEnabled: Bool = false,
+        allowsCloudSync: Bool = true
     ) {
         self.dataProvider = dataProvider
+        self.allowsCloudSync = allowsCloudSync
         let syncChangeRecorder = LibrarySyncChangeRecorder(dataProvider: dataProvider)
         let repository = LibraryRepository(
             dataProvider: dataProvider,
@@ -183,7 +176,6 @@ class LibraryStore {
         self.shouldResumeInterruptedCloudSyncBootstrap =
             snapshot.cloudSyncStatus.isEnabled && snapshot.cloudSyncStatus.bootstrapState == .running
         reloadPersistedPreferences()
-        applyDefaultFilters()
         lastObservedCloudSyncedPreferencesHash = preferences.cloudSyncedSettingsPayloadHash()
         setupUpdateLibrary()
         setupTMDbAPIConfigurationChangeMonitor()
@@ -197,8 +189,10 @@ class LibraryStore {
                 "Initial library fetch failed: \(String(describing: error), privacy: .public)"
             )
         }
-        self.syncCoordinator = LibrarySyncCoordinator(store: self)
-        setupLibrarySyncScheduling()
+        if allowsCloudSync {
+            self.syncCoordinator = LibrarySyncCoordinator(store: self)
+            setupLibrarySyncScheduling()
+        }
     }
 
     func reloadPersistedPreferences() {
@@ -240,8 +234,7 @@ class LibraryStore {
         if libraryCloudSyncStatus != snapshot.cloudSyncStatus {
             libraryCloudSyncStatus = snapshot.cloudSyncStatus
         }
-        // Browse filters reset only through `defaultFilters.didSet`, so unrelated
-        // preference writes (such as category edits) keep the current filters.
+        // Open windows keep their browse state; each applies new default filters itself.
     }
 
     func applyRemoteCloudSyncedPreferences(_ snapshot: LibrarySettingsSyncSnapshot) {
@@ -885,6 +878,7 @@ class LibraryStore {
             LibrarySyncCoordinator.hydrateMissingEntry,
         dateProvider: @escaping @MainActor @Sendable () -> Date = { .now }
     ) {
+        guard allowsCloudSync else { return }
         syncCoordinator = LibrarySyncCoordinator(
             store: self,
             client: client,
@@ -1015,10 +1009,6 @@ class LibraryStore {
         let now = Date.now
         entry.updateWatchStatus(defaultNewEntryWatchStatus, at: now)
         entry.markCreatedForLibrary(at: now)
-    }
-
-    func applyDefaultFilters() {
-        filters = defaultFilters
     }
 }
 

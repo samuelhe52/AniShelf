@@ -13,6 +13,7 @@ import SwiftUI
 /// Card behavior is selected by ``EntryDetailStatKind``, never by icon name or
 /// array position.
 struct EntryDetailStatGrid: View {
+    @Environment(\.popupPanelStyle) private var panelStyle
     @State private var showingProductionCompanies = false
 
     let availableCards: [EntryDetailStatCard]
@@ -23,10 +24,27 @@ struct EntryDetailStatGrid: View {
     let onJumpToEpisodes: () -> Void
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(cards) { card in
-                statCard(card)
+        switch panelStyle {
+        case .glass:
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(cards) { card in
+                    statCard(card)
+                }
             }
+        case .grouped:
+            // A borderless metric strip, like the App Store header metrics, so the stats
+            // read as a summary rather than another grouped box of rows.
+            HStack(spacing: 0) {
+                ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
+                    if index > 0 {
+                        Divider()
+                            .padding(.vertical, 6)
+                    }
+                    statCard(card)
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.vertical, 4)
         }
     }
 

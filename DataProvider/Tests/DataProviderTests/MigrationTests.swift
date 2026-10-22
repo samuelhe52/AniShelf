@@ -1,3 +1,10 @@
+//
+//  MigrationTests.swift
+//  AniShelf
+//
+//  Created by OpenAI Codex on behalf of Samuel He on 2026/5/10.
+//
+
 import Foundation
 import SwiftData
 import Testing
@@ -816,6 +823,35 @@ struct MigrationTests {
         #expect(migratedEntry.rewatchCount == 2)
         #expect(migratedEntry.categoryIDs.isEmpty)
         #expect(migratedEntry.categoriesUpdatedAt == nil)
+    }
+
+    @Test @MainActor func halfScoreMigrationFromV283KeepsWholeScores() throws {
+        let storeURL = temporaryStoreURL(name: "half-score-migration-v283")
+        let legacySchema = Schema(versionedSchema: SchemaV2_8_3.self)
+        let legacyConfiguration = ModelConfiguration(schema: legacySchema, url: storeURL)
+        let legacyContainer = try ModelContainer(
+            for: legacySchema,
+            configurations: legacyConfiguration
+        )
+        let legacyEntry = SchemaV2_8_3.AnimeEntry(
+            name: "Legacy Movie",
+            type: .movie,
+            tmdbID: 808_400,
+            dateSaved: referenceDate(year: 2026, month: 10, day: 1),
+            score: 4
+        )
+        legacyEntry.categoryIDs = ["category-a"]
+        legacyContainer.mainContext.insert(legacyEntry)
+        try legacyContainer.mainContext.save()
+
+        let migratedProvider = DataProvider(url: storeURL)
+        let migratedEntry = try #require(
+            try migratedProvider.getAllModels(ofType: AnimeEntry.self).first
+        )
+
+        #expect(migratedEntry.entryScore == EntryScore(whole: 4))
+        #expect(!migratedEntry.scoreHasHalf)
+        #expect(migratedEntry.categoryIDs == ["category-a"])
     }
 
     @Test @MainActor func imagePathMigrationFromV279PreservesUserState() throws {

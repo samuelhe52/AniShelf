@@ -1,3 +1,10 @@
+//
+//  LibraryMetadataRefresher.swift
+//  AniShelf
+//
+//  Created by OpenAI Codex on behalf of Samuel He on 2026/5/7.
+//
+
 import DataProvider
 import Foundation
 import SwiftData

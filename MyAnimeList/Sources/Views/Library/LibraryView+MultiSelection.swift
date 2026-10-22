@@ -8,78 +8,62 @@
 import DataProvider
 import SwiftUI
 
-extension LibraryView {
-    var supportsMultiSelection: Bool {
-        libraryViewStyle == .list || libraryViewStyle == .grid
-    }
-
-    var selectedEntries: [AnimeEntry] {
-        interaction.selectedEntryIDs.compactMap { selectionEntriesByID[$0] }
-    }
-
-    func applyBatchAction(_ action: LibraryBatchAction) {
-        let entries = selectedEntries
-        guard !entries.isEmpty else { return }
-
-        action.apply(to: entries)
-        guard action.endsMultiSelection else { return }
-        exitMultiSelection()
-        if entries.count >= 3 {
-            appReview.record(.multiSelectAction)
+#if !os(macOS)
+    extension LibraryView {
+        var supportsMultiSelection: Bool {
+            libraryViewStyle == .list || libraryViewStyle == .grid
         }
-    }
 
-    func deleteSelectedEntries() {
-        let entries = selectedEntries
-        guard !entries.isEmpty else {
+        var selectedEntries: [AnimeEntry] {
+            interaction.selectedEntryIDs.compactMap(scope.displayedEntry(for:))
+        }
+
+        func applyBatchAction(_ action: LibraryBatchAction) {
+            let entries = selectedEntries
+            guard !entries.isEmpty else { return }
+
+            LibraryBenchmarkSignposts.batchActionWillApply()
+            action.apply(to: entries)
+            guard action.endsMultiSelection else { return }
             exitMultiSelection()
-            return
-        }
-
-        let remainingEntries = store.libraryOnDisplay.filter { entry in
-            !interaction.selectedEntryIDs.contains(entry.libraryIdentity)
-        }
-        let scrollTarget = remainingEntries.first?.libraryIdentity
-
-        guard store.deleteEntries(entries) else { return }
-
-        requestLibraryScroll(to: scrollTarget)
-        exitMultiSelection()
-    }
-
-    func enterMultiSelection() {
-        updateSelectionDisplayItems()
-        withAnimation(LibraryViewTransitions.selectionModeAnimation()) {
-            interaction.enterMultiSelection()
-        }
-    }
-
-    func exitMultiSelection() {
-        withAnimation(LibraryViewTransitions.selectionModeAnimation()) {
-            interaction.exitMultiSelection()
-        }
-        selectionDisplayItems = nil
-        selectionLayoutIDs = nil
-        selectionEntriesByID.removeAll(keepingCapacity: true)
-    }
-
-    func refreshSelectionDisplayItemsIfNeeded() {
-        guard interaction.isMultiSelecting else { return }
-        updateSelectionDisplayItems()
-    }
-
-    private func updateSelectionDisplayItems() {
-        let items = store.libraryDisplayItems
-        let layoutIDs = items.map(\.id)
-        let displayedIDs = Set(layoutIDs)
-        interaction.selectedEntryIDs.formIntersection(displayedIDs)
-        selectionDisplayItems = items
-        selectionLayoutIDs = layoutIDs
-        selectionEntriesByID = Dictionary(
-            items.map { ($0.id, $0.entry) },
-            uniquingKeysWith: { existing, candidate in
-                AnimeEntryDuplicateResolver.prefers(candidate, existing) ? candidate : existing
+            if entries.count >= 3 {
+                appReview.record(.multiSelectAction)
             }
-        )
+        }
+
+        func deleteSelectedEntries() {
+            let entries = selectedEntries
+            guard !entries.isEmpty else {
+                exitMultiSelection()
+                return
+            }
+
+            let scrollTarget = scope.displayIDs.first { id in
+                !interaction.selectedEntryIDs.contains(id)
+            }
+
+            guard store.deleteEntries(entries) else { return }
+
+            browse.requestScroll(to: scrollTarget)
+            exitMultiSelection()
+        }
+
+        func enterMultiSelection() {
+            withAnimation(LibraryViewTransitions.selectionModeAnimation()) {
+                interaction.enterMultiSelection()
+            }
+        }
+
+        func exitMultiSelection() {
+            withAnimation(LibraryViewTransitions.selectionModeAnimation()) {
+                interaction.exitMultiSelection()
+            }
+        }
+
+        /// Keeps the selection to the entries still shown after a library or scope change.
+        func pruneSelection() {
+            guard interaction.isMultiSelecting else { return }
+            interaction.selectedEntryIDs.formIntersection(scope.displayIDs)
+        }
     }
-}
+#endif

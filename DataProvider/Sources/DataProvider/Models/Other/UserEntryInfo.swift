@@ -37,8 +37,16 @@ public struct UserEntryInfo: Equatable, Codable {
     /// Whether date controls are shown for this entry.
     public var isDateTrackingEnabled: Bool
 
-    /// User's optional score for this entry.
+    /// User's optional whole-star score for this entry.
     public var score: Int?
+
+    /// Adds 0.5 to ``score``. Always false when ``score`` is nil or 5.
+    public var scoreHasHalf: Bool
+
+    /// The full score, including the half star.
+    public var entryScore: EntryScore? {
+        EntryScore(whole: score, hasHalf: scoreHasHalf)
+    }
 
     /// Whether the entry is marked as favorite.
     public var favorite: Bool
@@ -69,6 +77,7 @@ public struct UserEntryInfo: Equatable, Codable {
         dateFinished: Date? = nil,
         isDateTrackingEnabled: Bool = true,
         score: Int? = nil,
+        scoreHasHalf: Bool = false,
         favorite: Bool,
         notes: String,
         usingCustomPoster: Bool,
@@ -81,7 +90,9 @@ public struct UserEntryInfo: Equatable, Codable {
         self.dateStarted = dateStarted
         self.dateFinished = dateFinished
         self.isDateTrackingEnabled = isDateTrackingEnabled
-        self.score = normalizedEntryScore(score)
+        let entryScore = EntryScore(whole: score, hasHalf: scoreHasHalf)
+        self.score = entryScore?.wholeStars
+        self.scoreHasHalf = entryScore?.hasHalf ?? false
         self.favorite = favorite
         self.notes = notes
         self.customPosterPath = usingCustomPoster ? customPosterPath : nil
@@ -96,7 +107,9 @@ public struct UserEntryInfo: Equatable, Codable {
         self.dateStarted = entry.dateStarted
         self.dateFinished = entry.dateFinished
         self.isDateTrackingEnabled = entry.isDateTrackingEnabled
-        self.score = normalizedEntryScore(entry.score)
+        let entryScore = entry.entryScore
+        self.score = entryScore?.wholeStars
+        self.scoreHasHalf = entryScore?.hasHalf ?? false
         self.favorite = entry.favorite
         self.notes = entry.notes
         customPosterPath = entry.usingCustomPoster ? entry.customPosterPath : nil
@@ -129,6 +142,7 @@ public struct UserEntryInfo: Equatable, Codable {
         case dateFinished
         case isDateTrackingEnabled
         case score
+        case scoreHasHalf
         case favorite
         case notes
         case usingCustomPoster
@@ -145,7 +159,8 @@ public struct UserEntryInfo: Equatable, Codable {
             dateStarted: try container.decodeIfPresent(Date.self, forKey: .dateStarted),
             dateFinished: try container.decodeIfPresent(Date.self, forKey: .dateFinished),
             isDateTrackingEnabled: try container.decodeIfPresent(Bool.self, forKey: .isDateTrackingEnabled) ?? true,
-            score: normalizedEntryScore(try container.decodeIfPresent(Int.self, forKey: .score)),
+            score: try container.decodeIfPresent(Int.self, forKey: .score),
+            scoreHasHalf: try container.decodeIfPresent(Bool.self, forKey: .scoreHasHalf) ?? false,
             favorite: try container.decode(Bool.self, forKey: .favorite),
             notes: try container.decode(String.self, forKey: .notes),
             usingCustomPoster: try container.decode(Bool.self, forKey: .usingCustomPoster),
@@ -161,11 +176,16 @@ public struct UserEntryInfo: Equatable, Codable {
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        let normalizedScore = entryScore
         try container.encode(watchStatus, forKey: .watchStatus)
         try container.encodeIfPresent(dateStarted, forKey: .dateStarted)
         try container.encodeIfPresent(dateFinished, forKey: .dateFinished)
         try container.encode(isDateTrackingEnabled, forKey: .isDateTrackingEnabled)
-        try container.encodeIfPresent(normalizedEntryScore(score), forKey: .score)
+        try container.encodeIfPresent(normalizedScore?.wholeStars, forKey: .score)
+        // Whole scores keep the payload older builds already read.
+        if normalizedScore?.hasHalf == true {
+            try container.encode(true, forKey: .scoreHasHalf)
+        }
         try container.encode(favorite, forKey: .favorite)
         try container.encode(notes, forKey: .notes)
         try container.encode(usingCustomPoster, forKey: .usingCustomPoster)
@@ -208,7 +228,7 @@ public struct UserEntryInfo: Equatable, Codable {
             && dateStarted == other.dateStarted
             && dateFinished == other.dateFinished
             && isDateTrackingEnabled == other.isDateTrackingEnabled
-            && score == other.score
+            && entryScore == other.entryScore
             && favorite == other.favorite
             && notes == other.notes
             && usingCustomPoster == other.usingCustomPoster
@@ -254,7 +274,7 @@ extension UserEntryInfo: CustomStringConvertible {
         Started: \(dateStarted?.description ?? "N/A")
         Finished: \(dateFinished?.description ?? "N/A")
         Track Dates: \(isDateTrackingEnabled)
-        Score: \(score.map(String.init) ?? "No score")
+        Score: \(entryScore.map(\.exportString) ?? "No score")
         Favorite: \(favorite)
         Notes: \(notes)
         Custom Poster: \(usingCustomPoster)
@@ -403,19 +423,40 @@ extension AnimeEntry {
         return true
     }
 
-    /// Low-level setter that does not advance `trackingUpdatedAt`.
-    ///
-    /// Use `updateScore(_:at:)` for user actions that should participate in
-    /// sync conflict resolution.
-    public func setScore(_ score: Int?) {
-        self.score = normalizedEntryScore(score)
+    /// The full score, including the half star.
+    public var entryScore: EntryScore? {
+        EntryScore(whole: score, hasHalf: scoreHasHalf)
     }
 
+    /// Low-level setter for a whole score that does not advance `trackingUpdatedAt`.
+    ///
+    /// Clears any half star. Out-of-range values clear the score.
+    public func setScore(_ score: Int?) {
+        setEntryScore(EntryScore(whole: score))
+    }
+
+    /// Low-level setter that writes both stored score fields without advancing
+    /// `trackingUpdatedAt`.
+    ///
+    /// Use `updateEntryScore(_:at:)` for user actions that should participate in
+    /// sync conflict resolution.
+    public func setEntryScore(_ score: EntryScore?) {
+        self.score = score?.wholeStars
+        scoreHasHalf = score?.hasHalf ?? false
+    }
+
+    /// Sets a whole score for a user action. Clears any half star.
     @discardableResult
     public func updateScore(_ score: Int?, at date: Date = .now) -> Bool {
-        let normalizedScore = normalizedEntryScore(score)
-        guard self.score != normalizedScore else { return false }
-        self.score = normalizedScore
+        updateEntryScore(EntryScore(whole: score), at: date)
+    }
+
+    /// Sets the score for a user action and advances `trackingUpdatedAt` when the
+    /// whole stars or the half star change.
+    @discardableResult
+    public func updateEntryScore(_ score: EntryScore?, at date: Date = .now) -> Bool {
+        guard entryScore != score else { return false }
+        setEntryScore(score)
         markTrackingModified(at: date)
         return true
     }
@@ -514,7 +555,7 @@ extension AnimeEntry {
         dateStarted = userInfo.dateStarted
         dateFinished = userInfo.dateFinished
         isDateTrackingEnabled = userInfo.isDateTrackingEnabled
-        score = normalizedEntryScore(userInfo.score)
+        setEntryScore(userInfo.entryScore)
         favorite = userInfo.favorite
         notes = userInfo.notes
         customPosterPath = userInfo.usingCustomPoster ? userInfo.customPosterPath : nil
@@ -549,9 +590,4 @@ extension AnimeEntry {
             return userInfo.episodeProgresses.filter { $0.seasonNumber == seasonNumber }
         }
     }
-}
-
-fileprivate func normalizedEntryScore(_ score: Int?) -> Int? {
-    guard let score else { return nil }
-    return AnimeEntry.validScoreRange.contains(score) ? score : nil
 }

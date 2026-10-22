@@ -1,3 +1,10 @@
+//
+//  LibraryEntrySnapshot.swift
+//  AniShelf
+//
+//  Created by OpenAI Codex on behalf of Samuel He on 2026/5/7.
+//
+
 import DataProvider
 import Foundation
 import SwiftUI
@@ -14,6 +21,24 @@ struct LibraryEntryDisplayItem: Identifiable {
     }
 }
 
+/// One computed library display list with the lookups its readers need.
+struct LibraryDisplayCache {
+    let items: [LibraryEntryDisplayItem]
+    let ids: [LibraryEntryIdentity]
+    let entriesByID: [LibraryEntryIdentity: AnimeEntry]
+
+    init(items: [LibraryEntryDisplayItem]) {
+        self.items = items
+        self.ids = items.map(\.id)
+        self.entriesByID = Dictionary(
+            items.map { ($0.id, $0.entry) },
+            uniquingKeysWith: { existing, candidate in
+                AnimeEntryDuplicateResolver.prefers(candidate, existing) ? candidate : existing
+            }
+        )
+    }
+}
+
 struct LibraryEntrySnapshot: Identifiable, Equatable {
     let id: LibraryEntryIdentity
     private let posterPath: String?
@@ -24,7 +49,7 @@ struct LibraryEntrySnapshot: Identifiable, Equatable {
     let watchStatus: AnimeEntry.WatchStatus
     let isRewatching: Bool
     let rewatchCount: Int
-    let score: Int?
+    let score: EntryScore?
     let isFavorite: Bool
     let episodeProgressLabel: String?
     let episodeProgressFraction: Double?
@@ -43,7 +68,7 @@ struct LibraryEntrySnapshot: Identifiable, Equatable {
         watchStatus = entry.watchStatus
         isRewatching = entry.isRewatching
         rewatchCount = entry.rewatchCount
-        score = entry.score
+        score = entry.entryScore
         isFavorite = entry.favorite
         episodeProgressLabel = episodeProgress.label
         episodeProgressFraction = episodeProgress.fraction

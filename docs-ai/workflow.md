@@ -51,6 +51,9 @@ copying the same content into every amendment.
 - Existing source paths must exist in the checkout. Proposed new paths may be
   named when explicitly marked proposed. Historical paths are allowed only in
   clearly identified preserved sources with their original provenance.
+- Do not cite untracked or ignored paths such as `.build/` as evidence; they can
+  be deleted at any time. Write the observed result into the record itself and
+  describe screenshots, logs, and review builds as local and not retained.
 - Keep records truthful. When a follow-up invalidates plan or action text, correct
   it in place and note the correction in the dated amendment. Named contracts and
   runbooks are living files and are updated in place; `historical/` sources are not edited.

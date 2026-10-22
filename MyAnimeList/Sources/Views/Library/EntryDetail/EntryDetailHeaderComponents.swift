@@ -35,6 +35,20 @@ struct EntryDetailHeroSection: View {
 
     private func hero(height: CGFloat) -> some View {
         ZStack(alignment: .bottom) {
+            heroBackground
+                .clipped()
+                .verticalBarBackgroundExtension()
+
+            heroText
+        }
+        .containerRelativeFrame(.horizontal)
+        .frame(height: height)
+    }
+
+    /// The artwork and its scrims, which extend under iPhone Duo's vertical bar; the text stays
+    /// inset.
+    private var heroBackground: some View {
+        ZStack(alignment: .bottom) {
             heroArtwork
 
             // Top scrim — keeps toolbar buttons legible
@@ -61,62 +75,61 @@ struct EntryDetailHeroSection: View {
                 )
                 .frame(height: 120)
             }
-
-            VStack(spacing: 0) {
-                Spacer(minLength: 0)
-
-                VStack(alignment: .center, spacing: 6) {
-                    if let logoImageURL {
-                        KFImageView(
-                            url: logoImageURL,
-                            targetSize: CGSize(width: 500, height: 500),
-                            diskCacheExpiration: .longTerm
-                        )
-                        .scaledToFit()
-                        .frame(maxWidth: 280)
-                        .frame(height: 78)
-                        .shadow(color: .black.opacity(0.28), radius: 10, y: 6)
-                    } else {
-                        Text(displayTitle)
-                            .font(.largeTitle.weight(.bold))
-                            .foregroundStyle(.white)
-                            .lineLimit(3)
-                            .minimumScaleFactor(0.78)
-                            .multilineTextAlignment(.center)
-                    }
-
-                    if let subtitleText {
-                        Text(subtitleText)
-                            .font(.subheadline.weight(.regular))
-                            .foregroundStyle(.white.opacity(0.82))
-                            .lineLimit(2)
-                            .multilineTextAlignment(.center)
-                    }
-
-                    if !metadataLineItems.isEmpty {
-                        Text(metadataLineItems.joined(separator: "  ·  "))
-                            .font(.footnote)
-                            .foregroundStyle(.white.opacity(0.68))
-                            .lineLimit(2)
-                            .multilineTextAlignment(.center)
-                    }
-
-                    if !genreNames.isEmpty {
-                        Text(genreNames.joined(separator: ", "))
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.56))
-                            .lineLimit(1)
-                    }
-                }
-                .frame(maxWidth: 360)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 36)
-                .frame(maxWidth: .infinity)
-            }
         }
-        .containerRelativeFrame(.horizontal)
-        .frame(height: height)
-        .clipped()
+    }
+
+    private var heroText: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+
+            VStack(alignment: .center, spacing: 6) {
+                if let logoImageURL {
+                    KFImageView(
+                        url: logoImageURL,
+                        targetSize: CGSize(width: 500, height: 500),
+                        diskCacheExpiration: .longTerm
+                    )
+                    .scaledToFit()
+                    .frame(maxWidth: 280)
+                    .frame(height: 78)
+                    .shadow(color: .black.opacity(0.28), radius: 10, y: 6)
+                } else {
+                    Text(displayTitle)
+                        .font(.largeTitle.weight(.bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(3)
+                        .minimumScaleFactor(0.78)
+                        .multilineTextAlignment(.center)
+                }
+
+                if let subtitleText {
+                    Text(subtitleText)
+                        .font(.subheadline.weight(.regular))
+                        .foregroundStyle(.white.opacity(0.82))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                }
+
+                if !metadataLineItems.isEmpty {
+                    Text(metadataLineItems.joined(separator: "  ·  "))
+                        .font(.footnote)
+                        .foregroundStyle(.white.opacity(0.68))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                }
+
+                if !genreNames.isEmpty {
+                    Text(genreNames.joined(separator: ", "))
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.56))
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: 360)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 36)
+            .frame(maxWidth: .infinity)
+        }
     }
 
     @ViewBuilder
@@ -146,11 +159,39 @@ struct EntryDetailHeroSection: View {
 }
 
 struct DetailStatCard: View {
+    @Environment(\.popupPanelStyle) private var panelStyle
     let card: EntryDetailStatCard
 
     private var valueIsShrinkable: Bool { card.valueIsShrinkable }
 
     var body: some View {
+        switch panelStyle {
+        case .glass: tile
+        case .grouped: compactTile
+        }
+    }
+
+    /// One column of the Mac inspector's metric strip: a bold value over a gray caption.
+    private var compactTile: some View {
+        VStack(spacing: 2) {
+            Text(card.value)
+                .font(.title3.weight(.semibold))
+                .lineLimit(1)
+                .allowsTightening(valueIsShrinkable)
+                .minimumScaleFactor(valueIsShrinkable ? 0.6 : 1)
+            Text(String(localized: card.title))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+        }
+        .padding(.horizontal, 6)
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+    }
+
+    private var tile: some View {
         VStack(alignment: .leading) {
             Image(systemName: card.symbolName)
                 .font(.headline)
@@ -172,9 +213,10 @@ struct DetailStatCard: View {
 }
 
 struct EntryDetailQuickActionsRow: View {
+    @Environment(\.popupPanelStyle) private var panelStyle
     @State private var editingReminder: AiringReminderSubscription?
 
-    let detailURL: URL?
+    let openInLinks: EntryOpenInLinks
     let isFavorite: Bool
     let showsConvertAction: Bool
     let conversionInProgress: Bool
@@ -193,33 +235,31 @@ struct EntryDetailQuickActionsRow: View {
     let onConvert: () async -> Void
     let onToggleDroppedStatus: () -> Void
 
-    var body: some View {
-        HStack(spacing: 10) {
-            Spacer(minLength: 0)
+    /// The Mac inspector lines compact bordered buttons up under the title instead of
+    /// centering large glass circles.
+    private var isCompact: Bool { panelStyle == .grouped }
 
-            if let detailURL {
-                Link(destination: detailURL) {
-                    Image(systemName: "safari")
-                        .font(.title2)
-                        .frame(width: 20, height: 20)
-                        .padding(10)
-                }
-                .buttonStyle(.glass)
-                .buttonBorderShape(.circle)
-                .tint(.primary)
+    var body: some View {
+        HStack(spacing: isCompact ? 6 : 10) {
+            if !isCompact {
+                Spacer(minLength: 0)
             }
+
+            EntryDetailOpenInMenu(links: openInLinks)
 
             PopupActionCircleButton(
                 systemImage: "square.and.arrow.up",
                 verticalOffset: -1,
                 action: onShare
             )
+            .macHelp(Text("Share…"))
 
             PopupActionCircleButton(
                 systemImage: isFavorite ? "heart.fill" : "heart",
                 tint: isFavorite ? .pink : .primary,
                 action: onToggleFavorite
             )
+            .macHelp(Text(isFavorite ? "Remove from Favorites" : "Add to Favorites"))
 
             Menu {
                 let broadcastMenuContent = EntryDetailBroadcastMenuContent(
@@ -259,22 +299,50 @@ struct EntryDetailQuickActionsRow: View {
                 )
                 .tint(dropActionIsDestructive ? .red : .primary)
             } label: {
-                Image(systemName: "ellipsis")
-                    .font(.title2)
-                    .frame(width: 20, height: 20)
-                    .padding(10)
+                PopupActionButtonLabel(systemImage: "ellipsis")
             }
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
-            .tint(.primary)
+            .popupActionButtonChrome()
+            .menuIndicator(isCompact ? .hidden : .automatic)
+            .macHelp(Text("More"))
 
             Spacer(minLength: 0)
         }
         .sheet(item: $editingReminder) { subscription in
-            AiringReminderTimingSheet(
-                subscription: subscription,
-                defaultTiming: AiringReminderCoordinator.shared.snapshot.defaultTiming
-            )
+            #if os(macOS)
+                MacAiringReminderTimingSheet(
+                    subscription: subscription,
+                    defaultTiming: AiringReminderCoordinator.shared.snapshot.defaultTiming
+                )
+            #else
+                AiringReminderTimingSheet(
+                    subscription: subscription,
+                    defaultTiming: AiringReminderCoordinator.shared.snapshot.defaultTiming
+                )
+            #endif
         }
+    }
+}
+
+extension View {
+    /// Mirrors this view under iPhone Duo's vertical bar, as Apple recommends for hero imagery;
+    /// it has no effect where the system never places a vertical bar.
+    fileprivate func verticalBarBackgroundExtension() -> some View {
+        modifier(VerticalBarBackgroundExtension())
+    }
+}
+
+fileprivate struct VerticalBarBackgroundExtension: ViewModifier {
+    @Environment(\.self) private var environment
+
+    func body(content: Content) -> some View {
+        #if os(macOS)
+            content
+        #else
+            if #available(iOS 27.1, *) {
+                content.backgroundExtensionEffect(isEnabled: environment.toolbarVerticalEdge != nil)
+            } else {
+                content
+            }
+        #endif
     }
 }

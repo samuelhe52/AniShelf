@@ -22,13 +22,13 @@ extension AnimeEntry.WatchStatus: @retroactive CustomLocalizedStringResourceConv
 
 extension UserEntryInfo: @retroactive CustomLocalizedStringResourceConvertible {
     public var localizedStringResource: LocalizedStringResource {
-        if let score {
+        if let score = entryScore {
             """
             Status: \(watchStatus)
             Started: \(dateStarted?.description ?? "N/A")
             Finished: \(dateFinished?.description ?? "N/A")
             Track Dates: \(isDateTrackingEnabled ? "Yes" : "No")
-            Score: \(score)
+            Score: \(score.formatted)
             Favorite: \(favorite ? "Yes" : "No")
             Notes: \(notes)
             Custom Poster: \(usingCustomPoster ? "Yes" : "No")

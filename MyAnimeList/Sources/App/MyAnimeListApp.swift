@@ -9,11 +9,20 @@ import DataProvider
 import StoreKit
 import SwiftData
 import SwiftUI
-import UIKit
+
+#if os(macOS)
+    import AppKit
+#else
+    import UIKit
+#endif
 
 @main
 struct MyAnimeListApp: App {
-    @UIApplicationDelegateAdaptor(LibrarySyncNotificationBridge.self) private var notificationBridge
+    #if os(macOS)
+        @NSApplicationDelegateAdaptor(LibrarySyncNotificationBridge.self) private var notificationBridge
+    #else
+        @UIApplicationDelegateAdaptor(LibrarySyncNotificationBridge.self) private var notificationBridge
+    #endif
     @State var libraryStore: LibraryStore
     @State var keyStorage: TMDbAPIKeyStorage
     @State var whatsNew: WhatsNewController
@@ -24,6 +33,9 @@ struct MyAnimeListApp: App {
     private let newerLibraryStoreVersion: Schema.Version?
     /// A DEBUG launch argument replaced the real store; library and sync work stay off for this launch.
     private let isSimulatedStartup: Bool
+    /// A DEBUG or `LIBRARY_FIXTURES` launch argument replaced the store with a generated library;
+    /// sync, reminders, and prompts stay off for this launch (docs-ai 026).
+    private let isLibraryFixture: Bool
     @State private var backgroundSyncExecution: LibrarySyncBackgroundExecutionController
     private let recoveryActivityGate: StartupRecoveryActivityGate
     private let lifecycleEventGate = AppLifecycleEventGate()
@@ -33,7 +45,9 @@ struct MyAnimeListApp: App {
         Language.followsSystemPreference()
 
     init() {
-        let (startupBootstrap, isSimulatedStartup) = Self.startupBootstrap()
+        let startup = Self.startupEnvironment()
+        let startupBootstrap = startup.bootstrap
+        let isSimulatedStartup = startup.isSimulated
         let startupRecovery = startupBootstrap.recovery
         let newerLibraryStoreVersion: Schema.Version? =
             if case .requiresNewerApp(let storeVersion) = startupBootstrap.status {
@@ -43,20 +57,24 @@ struct MyAnimeListApp: App {
             }
         let keyStorage = TMDbAPIKeyStorage()
         // A newer-store block never lifts: only an app update can open the library.
+        // A fixture library stays blocked too, so sync and reminders never act on it.
         let recoveryActivityGate = StartupRecoveryActivityGate(
-            isBlocked: startupRecovery != nil || newerLibraryStoreVersion != nil
+            isBlocked: startupRecovery != nil || newerLibraryStoreVersion != nil || startup.isLibraryFixture
         )
         let libraryStore = LibraryStore(
             dataProvider: startupBootstrap.provider,
+            preferences: LibraryPreferences(defaults: startup.defaults),
             hasTMDbAPIKey: {
                 guard let key = keyStorage.key else { return false }
                 return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             },
-            airingReminderPruningEnabled: recoveryActivityGate.allowsLibraryActivity
+            airingReminderPruningEnabled: recoveryActivityGate.allowsLibraryActivity,
+            allowsCloudSync: !startup.isLibraryFixture
         )
-        let whatsNew = WhatsNewController()
+        let whatsNew = WhatsNewController(defaults: startup.defaults)
         let supportStore = SupportStore()
-        let appReview = AppReviewPromptController()
+        let appReview = AppReviewPromptController(defaults: startup.defaults)
+        self.isLibraryFixture = startup.isLibraryFixture
 
         _libraryStore = State(initialValue: libraryStore)
         _keyStorage = State(initialValue: keyStorage)
@@ -66,9 +84,8 @@ struct MyAnimeListApp: App {
         _startupRecovery = State(initialValue: startupRecovery)
         self.newerLibraryStoreVersion = newerLibraryStoreVersion
         self.isSimulatedStartup = isSimulatedStartup
-        _backgroundSyncExecution = State(
-            initialValue: LibrarySyncBackgroundExecutionController()
-        )
+        let backgroundSyncExecution = LibrarySyncBackgroundExecutionController()
+        _backgroundSyncExecution = State(initialValue: backgroundSyncExecution)
         self.recoveryActivityGate = recoveryActivityGate
         RecoveryExportManager.cleanupAllTemporaryExports()
 
@@ -85,97 +102,247 @@ struct MyAnimeListApp: App {
                 return .failed
             }
         }
+        #if os(macOS)
+            Self.configureMacLifecycle(
+                libraryStore: libraryStore,
+                keyStorage: keyStorage,
+                appReview: appReview,
+                recoveryActivityGate: recoveryActivityGate,
+                lifecycleEventGate: lifecycleEventGate,
+                backgroundSyncExecution: backgroundSyncExecution
+            )
+        #endif
     }
 
-    private static func startupBootstrap() -> (
-        result: DataProviderBootstrapResult, isSimulated: Bool
-    ) {
+    #if os(macOS)
+        /// Wires app-lifetime events into the shared objects directly: the App value captured
+        /// here would hold stale `@State` once startup recovery finishes.
+        private static func configureMacLifecycle(
+            libraryStore: LibraryStore,
+            keyStorage: TMDbAPIKeyStorage,
+            appReview: AppReviewPromptController,
+            recoveryActivityGate: StartupRecoveryActivityGate,
+            lifecycleEventGate: AppLifecycleEventGate,
+            backgroundSyncExecution: LibrarySyncBackgroundExecutionController
+        ) {
+            let canSyncLibrary = { @MainActor in
+                recoveryActivityGate.allowsLibraryActivity && !libraryStore.requiresDuplicateRepair
+            }
+            // The Mac's foreground work; iOS runs it from the app-level scene phase instead,
+            // which needs a window and so misses activations while every window is closed.
+            LibrarySyncNotificationBridge.configureActivation {
+                // Launch handling already syncs and refreshes for the first activation, but it
+                // can run before the app is active, so every activation records the active day.
+                let isLaunchActivation = !lifecycleEventGate.shouldHandleActivation()
+                if !isLaunchActivation { keyStorage.retryInitialLookupIfNeeded() }
+                guard recoveryActivityGate.allowsLibraryActivity, keyStorage.hasUsableKey else { return }
+                if !libraryStore.requiresDuplicateRepair {
+                    appReview.recordActiveLibraryDay()
+                    if !isLaunchActivation { libraryStore.syncLibrary(trigger: .foreground) }
+                }
+                guard !isLaunchActivation else { return }
+                Task { @MainActor in
+                    await AiringReminderCoordinator.shared.reloadState()
+                    _ = await AiringReminderCoordinator.shared.refreshAll()
+                }
+            }
+            LibrarySyncNotificationBridge.configureTerminationFlush(
+                isNeeded: { canSyncLibrary() && libraryStore.needsBackgroundLibrarySyncProtection },
+                flush: { _ = await libraryStore.flushPendingLocalLibrarySyncAndWait() }
+            )
+            LibrarySyncNotificationBridge.configureSleepAndWake(
+                willSleep: {
+                    guard canSyncLibrary(), libraryStore.needsBackgroundLibrarySyncProtection else { return }
+                    backgroundSyncExecution.run(
+                        onExpiration: { libraryStore.cancelLibrarySyncForBackgroundExpiration() },
+                        operation: { _ = await libraryStore.flushPendingLocalLibrarySyncAndWait() }
+                    )
+                },
+                didWake: {
+                    guard canSyncLibrary() else { return }
+                    libraryStore.syncLibrary(trigger: .foreground)
+                }
+            )
+        }
+    #endif
+
+    private struct StartupEnvironment {
+        var bootstrap: DataProviderBootstrapResult
+        var isSimulated = false
+        var isLibraryFixture = false
+        var defaults: UserDefaults = .standard
+    }
+
+    private static func startupEnvironment() -> StartupEnvironment {
         #if DEBUG
             // Preview startup screens without opening or touching the real store.
             let arguments = ProcessInfo.processInfo.arguments
+            // Shows the half-star score hint again, for visual checks.
+            if arguments.contains("-reset-score-hint") {
+                UserDefaults.standard.removeObject(forKey: .entryScoreHalfHintSeen)
+            }
             if arguments.contains("-simulate-newer-library-store") {
-                return (
-                    DataProvider.newerStorePlaceholderBootstrap(
+                return StartupEnvironment(
+                    bootstrap: DataProvider.newerStorePlaceholderBootstrap(
                         storeVersion: Schema.Version(99, 0, 0)
                     ),
-                    true
+                    isSimulated: true
                 )
             }
             if arguments.contains("-simulate-startup-recovery") {
-                return (DataProvider.simulatedRecoveryBootstrap(), true)
+                return StartupEnvironment(bootstrap: DataProvider.simulatedRecoveryBootstrap(), isSimulated: true)
             }
         #endif
-        return (DataProvider.startupBootstrap, false)
+        #if DEBUG || LIBRARY_FIXTURES
+            // A generated library for scale checks and the UI benchmarks; never opens the real store.
+            if let fixture = LibraryFixture.fromLaunchArguments() {
+                return StartupEnvironment(
+                    bootstrap: fixture.makeBootstrap(),
+                    isLibraryFixture: true,
+                    defaults: fixture.defaults
+                )
+            }
+        #endif
+        return StartupEnvironment(bootstrap: DataProvider.startupBootstrap)
     }
 
     var body: some Scene {
-        WindowGroup {
-            ZStack {
-                if let newerLibraryStoreVersion {
-                    NewerLibraryStoreView(storeVersion: newerLibraryStoreVersion)
-                } else if let startupRecovery {
-                    StartupRecoveryView(
-                        recovery: startupRecovery,
-                        onContinue: continueAfterStartupRecovery
-                    )
-                } else if let key = keyStorage.key, !key.isEmpty {
-                    LibraryView()
-                        .onAppear {
-                            libraryStore.language = followsSystemLanguage ? .current : preferredLanguage
-                        }
-                        .transition(.opacity.animation(.easeInOut(duration: 1)))
-                } else if keyStorage.lookupState == .checking {
-                    ProgressView(checkingTMDbAPIKeyResource)
-                        .transition(.opacity.animation(.easeInOut(duration: 0.2)))
-                } else {
-                    TMDbAPIOnboardingView()
-                        .transition(.opacity.animation(.easeInOut(duration: 1)))
+        #if os(macOS)
+            WindowGroup(id: MacWindowID.library) {
+                libraryWindowContent
+            }
+            .defaultSize(width: 1180, height: 760)
+            .commands {
+                SidebarCommands()
+                MacLibraryCommands(whatsNew: whatsNew)
+            }
+
+            Window("About AniShelf", id: MacWindowID.about) {
+                MacAboutView()
+            }
+            .windowStyle(.hiddenTitleBar)
+            .windowResizability(.contentSize)
+            .defaultPosition(.center)
+            .restorationBehavior(.disabled)
+            .commandsRemoved()
+
+            Window("Support AniShelf", id: MacWindowID.support) {
+                MacSupportView()
+                    .environment(supportStore)
+                    .globalToasts()
+                    .providesWindowSceneIdentifier(role: .auxiliary)
+            }
+            .windowResizability(.contentSize)
+            .defaultPosition(.center)
+            .restorationBehavior(.disabled)
+            .commandsRemoved()
+
+            Settings {
+                MacSettingsRoot(isLibraryBlocked: isLibraryBlocked || !hasTMDbAPIKey)
+                    .environment(libraryStore)
+                    .environment(keyStorage)
+                    .environment(whatsNew)
+                    .environment(supportStore)
+                    .environment(appReview)
+                    // What's New opened from Settings presents in the Settings window.
+                    .modifier(WhatsNewPresenter(whatsNew: whatsNew, libraryStore: libraryStore))
+                    .globalToasts()
+                    .providesWindowSceneIdentifier(role: .auxiliary)
+            }
+        #else
+            WindowGroup {
+                libraryWindowContent
+            }
+        #endif
+    }
+
+    @ViewBuilder
+    private var libraryRoot: some View {
+        #if os(macOS)
+            MacLibraryView()
+        #else
+            LibraryView()
+        #endif
+    }
+
+    private var libraryWindowContent: some View {
+        ZStack {
+            if let newerLibraryStoreVersion {
+                NewerLibraryStoreView(storeVersion: newerLibraryStoreVersion)
+            } else if let startupRecovery {
+                StartupRecoveryView(
+                    recovery: startupRecovery,
+                    onContinue: continueAfterStartupRecovery
+                )
+            } else if let key = keyStorage.key, !key.isEmpty {
+                libraryRoot
+                    .libraryBrowseScope()
+                    .onAppear {
+                        libraryStore.language = followsSystemLanguage ? .current : preferredLanguage
+                    }
+                    .transition(.opacity.animation(.easeInOut(duration: 0.3)))
+            } else if keyStorage.lookupState == .checking {
+                ProgressView(checkingTMDbAPIKeyResource)
+                    .transition(.opacity.animation(.easeInOut(duration: 0.2)))
+            } else {
+                TMDbAPIOnboardingView()
+                    .transition(.opacity.animation(.easeInOut(duration: 0.3)))
+            }
+        }
+        #if (DEBUG || LIBRARY_FIXTURES) && os(iOS)
+            .overlay(alignment: .topLeading) {
+                if isLibraryFixture {
+                    LibraryFrameStatsElement()
+                    .frame(width: 1, height: 1)
                 }
             }
-            .environment(libraryStore)
-            .environment(keyStorage)
-            .environment(whatsNew)
-            .environment(supportStore)
-            .environment(appReview)
-            .onAppear {
-                guard lifecycleEventGate.shouldHandleLaunch() else { return }
-                keyStorage.retryInitialLookupIfNeeded()
-                if !isLibraryBlocked {
-                    requestSync(trigger: .appLaunch)
-                    recordActiveLibraryDayIfUsable()
-                    refreshAiringReminders()
-                }
+        #endif
+        .environment(libraryStore)
+        .environment(keyStorage)
+        .environment(whatsNew)
+        .environment(supportStore)
+        .environment(appReview)
+        .onAppear {
+            guard lifecycleEventGate.shouldHandleLaunch() else { return }
+            keyStorage.retryInitialLookupIfNeeded()
+            if !isLibraryBlocked {
+                requestSync(trigger: .appLaunch)
+                recordActiveLibraryDayIfUsable()
+                refreshAiringReminders()
             }
-            .onChange(of: scenePhase) { _, newPhase in
-                // scenePhase here is the app-level phase; every window delivers each transition.
-                guard lifecycleEventGate.shouldHandlePhaseChange(to: newPhase) else { return }
-                if newPhase == .active {
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            // scenePhase here is the app-level phase; every window delivers each transition.
+            guard lifecycleEventGate.shouldHandlePhaseChange(to: newPhase) else { return }
+            if newPhase == .active {
+                // The Mac handles activation in its app delegate (`configureMacLifecycle`).
+                #if !os(macOS)
                     keyStorage.retryInitialLookupIfNeeded()
                     requestSync(trigger: .foreground)
                     recordActiveLibraryDayIfUsable()
                     refreshAiringReminders()
-                } else if newPhase == .background {
-                    flushPendingLocalSync()
-                }
+                #endif
+            } else if newPhase == .background {
+                flushPendingLocalSync()
             }
-            .modifier(WhatsNewPresenter(whatsNew: whatsNew, libraryStore: libraryStore))
-            .onAppear(perform: updateWhatsNewPresentation)
-            .onChange(of: keyStorage.key) { _, newKey in
-                guard lifecycleEventGate.shouldHandleKeyChange(to: newKey) else { return }
-                updateWhatsNewPresentation()
-                recordActiveLibraryDayIfUsable()
-                if hasTMDbAPIKey {
-                    requestSync(trigger: .foreground)
-                }
-            }
-            .modifier(AppReviewPromptPresenter(appReview: appReview))
-            .globalToasts()
-            .providesWindowSceneIdentifier()
         }
+        .modifier(WhatsNewPresenter(whatsNew: whatsNew, libraryStore: libraryStore))
+        .onAppear(perform: updateWhatsNewPresentation)
+        .onChange(of: keyStorage.key) { _, newKey in
+            guard lifecycleEventGate.shouldHandleKeyChange(to: newKey) else { return }
+            updateWhatsNewPresentation()
+            recordActiveLibraryDayIfUsable()
+            if hasTMDbAPIKey {
+                requestSync(trigger: .foreground)
+            }
+        }
+        .modifier(AppReviewPromptPresenter(appReview: appReview))
+        .globalToasts()
+        .providesWindowSceneIdentifier(role: .library)
     }
 
     private func updateWhatsNewPresentation() {
-        guard !isLibraryBlocked else { return }
+        guard !isLibraryBlocked, !isLibraryFixture else { return }
         whatsNew.presentIfNeeded(allowsAutoPresentation: hasTMDbAPIKey)
     }
 
@@ -200,7 +367,7 @@ struct MyAnimeListApp: App {
     }
 
     private func requestSync(trigger: LibrarySyncCoordinator.Trigger) {
-        guard !isLibraryBlocked else { return }
+        guard !isLibraryBlocked, !isLibraryFixture else { return }
         guard !libraryStore.requiresDuplicateRepair else { return }
         libraryStore.syncLibrary(trigger: trigger)
     }
@@ -224,17 +391,17 @@ struct MyAnimeListApp: App {
     }
 
     private var hasTMDbAPIKey: Bool {
-        guard let key = keyStorage.key else { return false }
-        return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        keyStorage.hasUsableKey
     }
 
     private func recordActiveLibraryDayIfUsable() {
-        guard scenePhase == .active, !isLibraryBlocked, hasTMDbAPIKey else { return }
+        guard scenePhase == .active, !isLibraryBlocked, !isLibraryFixture, hasTMDbAPIKey else { return }
         guard !libraryStore.requiresDuplicateRepair else { return }
         appReview.recordActiveLibraryDay()
     }
 
     private func refreshAiringReminders() {
+        guard !isLibraryFixture else { return }
         Task { @MainActor in
             await AiringReminderCoordinator.shared.reloadState()
             _ = await AiringReminderCoordinator.shared.refreshAll()
@@ -269,6 +436,11 @@ fileprivate struct WhatsNewPresenter: ViewModifier {
         content
             .onChange(of: whatsNew.presentedEntry?.version, initial: true) { claimIfNeeded() }
             .onChange(of: windowSceneIdentifier) { claimIfNeeded() }
+            // A claim held by a closed window passes to the first open window that asks.
+            .onChange(of: AppWindowCoordinator.shared.registeredWindowIDs) { _, openWindows in
+                whatsNew.releasePresentation(ifNotIn: openWindows)
+                claimIfNeeded()
+            }
             .sheet(item: presentedEntry) { entry in
                 NavigationStack {
                     WhatsNewRootSheet(
@@ -345,11 +517,20 @@ fileprivate struct WhatsNewRootSheet: View {
     }
 
     var body: some View {
-        WhatsNewView(
-            entry: entry,
-            pastEntries: pastEntries,
-            actionRunner: actionRunner,
-            onDismiss: onDismiss
-        )
+        #if os(macOS)
+            MacWhatsNewView(
+                entry: entry,
+                pastEntries: pastEntries,
+                actionRunner: actionRunner,
+                onDismiss: onDismiss
+            )
+        #else
+            WhatsNewView(
+                entry: entry,
+                pastEntries: pastEntries,
+                actionRunner: actionRunner,
+                onDismiss: onDismiss
+            )
+        #endif
     }
 }

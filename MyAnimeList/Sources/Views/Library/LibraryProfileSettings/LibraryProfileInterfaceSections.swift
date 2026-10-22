@@ -19,25 +19,38 @@ struct LibraryProfileInterfaceSettingsSection: View {
     private var showProductionCompanyInsteadOfRuntime = false
 
     var body: some View {
-        VStack(spacing: 16) {
-            LibraryProfileSettingsSection(
-                "Library", systemImage: "hand.tap", tint: LibraryProfileSettingsDestination.appearance.tint
-            ) {
-                LibraryProfileSettingsToggleRow(
-                    title: "Open Detail with Single Tap",
-                    subtitle: "By default, double tap opens detail. Turn this on to use single tap instead.",
-                    isOn: $openDetailWithSingleTap
-                )
+        #if os(macOS)
+            sections
+        #else
+            VStack(spacing: 16) { sections }
+        #endif
+    }
 
-                if #available(iOS 27, *) {
+    @ViewBuilder
+    private var sections: some View {
+        Group {
+            // A click always opens the inspector on the Mac, and its toolbar has no soft edge option.
+            #if !os(macOS)
+                LibraryProfileSettingsSection(
+                    "Library", systemImage: "hand.tap", tint: LibraryProfileSettingsDestination.appearance.tint
+                ) {
                     LibraryProfileSettingsToggleRow(
-                        title: "Use Soft Navigation Bar Edges",
-                        subtitle:
-                            "Available on iOS 27 or later. Turn off to use the system appearance.",
-                        isOn: $useSoftNavigationBarEdges
+                        title: "Open Detail with Single Tap",
+                        subtitle: "By default, double tap opens detail. Turn this on to use single tap instead.",
+                        isOn: $openDetailWithSingleTap
                     )
+
+                    if #available(iOS 27, *) {
+                        LibraryProfileSettingsToggleRow(
+                            title: "Use Soft Navigation Bar Edges",
+                            subtitle:
+                                "Available on iOS 27 or later. Turn off to use the system appearance.",
+                            isOn: $useSoftNavigationBarEdges
+                        )
+                    }
                 }
-            }
+            #endif
+            LibraryProfileOpenInSettingsSection()
             LibraryProfileSettingsSection(
                 "Entry Details", systemImage: "rectangle.3.group.fill",
                 tint: LibraryProfileSettingsDestination.appearance.tint
@@ -71,13 +84,13 @@ struct LibraryProfileTMDbConnectionSection: View {
     @State private var showRestartAlert = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            LibraryProfileSettingHeader(
-                title: "TMDb Connection",
-                subtitle: "Turn this on if direct TMDb access is unstable on your network.",
-                systemImage: "network",
-                tint: LibraryProfileSettingsDestination.metadataImages.tint
-            )
+        LibraryProfileSettingsGroup(
+            "TMDb Connection",
+            subtitle: "Turn this on if direct TMDb access is unstable on your network.",
+            systemImage: "network",
+            tint: LibraryProfileSettingsDestination.metadataImages.tint,
+            spacing: 10
+        ) {
 
             LibraryProfileSettingsToggleRow(
                 title: "Use TMDb Proxy",
@@ -94,8 +107,6 @@ struct LibraryProfileTMDbConnectionSection: View {
                 action: onChangeAPIKey
             )
         }
-        .padding(14)
-        .libraryProfileInsetPanel(cornerRadius: 22, tint: LibraryProfileSettingsDestination.metadataImages.tint)
         .alert("TMDb Proxy Updated", isPresented: $showRestartAlert) {
             Button("OK") {}
         } message: {
@@ -151,6 +162,82 @@ struct LibraryProfileTrackingSettingsSection: View {
     private func handleScoringEnabledChange(old: Bool, new: Bool) {
         guard old != new, !new, store.groupStrategy == .score else { return }
         store.groupStrategy = .none
+    }
+}
+
+fileprivate struct LibraryProfileOpenInSettingsSection: View {
+    @AppStorage(.libraryOpenInSwipeDestination)
+    private var swipeDestination: EntryOpenInSwipeDestination = .ask
+
+    var body: some View {
+        // Capture the value before the section's escaping content closure so SwiftUI
+        // tracks this body's dependency and sees a changed value in the menu content.
+        let selection = swipeDestination
+
+        LibraryProfileSettingsSection(
+            "Open In", systemImage: EntryOpenInL10n.systemImage,
+            tint: LibraryProfileSettingsDestination.appearance.tint
+        ) {
+            #if os(macOS)
+                LabeledContent("Swipe Action Opens") {
+                    Menu {
+                        options(selection: selection)
+                    } label: {
+                        Text(selection.title)
+                    }
+                    .fixedSize()
+                }
+            #else
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    Text("Swipe Action Opens")
+                        .settingsRowTitleFont()
+                    Spacer(minLength: 12)
+                    Menu {
+                        options(selection: selection)
+                    } label: {
+                        LibraryProfileSelectionCapsule(
+                            title: selection.title,
+                            tint: LibraryProfileSettingsDestination.appearance.tint
+                        )
+                    }
+                    .customLabeledMenu()
+                }
+                .padding(.vertical, 2)
+            #endif
+        }
+    }
+
+    /// Menu toggles rather than a `Picker`, which ignores `.disabled` on individual options.
+    ///
+    /// Apps that aren't installed can't be chosen; the swipe still asks if a chosen app is removed later.
+    private func options(selection: EntryOpenInSwipeDestination) -> some View {
+        ForEach(EntryOpenInSwipeDestination.allCases, id: \.self) { destination in
+            let isInstalled = isAvailable(destination)
+            Toggle(
+                isOn: Binding(
+                    get: { selection == destination },
+                    set: { if $0 { swipeDestination = destination } }
+                )
+            ) {
+                optionTitle(destination, isInstalled: isInstalled)
+            }
+            .disabled(!isInstalled)
+        }
+    }
+
+    @ViewBuilder
+    private func optionTitle(_ destination: EntryOpenInSwipeDestination, isInstalled: Bool) -> some View {
+        Text(destination.title)
+        if !isInstalled {
+            Text(EntryOpenInL10n.notInstalled)
+        }
+    }
+
+    private func isAvailable(_ destination: EntryOpenInSwipeDestination) -> Bool {
+        switch destination {
+        case .ask: true
+        case .app(let app): app.isInstalled
+        }
     }
 }
 

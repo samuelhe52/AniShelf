@@ -75,6 +75,31 @@ struct LibraryProfileActionRow: View {
     let action: () -> Void
 
     var body: some View {
+        #if os(macOS)
+            macRow
+        #else
+            touchRow
+        #endif
+    }
+
+    #if os(macOS)
+        /// A form row with a push button, as in System Settings.
+        ///
+        /// A chevron would read as
+        /// navigation, but every action row runs a command or opens a sheet.
+        private var macRow: some View {
+            LabeledContent {
+                Button(role: role, action: action) {
+                    Text(title)
+                }
+                .fixedSize()
+            } label: {
+                Text(subtitle)
+            }
+        }
+    #endif
+
+    private var touchRow: some View {
         Button(role: role, action: action) {
             HStack(spacing: 12) {
                 if showsIcon {
@@ -106,10 +131,13 @@ struct LibraryProfileActionDivider: View {
     var leadingInset: CGFloat = 58
 
     var body: some View {
-        Rectangle()
-            .fill(.primary.opacity(0.075))
-            .frame(height: 1)
-            .padding(.leading, leadingInset)
+        // Mac form rows draw their own separators.
+        #if !os(macOS)
+            Rectangle()
+                .fill(.primary.opacity(0.075))
+                .frame(height: 1)
+                .padding(.leading, leadingInset)
+        #endif
     }
 }
 
@@ -157,36 +185,51 @@ struct LibraryProfileSettingIcon: View {
     }
 }
 
-struct LibraryProfileSelectionCapsule: View {
-    let title: LocalizedStringResource
-    let tint: Color
+/// The iOS menu label for a settings choice. The Mac uses native pop-up pickers instead.
+#if !os(macOS)
+    struct LibraryProfileSelectionCapsule: View {
+        let title: LocalizedStringResource
+        let tint: Color
 
-    var body: some View {
-        capsuleContent(title: title)
-            .foregroundStyle(tint)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background {
-                Capsule(style: .continuous)
-                    .fill(tint.opacity(0.12))
-            }
-            .overlay {
-                Capsule(style: .continuous)
-                    .stroke(tint.opacity(0.18), lineWidth: 1)
-            }
-    }
-
-    @ViewBuilder
-    private func capsuleContent(title: LocalizedStringResource) -> some View {
-        HStack(spacing: 6) {
-            Text(title)
-                .font(.footnote.weight(.semibold))
-                .lineLimit(1)
-
-            Image(systemName: "chevron.down")
-                .font(.caption2.weight(.semibold))
+        var body: some View {
+            capsuleContent(title: title)
                 .foregroundStyle(tint)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background {
+                    Capsule(style: .continuous)
+                        .fill(tint.opacity(0.12))
+                }
+                .overlay {
+                    Capsule(style: .continuous)
+                        .stroke(tint.opacity(0.18), lineWidth: 1)
+                }
         }
+
+        @ViewBuilder
+        private func capsuleContent(title: LocalizedStringResource) -> some View {
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(.footnote.weight(.semibold))
+                    .lineLimit(1)
+
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(tint)
+            }
+        }
+    }
+#endif
+
+extension View {
+    /// A settings command button: the standard push button on the Mac, the tinted touch
+    /// button on iOS.
+    @ViewBuilder func libraryProfileCommandButtonStyle(tint: Color) -> some View {
+        #if os(macOS)
+            buttonStyle(.bordered)
+        #else
+            buttonStyle(LibraryProfileCommandButtonStyle(tint: tint, filled: false))
+        #endif
     }
 }
 
@@ -198,6 +241,10 @@ struct LibraryProfileCommandButtonStyle: ButtonStyle {
     let filled: Bool
 
     func makeBody(configuration: Configuration) -> some View {
+        touchBody(configuration: configuration)
+    }
+
+    private func touchBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(filled ? .white : tint)
@@ -255,27 +302,62 @@ struct LibraryProfileSettingsToggleRow: View {
     var tint: Color? = nil
 
     var body: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 3) {
+        #if os(macOS)
+            // A standard form switch with its description below the title.
+            Toggle(isOn: $isOn) {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
                 Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer(minLength: 12)
-            Toggle(title, isOn: $isOn)
-                .labelsHidden()
-                .tint(tint ?? pageTint)
-                .scaleEffect(0.78, anchor: .trailing)
-                .frame(width: 42, height: 26, alignment: .trailing)
-        }
-        .padding(.vertical, 2)
+            .toggleStyle(.switch)
+        #else
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 12)
+                Toggle(title, isOn: $isOn)
+                    .labelsHidden()
+                    .tint(tint ?? pageTint)
+                    .scaleEffect(0.78, anchor: .trailing)
+                    .frame(width: 42, height: 26, alignment: .trailing)
+            }
+            .padding(.vertical, 2)
+        #endif
     }
 }
 
 extension EnvironmentValues {
     /// The pushed settings page's destination tint; toggles without an explicit tint use it.
     @Entry var libraryProfilePageTint: Color = .mint
+}
+
+/// Settings rows stacked in an iOS card; on the Mac each stays its own form row.
+struct LibraryProfileSettingsRows<Content: View>: View {
+    var alignment: HorizontalAlignment = .leading
+    var spacing: CGFloat = 10
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        #if os(macOS)
+            Group(content: content)
+        #else
+            VStack(alignment: alignment, spacing: spacing, content: content)
+        #endif
+    }
+}
+
+extension View {
+    /// A settings row title: regular body text in a Mac form, compact semibold in iOS cards.
+    @ViewBuilder func settingsRowTitleFont() -> some View {
+        #if os(macOS)
+            self
+        #else
+            font(.subheadline.weight(.semibold))
+        #endif
+    }
 }

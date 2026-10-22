@@ -7,7 +7,6 @@
 
 import Foundation
 import Testing
-import UIKit
 
 @testable import DataProvider
 @testable import MyAnimeList
@@ -42,12 +41,14 @@ struct UserEntryInfoAndLibraryStatsTests {
         #expect(first.dateStarted == nil)
         #expect(second.dateFinished == nil)
 
-        LibraryBatchAction.score(5).apply(to: entries)
-        #expect(first.score == 5)
-        #expect(second.score == 5)
+        LibraryBatchAction.score(EntryScore(halves: 9)).apply(to: entries)
+        #expect(first.score == 4)
+        #expect(first.scoreHasHalf)
+        #expect(second.entryScore == EntryScore(halves: 9))
 
         LibraryBatchAction.score(nil).apply(to: entries)
         #expect(first.score == nil)
+        #expect(!first.scoreHasHalf)
         #expect(second.score == nil)
     }
 
@@ -69,9 +70,9 @@ struct UserEntryInfoAndLibraryStatsTests {
         let entry = AnimeEntry.template(id: 101)
         let originalUserInfo = entry.userInfo
 
-        entry.setScore(4)
+        entry.setEntryScore(EntryScore(halves: 9))
         #expect(entry.score == 4)
-        #expect(entry.userInfo.score == 4)
+        #expect(entry.userInfo.entryScore == EntryScore(halves: 9))
         #expect(entry.userInfoHasChanges(comparedTo: originalUserInfo))
 
         let encoded = try JSONEncoder().encode(entry.userInfo)
@@ -80,11 +81,12 @@ struct UserEntryInfoAndLibraryStatsTests {
 
         let restored = AnimeEntry.template(id: 202)
         restored.updateUserInfo(from: decoded)
-        #expect(restored.score == 4)
+        #expect(restored.entryScore == EntryScore(halves: 9))
         #expect(restored.userInfo == decoded)
 
         entry.setScore(nil)
         #expect(entry.score == nil)
+        #expect(!entry.scoreHasHalf)
         #expect(!entry.userInfoHasChanges(comparedTo: originalUserInfo))
     }
 

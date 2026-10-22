@@ -467,7 +467,7 @@ fileprivate struct TMDbLinkRow: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
             .background(
-                Color(.secondarySystemBackground).opacity(0.72),
+                Color.platformSecondarySystemBackground.opacity(0.72),
                 in: RoundedRectangle(cornerRadius: 16, style: .continuous)
             )
             .contentShape(Rectangle())
@@ -492,7 +492,7 @@ fileprivate struct TMDbOnboardingNavigation: View {
                         .font(.headline.weight(.semibold))
                         .frame(width: 50, height: 50)
                         .background(
-                            Color(.secondarySystemBackground),
+                            Color.platformSecondarySystemBackground,
                             in: RoundedRectangle(cornerRadius: 18, style: .continuous)
                         )
                 }

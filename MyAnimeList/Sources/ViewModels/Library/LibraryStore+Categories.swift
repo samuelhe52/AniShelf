@@ -8,16 +8,13 @@
 import Foundation
 
 extension LibraryStore {
-    var activeCategory: LibraryCategory? {
-        guard categoriesEnabled, let activeCategoryID else { return nil }
-        return categories.first { $0.id == activeCategoryID }
-    }
-
     var knownCategoryIDs: Set<LibraryCategory.ID> {
         Set(categories.map(\.id))
     }
 
-    /// Number of library entries in each category. IDs of deleted categories are not counted.
+    /// Number of library entries in each category.
+    ///
+    /// IDs of deleted categories are not counted.
     var categoryEntryCounts: [LibraryCategory.ID: Int] {
         let known = knownCategoryIDs
         var counts: [LibraryCategory.ID: Int] = [:]
@@ -61,7 +58,9 @@ extension LibraryStore {
         return true
     }
 
-    /// Removes only the definition. Entries keep the stale ID: reads ignore unknown IDs,
+    /// Removes only the definition.
+    ///
+    /// Entries keep the stale ID: reads ignore unknown IDs,
     /// and the next membership write on an entry drops them. This avoids rewriting and
     /// re-uploading every member entry.
     func deleteCategory(_ id: LibraryCategory.ID) {

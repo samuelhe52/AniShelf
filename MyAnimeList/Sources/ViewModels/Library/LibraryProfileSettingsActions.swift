@@ -176,8 +176,22 @@ final class LibraryProfileSettingsActions {
         for store: LibraryStore,
         options: LibraryRefreshOptions
     ) {
+        // Every window and the menu bar can start a refresh; overlapping runs would double the
+        // TMDb requests and fight over the progress toast (docs-ai 028).
+        guard !store.isRefreshingAllMetadata else {
+            libraryStoreLogger.info("Skipped a metadata refresh request while one is running.")
+            // Finish this caller's reporter too, such as What's New's in-progress button.
+            options.reporter.report(
+                .refreshComplete(
+                    .init(state: .partialComplete, messageResource: "Metadata is already refreshing.")
+                )
+            )
+            return
+        }
+        store.isRefreshingAllMetadata = true
         let modelContainer = store.dataProvider.sharedModelContainer
         Task {
+            defer { store.isRefreshingAllMetadata = false }
             do {
                 let metadataRefreshWriter = LibraryMetadataRefreshWriter(
                     modelContainer: modelContainer

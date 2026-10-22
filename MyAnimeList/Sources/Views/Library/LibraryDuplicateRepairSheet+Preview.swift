@@ -18,7 +18,7 @@ fileprivate struct LibraryDuplicateRepairSheetPreviewHost: View {
     }
 
     var body: some View {
-        Color(.systemGroupedBackground)
+        Color.platformSystemGroupedBackground
             .ignoresSafeArea()
             .sheet(isPresented: duplicateRepairPresented) {
                 LibraryDuplicateRepairSheet(store: store)

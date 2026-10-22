@@ -17,7 +17,7 @@ enum LibraryProfileSettingsLayout: Equatable {
 
 struct LibraryProfileSettingsLayoutPolicy {
     func layout(
-        horizontalSizeClass: UserInterfaceSizeClass?,
+        horizontalSizeClass: PlatformHorizontalSizeClass?,
         dynamicTypeSize: DynamicTypeSize
     ) -> LibraryProfileSettingsLayout {
         guard horizontalSizeClass == .regular, !dynamicTypeSize.isAccessibilitySize else {
@@ -38,6 +38,17 @@ enum LibraryProfileSettingsDestination: Hashable, CaseIterable {
         case .reminders: "Airing & Reminders"
         case .metadataImages: "Metadata & Images"
         case .syncData: "Sync & Data"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .language: "globe"
+        case .libraryTracking: "slider.horizontal.3"
+        case .appearance: "rectangle.3.group.fill"
+        case .reminders: "bell.badge.fill"
+        case .metadataImages: "photo.stack"
+        case .syncData: "icloud"
         }
     }
 
@@ -147,7 +158,7 @@ struct LibraryProfileStats: Equatable {
     }
 }
 
-enum LibraryProfileRuntimeMode: Equatable {
+enum LibraryProfileRuntimeMode: Hashable {
     case total
     case watched
     case planned

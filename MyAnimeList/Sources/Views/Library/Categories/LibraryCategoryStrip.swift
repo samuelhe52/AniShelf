@@ -6,7 +6,12 @@
 //
 
 import SwiftUI
-import UIKit
+
+#if os(macOS)
+    import AppKit
+#else
+    import UIKit
+#endif
 
 /// A pinned category switcher.
 ///
@@ -14,6 +19,7 @@ import UIKit
 /// so leaving List/Grid or entering multi-selection also ends reordering.
 struct LibraryCategoryStrip: View {
     @Environment(LibraryStore.self) private var store
+    @Environment(LibraryBrowseScope.self) private var scope
     let openCategoryManager: () -> Void
     let allowsCategoryActions: Bool
 
@@ -34,7 +40,7 @@ struct LibraryCategoryStrip: View {
     @State private var deletingCategory: LibraryCategory?
     @State private var viewportWidth: CGFloat = 0
 
-    private var selectedTabID: String { store.activeCategoryID ?? "all" }
+    private var selectedTabID: String { scope.activeCategoryID ?? "all" }
     private var reorderAnimation: Animation { .bouncy }
     private var displayedCategories: [LibraryCategory] {
         guard let draftOrder else { return store.categories }
@@ -54,8 +60,8 @@ struct LibraryCategoryStrip: View {
             ScrollView(.horizontal) {
                 HStack(spacing: 4) {
                     if isReordering {
-                        tabLabel(Text(LocalizedStringResource("All")), isSelected: store.activeCategoryID == nil)
-                            .accessibilityAddTraits(store.activeCategoryID == nil ? .isSelected : [])
+                        tabLabel(Text(LocalizedStringResource("All")), isSelected: scope.activeCategoryID == nil)
+                            .accessibilityAddTraits(scope.activeCategoryID == nil ? .isSelected : [])
                             .measureTabWidth("all", in: $tabWidths)
                             .id("all")
                     } else {
@@ -105,7 +111,7 @@ struct LibraryCategoryStrip: View {
                     ended: { finishDrag(commit: $0) }
                 )
             )
-            .onChange(of: store.activeCategoryID, initial: true) {
+            .onChange(of: scope.activeCategoryID, initial: true) {
                 withAnimation(.snappy) { proxy.scrollTo(selectedTabID, anchor: .center) }
             }
             .onChange(of: store.categories) {
@@ -127,7 +133,7 @@ struct LibraryCategoryStrip: View {
         .glassEffect(.regular, in: .capsule)
         .padding(.horizontal, 16)
         .padding(.bottom, 4)
-        .animation(.snappy, value: store.activeCategoryID)
+        .animation(.snappy, value: scope.activeCategoryID)
         .animation(reorderAnimation, value: store.categories)
         .sensoryFeedback(.impact(weight: .light), trigger: draggedCategoryID) { _, newValue in
             newValue != nil
@@ -150,9 +156,9 @@ struct LibraryCategoryStrip: View {
     @ViewBuilder
     private func categoryTab(_ category: LibraryCategory) -> some View {
         if isReordering {
-            tabLabel(Text(category.name), isSelected: store.activeCategoryID == category.id)
+            tabLabel(Text(category.name), isSelected: scope.activeCategoryID == category.id)
                 .modifier(CategoryTabWiggle(isActive: draggedCategoryID != category.id))
-                .accessibilityAddTraits(store.activeCategoryID == category.id ? .isSelected : [])
+                .accessibilityAddTraits(scope.activeCategoryID == category.id ? .isSelected : [])
                 .accessibilityHint(Text(LocalizedStringResource("Hold and drag to reorder.")))
                 .accessibilityAction(named: Text(LocalizedStringResource("Move Left"))) {
                     moveAccessibly(category.id, by: -1)
@@ -167,7 +173,7 @@ struct LibraryCategoryStrip: View {
 
     /// Tap selects; long press opens the category actions.
     private func menuTab(_ category: LibraryCategory?, title: Text) -> some View {
-        let isSelected = store.activeCategoryID == category?.id
+        let isSelected = scope.activeCategoryID == category?.id
         return Button {
             select(category?.id)
         } label: {
@@ -184,7 +190,7 @@ struct LibraryCategoryStrip: View {
     }
 
     private func select(_ id: LibraryCategory.ID?) {
-        withAnimation(.snappy) { store.activeCategoryID = id }
+        withAnimation(.snappy) { scope.activeCategoryID = id }
     }
 
     private func tabLabel(_ title: Text, isSelected: Bool) -> some View {
@@ -352,57 +358,89 @@ extension View {
 }
 
 /// A short hold claims the pan; swiping before the hold still scrolls normally.
-fileprivate struct CategoryReorderGesture: UIGestureRecognizerRepresentable {
-    let isEnabled: Bool
-    let coordinateSpace: Namespace.ID
-    let canBegin: (CGPoint) -> Bool
-    let began: (CGPoint) -> Void
-    let moved: (CGPoint) -> Void
-    let ended: (Bool) -> Void
-
-    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator {
-        Coordinator(canBegin: canBegin, converter: converter, coordinateSpace: coordinateSpace)
-    }
-
-    func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
-        let recognizer = UILongPressGestureRecognizer()
-        recognizer.minimumPressDuration = 0.2
-        recognizer.allowableMovement = 4
-        recognizer.delegate = context.coordinator
-        recognizer.isEnabled = isEnabled
-        return recognizer
-    }
-
-    func updateUIGestureRecognizer(_ recognizer: UILongPressGestureRecognizer, context: Context) {
-        context.coordinator.canBegin = canBegin
-        recognizer.isEnabled = isEnabled
-    }
-
-    func handleUIGestureRecognizerAction(_ recognizer: UILongPressGestureRecognizer, context: Context) {
-        let location = context.converter.location(in: .named(coordinateSpace))
-        switch recognizer.state {
-        case .began: began(location)
-        case .changed: moved(location)
-        case .ended: ended(true)
-        case .cancelled, .failed: ended(false)
-        default: break
-        }
-    }
-
-    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
-        var canBegin: (CGPoint) -> Bool
-        let converter: CoordinateSpaceConverter
+#if os(macOS)
+    fileprivate struct CategoryReorderGesture: Gesture {
+        let isEnabled: Bool
         let coordinateSpace: Namespace.ID
+        let canBegin: (CGPoint) -> Bool
+        let began: (CGPoint) -> Void
+        let moved: (CGPoint) -> Void
+        let ended: (Bool) -> Void
+        @State private var dragging = false
 
-        init(canBegin: @escaping (CGPoint) -> Bool, converter: CoordinateSpaceConverter, coordinateSpace: Namespace.ID)
-        {
-            self.canBegin = canBegin
-            self.converter = converter
-            self.coordinateSpace = coordinateSpace
-        }
-
-        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-            canBegin(converter.location(in: .named(coordinateSpace)))
+        var body: some Gesture {
+            DragGesture(minimumDistance: 4, coordinateSpace: .named(coordinateSpace))
+                .onChanged { value in
+                    guard isEnabled, canBegin(value.startLocation) else { return }
+                    if !dragging {
+                        dragging = true
+                        began(value.startLocation)
+                    }
+                    moved(value.location)
+                }
+                .onEnded { _ in
+                    guard dragging else { return }
+                    dragging = false
+                    ended(true)
+                }
         }
     }
-}
+#else
+    fileprivate struct CategoryReorderGesture: UIGestureRecognizerRepresentable {
+        let isEnabled: Bool
+        let coordinateSpace: Namespace.ID
+        let canBegin: (CGPoint) -> Bool
+        let began: (CGPoint) -> Void
+        let moved: (CGPoint) -> Void
+        let ended: (Bool) -> Void
+
+        func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator {
+            Coordinator(canBegin: canBegin, converter: converter, coordinateSpace: coordinateSpace)
+        }
+
+        func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
+            let recognizer = UILongPressGestureRecognizer()
+            recognizer.minimumPressDuration = 0.2
+            recognizer.allowableMovement = 4
+            recognizer.delegate = context.coordinator
+            recognizer.isEnabled = isEnabled
+            return recognizer
+        }
+
+        func updateUIGestureRecognizer(_ recognizer: UILongPressGestureRecognizer, context: Context) {
+            context.coordinator.canBegin = canBegin
+            recognizer.isEnabled = isEnabled
+        }
+
+        func handleUIGestureRecognizerAction(_ recognizer: UILongPressGestureRecognizer, context: Context) {
+            let location = context.converter.location(in: .named(coordinateSpace))
+            switch recognizer.state {
+            case .began: began(location)
+            case .changed: moved(location)
+            case .ended: ended(true)
+            case .cancelled, .failed: ended(false)
+            default: break
+            }
+        }
+
+        final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+            var canBegin: (CGPoint) -> Bool
+            let converter: CoordinateSpaceConverter
+            let coordinateSpace: Namespace.ID
+
+            init(
+                canBegin: @escaping (CGPoint) -> Bool, converter: CoordinateSpaceConverter,
+                coordinateSpace: Namespace.ID
+            ) {
+                self.canBegin = canBegin
+                self.converter = converter
+                self.coordinateSpace = coordinateSpace
+            }
+
+            func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+                canBegin(converter.location(in: .named(coordinateSpace)))
+            }
+        }
+    }
+
+#endif
