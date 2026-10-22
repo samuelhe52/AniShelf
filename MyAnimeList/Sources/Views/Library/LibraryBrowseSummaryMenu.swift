@@ -10,6 +10,7 @@ import SwiftUI
 struct LibraryBrowseSummaryMenu: View {
     let scope: LibraryBrowseScope
     let scoringEnabled: Bool
+    var usesSymbolLabel = false
 
     private var store: LibraryStore { scope.store }
 
@@ -98,7 +99,18 @@ struct LibraryBrowseSummaryMenu: View {
                 )
                 .labelStyle(.iconOnly)
             #else
-                LibraryToolbarSummaryCapsule(primary: filterSummaryResource)
+                if usesSymbolLabel {
+                    Label(
+                        "Sort, group, and filter",
+                        systemImage: activeFilters.isEmpty
+                            ? "line.3.horizontal.decrease.circle"
+                            : "line.3.horizontal.decrease.circle.fill"
+                    )
+                    .labelStyle(.iconOnly)
+                    .accessibilityValue(Text(filterSummaryResource))
+                } else {
+                    LibraryToolbarSummaryCapsule(primary: filterSummaryResource)
+                }
             #endif
         }
         .keepsMenuPresentedAfterAction()

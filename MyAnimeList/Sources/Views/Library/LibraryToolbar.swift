@@ -10,6 +10,7 @@ import SwiftUI
 
 #if !os(macOS)
     struct LibraryToolbar: ToolbarContent {
+        @Environment(\.self) private var environment
         let store: LibraryStore
         let scope: LibraryBrowseScope
         let interaction: LibraryEntryInteractionState
@@ -28,8 +29,74 @@ import SwiftUI
 
         @ToolbarContentBuilder
         var body: some ToolbarContent {
+            if #available(iOS 27.1, *), usesVerticalToolbar {
+                verticalBarContent
+            } else {
+                topBarContent
+                bottomBarContent
+            }
+        }
+
+        private var usesVerticalToolbar: Bool {
+            if #available(iOS 27.1, *) {
+                // Inspector pane ownership is a separate slice; preserve its existing toolbar.
+                return environment.toolbarVerticalEdge != nil && interaction.inspectorPresentation == nil
+            }
+            return false
+        }
+
+        /// iPhone Duo's vertical bar keeps the library header horizontal, since its count and
+        /// category are meaningful text, and moves the bottom controls into the vertical bar as
+        /// symbols (docs-ai 031).
+        @available(iOS 27.1, *)
+        @ToolbarContentBuilder
+        private var verticalBarContent: some ToolbarContent {
             topBarContent
-            bottomBarContent
+            if interaction.isMultiSelecting {
+                ToolbarItem(placement: .platformBottomBar) {
+                    LibrarySelectionDeleteButton(
+                        selectedEntries: selectedEntries,
+                        deleteSelectedEntries: deleteSelectedEntries
+                    )
+                }
+                .visibilityPriority(.low)
+                ToolbarItemGroup(placement: .platformBottomBar) {
+                    LibrarySelectionStatusMenu(selectedEntries: selectedEntries, applyBatchAction: applyBatchAction)
+                    LibrarySelectionFavoriteButton(selectedEntries: selectedEntries, applyBatchAction: applyBatchAction)
+                    if store.categoriesEnabled {
+                        LibrarySelectionCategoryMenu(
+                            store: store, selectedEntries: selectedEntries, applyBatchAction: applyBatchAction)
+                    }
+                }
+                ToolbarOverflowMenu {
+                    LibrarySelectionActionsMenu(
+                        selectedEntries: selectedEntries, scoringEnabled: scoringEnabled,
+                        applyBatchAction: applyBatchAction
+                    ).actions
+                        .disabled(selectedEntries.isEmpty)
+                }
+            } else {
+                ToolbarItem(placement: .platformBottomBar) {
+                    Menu {
+                        Picker("View Style", selection: $libraryViewStyle) {
+                            ForEach(LibraryViewStyle.allCases, id: \.self) { style in
+                                Label(style.nameKey, systemImage: style.systemImageName).tag(style)
+                            }
+                        }
+                        .pickerStyle(.inline)
+                    } label: {
+                        Label("View Style", systemImage: libraryViewStyle.systemImageName)
+                    }
+                }
+                .visibilityPriority(.low)
+                ToolbarItem(placement: .platformBottomBar) {
+                    LibraryBrowseSummaryMenu(scope: scope, scoringEnabled: scoringEnabled, usesSymbolLabel: true)
+                }
+                ToolbarItem(placement: .platformBottomBar) {
+                    LibrarySearchButton(isSearching: $isSearching)
+                }
+                .visibilityPriority(.high)
+            }
         }
 
         @ToolbarContentBuilder
@@ -307,6 +374,15 @@ import SwiftUI
 
         var body: some View {
             Menu {
+                actions
+            } label: {
+                Label("Actions", systemImage: "ellipsis")
+            }
+            .disabled(selectedEntries.isEmpty)
+        }
+
+        var actions: some View {
+            Group {
                 Button("Track Dates", systemImage: "calendar.badge.checkmark") {
                     applyBatchAction(.dateTracking(true))
                 }
@@ -326,10 +402,7 @@ import SwiftUI
                         }
                     }
                 }
-            } label: {
-                Label("Actions", systemImage: "ellipsis")
             }
-            .disabled(selectedEntries.isEmpty)
         }
     }
 
