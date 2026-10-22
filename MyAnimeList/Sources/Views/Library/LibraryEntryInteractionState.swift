@@ -14,14 +14,16 @@
         let host: LibraryEntryDetailHost
         let activation: LibraryEntryDetailActivation
 
-        init(horizontalSizeClass: PlatformHorizontalSizeClass?) {
-            if horizontalSizeClass == .regular {
-                host = .inspector
-                activation = .singleTap
-            } else {
-                host = .sheet
-                activation = .userPreference
-            }
+        /// - Parameters:
+        ///   - horizontalSizeClass: The library's width class, which also sets detail activation.
+        ///   - adaptsInspectorNatively: Whether size-class changes come from a posture change the
+        ///     native inspector adapts to on its own, as on iPhone Duo where the system places a
+        ///     vertical bar. Detail then stays in the inspector, which SwiftUI presents as a sheet at
+        ///     compact width, instead of migrating to the app's sheet (docs-ai 031). iPad window
+        ///     resizing does not reliably re-present a native inspector, so it keeps the migration.
+        init(horizontalSizeClass: PlatformHorizontalSizeClass?, adaptsInspectorNatively: Bool = false) {
+            host = horizontalSizeClass == .regular || adaptsInspectorNatively ? .inspector : .sheet
+            activation = horizontalSizeClass == .regular ? .singleTap : .userPreference
         }
     }
 

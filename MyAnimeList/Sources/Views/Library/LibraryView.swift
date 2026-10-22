@@ -35,6 +35,8 @@ import SwiftUI
         /// The inspector column's presentation, which the system can change on its own across
         /// size-class transitions; `syncInspectorColumn` reconciles it with the detail host.
         @State private var isInspectorColumnPresented = false
+        /// Whether the native inspector adapts across size-class changes, as on iPhone Duo.
+        @State private var adaptsInspectorNatively = false
 
         // Persistent UI preference
         @AppStorage(.libraryScoringEnabled) var scoringEnabled = true
@@ -79,7 +81,8 @@ import SwiftUI
                 isSearching: browse.isSearching,
                 isShowingProfileSettings: showProfileSettings,
                 workspaceState: $inspectorDetailWorkspaceState,
-                persistedLastInspectorDetailEntryIdentity: persistedInspectorDetailEntryIdentity
+                persistedLastInspectorDetailEntryIdentity: persistedInspectorDetailEntryIdentity,
+                adaptsInspectorNatively: $adaptsInspectorNatively
             )
             .libraryWindowBehaviors(
                 store: store,
@@ -188,15 +191,23 @@ import SwiftUI
         ///
         /// Across a size-class change, such as folding or unfolding iPhone Duo, SwiftUI can
         /// dismiss the inspector before `horizontalSizeClass` reaches this view, and can restore a
-        /// column it remembers after the detail has closed. Both are handled on the next main-actor
-        /// turn: a dismissal still current after the size-class update closes the detail, and
-        /// otherwise the column follows the detail host, so a restored column with no detail
-        /// behind it is released instead of staying empty.
+        /// column it remembers after the detail has closed. Both are handled after the change
+        /// settles: a dismissal still current then closes the detail, and otherwise the column
+        /// follows the detail host, so a restored column with no detail behind it is released
+        /// instead of staying empty.
+        ///
+        /// A natively adapting inspector briefly reports `false` and then `true` while it turns into
+        /// a sheet, so its dismissals wait until the presentation has stayed closed.
         private func syncInspectorColumn(
             systemPresented: Bool,
             presentation: LibraryEntryDetailHostPresentation?
         ) {
+            let settlesNativeAdaptation = !systemPresented && adaptsInspectorNatively
             Task { @MainActor in
+                if settlesNativeAdaptation {
+                    try? await Task.sleep(for: .milliseconds(400))
+                    guard !isInspectorColumnPresented else { return }
+                }
                 let current = detailSheetOnScreenID != nil ? nil : interaction.inspectorPresentation
                 if !systemPresented, let presentation, current?.id == presentation.id {
                     interaction.detailHostDidDismiss(presentation)
@@ -412,11 +423,18 @@ import SwiftUI
         // MARK: - Entry Actions
 
         private var detailHostPolicy: LibraryEntryDetailHostPolicy {
-            LibraryEntryDetailHostPolicy(horizontalSizeClass: horizontalSizeClass)
+            LibraryEntryDetailHostPolicy(
+                horizontalSizeClass: horizontalSizeClass,
+                adaptsInspectorNatively: adaptsInspectorNatively
+            )
         }
 
         private var currentDetailActivation: LibraryEntryDetailActivation {
             guard let committedHost = interaction.detailHostPresentation?.host else {
+                return detailHostPolicy.activation
+            }
+            // A natively adapted inspector is a sheet at compact width, so it keeps compact taps.
+            if adaptsInspectorNatively {
                 return detailHostPolicy.activation
             }
             return committedHost == .inspector ? .singleTap : .userPreference

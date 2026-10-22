@@ -109,6 +109,16 @@ struct LibraryEntryInteractionStateTests {
             #expect(unspecifiedPolicy.activation == .userPreference)
         }
 
+        @Test func nativeInspectorAdaptationKeepsTheInspectorWithCompactActivation() {
+            let compactPolicy = LibraryEntryDetailHostPolicy(
+                horizontalSizeClass: .compact,
+                adaptsInspectorNatively: true
+            )
+
+            #expect(compactPolicy.host == .inspector)
+            #expect(compactPolicy.activation == .userPreference)
+        }
+
         @Test(arguments: [LibraryEntryDetailHost.inspector, .sheet])
         @MainActor func visibleHostMigrationWaitsForNativeDisappearance(initialHost: LibraryEntryDetailHost) throws {
             let state = LibraryEntryInteractionState(initialDetailHost: initialHost)

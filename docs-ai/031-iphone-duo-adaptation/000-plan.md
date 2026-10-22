@@ -53,7 +53,9 @@ Agreed problem list, in priority order:
 - No custom layout per device pose. The HIG asks for size-class-driven layouts that
   expand, not per-pose redesigns.
 - No change to the 005 host policy (sheet in compact width, inspector in regular
-  width).
+  width). *Corrected 2026-10-23:* on iPhone Duo the inspector now stays the host at compact
+  width and adapts natively; see [005-native-inspector-adaptation.md](005-native-inspector-adaptation.md).
+  Other devices keep the 005 policy.
 
 ## Design / approach
 
@@ -134,3 +136,4 @@ Key files: `MyAnimeList/Sources/Views/Library/LibraryView.swift`,
 - Updated 2026-10-22: Slice 1 stages native host migration on disappearance, preserves 002's deferred inspector handling, and adds bounded recovery for a lost callback — see [003-native-host-migration.md](003-native-host-migration.md). Duo first-pass validation is complete; Claude Code review remains. Slice 2 has not started.
 - Updated 2026-10-22: Slice 1 was accepted in Claude Code's review appended to 003. Slice 2 is a hybrid toolbar. Where the system requests vertical bars, the library header (count/category, Select, profile) stays horizontal and unchanged, and the bottom controls move into the vertical bar as symbols. Elsewhere the toolbar is unchanged from `76f6012`. An all-vertical first version was rejected after the maintainer's visual pass. From now on Claude Code implements the remaining slices directly, without Codex. Apple guidance, the rejected version, and validation: [004-vertical-library-toolbar.md](004-vertical-library-toolbar.md). New for P3: the inner-landscape gallery now reaches the multi-card shelf, and its date pills wrap. Slice 3 and P3 have not started.
 - Updated 2026-10-22: Two fixes after the maintainer's visual pass, both changing only Duo layouts. The hero fix extends the detail hero artwork under the vertical bar with `backgroundExtensionEffect(isEnabled:)`, enabled only when `toolbarVerticalEdge != nil`, as Apple's preparation guide recommends for hero images. The title and metadata stay inset. This removes the blank strip beside the cover sheet and the inner-landscape inspector, which the maintainer identified as the main remaining problem. `5ff92f7` keeps the profile hero count on one line beside the cover's vertical bar by letting the number shrink; layouts that already fit are unchanged. A stacked fallback was tried first and rejected because the large rounded digits misaligned with the title. The system's minimization of the leftover horizontal header on scroll (`toolbarMinimizationBehavior` `.automatic`) is kept deliberately.
+- Updated 2026-10-23: Folding no longer closes and reopens the inspector. On iPhone Duo the native inspector carries detail across folds, and the app's own migration remains for iPad. This corrects the non-goal above — see [005-native-inspector-adaptation.md](005-native-inspector-adaptation.md)
