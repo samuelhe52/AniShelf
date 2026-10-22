@@ -43,6 +43,7 @@ historical runtime scenario was rerun. Entry 010 remains an unimplemented propos
 | 028 | 2026-10-18 | [Window state ownership](028-window-state-ownership/000-plan.md) | Implemented — maintainer accepted | [Action](028-window-state-ownership/001-action.md), [local browse preferences](028-window-state-ownership/002-local-browse-preferences.md) |
 | 029 | 2026-10-18 | [Half-star scores](029-half-star-scores/000-plan.md) | Implemented — maintainer accepted | [Action](029-half-star-scores/001-action.md) |
 | 030 | 2026-10-20 | [Open In Infuse and Kazumi](030-open-in-players/000-plan.md) | Implemented; Bangumi mapping deferred | [Action](030-open-in-players/001-action.md) |
+| 031 | 2026-10-22 | [iPhone Duo adaptation](031-iphone-duo-adaptation/000-plan.md) | In progress — empty inspector fixed; slice 1 awaiting review | [Empty inspector column](031-iphone-duo-adaptation/002-empty-inspector-column.md), [native host migration](031-iphone-duo-adaptation/003-native-host-migration.md) |
 
 ## Find a contract or source
 

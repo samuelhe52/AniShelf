@@ -248,6 +248,7 @@ struct EntryDetailSessionTests {
                 resolveEntry: { $0 == entry.libraryIdentity ? entry : nil }
             )
             let originalSession = try #require(store.presentedSession)
+            state.detailHostDidAppear(inspectorPresentation)
             originalSession.scrollPosition.scrollTo(y: 312)
             originalSession.isEditingDetails = true
             originalSession.isCharacterExpanded = false
@@ -258,6 +259,14 @@ struct EntryDetailSessionTests {
                 .sheet,
                 migrationBlocked: false
             )
+            #expect(state.detailSheetPresentation == nil)
+            store.synchronizePresentedDetail(
+                identity: state.presentedDetailEntryID,
+                repository: repository,
+                resolveEntry: { $0 == entry.libraryIdentity ? entry : nil }
+            )
+            #expect(store.presentedSession === originalSession)
+            state.detailHostDidDisappear(inspectorPresentation, migrationBlocked: false)
             store.synchronizePresentedDetail(
                 identity: state.presentedDetailEntryID,
                 repository: repository,
@@ -269,11 +278,14 @@ struct EntryDetailSessionTests {
             #expect(sheetPresentation.id != inspectorPresentation.id)
             #expect(sheetPresentation.detailPresentationID == canonicalPresentation.id)
             #expect(sheetSession === originalSession)
+            state.detailHostDidAppear(sheetPresentation)
 
             state.requestDetailHost(
                 .inspector,
                 migrationBlocked: false
             )
+            #expect(state.inspectorPresentation == nil)
+            state.detailHostDidDisappear(sheetPresentation, migrationBlocked: false)
             store.synchronizePresentedDetail(
                 identity: state.presentedDetailEntryID,
                 repository: repository,

@@ -109,6 +109,113 @@ struct LibraryEntryInteractionStateTests {
             #expect(unspecifiedPolicy.activation == .userPreference)
         }
 
+        @Test(arguments: [LibraryEntryDetailHost.inspector, .sheet])
+        @MainActor func visibleHostMigrationWaitsForNativeDisappearance(initialHost: LibraryEntryDetailHost) throws {
+            let state = LibraryEntryInteractionState(initialDetailHost: initialHost)
+            let entry = AnimeEntry.template(id: 42)
+            state.setEditingEntry(entry)
+            let original = try #require(state.detailHostPresentation)
+            let editRequest = try #require(state.detailEditRequest)
+            state.detailHostDidAppear(original)
+            let destination: LibraryEntryDetailHost = initialHost == .inspector ? .sheet : .inspector
+
+            state.requestDetailHost(destination, migrationBlocked: false)
+
+            #expect(state.retiringDetailHostPresentationID == original.id)
+            #expect(state.detailHostPresentation?.id == original.id)
+            #expect(state.detailHostPresentation?.isHostPresented == false)
+            #expect(state.detailSheetPresentation == nil)
+            #expect(state.inspectorPresentation == nil)
+            #expect(state.presentedDetailEntryID == entry.libraryIdentity)
+            #expect(!state.isCurrentDetailHostPresentation(original.id))
+            state.consumeDetailEditRequest(editRequest.id, fromHostPresentationID: original.id)
+            #expect(state.detailEditRequest?.id == editRequest.id)
+            #expect(state.detailEditRequest?.hostPresentationID == nil)
+            state.dismissDetails(ifHostPresentationID: original.id)
+            #expect(state.presentedDetailEntryID == entry.libraryIdentity)
+
+            state.detailHostDidDisappear(original, migrationBlocked: false)
+            let replacement = try #require(state.detailHostPresentation)
+            #expect(replacement.host == destination)
+            #expect(replacement.id != original.id)
+            #expect(replacement.isHostPresented)
+            #expect(state.detailEditRequest?.hostPresentationID == replacement.id)
+            state.detailHostDidAppear(replacement)
+            state.detailHostDidDisappear(original, migrationBlocked: false)
+            #expect(state.detailHostPresentation == replacement)
+        }
+
+        @Test @MainActor func retirementUsesTheLatestDestinationAndEntry() throws {
+            let state = LibraryEntryInteractionState(initialDetailHost: .inspector)
+            let first = AnimeEntry.template(id: 42)
+            let second = AnimeEntry.template(id: 43)
+            state.openDetails(for: first)
+            let original = try #require(state.detailHostPresentation)
+            state.detailHostDidAppear(original)
+            state.requestDetailHost(.sheet, migrationBlocked: false)
+            state.setEditingEntry(second)
+            state.requestDetailHost(.inspector, migrationBlocked: false)
+
+            #expect(state.retiringDetailHostPresentationID == original.id)
+            #expect(state.detailEditRequest?.hostPresentationID == nil)
+            state.detailHostDidDisappear(original, migrationBlocked: false)
+            let replacement = try #require(state.inspectorPresentation)
+            #expect(replacement.entryIdentity == second.libraryIdentity)
+            #expect(replacement.id != original.id)
+            #expect(state.detailEditRequest?.hostPresentationID == replacement.id)
+        }
+
+        @Test(arguments: [LibraryEntryDetailHost.inspector, .sheet])
+        @MainActor func lostDisappearanceCanRecoverAndOpenDetail(initialHost: LibraryEntryDetailHost) throws {
+            let state = LibraryEntryInteractionState(initialDetailHost: initialHost)
+            let first = AnimeEntry.template(id: 42)
+            let second = AnimeEntry.template(id: 43)
+            state.openDetails(for: first)
+            let original = try #require(state.detailHostPresentation)
+            state.detailHostDidAppear(original)
+            let destination: LibraryEntryDetailHost = initialHost == .inspector ? .sheet : .inspector
+            state.requestDetailHost(destination, migrationBlocked: false)
+            state.setEditingEntry(second)
+
+            // Simulate the watchdog firing without any native disappearance callback.
+            state.recoverDetailHostRetirement(original.id, migrationBlocked: false)
+
+            let replacement = try #require(state.detailHostPresentation)
+            #expect(state.retiringDetailHostPresentationID == nil)
+            #expect(replacement.host == destination)
+            #expect(replacement.entryIdentity == second.libraryIdentity)
+            #expect(replacement.isHostPresented)
+            #expect(state.detailEditRequest?.hostPresentationID == replacement.id)
+            state.detailHostDidAppear(replacement)
+            state.requestDetailHost(initialHost, migrationBlocked: false)
+
+            // A stale timer or callback must not finish a subsequent retirement.
+            state.recoverDetailHostRetirement(original.id, migrationBlocked: false)
+            state.detailHostDidDisappear(original, migrationBlocked: false)
+            #expect(state.retiringDetailHostPresentationID == replacement.id)
+            state.detailHostDidDisappear(replacement, migrationBlocked: false)
+            state.dismissDetails()
+            state.openDetails(for: first)
+            #expect(state.detailHostPresentation?.isHostPresented == true)
+            #expect(state.presentedDetailEntryID == first.libraryIdentity)
+        }
+
+        @Test @MainActor func retirementRecoveryRespectsMigrationBlock() throws {
+            let state = LibraryEntryInteractionState(initialDetailHost: .inspector)
+            let entry = AnimeEntry.template(id: 42)
+            state.openDetails(for: entry)
+            let original = try #require(state.inspectorPresentation)
+            state.detailHostDidAppear(original)
+            state.requestDetailHost(.sheet, migrationBlocked: false)
+
+            state.recoverDetailHostRetirement(original.id, migrationBlocked: true)
+
+            #expect(state.detailSheetPresentation == nil)
+            #expect(state.retiringDetailHostPresentationID == nil)
+            state.reconcileDetailHostIfPossible(migrationBlocked: false)
+            #expect(state.detailSheetPresentation?.entryIdentity == entry.libraryIdentity)
+        }
+
         @Test @MainActor func editingPresentsDetailAndRequestsTheEditingSection() throws {
             let state = LibraryEntryInteractionState()
             let entry = AnimeEntry.template(id: 42)
@@ -330,6 +437,7 @@ struct LibraryEntryInteractionStateTests {
             state.openDetails(for: entry)
             let canonicalPresentation = try #require(state.detailPresentation)
             let inspectorPresentation = try #require(state.inspectorPresentation)
+            state.detailHostDidAppear(inspectorPresentation)
 
             state.requestDetailHost(
                 .sheet,
@@ -337,6 +445,7 @@ struct LibraryEntryInteractionStateTests {
                 rootPresentationActive: true
             )
             state.detailHostDidDismiss(inspectorPresentation)
+            state.detailHostDidDisappear(inspectorPresentation, migrationBlocked: false)
 
             #expect(state.isDetailDormantUntilInspector)
             #expect(state.detailPresentation?.id == canonicalPresentation.id)

@@ -30,6 +30,11 @@ import SwiftUI
         @State private var showCategoryManager = false
         @State private var isReorderingCategories = false
         @State private var inspectorDetailWorkspaceState = LibraryInspectorDetailWorkspaceState()
+        /// The detail sheet still on screen, including its dismissal animation.
+        @State private var detailSheetOnScreenID: UUID?
+        /// The inspector column's presentation, which the system can change on its own across
+        /// size-class transitions; `syncInspectorColumn` reconciles it with the detail host.
+        @State private var isInspectorColumnPresented = false
 
         // Persistent UI preference
         @AppStorage(.libraryScoringEnabled) var scoringEnabled = true
@@ -108,7 +113,17 @@ import SwiftUI
             let detailSession = detailSessionStore.session(
                 for: interaction.presentedDetailEntryID
             )
-            let inspectorPresentation = interaction.inspectorPresentation
+            // A size-class change can move detail from the sheet to the inspector while the sheet
+            // is still animating away. Presenting the inspector during that dismissal makes SwiftUI
+            // report a spurious inspector dismissal and leave an empty column (docs-ai 031), so the
+            // inspector waits for the sheet to leave.
+            let inspectorPresentation =
+                detailSheetOnScreenID != nil ? nil : interaction.inspectorPresentation
+            // Keep native inspector content mounted throughout its outgoing transition.
+            let inspectorContentPresentation = interaction.detailHostPresentation.flatMap {
+                $0.host == .inspector ? $0 : nil
+            }
+            let retiringPresentationID = interaction.retiringDetailHostPresentationID
             let presentedSheetRoute = interaction.activeSheetRoute
             let activeSheetRoute = Binding<LibraryEntrySheetRoute?>(
                 get: { interaction.activeSheetRoute },
@@ -123,24 +138,42 @@ import SwiftUI
                 .environment(\.libraryEntryDetailActivation, currentDetailActivation)
                 .inspector(
                     isPresented: Binding(
-                        get: {
-                            guard let inspectorPresentation else { return false }
-                            return interaction.inspectorPresentation?.id == inspectorPresentation.id
-                        },
+                        get: { isInspectorColumnPresented },
                         set: { isPresented in
-                            guard !isPresented, let inspectorPresentation else { return }
-                            interaction.detailHostDidDismiss(inspectorPresentation)
+                            isInspectorColumnPresented = isPresented
+                            syncInspectorColumn(systemPresented: isPresented, presentation: inspectorPresentation)
                         }
                     )
                 ) {
-                    if let inspectorPresentation, let detailSession {
-                        detailHostContent(presentation: inspectorPresentation, session: detailSession)
-                            .presentationBackground(inspectorPresentation.host.pageBackground)
+                    if let inspectorContentPresentation, let detailSession {
+                        detailHostContent(presentation: inspectorContentPresentation, session: detailSession)
+                            .presentationBackground(inspectorContentPresentation.host.pageBackground)
                             .inspectorColumnWidth(min: 400, ideal: 480, max: 520)
                     }
                 }
+                .onChange(of: inspectorPresentation?.id, initial: true) {
+                    isInspectorColumnPresented = inspectorPresentation != nil
+                }
                 .sheet(item: activeSheetRoute) { route in
                     sheetContent(for: route, detailSession: detailSession)
+                }
+                .task(id: retiringPresentationID) {
+                    guard let retiringPresentationID else { return }
+                    // Normal migration finishes on native disappearance. Bound the wait in case
+                    // SwiftUI drops that callback while rebuilding the presentation hierarchy.
+                    do {
+                        try await Task.sleep(for: .seconds(2))
+                    } catch {
+                        return
+                    }
+                    guard interaction.retiringDetailHostPresentationID == retiringPresentationID else { return }
+                    if detailSheetOnScreenID == retiringPresentationID {
+                        detailSheetOnScreenID = nil
+                    }
+                    interaction.recoverDetailHostRetirement(
+                        retiringPresentationID,
+                        migrationBlocked: detailHostMigrationBlocked
+                    )
                 }
                 .libraryEntryActionOverlays(
                     state: interaction.actions,
@@ -149,6 +182,28 @@ import SwiftUI
                     },
                     resolveEntry: { store.repository.existingEntry(identity: $0) }
                 )
+        }
+
+        /// Reconciles a presentation change the system made to the inspector column.
+        ///
+        /// Across a size-class change, such as folding or unfolding iPhone Duo, SwiftUI can
+        /// dismiss the inspector before `horizontalSizeClass` reaches this view, and can restore a
+        /// column it remembers after the detail has closed. Both are handled on the next main-actor
+        /// turn: a dismissal still current after the size-class update closes the detail, and
+        /// otherwise the column follows the detail host, so a restored column with no detail
+        /// behind it is released instead of staying empty.
+        private func syncInspectorColumn(
+            systemPresented: Bool,
+            presentation: LibraryEntryDetailHostPresentation?
+        ) {
+            Task { @MainActor in
+                let current = detailSheetOnScreenID != nil ? nil : interaction.inspectorPresentation
+                if !systemPresented, let presentation, current?.id == presentation.id {
+                    interaction.detailHostDidDismiss(presentation)
+                    return
+                }
+                isInspectorColumnPresented = current != nil
+            }
         }
 
         @ViewBuilder
@@ -164,6 +219,12 @@ import SwiftUI
                         session: detailSession
                     )
                     .presentationBackground(presentation.host.pageBackground)
+                    .onAppear { detailSheetOnScreenID = presentation.id }
+                    .onDisappear {
+                        if detailSheetOnScreenID == presentation.id {
+                            detailSheetOnScreenID = nil
+                        }
+                    }
                 }
             case .workflow(let presentation):
                 LibraryEntryWorkflowSheet(store: store, presentation: presentation)
@@ -200,6 +261,12 @@ import SwiftUI
                 )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onAppear {
+                interaction.detailHostDidAppear(presentation)
+            }
+            .onDisappear {
+                interaction.detailHostDidDisappear(presentation, migrationBlocked: session.blocksHostMigration)
+            }
         }
 
         private var libraryBrowserStack: some View {

@@ -77,6 +77,8 @@
         private(set) var detailHostPresentation: LibraryEntryDetailHostPresentation?
         private(set) var isInteractivelyResizing = false
         private(set) var isDetailDormantUntilInspector = false
+        private(set) var retiringDetailHostPresentationID: UUID?
+        private var visibleDetailHostPresentationID: UUID?
 
         init(initialDetailHost: LibraryEntryDetailHost = .sheet) {
             actions = LibraryEntryActionState()
@@ -169,15 +171,18 @@
             let presentation = LibraryEntryDetailPresentation(entryIdentity: entry.libraryIdentity)
             detailPresentation = presentation
 
-            if detailHostPresentation?.isHostPresented == true {
-                detailHostPresentation?.detailPresentationID = presentation.id
-                detailHostPresentation?.entryIdentity = entry.libraryIdentity
-            } else {
-                detailHostPresentation = LibraryEntryDetailHostPresentation(
-                    detailPresentationID: presentation.id,
-                    entryIdentity: entry.libraryIdentity,
-                    host: desiredDetailHost
-                )
+            // Keep an outgoing native host alive until its disappearance callback.
+            if retiringDetailHostPresentationID == nil {
+                if detailHostPresentation?.isHostPresented == true {
+                    detailHostPresentation?.detailPresentationID = presentation.id
+                    detailHostPresentation?.entryIdentity = entry.libraryIdentity
+                } else {
+                    detailHostPresentation = LibraryEntryDetailHostPresentation(
+                        detailPresentationID: presentation.id,
+                        entryIdentity: entry.libraryIdentity,
+                        host: desiredDetailHost
+                    )
+                }
             }
             retargetDetailEditRequest()
         }
@@ -187,10 +192,14 @@
             detailHostPresentation = nil
             detailEditRequest = nil
             isDetailDormantUntilInspector = false
+            retiringDetailHostPresentationID = nil
+            visibleDetailHostPresentationID = nil
         }
 
         func dismissDetails(ifHostPresentationID hostPresentationID: UUID) {
-            guard detailHostPresentation?.id == hostPresentationID else { return }
+            guard detailHostPresentation?.id == hostPresentationID,
+                retiringDetailHostPresentationID != hostPresentationID
+            else { return }
             dismissDetails()
         }
 
@@ -207,7 +216,11 @@
                 detailHostPresentation?.host == .inspector
             {
                 isDetailDormantUntilInspector = true
+                if visibleDetailHostPresentationID == detailHostPresentation?.id {
+                    retiringDetailHostPresentationID = detailHostPresentation?.id
+                }
                 detailHostPresentation?.isHostPresented = false
+                retargetDetailEditRequest()
                 return
             }
 
@@ -252,12 +265,51 @@
         }
 
         func isCurrentDetailHostPresentation(_ presentationID: UUID) -> Bool {
-            detailHostPresentation?.id == presentationID
+            detailHostPresentation?.id == presentationID && retiringDetailHostPresentationID != presentationID
+        }
+
+        func detailHostDidAppear(_ presentation: LibraryEntryDetailHostPresentation) {
+            guard detailHostPresentation?.id == presentation.id else { return }
+            visibleDetailHostPresentationID = presentation.id
+        }
+
+        func detailHostDidDisappear(
+            _ presentation: LibraryEntryDetailHostPresentation,
+            migrationBlocked: Bool
+        ) {
+            if visibleDetailHostPresentationID == presentation.id {
+                visibleDetailHostPresentationID = nil
+            }
+            guard retiringDetailHostPresentationID == presentation.id else { return }
+            retiringDetailHostPresentationID = nil
+            reconcileDetailHostIfPossible(migrationBlocked: migrationBlocked)
+        }
+
+        /// A native disappearance callback may be lost when SwiftUI replaces its host hierarchy.
+        ///
+        /// Only recover the retirement that timed out; late callbacks cannot affect a newer host.
+        func recoverDetailHostRetirement(_ presentationID: UUID, migrationBlocked: Bool) {
+            guard retiringDetailHostPresentationID == presentationID,
+                let presentation = detailHostPresentation,
+                presentation.id == presentationID
+            else { return }
+            detailHostDidDisappear(presentation, migrationBlocked: migrationBlocked)
         }
 
         private func reconcileDetailHostPresentation() {
             guard let detailPresentation else {
                 detailHostPresentation = nil
+                return
+            }
+
+            guard retiringDetailHostPresentationID == nil else { return }
+            if let presentation = detailHostPresentation,
+                presentation.host != desiredDetailHost,
+                visibleDetailHostPresentationID == presentation.id
+            {
+                retiringDetailHostPresentationID = presentation.id
+                detailHostPresentation?.isHostPresented = false
+                retargetDetailEditRequest()
                 return
             }
 
@@ -278,14 +330,15 @@
 
         private func retargetDetailEditRequest() {
             guard detailEditRequest?.entryIdentity == detailPresentation?.entryIdentity else { return }
-            detailEditRequest?.hostPresentationID = detailHostPresentation?.id
+            detailEditRequest?.hostPresentationID =
+                retiringDetailHostPresentationID == nil ? detailHostPresentation?.id : nil
         }
 
         func setEditingEntry(_ entry: AnimeEntry) {
             openDetails(for: entry)
             detailEditRequest = LibraryEntryDetailEditRequest(
                 entryIdentity: entry.libraryIdentity,
-                hostPresentationID: detailHostPresentation?.id
+                hostPresentationID: retiringDetailHostPresentationID == nil ? detailHostPresentation?.id : nil
             )
         }
 
