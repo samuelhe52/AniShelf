@@ -20,6 +20,7 @@ import SwiftUI
 enum EntryOpenInApp: String, CaseIterable, Identifiable {
     case infuse
     case kazumi
+    case bilibili
 
     var id: Self { self }
 
@@ -27,20 +28,26 @@ enum EntryOpenInApp: String, CaseIterable, Identifiable {
         switch self {
         case .infuse: "Infuse"
         case .kazumi: "Kazumi"
+        case .bilibili: "bilibili"
         }
     }
 
     var systemImage: String {
         switch self {
         case .infuse: "play.rectangle"
-        case .kazumi: "magnifyingglass"
+        case .kazumi, .bilibili: "magnifyingglass"
         }
     }
 
-    /// Whether the app is installed, checked without an entry-specific link.
+    /// Whether the app (or web destination on Mac) is available without an entry-specific link.
     @MainActor
     var isInstalled: Bool {
-        guard let url = URL(string: "\(rawValue)://") else { return false }
+        #if os(macOS)
+            let urlString = self == .bilibili ? "https://search.bilibili.com" : "\(rawValue)://"
+        #else
+            let urlString = "\(rawValue)://"
+        #endif
+        guard let url = URL(string: urlString) else { return false }
         return EntryOpenInLinks.hasHandler(for: url)
     }
 }
@@ -84,18 +91,21 @@ enum EntryOpenInSwipeDestination: Hashable, CaseIterable, RawRepresentable {
 struct EntryOpenInLinks: Equatable {
     var infuseURL: URL?
     var kazumiURL: URL?
+    var bilibiliURL: URL?
     var homepageURL: URL?
 
-    init(infuseURL: URL?, kazumiURL: URL?, homepageURL: URL?) {
+    init(infuseURL: URL?, kazumiURL: URL?, bilibiliURL: URL? = nil, homepageURL: URL?) {
         self.infuseURL = infuseURL
         self.kazumiURL = kazumiURL
+        self.bilibiliURL = bilibiliURL
         self.homepageURL = homepageURL
     }
 
     init(entry: AnimeEntry, homepageURL: URL?) {
         self.init(
             infuseURL: Self.infuseURL(type: entry.type, tmdbID: entry.tmdbID),
-            kazumiURL: Self.kazumiURL(query: Self.kazumiSearchTitle(for: entry)),
+            kazumiURL: Self.kazumiURL(query: Self.searchTitle(for: entry)),
+            bilibiliURL: Self.bilibiliURL(query: Self.searchTitle(for: entry)),
             homepageURL: homepageURL
         )
     }
@@ -126,9 +136,8 @@ struct EntryOpenInLinks: Equatable {
         return components.url
     }
 
-    /// Bangumi matches Chinese and Japanese titles far better than English ones, so prefer those
-    /// translations of the series title before falling back to the display name.
-    static func kazumiSearchTitle(for entry: AnimeEntry) -> String {
+    /// Search Chinese/Japanese catalogs with a translated series title before falling back to the display name.
+    static func searchTitle(for entry: AnimeEntry) -> String {
         let series = entry.parentSeriesEntry ?? entry
         for languageKey in ["zh-CN", "ja-JP"] {
             if let title = series.nameTranslations[languageKey], !title.isEmpty {
@@ -138,10 +147,30 @@ struct EntryOpenInLinks: Equatable {
         return entry.displayName
     }
 
+    static func bilibiliURL(query: String) -> URL? {
+        let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return nil }
+        var components = URLComponents()
+        #if os(macOS)
+            components.scheme = "https"
+            components.host = "search.bilibili.com"
+            components.path = "/all"
+        #else
+            components.scheme = "bilibili"
+            components.host = "search"
+            components.path = "/"
+        #endif
+        components.queryItems = [URLQueryItem(name: "keyword", value: query)]
+        components.percentEncodedQuery = components.percentEncodedQuery?
+            .replacingOccurrences(of: "+", with: "%2B")
+        return components.url
+    }
+
     func url(for app: EntryOpenInApp) -> URL? {
         switch app {
         case .infuse: infuseURL
         case .kazumi: kazumiURL
+        case .bilibili: bilibiliURL
         }
     }
 

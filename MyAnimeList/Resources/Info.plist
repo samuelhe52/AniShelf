@@ -23,6 +23,7 @@
 	<array>
 		<string>infuse</string>
 		<string>kazumi</string>
+		<string>bilibili</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>

@@ -13339,6 +13339,22 @@
     },
     "Kazumi" : {
       "shouldTranslate" : false
+    },
+    "bilibili" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ビリビリ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "哔哩哔哩"
+          }
+        }
+      }
     }
   },
   "version" : "1.2"
