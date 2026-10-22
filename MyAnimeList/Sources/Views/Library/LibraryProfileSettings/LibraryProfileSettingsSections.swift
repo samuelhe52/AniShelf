@@ -34,18 +34,21 @@ struct LibraryProfileHeroCard: View {
                     .offset(x: 6, y: 6)
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("\(stats.totalCount)")
-                        .font(.system(size: 54, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                        .contentTransition(.numericText())
-                    Text(animeTitleResource)
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-                .accessibilityElement(children: .combine)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                // Narrow widths, such as iPhone Duo's cover beside its vertical bar, shrink the
+                // count rather than wrapping its digits.
+                Text("\(stats.totalCount)")
+                    .font(.system(size: 54, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                Text(animeTitleResource)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .fixedSize()
             }
+            .accessibilityElement(children: .combine)
             .frame(maxWidth: .infinity, alignment: .leading)
 
             Spacer(minLength: 0)
