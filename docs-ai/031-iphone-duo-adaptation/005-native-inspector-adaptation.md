@@ -74,10 +74,13 @@ attaches its inspector the same way AniShelf does.
     content.
   - Swiping the cover sheet down closed the detail, and unfolding showed no column.
 - iPad Pro 13-inch simulator, iPadOS 27.0 (already booted by Codex): the inspector column opened
-  on a single tap and closed with Done, as before. Narrowing the window was not tested.
+  on a single tap and closed with Done, as before. The maintainer tested narrowing the window
+  with detail open by hand on 2026-10-23, and the app's own migration worked.
 - `make test-app-sim APP_TEST_ONLY='MyAnimeListTests/LibraryEntryInteractionStateTests MyAnimeListTests/EntryDetailSessionTests'`
   on the Duo passed, including the new policy test. Targeted `swift format lint` is clean.
 
-Unverified: Split View multitasking on the Duo's inner display, which narrows the window like iPad
-and might share iPad's unreliable re-presentation; iPhone Pro Max rotation (no simulator); and
-physical hardware.
+- Split View on the Duo's inner display (maintainer, by hand, 2026-10-23) worked in every case
+  tried: opening detail in Split View, entering Split View with detail open, leaving it, closing
+  detail before leaving, and folding in Split View.
+
+Unverified: iPhone Pro Max rotation (no simulator) and physical hardware.
