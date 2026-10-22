@@ -35,6 +35,20 @@ struct EntryDetailHeroSection: View {
 
     private func hero(height: CGFloat) -> some View {
         ZStack(alignment: .bottom) {
+            heroBackground
+                .clipped()
+                .verticalBarBackgroundExtension()
+
+            heroText
+        }
+        .containerRelativeFrame(.horizontal)
+        .frame(height: height)
+    }
+
+    /// The artwork and its scrims, which extend under iPhone Duo's vertical bar; the text stays
+    /// inset.
+    private var heroBackground: some View {
+        ZStack(alignment: .bottom) {
             heroArtwork
 
             // Top scrim — keeps toolbar buttons legible
@@ -61,62 +75,61 @@ struct EntryDetailHeroSection: View {
                 )
                 .frame(height: 120)
             }
-
-            VStack(spacing: 0) {
-                Spacer(minLength: 0)
-
-                VStack(alignment: .center, spacing: 6) {
-                    if let logoImageURL {
-                        KFImageView(
-                            url: logoImageURL,
-                            targetSize: CGSize(width: 500, height: 500),
-                            diskCacheExpiration: .longTerm
-                        )
-                        .scaledToFit()
-                        .frame(maxWidth: 280)
-                        .frame(height: 78)
-                        .shadow(color: .black.opacity(0.28), radius: 10, y: 6)
-                    } else {
-                        Text(displayTitle)
-                            .font(.largeTitle.weight(.bold))
-                            .foregroundStyle(.white)
-                            .lineLimit(3)
-                            .minimumScaleFactor(0.78)
-                            .multilineTextAlignment(.center)
-                    }
-
-                    if let subtitleText {
-                        Text(subtitleText)
-                            .font(.subheadline.weight(.regular))
-                            .foregroundStyle(.white.opacity(0.82))
-                            .lineLimit(2)
-                            .multilineTextAlignment(.center)
-                    }
-
-                    if !metadataLineItems.isEmpty {
-                        Text(metadataLineItems.joined(separator: "  ·  "))
-                            .font(.footnote)
-                            .foregroundStyle(.white.opacity(0.68))
-                            .lineLimit(2)
-                            .multilineTextAlignment(.center)
-                    }
-
-                    if !genreNames.isEmpty {
-                        Text(genreNames.joined(separator: ", "))
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.56))
-                            .lineLimit(1)
-                    }
-                }
-                .frame(maxWidth: 360)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 36)
-                .frame(maxWidth: .infinity)
-            }
         }
-        .containerRelativeFrame(.horizontal)
-        .frame(height: height)
-        .clipped()
+    }
+
+    private var heroText: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+
+            VStack(alignment: .center, spacing: 6) {
+                if let logoImageURL {
+                    KFImageView(
+                        url: logoImageURL,
+                        targetSize: CGSize(width: 500, height: 500),
+                        diskCacheExpiration: .longTerm
+                    )
+                    .scaledToFit()
+                    .frame(maxWidth: 280)
+                    .frame(height: 78)
+                    .shadow(color: .black.opacity(0.28), radius: 10, y: 6)
+                } else {
+                    Text(displayTitle)
+                        .font(.largeTitle.weight(.bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(3)
+                        .minimumScaleFactor(0.78)
+                        .multilineTextAlignment(.center)
+                }
+
+                if let subtitleText {
+                    Text(subtitleText)
+                        .font(.subheadline.weight(.regular))
+                        .foregroundStyle(.white.opacity(0.82))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                }
+
+                if !metadataLineItems.isEmpty {
+                    Text(metadataLineItems.joined(separator: "  ·  "))
+                        .font(.footnote)
+                        .foregroundStyle(.white.opacity(0.68))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                }
+
+                if !genreNames.isEmpty {
+                    Text(genreNames.joined(separator: ", "))
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.56))
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: 360)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 36)
+            .frame(maxWidth: .infinity)
+        }
     }
 
     @ViewBuilder
@@ -307,5 +320,29 @@ struct EntryDetailQuickActionsRow: View {
                 )
             #endif
         }
+    }
+}
+
+extension View {
+    /// Mirrors this view under iPhone Duo's vertical bar, as Apple recommends for hero imagery;
+    /// it has no effect where the system never places a vertical bar.
+    fileprivate func verticalBarBackgroundExtension() -> some View {
+        modifier(VerticalBarBackgroundExtension())
+    }
+}
+
+fileprivate struct VerticalBarBackgroundExtension: ViewModifier {
+    @Environment(\.self) private var environment
+
+    func body(content: Content) -> some View {
+        #if os(macOS)
+            content
+        #else
+            if #available(iOS 27.1, *) {
+                content.backgroundExtensionEffect(isEnabled: environment.toolbarVerticalEdge != nil)
+            } else {
+                content
+            }
+        #endif
     }
 }
