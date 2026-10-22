@@ -22,13 +22,18 @@ struct AnimeEntryDates: View {
         self.labelsHidden = labelsHidden
     }
 
-    private var dateFormatStyle: Date.FormatStyle {
-        .dateTime.year().month().day()
+    var body: some View {
+        // Narrow shelf cards, such as on iPhone Duo's short inner landscape display, would wrap the
+        // long dates in Japanese and Chinese; numeric dates keep each date on one line there.
+        ViewThatFits(in: .horizontal) {
+            pill(dateFormat: .dateTime.year().month().day())
+            pill(dateFormat: .dateTime.year().month(.defaultDigits).day())
+        }
     }
 
-    var body: some View {
+    private func pill(dateFormat: Date.FormatStyle) -> some View {
         HStack(spacing: 18) {
-            dateColumn(label: dateStartedResource, value: snapshot.dateStarted)
+            dateColumn(label: dateStartedResource, value: snapshot.dateStarted, format: dateFormat)
 
             Image(systemName: "ellipsis")
                 .font(.footnote.weight(.bold))
@@ -37,7 +42,7 @@ struct AnimeEntryDates: View {
                     labelsHidden ? d[VerticalAlignment.center] : -7
                 }
 
-            dateColumn(label: dateFinishedResource, value: snapshot.dateFinished)
+            dateColumn(label: dateFinishedResource, value: snapshot.dateFinished, format: dateFormat)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)
@@ -52,7 +57,11 @@ struct AnimeEntryDates: View {
     }
 
     @ViewBuilder
-    private func dateColumn(label: LocalizedStringResource, value: Date?) -> some View {
+    private func dateColumn(
+        label: LocalizedStringResource,
+        value: Date?,
+        format: Date.FormatStyle
+    ) -> some View {
         VStack(spacing: 4) {
             if !labelsHidden {
                 Text(label)
@@ -61,7 +70,7 @@ struct AnimeEntryDates: View {
             }
 
             if let value {
-                Text(value, format: dateFormatStyle)
+                Text(value, format: format)
                     .font(.system(size: 16, weight: .semibold))
                     .monospacedDigit()
             } else {
