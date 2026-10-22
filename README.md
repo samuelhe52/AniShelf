@@ -6,7 +6,7 @@
   <p>A native app for tracking and managing your anime library on iPhone, iPad, and Mac.</p>
 
   <p>
-    <img src="https://img.shields.io/badge/platform-iOS%20%C2%B7%20iPadOS%2026%2B-34C759" alt="iOS and iPadOS 26 or later" />
+    <img src="https://img.shields.io/badge/platform-iOS%20%C2%B7%20iPadOS%20%C2%B7%20macOS%2026%2B-34C759" alt="iOS, iPadOS, and macOS 26 or later" />
     <img src="https://img.shields.io/badge/license-Apache%202.0-blue" alt="Apache License 2.0" />
     <a href="https://apps.apple.com/app/id6759359144"><img src="https://img.shields.io/badge/App%20Store-Download%20now-007AFF?logo=apple&logoColor=white" alt="Download AniShelf on the App Store" /></a>
   </p>
@@ -35,7 +35,7 @@
 
 ## 📱 Availability
 
-AniShelf is available on the [App Store](https://apps.apple.com/app/id6759359144) for iPhone and iPad running iOS or iPadOS 26 or later, and for Mac with Apple silicon running the iPad app.
+AniShelf is available on the [App Store](https://apps.apple.com/app/id6759359144) for iPhone and iPad running iOS or iPadOS 26 or later, and as a native Mac app for macOS 26 or later.
 
 New features will be released on TestFlight before being pushed to the App Store. You can join the [TestFlight Beta](https://testflight.apple.com/join/ns3sR38X) to get early access to new features and provide feedback.
 
@@ -47,10 +47,12 @@ New features will be released on TestFlight before being pushed to the App Store
 - **🔍 Smart Search** - Find anime using The Movie Database (TMDb) with multi-language support
 - **🎨 Beautiful UI** - Native SwiftUI interface, polished and consistent design language
 - **📊 Track Progress** - Track watch status, scores, episode-level progress, and rewatches
+- **▶️ Open In** - Jump from an entry to Infuse, Kazumi, or bilibili
 - **⏰ Broadcast & Reminders** - View broadcast airtimes for eligible anime and set reminders for each new episode, before or after airtime
 - **💾 Backup & Restore** - Back up and restore your library and settings, or export your library to common file formats
 - **☁️ iCloud Sync** - Keep your library and preferences in sync across your devices
 - **🌍 Multi-language** - Support for anime metadata in English, Chinese, and Japanese.
+- **🖥️ Native Mac App** - A desktop interface with a sidebar, an inspector, and windows that each keep their own view
 
 ## CLI & Agentic Access
 
@@ -64,7 +66,7 @@ For manual installation and setup, follow the [anishelf-cli README](https://gith
 
 ### 📋 Build/Run Requirements
 
-- iOS/iPadOS 26.0+
+- iOS/iPadOS 26.0+ or macOS 26.0+
 - Xcode 26.0+
 - Swift 6.0+
 - TMDb API key (free from [The Movie Database](https://www.themoviedb.org/settings/api))
@@ -85,7 +87,7 @@ For manual installation and setup, follow the [anishelf-cli README](https://gith
    ```
 
 3. **Build and run**
-   - Select your target device or simulator
+   - Select your target device, a simulator, or My Mac
    - Press `⌘R` to build and run
    - On first launch, you'll be prompted to enter your TMDb API key
 
@@ -95,6 +97,7 @@ For manual installation and setup, follow the [anishelf-cli README](https://gith
 make build
 make run-sim # Build and run on a booted simulator
 make test-sim # Run the app and DataProvider test suites on a booted simulator
+make run-mac # Build and run the native Mac app
 make lint
 ```
 

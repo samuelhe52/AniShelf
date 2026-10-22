@@ -1,6 +1,118 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "This release brings AniShelf to macOS natively, adds half-star ratings and Open In shortcuts, and improves window and foldable layouts." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ネイティブmacOS版が登場しました。0.5刻みの評価と「ほかのアプリで開く」ショートカットを追加し、複数ウインドウと折りたたみ画面のレイアウトを改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本次更新带来原生macOS版本，新增半星评分与“打开方式”快捷操作，并优化多窗口和折叠屏布局。"
+          }
+        }
+      }
+    },
+    "Added a native macOS app with a redesigned desktop interface and interactions." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デスクトップ向けにUIと操作を再設計したネイティブmacOS版を追加しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增原生 macOS 版本，针对桌面端重新设计 UI 与交互。"
+          }
+        }
+      }
+    },
+    "Rate anime in half-star increments, such as 4.5 stars, and drag to adjust your score." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4.5など、0.5刻みで評価できるようになりました。ドラッグして評価を調整できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "支持半星评分（如 4.5 星），可通过滑动调整分数。"
+          }
+        }
+      }
+    },
+    "Open entries in Infuse, Kazumi, or bilibili from the detail page, and set up quick access with a swipe in List view." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詳細ページからInfuse、Kazumi、bilibiliで作品を開けるようになりました。リスト表示でスワイプしてすばやく開く設定もできます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "支持在详情页中跳转至 Infuse、Kazumi 和哔哩哔哩，并可设置在列表页面下通过侧滑快速跳转"
+          }
+        }
+      }
+    },
+    "Each window now keeps its own category, filters, sorting, and view mode without affecting other windows." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ウインドウごとにカテゴリ、フィルタ、並べ替え、表示モードを個別に保持し、ほかのウインドウに影響しなくなりました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "各窗口可独立保留分类、筛选、排序与视图模式，互不干扰。"
+          }
+        }
+      }
+    },
+    "Added support for iPhone Duo." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone Duoに対応しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "适配 iPhone Duo。"
+          }
+        }
+      }
+    },
+    "Improved library search and poster loading, and fixed library rows not updating after episode progress changes." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリ検索とポスターの読み込みを改善し、エピソードの進捗を変更してもリストが更新されない問題などを修正しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "改善资料库搜索与海报加载表现，修复观看进度更新后列表未及时刷新等问题。"
+          }
+        }
+      }
+    },
     "%@ out of 5" : {
       "localizations" : {
         "ja" : {
