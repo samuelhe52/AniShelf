@@ -2,7 +2,7 @@
 //  LibrarySyncCoordinatorTests+Restoration.swift
 //  AniShelf
 //
-//  Created by OpenAI Codex on behalf of samuelhe52 on 2026/9/12.
+//  Created by OpenAI Codex on behalf of Samuel He on 2026/9/12.
 //
 
 import CloudKit

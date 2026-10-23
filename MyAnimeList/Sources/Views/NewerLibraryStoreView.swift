@@ -2,7 +2,7 @@
 //  NewerLibraryStoreView.swift
 //  AniShelf
 //
-//  Created by Claude Code on behalf of samuelhe52 on 2026/10/15.
+//  Created by Claude Code on behalf of Samuel He on 2026/10/15.
 //
 
 import SwiftData

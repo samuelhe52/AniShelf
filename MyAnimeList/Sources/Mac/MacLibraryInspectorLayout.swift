@@ -2,7 +2,7 @@
 //  MacLibraryInspectorLayout.swift
 //  AniShelf
 //
-//  Created by OpenAI Codex on behalf of samuelhe52 on 2026/10/17.
+//  Created by OpenAI Codex on behalf of Samuel He on 2026/10/17.
 //
 
 #if os(macOS)

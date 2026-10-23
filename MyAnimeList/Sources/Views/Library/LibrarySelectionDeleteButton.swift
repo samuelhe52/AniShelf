@@ -2,7 +2,7 @@
 //  LibrarySelectionDeleteButton.swift
 //  AniShelf
 //
-//  Created by Claude Code on behalf of samuelhe52 on 2026/10/17.
+//  Created by Claude Code on behalf of Samuel He on 2026/10/17.
 //
 
 import DataProvider

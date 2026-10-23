@@ -2,7 +2,7 @@
 //  TVMazeConfirmedMappingStore.swift
 //  AniShelf
 //
-//  Created by OpenAI Codex on behalf of samuelhe52 on 2026/8/11.
+//  Created by OpenAI Codex on behalf of Samuel He on 2026/8/11.
 //
 
 import Foundation
