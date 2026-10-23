@@ -203,18 +203,24 @@ final class EntryDetailViewModel {
         self.repository = repository
         self.refetchesForMissingLogo = refetchesForMissingLogo
         self.infoFetcher = infoFetcher
-        self.detailInfoLoader =
-            detailInfoLoader
-            ?? { entryType, tmdbID, language in
-                try await infoFetcher.detailInfo(
-                    entryType: entryType,
-                    tmdbID: tmdbID,
-                    language: language
-                )
-            }
+        self.detailInfoLoader = detailInfoLoader ?? Self.defaultDetailInfoLoader(infoFetcher)
         self.detailPersistenceSaver =
             detailPersistenceSaver
             ?? repository.save
+    }
+
+    private static func defaultDetailInfoLoader(_ infoFetcher: InfoFetcher) -> EntryDetailInfoLoader {
+        #if DEBUG || LIBRARY_FIXTURES
+            // Fixture entries have no TMDb records (docs-ai 026).
+            if LibraryFixture.active != nil {
+                return { _, tmdbID, language in
+                    try LibraryFixture.detail(tmdbID: tmdbID, language: language)
+                }
+            }
+        #endif
+        return { entryType, tmdbID, language in
+            try await infoFetcher.detailInfo(entryType: entryType, tmdbID: tmdbID, language: language)
+        }
     }
 
     /// Shows what the library already stores for `entry`, synchronously, so a new detail
