@@ -88,7 +88,7 @@ struct GlobalToastsModifier: ViewModifier {
                         return AlertToast(
                             displayMode: .hud,
                             type: .loading,
-                            titleResource: "Loading...")
+                            titleResource: "Loading…")
                     }
                     let fraction = Double(progress.current) / Double(progress.total)
                     return AlertToast(

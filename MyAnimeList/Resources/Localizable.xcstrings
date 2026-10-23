@@ -2221,18 +2221,18 @@
         }
       }
     },
-    "Add To Library..." : {
+    "Add to Library" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ライブラリに追加..."
+            "value" : "ライブラリに追加"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加入资料库..."
+            "value" : "加入资料库"
           }
         }
       }
@@ -3631,51 +3631,51 @@
         }
       }
     },
-    "Checking key..." : {
+    "Checking key…" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "キーを確認中..."
+            "value" : "キーを確認中…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在验证密钥..."
+            "value" : "正在验证密钥…"
           }
         }
       }
     },
-    "Checking TMDb API key..." : {
+    "Checking TMDb API key…" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "TMDb APIキーを確認中..."
+            "value" : "TMDb APIキーを確認中…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在验证TMDb API密钥..."
+            "value" : "正在验证TMDb API密钥…"
           }
         }
       }
     },
-    "Checking..." : {
+    "Checking…" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "確認中..."
+            "value" : "確認中…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "验证中..."
+            "value" : "验证中…"
           }
         }
       }
@@ -5164,18 +5164,18 @@
         }
       }
     },
-    "Export as..." : {
+    "Export as" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "形式を選んで書き出し..."
+            "value" : "形式を選んで書き出し"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "导出为..."
+            "value" : "导出为"
           }
         }
       }
@@ -6645,7 +6645,7 @@
         }
       }
     },
-    "Loading posters..." : {
+    "Loading posters…" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -6661,7 +6661,7 @@
         }
       }
     },
-    "Loading support options from the App Store..." : {
+    "Loading support options from the App Store…" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -6677,18 +6677,18 @@
         }
       }
     },
-    "Loading..." : {
+    "Loading…" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "読み込み中..."
+            "value" : "読み込み中…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加载中..."
+            "value" : "加载中…"
           }
         }
       }
@@ -8124,13 +8124,13 @@
         }
       }
     },
-    "Prefetching images..." : {
+    "Prefetching images…" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "画像をプリフェッチしています..."
+            "value" : "画像をプリフェッチしています…"
           }
         },
         "zh-Hans" : {
@@ -8636,13 +8636,13 @@
         }
       }
     },
-    "Refreshing infos..." : {
+    "Refreshing infos…" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "情報を更新中..."
+            "value" : "情報を更新中…"
           }
         },
         "zh-Hans" : {
@@ -8653,18 +8653,18 @@
         }
       }
     },
-    "Refreshing Metadata..." : {
+    "Refreshing Metadata…" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "メタデータを更新中..."
+            "value" : "メタデータを更新中…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在刷新元数据..."
+            "value" : "正在刷新元数据…"
           }
         }
       }
@@ -9396,34 +9396,34 @@
         }
       }
     },
-    "Search for an anime..." : {
+    "Search for an anime" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アニメを検索…"
+            "value" : "アニメを検索"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "搜索动画…"
+            "value" : "搜索动画"
           }
         }
       }
     },
-    "Search in your library..." : {
+    "Search in your library" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ライブラリで検索…"
+            "value" : "ライブラリで検索"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "搜索资料库..."
+            "value" : "搜索资料库"
           }
         }
       }
@@ -9444,18 +9444,18 @@
         }
       }
     },
-    "Search TV animation or movies..." : {
+    "Search TV animation or movies" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "TVアニメと映画を検索..."
+            "value" : "TVアニメと映画を検索"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "搜索TV动画或电影..."
+            "value" : "搜索TV动画或电影"
           }
         }
       }
@@ -9476,34 +9476,34 @@
         }
       }
     },
-    "Search..." : {
+    "Search…" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "検索..."
+            "value" : "検索…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "搜索..."
+            "value" : "搜索…"
           }
         }
       }
     },
-    "Searching TMDb..." : {
+    "Searching TMDb…" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "TMDbを検索中..."
+            "value" : "TMDbを検索中…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在搜索TMDb..."
+            "value" : "正在搜索TMDb…"
           }
         }
       }
@@ -11805,7 +11805,7 @@
         }
       }
     },
-    "Write some thoughts..." : {
+    "Write some thoughts…" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -13426,22 +13426,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打开"
-          }
-        }
-      }
-    },
-    "Open In…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アプリで開く…"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开方式…"
           }
         }
       }

@@ -409,7 +409,7 @@ struct MyAnimeListApp: App {
     }
 
     private var checkingTMDbAPIKeyResource: LocalizedStringResource {
-        "Checking TMDb API key..."
+        "Checking TMDb API key…"
     }
 }
 

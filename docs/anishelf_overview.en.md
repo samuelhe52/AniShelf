@@ -61,8 +61,8 @@ AniShelf requires a TMDb API key, which is free for personal use. To get one:
    2. You can also join the TestFlight beta to try new features early: [AniShelf TestFlight](https://testflight.apple.com/join/ns3sR38X). If you don't have TestFlight installed, install the TestFlight app first, then open the link again and tap "View in TestFlight".
 2. On first launch, enter your TMDb API key when prompted.
 3. Tap the search button at the bottom right, enter the name of a series or film, and add the matching entry to your library.
-   1. For series, you can add the whole series or individual seasons (switch modes with the slider below). Use the button at the top right to select the series or one or more seasons, then tap "Add To Library...".
-   2. For films, select the entry and tap "Add To Library...".
+   1. For series, you can add the whole series or individual seasons (switch modes with the slider below). Use the button at the top right to select the series or one or more seasons, then tap "Add to Library".
+   2. For films, select the entry and tap "Add to Library".
    3. Some shows air in multiple seasons, but the official release doesn't separate them into seasons (episode numbering is continuous). A typical example is *Frieren: Beyond Journey's End*, where "Season 1" contains all 38 episodes. In cases like this, add the whole series instead.
    4. To add several entries at once, tap "Batch Add" at the top right of the search page and enter multiple titles or TMDb IDs.
 4. Tap the icon at the bottom left to switch between library views.

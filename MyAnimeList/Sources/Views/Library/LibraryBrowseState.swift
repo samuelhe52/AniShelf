@@ -95,7 +95,7 @@ final class LibraryBrowseState {
     ) {
         isSearching = false
         Task {
-            ToastCenter.global.loadingMessage = .message("Loading...")
+            ToastCenter.global.loadingMessage = .message("Loading…")
             let success = await scope.store.newEntryFromSearchResults(results)
             // A failure shows its own toast; the loading toast never dismisses itself.
             ToastCenter.global.loadingMessage = nil

@@ -665,7 +665,7 @@ struct TMDbBatchAddView: View {
     }
 
     private var loadingMessageResource: LocalizedStringResource {
-        "Searching TMDb..."
+        "Searching TMDb…"
     }
 
     private var seriesCandidatesTitleResource: LocalizedStringResource {
@@ -685,7 +685,7 @@ struct TMDbBatchAddView: View {
     }
 
     private var addToLibraryTitleResource: LocalizedStringResource {
-        "Add To Library..."
+        "Add to Library"
     }
 
     private var checkoutTitleResource: LocalizedStringResource {

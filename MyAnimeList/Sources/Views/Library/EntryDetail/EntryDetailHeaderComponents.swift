@@ -279,7 +279,7 @@ struct EntryDetailQuickActionsRow: View {
                 verticalOffset: -1,
                 action: onShare
             )
-            .macHelp(Text("Share…"))
+            .macHelp(Text("Share"))
 
             PopupActionCircleButton(
                 systemImage: isFavorite ? "heart.fill" : "heart",

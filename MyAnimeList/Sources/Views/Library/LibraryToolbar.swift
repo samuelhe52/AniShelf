@@ -448,7 +448,7 @@ import SwiftUI
         @Binding var isSearching: Bool
 
         var body: some View {
-            Button("Search...", systemImage: "magnifyingglass") { isSearching = true }
+            Button("Search…", systemImage: "magnifyingglass") { isSearching = true }
         }
     }
 #endif

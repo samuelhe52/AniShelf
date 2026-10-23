@@ -592,7 +592,7 @@ struct LibraryProfileBackupExportSection: View {
                 }
 
                 LabeledContent {
-                    Menu("Export as...") {
+                    Menu("Export as") {
                         ForEach(LibraryExportFormat.allCases) { format in
                             Button {
                                 onExportLibrary(format)
@@ -692,7 +692,7 @@ struct LibraryProfileBackupExportSection: View {
                 }
             }
         } label: {
-            Label("Export as...", systemImage: "square.and.arrow.up.on.square")
+            Label("Export as", systemImage: "square.and.arrow.up.on.square")
         }
         .libraryProfileCommandButtonStyle(tint: LibraryProfileSettingsDestination.syncData.tint)
     }

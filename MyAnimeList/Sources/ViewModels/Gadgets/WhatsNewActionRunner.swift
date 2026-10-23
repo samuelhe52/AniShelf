@@ -71,7 +71,7 @@ final class WhatsNewActionRunner {
 
         refreshState = .inProgress(
             .init(
-                messageResource: "Refreshing Metadata...",
+                messageResource: "Refreshing Metadata…",
                 fractionCompleted: 0
             )
         )

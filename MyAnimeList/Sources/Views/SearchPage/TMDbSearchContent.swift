@@ -219,7 +219,7 @@ struct TMDbSearchContent: View {
     @ViewBuilder
     private var submitMenu: some View {
         if tmdbSearchService.registeredCount != 0 {
-            Button("Add To Library...") {
+            Button("Add to Library") {
                 tmdbSearchService.submit()
             }
             .buttonStyle(.glassProminent)

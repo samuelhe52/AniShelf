@@ -226,7 +226,7 @@ struct PosterSlides: View {
     private var loadingView: some View {
         VStack {
             Spacer()
-            ProgressView("Loading posters...")
+            ProgressView("Loading posters…")
             Spacer()
         }
     }

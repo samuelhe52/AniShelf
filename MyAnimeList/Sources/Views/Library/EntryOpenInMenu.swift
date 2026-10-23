@@ -194,7 +194,7 @@ struct EntryOpenInLinks: Equatable {
 }
 
 enum EntryOpenInL10n {
-    static let openIn: LocalizedStringResource = "Open In…"
+    static let openIn: LocalizedStringResource = "Open In"
     /// Swipe actions size to their labels, so the swipe uses a short label.
     static let open: LocalizedStringResource = "Open"
     static let homepage: LocalizedStringResource = "Homepage"
