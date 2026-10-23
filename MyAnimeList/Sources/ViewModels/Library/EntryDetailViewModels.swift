@@ -180,7 +180,10 @@ final class EntryDetailViewModel {
     private var preparedRequestKey: String?
     /// The request last fetched from the network, which also settles whether a logo exists.
     private var fetchedRequestKey: String?
+    /// The request the current generation loads; only a different request starts a new one.
+    private var loadingRequestKey: String?
     private var loadGeneration = 0
+    private var activeLoadCount = 0
 
     private static func requestKey(for entry: AnimeEntry, language: Language) -> String {
         "\(entry.tmdbID)-\(language.rawValue)"
@@ -259,17 +262,28 @@ final class EntryDetailViewModel {
         let needsLogo = includesTitleLogo && logoImageURL == nil && fetchedRequestKey != requestKey
         guard loadedRequestKey != requestKey || needsLogo else { return }
 
-        loadGeneration += 1
+        // Only a different request supersedes an in-flight load. SwiftUI can start a second
+        // load for the same request from a view it then discards, as when the inspector
+        // restores its selection at launch; whichever load finishes uncancelled applies.
+        if loadingRequestKey != requestKey {
+            loadGeneration += 1
+            loadingRequestKey = requestKey
+            activeLoadCount = 0
+        }
         let generation = loadGeneration
+        activeLoadCount += 1
         loadError = nil
         isLoading = true
+        defer {
+            if loadGeneration == generation {
+                activeLoadCount -= 1
+                isLoading = activeLoadCount > 0
+            }
+        }
+
         do {
             let detailDTO = try await detailInfoLoader(entry.type, entry.tmdbID, language)
-            guard loadGeneration == generation else { return }
-            guard !Task.isCancelled else {
-                isLoading = false
-                return
-            }
+            guard loadGeneration == generation, !Task.isCancelled else { return }
 
             let detail = try replaceAndPersistDetail(
                 for: entry,
@@ -280,16 +294,8 @@ final class EntryDetailViewModel {
             loadedRequestKey = requestKey
             fetchedRequestKey = requestKey
         } catch {
-            guard loadGeneration == generation else { return }
-            if Task.isCancelled || Self.isCancellation(error) {
-                loadError = nil
-                isLoading = false
-                return
-            }
+            guard loadGeneration == generation, !Task.isCancelled, !Self.isCancellation(error) else { return }
             loadError = error.localizedDescription
-        }
-        if loadGeneration == generation {
-            isLoading = false
         }
     }
 

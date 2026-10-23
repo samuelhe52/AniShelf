@@ -87,9 +87,27 @@ runtime was not reviewed during this task.
   unchanged. Real title logos remain unverified.
 - Maintainer visual pass of the under-toolbar hero: cards under the toolbar, bright
   artwork, overscroll, live mode switching, inspector widths, and dark mode all checked out.
-- Found, not fixed: the inspector's restored selection at launch starts two loads; the
-  newer one is cancelled with its view and the older result is discarded as stale, so the
-  restored entry shows only stored values until reselected. Predates this change.
+- Found during review and fixed afterward (amendment 2 below): the inspector's restored
+  selection at launch started two loads, and neither result applied.
+
+## Amendment 2: duplicate same-request loads at launch (2026-10-23)
+
+When the inspector restores its selection at launch, SwiftUI starts `load` from two
+views for the same session and then discards one. Each call bumped `loadGeneration`,
+so the surviving load's result was discarded as stale, while the newer load was
+cancelled with its view; the restored entry showed only stored values until it was
+reselected. This predated 032 and also affected real TMDb loads. Now only a different
+request (entry or language) starts a new generation. Same-request loads share it,
+whichever finishes uncancelled applies, and `isLoading` counts the active loads.
+Rejected: having the second caller return early and wait on the first, which fails when
+SwiftUI discards the first view instead; and letting a cancelled load still apply its
+result, which breaks the cancellation contract and does not help when the network
+request itself is cancelled.
+
+- `testCancelledDuplicateLoadDoesNotDiscardSameRequest` fails with the old generation
+  bump and passes with the fix; all `EntryDetailViewModelTests` pass.
+- Fixture relaunch with a saved selection: the restored entry shows its logo, metadata,
+  genres, and stats without reselecting.
 
 ## Open questions
 

@@ -322,6 +322,39 @@ extension EntryDetailViewModelTests {
         #expect(!viewModel.isLoading)
     }
 
+    @Test @MainActor func testCancelledDuplicateLoadDoesNotDiscardSameRequest() async {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let loader = DelayedLanguageEntryDetailLoader()
+        let viewModel = EntryDetailViewModel(
+            repository: repository,
+            detailInfoLoader: { entryType, tmdbID, language in
+                try await loader.load(entryType: entryType, tmdbID: tmdbID, language: language)
+            }
+        )
+        let entry = AnimeEntry.template(id: 43)
+
+        // As at launch: a second view starts the same load, then SwiftUI discards it.
+        let survivingLoad = Task {
+            await viewModel.load(for: entry, language: .japanese)
+        }
+        while await loader.requestCount == 0 {
+            await Task.yield()
+        }
+        let discardedLoad = Task {
+            await viewModel.load(for: entry, language: .japanese)
+        }
+        while await loader.requestCount < 2 {
+            await Task.yield()
+        }
+        discardedLoad.cancel()
+        await discardedLoad.value
+        await survivingLoad.value
+
+        #expect(viewModel.displayTitle == "Japanese Detail")
+        #expect(viewModel.loadError == nil)
+        #expect(!viewModel.isLoading)
+    }
+
     @Test @MainActor func testCancelledBeforeStartDetailLoadDoesNotMutateCurrentState() async {
         let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
         let loader = ImmediateLanguageEntryDetailLoader()
