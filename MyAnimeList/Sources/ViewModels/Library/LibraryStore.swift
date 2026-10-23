@@ -115,17 +115,17 @@ class LibraryStore {
 
     // MARK: - Categories State
 
-    /// Opt-in switch for library categories.
+    /// Switch for library categories, enabled by default.
     ///
     /// Turning it off keeps categories and memberships.
-    var categoriesEnabled: Bool = false {
+    var categoriesEnabled: Bool = true {
         willSet {
             preferences.saveCategoriesEnabled(newValue)
             libraryStoreLogger.debug("Updated categories enabled to \(newValue)")
         }
     }
     /// Optional pinned switcher for List and Grid; retained when categories are disabled.
-    var categoryStripEnabled: Bool = false {
+    var categoryStripEnabled: Bool = true {
         willSet { preferences.saveCategoryStripEnabled(newValue) }
     }
     /// Category definitions in display order.
