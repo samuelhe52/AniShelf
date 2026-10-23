@@ -32,12 +32,16 @@ extension View {
         #endif
     }
 
-    /// Lets the iOS hero artwork run under the navigation bar.
+    /// Lets the hero artwork run under the navigation bar or window toolbar.
     ///
-    /// The Mac inspector has no hero.
-    @ViewBuilder func heroIgnoresTopSafeArea() -> some View {
+    /// The Mac inspector's compact header has no hero, so it stays below the toolbar.
+    @ViewBuilder func heroIgnoresTopSafeArea(_ showsHero: Bool) -> some View {
         #if os(macOS)
-            self
+            if showsHero {
+                ignoresSafeArea(edges: .top)
+            } else {
+                self
+            }
         #else
             ignoresSafeArea(edges: .top)
         #endif

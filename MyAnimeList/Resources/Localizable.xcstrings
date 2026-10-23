@@ -1,6 +1,70 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Detail Header" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詳細ページのヘッダー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "详情页顶部"
+          }
+        }
+      }
+    },
+    "Compact" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コンパクト"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "紧凑"
+          }
+        }
+      }
+    },
+    "Cinematic" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シネマティック"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "影院"
+          }
+        }
+      }
+    },
+    "Cinematic shows large artwork and the title logo. Applies to this Mac only." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シネマティックでは大きな背景画像と作品ロゴを表示します。このMacにのみ適用されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "影院模式显示大幅背景图和作品标志。仅应用于此Mac。"
+          }
+        }
+      }
+    },
     "This release brings AniShelf to macOS natively, adds half-star ratings and Open In shortcuts, and improves window and foldable layouts." : {
       "localizations" : {
         "ja" : {

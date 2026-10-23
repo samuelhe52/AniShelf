@@ -24,6 +24,10 @@ struct EntryDetailView: View {
     @AppStorage(.broadcastScheduleEnabled) private var broadcastScheduleEnabled = true
     @AppStorage(.showProductionCompanyInsteadOfRuntime)
     private var showProductionCompanyInsteadOfRuntime = false
+    #if os(macOS)
+        @AppStorage(.macEntryDetailHeaderStyle) private var macHeaderStyle: MacEntryDetailHeaderStyle = .compact
+        @Environment(\.macInspectorPosterFlight) private var posterFlight
+    #endif
 
     @Bindable private var session: EntryDetailSession
     private let detailHost: LibraryEntryDetailHost
@@ -37,6 +41,14 @@ struct EntryDetailView: View {
     @State private var conversionTaskID: UUID?
 
     private var currentLanguage: Language { followsSystemLanguage ? .current : preferredLanguage }
+    /// The hero shows the title logo and centers the quick actions below it.
+    private var showsHero: Bool {
+        #if os(macOS)
+            macHeaderStyle == .cinematic
+        #else
+            true
+        #endif
+    }
     private var hasEpisodesSection: Bool {
         switch session.entry.type {
         case .series: !session.model.seasonCards.isEmpty
@@ -45,7 +57,12 @@ struct EntryDetailView: View {
         }
     }
     private let scrollCoordinateSpaceName = "EntryDetailScroll"
-    private let heroHeight: CGFloat = 420
+    #if os(macOS)
+        // About 52 points sit under the window toolbar.
+        private let heroHeight: CGFloat = 412
+    #else
+        private let heroHeight: CGFloat = 420
+    #endif
 
     init(
         session: EntryDetailSession,
@@ -67,10 +84,11 @@ struct EntryDetailView: View {
 
     var body: some View {
         pageWithPrompts
-            .task(id: "\(session.instanceID)-\(currentLanguage.rawValue)") {
+            .task(id: "\(session.instanceID)-\(currentLanguage.rawValue)-\(showsHero)") {
                 await session.model.load(
                     for: session.entry,
-                    language: currentLanguage
+                    language: currentLanguage,
+                    includesTitleLogo: showsHero
                 )
                 await session.refreshEpisodeCountsIfEligible(language: currentLanguage)
             }
@@ -112,7 +130,7 @@ struct EntryDetailView: View {
             .transition(.opacity)
         }
         .animation(entryReplacementAnimation, value: session.instanceID)
-        .heroIgnoresTopSafeArea()
+        .heroIgnoresTopSafeArea(showsHero)
         .hiddenNavigationBarBackground()
         #if !os(macOS)
             // On the Mac the inspector's root view owns Hide Inspector.
@@ -286,6 +304,7 @@ struct EntryDetailView: View {
                 homepageURL: session.model.primaryLinkURL ?? session.entry.linkToDetails
             ),
             isFavorite: session.entry.favorite,
+            isCentered: showsHero,
             showsConvertAction: session.entry.type != .movie,
             conversionInProgress: session.conversion.inProgress,
             convertMenuTitle: { convertMenuTitle },
@@ -348,26 +367,32 @@ struct EntryDetailView: View {
         }
     }
 
+    // MARK: - Shared Hero
+
+    private var heroSection: some View {
+        EntryDetailHeroSection(
+            imageURL: session.model.heroImageURL
+                ?? session.entry.backdropURL
+                ?? session.entry.posterURL,
+            logoImageURL: session.model.logoImageURL,
+            displayTitle: session.model.displayTitle,
+            subtitleText: session.model.subtitleText,
+            metadataLineItems: session.model.metadataLineItems,
+            genreNames: session.model.genreNames,
+            accentColor: session.entry.favorite ? .orange : .blue,
+            pageBackground: detailHost.pageBackground,
+            scrollCoordinateSpaceName: scrollCoordinateSpaceName,
+            height: heroHeight
+        )
+    }
+
     // MARK: - iOS Page
 
     #if !os(macOS)
         /// The iOS page: a hero with the title and quick actions, then the detail cards.
         private func iOSPageContent(_ proxy: ScrollViewProxy) -> some View {
             VStack(spacing: 0) {
-                EntryDetailHeroSection(
-                    imageURL: session.model.heroImageURL
-                        ?? session.entry.backdropURL
-                        ?? session.entry.posterURL,
-                    logoImageURL: session.model.logoImageURL,
-                    displayTitle: session.model.displayTitle,
-                    subtitleText: session.model.subtitleText,
-                    metadataLineItems: session.model.metadataLineItems,
-                    genreNames: session.model.genreNames,
-                    accentColor: session.entry.favorite ? .orange : .blue,
-                    pageBackground: detailHost.pageBackground,
-                    scrollCoordinateSpaceName: scrollCoordinateSpaceName,
-                    height: heroHeight
-                )
+                heroSection
 
                 VStack(alignment: .leading, spacing: 20) {
                     quickActionsRow
@@ -387,26 +412,44 @@ struct EntryDetailView: View {
     // MARK: - Mac Inspector
 
     #if os(macOS)
-        /// The Mac inspector: a compact header with the tracking controls right below it,
-        /// drawn as grouped boxes instead of the iOS hero and glass cards.
+        /// Either header sits above the same native Mac controls and grouped cards.
         private func macInspectorContent(_ proxy: ScrollViewProxy) -> some View {
-            VStack(alignment: .leading, spacing: 12) {
-                MacEntryDetailHeader(
-                    posterURL: session.entry.posterURL,
-                    displayTitle: session.model.displayTitle,
-                    subtitleText: session.model.subtitleText,
-                    metadataLineItems: session.model.metadataLineItems,
-                    genreNames: session.model.genreNames
-                ) {
-                    quickActionsRow
+            VStack(alignment: .leading, spacing: 0) {
+                switch macHeaderStyle {
+                case .compact:
+                    MacEntryDetailHeader(
+                        posterURL: session.entry.posterURL,
+                        displayTitle: session.model.displayTitle,
+                        subtitleText: session.model.subtitleText,
+                        metadataLineItems: session.model.metadataLineItems,
+                        genreNames: session.model.genreNames
+                    ) {
+                        quickActionsRow
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.top, 12)
+                    .padding(.bottom, 16)
+                case .cinematic:
+                    heroSection
+                        .onAppear {
+                            // No poster is visible in this mode; a batch must not fly one
+                            // from the compact header's last recorded position.
+                            posterFlight?.sourceFrame = nil
+                        }
                 }
-                .padding(.bottom, 4)
 
-                detailsContent(proxy)
+                VStack(alignment: .leading, spacing: 12) {
+                    if macHeaderStyle == .cinematic {
+                        // Overlaps the hero's fade, as on iOS.
+                        quickActionsRow
+                            .padding(.top, -20)
+                            .padding(.bottom, 4)
+                    }
+                    detailsContent(proxy)
+                }
+                .padding(.horizontal, 14)
+                .padding(.bottom, 24)
             }
-            .padding(.horizontal, 14)
-            .padding(.top, 12)
-            .padding(.bottom, 24)
             .environment(\.popupPanelStyle, .grouped)
         }
     #endif

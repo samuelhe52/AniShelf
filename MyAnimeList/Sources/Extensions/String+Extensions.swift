@@ -24,6 +24,8 @@ extension String {
     static let libraryOpenDetailWithSingleTap = "LibraryOpenDetailWithSingleTap"
     static let entryDetailCharactersExpandedByDefault = "EntryDetailCharactersExpandedByDefault"
     static let entryDetailStaffExpandedByDefault = "EntryDetailStaffExpandedByDefault"
+    // Mac-only presentation. Keep out of backup and CloudKit allowlists.
+    static let macEntryDetailHeaderStyle = "MacEntryDetailHeaderStyle"
     static let showProductionCompanyInsteadOfRuntime = "ShowProductionCompanyInsteadOfRuntime"
     static let libraryScoringEnabled = "LibraryScoringEnabled"
     // Device-local. Keep out of backup and CloudKit allowlists.

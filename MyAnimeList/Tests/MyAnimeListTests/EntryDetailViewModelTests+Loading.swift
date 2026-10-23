@@ -46,41 +46,36 @@ extension EntryDetailViewModelTests {
         #expect(await httpClient.requests.isEmpty)
     }
 
-    @Test @MainActor func testEntryDetailRefetchesMissingLogoOnlyWhereTheLogoIsShown() async {
+    @Test(arguments: ["/logo.png", nil] as [String?])
+    @MainActor func testTitleLogoHeaderFetchesMissingCachedLogoOnce(logoPath: String?) async {
         let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
-        let httpClient = RecordingTMDbHTTPClient { _ in
-            HTTPResponse(statusCode: 500, data: Data())
-        }
-        let fetcher = InfoFetcher(
-            client: TMDbClient(
-                apiKey: "test-key",
-                httpClient: httpClient,
-                configuration: .default
-            ),
-            fetchTMDbResponseData: { _ in Data() }
+        let loader = HeaderLogoEntryDetailLoader(logoPath: logoPath)
+        let viewModel = EntryDetailViewModel(
+            repository: repository,
+            detailInfoLoader: { _, _, language in
+                await loader.load(language: language)
+            },
+            detailPersistenceSaver: {}
         )
-        let viewModel = EntryDetailViewModel(repository: repository, infoFetcher: fetcher)
         let entry = AnimeEntry(
             name: "Series",
             type: .series,
             tmdbID: 38,
-            detail: AnimeEntryDetail(
-                language: Language.english.rawValue,
-                title: "Cached Detail"
-            )
+            detail: AnimeEntryDetail(language: Language.english.rawValue, title: "Cached Detail")
         )
 
         await viewModel.load(for: entry, language: .english)
-
+        #expect(await loader.requestCount == 0)
         #expect(viewModel.displayTitle == "Cached Detail")
-        #if os(macOS)
-            // The Mac shows no title logo, so the stored detail is already current.
-            #expect(viewModel.loadError == nil)
-            #expect(await httpClient.requests.isEmpty)
-        #else
-            #expect(viewModel.loadError != nil)
-            #expect(!(await httpClient.requests).isEmpty)
-        #endif
+
+        await viewModel.load(for: entry, language: .english, includesTitleLogo: true)
+        #expect(await loader.requestCount == 1)
+        #expect(viewModel.displayTitle == "Refreshed Detail")
+        #expect((viewModel.logoImageURL != nil) == (logoPath != nil))
+
+        await viewModel.load(for: entry, language: .english)
+        await viewModel.load(for: entry, language: .english, includesTitleLogo: true)
+        #expect(await loader.requestCount == 1)
     }
 
     @Test @MainActor func testEntryDetailRetriesSameRequestAfterFailure() async {
@@ -168,12 +163,11 @@ extension EntryDetailViewModelTests {
                     throw EntryDetailPersistenceError()
                 }
                 try dataProvider.dataHandler.modelContext.save()
-            },
-            // The logo-less stored detail is what makes this load fetch.
-            refetchesForMissingLogo: true
+            }
         )
 
-        await viewModel.load(for: entry, language: .english)
+        // The logo-less stored detail is what makes this load fetch.
+        await viewModel.load(for: entry, language: .english, includesTitleLogo: true)
 
         #expect(await loader.requestCount == 1)
         #expect(saveAttemptCount == 1)
@@ -210,7 +204,7 @@ extension EntryDetailViewModelTests {
         #expect(persistedEntry.detail?.seasons.map(\.title) == ["Persisted Season"])
         #expect(persistedEntry.detail?.orderedEpisodes.map(\.title) == ["Persisted Episode"])
 
-        await viewModel.load(for: entry, language: .english)
+        await viewModel.load(for: entry, language: .english, includesTitleLogo: true)
 
         #expect(await loader.requestCount == 2)
         #expect(saveAttemptCount == 2)

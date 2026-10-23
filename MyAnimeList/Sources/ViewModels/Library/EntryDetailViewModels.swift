@@ -178,16 +178,9 @@ final class EntryDetailViewModel {
     /// The request whose stored values are showing; `loadedRequestKey` is set once they are
     /// also current.
     private var preparedRequestKey: String?
+    /// The request last fetched from the network, which also settles whether a logo exists.
+    private var fetchedRequestKey: String?
     private var loadGeneration = 0
-
-    /// Only the iOS hero shows the title logo, so only iOS refetches a stored detail that
-    /// predates logos.
-    #if os(macOS)
-        static let platformRefetchesForMissingLogo = false
-    #else
-        static let platformRefetchesForMissingLogo = true
-    #endif
-    private let refetchesForMissingLogo: Bool
 
     private static func requestKey(for entry: AnimeEntry, language: Language) -> String {
         "\(entry.tmdbID)-\(language.rawValue)"
@@ -197,11 +190,9 @@ final class EntryDetailViewModel {
         repository: LibraryRepository,
         infoFetcher: InfoFetcher = .init(),
         detailInfoLoader: EntryDetailInfoLoader? = nil,
-        detailPersistenceSaver: EntryDetailPersistenceSaver? = nil,
-        refetchesForMissingLogo: Bool = platformRefetchesForMissingLogo
+        detailPersistenceSaver: EntryDetailPersistenceSaver? = nil
     ) {
         self.repository = repository
-        self.refetchesForMissingLogo = refetchesForMissingLogo
         self.infoFetcher = infoFetcher
         self.detailInfoLoader = detailInfoLoader ?? Self.defaultDetailInfoLoader(infoFetcher)
         self.detailPersistenceSaver =
@@ -250,22 +241,23 @@ final class EntryDetailViewModel {
         loadError = nil
         if let detail = entry.detail, detail.language == language.rawValue {
             apply(detail: detail, entry: entry, language: language)
-            if detail.logoImageURL != nil || !refetchesForMissingLogo {
-                loadedRequestKey = requestKey
-                isLoading = false
-            }
+            loadedRequestKey = requestKey
+            isLoading = false
         }
     }
 
-    func load(for entry: AnimeEntry, language: Language) async {
+    /// Fetches unless the stored detail is current.
+    ///
+    /// A header that shows the title logo passes `includesTitleLogo`, so a stored detail
+    /// predating logos is fetched once.
+    func load(for entry: AnimeEntry, language: Language, includesTitleLogo: Bool = false) async {
         guard !Task.isCancelled else { return }
 
         let requestKey = Self.requestKey(for: entry, language: language)
-        guard loadedRequestKey != requestKey else { return }
-
         // A no-op when the session already prepared this entry and language.
         prepare(for: entry, language: language)
-        guard loadedRequestKey != requestKey else { return }
+        let needsLogo = includesTitleLogo && logoImageURL == nil && fetchedRequestKey != requestKey
+        guard loadedRequestKey != requestKey || needsLogo else { return }
 
         loadGeneration += 1
         let generation = loadGeneration
@@ -286,6 +278,7 @@ final class EntryDetailViewModel {
             apply(detail: detail, entry: entry, language: language)
             fetchedDetailRevision += 1
             loadedRequestKey = requestKey
+            fetchedRequestKey = requestKey
         } catch {
             guard loadGeneration == generation else { return }
             if Task.isCancelled || Self.isCancellation(error) {

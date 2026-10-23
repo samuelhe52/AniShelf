@@ -8,6 +8,18 @@
 #if os(macOS)
     import SwiftUI
 
+    enum MacEntryDetailHeaderStyle: String, CaseIterable {
+        case compact
+        case cinematic
+
+        var title: LocalizedStringResource {
+            switch self {
+            case .compact: "Compact"
+            case .cinematic: "Cinematic"
+            }
+        }
+    }
+
     /// The inspector's entry header on the Mac: a small poster beside the title, metadata,
     /// and the quick actions, in place of the iOS full-width hero artwork.
     struct MacEntryDetailHeader<Actions: View>: View {

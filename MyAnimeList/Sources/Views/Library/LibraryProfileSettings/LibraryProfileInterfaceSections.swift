@@ -17,6 +17,10 @@ struct LibraryProfileInterfaceSettingsSection: View {
     @AppStorage(.useSoftNavigationBarEdges) private var useSoftNavigationBarEdges = true
     @AppStorage(.showProductionCompanyInsteadOfRuntime)
     private var showProductionCompanyInsteadOfRuntime = false
+    #if os(macOS)
+        @AppStorage(.macEntryDetailHeaderStyle)
+        private var macEntryDetailHeaderStyle: MacEntryDetailHeaderStyle = .compact
+    #endif
 
     var body: some View {
         #if os(macOS)
@@ -55,6 +59,18 @@ struct LibraryProfileInterfaceSettingsSection: View {
                 "Entry Details", systemImage: "rectangle.3.group.fill",
                 tint: LibraryProfileSettingsDestination.appearance.tint
             ) {
+                #if os(macOS)
+                    Picker("Detail Header", selection: $macEntryDetailHeaderStyle) {
+                        ForEach(MacEntryDetailHeaderStyle.allCases, id: \.self) { style in
+                            Text(style.title).tag(style)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    Text("Cinematic shows large artwork and the title logo. Applies to this Mac only.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                #endif
+
                 LibraryProfileSettingsToggleRow(
                     title: "Expand Characters by Default",
                     subtitle: "Open the Characters section automatically in entry detail view.",
