@@ -31,13 +31,13 @@ import SwiftUI
                     Text("Categories")
                         .font(.title2.weight(.semibold))
                     Spacer()
-                    Button(LocalizedStringResource("New Category…"), systemImage: "plus") {
+                    Button("New Category…", systemImage: "plus") {
                         namePrompt = .init(purpose: .create(memberCount: 0))
                     }
                     .buttonStyle(.bordered)
                 }
 
-                Text(LocalizedStringResource("Select anime in List or Grid view, then choose Category in the toolbar."))
+                Text("Select anime in List or Grid view, then choose Category in the toolbar.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -60,7 +60,7 @@ import SwiftUI
                             .padding(.vertical, 4)
                             .tag(category.id)
                             .accessibilityHint(
-                                Text(LocalizedStringResource("Double-click to rename. Drag to reorder.")))
+                                Text("Double-click to rename. Drag to reorder."))
                         }
                         .onMove { source, destination in
                             store.moveCategories(fromOffsets: source, toOffset: destination)
@@ -105,7 +105,7 @@ import SwiftUI
                     }
 
                     if !store.categories.isEmpty {
-                        Text(LocalizedStringResource("Double-click to rename. Drag to reorder."))
+                        Text("Double-click to rename. Drag to reorder.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -113,14 +113,14 @@ import SwiftUI
                 }
 
                 HStack(spacing: 8) {
-                    Button(LocalizedStringResource("Rename…"), systemImage: "pencil") {
+                    Button("Rename…", systemImage: "pencil") {
                         if let category = selectedCategory {
                             namePrompt = .init(purpose: .rename(category))
                         }
                     }
                     .disabled(selectedCategory == nil)
 
-                    Button(LocalizedStringResource("Delete…"), systemImage: "trash", role: .destructive) {
+                    Button("Delete…", systemImage: "trash", role: .destructive) {
                         deletingCategory = selectedCategory
                     }
                     .disabled(selectedCategory == nil)

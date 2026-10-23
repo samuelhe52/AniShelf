@@ -125,7 +125,7 @@ struct LibraryProfileAppInfoCard: View {
                     LibraryProfileHubRow(
                         title: "What's New", systemImage: "sparkles.rectangle.stack",
                         tint: LibraryProfileSettingsPalette.appInfo,
-                        value: LocalizedStringResource("\(whatsNewVersion)"))
+                        value: "\(whatsNewVersion)")
                 }
                 LibraryProfileActionDivider(leadingInset: 44)
             }

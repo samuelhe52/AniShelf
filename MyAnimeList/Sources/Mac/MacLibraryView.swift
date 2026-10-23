@@ -115,7 +115,7 @@
                 Text("This may take considerable time.")
             }
             .alert(
-                LocalizedStringResource("Delete Selected Anime?"),
+                "Delete Selected Anime?",
                 isPresented: Binding(
                     get: { pendingBatchDeletion != nil },
                     set: { if !$0 { pendingBatchDeletion = nil } }
@@ -125,7 +125,7 @@
                 Button("Delete", role: .destructive) { deleteEntries(entries) }
                 Button("Cancel", role: .cancel) {}
             } message: { entries in
-                Text(LocalizedStringResource("This will delete \(entries.count) selected anime from your library."))
+                Text("This will delete \(entries.count) selected anime from your library.")
             }
             .sheet(item: workflowPresentation) { presentation in
                 LibraryEntryWorkflowSheet(store: store, presentation: presentation)

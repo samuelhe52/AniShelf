@@ -60,12 +60,12 @@ struct LibraryCategoryStrip: View {
             ScrollView(.horizontal) {
                 HStack(spacing: 4) {
                     if isReordering {
-                        tabLabel(Text(LocalizedStringResource("All")), isSelected: scope.activeCategoryID == nil)
+                        tabLabel(Text("All"), isSelected: scope.activeCategoryID == nil)
                             .accessibilityAddTraits(scope.activeCategoryID == nil ? .isSelected : [])
                             .measureTabWidth("all", in: $tabWidths)
                             .id("all")
                     } else {
-                        menuTab(nil, title: Text(LocalizedStringResource("All")))
+                        menuTab(nil, title: Text("All"))
                             .measureTabWidth("all", in: $tabWidths)
                             .id("all")
                     }
@@ -159,11 +159,11 @@ struct LibraryCategoryStrip: View {
             tabLabel(Text(category.name), isSelected: scope.activeCategoryID == category.id)
                 .modifier(CategoryTabWiggle(isActive: draggedCategoryID != category.id))
                 .accessibilityAddTraits(scope.activeCategoryID == category.id ? .isSelected : [])
-                .accessibilityHint(Text(LocalizedStringResource("Hold and drag to reorder.")))
-                .accessibilityAction(named: Text(LocalizedStringResource("Move Left"))) {
+                .accessibilityHint(Text("Hold and drag to reorder."))
+                .accessibilityAction(named: Text("Move Left")) {
                     moveAccessibly(category.id, by: -1)
                 }
-                .accessibilityAction(named: Text(LocalizedStringResource("Move Right"))) {
+                .accessibilityAction(named: Text("Move Right")) {
                     moveAccessibly(category.id, by: 1)
                 }
         } else {
@@ -307,22 +307,22 @@ struct LibraryCategoryStrip: View {
     private func categoryMenu(for category: LibraryCategory?) -> some View {
         Section {
             if let category {
-                Button(LocalizedStringResource("Rename"), systemImage: "pencil") {
+                Button("Rename", systemImage: "pencil") {
                     namePrompt = .init(purpose: .rename(category))
                 }
             }
-            Button(LocalizedStringResource("Edit Categories…"), systemImage: "list.bullet") {
+            Button("Edit Categories…", systemImage: "list.bullet") {
                 isReordering = false
                 openCategoryManager()
             }
             if let category {
-                Button(LocalizedStringResource("Delete"), systemImage: "trash", role: .destructive) {
+                Button("Delete", systemImage: "trash", role: .destructive) {
                     deletingCategory = category
                 }
             }
         }
         Section {
-            Button(LocalizedStringResource("Reorder Tabs"), systemImage: "arrow.left.arrow.right") {
+            Button("Reorder Tabs", systemImage: "arrow.left.arrow.right") {
                 withAnimation(.snappy) { isReordering = true }
             }
             .disabled(store.categories.count < 2)

@@ -52,13 +52,11 @@ struct NewerLibraryStoreView: View {
                 .foregroundStyle(.blue)
                 .accessibilityHidden(true)
 
-            Text(LocalizedStringResource("Update AniShelf to Open Your Library"))
+            Text("Update AniShelf to Open Your Library")
                 .font(.largeTitle.bold())
 
             Text(
-                LocalizedStringResource(
-                    "Your library was saved by a newer version of AniShelf. Update the app to open it."
-                )
+                "Your library was saved by a newer version of AniShelf. Update the app to open it."
             )
             .font(.title3)
             .foregroundStyle(.secondary)
@@ -69,10 +67,8 @@ struct NewerLibraryStoreView: View {
         VStack(alignment: .leading, spacing: 16) {
             point(
                 icon: "lock.shield",
-                title: LocalizedStringResource("Your library is safe"),
-                detail: LocalizedStringResource(
-                    "AniShelf has not changed or moved your library, and iCloud Sync is paused until you update."
-                )
+                title: "Your library is safe",
+                detail: "AniShelf has not changed or moved your library, and iCloud Sync is paused until you update."
             )
         }
         .padding(20)
@@ -85,13 +81,13 @@ struct NewerLibraryStoreView: View {
                 Text(verbatim: Self.appVersion)
                     .monospacedDigit()
             } label: {
-                Text(LocalizedStringResource("App Version"))
+                Text("App Version")
             }
             LabeledContent {
                 Text(verbatim: Self.versionString(storeVersion))
                     .monospacedDigit()
             } label: {
-                Text(LocalizedStringResource("Library Data Version"))
+                Text("Library Data Version")
             }
         }
         .font(.subheadline)
@@ -103,7 +99,7 @@ struct NewerLibraryStoreView: View {
         Button {
             openURL(Self.appStoreURL)
         } label: {
-            Text(LocalizedStringResource("Open App Store"))
+            Text("Open App Store")
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)

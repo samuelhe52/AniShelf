@@ -45,12 +45,12 @@ struct LibraryDuplicateRepairSheet: View {
                 }
             }
             // .animation(.snappy(duration: 0.4), value: currentGroup?.id)
-            .navigationTitle(LocalizedStringResource("Repair Library"))
+            .navigationTitle("Repair Library")
             .inlineNavigationTitle()
         }
         .interactiveDismissDisabled()
         .confirmationDialog(
-            LocalizedStringResource("Choose an Anime to Keep"),
+            "Choose an Anime to Keep",
             isPresented: $isShowingResolutionChoices,
             titleVisibility: .visible
         ) {
@@ -63,19 +63,17 @@ struct LibraryDuplicateRepairSheet: View {
             }
         } message: {
             Text(
-                LocalizedStringResource(
-                    "The other stored copies will be removed from this device."
-                )
+                "The other stored copies will be removed from this device."
             )
         }
         .alert(
-            LocalizedStringResource("Unable to Repair Library"),
+            "Unable to Repair Library",
             isPresented: Binding(
                 get: { resolutionError != nil },
                 set: { if !$0 { resolutionError = nil } }
             )
         ) {
-            Button(LocalizedStringResource("OK")) {
+            Button("OK") {
                 resolutionError = nil
             }
         } message: {
@@ -115,13 +113,11 @@ struct LibraryDuplicateRepairSheet: View {
                 .foregroundStyle(.orange)
                 .accessibilityHidden(true)
 
-            Text(LocalizedStringResource("Duplicate Anime Found"))
+            Text("Duplicate Anime Found")
                 .font(.largeTitle.bold())
 
             Text(
-                LocalizedStringResource(
-                    "AniShelf found multiple stored copies of the same anime. Review them and choose the copy you want to keep before continuing."
-                )
+                "AniShelf found multiple stored copies of the same anime. Review them and choose the copy you want to keep before continuing."
             )
             .font(.title3)
             .foregroundStyle(.secondary)
@@ -158,7 +154,7 @@ struct LibraryDuplicateRepairSheet: View {
                     .font(.subheadline.monospacedDigit().bold())
 
                 if isRecommended {
-                    Text(LocalizedStringResource("Recommended"))
+                    Text("Recommended")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.orange)
                 }

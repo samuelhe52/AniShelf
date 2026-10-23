@@ -23,13 +23,12 @@ struct LibrarySelectionDeleteButton: View {
         }
         .disabled(selectedEntries.isEmpty)
         .tint(.red)
-        .alert(LocalizedStringResource("Delete Selected Anime?"), isPresented: $isShowingConfirmation) {
+        .alert("Delete Selected Anime?", isPresented: $isShowingConfirmation) {
             Button("Delete", role: .destructive, action: deleteSelectedEntries)
             Button("Cancel", role: .cancel) {}
         } message: {
             Text(
-                LocalizedStringResource(
-                    "This will delete \(selectedEntries.count) selected anime from your library."))
+                "This will delete \(selectedEntries.count) selected anime from your library.")
         }
     }
 }

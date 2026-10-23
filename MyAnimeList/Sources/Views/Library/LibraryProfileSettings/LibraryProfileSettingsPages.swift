@@ -32,7 +32,7 @@ struct LibraryProfileSettingsPage<Content: View>: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel(Text(LocalizedStringResource("Close")))
+                        .accessibilityLabel(Text("Close"))
                     }
                 #endif
             }

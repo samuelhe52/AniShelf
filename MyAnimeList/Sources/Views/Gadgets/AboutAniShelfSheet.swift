@@ -29,7 +29,7 @@ struct AboutAniShelfSheet: View {
         .inlineNavigationTitle()
         .toolbar {
             ToolbarItem(placement: .sheetTrailing) {
-                Button(LocalizedStringResource("Done")) { dismiss() }
+                Button("Done") { dismiss() }
             }
         }
         .presentationSizing(.form)

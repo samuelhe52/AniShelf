@@ -70,7 +70,7 @@
             .formStyle(.grouped)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(LocalizedStringResource("Done"), action: onDismiss)
+                    Button("Done", action: onDismiss)
                 }
             }
             .macSheetFrame(width: 600, height: 640)

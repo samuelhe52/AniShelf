@@ -117,7 +117,7 @@ struct LibraryProfileICloudSyncSection: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text(LocalizedStringResource("Review entries")))
+        .accessibilityLabel(Text("Review entries"))
         .popover(isPresented: isPresented) {
             LibraryFailedEntriesPopover(
                 title: title,

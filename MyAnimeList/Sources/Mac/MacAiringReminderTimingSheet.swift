@@ -174,7 +174,7 @@ import SwiftUI
                     selection = component
                     enteredDigits = ""
                 }
-                .help(Text(LocalizedStringResource("Type a value, or use the Up and Down arrow keys.")))
+                .help(Text("Type a value, or use the Up and Down arrow keys."))
                 .accessibilityLabel(Text(component.title))
                 .accessibilityValue(Text(value(for: component), format: .number))
                 .accessibilityAddTraits(.isButton)

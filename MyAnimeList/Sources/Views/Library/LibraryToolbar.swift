@@ -111,7 +111,7 @@ import SwiftUI
             }
             if isReorderingCategories {
                 ToolbarItem(placement: .platformTrailing) {
-                    Button(LocalizedStringResource("Done")) {
+                    Button("Done") {
                         withAnimation(.snappy) { isReorderingCategories = false }
                     }
                     .font(.headline.weight(.semibold))
