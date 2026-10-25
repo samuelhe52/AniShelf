@@ -53,6 +53,7 @@ public struct UserEntryInfo: Equatable, Codable {
 
     /// Notes for this entry.
     public var notes: String
+    public var episodeNotes: [EpisodeNote]
 
     /// Whether the entry is using a custom poster image.
     public var usingCustomPoster: Bool
@@ -80,6 +81,7 @@ public struct UserEntryInfo: Equatable, Codable {
         scoreHasHalf: Bool = false,
         favorite: Bool,
         notes: String,
+        episodeNotes: [EpisodeNote] = [],
         usingCustomPoster: Bool,
         customPosterPath: String? = nil,
         episodeProgresses: [EpisodeProgressSnapshot] = [],
@@ -95,6 +97,7 @@ public struct UserEntryInfo: Equatable, Codable {
         self.scoreHasHalf = entryScore?.hasHalf ?? false
         self.favorite = favorite
         self.notes = notes
+        self.episodeNotes = EpisodeNote.merged(episodeNotes, [])
         self.customPosterPath = usingCustomPoster ? customPosterPath : nil
         self.usingCustomPoster = self.customPosterPath != nil
         self.episodeProgresses = Self.normalizedEpisodeProgresses(episodeProgresses)
@@ -112,6 +115,7 @@ public struct UserEntryInfo: Equatable, Codable {
         self.scoreHasHalf = entryScore?.hasHalf ?? false
         self.favorite = entry.favorite
         self.notes = entry.notes
+        self.episodeNotes = entry.episodeNotes
         customPosterPath = entry.usingCustomPoster ? entry.customPosterPath : nil
         usingCustomPoster = customPosterPath != nil
         self.episodeProgresses = Self.normalizedEpisodeProgresses(
@@ -131,6 +135,7 @@ public struct UserEntryInfo: Equatable, Codable {
     public var isEmpty: Bool {
         watchStatus == .planToWatch && dateStarted == nil && dateFinished == nil
             && isDateTrackingEnabled
+            && episodeNotes.allSatisfy(\.isEmpty)
             && score == nil && favorite == false && notes.isEmpty && usingCustomPoster == false
             && episodeProgresses.allSatisfy { $0.watchedThroughEpisode == 0 }
             && !isRewatching && rewatchCount == 0
@@ -145,6 +150,7 @@ public struct UserEntryInfo: Equatable, Codable {
         case scoreHasHalf
         case favorite
         case notes
+        case episodeNotes
         case usingCustomPoster
         case customPosterPath
         case episodeProgresses
@@ -163,6 +169,7 @@ public struct UserEntryInfo: Equatable, Codable {
             scoreHasHalf: try container.decodeIfPresent(Bool.self, forKey: .scoreHasHalf) ?? false,
             favorite: try container.decode(Bool.self, forKey: .favorite),
             notes: try container.decode(String.self, forKey: .notes),
+            episodeNotes: try container.decodeIfPresent([EpisodeNote].self, forKey: .episodeNotes) ?? [],
             usingCustomPoster: try container.decode(Bool.self, forKey: .usingCustomPoster),
             customPosterPath: try container.decodeIfPresent(String.self, forKey: .customPosterPath),
             episodeProgresses: try container.decodeIfPresent(
@@ -188,6 +195,7 @@ public struct UserEntryInfo: Equatable, Codable {
         }
         try container.encode(favorite, forKey: .favorite)
         try container.encode(notes, forKey: .notes)
+        try container.encode(episodeNotes, forKey: .episodeNotes)
         try container.encode(usingCustomPoster, forKey: .usingCustomPoster)
         try container.encodeIfPresent(customPosterPath, forKey: .customPosterPath)
         try container.encode(episodeProgresses, forKey: .episodeProgresses)
@@ -231,11 +239,22 @@ public struct UserEntryInfo: Equatable, Codable {
             && entryScore == other.entryScore
             && favorite == other.favorite
             && notes == other.notes
+            && episodeNotes.filter { !$0.isEmpty }.map { EpisodeNoteValue($0) }
+                == other.episodeNotes.filter { !$0.isEmpty }.map { EpisodeNoteValue($0) }
             && usingCustomPoster == other.usingCustomPoster
             && customPosterPath == other.customPosterPath
             && semanticEpisodeProgresses == other.semanticEpisodeProgresses
             && isRewatching == other.isRewatching
             && rewatchCount == other.rewatchCount
+    }
+
+    private struct EpisodeNoteValue: Equatable {
+        let anchor: EpisodeNoteAnchor
+        let text: String
+        init(_ note: EpisodeNote) {
+            anchor = note.anchor
+            text = note.text
+        }
     }
 
     /// Zero progress is a sync reset marker; to the user it reads the same as no progress.
@@ -281,7 +300,14 @@ extension UserEntryInfo: CustomStringConvertible {
         Episode Progress: \(Self.episodeProgressDescription(episodeProgresses))
         Rewatching: \(isRewatching)
         Rewatch Count: \(rewatchCount)
+        Episode Notes: \(Self.episodeNotesDescription(episodeNotes))
         """
+    }
+
+    private static func episodeNotesDescription(_ episodeNotes: [EpisodeNote]) -> String {
+        let notes = episodeNotes.filter { !$0.isEmpty }
+        guard !notes.isEmpty else { return "None" }
+        return notes.map { "\n\($0.anchor.plainTextLabel): \($0.text)" }.joined()
     }
 
     private static func episodeProgressDescription(
@@ -558,6 +584,7 @@ extension AnimeEntry {
         setEntryScore(userInfo.entryScore)
         favorite = userInfo.favorite
         notes = userInfo.notes
+        restoreEpisodeNotes(userInfo.episodeNotes)
         customPosterPath = userInfo.usingCustomPoster ? userInfo.customPosterPath : nil
         usingCustomPoster = customPosterPath != nil
         isRewatching = userInfo.isRewatching && userInfo.watchStatus == .watching

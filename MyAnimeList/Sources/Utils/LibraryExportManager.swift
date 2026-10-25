@@ -74,6 +74,7 @@ struct LibraryExportRecord: Codable, Equatable {
     let score: Double?
     let favorite: Bool
     let notes: String
+    let episodeNotes: [EpisodeNote]
     let usingCustomPoster: Bool
     let isRewatching: Bool
     let rewatchCount: Int
@@ -95,7 +96,8 @@ struct LibraryExportRecord: Codable, Equatable {
         "notes",
         "using_custom_poster",
         "is_rewatching",
-        "rewatch_count"
+        "rewatch_count",
+        "episode_notes"
     ]
 
     init(entry: AnimeEntry) {
@@ -112,6 +114,7 @@ struct LibraryExportRecord: Codable, Equatable {
         score = entry.entryScore?.value
         favorite = entry.favorite
         notes = entry.notes
+        episodeNotes = entry.episodeNotes.filter { !$0.isEmpty }
         usingCustomPoster = entry.usingCustomPoster
         isRewatching = entry.isRewatching
         rewatchCount = entry.rewatchCount
@@ -151,7 +154,8 @@ struct LibraryExportRecord: Codable, Equatable {
             notes,
             usingCustomPoster ? "true" : "false",
             isRewatching ? "true" : "false",
-            String(rewatchCount)
+            String(rewatchCount),
+            String(decoding: (try? JSONEncoder().encode(episodeNotes)) ?? Data(), as: UTF8.self)
         ]
     }
 
@@ -329,11 +333,18 @@ final class LibraryExportManager {
                 "Score: \(entry.scoreText ?? "No score")",
                 "Favorite: \(entry.favorite ? "true" : "false")",
                 "Custom Poster: \(entry.usingCustomPoster ? "true" : "false")",
-                "Notes: \(entry.notes.isEmpty ? "N/A" : entry.notes)"
+                "Notes: \(entry.notes.isEmpty ? "N/A" : entry.notes)",
+                "Episode Notes: \(episodeNotesText(entry.episodeNotes))"
             ].joined(separator: "\n")
         }
 
         return header + "\n\n" + entryText.joined(separator: "\n\n")
+    }
+
+    private func episodeNotesText(_ notes: [EpisodeNote]) -> String {
+        guard !notes.isEmpty else { return "N/A" }
+        return notes.map { "\($0.anchor.plainTextLabel): \($0.text)" }
+            .joined(separator: "\n\n")
     }
 
     private func delimitedText(

@@ -204,8 +204,15 @@ struct LibraryRelationshipAndConversionTests {
         seriesEntry.dateStarted = referenceDate(year: 2026, month: 5, day: 3)
         seriesEntry.dateFinished = referenceDate(year: 2026, month: 5, day: 4)
         seriesEntry.notes = "Series-side score"
+        seriesEntry.updateEpisodeNote(at: .init(seasonNumber: 1, episodeNumber: 4), text: "Season one")
+        seriesEntry.updateEpisodeNote(at: .init(seasonNumber: 2, episodeNumber: 8), text: "Season two")
         seriesEntry.updateCategoryMembership("category-a", isMember: true)
         try repository.newEntry(seriesEntry)
+        // Another window or iCloud edits a note while conversion awaits TMDb.
+        let editDuringFetch: @MainActor @Sendable () -> Void = {
+            seriesEntry.updateEpisodeNote(at: .init(seasonNumber: 1, episodeNumber: 4), text: "Edited mid-fetch")
+        }
+        let latestInfoFetcher = makeLatestInfoFetcher()
 
         try await converter.convertSeriesToSeason(
             seriesEntry,
@@ -213,7 +220,10 @@ struct LibraryRelationshipAndConversionTests {
             language: .english,
             posterLanguage: .originalLanguage,
             fetcher: fetcher,
-            latestInfoFetcher: makeLatestInfoFetcher()
+            latestInfoFetcher: { entryType, tmdbID, language in
+                if case .season = entryType { await editDuringFetch() }
+                return try await latestInfoFetcher(entryType, tmdbID, language)
+            }
         )
 
         let migratedEntries = try dataProvider.getAllModels(ofType: AnimeEntry.self)
@@ -237,6 +247,8 @@ struct LibraryRelationshipAndConversionTests {
         #expect(seasonEntry.dateStarted == referenceDate(year: 2026, month: 5, day: 3))
         #expect(seasonEntry.dateFinished == referenceDate(year: 2026, month: 5, day: 4))
         #expect(hiddenSeriesEntry.tmdbID == 209867)
+        #expect(hiddenSeriesEntry.episodeNotes.filter { !$0.isEmpty }.count == 2)
+        #expect(seasonEntry.episodeNote(at: .init(seasonNumber: 1, episodeNumber: 4))?.text == "Edited mid-fetch")
         #expect(transactionSaveCount == 1)
     }
 

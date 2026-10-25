@@ -14,6 +14,27 @@ import Testing
 @testable import MyAnimeList
 
 struct LibrarySyncRecorderBehaviorTests {
+    @Test @MainActor func testEpisodeNoteEditQueuesHiddenParentEvenBelowAnotherNotesClock() throws {
+        let queueURL = makeTemporaryQueueURL(name: "episode-notes")
+        defer { try? FileManager.default.removeItem(at: queueURL.deletingLastPathComponent()) }
+        let provider = DataProvider(inMemory: true)
+        let parent = AnimeEntry(name: "Series", type: .series, tmdbID: 700)
+        parent.onDisplay = false
+        let season = AnimeEntry(name: "Season", type: .season(seasonNumber: 1, parentSeriesID: 700), tmdbID: 701)
+        season.parentSeriesEntry = parent
+        parent.updateEpisodeNote(
+            at: .init(seasonNumber: 2, episodeNumber: 1), text: "Future clock", date: .distantFuture)
+        provider.dataHandler.modelContext.insert(parent)
+        provider.dataHandler.modelContext.insert(season)
+        try provider.dataHandler.modelContext.save()
+        let queue = LibraryEntrySyncDirtyQueueStore(url: queueURL)
+        let recorder = LibrarySyncChangeRecorder(dataProvider: provider, dirtyQueueStore: queue)
+        season.updateEpisodeNote(at: .init(seasonNumber: 1, episodeNumber: 4), text: "Season note")
+        try provider.dataHandler.modelContext.save()
+        #expect(recorder.dirtyQueueStore.load().entries.map(\.identity) == [parent.libraryIdentity])
+        #expect(parent.trackingUpdatedAt == nil)
+    }
+
     @Test @MainActor func testLibrarySyncRecorderQueuesUpsertsAndIgnoresMetadataOnlySaves() throws {
         let queueURL = makeTemporaryQueueURL(name: "metadata-only-save")
         defer { try? FileManager.default.removeItem(at: queueURL.deletingLastPathComponent()) }

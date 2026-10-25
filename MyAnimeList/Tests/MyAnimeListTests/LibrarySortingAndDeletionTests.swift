@@ -76,6 +76,7 @@ struct LibrarySortingAndDeletionTests {
             tmdbID: 500_003
         )
         childSeason.parentSeriesEntry = discarded
+        discarded.updateEpisodeNote(at: .init(seasonNumber: 1, episodeNumber: 4), text: "Kept annotation")
 
         try store.repository.newEntry(keeper)
         try store.repository.newEntry(discarded)
@@ -105,6 +106,7 @@ struct LibrarySortingAndDeletionTests {
         #expect(storedEntries.filter { $0.libraryIdentity == identity }.count == 1)
         #expect(storedEntries.contains { $0 === keeper })
         #expect(childSeason.parentSeriesEntry === keeper)
+        #expect(keeper.episodeNote(at: .init(seasonNumber: 1, episodeNumber: 4))?.text == "Kept annotation")
         #expect(!store.requiresDuplicateRepair)
         #expect(store.library.contains { $0 === keeper })
 

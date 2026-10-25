@@ -384,4 +384,48 @@ extension LibrarySyncCoordinatorTests {
         #expect(pendingUpsert.dirtyAt == newerDirtyAt)
         #expect(database.savedRecords.count == 1)
     }
+
+    @Test @MainActor func exportConfirmationKeepsNoteEditBehindFutureNoteClock() async throws {
+        let store = makeSyncReadyStore()
+        let entry = AnimeEntry(name: "Skewed Notes", type: .series, tmdbID: 712)
+        let futureClock = referenceDate(year: 2030, month: 1, day: 1)
+        entry.markCreatedForLibrary(at: referenceDate(year: 2026, month: 5, day: 1))
+        entry.updateEpisodeNote(at: .init(seasonNumber: 1, episodeNumber: 1), text: "Skewed", date: futureClock)
+        try store.repository.newEntry(entry)
+        try store.syncChangeRecorder.dirtyQueueStore.replaceEntries([
+            .upsert(.init(identity: entry.libraryIdentity, dirtyAt: futureClock))
+        ])
+        store.rebuildSyncChangeTracking()
+
+        let database = FakeCloudLibrarySyncDatabase(changes: [makeEmptyChangeBatch()])
+        database.suspendNextSave = true
+        let coordinator = LibrarySyncCoordinator(
+            store: store,
+            client: CloudLibrarySyncClient(),
+            database: database,
+            namespaceProvider: { makeNamespace() }
+        )
+
+        let syncTask = Task {
+            await coordinator.sync(trigger: .manualRetry)
+        }
+        while !database.isSaveSuspended {
+            await Task.yield()
+        }
+
+        entry.updateEpisodeNote(
+            at: .init(seasonNumber: 1, episodeNumber: 2), text: "Edited mid-export",
+            date: referenceDate(year: 2026, month: 5, day: 9))
+        try store.repository.save()
+        database.resumeSuspendedSave()
+
+        _ = await syncTask.value
+
+        let remainingEntry = store.syncChangeRecorder.dirtyQueueStore.load().entry(for: entry.libraryIdentity)
+        guard case .upsert(let pendingUpsert) = remainingEntry else {
+            Issue.record("Expected the mid-export note edit to remain queued.")
+            return
+        }
+        #expect(pendingUpsert.dirtyAt > futureClock)
+    }
 }

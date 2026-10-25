@@ -88,6 +88,9 @@ extension LibraryStore {
         let modelContext = dataProvider.dataHandler.modelContext
         do {
             try syncChangeRecorder.withSuppressedRecording {
+                survivor.storedEpisodeNotes = group.entries.reduce([]) {
+                    EpisodeNote.merged($0, $1.storedEpisodeNotes)
+                }
                 for duplicate in group.entries where duplicate !== survivor {
                     for childEntry in Array(duplicate.childSeasonEntries) {
                         childEntry.parentSeriesEntry = survivor

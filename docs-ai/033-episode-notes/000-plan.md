@@ -27,7 +27,7 @@ Per-viewing journals, arbitrary tags, recent-note feeds, cross-library episode-n
 - Empty text is a deletion marker. Inline editing retains a selected empty draft and offers scoped revert; existing detail Discard must restore episode notes as well as overall notes. Reverts advance note clocks.
 - Extend `LibraryEntrySyncSnapshot` and `CloudLibrarySyncClient` with normalized note values, independent merge, and newest-clock accounting. New records use a new sync version so older builds cannot overwrite unknown state.
 - Proposed shared UI: `MyAnimeList/Sources/Views/Library/EntryDetail/EntryNotesSection.swift`. Use local or session-owned selection, native pickers, semantic colors, and platform-appropriate sheets. The episode number remains visible while editing. Overall is initially selected; selection persists within the detail session.
-- Export structured episode notes in JSON, an additional serialized column in tabular formats, and labeled sections in Markdown.
+- Export structured episode notes in JSON, an additional serialized column in tabular formats, and labeled sections in plain text.
 
 ## Alternatives & decisions
 | Choice | Reason and alternative |

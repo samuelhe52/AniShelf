@@ -96,8 +96,10 @@ final class LibraryEntryActionState {
     }
 
     func preparePaste(_ userInfo: UserEntryInfo, for entry: AnimeEntry) {
-        if entry.userInfo.isEmpty {
-            entry.updateUserInfoFromUserAction(userInfo)
+        var target = entry.userInfo
+        target.episodeNotes = []
+        if target.isEmpty {
+            Self.applyPaste(userInfo, to: entry)
             ToastCenter.global.pasted = true
         } else {
             pendingPasteRequest = LibraryEntryPasteRequest(
@@ -117,8 +119,16 @@ final class LibraryEntryActionState {
 
         pendingPasteRequest = nil
         guard let entry = resolveEntry(request.entryIdentity) else { return }
-        entry.updateUserInfoFromUserAction(request.userInfo)
+        Self.applyPaste(request.userInfo, to: entry)
         ToastCenter.global.pasted = true
+    }
+
+    /// Episode notes are anchored to one show's numbering and already shared within
+    /// a show, so pasting keeps the target's notes. They still travel in copied text.
+    private static func applyPaste(_ userInfo: UserEntryInfo, to entry: AnimeEntry) {
+        var userInfo = userInfo
+        userInfo.episodeNotes = entry.episodeNotes
+        entry.updateUserInfoFromUserAction(userInfo)
     }
 
     func clearPasteRequest(requestID: UUID) {

@@ -138,7 +138,10 @@ struct LibraryProfileStats: Equatable {
                 false
             }
         }
-        entriesWithNotesCount = entries.count { !$0.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        entriesWithNotesCount = entries.count {
+            !$0.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || $0.episodeNotes.contains { !$0.isEmpty }
+        }
         totalRuntimeMinutes = Self.runtimeMinutes(for: entries)
         watchedRuntimeMinutes = Self.runtimeMinutes(for: entries) { $0.watchStatus == .watched }
         plannedRuntimeMinutes = Self.runtimeMinutes(for: entries) { $0.watchStatus == .planToWatch }

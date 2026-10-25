@@ -58,7 +58,10 @@ final class LibraryEntryConverter {
             entriesToInsert = [parentEntry]
         }
 
-        parentEntry.updateUserInfoFromUserAction(userInfo)
+        // Episode notes already live on the parent; keep its other seasons intact.
+        var seriesUserInfo = userInfo
+        seriesUserInfo.episodeNotes = parentEntry.episodeNotes
+        parentEntry.updateUserInfoFromUserAction(seriesUserInfo)
         parentEntry.updateCategoryIDs(categoryIDs)
         if userInfo.usingCustomPoster {
             parentEntry.updateCustomPosterURL(originalPosterURL)
@@ -108,12 +111,17 @@ final class LibraryEntryConverter {
         let parentEntry = AnimeEntry(fromInfo: resolvedParentLatestInfo.0)
         parentEntry.replaceDetail(from: resolvedParentLatestInfo.1)
         parentEntry.updateDisplayState(false)
+        parentEntry.storedEpisodeNotes = entry.episodeNotes
 
         let seasonEntry = AnimeEntry(fromInfo: resolvedSeasonLatestInfo.0)
         seasonEntry.replaceDetail(from: resolvedSeasonLatestInfo.1)
         seasonEntry.parentSeriesEntry = parentEntry
         seasonEntry.updateDisplayState(true)
-        seasonEntry.updateUserInfoFromUserAction(userInfo)
+        // The parent already holds the current notes; replaying the pre-fetch snapshot
+        // would revert note edits received while metadata loaded.
+        var seasonUserInfo = userInfo
+        seasonUserInfo.episodeNotes = seasonEntry.episodeNotes
+        seasonEntry.updateUserInfoFromUserAction(seasonUserInfo)
         seasonEntry.updateCategoryIDs(categoryIDs)
         if userInfo.usingCustomPoster {
             seasonEntry.updateCustomPosterURL(originalPosterURL)
