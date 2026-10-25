@@ -46,6 +46,8 @@ historical runtime scenario was rerun. Entry 010 remains an unimplemented propos
 | 031 | 2026-10-22 | [iPhone Duo adaptation](031-iphone-duo-adaptation/000-plan.md) | Implemented — maintainer accepted; known glass limitation | [Action](031-iphone-duo-adaptation/001-action.md), [Empty inspector column](031-iphone-duo-adaptation/002-empty-inspector-column.md), [native host migration](031-iphone-duo-adaptation/003-native-host-migration.md), [vertical library toolbar](031-iphone-duo-adaptation/004-vertical-library-toolbar.md), [native inspector adaptation](031-iphone-duo-adaptation/005-native-inspector-adaptation.md), [accepted folded glass limitation](031-iphone-duo-adaptation/006-folded-inspector-glass-limitation.md) |
 | 032 | 2026-10-23 | [Mac detail header modes](032-mac-detail-header/000-plan.md) | Implemented; fixture UI reviewed | [Action](032-mac-detail-header/001-action.md) |
 
+| 033 | 2026-10-26 | [Episode notes with scope chips](033-episode-notes/000-plan.md) | In progress | — |
+
 ## Find a contract or source
 
 - [Adaptive library requirements](005-adaptive-library/requirements/adaptive-library-experience/spec.md).
