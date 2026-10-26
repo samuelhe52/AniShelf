@@ -8,6 +8,10 @@
 import DataProvider
 import SwiftUI
 
+#if !os(macOS)
+    import UIKit
+#endif
+
 /// Design A: the editor stays in place while chips inside its box select the note scope.
 struct EntryNotesSection: View {
     let entry: AnimeEntry
@@ -287,6 +291,12 @@ struct EntryNotesSection: View {
                     onExpand: { sheet = .all },
                     menu: { anchor in episodeMenu(for: anchor, hasText: true) }
                 )
+                #if !os(macOS)
+                    // Swipes cancel row taps; only vertical scrolling may recognize alongside them.
+                    .gesture(EntryNotesOverviewSwipe(direction: .left) { select(.overall) })
+                    // All is the first scope. Consume a right swipe without opening its touched row.
+                    .gesture(EntryNotesOverviewSwipe(direction: .right) {})
+                #endif
                 .transition(.blurReplace)
             } else {
                 editor
@@ -301,10 +311,23 @@ struct EntryNotesSection: View {
             if supportsEpisodes, scopeTitle.secondary != nil || isStranded { scopeLabel }
             PlaceholderTextEditor(
                 text: Binding(get: { currentText }, set: setText),
-                placeholder: selectedAnchor == nil ? EntryDetailL10n.writeSomeThoughts : "Write an episode note…"
+                placeholder: selectedAnchor == nil ? EntryDetailL10n.writeSomeThoughts : "Write an episode note…",
+                onHorizontalSwipe: { swipeScope($0) }
             )
             .accessibilityLabel(Text(verbatim: scopeTitle.primary))
             .accessibilityIdentifier("entryNotes.editor")
+
+            if supportsEpisodes {
+                HStack {
+                    Spacer(minLength: 4)
+                    Button("All", systemImage: "arrow.uturn.backward") { select(.all) }
+                        .font(.caption.weight(.semibold))
+                        .buttonStyle(.borderless)
+                        .accessibilityIdentifier("entryNotes.showAll")
+                }
+                .padding(.horizontal, 4)
+                .padding(.top, 6)
+            }
         }
     }
 
@@ -346,6 +369,16 @@ struct EntryNotesSection: View {
 
     private func select(_ scope: EntryNoteScope) {
         withAnimation(.snappy) { selectedScope = scope }
+    }
+
+    private func swipeScope(_ direction: HorizontalEdge) {
+        guard supportsEpisodes else { return }
+        // Match the chip strip, excluding the separate note-creation controls. Stop at either end.
+        let scopes: [EntryNoteScope] = [.all, .overall] + chipAnchors.map { .episode($0) }
+        guard let index = scopes.firstIndex(of: selectedScope) else { return }
+        let nextIndex = index + (direction == .leading ? 1 : -1)
+        guard scopes.indices.contains(nextIndex) else { return }
+        select(scopes[nextIndex])
     }
 
     private func setText(_ text: String) {
@@ -403,6 +436,42 @@ enum EntryNoteScope: Hashable {
     case overall
     case episode(EpisodeNoteAnchor)
 }
+
+#if !os(macOS)
+    /// A discrete swipe that competes with overview row taps, but leaves scrolling available.
+    fileprivate struct EntryNotesOverviewSwipe: UIGestureRecognizerRepresentable {
+        let direction: UISwipeGestureRecognizer.Direction
+        let action: () -> Void
+
+        func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator {
+            Coordinator()
+        }
+
+        func makeUIGestureRecognizer(context: Context) -> UISwipeGestureRecognizer {
+            let recognizer = UISwipeGestureRecognizer()
+            recognizer.direction = direction
+            recognizer.cancelsTouchesInView = true
+            recognizer.delaysTouchesEnded = true
+            recognizer.delegate = context.coordinator
+            return recognizer
+        }
+
+        func handleUIGestureRecognizerAction(_ recognizer: UISwipeGestureRecognizer, context: Context) {
+            guard recognizer.state == .ended else { return }
+            action()
+        }
+
+        final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+            func gestureRecognizer(
+                _ gestureRecognizer: UIGestureRecognizer,
+                shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+            ) -> Bool {
+                guard let scrollView = otherGestureRecognizer.view as? UIScrollView else { return false }
+                return otherGestureRecognizer === scrollView.panGestureRecognizer
+            }
+        }
+    }
+#endif
 
 // MARK: - Labels and metadata
 

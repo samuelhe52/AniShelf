@@ -24,6 +24,8 @@ struct PlaceholderTextEditor: View {
     var isLiteralInput = false
     /// Focuses the editor when it appears.
     var autofocus = false
+    /// Optional touch navigation on iOS; leading is a left swipe, trailing a right swipe.
+    var onHorizontalSwipe: ((HorizontalEdge) -> Void)? = nil
 
     var body: some View {
         #if os(macOS)
@@ -46,7 +48,8 @@ struct PlaceholderTextEditor: View {
                 text: $text,
                 placeholder: String(localized: placeholder),
                 isLiteralInput: isLiteralInput,
-                autofocus: autofocus
+                autofocus: autofocus,
+                onHorizontalSwipe: onHorizontalSwipe
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         #endif
@@ -75,6 +78,7 @@ struct PlaceholderTextEditor: View {
         let placeholder: String
         let isLiteralInput: Bool
         let autofocus: Bool
+        let onHorizontalSwipe: ((HorizontalEdge) -> Void)?
 
         func makeCoordinator() -> Coordinator {
             Coordinator(text: $text)
@@ -102,6 +106,16 @@ struct PlaceholderTextEditor: View {
             }
             textView.text = text
             textView.focusesOnWindow = autofocus
+            if onHorizontalSwipe != nil {
+                for direction: UISwipeGestureRecognizer.Direction in [.left, .right] {
+                    let swipe = UISwipeGestureRecognizer(
+                        target: context.coordinator, action: #selector(Coordinator.swipe(_:)))
+                    swipe.direction = direction
+                    swipe.delegate = context.coordinator
+                    textView.addGestureRecognizer(swipe)
+                }
+            }
+            context.coordinator.onHorizontalSwipe = onHorizontalSwipe
             context.coordinator.lastSyncedText = text
             return textView
         }
@@ -109,6 +123,7 @@ struct PlaceholderTextEditor: View {
         func updateUIView(_ textView: PlaceholderUITextView, context: Context) {
             let coordinator = context.coordinator
             coordinator.text = $text
+            coordinator.onHorizontalSwipe = onHorizontalSwipe
             textView.placeholder = placeholder
             // Apply only changes made outside the editor. The model can reject a keystroke (a
             // whitespace-only episode note stays empty), and echoing that back would erase it.
@@ -119,8 +134,9 @@ struct PlaceholderTextEditor: View {
             }
         }
 
-        final class Coordinator: NSObject, UITextViewDelegate {
+        final class Coordinator: NSObject, UITextViewDelegate, UIGestureRecognizerDelegate {
             var text: Binding<String>
+            var onHorizontalSwipe: ((HorizontalEdge) -> Void)?
             /// The binding's value as of the last update, to tell outside changes from typing.
             var lastSyncedText = ""
 
@@ -131,6 +147,27 @@ struct PlaceholderTextEditor: View {
             func textViewDidChange(_ textView: UITextView) {
                 (textView as? PlaceholderUITextView)?.updatePlaceholderVisibility()
                 text.wrappedValue = textView.text
+            }
+
+            func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+                guard onHorizontalSwipe != nil, let textView = gestureRecognizer.view as? UITextView else {
+                    return false
+                }
+                // Leave IME composition and selection-handle drags to the text editor.
+                return textView.markedTextRange == nil && textView.selectedRange.length == 0
+            }
+
+            func gestureRecognizer(
+                _ gestureRecognizer: UIGestureRecognizer,
+                shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+            ) -> Bool {
+                // The text view's scrolling pan otherwise recognizes before a swipe can finish.
+                otherGestureRecognizer === (gestureRecognizer.view as? UITextView)?.panGestureRecognizer
+            }
+
+            @objc func swipe(_ gesture: UISwipeGestureRecognizer) {
+                guard gesture.state == .ended else { return }
+                onHorizontalSwipe?(gesture.direction == .left ? .leading : .trailing)
             }
         }
     }
