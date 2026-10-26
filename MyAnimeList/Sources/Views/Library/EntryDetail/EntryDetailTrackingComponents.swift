@@ -262,6 +262,7 @@ struct EntryDetailTrackingSection: View {
     @Environment(\.popupPanelStyle) private var panelStyle
     let entry: AnimeEntry
     var originalNotes: String? = nil
+    var originalEpisodeNotes: [EpisodeNote] = []
     let scoringEnabled: Bool
     let episodeProgressTrackingEnabled: Bool
     let onWatchStatusSelected: (AnimeEntry.WatchStatus) -> Void
@@ -275,6 +276,7 @@ struct EntryDetailTrackingSection: View {
             MacEntryTrackingEditor(
                 entry: entry,
                 originalNotes: originalNotes,
+                originalEpisodeNotes: originalEpisodeNotes,
                 scoringEnabled: scoringEnabled,
                 episodeProgressTrackingEnabled: episodeProgressTrackingEnabled,
                 onWatchStatusSelected: onWatchStatusSelected,
@@ -303,6 +305,8 @@ struct EntryDetailTrackingSection: View {
                         ) {
                             EntryDetailTrackingEditor(
                                 entry: entry,
+                                originalNotes: originalNotes,
+                                originalEpisodeNotes: originalEpisodeNotes,
                                 episodeProgressTrackingEnabled: episodeProgressTrackingEnabled,
                                 onWatchStatusSelected: onWatchStatusSelected,
                                 onEpisodeProgressCompletionSuggested: onEpisodeProgressCompletionSuggested
@@ -319,6 +323,8 @@ struct EntryDetailTrackingSection: View {
                     ) {
                         EntryDetailTrackingEditor(
                             entry: entry,
+                            originalNotes: originalNotes,
+                            originalEpisodeNotes: originalEpisodeNotes,
                             episodeProgressTrackingEnabled: episodeProgressTrackingEnabled,
                             onWatchStatusSelected: onWatchStatusSelected,
                             onEpisodeProgressCompletionSuggested: onEpisodeProgressCompletionSuggested
@@ -362,6 +368,8 @@ extension AnimeEntry {
     /// The iOS tracking editor; the Mac card uses `MacEntryTrackingEditor`.
     fileprivate struct EntryDetailTrackingEditor: View {
         @Bindable var entry: AnimeEntry
+        let originalNotes: String?
+        let originalEpisodeNotes: [EpisodeNote]
         let episodeProgressTrackingEnabled: Bool
         let onWatchStatusSelected: (AnimeEntry.WatchStatus) -> Void
         let onEpisodeProgressCompletionSuggested: (AnimeEntryEpisodeProgressCompletionPrompt) -> Void
@@ -427,28 +435,7 @@ extension AnimeEntry {
         }
 
         private var notesSection: some View {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(EntryDetailL10n.notes)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                ScrollIsolatedPlaceholderTextEditor(
-                    text: Binding(
-                        get: { entry.notes },
-                        set: { entry.updateNotes($0) }
-                    ),
-                    placeholder: EntryDetailL10n.writeSomeThoughts
-                )
-                .frame(height: 180)
-                .padding(12)
-                .background(
-                    .thinMaterial,
-                    in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                )
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(.white.opacity(0.1), lineWidth: 0.5)
-                }
-            }
+            EntryNotesSection(entry: entry, originalNotes: originalNotes, originalEpisodeNotes: originalEpisodeNotes)
         }
     }
 

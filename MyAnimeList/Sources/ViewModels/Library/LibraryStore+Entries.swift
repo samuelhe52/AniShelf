@@ -76,6 +76,33 @@ extension LibraryStore {
         return entry
     }
 
+    /// Refreshes one season whose parent series link is missing; the refresh relinks or
+    /// inserts the series (docs-ai 033). Tries once per launch and defers to a running
+    /// Refresh All, which repairs the link itself.
+    func restoreMissingParentSeries(for entry: AnimeEntry) async {
+        guard case .season = entry.type, entry.parentSeriesEntry == nil, !isRefreshingAllMetadata,
+            parentSeriesRestoreAttemptedIDs.insert(entry.id).inserted
+        else { return }
+        libraryStoreLogger.info("Restoring the missing parent series of a season entry.")
+        let writer = LibraryMetadataRefreshWriter(modelContainer: dataProvider.sharedModelContainer)
+        let refresher = LibraryMetadataRefresher(
+            repository: repository,
+            longTermGalleryPosterCachingEnabled: longTermGalleryPosterCachingEnabled,
+            applyMetadataRefresh: { updates, parentUpdates in
+                try await writer.apply(updates: updates, parentUpdates: parentUpdates)
+            }
+        )
+        await performWithDeferredLibrarySaveRefresh {
+            await refresher.refreshInfos(
+                for: [entry],
+                fetcher: infoFetcher,
+                language: language,
+                posterLanguage: posterLanguage,
+                options: .init(reporter: .silent, prefetchImages: false)
+            )
+        }
+    }
+
     /// Shows an entry that already exists, returning `nil` because nothing new was created.
     private func revealExistingEntry(_ existingEntry: AnimeEntry) throws -> AnimeEntry? {
         existingEntry.updateDisplayState(true)

@@ -79,20 +79,30 @@ struct EpisodeRowView: View {
     let card: EntryDetailEpisodeCard
     let previewContext: EpisodePreviewContext?
     let isWatched: Bool
+    let entry: AnimeEntry?
+    @State private var editingNote: EpisodeNoteAnchor?
+    @State private var editAfterPreview = false
     @State private var showPreview = false
     @State private var previewHapticTrigger = false
+    @State private var retainedNoteText: String?
+    @State private var isNoteVisible = true
+    @State private var isNoteEditorPresented = false
 
     init(
         card: EntryDetailEpisodeCard,
         previewContext: EpisodePreviewContext? = nil,
-        isWatched: Bool = false
+        isWatched: Bool = false,
+        entry: AnimeEntry? = nil
     ) {
         self.card = card
         self.previewContext = previewContext
         self.isWatched = isWatched
+        self.entry = entry
     }
 
     var body: some View {
+        let displayedNoteText = noteText ?? retainedNoteText
+
         HStack(spacing: 0) {
             Group {
                 if let imageURL = card.imageURL {
@@ -115,14 +125,25 @@ struct EpisodeRowView: View {
             .padding(.trailing, 12)
 
             VStack(alignment: .leading, spacing: 6) {
+                // A note line takes the title's second line so the text stays level with the thumbnail.
                 Text(card.title)
                     .font(.subheadline.weight(.semibold))
-                    .lineLimit(2)
+                    .lineLimit(displayedNoteText == nil ? 2 : 1)
                 Text(card.subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .lineLimit(displayedNoteText == nil ? 2 : 1)
+                if let displayedNoteText {
+                    Text("\(Image(systemName: "note.text")) \(displayedNoteText)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .opacity(isNoteVisible ? 1 : 0)
+                        .transition(.identity)
+                        .accessibilityHidden(noteText == nil)
+                }
             }
+            .animation(.snappy, value: displayedNoteText != nil)
 
             Spacer(minLength: 4)
 
@@ -135,13 +156,93 @@ struct EpisodeRowView: View {
             previewHapticTrigger.toggle()
             showPreview = true
         }
-        .sensoryFeedback(.impact(flexibility: .solid), trigger: previewHapticTrigger)
-        .popover(isPresented: $showPreview) {
-            if let previewContext {
-                EpisodePreviewCard(card: card, context: previewContext)
-                    .presentationCompactAdaptation(.popover)
+        .swipeActions(edge: .trailing) {
+            if let noteAnchor {
+                Button(noteText == nil ? "Add Note" : "Edit Note", systemImage: "note.text") {
+                    editingNote = noteAnchor
+                }
+                .tint(.blue)
             }
         }
+        .sensoryFeedback(.impact(flexibility: .solid), trigger: previewHapticTrigger)
+        .onChange(of: noteText, initial: true) { _, newValue in
+            updateNotePresentation(newValue)
+        }
+        #if os(macOS)
+            .contextMenu {
+                if previewContext != nil {
+                    Button("Preview", systemImage: "eye") { showPreview = true }
+                }
+                if noteAnchor != nil {
+                    Button(noteText == nil ? "Add Note" : "Edit Note", systemImage: "note.text") {
+                        editingNote = noteAnchor
+                    }
+                }
+            }
+        #endif
+        // Long press stays the iOS preview gesture; the preview offers the note.
+        .accessibilityActions {
+            if noteAnchor != nil {
+                Button(noteText == nil ? "Add Note" : "Edit Note") { editingNote = noteAnchor }
+            }
+        }
+        .sheet(
+            item: $editingNote,
+            onDismiss: {
+                isNoteEditorPresented = false
+                updateNotePresentation(noteText)
+            }
+        ) { anchor in
+            if let entry {
+                EpisodeNoteEditor(entry: entry, anchor: anchor)
+                    .modifier(EntryNotesPresentationLifecycle())
+                    .onAppear { isNoteEditorPresented = true }
+            }
+        }
+        .popover(isPresented: $showPreview) {
+            if let previewContext {
+                EpisodePreviewCard(card: card, context: previewContext, entry: entry) {
+                    editAfterPreview = true
+                    showPreview = false
+                }
+                .onDisappear {
+                    if editAfterPreview {
+                        editAfterPreview = false
+                        editingNote = noteAnchor
+                    }
+                }
+                .presentationCompactAdaptation(.popover)
+            }
+        }
+    }
+
+    private func updateNotePresentation(_ text: String?) {
+        if let text {
+            retainedNoteText = text
+            withAnimation(.easeOut(duration: 0.2)) {
+                isNoteVisible = true
+            }
+        } else if retainedNoteText != nil, !isNoteEditorPresented {
+            // Fade after the editor dismisses, keeping the note's space until it is invisible.
+            withAnimation(.easeOut(duration: 0.2), completionCriteria: .removed) {
+                isNoteVisible = false
+            } completion: {
+                guard noteText == nil else { return }
+                retainedNoteText = nil
+            }
+        }
+    }
+
+    private var noteText: String? {
+        guard let entry, let noteAnchor, let note = entry.episodeNote(at: noteAnchor), !note.isEmpty else {
+            return nil
+        }
+        return note.text.split(whereSeparator: \.isNewline).first.map(String.init)
+    }
+
+    private var noteAnchor: EpisodeNoteAnchor? {
+        guard let previewContext, entry?.supportsEpisodeNotes == true else { return nil }
+        return .init(seasonNumber: previewContext.seasonNumber, episodeNumber: card.episodeNumber)
     }
 
     @ViewBuilder
@@ -167,9 +268,6 @@ extension View {
             if isEnabled {
                 contentShape(Rectangle())
                     .onTapGesture(perform: action)
-                    .contextMenu {
-                        Button("Preview", systemImage: "eye", action: action)
-                    }
                     .accessibilityAction(named: Text("Preview"), action)
             } else {
                 self

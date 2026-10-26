@@ -15,6 +15,7 @@
         @Bindable var entry: AnimeEntry
         /// The notes when the inspector opened; a rewrite can be reverted to them.
         let originalNotes: String?
+        let originalEpisodeNotes: [EpisodeNote]
         let scoringEnabled: Bool
         let episodeProgressTrackingEnabled: Bool
         let onWatchStatusSelected: (AnimeEntry.WatchStatus) -> Void
@@ -24,7 +25,8 @@
             VStack(alignment: .leading, spacing: 0) {
                 if scoringEnabled {
                     EntryTrackingRow(EntryDetailL10n.score) {
-                        EntryScoreCard(score: entry.entryScore, onSetScore: { entry.updateEntryScore($0) }, isInline: true)
+                        EntryScoreCard(
+                            score: entry.entryScore, onSetScore: { entry.updateEntryScore($0) }, isInline: true)
                     }
                     Divider()
                 }
@@ -84,39 +86,7 @@
         }
 
         private var notesSection: some View {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text(EntryDetailL10n.notes)
-                    Spacer(minLength: 8)
-                    // Edits save as they happen. A rewrite, unlike an append, may lose text,
-                    // so it can be reverted here; iOS offers Discard from its Done menu.
-                    if let originalNotes, !entry.notes.hasPrefix(originalNotes) {
-                        Button(EntryDetailL10n.revertNotes) {
-                            entry.updateNotes(originalNotes)
-                        }
-                        .controlSize(.small)
-                    }
-                }
-                ScrollIsolatedPlaceholderTextEditor(
-                    text: Binding(
-                        get: { entry.notes },
-                        set: { entry.updateNotes($0) }
-                    ),
-                    placeholder: EntryDetailL10n.writeSomeThoughts
-                )
-                // A quiet inset surface keeps the editor legible without a bright
-                // white panel competing with the surrounding inspector content.
-                .font(.body)
-                .lineSpacing(3)
-                .frame(height: 200)
-                .padding(.vertical, 6)
-                .padding(.horizontal, 4)
-                .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .strokeBorder(.separator, lineWidth: 0.5)
-                }
-            }
+            EntryNotesSection(entry: entry, originalNotes: originalNotes, originalEpisodeNotes: originalEpisodeNotes)
         }
     }
 

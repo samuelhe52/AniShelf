@@ -1,6 +1,166 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Overall" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全体"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整体"
+          }
+        }
+      }
+    },
+    "Other…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その他…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其他…"
+          }
+        }
+      }
+    },
+    "Write an episode note…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このエピソードの感想を書く…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写下这一集的感想…"
+          }
+        }
+      }
+    },
+    "Select a note to edit" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ノートを選択して編集"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择笔记以编辑"
+          }
+        }
+      }
+    },
+    "Expand" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拡大"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "展开"
+          }
+        }
+      }
+    },
+    "Season 0 contains specials" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シーズン0は特別編です"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第0季为特别篇"
+          }
+        }
+      }
+    },
+    "Delete Note" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ノートを削除"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除笔记"
+          }
+        }
+      }
+    },
+    "E%lld" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第%lld話"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第%lld集"
+          }
+        }
+      }
+    },
+    "S%lld E%lld" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S%lld E%lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S%lld E%lld"
+          }
+        }
+      }
+    },
+    "Season %lld · Episode %lld" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シーズン%lld・第%lld話"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第%lld季·第%lld集"
+          }
+        }
+      }
+    },
     "Detail Header" : {
       "localizations" : {
         "ja" : {
@@ -1048,9 +1208,7 @@
         }
       }
     },
-    "%lld entries. Two entries deliberately fail every metadata restoration attempt. Use Retry three times to expose their discard actions." : {
-
-    },
+    "%lld entries. Two entries deliberately fail every metadata restoration attempt. Use Retry three times to expose their discard actions." : {},
     "%lld episodes" : {
       "localizations" : {
         "ja" : {
@@ -3311,9 +3469,7 @@
         }
       }
     },
-    "Broadcast Policy" : {
-
-    },
+    "Broadcast Policy" : {},
     "Built-in release notes" : {
       "localizations" : {
         "ja" : {
@@ -3857,9 +4013,7 @@
         }
       }
     },
-    "Completed Sync" : {
-
-    },
+    "Completed Sync" : {},
     "Confirm" : {
       "localizations" : {
         "ja" : {
@@ -5693,9 +5847,7 @@
         }
       }
     },
-    "Following menu action" : {
-
-    },
+    "Following menu action" : {},
     "Format" : {
       "localizations" : {
         "ja" : {
@@ -5936,9 +6088,7 @@
         }
       }
     },
-    "Hold deletions until Retry" : {
-
-    },
+    "Hold deletions until Retry" : {},
     "Type a value, or use the Up and Down arrow keys." : {
       "localizations" : {
         "ja" : {
@@ -6036,9 +6186,7 @@
         }
       }
     },
-    "iCloud Sync Preview" : {
-
-    },
+    "iCloud Sync Preview" : {},
     "iCloud storage is full. Free up space or upgrade your iCloud storage, then retry sync." : {
       "localizations" : {
         "ja" : {
@@ -6167,15 +6315,9 @@
         }
       }
     },
-    "Inject failures" : {
-
-    },
-    "Injected failures are off. The next Retry will load the pending entries and clear the other notices." : {
-
-    },
-    "Injected failures are off. The next Retry will restore the two pending entries and complete bootstrap." : {
-
-    },
+    "Inject failures" : {},
+    "Injected failures are off. The next Retry will load the pending entries and clear the other notices." : {},
+    "Injected failures are off. The next Retry will restore the two pending entries and complete bootstrap." : {},
     "Interface" : {
       "localizations" : {
         "ja" : {
@@ -7640,9 +7782,7 @@
         }
       }
     },
-    "Open airtime menu" : {
-
-    },
+    "Open airtime menu" : {},
     "Open API Page" : {
       "localizations" : {
         "ja" : {
@@ -9022,9 +9162,7 @@
         }
       }
     },
-    "Restoration" : {
-
-    },
+    "Restoration" : {},
     "Restore" : {
       "localizations" : {
         "ja" : {
@@ -9313,9 +9451,7 @@
         }
       }
     },
-    "Scenario" : {
-
-    },
+    "Scenario" : {},
     "Schedule" : {
       "localizations" : {
         "ja" : {
@@ -10216,9 +10352,7 @@
         }
       }
     },
-    "Sync succeeded, but two entries couldn't be loaded, two changes weren't uploaded, and one record is unreadable. The entry TMDb no longer lists can be discarded right away." : {
-
-    },
+    "Sync succeeded, but two entries couldn't be loaded, two changes weren't uploaded, and one record is unreadable. The entry TMDb no longer lists can be discarded right away." : {},
     "Synced" : {
       "localizations" : {
         "ja" : {
@@ -10268,9 +10402,7 @@
         }
       }
     },
-    "Synthetic iCloud Library" : {
-
-    },
+    "Synthetic iCloud Library" : {},
     "Tab-Separated Values (.tsv)" : {
       "localizations" : {
         "ja" : {
@@ -12557,15 +12689,9 @@
         }
       }
     },
-    "Deleted" : {
-
-    },
-    "iCloud data was deleted in iCloud settings. Upload stays blocked while failures are injected." : {
-
-    },
-    "Injected failures are off. Upload This Library re-creates the iCloud data and completes sync." : {
-
-    },
+    "Deleted" : {},
+    "iCloud data was deleted in iCloud settings. Upload stays blocked while failures are injected." : {},
+    "Injected failures are off. Upload This Library re-creates the iCloud data and completes sync." : {},
     "System (%@)" : {
       "localizations" : {
         "ja" : {
@@ -13512,6 +13638,246 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "哔哩哔哩"
+          }
+        }
+      }
+    },
+    "Combine Notes" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ノートを結合"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "合并笔记"
+          }
+        }
+      }
+    },
+    "%@ already has a note" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@にはすでにノートがあります"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@已有笔记"
+          }
+        }
+      }
+    },
+    "The moved note is added after the existing text." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移動したノートは既存のテキストの後に追加されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移动的笔记将接在现有内容之后。"
+          }
+        }
+      }
+    },
+    "New Note for %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@の新しいノート"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@的新笔记"
+          }
+        }
+      }
+    },
+    "Move to Episode…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別のエピソードに移動…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移到其他集…"
+          }
+        }
+      }
+    },
+    "Not in Episode List · Move…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エピソード一覧にありません・移動…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不在分集列表中·移动…"
+          }
+        }
+      }
+    },
+    "SP %lld" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SP %lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SP %lld"
+          }
+        }
+      }
+    },
+    "Episode %lld" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第%lld話"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第%lld集"
+          }
+        }
+      }
+    },
+    "Choose Episode" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エピソードを選択"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择分集"
+          }
+        }
+      }
+    },
+    "Move to Episode" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移動先のエピソード"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移动到分集"
+          }
+        }
+      }
+    },
+    "Has Note" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ノートあり"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有笔记"
+          }
+        }
+      }
+    },
+    "All Notes" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべてのノート"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部笔记"
+          }
+        }
+      }
+    },
+    "Add Note" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ノートを追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加笔记"
+          }
+        }
+      }
+    },
+    "Edit Note" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ノートを編集"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑笔记"
+          }
+        }
+      }
+    },
+    "Episode Not Listed" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一覧にないエピソード"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "列表中没有的分集"
           }
         }
       }

@@ -69,6 +69,9 @@ struct EntryDetailEpisodeCard: Identifiable, Equatable {
     let title: String
     let subtitle: String
     let imageURL: URL?
+    /// The bare episode title and air date, for lists that format their own rows.
+    let name: String
+    let airDate: Date?
 }
 
 struct EpisodePreviewStaffRow: Identifiable, Equatable {

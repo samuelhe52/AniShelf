@@ -496,7 +496,9 @@ final class EntryDetailViewModel {
                 title: "\($0.episodeNumber). \($0.title)",
                 subtitle: $0.airDate?.formatted(date: .abbreviated, time: .omitted)
                     ?? String(localized: EntryDetailL10n.episode),
-                imageURL: $0.imageURL
+                imageURL: $0.imageURL,
+                name: $0.title,
+                airDate: $0.airDate
             )
         }
     }

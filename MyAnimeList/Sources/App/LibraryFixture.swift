@@ -46,6 +46,22 @@
             return detail
         }
 
+        /// Local episode rows let detail interactions work without fixture TMDb requests.
+        nonisolated static func episodeSummaries(seriesTMDbID: Int, seasonNumber: Int) -> [AnimeEntryEpisodeSummaryDTO]?
+        {
+            guard
+                let season = details.withLock({ $0[seriesTMDbID]?.seasons.first { $0.seasonNumber == seasonNumber } }),
+                let count = season.episodeCount, count > 0
+            else { return nil }
+            return (1...count).map { number in
+                AnimeEntryEpisodeSummaryDTO(
+                    id: seriesTMDbID * 1_000 + seasonNumber * 100 + number,
+                    episodeNumber: number,
+                    title: "Episode \(number)"
+                )
+            }
+        }
+
         let size: Int
         let defaults: UserDefaults
 

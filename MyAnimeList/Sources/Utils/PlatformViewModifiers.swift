@@ -24,6 +24,14 @@ extension EnvironmentValues {
 }
 
 extension View {
+    @ViewBuilder func supportedSwipeActionsContainer() -> some View {
+        if #available(iOS 27.0, macOS 27.0, *) {
+            swipeActionsContainer()
+        } else {
+            self
+        }
+    }
+
     @ViewBuilder func inlineNavigationTitle() -> some View {
         #if os(macOS)
             self

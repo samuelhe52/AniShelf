@@ -24,7 +24,14 @@ final class SeriesSeasonEpisodeLoader {
 
     init(
         fetchEpisodes: @escaping FetchEpisodes = { seriesTMDbID, seasonNumber, language in
-            try await InfoFetcher().seasonEpisodeSummaries(
+            #if DEBUG || LIBRARY_FIXTURES
+                if let episodes = LibraryFixture.episodeSummaries(
+                    seriesTMDbID: seriesTMDbID, seasonNumber: seasonNumber)
+                {
+                    return episodes
+                }
+            #endif
+            return try await InfoFetcher().seasonEpisodeSummaries(
                 parentSeriesID: seriesTMDbID,
                 seasonNumber: seasonNumber,
                 language: language
@@ -79,6 +86,7 @@ final class SeriesSeasonEpisodeLoader {
 
 struct SeriesSeasonEpisodeGroupView: View {
     let season: EntryDetailSeasonCard
+    let entry: AnimeEntry?
     let seriesTMDbID: Int
     let language: Language
     let watchStatus: AnimeEntry.WatchStatus
@@ -97,6 +105,7 @@ struct SeriesSeasonEpisodeGroupView: View {
 
     init(
         season: EntryDetailSeasonCard,
+        entry: AnimeEntry? = nil,
         seriesTMDbID: Int,
         language: Language,
         watchStatus: AnimeEntry.WatchStatus,
@@ -106,6 +115,7 @@ struct SeriesSeasonEpisodeGroupView: View {
         sectionSystemImage: String? = nil
     ) {
         self.season = season
+        self.entry = entry
         self.seriesTMDbID = seriesTMDbID
         self.language = language
         self.watchStatus = watchStatus
@@ -166,6 +176,7 @@ struct SeriesSeasonEpisodeGroupView: View {
         }
         .padding(panelStyle.contentPadding)
         .popupGlassPanel(cornerRadius: 24)
+        .clipShape(RoundedRectangle(cornerRadius: panelStyle == .grouped ? 10 : 24, style: .continuous))
         .animation(loadingAnimation, value: episodeLoader.isLoading)
         .animation(loadingAnimation, value: episodeLoader.loadFailed)
         .animation(loadingAnimation, value: isExpanded)
@@ -209,7 +220,8 @@ struct SeriesSeasonEpisodeGroupView: View {
                             inSeason: season.seasonNumber,
                             watchStatus: watchStatus,
                             summary: episodeProgressSummary
-                        )
+                        ),
+                        entry: entry
                     )
                 }
 
@@ -254,7 +266,9 @@ struct SeriesSeasonEpisodeGroupView: View {
             title: "\(dto.episodeNumber). \(dto.title)",
             subtitle: dto.airDate?.formatted(date: .abbreviated, time: .omitted)
                 ?? String(localized: EntryDetailL10n.episode),
-            imageURL: dto.resolvedImageURL
+            imageURL: dto.resolvedImageURL,
+            name: dto.title,
+            airDate: dto.airDate
         )
     }
 
@@ -270,6 +284,8 @@ struct SeriesSeasonEpisodeGroupView: View {
 struct EpisodePreviewCard: View {
     let card: EntryDetailEpisodeCard
     let context: EpisodePreviewContext
+    var entry: AnimeEntry? = nil
+    var onNote: (() -> Void)? = nil
 
     @State private var previewModel = EpisodePreviewViewModel()
 
@@ -316,6 +332,31 @@ struct EpisodePreviewCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentTransition(.opacity)
                 .animation(.easeInOut(duration: 0.2), value: previewModel.overviewText)
+
+            if let entry, entry.supportsEpisodeNotes, let onNote {
+                let anchor = EpisodeNoteAnchor(seasonNumber: context.seasonNumber, episodeNumber: card.episodeNumber)
+                let note = entry.episodeNote(at: anchor).flatMap { $0.isEmpty ? nil : $0.text }
+                // Matches the Staff section below: a caption header over plain text, no inset box.
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(EntryDetailL10n.notes)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 8)
+                        Button(note == nil ? "Add Note" : "Edit", action: onNote)
+                            .font(.caption.weight(.semibold))
+                            .buttonStyle(.borderless)
+                    }
+                    if let note {
+                        Text(verbatim: note)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .lineSpacing(3)
+                            .lineLimit(5)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
 
             if !previewModel.staffRows.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {

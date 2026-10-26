@@ -231,7 +231,9 @@ func makeEpisodePreviewCard() -> EntryDetailEpisodeCard {
         episodeNumber: 1,
         title: "1. Preview",
         subtitle: "Apr 7, 2013",
-        imageURL: nil
+        imageURL: nil,
+        name: "Preview",
+        airDate: nil
     )
 }
 

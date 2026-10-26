@@ -70,6 +70,7 @@ final class EntryDetailSession {
     var originalUserInfo: UserEntryInfo
     var originalTrackingUpdatedAt: Date?
     var conversion = EntryDetailConversionState()
+    var isPresentingNotes = false
     var hasPendingWatchedReviewOpportunity = false
     var isCharacterExpanded: Bool
     var isStaffExpanded: Bool
@@ -80,6 +81,7 @@ final class EntryDetailSession {
         presentation.blocksHostMigration
             || isAwaitingActiveSheetDismissalForHostChange
             || conversion.inProgress
+            || isPresentingNotes
     }
 
     init(

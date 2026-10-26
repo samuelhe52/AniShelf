@@ -53,6 +53,10 @@ class LibraryStore {
     ///
     /// Only `LibraryProfileSettingsActions` should write this.
     var isRefreshingAllMetadata = false
+    /// Seasons whose missing parent series this launch already tried to restore.
+    ///
+    /// Only `restoreMissingParentSeries(for:)` should write this.
+    @ObservationIgnored var parentSeriesRestoreAttemptedIDs: Set<PersistentIdentifier> = []
     @ObservationIgnored var infoFetcher: InfoFetcher
     var language: Language = .resolvedAnimeInfoLanguage()
     /// Read at each fetch so a settings change applies to the next library write.

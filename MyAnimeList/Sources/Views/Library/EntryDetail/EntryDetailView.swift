@@ -13,6 +13,7 @@ import SwiftUI
 struct EntryDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppReviewPromptController.self) private var appReview
+    @Environment(LibraryStore.self) private var store: LibraryStore?
     private let airingReminders = AiringReminderCoordinator.shared
 
     @AppStorage(.preferredAnimeInfoLanguage) private var preferredLanguage: Language = .english
@@ -84,6 +85,7 @@ struct EntryDetailView: View {
 
     var body: some View {
         pageWithPrompts
+            .environment(session)
             .task(id: "\(session.instanceID)-\(currentLanguage.rawValue)-\(showsHero)") {
                 await session.model.load(
                     for: session.entry,
@@ -91,6 +93,13 @@ struct EntryDetailView: View {
                     includesTitleLogo: showsHero
                 )
                 await session.refreshEpisodeCountsIfEligible(language: currentLanguage)
+                await store?.restoreMissingParentSeries(for: session.entry)
+            }
+            .onChange(of: session.entry.supportsEpisodeNotes) { hadOwner, hasOwner in
+                // Without an owner the snapshot read no episode notes, and note editing was
+                // unavailable. Adopt the restored parent's notes so Discard keeps them.
+                guard !hadOwner, hasOwner else { return }
+                session.originalUserInfo.episodeNotes = session.entry.episodeNotes
             }
             .task(id: broadcastActivationTaskID) {
                 session.broadcast.update(broadcastActivationTaskID.activation)
@@ -114,6 +123,7 @@ struct EntryDetailView: View {
                         iOSPageContent(proxy)
                     #endif
                 }
+                .supportedSwipeActionsContainer()
                 .scrollPosition($session.scrollPosition)
                 .coordinateSpace(name: scrollCoordinateSpaceName)
                 .preferredNavigationBarScrollEdgeEffect()
@@ -514,6 +524,7 @@ struct EntryDetailView: View {
                     ForEach(session.model.seasonCards) { season in
                         SeriesSeasonEpisodeGroupView(
                             season: season,
+                            entry: session.entry,
                             seriesTMDbID: session.entry.tmdbID,
                             language: currentLanguage,
                             watchStatus: session.entry.watchStatus,
@@ -555,11 +566,17 @@ struct EntryDetailView: View {
                                         summary: session.entry.episodeProgressSummary(
                                             forSeason: session.entry.type.seasonNumber ?? 0
                                         )
-                                    )
+                                    ),
+                                entry: session.entry
                             )
                         }
                     }
                 }
+                #if os(macOS)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                #else
+                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                #endif
                 .id(EntryDetailScrollTarget.episodesSection)
             }
         case .movie:
@@ -583,6 +600,7 @@ struct EntryDetailView: View {
         EntryDetailTrackingSection(
             entry: session.entry,
             originalNotes: session.originalUserInfo.notes,
+            originalEpisodeNotes: session.originalUserInfo.episodeNotes,
             scoringEnabled: scoringEnabled,
             episodeProgressTrackingEnabled: episodeProgressTrackingEnabled,
             onWatchStatusSelected: requestWatchStatusChange,
@@ -777,6 +795,9 @@ struct EntryDetailView: View {
     private var shouldConfirmBeforeSaving: Bool {
         // Only non-incremental note changes require confirmation.
         !session.entry.notes.hasPrefix(session.originalUserInfo.notes)
+            || session.originalUserInfo.episodeNotes.contains { note in
+                !note.isEmpty && !(session.entry.episodeNote(at: note.anchor)?.text ?? "").hasPrefix(note.text)
+            }
     }
 
     private func saveAndDismissIfNeeded() {
