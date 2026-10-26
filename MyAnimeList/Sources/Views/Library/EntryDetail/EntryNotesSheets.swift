@@ -63,6 +63,12 @@ struct EpisodeNotePicker: View {
     private var language: Language { followsSystemLanguage ? .current : preferredLanguage }
     private var seriesRequestKey: String { "\(entry.tmdbID)-\(season)-\(language.rawValue)" }
 
+    /// A series fetches titles per season; rows keep their loaded shape until they arrive.
+    private var isFetchingTitles: Bool {
+        entry.type.seasonNumber == nil && seriesEpisodes.loadedRequestKey != seriesRequestKey
+            && !seriesEpisodes.loadFailed
+    }
+
     private var seasons: [(number: Int, title: String)] {
         guard entry.type.seasonNumber == nil else { return [] }
         return (entry.detail?.seasons ?? [])
@@ -89,54 +95,109 @@ struct EpisodeNotePicker: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if let episodes {
-                    episodeList(episodes)
-                } else {
-                    Form { numberSection }
-                }
-            }
-            .navigationTitle(title)
-            .inlineNavigationTitle()
-            .preferredNavigationBarScrollEdgeEffect()
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(action: dismiss.callAsFunction) { SheetCloseLabel() }
-                        .accessibilityLabel(Text("Close"))
-                        .keyboardShortcut(.cancelAction)
-                }
-            }
-            .task(id: seriesRequestKey) {
-                guard entry.type.seasonNumber == nil else { return }
-                await seriesEpisodes.load(
-                    requestKey: seriesRequestKey, seriesTMDbID: entry.tmdbID, seasonNumber: season, language: language)
-            }
-        }
-        .presentationDetents([.medium, .large])
         #if os(macOS)
-            .frame(minWidth: 360, minHeight: 420)
+            macBody
+        #else
+            iOSBody
         #endif
     }
+
+    private func loadSeriesEpisodes() async {
+        guard entry.type.seasonNumber == nil else { return }
+        await seriesEpisodes.load(
+            requestKey: seriesRequestKey, seriesTMDbID: entry.tmdbID, seasonNumber: season, language: language)
+    }
+
+    private var seasonPicker: some View {
+        Picker("Season", selection: $season.animation(.snappy)) {
+            ForEach(seasons, id: \.number) { season in
+                Text(verbatim: season.title).tag(season.number)
+            }
+        }
+    }
+
+    #if os(macOS)
+        /// Laid out like the app's other Mac sheets: heading, list, then manual entry and Close.
+        private var macBody: some View {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(title)
+                        .font(.title2.weight(.semibold))
+                    Spacer(minLength: 12)
+                    if seasons.count > 1 {
+                        seasonPicker
+                            .labelsHidden()
+                            .fixedSize()
+                    }
+                }
+                .padding([.horizontal, .top], 20)
+                .padding(.bottom, 12)
+
+                if let episodes {
+                    Divider()
+                    episodeList(episodes)
+                        .listStyle(.inset)
+                    Divider()
+                }
+
+                VStack(alignment: .leading, spacing: 16) {
+                    numberSection
+                    HStack {
+                        Spacer()
+                        Button("Close") { dismiss() }
+                            .keyboardShortcut(.cancelAction)
+                    }
+                }
+                .padding(20)
+            }
+            .frame(width: 460)
+            .frame(height: episodes == nil ? nil : 560)
+            .task(id: seriesRequestKey) { await loadSeriesEpisodes() }
+        }
+    #else
+        private var iOSBody: some View {
+            NavigationStack {
+                Group {
+                    if let episodes {
+                        episodeList(episodes)
+                    } else {
+                        Form { numberSection }
+                    }
+                }
+                .navigationTitle(title)
+                .inlineNavigationTitle()
+                .preferredNavigationBarScrollEdgeEffect()
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(action: dismiss.callAsFunction) { SheetCloseLabel() }
+                            .accessibilityLabel(Text("Close"))
+                            .keyboardShortcut(.cancelAction)
+                    }
+                }
+                .task(id: seriesRequestKey) { await loadSeriesEpisodes() }
+            }
+            .presentationDetents([.medium, .large])
+        }
+    #endif
 
     private func episodeList(_ episodes: [Episode]) -> some View {
         ScrollViewReader { proxy in
             List {
-                if seasons.count > 1 {
-                    Picker("Season", selection: $season.animation(.snappy)) {
-                        ForEach(seasons, id: \.number) { season in
-                            Text(verbatim: season.title).tag(season.number)
-                        }
-                    }
-                }
+                #if os(iOS)
+                    if seasons.count > 1 { seasonPicker }
+                #endif
                 Section {
                     ForEach(episodes) { episode in
                         row(episode)
                     }
                 }
-                numberSection
+                #if os(iOS)
+                    // The Mac sheet places manual entry below the list.
+                    numberSection
+                #endif
             }
-            .animation(.snappy, value: episodes.map(\.title))
+            // Rows animate their own content; List cells do not inherit this animation.
+            .animation(.snappy, value: episodes.map(\.number))
             .onAppear {
                 // Only scroll when the target would start below the first screenful.
                 if let target = source ?? suggestion, target.seasonNumber == season, target.episodeNumber > 5 {
@@ -148,25 +209,35 @@ struct EpisodeNotePicker: View {
 
     private func row(_ episode: Episode) -> some View {
         let anchor = EpisodeNoteAnchor(seasonNumber: season, episodeNumber: episode.number)
+        let isPending = isFetchingTitles
         return Button {
             choose(anchor)
         } label: {
             HStack(spacing: 12) {
                 let title = episode.title.flatMap { $0.isEmpty ? nil : $0 }
-                if title != nil {
+                if isPending || title != nil {
                     Text(verbatim: "\(episode.number)")
                         .font(.body.monospacedDigit())
                         .foregroundStyle(.secondary)
                         .frame(minWidth: 26, alignment: .leading)
                 }
+                // While pending, redacted lines hold the loaded row's height, so arriving
+                // titles only swap content instead of resizing table rows.
                 VStack(alignment: .leading, spacing: 2) {
-                    if let title {
+                    if isPending {
+                        Text(verbatim: "Episode title")
+                            .redacted(reason: .placeholder)
+                    } else if let title {
                         Text(verbatim: title)
                             .lineLimit(1)
                     } else {
                         Text("Episode \(episode.number)")
                     }
-                    if let airDate = episode.airDate {
+                    if isPending {
+                        Text(Date.now, format: .dateTime.year().month().day())
+                            .font(.caption)
+                            .redacted(reason: .placeholder)
+                    } else if let airDate = episode.airDate {
                         Text(airDate, format: .dateTime.year().month().day())
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -175,6 +246,7 @@ struct EpisodeNotePicker: View {
                 Spacer(minLength: 8)
                 trailing(for: anchor)
             }
+            .animation(.snappy, value: isPending)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
@@ -235,38 +307,82 @@ fileprivate struct EpisodeNumberSection: View {
 
     private var anchor: EpisodeNoteAnchor { .init(seasonNumber: season, episodeNumber: episode) }
 
+    private var isValid: Bool { season >= 0 && episode >= 1 && anchor != source }
+
     var body: some View {
-        Section {
-            if entry.type.seasonNumber == nil {
-                numberRow("Season", value: $season, minimum: 0)
+        #if os(macOS)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Episode Not Listed")
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 16) {
+                    if entry.type.seasonNumber == nil {
+                        numberRow("Season", prefix: "S", value: $season, minimum: 0)
+                    }
+                    numberRow("Episode", prefix: "E", value: $episode, minimum: 1)
+                    Spacer(minLength: 8)
+                    Button(actionTitle) { confirm(anchor) }
+                        .disabled(!isValid)
+                }
+                if entry.type.seasonNumber == nil {
+                    Text("Season 0 contains specials")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
-            numberRow("Episode", value: $episode, minimum: 1)
-            Button(actionTitle) { confirm(anchor) }
-                .disabled(season < 0 || episode < 1 || anchor == source)
-        } header: {
-            Text("Episode Not Listed")
-        } footer: {
-            if entry.type.seasonNumber == nil {
-                Text("Season 0 contains specials")
+        #else
+            Section {
+                if entry.type.seasonNumber == nil {
+                    numberRow("Season", prefix: "S", value: $season, minimum: 0)
+                }
+                numberRow("Episode", prefix: "E", value: $episode, minimum: 1)
+                Button(actionTitle) { confirm(anchor) }
+                    .disabled(!isValid)
+            } header: {
+                Text("Episode Not Listed")
+            } footer: {
+                if entry.type.seasonNumber == nil {
+                    Text("Season 0 contains specials")
+                }
             }
-        }
+        #endif
     }
 
-    private func numberRow(_ title: LocalizedStringKey, value: Binding<Int>, minimum: Int) -> some View {
-        LabeledContent(title) {
-            HStack(spacing: 12) {
+    /// The Mac shows both rows side by side, so it labels them with the chips' S/E prefixes;
+    /// the full name stays the accessibility label.
+    private func numberRow(
+        _ title: LocalizedStringKey,
+        prefix: String,
+        value: Binding<Int>,
+        minimum: Int
+    ) -> some View {
+        #if os(macOS)
+            HStack(spacing: 4) {
+                Text(verbatim: prefix)
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
                 TextField(title, value: value, format: .number)
                     .labelsHidden()
                     .multilineTextAlignment(.trailing)
                     .monospacedDigit()
-                    .frame(width: 64)
-                    #if os(iOS)
-                        .keyboardType(.numberPad)
-                    #endif
+                    .frame(width: 44)
                 Stepper(title, value: value, in: minimum...9_999)
                     .labelsHidden()
             }
-        }
+        #else
+            LabeledContent(title) {
+                HStack(spacing: 12) {
+                    TextField(title, value: value, format: .number)
+                        .labelsHidden()
+                        .multilineTextAlignment(.trailing)
+                        .monospacedDigit()
+                        .frame(width: 64)
+                        .keyboardType(.numberPad)
+                    Stepper(title, value: value, in: minimum...9_999)
+                        .labelsHidden()
+                }
+            }
+        #endif
     }
 }
 

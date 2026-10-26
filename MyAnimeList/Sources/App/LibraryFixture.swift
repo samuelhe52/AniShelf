@@ -57,7 +57,10 @@
                 AnimeEntryEpisodeSummaryDTO(
                     id: seriesTMDbID * 1_000 + seasonNumber * 100 + number,
                     episodeNumber: number,
-                    title: "Episode \(number)"
+                    title: "Episode \(number)",
+                    // Weekly, like most TMDb seasons, so rows show dates as they would live.
+                    airDate: referenceDate.addingTimeInterval(
+                        86_400 * Double(seasonNumber * 120 + number * 7 - seriesTMDbID % 1_000 * 10))
                 )
             }
         }
@@ -144,7 +147,7 @@
             }
         }
 
-        private static let referenceDate = Date(timeIntervalSince1970: 1_790_000_000)  // 2026-09
+        nonisolated private static let referenceDate = Date(timeIntervalSince1970: 1_790_000_000)  // 2026-09
 
         private static func makeEntry(index: Int, generator: inout SplitMix64) -> AnimeEntry {
             let type: AnimeType = generator.chance(0.25) ? .movie : .series
@@ -225,6 +228,7 @@
                 seasonCount: seasonCount,
                 seasons: seasons
             )
+            seedEpisodeNotes(of: entry, index: index, seasons: seasons, saved: saved)
             guard entry.watchStatus == .watching else { return }
             for season in seasons {
                 let episodeCount = season.episodeCount ?? 12
@@ -236,6 +240,44 @@
                 )
             }
         }
+
+        /// Gives every other series lorem ipsum notes on about a quarter of its episodes, from
+        /// one line to several paragraphs, so the notes chips, All, and episode rows have content.
+        private static func seedEpisodeNotes(
+            of entry: AnimeEntry,
+            index: Int,
+            seasons: [AnimeEntrySeasonSummary],
+            saved: Date
+        ) {
+            guard index.isMultiple(of: 2) else { return }
+            for season in seasons {
+                for episode in 1...(season.episodeCount ?? 12) where (episode + index) % 4 == 1 {
+                    entry.updateEpisodeNote(
+                        at: .init(seasonNumber: season.seasonNumber, episodeNumber: episode),
+                        text: loremNotes[(index + episode) % loremNotes.count],
+                        date: saved.addingTimeInterval(86_400 * Double(season.seasonNumber * 30 + episode))
+                    )
+                }
+            }
+        }
+
+        private static let loremNotes = [
+            "Lorem ipsum dolor sit amet.",
+            "Consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            """
+            Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+            """,
+            "Excepteur sint occaecat cupidatat non proident.",
+            """
+            Sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam.
+
+            Eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+
+            Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit.
+            """
+        ]
 
         // MARK: - Details
 

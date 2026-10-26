@@ -26,76 +26,119 @@ struct EpisodeNoteEditor: View {
     private var title: (primary: String, secondary: String?) { EntryNoteLabels.title(anchor, entry: entry) }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 16) {
-                ZStack(alignment: .topLeading) {
-                    if text.isEmpty {
-                        Text("Write an episode note…")
-                            .foregroundStyle(.tertiary)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 8)
-                            .allowsHitTesting(false)
-                    }
-                    TextEditor(text: $text)
-                        .focused($isFocused)
-                        .scrollContentBackground(.hidden)
-                        .accessibilityLabel(Text(verbatim: title.primary))
-                        .accessibilityIdentifier("episodeNote.editor")
-                }
-                .font(.body)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Self.fieldBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-                if !savedText.isEmpty {
-                    Button("Delete Note", role: .destructive) {
-                        entry.updateEpisodeNote(at: anchor, text: "")
-                        dismiss()
-                    }
-                    .font(.body.weight(.semibold))
-                }
-            }
-            .padding([.horizontal, .bottom])
-            .padding(.top, 4)
-            .background(Self.sheetBackground)
-            .navigationTitle(Text(verbatim: title.primary))
-            #if os(iOS)
-                .navigationSubtitle(Text(verbatim: title.secondary ?? ""))
-            #endif
-            .inlineNavigationTitle()
-            .preferredNavigationBarScrollEdgeEffect()
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(action: dismiss.callAsFunction) {
-                        SheetCloseLabel(title: "Cancel")
-                    }
-                    .accessibilityLabel(Text("Cancel"))
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        // An unchanged normalized draft (such as whitespace only) is a no-op save;
-                        // keep the draft only if the season lost its parent series mid-edit.
-                        if entry.updateEpisodeNote(at: anchor, text: text) || entry.supportsEpisodeNotes {
-                            dismiss()
-                        }
-                    }
-                    .disabled(text == savedText)
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
-        .interactiveDismissDisabled(text != savedText)
-        .onAppear { isFocused = true }
         #if os(macOS)
-            .frame(minWidth: 400, minHeight: 320)
+            macBody
+        #else
+            iOSBody
         #endif
     }
+
+    private var field: some View {
+        // Shares the per-platform placeholder metrics that line it up with the caret.
+        PlaceholderTextEditor(text: $text, placeholder: "Write an episode note…")
+            .focused($isFocused)
+            .accessibilityLabel(Text(verbatim: title.primary))
+            .accessibilityIdentifier("episodeNote.editor")
+            .font(.body)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+    }
+
+    private func save() {
+        // An unchanged normalized draft (such as whitespace only) is a no-op save;
+        // keep the draft only if the season lost its parent series mid-edit.
+        if entry.updateEpisodeNote(at: anchor, text: text) || entry.supportsEpisodeNotes {
+            dismiss()
+        }
+    }
+
+    private func delete() {
+        entry.updateEpisodeNote(at: anchor, text: "")
+        dismiss()
+    }
+
+    #if os(macOS)
+        /// Laid out like the app's other Mac sheets: heading, field, then one action row.
+        private var macBody: some View {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(verbatim: title.primary)
+                        .font(.title2.weight(.semibold))
+                    if let secondary = title.secondary {
+                        Text(verbatim: secondary)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                }
+
+                field
+                    .frame(minHeight: 180)
+                    .background(.background, in: RoundedRectangle(cornerRadius: 10))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 10)
+                            .strokeBorder(.quaternary, lineWidth: 0.5)
+                    }
+
+                HStack(spacing: 8) {
+                    if !savedText.isEmpty {
+                        Button("Delete Note", role: .destructive, action: delete)
+                    }
+                    Spacer()
+                    Button("Cancel") { dismiss() }
+                        .keyboardShortcut(.cancelAction)
+                    // Return types a newline in the field, so Save takes Command-Return.
+                    Button("Save", action: save)
+                        .buttonStyle(.borderedProminent)
+                        .keyboardShortcut(.return, modifiers: .command)
+                        .disabled(text == savedText)
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(24)
+            .frame(width: 460)
+            .onAppear { isFocused = true }
+        }
+    #else
+        private var iOSBody: some View {
+            NavigationStack {
+                VStack(spacing: 16) {
+                    field
+                        .background(Self.fieldBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                    if !savedText.isEmpty {
+                        Button("Delete Note", role: .destructive, action: delete)
+                            .font(.body.weight(.semibold))
+                    }
+                }
+                .padding([.horizontal, .bottom])
+                .padding(.top, 4)
+                .background(Self.sheetBackground)
+                .navigationTitle(Text(verbatim: title.primary))
+                .navigationSubtitle(Text(verbatim: title.secondary ?? ""))
+                .inlineNavigationTitle()
+                .preferredNavigationBarScrollEdgeEffect()
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(action: dismiss.callAsFunction) {
+                            SheetCloseLabel(title: "Cancel")
+                        }
+                        .accessibilityLabel(Text("Cancel"))
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save", action: save)
+                            .disabled(text == savedText)
+                    }
+                }
+            }
+            .presentationDetents([.medium, .large])
+            .interactiveDismissDisabled(text != savedText)
+            .onAppear { isFocused = true }
+        }
+    #endif
 
     #if os(iOS)
         private static let fieldBackground = Color(uiColor: .secondarySystemGroupedBackground)
         private static let sheetBackground = Color(uiColor: .systemGroupedBackground)
-    #else
-        private static let fieldBackground = Color(nsColor: .textBackgroundColor)
-        private static let sheetBackground = Color.clear
     #endif
 }

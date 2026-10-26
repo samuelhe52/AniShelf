@@ -82,6 +82,8 @@ struct EntryNotesSection: View {
         }
         .animation(.snappy, value: selectedScope)
         .animation(.snappy, value: chipAnchors)
+        // The first note's text adds All without changing the chip anchors.
+        .animation(.snappy, value: visibleNotes.isEmpty)
         .onChange(of: selectedScope) { _, scope in
             EntryNoteScopeMemory.remember(scope, for: entry)
         }
@@ -122,12 +124,16 @@ struct EntryNotesSection: View {
             Spacer(minLength: 8)
             #if os(macOS)
                 // iOS covers this with Done › Discard Changes and text undo.
-                if !isAll, let originalText, currentText != originalText {
-                    Button("Revert Notes") { setText(originalText) }
-                        .font(.caption)
-                        .controlSize(.small)
-                        .transition(.opacity)
+                let canRevert = !isAll && originalText.map { currentText != $0 } == true
+                Button("Revert Notes") {
+                    if let originalText { setText(originalText) }
                 }
+                .font(.caption)
+                .controlSize(.small)
+                // Keep the header height stable when the revert action becomes available.
+                .opacity(canRevert ? 1 : 0)
+                .disabled(!canRevert)
+                .accessibilityHidden(!canRevert)
             #endif
         }
     }
@@ -140,6 +146,7 @@ struct EntryNotesSection: View {
                 HStack(spacing: 6) {
                     if !visibleNotes.isEmpty || isAll {
                         chip(.all, title: String(localized: "All"), hasText: false)
+                            .transition(.scale(scale: 0.8).combined(with: .opacity))
                     }
                     chip(
                         .overall, title: String(localized: "Overall"),
@@ -168,7 +175,8 @@ struct EntryNotesSection: View {
                 }
                 .padding(.vertical, 1)
             }
-            .scrollIndicators(.hidden)
+            // `.hidden` still shows a scroller on macOS when a mouse is connected.
+            .scrollIndicators(.never)
             // Run the row to the box edges so chips scroll under them instead of clipping early.
             .contentMargins(.horizontal, EntryNotesBoxStyle.inset, for: .scrollContent)
             .padding(.horizontal, -EntryNotesBoxStyle.inset)
