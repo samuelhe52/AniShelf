@@ -72,6 +72,7 @@ import SwiftUI
                     }
                 }
                 .contentMargins(.top, 8, for: .scrollContent)
+                .preferredNavigationBarScrollEdgeEffect()
                 .navigationTitle("Categories")
                 .inlineNavigationTitle()
                 .toolbar {

@@ -217,9 +217,11 @@ extension View {
 
 /// Label for a sheet's dismiss button: a glyph on iOS, and the text button macOS sheets use.
 struct SheetCloseLabel: View {
+    var title: LocalizedStringResource = "Close"
+
     var body: some View {
         #if os(macOS)
-            Text("Close")
+            Text(title)
         #else
             Image(systemName: "xmark")
         #endif
