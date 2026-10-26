@@ -23,7 +23,7 @@ struct EntryNotesSection: View {
         self.entry = entry
         self.originalNotes = originalNotes
         self.originalEpisodeNotes = originalEpisodeNotes
-        _selectedScope = State(initialValue: EntryNoteScopeMemory.validScope(for: entry))
+        _selectedScope = State(initialValue: entry.supportsEpisodeNotes ? .all : .overall)
     }
 
     private enum NotesSheet: Identifiable, Hashable {
@@ -50,7 +50,7 @@ struct EntryNotesSection: View {
     private var chipAnchors: [EpisodeNoteAnchor] {
         var anchors = Set(visibleNotes.map(\.anchor))
         if let selectedAnchor { anchors.insert(selectedAnchor) }
-        return anchors.sorted()
+        return anchors.sorted(by: >)
     }
 
     private var suggestion: EpisodeNoteAnchor? {
@@ -82,10 +82,8 @@ struct EntryNotesSection: View {
         }
         .animation(.snappy, value: selectedScope)
         .animation(.snappy, value: chipAnchors)
-        // The first note's text adds All without changing the chip anchors.
-        .animation(.snappy, value: visibleNotes.isEmpty)
-        .onChange(of: selectedScope) { _, scope in
-            EntryNoteScopeMemory.remember(scope, for: entry)
+        .onChange(of: entry.libraryIdentity) { _, _ in
+            selectedScope = entry.supportsEpisodeNotes ? .all : .overall
         }
         .sheet(item: $sheet) { destination in
             Group {
@@ -141,54 +139,75 @@ struct EntryNotesSection: View {
     // MARK: Chips
 
     private var scopeChips: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal) {
-                HStack(spacing: 6) {
-                    if !visibleNotes.isEmpty || isAll {
+        HStack(spacing: 6) {
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal) {
+                    HStack(spacing: 6) {
                         chip(.all, title: String(localized: "All"), hasText: false)
-                            .transition(.scale(scale: 0.8).combined(with: .opacity))
+                        chip(
+                            .overall, title: String(localized: "Overall"),
+                            hasText: !entry.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                && !visibleNotes.isEmpty)
+                        ForEach(chipAnchors) { anchor in
+                            let hasText = entry.episodeNote(at: anchor)?.isEmpty == false
+                            chip(.episode(anchor), title: EntryNoteLabels.short(anchor, entry: entry), hasText: hasText)
+                                .contextMenu { episodeMenu(for: anchor, hasText: hasText) }
+                                .transition(.scale(scale: 0.8).combined(with: .opacity))
+                        }
                     }
-                    chip(
-                        .overall, title: String(localized: "Overall"),
-                        hasText: !entry.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            && !visibleNotes.isEmpty)
-                    ForEach(chipAnchors) { anchor in
-                        let hasText = entry.episodeNote(at: anchor)?.isEmpty == false
-                        chip(.episode(anchor), title: EntryNoteLabels.short(anchor, entry: entry), hasText: hasText)
-                            .contextMenu { episodeMenu(for: anchor, hasText: hasText) }
-                            .transition(.scale(scale: 0.8).combined(with: .opacity))
-                    }
-                    if let suggestion, !chipAnchors.contains(suggestion) {
-                        suggestedChip(suggestion)
-                            .transition(.opacity)
-                    }
-                    Button {
-                        sheet = .picker(.open)
-                    } label: {
-                        Text("Other…")
-                            .chipText()
-                            .foregroundStyle(.tint)
-                            .padding(.horizontal, 6)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("entryNotes.other")
+                    .padding(.vertical, 1)
                 }
-                .padding(.vertical, 1)
+                // `.hidden` still shows a scroller on macOS when a mouse is connected.
+                .scrollIndicators(.never)
+                .contentMargins(.leading, EntryNotesBoxStyle.inset, for: .scrollContent)
+                // Leave room for the last chip to clear the trailing fade.
+                .contentMargins(.trailing, 16, for: .scrollContent)
+                .mask {
+                    HStack(spacing: 0) {
+                        Rectangle()
+                        LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                            .frame(width: 16)
+                    }
+                }
+                .padding(.leading, -EntryNotesBoxStyle.inset)
+                .onAppear { proxy.scrollTo(selectedScope, anchor: .center) }
+                .onChange(of: selectedScope) { _, scope in
+                    withAnimation(.snappy) { proxy.scrollTo(scope, anchor: .center) }
+                }
             }
-            // `.hidden` still shows a scroller on macOS when a mouse is connected.
-            .scrollIndicators(.never)
-            // Run the row to the box edges so chips scroll under them instead of clipping early.
-            .contentMargins(.horizontal, EntryNotesBoxStyle.inset, for: .scrollContent)
-            .padding(.horizontal, -EntryNotesBoxStyle.inset)
-            .onAppear { proxy.scrollTo(selectedScope, anchor: .center) }
-            .onChange(of: selectedScope) { _, scope in
-                withAnimation(.snappy) { proxy.scrollTo(scope, anchor: .center) }
-            }
+            .frame(minWidth: 0, maxWidth: .infinity)
+            noteCreationControls
         }
+    }
+
+    private var noteCreationControls: some View {
+        HStack(spacing: 6) {
+            if let suggestion {
+                suggestedChip(suggestion)
+                    .transition(.opacity)
+            }
+            Button {
+                sheet = .picker(.open)
+            } label: {
+                Text("Other…")
+                    .chipText()
+                    .foregroundStyle(.tint)
+                    .padding(.horizontal, 6)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("entryNotes.other")
+        }
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     private func chip(_ scope: EntryNoteScope, title: String, hasText: Bool) -> some View {
         let isSelected = selectedScope == scope
+        let accessibilityTitle =
+            if case .episode(let anchor) = scope {
+                EntryNoteLabels.title(anchor, entry: entry).primary
+            } else {
+                title
+            }
         return Button {
             select(scope)
         } label: {
@@ -206,7 +225,12 @@ struct EntryNotesSection: View {
             .padding(.horizontal, 11)
             .padding(.vertical, 6)
             .background {
-                Capsule().fill(.fill.tertiary)
+                Capsule()
+                    .fill(.fill.tertiary)
+                    #if os(macOS)
+                        // Avoid broken vibrant blending inside the fade mask on macOS.
+                        .environment(\.backgroundMaterial, nil)
+                    #endif
                 if isSelected {
                     Capsule()
                         .fill(.tint)
@@ -216,6 +240,7 @@ struct EntryNotesSection: View {
             .contentShape(.capsule)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: accessibilityTitle))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .id(scope)
     }
@@ -364,8 +389,8 @@ struct EntryNotesSection: View {
     private func delete(_ anchor: EpisodeNoteAnchor) {
         withAnimation(.snappy) {
             entry.updateEpisodeNote(at: anchor, text: "")
-            if selectedAnchor == anchor || (selectedScope == .all && visibleNotes.isEmpty) {
-                selectedScope = .overall
+            if selectedAnchor == anchor {
+                selectedScope = .all
             }
         }
     }
@@ -377,71 +402,14 @@ enum EntryNoteScope: Hashable {
     case all
     case overall
     case episode(EpisodeNoteAnchor)
-
-    var storageValue: String {
-        switch self {
-        case .all: "all"
-        case .overall: "overall"
-        case .episode(let anchor): "\(anchor.seasonNumber):\(anchor.episodeNumber)"
-        }
-    }
-
-    init?(storageValue: String) {
-        switch storageValue {
-        case "all": self = .all
-        case "overall": self = .overall
-        default:
-            let numbers = storageValue.split(separator: ":").compactMap { Int($0) }
-            guard numbers.count == 2, numbers[0] >= 0, numbers[1] > 0 else { return nil }
-            self = .episode(.init(seasonNumber: numbers[0], episodeNumber: numbers[1]))
-        }
-    }
-}
-
-/// The last chip per entry on this device. Only non-Overall choices are kept, most recent last.
-enum EntryNoteScopeMemory {
-    private static let key = "entryNotes.lastScopes"
-    private static let limit = 200
-
-    static func validScope(for entry: AnimeEntry) -> EntryNoteScope {
-        guard entry.supportsEpisodeNotes,
-            let stored = entries().last(where: { $0.id == entry.libraryIdentity.rawID }),
-            let scope = EntryNoteScope(storageValue: stored.scope)
-        else { return .overall }
-        switch scope {
-        case .all:
-            return entry.episodeNotes.contains { !$0.isEmpty } ? .all : .overall
-        case .episode(let anchor):
-            return entry.episodeNote(at: anchor)?.isEmpty == false ? scope : .overall
-        case .overall:
-            return .overall
-        }
-    }
-
-    static func remember(_ scope: EntryNoteScope, for entry: AnimeEntry) {
-        let id = entry.libraryIdentity.rawID
-        var stored = entries().filter { $0.id != id }
-        if scope != .overall { stored.append((id, scope.storageValue)) }
-        UserDefaults.standard.set(stored.suffix(limit).map { "\($0.id)\t\($0.scope)" }, forKey: key)
-    }
-
-    private static func entries() -> [(id: String, scope: String)] {
-        (UserDefaults.standard.stringArray(forKey: key) ?? []).compactMap { line in
-            let parts = line.split(separator: "\t", maxSplits: 1).map(String.init)
-            return parts.count == 2 ? (parts[0], parts[1]) : nil
-        }
-    }
 }
 
 // MARK: - Labels and metadata
 
 enum EntryNoteLabels {
     static func short(_ anchor: EpisodeNoteAnchor, entry: AnimeEntry) -> String {
-        if anchor.seasonNumber == 0, entry.type.seasonNumber == nil {
-            return String(localized: "SP \(anchor.episodeNumber)")
-        }
         if !showsSeason(anchor, entry: entry) { return String(localized: "E\(anchor.episodeNumber)") }
-        return String(localized: "S\(anchor.seasonNumber) E\(anchor.episodeNumber)")
+        return String(localized: "S\(anchor.seasonNumber)E\(anchor.episodeNumber)")
     }
 
     /// Season entries and single-season series need no season in their labels.
@@ -534,10 +502,15 @@ fileprivate struct EntryNotesOverview<Menu: View>: View {
         VStack(alignment: .leading, spacing: 6) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 2) {
-                    if !entry.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        section(title: String(localized: "Overall"), text: entry.notes) { onSelect(.overall) }
+                    let notes = entry.episodeNotes.filter { !$0.isEmpty }.sorted { $0.anchor > $1.anchor }
+                    let overallIsEmpty = entry.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    if !overallIsEmpty || notes.isEmpty {
+                        section(
+                            title: String(localized: "Overall"),
+                            text: overallIsEmpty ? String(localized: EntryDetailL10n.writeSomeThoughts) : entry.notes
+                        ) { onSelect(.overall) }
                     }
-                    ForEach(entry.episodeNotes.filter { !$0.isEmpty }) { note in
+                    ForEach(notes) { note in
                         let title = EntryNoteLabels.title(note.anchor, entry: entry)
                         section(
                             title: [title.primary, title.secondary].compactMap(\.self).joined(separator: " · "),

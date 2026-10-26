@@ -8,13 +8,14 @@
 | 2026-10-26 | Add the V2.8.5 schema, independently clocked episode-note values, sync, user snapshots, export, conversion/duplicate preservation, and note statistics. Review corrections are folded in. | `b9c2cf1` |
 | 2026-10-26 | Replace the two existing notes sections with shared scope chips; add the overview, picker, note moves, swipe-to-edit episode rows, the episode-note sheet, translations, and local fixture episode rows. Review corrections are folded in. | `d0f74e9` |
 | 2026-10-26 | Keep sibling seasons linked to the new hidden parent when a series converts to a season. | `c67cba1` |
+| 2026-10-26 | Open on All, shorten and reverse the episode strip, pin creation controls, and resolve the macOS fade-mask rendering regression. | Same commit as [003 amendment](003-compact-strip-and-macos-fade.md) |
 
 ## Outcome and current state (as of 2026-10-26)
 
 - Overall notes keep their original entry-specific meaning. Movies retain the overall editor alone.
 - Series and season views share one evolving note per season/episode anchor. Season zero and episodes absent from metadata remain valid. Empty text is retained as a timestamped deletion marker. Note changes do not advance the unrelated tracking-field clock.
-- The inline Notes section keeps a bounded content area. Horizontally scrolling chips select All, Overall, a populated episode, a suggested next unwritten episode, or Other…. The last non-Overall chip is remembered per entry on the device (`EntryNoteScopeMemory`, capped at 200 entries) and falls back to Overall when its note no longer exists.
-- All shows populated notes in season/episode order. Selecting a section returns to the editor; Expand opens a larger reader with the same navigation.
+- The inline Notes section keeps a bounded content area and one chip row. It opens on All for entries supporting episode notes; selection is local to the view, with no per-entry preference persistence. All, Overall, and populated episodes scroll horizontally; the suggestion and Other… stay fixed on the trailing side. Episode chips use compact `E13` / `S2E13` labels and descending season/episode order. A 16-point gradient mask fades the scroller; only macOS disables capsule-background vibrancy to prevent black `.fill.tertiary` fills. See [003 amendment](003-compact-strip-and-macos-fade.md).
+- Inline All shows populated Overall first, followed by episodes in descending season/episode order. An empty All offers an Overall placeholder that opens the editor. Selecting a section returns to the editor; Expand opens the existing larger reader, whose ordering was not changed by the strip follow-up.
 - Episode chips and reader sections offer Move to Episode… and Delete Note. A move writes the new anchor and leaves a deletion marker on the old one; an occupied target asks before combining. Once episode metadata has loaded, a note whose episode is missing from it shows a "Not in Episode List · Move…" hint.
 - Episode rows offer Add/Edit Note as a swipe action on iOS, a context menu on macOS, and an accessibility action. Long press stays the iOS preview gesture; the preview shows existing note text and hands off to a separate editor sheet after the popover closes. Cancel leaves the saved text unchanged; Save and Delete Note update the shared note, and a whitespace-only draft for a new note saves as a no-op. Open note sheets block detail-host migration.
 - A season whose parent series link is missing hides every episode-note entry point. Opening its detail runs a silent single-entry metadata refresh once per launch that relinks or recreates the parent; when the owner appears, the Discard baseline adopts its existing notes.
@@ -42,7 +43,7 @@ Key source files:
 
 ## Deviations from plan
 
-- Chip selection first used per-entry scene storage; the 2026-10-26 plan amendment replaced it with device-wide per-entry memory before the UI rework.
+- Chip selection first used per-entry scene storage; the initial 2026-10-26 plan amendment replaced it with device-wide per-entry memory before the UI rework. The later [compact-strip amendment](003-compact-strip-and-macos-fade.md) removes that memory in favor of All-on-open and local view state.
 - Added local episode summaries to the existing library fixture. Its generated series IDs cannot resolve on TMDb; local rows enabled actual episode-note interaction checks without credentials or real library data.
 - Visual inspection caught missing visible labels on the numeric episode picker. Explicit Season/Episode labels were added and rechecked in the simulator.
 - A deletion-clock review found that a season tombstone must inspect the concrete row's note clocks rather than the shared parent's notes. Corrected and covered by a focused test.
@@ -68,13 +69,14 @@ Key source files:
 | `make run-sim DEVICE_PROCESS_LAUNCH_ARGS='-library-fixture 24'`, followed by `make launch-sim` after final test builds | Passed on the already booted iPhone 18 Pro / iOS 27.0 simulator. |
 | `sim-use` interaction and screenshot checks | Verified suggested-chip selection, Unicode note entry, All, expanded overview, selection back into the editor, another season through Other, final picker labels, episode-row Add/Edit marker, preview-to-editor handoff, Cancel, and saving/reopening the detail. Screenshots were inspected locally and are not retained in Git. |
 | Localization and diff checks | All new keys have Japanese and Simplified Chinese translations; `git diff --check` passed. |
+| Later compact-strip and macOS fade follow-up | Multiple `make run-mac` builds and fixture launches succeeded. The maintainer confirmed removing the mask restored badge appearance, rejected the overlay/native-edge experiments, and accepted the gradient mask with capsule vibrancy disabled. The final macOS-only guard was not rebuilt. Full evidence and iOS limits are recorded in [003 amendment](003-compact-strip-and-macos-fade.md); the earlier test results above are not fresh validation of this follow-up. |
 
 Initial incremental package attempts failed to compile. Rerunning without `--quiet` exposed missing `try` and use of app-only user-info convenience helpers in the new package tests; these were corrected before the successful runs above. The simulator's Japanese IME altered an initial hardware-keyboard test string; native Paste then entered and verified the intended Unicode text. A transient edit-menu readiness error was resolved by targeting the editor's native menu. These automation failures were not app crashes.
 
 ## Open questions and release follow-ups
 
 - Production CloudKit sync and two-device convergence were not exercised. Verify/promote the new `LibraryEntry.episodeNotes` Bytes field in the release environment before distribution; sync schema version 4 causes older clients to quarantine new snapshots rather than overwrite note state.
-- Native macOS compiled, but pointer/keyboard interaction and narrow-inspector visual acceptance remain unverified. No device was booted, no physical device was used, and no Mac app was launched.
+- The initial feature validation compiled native macOS without launching it. The later [compact-strip follow-up](003-compact-strip-and-macos-fade.md) built and launched the Mac fixture repeatedly and obtained maintainer visual acceptance of the fade fix before its final platform guard. Complete pointer/keyboard interaction and narrow-inspector acceptance remain unverified. No device was booted and no physical device was used for that follow-up.
 - Host-migration blocking is implemented; a fold/unfold interaction while a notes draft is open was not exercised.
 - The simulator interaction checks above predate the swipe-to-edit rework; validation of the reworked UI was not recorded here. The parent-restore and Discard-baseline paths have no automated coverage and were not exercised in the running app.
 - Update episode-note feature copy and, when selected, refreshed screenshots in `../anishelf-site`. That repository was not edited.

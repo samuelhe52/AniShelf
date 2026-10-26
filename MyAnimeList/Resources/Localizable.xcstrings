@@ -118,29 +118,29 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "第%lld話"
+            "value" : "E%lld"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "第%lld集"
+            "value" : "E%lld"
           }
         }
       }
     },
-    "S%lld E%lld" : {
+    "S%lldE%lld" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "S%lld E%lld"
+            "value" : "S%lldE%lld"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "S%lld E%lld"
+            "value" : "S%lldE%lld"
           }
         }
       }
