@@ -14,7 +14,6 @@ struct EpisodeNoteEditor: View {
     let entry: AnimeEntry
     let anchor: EpisodeNoteAnchor
     @State private var text: String
-    @FocusState private var isFocused: Bool
 
     init(entry: AnimeEntry, anchor: EpisodeNoteAnchor) {
         self.entry = entry
@@ -34,12 +33,9 @@ struct EpisodeNoteEditor: View {
     }
 
     private var field: some View {
-        // Shares the per-platform placeholder metrics that line it up with the caret.
-        PlaceholderTextEditor(text: $text, placeholder: "Write an episode note…")
-            .focused($isFocused)
+        PlaceholderTextEditor(text: $text, placeholder: "Write an episode note…", autofocus: true)
             .accessibilityLabel(Text(verbatim: title.primary))
             .accessibilityIdentifier("episodeNote.editor")
-            .font(.body)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
     }
@@ -97,7 +93,6 @@ struct EpisodeNoteEditor: View {
             }
             .padding(24)
             .frame(width: 460)
-            .onAppear { isFocused = true }
         }
     #else
         private var iOSBody: some View {
@@ -133,7 +128,6 @@ struct EpisodeNoteEditor: View {
             }
             .presentationDetents([.medium, .large])
             .interactiveDismissDisabled(text != savedText)
-            .onAppear { isFocused = true }
         }
     #endif
 

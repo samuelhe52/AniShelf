@@ -71,10 +71,9 @@ struct TMDbBatchAddView: View {
 
                 PlaceholderTextEditor(
                     text: $promptInput,
-                    placeholder: inputPlaceholderResource
+                    placeholder: inputPlaceholderResource,
+                    isLiteralInput: true
                 )
-                .autocorrectionDisabled(true)
-                .font(.body.monospaced())
                 .focused($isPromptEditorFocused)
                 .padding(8)
                 .background(Color(nsColor: .textBackgroundColor), in: .rect(cornerRadius: 6))
@@ -157,10 +156,9 @@ struct TMDbBatchAddView: View {
 
                             PlaceholderTextEditor(
                                 text: $promptInput,
-                                placeholder: inputPlaceholderResource
+                                placeholder: inputPlaceholderResource,
+                                isLiteralInput: true
                             )
-                            .noInputAutocapitalization()
-                            .autocorrectionDisabled(true)
                             .frame(height: TMDbBatchAddLayout.promptHeight)
                             .padding(12)
                             .background(

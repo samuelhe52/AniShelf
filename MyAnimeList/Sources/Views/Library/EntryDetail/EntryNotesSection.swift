@@ -274,11 +274,10 @@ struct EntryNotesSection: View {
     private var editor: some View {
         VStack(alignment: .leading, spacing: 0) {
             if supportsEpisodes, scopeTitle.secondary != nil || isStranded { scopeLabel }
-            ScrollIsolatedPlaceholderTextEditor(
+            PlaceholderTextEditor(
                 text: Binding(get: { currentText }, set: setText),
                 placeholder: selectedAnchor == nil ? EntryDetailL10n.writeSomeThoughts : "Write an episode note…"
             )
-            .font(.body)
             .accessibilityLabel(Text(verbatim: scopeTitle.primary))
             .accessibilityIdentifier("entryNotes.editor")
         }
