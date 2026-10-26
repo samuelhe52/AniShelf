@@ -127,6 +127,10 @@ final class LibraryEntryConverter {
             seasonEntry.updateCustomPosterURL(originalPosterURL)
         }
 
+        // Preserve surviving seasons' access to their series metadata and notes.
+        for childEntry in Array(entry.childSeasonEntries) {
+            childEntry.parentSeriesEntry = parentEntry
+        }
         try repository.replaceEntry(entry, inserting: [parentEntry, seasonEntry])
 
         libraryStoreLogger.info(

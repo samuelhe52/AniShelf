@@ -208,6 +208,15 @@ struct LibraryRelationshipAndConversionTests {
         seriesEntry.updateEpisodeNote(at: .init(seasonNumber: 2, episodeNumber: 8), text: "Season two")
         seriesEntry.updateCategoryMembership("category-a", isMember: true)
         try repository.newEntry(seriesEntry)
+        let siblingEntry = AnimeEntry(
+            name: "Frieren Season 2",
+            type: .season(seasonNumber: 2, parentSeriesID: 209867),
+            tmdbID: 400_235
+        )
+        siblingEntry.parentSeriesEntry = seriesEntry
+        siblingEntry.notes = "Sibling notes"
+        try repository.newEntry(siblingEntry)
+        let siblingID = siblingEntry.id
         // Another window or iCloud edits a note while conversion awaits TMDb.
         let editDuringFetch: @MainActor @Sendable () -> Void = {
             seriesEntry.updateEpisodeNote(at: .init(seasonNumber: 1, episodeNumber: 4), text: "Edited mid-fetch")
@@ -226,7 +235,8 @@ struct LibraryRelationshipAndConversionTests {
             }
         )
 
-        let migratedEntries = try dataProvider.getAllModels(ofType: AnimeEntry.self)
+        let verificationContext = ModelContext(dataProvider.sharedModelContainer)
+        let migratedEntries = try verificationContext.fetch(FetchDescriptor<AnimeEntry>())
         let seasonEntry = try #require(
             migratedEntries.first {
                 guard case .season(let seasonNumber, let parentSeriesID) = $0.type else {
@@ -249,6 +259,14 @@ struct LibraryRelationshipAndConversionTests {
         #expect(hiddenSeriesEntry.tmdbID == 209867)
         #expect(hiddenSeriesEntry.episodeNotes.filter { !$0.isEmpty }.count == 2)
         #expect(seasonEntry.episodeNote(at: .init(seasonNumber: 1, episodeNumber: 4))?.text == "Edited mid-fetch")
+        let survivingSibling = try #require(migratedEntries.first { $0.id == siblingID })
+        #expect(survivingSibling.parentSeriesEntry === hiddenSeriesEntry)
+        #expect(Set(hiddenSeriesEntry.childSeasonEntries.map(\.id)) == [seasonEntry.id, siblingID])
+        #expect(survivingSibling.onDisplay)
+        #expect(survivingSibling.notes == "Sibling notes")
+        #expect(survivingSibling.displayName == hiddenSeriesEntry.name)
+        #expect(survivingSibling.supportsEpisodeNotes)
+        #expect(survivingSibling.episodeNote(at: .init(seasonNumber: 2, episodeNumber: 8))?.text == "Season two")
         #expect(transactionSaveCount == 1)
     }
 
@@ -317,7 +335,16 @@ struct LibraryRelationshipAndConversionTests {
         let seriesEntry = AnimeEntry(name: "Frieren", type: .series, tmdbID: 209867)
         seriesEntry.setScore(3)
         seriesEntry.notes = "Original series note"
+        seriesEntry.updateEpisodeNote(at: .init(seasonNumber: 2, episodeNumber: 8), text: "Season two")
         try repository.newEntry(seriesEntry)
+        let siblingEntry = AnimeEntry(
+            name: "Frieren Season 2",
+            type: .season(seasonNumber: 2, parentSeriesID: 209867),
+            tmdbID: 400_235
+        )
+        siblingEntry.parentSeriesEntry = seriesEntry
+        try repository.newEntry(siblingEntry)
+        let siblingID = siblingEntry.id
 
         do {
             try await converter.convertSeriesToSeason(
@@ -335,11 +362,15 @@ struct LibraryRelationshipAndConversionTests {
 
         let persistedEntries = try dataProvider.getAllModels(ofType: AnimeEntry.self)
         let persistedSeries = try #require(persistedEntries.first { $0.id == seriesEntry.id })
-        #expect(persistedEntries.count == 1)
+        #expect(persistedEntries.count == 2)
         #expect(persistedSeries.type == .series)
         #expect(persistedSeries.onDisplay)
         #expect(persistedSeries.score == 3)
         #expect(persistedSeries.notes == "Original series note")
+        let persistedSibling = try #require(persistedEntries.first { $0.id == siblingID })
+        #expect(persistedSibling.parentSeriesEntry === persistedSeries)
+        #expect(persistedSeries.childSeasonEntries.map(\.id) == [siblingID])
+        #expect(persistedSibling.episodeNote(at: .init(seasonNumber: 2, episodeNumber: 8))?.text == "Season two")
         #expect(transactionSaveAttempts == 1)
     }
 }
