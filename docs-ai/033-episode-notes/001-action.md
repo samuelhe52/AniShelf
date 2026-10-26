@@ -1,0 +1,81 @@
+# 033 — Episode notes with scope chips: Action record
+
+## Timeline
+
+| Date | Change | Ref |
+| --- | --- | --- |
+| 2026-10-26 | Record design A and the persistence/sync acceptance criteria before implementation. | `4b0898c` |
+| 2026-10-26 | Add the V2.8.5 schema, independently clocked episode-note values, sync, user snapshots, export, conversion/duplicate preservation, and note statistics. Review corrections are folded in. | `b9c2cf1` |
+| 2026-10-26 | Replace the two existing notes sections with shared scope chips; add the overview, picker, note moves, swipe-to-edit episode rows, the episode-note sheet, translations, and local fixture episode rows. Review corrections are folded in. | `d0f74e9` |
+| 2026-10-26 | Keep sibling seasons linked to the new hidden parent when a series converts to a season. | `c67cba1` |
+
+## Outcome and current state (as of 2026-10-26)
+
+- Overall notes keep their original entry-specific meaning. Movies retain the overall editor alone.
+- Series and season views share one evolving note per season/episode anchor. Season zero and episodes absent from metadata remain valid. Empty text is retained as a timestamped deletion marker. Note changes do not advance the unrelated tracking-field clock.
+- The inline Notes section keeps a bounded content area. Horizontally scrolling chips select All, Overall, a populated episode, a suggested next unwritten episode, or Other…. The last non-Overall chip is remembered per entry on the device (`EntryNoteScopeMemory`, capped at 200 entries) and falls back to Overall when its note no longer exists.
+- All shows populated notes in season/episode order. Selecting a section returns to the editor; Expand opens a larger reader with the same navigation.
+- Episode chips and reader sections offer Move to Episode… and Delete Note. A move writes the new anchor and leaves a deletion marker on the old one; an occupied target asks before combining. Once episode metadata has loaded, a note whose episode is missing from it shows a "Not in Episode List · Move…" hint.
+- Episode rows offer Add/Edit Note as a swipe action on iOS, a context menu on macOS, and an accessibility action. Long press stays the iOS preview gesture; the preview shows existing note text and hands off to a separate editor sheet after the popover closes. Cancel leaves the saved text unchanged; Save and Delete Note update the shared note, and a whitespace-only draft for a new note saves as a no-op. Open note sheets block detail-host migration.
+- A season whose parent series link is missing hides every episode-note entry point. Opening its detail runs a silent single-entry metadata refresh once per launch that relinks or recreates the parent; when the owner appears, the Discard baseline adopts its existing notes.
+- Pasting user info never changes the target's episode notes, and the paste-overwrite confirmation ignores them; copied text still carries them.
+- Revert restores only the selected note. The existing detail Discard action restores the season-scoped episode-note snapshot as well as the overall note. Restoring changed episode text advances its clock so already-synced edits cannot override the revert.
+- JSON exports contain structured notes, tabular exports append an `episode_notes` JSON column, and plain-text exports label episode notes. A season-only export includes its parent-owned notes for that season. The With Notes statistic includes entries with episode notes.
+
+Key source files:
+
+- `DataProvider/Sources/DataProvider/Models/Other/EpisodeNote.swift`
+- `DataProvider/Sources/DataProvider/Models/Other/UserEntryInfo.swift`
+- `DataProvider/Sources/DataProvider/Models/V2/SchemaV2_8_5.swift`
+- `DataProvider/Sources/DataProvider/MigrationPlan.swift`
+- `DataProvider/Sources/LibrarySync/LibraryEntrySyncSnapshot.swift`
+- `DataProvider/Sources/LibrarySync/CloudLibrarySyncClient.swift`
+- `MyAnimeList/Sources/Views/Library/EntryDetail/EntryNotesSection.swift`
+- `MyAnimeList/Sources/Views/Library/EntryDetail/EntryNotesSheets.swift`
+- `MyAnimeList/Sources/Views/Library/EntryDetail/EpisodeNoteEditor.swift`
+- `MyAnimeList/Sources/Views/Library/EntryDetail/EntryDetailView.swift`
+- `MyAnimeList/Sources/ViewModels/Library/LibraryStore+Entries.swift`
+- `MyAnimeList/Sources/ViewModels/Library/LibraryEntryConverter.swift`
+- `MyAnimeList/Sources/ViewModels/Library/LibraryDuplicateRepair.swift`
+- `MyAnimeList/Sources/ViewModels/Library/LibrarySyncChangeRecorder.swift`
+- `MyAnimeList/Sources/Utils/LibraryExportManager.swift`
+
+## Deviations from plan
+
+- Chip selection first used per-entry scene storage; the 2026-10-26 plan amendment replaced it with device-wide per-entry memory before the UI rework.
+- Added local episode summaries to the existing library fixture. Its generated series IDs cannot resolve on TMDb; local rows enabled actual episode-note interaction checks without credentials or real library data.
+- Visual inspection caught missing visible labels on the numeric episode picker. Explicit Season/Episode labels were added and rechecked in the simulator.
+- A deletion-clock review found that a season tombstone must inspect the concrete row's note clocks rather than the shared parent's notes. Corrected and covered by a focused test.
+- Post-implementation reviews found and corrected, each folded into the commit it fixes:
+  - The dirty-queue revision was the newest field clock, so an edit made behind a note with a future clock left the queue entry unchanged and an in-flight export could dequeue it. Each detected edit now outranks the queued upsert (regression test in `LibrarySyncCoordinatorTests+Export.swift`).
+  - Series-to-season conversion replayed a pre-fetch snapshot through `restoreEpisodeNotes`, reverting note edits received while TMDb loaded. It now keeps the parent's current notes (extended conversion test).
+  - Each per-anchor lookup decoded and sorted the whole payload, which made rendering quadratic in note count. The last decoded payload and an anchor index are now cached by payload bytes, outside the SwiftData model.
+  - Parentless seasons offered note entry points whose save silently failed; see the ownership bullet above and the plan amendment.
+  - The editor kept a whitespace-only new note open, because Save stayed enabled but the normalized save was a no-op.
+- Series-to-season conversion deleted the old series row while sibling seasons still pointed at it, leaving them without a parent, its metadata, or their episode notes. This predates episode notes; it is fixed separately in `c67cba1`, with rollback coverage.
+
+## Validation
+
+| Check | Result |
+| --- | --- |
+| `make test-dataprovider` | Passed: 68 LibrarySync tests and 72 DataProvider tests, including V2.8.4 migration and store reopen. Recovery tests intentionally emit diagnostics for invalid fixture stores. |
+| `make test-dataprovider DATAPROVIDER_TEST_FILTER='EpisodeNoteTests'` | Passed: 5 tests after adding the shared-parent/season-deletion regression case. |
+| `make test-app-sim APP_TEST_ONLY='MyAnimeListTests/LibraryExportManagerTests MyAnimeListTests/LibraryRelationshipAndConversionTests MyAnimeListTests/LibrarySyncRecorderBehaviorTests MyAnimeListTests/EntryDetailSessionTests MyAnimeListTests/UserEntryInfoAndLibraryStatsTests'` | Passed: 54 cases. |
+| `make test-app-sim APP_TEST_ONLY='MyAnimeListTests/LibrarySortingAndDeletionTests MyAnimeListTests/EntryDetailSessionTests'` | Passed: 27 cases, including duplicate annotation preservation. |
+| `make test-app-sim APP_TEST_ONLY='MyAnimeListTests/UserEntryInfoAndLibraryStatsTests MyAnimeListTests/EntryDetailViewModelTests'` | Passed: 53 cases after the final picker and fixture changes. Counts overlap earlier runs. |
+| `make build-mac` | Passed, including a final build of the complete UI and picker-label fix. Mac app was not launched. |
+| Post-review runs (after the UI rework and review fixes) | `make test-dataprovider DATAPROVIDER_TEST_FILTER='EpisodeNoteTests\|LibrarySyncTests'` passed 69 tests. `make build-mac` passed. On the simulator, `LibraryRelationshipAndConversionTests`, `EntryDetailViewModelTests`, and `LibraryMetadataRefreshTests` passed; `LibrarySyncCoordinatorTests` passed except `categoryDefinitionsRoundTripThroughSettingsPayload`, which fails on its first category-default assertion even in isolation and is unrelated to this work. The conversion regression test was confirmed to fail with its fix reverted. |
+| `make run-sim DEVICE_PROCESS_LAUNCH_ARGS='-library-fixture 24'`, followed by `make launch-sim` after final test builds | Passed on the already booted iPhone 18 Pro / iOS 27.0 simulator. |
+| `sim-use` interaction and screenshot checks | Verified suggested-chip selection, Unicode note entry, All, expanded overview, selection back into the editor, another season through Other, final picker labels, episode-row Add/Edit marker, preview-to-editor handoff, Cancel, and saving/reopening the detail. Screenshots were inspected locally and are not retained in Git. |
+| Localization and diff checks | All new keys have Japanese and Simplified Chinese translations; `git diff --check` passed. |
+
+Initial incremental package attempts failed to compile. Rerunning without `--quiet` exposed missing `try` and use of app-only user-info convenience helpers in the new package tests; these were corrected before the successful runs above. The simulator's Japanese IME altered an initial hardware-keyboard test string; native Paste then entered and verified the intended Unicode text. A transient edit-menu readiness error was resolved by targeting the editor's native menu. These automation failures were not app crashes.
+
+## Open questions and release follow-ups
+
+- Production CloudKit sync and two-device convergence were not exercised. Verify/promote the new `LibraryEntry.episodeNotes` Bytes field in the release environment before distribution; sync schema version 4 causes older clients to quarantine new snapshots rather than overwrite note state.
+- Native macOS compiled, but pointer/keyboard interaction and narrow-inspector visual acceptance remain unverified. No device was booted, no physical device was used, and no Mac app was launched.
+- Host-migration blocking is implemented; a fold/unfold interaction while a notes draft is open was not exercised.
+- The simulator interaction checks above predate the swipe-to-edit rework; validation of the reworked UI was not recorded here. The parent-restore and Discard-baseline paths have no automated coverage and were not exercised in the running app.
+- Update episode-note feature copy and, when selected, refreshed screenshots in `../anishelf-site`. That repository was not edited.
+- No commits were pushed and no release or production schema deployment was performed.
