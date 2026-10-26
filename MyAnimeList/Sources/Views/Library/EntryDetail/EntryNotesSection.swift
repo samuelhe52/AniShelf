@@ -27,7 +27,7 @@ struct EntryNotesSection: View {
         self.entry = entry
         self.originalNotes = originalNotes
         self.originalEpisodeNotes = originalEpisodeNotes
-        _selectedScope = State(initialValue: entry.supportsEpisodeNotes ? .all : .overall)
+        _selectedScope = State(initialValue: .defaultScope(for: entry))
     }
 
     private enum NotesSheet: Identifiable, Hashable {
@@ -87,7 +87,12 @@ struct EntryNotesSection: View {
         .animation(.snappy, value: selectedScope)
         .animation(.snappy, value: chipAnchors)
         .onChange(of: entry.libraryIdentity) { _, _ in
-            selectedScope = entry.supportsEpisodeNotes ? .all : .overall
+            selectedScope = .defaultScope(for: entry)
+        }
+        .onChange(of: visibleNotes.isEmpty) { _, isEmpty in
+            if isEmpty && selectedScope == .all {
+                select(.overall)
+            }
         }
         .sheet(item: $sheet) { destination in
             Group {
@@ -423,7 +428,7 @@ struct EntryNotesSection: View {
         withAnimation(.snappy) {
             entry.updateEpisodeNote(at: anchor, text: "")
             if selectedAnchor == anchor {
-                selectedScope = .all
+                selectedScope = .defaultScope(for: entry)
             }
         }
     }
@@ -435,6 +440,10 @@ enum EntryNoteScope: Hashable {
     case all
     case overall
     case episode(EpisodeNoteAnchor)
+
+    static func defaultScope(for entry: AnimeEntry) -> Self {
+        entry.supportsEpisodeNotes && entry.episodeNotes.contains { !$0.isEmpty } ? .all : .overall
+    }
 }
 
 #if !os(macOS)

@@ -11,10 +11,16 @@ space in the notes box.
 This amendment records the implemented follow-up and its observed rendering
 failures on 2026-10-26.
 
+Updated 2026-10-27: the default-scope and deletion descriptions below incorporate
+the [Overall-default correction](004-overall-default-without-episode-notes.md),
+committed with its documentation. The original rendering validation remains dated
+to its own follow-up.
+
 ## Change
 
-- Entries supporting episode notes open on All. Selection lives in local view
-  state and resets when entry identity changes. `EntryNoteScopeMemory` and its
+- Entries supporting episode notes open on All when at least one nonempty episode
+  note exists, otherwise on Overall. Selection lives in local view state and
+  resets to that default when entry identity changes. `EntryNoteScopeMemory` and its
   `entryNotes.lastScopes` reads/writes were removed. Entries without episode-note
   support retain the overall editor.
 - Keep one row: All, Overall, and saved episode chips scroll horizontally; the
@@ -29,7 +35,9 @@ failures on 2026-10-26.
   headings, and reader sections.
 - All remains available when no episode notes exist. If all notes are empty, its
   Overall placeholder opens the editor. Deleting the selected episode note returns
-  to All; deleting the last note while viewing All keeps that overview selected.
+  to All if other nonempty episode notes remain, otherwise to Overall. When the last
+  nonempty episode note disappears while viewing All, the selection switches to
+  Overall. A selected empty episode draft stays open while typing.
 - A trailing gradient mask fades the scrollable strip over 16 points. Matching
   trailing content margin lets the last chip scroll fully clear of the fade.
 
