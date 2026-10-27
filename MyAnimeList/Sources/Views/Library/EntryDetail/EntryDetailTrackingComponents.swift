@@ -15,12 +15,14 @@ struct EntryScoreCard: View {
     @State private var bouncingStar: Int?
     /// Frames of the five stars in the row's coordinate space, lowest first.
     @State private var starFrames: [CGRect] = Array(repeating: .zero, count: 5)
-    /// The score under a touch drag, shown before it is saved. Resets on its own when
-    /// the drag ends or the system cancels it.
+    /// The score under a touch drag, shown before it is saved.
+    ///
+    /// Resets on its own when the drag ends or the system cancels it.
     @GestureState private var dragHalves: Int?
-    /// The score a drag just dropped, shown until `score` catches up. The drag's reset
-    /// redraws this card before the parent passes the saved score back in, which would
-    /// otherwise flash the old score for a frame.
+    /// The score a drag just dropped, shown until `score` catches up.
+    ///
+    /// The drag's reset redraws this card before the parent passes the saved score back in, which
+    /// would otherwise flash the old score for a frame.
     @State private var droppedHalves: Int?
     /// The score under the Mac pointer, shown before a click.
     @State private var hoverHalves: Int?
@@ -31,8 +33,9 @@ struct EntryScoreCard: View {
     private let bounceOutAnimation = Animation.spring(response: 0.28, dampingFraction: 0.72)
     private let starsSpace = "EntryScoreStars"
 
-    /// Inline drops the title row and the Clear button for the Mac tracking row. There the
-    /// pointer picks a whole or a half star, and a click on the current score clears it.
+    /// Inline drops the title row and the Clear button for the Mac tracking row.
+    ///
+    /// There the pointer picks a whole or a half star, and a click on the current score clears it.
     var isInline = false
 
     var body: some View {
@@ -205,7 +208,9 @@ struct EntryScoreCard: View {
             }
     }
 
-    /// Moves the score by half stars, staying within 1…5. An unscored entry starts at 1.
+    /// Moves the score by half stars, staying within 1…5.
+    ///
+    /// An unscored entry starts at 1.
     private func adjustScore(by steps: Int) {
         guard let score else {
             if steps > 0 { setScore(.lowest) }
@@ -214,8 +219,10 @@ struct EntryScoreCard: View {
         setScore(score.stepped(by: steps) ?? score)
     }
 
-    /// A tap on star N sets N. A tap on the star at the top of the score takes off its
-    /// half, or puts it back. Star 1 stays at 1.
+    /// A tap on star N sets N.
+    ///
+    /// A tap on the star at the top of the score takes off its half, or puts it back. Star 1 stays
+    /// at 1.
     private func tapped(star: Int) {
         let whole = star * 2
         let next: EntryScore? =
@@ -226,8 +233,10 @@ struct EntryScoreCard: View {
         setScore(next, bounces: true)
     }
 
-    /// Half-star units under `x`: each star's leading edge and center that `x` has
-    /// passed adds one half. Nil until the stars have been laid out.
+    /// Half-star units under `x`: each star's leading edge and center that `x` has passed adds one
+    /// half.
+    ///
+    /// Nil until the stars have been laid out.
     private func halves(atX x: CGFloat) -> Int? {
         guard starFrames.allSatisfy({ $0.width > 0 }) else { return nil }
         let passed = starFrames.flatMap { [$0.minX, $0.midX] }.filter { x >= $0 }.count
@@ -235,7 +244,9 @@ struct EntryScoreCard: View {
         return min(max(passed, range.lowerBound), range.upperBound)
     }
 
-    /// Saves `value`. Only taps and clicks bounce the top star.
+    /// Saves `value`.
+    ///
+    /// Only taps and clicks bounce the top star.
     private func setScore(_ value: EntryScore?, bounces: Bool = false) {
         withAnimation(selectionAnimation) {
             onSetScore(value)

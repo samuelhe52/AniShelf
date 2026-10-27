@@ -40,7 +40,9 @@ public struct UserEntryInfo: Equatable, Codable {
     /// User's optional whole-star score for this entry.
     public var score: Int?
 
-    /// Adds 0.5 to ``score``. Always false when ``score`` is nil or 5.
+    /// Adds 0.5 to ``score``.
+    ///
+    /// Always false when ``score`` is nil or 5.
     public var scoreHasHalf: Bool
 
     /// The full score, including the half star.
@@ -471,7 +473,9 @@ extension AnimeEntry {
         scoreHasHalf = score?.hasHalf ?? false
     }
 
-    /// Sets a whole score for a user action. Clears any half star.
+    /// Sets a whole score for a user action.
+    ///
+    /// Clears any half star.
     @discardableResult
     public func updateScore(_ score: Int?, at date: Date = .now) -> Bool {
         updateEntryScore(EntryScore(whole: score), at: date)

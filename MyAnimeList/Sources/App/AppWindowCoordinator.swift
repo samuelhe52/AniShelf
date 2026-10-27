@@ -70,8 +70,9 @@ final class AppWindowCoordinator {
         return identifier == frontmostLibraryWindowID
     }
 
-    /// Adds a window once its identifier resolves. A window that is already active becomes
-    /// primary; otherwise it ranks last until it activates.
+    /// Adds a window once its identifier resolves.
+    ///
+    /// A window that is already active becomes primary; otherwise it ranks last until it activates.
     func register(_ identifier: String, role: Role, isActive: Bool) {
         roles[identifier] = role
         if isActive {

@@ -123,8 +123,10 @@ final class LibraryEntryActionState {
         ToastCenter.global.pasted = true
     }
 
-    /// Episode notes are anchored to one show's numbering and already shared within
-    /// a show, so pasting keeps the target's notes. They still travel in copied text.
+    /// Episode notes are anchored to one show's numbering and already shared within a show, so
+    /// pasting keeps the target's notes.
+    ///
+    /// They still travel in copied text.
     private static func applyPaste(_ userInfo: UserEntryInfo, to entry: AnimeEntry) {
         var userInfo = userInfo
         userInfo.episodeNotes = entry.episodeNotes

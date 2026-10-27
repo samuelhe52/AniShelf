@@ -8,7 +8,9 @@
 import Foundation
 import Synchronization
 
-/// A stable, metadata-independent episode anchor. Season zero denotes specials.
+/// A stable, metadata-independent episode anchor.
+///
+/// Season zero denotes specials.
 public struct EpisodeNoteAnchor: Codable, Hashable, Comparable, Sendable, Identifiable {
     public var seasonNumber: Int
     public var episodeNumber: Int
@@ -44,8 +46,10 @@ public struct EpisodeNote: Codable, Equatable, Sendable, Identifiable {
         self.updatedAt = LibrarySyncTimestamp.normalized(updatedAt)
     }
 
-    /// Deterministic, commutative merge. Deletion wins an equal-clock conflict;
-    /// otherwise a stable text order breaks ties between two concurrent edits.
+    /// Deterministic, commutative merge.
+    ///
+    /// Deletion wins an equal-clock conflict; otherwise a stable text order breaks ties between two
+    /// concurrent edits.
     public static func merged(_ lhs: [Self], _ rhs: [Self]) -> [Self] {
         var notes: [EpisodeNoteAnchor: Self] = [:]
         for value in lhs + rhs where value.anchor.seasonNumber >= 0 && value.anchor.episodeNumber > 0 {
@@ -63,8 +67,10 @@ public struct EpisodeNote: Codable, Equatable, Sendable, Identifiable {
     }
 }
 
-/// The most recently decoded payload. Views look notes up one anchor at a time, so
-/// reusing it keeps a render pass from decoding the whole payload per lookup.
+/// The most recently decoded payload.
+///
+/// Views look notes up one anchor at a time, so reusing it keeps a render pass from decoding the
+/// whole payload per lookup.
 fileprivate struct DecodedEpisodeNotes: Sendable {
     let data: Data
     let notes: [EpisodeNote]
@@ -90,7 +96,9 @@ extension AnimeEntry {
         return decoded
     }
 
-    /// Storage on this concrete row, used by sync. Season UI uses `episodeNotes`.
+    /// Storage on this concrete row, used by sync.
+    ///
+    /// Season UI uses `episodeNotes`.
     public var storedEpisodeNotes: [EpisodeNote] {
         get { decodedEpisodeNotes?.notes ?? [] }
         set {
@@ -100,8 +108,9 @@ extension AnimeEntry {
         }
     }
 
-    /// The series row that stores episode notes. Seasons have none while their
-    /// parent is missing; metadata refresh restores the parent.
+    /// The series row that stores episode notes.
+    ///
+    /// Seasons have none while their parent is missing; metadata refresh restores the parent.
     public var episodeNoteOwner: AnimeEntry? {
         switch type {
         case .movie: nil
@@ -142,6 +151,7 @@ extension AnimeEntry {
     }
 
     /// Reverting is a new edit, so already-synced deletions/rewrites cannot win later.
+    ///
     /// A season restore touches only that season; other seasons remain intact.
     public func restoreEpisodeNotes(_ original: [EpisodeNote], at date: Date = .now) {
         let originals = Dictionary(uniqueKeysWithValues: EpisodeNote.merged(original, []).map { ($0.anchor, $0.text) })

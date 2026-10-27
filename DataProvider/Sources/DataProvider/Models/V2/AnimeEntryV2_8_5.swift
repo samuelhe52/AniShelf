@@ -42,7 +42,9 @@ extension SchemaV2_8_5 {
         public var dateFinished: Date?
         public var isDateTrackingEnabled: Bool = true
         public var score: Int?
-        /// Adds 0.5 to `score`. Always false when `score` is nil or 5.
+        /// Adds 0.5 to `score`.
+        ///
+        /// Always false when `score` is nil or 5.
         public var scoreHasHalf: Bool = false
         public var favorite: Bool = false
         public var notes: String = ""

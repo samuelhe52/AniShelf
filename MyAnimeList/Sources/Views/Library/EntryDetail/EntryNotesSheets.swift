@@ -8,8 +8,10 @@
 import DataProvider
 import SwiftUI
 
-/// Chooses an episode to open or move a note to. Lists metadata episodes when known and
-/// always offers inline number entry for specials, renumbered, or offline episodes.
+/// Chooses an episode to open or move a note to.
+///
+/// Lists metadata episodes when known and always offers inline number entry for specials,
+/// renumbered, or offline episodes.
 struct EpisodeNotePicker: View {
     enum Purpose: Hashable {
         case open
@@ -76,8 +78,10 @@ struct EpisodeNotePicker: View {
             .map { ($0.seasonNumber, $0.title) }
     }
 
-    /// Stored episodes for a season entry; fetched titles for a series, with numbered
-    /// placeholders until they arrive. Nil when metadata gives no episode count.
+    /// Stored episodes for a season entry; fetched titles for a series, with numbered placeholders
+    /// until they arrive.
+    ///
+    /// Nil when metadata gives no episode count.
     private var episodes: [Episode]? {
         if entry.type.seasonNumber == season, let stored = entry.detail?.orderedEpisodes, !stored.isEmpty {
             return stored.map { Episode(number: $0.episodeNumber, title: $0.title, airDate: $0.airDate) }
@@ -386,7 +390,9 @@ fileprivate struct EpisodeNumberSection: View {
     }
 }
 
-/// The expanded All view: every note in reading order. Selecting one returns to its editor.
+/// The expanded All view: every note in reading order.
+///
+/// Selecting one returns to its editor.
 struct EntryNotesReader: View {
     @Environment(\.dismiss) private var dismiss
     let entry: AnimeEntry

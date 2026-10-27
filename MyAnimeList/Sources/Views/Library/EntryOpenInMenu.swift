@@ -14,7 +14,9 @@ import SwiftUI
     import UIKit
 #endif
 
-/// Apps the "Open In" menus can launch. Add a case here to offer another app.
+/// Apps the "Open In" menus can launch.
+///
+/// Add a case here to offer another app.
 ///
 /// Raw values are persisted by `EntryOpenInSwipeDestination`, so keep them stable.
 enum EntryOpenInApp: String, CaseIterable, Identifiable {
@@ -203,8 +205,9 @@ enum EntryOpenInL10n {
     static let systemImage = "arrow.up.forward.app"
 }
 
-/// Menu items for every available link. Apps that aren't installed stay listed but disabled,
-/// so people can discover them.
+/// Menu items for every available link.
+///
+/// Apps that aren't installed stay listed but disabled, so people can discover them.
 struct EntryOpenInMenuItems: View {
     let links: EntryOpenInLinks
 
@@ -337,8 +340,10 @@ fileprivate struct EntryOpenInAlertModifier: ViewModifier {
     }
 }
 
-/// A list row's Open In swipe action. It opens the default swipe destination directly
-/// when that app can open the entry, and otherwise hands the request to its alert.
+/// A list row's Open In swipe action.
+///
+/// It opens the default swipe destination directly when that app can open the entry, and otherwise
+/// hands the request to its alert.
 struct EntryOpenInSwipeButton: View {
     @Environment(\.openURL) private var openURL
     @AppStorage(.libraryOpenInSwipeDestination)

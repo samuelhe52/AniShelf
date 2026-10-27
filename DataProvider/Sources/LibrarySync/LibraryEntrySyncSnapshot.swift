@@ -14,8 +14,9 @@ import Foundation
 /// the library membership, display, tracking, poster override, note, episode
 /// progress fields needed to replay a user's library state on another device.
 public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
-    /// Version 4 adds independently clocked episode notes. Older builds
-    /// quarantine these records rather than overwrite note state.
+    /// Version 4 adds independently clocked episode notes.
+    ///
+    /// Older builds quarantine these records rather than overwrite note state.
     public static let currentSchemaVersion = 4
 
     private enum CodingKeys: String, CodingKey {
@@ -82,7 +83,9 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     public var dateFinished: Date?
     public var isDateTrackingEnabled: Bool
     public var score: Int?
-    /// Adds 0.5 to `score`. Always false when `score` is nil or 5.
+    /// Adds 0.5 to `score`.
+    ///
+    /// Always false when `score` is nil or 5.
     public var scoreHasHalf: Bool
     public var favorite: Bool
     public var notes: String
@@ -153,6 +156,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     ///   - scoreHasHalf: Adds 0.5 to `score`. Dropped without a score or at 5.
     ///   - favorite: Favorite flag.
     ///   - notes: User notes.
+    ///   - episodeNotes: Independently clocked notes for individual episodes.
     ///   - usingCustomPoster: Whether `customPosterPath` should be applied.
     ///   - customPosterPath: User-selected TMDb poster path. Ignored unless
     ///     `usingCustomPoster` is true.

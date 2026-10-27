@@ -76,9 +76,10 @@ extension LibraryStore {
         return entry
     }
 
-    /// Refreshes one season whose parent series link is missing; the refresh relinks or
-    /// inserts the series (docs-ai 033). Tries once per launch and defers to a running
-    /// Refresh All, which repairs the link itself.
+    /// Refreshes one season whose parent series link is missing; the refresh relinks or inserts the
+    /// series (docs-ai 033).
+    ///
+    /// Tries once per launch and defers to a running Refresh All, which repairs the link itself.
     func restoreMissingParentSeries(for entry: AnimeEntry) async {
         guard case .season = entry.type, entry.parentSeriesEntry == nil, !isRefreshingAllMetadata,
             parentSeriesRestoreAttemptedIDs.insert(entry.id).inserted

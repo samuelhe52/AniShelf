@@ -129,7 +129,9 @@ struct LibraryExportRecord: Codable, Equatable {
         }
     }
 
-    /// "4" or "4.5" for the text formats. JSON carries the number.
+    /// "4" or "4.5" for the text formats.
+    ///
+    /// JSON carries the number.
     fileprivate var scoreText: String? {
         score.map {
             $0.formatted(.number.precision(.fractionLength(0...1)).locale(Locale(identifier: "en_US_POSIX")))

@@ -46,9 +46,10 @@
         /// saves one, so a new window falls back to the last-inspected entry.
         @SceneStorage("librarySelection") var storedSelection: String?
         @SceneStorage("libraryFind") var storedFindText = ""
-        /// Find text and selection as the window started or last restored them. Scene storage
-        /// can arrive after the window appears; it applies until the user changes the value,
-        /// and after that the live value replaces it.
+        /// Find text and selection as the window started or last restored them.
+        ///
+        /// Scene storage can arrive after the window appears; it applies until the user changes the
+        /// value, and after that the live value replaces it.
         @State var lastAppliedFindText = ""
         @State var findAcceptsRestoration = true
         @State var lastAppliedSelection: Set<LibraryEntryIdentity> = []

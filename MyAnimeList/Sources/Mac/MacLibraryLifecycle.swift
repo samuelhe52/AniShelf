@@ -198,8 +198,10 @@
         }
     }
 
-    /// Library windows for app-level events: the one to target, and a way to open one after
-    /// the last is closed. Which windows are open comes from `AppWindowCoordinator`.
+    /// Library windows for app-level events: the one to target, and a way to open one after the
+    /// last is closed.
+    ///
+    /// Which windows are open comes from `AppWindowCoordinator`.
     @MainActor
     enum MacLibraryWindows {
         /// SwiftUI only hands `openWindow` to views, so library windows provide it.
