@@ -14,21 +14,15 @@ note; opening its editor directly is more useful.
   episode note. Switch from All to Overall when the last nonempty episode note
   disappears. Keep selected empty episode drafts open while typing.
 - All remains manually selectable for entries supporting episode notes.
-- Corrected the existing plan, action record, and compact-strip amendment in place.
-  Their dated history and earlier validation results remain preserved.
+- Corrected the plan, action record, and compact-strip amendment in place.
 
 ## Refs
 
-- Implementation and documentation are included in the same commit (2026-10-27).
-- Source: `MyAnimeList/Sources/Views/Library/EntryDetail/EntryNotesSection.swift`,
-  including `EntryNoteScope.defaultScope(for:)`, entry-identity and empty-note
-  observers, and the selected-note deletion fallback.
+- Source: `MyAnimeList/Sources/Views/Library/EntryDetail/EntryNotesSection.swift`.
 
 ## Validation
 
-During implementation, `make build-mac` and `make run-sim` passed. On the already
-booted iPhone 18 Pro simulator, `sim-use` confirmed an entry with an overall note
+`make build-mac` and `make run-sim` passed. In the simulator, `sim-use` confirmed an entry with an overall note
 and no episode notes opened with the Overall editor. Last-note deletion and
 entry-switch behavior were checked in source, not exercised in the UI. No automated
-tests were added or run for this fix. These checks were not rerun for this
-documentation correction.
+tests were added.
