@@ -152,7 +152,6 @@ struct EntryNotesSection: View {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal) {
                     HStack(spacing: 6) {
-                        chip(.all, title: String(localized: "All"), hasText: false)
                         chip(
                             .overall, title: String(localized: "Overall"),
                             hasText: !entry.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -179,8 +178,9 @@ struct EntryNotesSection: View {
                     }
                 }
                 .padding(.leading, -EntryNotesBoxStyle.inset)
-                .onAppear { proxy.scrollTo(selectedScope, anchor: .center) }
+                .onAppear { proxy.scrollTo(selectedScope == .all ? .overall : selectedScope, anchor: .center) }
                 .onChange(of: selectedScope) { _, scope in
+                    guard scope != .all else { return }
                     withAnimation(.snappy) { proxy.scrollTo(scope, anchor: .center) }
                 }
             }
@@ -218,7 +218,7 @@ struct EntryNotesSection: View {
                 title
             }
         return Button {
-            select(scope)
+            select(isSelected ? .all : scope)
         } label: {
             HStack(spacing: 4) {
                 Text(verbatim: title)
@@ -378,7 +378,7 @@ struct EntryNotesSection: View {
 
     private func swipeScope(_ direction: HorizontalEdge) {
         guard supportsEpisodes else { return }
-        // Match the chip strip, excluding the separate note-creation controls. Stop at either end.
+        // Start at the unselected overview, then follow the chips. Stop at either end.
         let scopes: [EntryNoteScope] = [.all, .overall] + chipAnchors.map { .episode($0) }
         guard let index = scopes.firstIndex(of: selectedScope) else { return }
         let nextIndex = index + (direction == .leading ? 1 : -1)

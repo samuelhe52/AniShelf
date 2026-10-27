@@ -23,7 +23,7 @@ to its own follow-up.
   resets to that default when entry identity changes. `EntryNoteScopeMemory` and its
   `entryNotes.lastScopes` reads/writes were removed. Entries without episode-note
   support retain the overall editor.
-- Keep one row: All, Overall, and saved episode chips scroll horizontally; the
+- Keep one row: Overall and saved episode chips scroll horizontally; the
   suggestion and Other… remain fixed on the trailing side outside the scroller.
 - Saved episode chips and episode sections in the inline All overview sort by
   descending season and episode number, rather than by last-edit time. Overall

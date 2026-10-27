@@ -12,8 +12,7 @@ maintainer then extended the same control to the Global/Overall editor.
   inline episode and Overall editors on iOS and macOS for entries supporting
   episode notes, including a selected empty episode draft. Use the overview
   footer's caption-weight styling and horizontal inset.
-- The button selects the existing All scope through `select(.all)`, which also
-  scrolls the selected capsule into view through the existing scope observer.
+- The button selects the existing All scope directly.
 - Keep the bounded notes-box height. The footer reserves space beneath the
   editor rather than covering editable text.
 - Show the control whenever episode-note support makes All available. Movie
