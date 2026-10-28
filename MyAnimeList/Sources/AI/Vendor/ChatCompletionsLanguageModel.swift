@@ -12,6 +12,8 @@
 // Source: apple/foundation-models-utilities, cc3820def1fe016bc6cd49d958cd2f2a29be76a8.
 // Changes: OS 27 availability, app-compatible imports/formatting, and rejection
 // of truncated provider responses and streams without a completion signal.
+// MODIFIED by Claude Code on behalf of Samuel He on 2026/10/28.
+// Changes: optional provider reasoning control (`reasoning_effort` or OpenRouter `reasoning`).
 //
 //===----------------------------------------------------------------------===//
 import Foundation
@@ -65,6 +67,17 @@ public struct ChatCompletionsLanguageModel: Sendable, LanguageModel {
 
     public var supportsGuidedGeneration: Bool
 
+    /// Reasoning control for providers that accept it. `nil` sends nothing, so the provider default applies.
+    public var reasoning: Reasoning?
+
+    /// The two wire forms OpenAI-compatible endpoints use for reasoning control.
+    public enum Reasoning: Hashable, Sendable {
+        /// Top-level `reasoning_effort`, as OpenAI accepts it (for example `"none"` or `"low"`).
+        case effort(String)
+        /// OpenRouter's `reasoning` object.
+        case openRouter(enabled: Bool, effort: String?)
+    }
+
     // Overridden in tests to inject a URLSession with mock protocol handlers.
     var urlSession: URLSession?
 
@@ -87,12 +100,14 @@ public struct ChatCompletionsLanguageModel: Sendable, LanguageModel {
         url: URL,
         additionalHeaders: [String: String] = [:],
         supportsGuidedGeneration: Bool = true,
+        reasoning: Reasoning? = nil,
         urlSessionConfiguration: URLSessionConfiguration? = nil
     ) {
         self.name = name
         self.url = url
         self.additionalHeaders = additionalHeaders
         self.supportsGuidedGeneration = supportsGuidedGeneration
+        self.reasoning = reasoning
         self.urlSession = urlSessionConfiguration.map { URLSession(configuration: $0) }
     }
 
@@ -110,6 +125,7 @@ public struct ChatCompletionsLanguageModel: Sendable, LanguageModel {
             modelName: name,
             url: url,
             additionalHeaders: additionalHeaders,
+            reasoning: reasoning,
             urlSession: urlSession
         )
     }
@@ -218,18 +234,21 @@ public struct ChatCompletionsLanguageModel: Sendable, LanguageModel {
             fileprivate let modelName: String
             fileprivate let url: URL
             fileprivate let additionalHeaders: [String: String]
+            fileprivate let reasoning: Reasoning?
             fileprivate let urlSession: URLSession?
 
             public static func == (lhs: Configuration, rhs: Configuration) -> Bool {
                 lhs.modelName == rhs.modelName
                     && lhs.url == rhs.url
                     && lhs.additionalHeaders == rhs.additionalHeaders
+                    && lhs.reasoning == rhs.reasoning
             }
 
             public func hash(into hasher: inout Hasher) {
                 hasher.combine(modelName)
                 hasher.combine(url)
                 hasher.combine(additionalHeaders)
+                hasher.combine(reasoning)
             }
         }
 
@@ -289,7 +308,17 @@ public struct ChatCompletionsLanguageModel: Sendable, LanguageModel {
                             schema: schema
                         )
                     )
-                }
+                },
+                reasoningEffort: {
+                    if case .effort(let effort) = configuration.reasoning { effort } else { nil }
+                }(),
+                reasoning: {
+                    if case .openRouter(let enabled, let effort) = configuration.reasoning {
+                        ChatCompletionsClient.ChatCompletionRequest.ReasoningObject(enabled: enabled, effort: effort)
+                    } else {
+                        nil
+                    }
+                }()
             )
 
             // Stream the response back into the framework via `channel`.
@@ -757,8 +786,15 @@ fileprivate struct ChatCompletionsClient {
         var tools: [Tool]?
         var toolChoice: ChatCompletionRequest.ToolChoice?
         var responseFormat: ResponseFormat?
+        var reasoningEffort: String?
+        var reasoning: ReasoningObject?
         var stream = true
         var streamOptions = StreamOptions(includeUsage: true)
+
+        struct ReasoningObject: Encodable {
+            var enabled: Bool
+            var effort: String?
+        }
 
         struct StreamOptions: Encodable {
             var includeUsage: Bool
@@ -776,6 +812,8 @@ fileprivate struct ChatCompletionsClient {
             case maxCompletionTokens = "max_completion_tokens"
             case tools
             case responseFormat = "response_format"
+            case reasoningEffort = "reasoning_effort"
+            case reasoning
             case stream
             case streamOptions = "stream_options"
             case toolChoice = "tool_choice"

@@ -88,8 +88,11 @@ New code lives under a proposed `MyAnimeList/Sources/AI/` folder unless noted.
     `MyAnimeList/Sources/AI/Vendor/ChatCompletionsLanguageModel.swift`.
   - Keep its license header, mark it `@available(iOS 27, macOS 27, *)`, and record
     the source revision in the file.
-- **Default models** are the experiment's passing ones: `gpt-5.4-mini` for OpenAI
-  and `google/gemini-3.8-flash` for OpenRouter. Each can be edited in Settings.
+- **Default models:** `gpt-6-luna` for OpenAI and `openai/gpt-6-luna` for OpenRouter,
+  both checked with reasoning off (see [003-reasoning-off.md](003-reasoning-off.md)).
+  Each can be edited in Settings.
+- **Reasoning** is off by default for providers. Low, medium and high stay available in
+  code for tasks that need them.
 
 ### Provider keys and Settings
 
@@ -272,3 +275,4 @@ need. If a later feature needs keyword retrieval, copy over `de239c2`
 ## Amendments
 
 - Updated 2026-10-28: Delivered the foundation slice without feature UI or Settings; validation and remaining boundaries are recorded in [002-foundation.md](002-foundation.md). The aggregate `001-action.md` is deferred until the last slice, following the multi-slice workflow.
+- Updated 2026-10-28: Provider reasoning is off by default (low/medium/high kept in code), the response reservation follows it, and the default models moved to `gpt-6-luna`; corrected the default-model text here and the budget row in 002 — see [003-reasoning-off.md](003-reasoning-off.md)

@@ -26,6 +26,8 @@ protocol AIStructuredGenerator {
 struct AISessionFactory {
     let configuration: AIConfiguration
     let keys: AIProviderKeyStorage
+    /// Ignored by the Apple system model. Callers that change it should size the budget to match.
+    var reasoning: AIReasoning = .off
 
     func makeSession(backend: AIBackend, instructions: String) throws -> LanguageModelSession {
         guard AIAvailability(keys: keys).isUsable(backend) else { throw AIError.unavailable }
@@ -37,11 +39,24 @@ struct AISessionFactory {
                 name: configuration.model(for: backend),
                 url: URL(string: backend == .openAI ? "https://api.openai.com/v1" : "https://openrouter.ai/api/v1")!,
                 additionalHeaders: ["Authorization": "Bearer \(key)"],
-                supportsGuidedGeneration: true
+                supportsGuidedGeneration: true,
+                reasoning: Self.wireReasoning(reasoning, for: backend)
             )
             return LanguageModelSession(model: model, instructions: instructions)
         }
         throw AIError.unavailable
+    }
+
+    /// OpenAI takes `reasoning_effort` (`none` turns it off); OpenRouter takes a `reasoning` object.
+    @available(iOS 27.0, macOS 27.0, *)
+    static func wireReasoning(_ reasoning: AIReasoning, for backend: AIBackend) -> ChatCompletionsLanguageModel
+        .Reasoning?
+    {
+        switch backend {
+        case .apple: nil
+        case .openAI: .effort(reasoning == .off ? "none" : reasoning.rawValue)
+        case .openRouter: .openRouter(enabled: reasoning != .off, effort: reasoning == .off ? nil : reasoning.rawValue)
+        }
     }
 }
 

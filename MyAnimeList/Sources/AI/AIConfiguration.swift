@@ -14,10 +14,18 @@ enum AIBackend: String, CaseIterable, Sendable {
     var defaultModel: String {
         switch self {
         case .apple: ""
-        case .openAI: "gpt-5.4-mini"
-        case .openRouter: "google/gemini-3.8-flash"
+        case .openAI: "gpt-6-luna"
+        case .openRouter: "openai/gpt-6-luna"
         }
     }
+}
+
+/// Provider reasoning effort.
+///
+/// Off by default: library tasks are simple classification, and reasoning tokens count
+/// against the response cap. The other levels stay available for tasks that need them.
+enum AIReasoning: String, CaseIterable, Sendable {
+    case off, low, medium, high
 }
 
 /// Device-local choices.

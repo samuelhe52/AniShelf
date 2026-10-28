@@ -37,16 +37,17 @@ struct AIContextBudget {
     /// All providers use Apple's cap.
     static func make<Value: Generable>(
         backend: AIBackend, instructions: String, generating: Value.Type,
-        maximumResponseTokens: Int? = nil
+        reasoning: AIReasoning = .off, maximumResponseTokens: Int? = nil
     ) async throws -> Self {
         let model = SystemLanguageModel.default
         // Ineligible systems (including Simulator) can report zero. Providers still use
         // the 26-era Apple limit until a positive runtime limit is available.
         let reportedLimit = model.contextSize
         let limit = reportedLimit > 0 ? reportedLimit : 4096
-        // OpenAI's completion cap includes hidden reasoning. Reserve it from the same
-        // shared context budget, rather than assuming 512 tokens can cover both.
-        let maximumResponseTokens = maximumResponseTokens ?? (backend == .openAI ? 2048 : 512)
+        // Provider completion caps include hidden reasoning. With reasoning off, a selection
+        // takes about 20 tokens; with it on, reserve room for the reasoning as well.
+        let usesReasoning = backend != .apple && reasoning != .off
+        let maximumResponseTokens = maximumResponseTokens ?? (usesReasoning ? 2048 : 512)
         let framingMargin = 256
         if backend == .apple, #available(iOS 26.4, macOS 26.4, *), model.isAvailable {
             let instructionCost = try await model.tokenCount(for: Instructions(instructions))

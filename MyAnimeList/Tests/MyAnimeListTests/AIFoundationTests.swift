@@ -37,7 +37,7 @@ struct AIFoundationTests {
         config.selectedBackend = .openAI
         #expect(config.resolvedBackend(availability: available) == .apple)
         #expect(available.reason(for: .openAI) == .missingKey)
-        #expect(config.model(for: .openAI) == "gpt-5.4-mini")
+        #expect(config.model(for: .openAI) == "gpt-6-luna")
         config.setModel(" custom-model ", for: .openRouter)
         #expect(AIConfiguration(defaults: defaults).model(for: .openRouter) == "custom-model")
     }
@@ -83,8 +83,13 @@ struct AIFoundationTests {
         )
         #expect(budget.contextSize > 0)
         #expect(try await budget.fits("0: sample"))
-        let reasoningBudget = try await AIContextBudget.make(
+        let defaultBudget = try await AIContextBudget.make(
             backend: .openAI, instructions: "Select matching cards.", generating: AIBatchSelection.self
+        )
+        #expect(defaultBudget.maximumResponseTokens == 512)
+        let reasoningBudget = try await AIContextBudget.make(
+            backend: .openAI, instructions: "Select matching cards.", generating: AIBatchSelection.self,
+            reasoning: .low
         )
         #expect(reasoningBudget.maximumResponseTokens == 2048)
         #expect(try await reasoningBudget.fits("0: sample"))
@@ -234,13 +239,32 @@ struct AIFoundationTests {
         #expect(response.content.matchingIndices == [0, 1])
     }
 
+    @Test(arguments: [AIBackend.openAI, .openRouter])
+    func reasoningIsOffByDefaultOnTheWire(_ backend: AIBackend) async throws {
+        guard #available(iOS 27.0, macOS 27.0, *) else { return }
+        let factory = AISessionFactory(
+            configuration: AIConfiguration(defaults: .standard), keys: AIProviderKeyStorage())
+        #expect(factory.reasoning == .off)
+        // The mock answers [0, 1] only when the body carries exactly this backend's "off" form.
+        let model = mockProvider(
+            backend == .openAI ? "reasoningOffOpenAI" : "reasoningOffOpenRouter",
+            reasoning: AISessionFactory.wireReasoning(factory.reasoning, for: backend)
+        )
+        let response = try await LanguageModelSession(model: model).respond(
+            to: "Select.", generating: AIBatchSelection.self
+        )
+        #expect(response.content.matchingIndices == [0, 1])
+    }
+
     @available(iOS 27.0, macOS 27.0, *)
-    private func mockProvider(_ scenario: String) -> ChatCompletionsLanguageModel {
+    private func mockProvider(
+        _ scenario: String, reasoning: ChatCompletionsLanguageModel.Reasoning? = nil
+    ) -> ChatCompletionsLanguageModel {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [AIStreamURLProtocol.self]
         return ChatCompletionsLanguageModel(
             name: "mock", url: URL(string: "https://ai-foundation.invalid/\(scenario)/v1")!,
-            urlSessionConfiguration: configuration
+            reasoning: reasoning, urlSessionConfiguration: configuration
         )
     }
 
@@ -311,11 +335,14 @@ fileprivate final class AIStreamURLProtocol: URLProtocol {
     override func startLoading() {
         let url = request.url!
         let scenario = url.pathComponents[1]
-        let content = scenario.hasSuffix("Partial") ? #"{"matchingIndices":[0,1,"# : #"{"matchingIndices":[0,1]}"#
+        var content = scenario.hasSuffix("Partial") ? #"{"matchingIndices":[0,1,"# : #"{"matchingIndices":[0,1]}"#
+        if scenario.hasPrefix("reasoningOff") && !Self.carriesReasoningOff(request, scenario: scenario) {
+            content = #"{"matchingIndices":[]}"#
+        }
         let chunk: [String: Any] = ["id": "mock", "model": "mock", "choices": [["delta": ["content": content]]]]
         let data = try! JSONSerialization.data(withJSONObject: chunk)
         var body = "data: \(String(decoding: data, as: UTF8.self))\n\n"
-        if scenario.hasPrefix("truncated") || scenario == "finishOnly" {
+        if scenario.hasPrefix("truncated") || scenario == "finishOnly" || scenario.hasPrefix("reasoningOff") {
             let reason = scenario.hasPrefix("truncated") ? "length" : "stop"
             body +=
                 "data: {\"id\":\"mock\",\"model\":\"mock\",\"choices\":[{\"delta\":{},\"finish_reason\":\"\(reason)\"}]}\n\n"
@@ -329,6 +356,27 @@ fileprivate final class AIStreamURLProtocol: URLProtocol {
     }
 
     override func stopLoading() {}
+
+    /// URLProtocol sees the body as a stream, not `httpBody`.
+    private static func carriesReasoningOff(_ request: URLRequest, scenario: String) -> Bool {
+        guard let stream = request.httpBodyStream else { return false }
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            guard count > 0 else { break }
+            data.append(buffer, count: count)
+        }
+        guard let body = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return false }
+        if scenario == "reasoningOffOpenAI" {
+            return body["reasoning_effort"] as? String == "none" && body["reasoning"] == nil
+        }
+        let reasoning = body["reasoning"] as? [String: Any]
+        return reasoning?["enabled"] as? Bool == false && reasoning?["effort"] == nil
+            && body["reasoning_effort"] == nil
+    }
 }
 
 @MainActor
