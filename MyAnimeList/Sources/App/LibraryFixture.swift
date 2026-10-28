@@ -109,7 +109,13 @@
                 add: { _ in errSecSuccess },
                 update: { _, _ in errSecSuccess },
                 delete: { _ in errSecSuccess },
-                copyMatching: { _ in (errSecSuccess, Data("library-fixture".utf8) as AnyObject) }
+                copyMatching: { query in
+                    // AI has no fixture credentials; never advertise a fake provider key as usable.
+                    if query[kSecAttrService as String] as? String == "\(String.bundleIdentifier).ai-provider" {
+                        return (errSecItemNotFound, nil)
+                    }
+                    return (errSecSuccess, Data("library-fixture".utf8) as AnyObject)
+                }
             )
         }
 
