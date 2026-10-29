@@ -29,11 +29,6 @@
             return backend
         }
 
-        @Generable
-        struct SmokeResponse {
-            var value: Int
-        }
-
         /// Explicit opt-in, one synthetic typed request, no library context or response logging.
         static func start(configuration: AIConfiguration, isFixture: Bool) {
             let environment = ProcessInfo.processInfo.environment
@@ -53,19 +48,8 @@
             Task {
                 let status: String
                 do {
-                    let generator = AILanguageModelGenerator(
-                        factory: AISessionFactory(configuration: configuration, keys: keys), backend: backend
-                    )
-                    let instructions = "Return the requested integer in the value field."
-                    let budget = try await AIContextBudget.make(
-                        backend: backend, instructions: instructions, generating: SmokeResponse.self
-                    )
-                    guard try await budget.fits("Return 7.") else { throw AIError.itemTooLarge }
-                    let response = try await generator.generate(
-                        SmokeResponse.self, instructions: instructions, prompt: "Return 7.",
-                        maximumResponseTokens: budget.maximumResponseTokens
-                    )
-                    status = response.value == 7 ? "PASS" : "FAIL_VALUE"
+                    try await AIConnectionCheck.run(backend: backend, configuration: configuration, keys: keys)
+                    status = "PASS"
                 } catch {
                     // Never serialize an underlying provider error; it may echo request content.
                     switch error as? AIError {

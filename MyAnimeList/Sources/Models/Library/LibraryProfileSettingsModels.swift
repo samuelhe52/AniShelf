@@ -28,7 +28,7 @@ struct LibraryProfileSettingsLayoutPolicy {
 }
 
 enum LibraryProfileSettingsDestination: Hashable, CaseIterable {
-    case language, libraryTracking, appearance, reminders, metadataImages, syncData
+    case language, libraryTracking, appearance, reminders, metadataImages, smartFeatures, syncData
 
     var title: LocalizedStringResource {
         switch self {
@@ -37,6 +37,7 @@ enum LibraryProfileSettingsDestination: Hashable, CaseIterable {
         case .appearance: "Appearance & Interaction"
         case .reminders: "Airing & Reminders"
         case .metadataImages: "Metadata & Images"
+        case .smartFeatures: "Smart Features"
         case .syncData: "Sync & Data"
         }
     }
@@ -48,6 +49,7 @@ enum LibraryProfileSettingsDestination: Hashable, CaseIterable {
         case .appearance: "rectangle.3.group.fill"
         case .reminders: "bell.badge.fill"
         case .metadataImages: "photo.stack"
+        case .smartFeatures: "sparkles"
         case .syncData: "icloud"
         }
     }
@@ -60,6 +62,7 @@ enum LibraryProfileSettingsDestination: Hashable, CaseIterable {
         case .appearance: LibraryProfileSettingsPalette.muted(.teal)
         case .reminders: LibraryProfileSettingsPalette.muted(.orange)
         case .metadataImages: LibraryProfileSettingsPalette.muted(.cyan)
+        case .smartFeatures: LibraryProfileSettingsPalette.muted(.green.mix(with: .blue, by: 0.3))
         case .syncData: LibraryProfileSettingsPalette.muted(.indigo)
         }
     }

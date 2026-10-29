@@ -18,6 +18,50 @@ enum AIBackend: String, CaseIterable, Sendable {
         case .openRouter: "openai/gpt-6-luna"
         }
     }
+
+    /// Product names, shown as they are in every language.
+    var displayName: String {
+        switch self {
+        case .apple: "Apple Intelligence"
+        case .openAI: "OpenAI"
+        case .openRouter: "OpenRouter"
+        }
+    }
+
+    var isProvider: Bool { self != .apple }
+
+    /// Models checked with reasoning off and strict structured output (docs-ai 034.003).
+    ///
+    /// Any other model ID is a custom choice the user makes at their own risk.
+    var suggestedModels: [AISuggestedModel] {
+        switch self {
+        case .apple: []
+        case .openAI: [AISuggestedModel(id: "gpt-6-luna", name: "GPT-6 Luna")]
+        case .openRouter:
+            [
+                AISuggestedModel(id: "openai/gpt-6-luna", name: "GPT-6 Luna"),
+                AISuggestedModel(id: "anthropic/claude-haiku-5.5", name: "Claude Haiku 5.5"),
+                AISuggestedModel(id: "deepseek/deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash")
+            ]
+        }
+    }
+}
+
+extension Notification.Name {
+    /// Posted on the main thread when the Smart Features backend, a key, or a model changes.
+    ///
+    /// The object is the posting ``AISettingsModel``. A key or model change puts its backend under
+    /// ``AIBackend/changedBackendKey`` in the user info.
+    static let aiConfigurationDidChange = Notification.Name("AIConfigurationDidChange")
+}
+
+extension AIBackend {
+    static let changedBackendKey = "backend"
+}
+
+struct AISuggestedModel: Hashable, Sendable {
+    let id: String
+    let name: String
 }
 
 /// Provider reasoning effort.
@@ -33,6 +77,14 @@ enum AIReasoning: String, CaseIterable, Sendable {
 /// Secrets never belong in these defaults.
 struct AIConfiguration {
     let defaults: UserDefaults
+
+    /// The app's defaults, or a fixture launch's own suite, so a fixture never changes real choices.
+    @MainActor static var appDefaults: UserDefaults {
+        #if DEBUG || LIBRARY_FIXTURES
+            if let fixture = LibraryFixture.active { return fixture.defaults }
+        #endif
+        return .standard
+    }
 
     func model(for backend: AIBackend) -> String {
         let value = defaults.string(forKey: "ai.model.\(backend.rawValue)")?
@@ -52,6 +104,13 @@ struct AIConfiguration {
     func resolvedBackend(availability: AIAvailability) -> AIBackend? {
         if let selectedBackend, availability.isUsable(selectedBackend) { return selectedBackend }
         return AIBackend.allCases.first(where: availability.isUsable)
+    }
+
+    /// The backend Smart Features use on this device now, or `nil` when none can work.
+    @MainActor static func currentBackend(
+        defaults: UserDefaults = appDefaults, keys: AIProviderKeyStorage = AIProviderKeyStorage()
+    ) -> AIBackend? {
+        AIConfiguration(defaults: defaults).resolvedBackend(availability: AIAvailability(keys: keys))
     }
 }
 

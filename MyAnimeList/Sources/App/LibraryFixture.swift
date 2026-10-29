@@ -20,9 +20,9 @@
     /// A generated library for scale checks and the UI benchmarks; see docs-ai 026.
     ///
     /// `-library-fixture <N>` boots the real UI on N deterministic entries in an in-memory store.
-    /// Library preferences, the TMDb key, What's New, review prompts, and the poster pipeline are
-    /// isolated, and the app turns sync and airing reminders off, so nothing reaches the real
-    /// library or iCloud.
+    /// Library preferences, Smart Features choices, the TMDb key, What's New, review prompts, and the
+    /// poster pipeline are isolated, and the app turns sync and airing reminders off, so nothing
+    /// reaches the real library or iCloud.
     @MainActor
     struct LibraryFixture {
         static let launchArgument = "-library-fixture"

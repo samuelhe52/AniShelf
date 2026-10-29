@@ -16,8 +16,13 @@ import SwiftUI
         @Environment(LibraryStore.self) private var store
         @Environment(\.dismiss) private var dismiss
 
+        /// Called after "Describe…" creates a category, so the presenting window can show it.
+        var onCategoryCreated: ((LibraryCategory.ID) -> Void)? = nil
+
         @State private var namePrompt: LibraryCategoryNamePrompt?
         @State private var deletingCategory: LibraryCategory?
+        @State private var describeBackend: AIBackend?
+        @State private var drafting: AIBackend?
 
         var body: some View {
             let counts = store.categoryEntryCounts
@@ -83,12 +88,30 @@ import SwiftUI
                         .accessibilityLabel(Text("Close"))
                     }
                     ToolbarItem(placement: .primaryAction) {
-                        Button("New Category", systemImage: "plus") {
-                            namePrompt = .init(purpose: .create(memberCount: 0))
+                        if let describeBackend {
+                            Menu("New Category", systemImage: "plus") {
+                                Button("Name…", systemImage: "character.cursor.ibeam") {
+                                    namePrompt = .init(purpose: .create(memberCount: 0))
+                                }
+                                Button("Describe…", systemImage: "sparkles") {
+                                    drafting = describeBackend
+                                }
+                            }
+                        } else {
+                            Button("New Category", systemImage: "plus") {
+                                namePrompt = .init(purpose: .create(memberCount: 0))
+                            }
                         }
                     }
                 }
                 .libraryCategoryEditing(namePrompt: $namePrompt, deletingCategory: $deletingCategory)
+                .sheet(item: $drafting) { backend in
+                    CategoryDraftSheet(backend: backend) { id in onCategoryCreated?(id) }
+                }
+                .onAppear { describeBackend = AIConfiguration.currentBackend() }
+                .onReceive(NotificationCenter.default.publisher(for: .aiConfigurationDidChange)) { _ in
+                    describeBackend = AIConfiguration.currentBackend()
+                }
             }
         }
     }

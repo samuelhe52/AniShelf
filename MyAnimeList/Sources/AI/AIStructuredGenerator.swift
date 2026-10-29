@@ -26,7 +26,9 @@ protocol AIStructuredGenerator {
 struct AISessionFactory {
     let configuration: AIConfiguration
     let keys: AIProviderKeyStorage
-    /// Ignored by the Apple system model. Callers that change it should size the budget to match.
+    /// Provider reasoning; the Apple system model ignores it.
+    ///
+    /// Callers that change it should size the budget to match.
     var reasoning: AIReasoning = .off
 
     func makeSession(backend: AIBackend, instructions: String) throws -> LanguageModelSession {

@@ -100,11 +100,13 @@ New code lives under a proposed `MyAnimeList/Sources/AI/` folder unless noted.
   account per provider. This follows `MyAnimeList/Sources/Utils/TMDbAPIKeyStorage.swift`
   and reuses its injectable `TMDbAPIKeyStorageKeychainClient`, so fixture launches
   never touch real keys (docs-ai 026). Keys do not sync between devices.
-- Settings adds an AI destination to `LibraryProfileSettingsDestination` in
-  `MyAnimeList/Sources/Models/Library/LibraryProfileSettingsModels.swift`, mirrored
-  in `MyAnimeList/Sources/Mac/MacSettingsRoot.swift`. The page contains:
+- Settings adds a "Smart Features" destination to `LibraryProfileSettingsDestination` in
+  `MyAnimeList/Sources/Models/Library/LibraryProfileSettingsModels.swift`. The Mac
+  Settings window (`MyAnimeList/Sources/Mac/MacSettingsRoot.swift`) shows the same
+  view, so it gets the page too. The page contains:
   - a backend picker that marks unavailable backends with their reason;
-  - key and model fields for OpenAI and OpenRouter, only on 27;
+  - key and model fields for OpenAI and OpenRouter, only on 27. The model list
+    holds the checked models plus "Custom Model…", with a warning about the risks;
   - a connection test that runs one tiny typed request;
   - a short disclosure that third-party backends receive library titles,
     overviews and, for note sorting, note text.
@@ -163,15 +165,22 @@ client. Feature UI and Settings come in later slices.
 - **Entry point:** the category manager's New Category action
   (`MyAnimeList/Sources/Views/Library/Categories/LibraryCategoryManagerSheet.swift`
   and `MyAnimeList/Sources/Mac/MacLibraryCategoryManagerSheet.swift`) becomes a
-  menu with "Name…" (today's flow) and "Describe…". The AI option appears only
-  when Library Categories is on and a backend is usable.
+  menu with "Name…" (today's flow) and "Describe…". The Mac sidebar's "New
+  Category…" gets the same menu. "Describe…" appears only when a backend is usable.
 - **Plan step:** one call turns the instruction into a `@Generable`
   `CategoryQueryPlan`:
   - a suggested category name;
-  - structured filters: type, watch status, favorite, score range, year range, and
-    TMDb genre IDs chosen from a list given in the instructions;
-  - an optional `semanticCriterion`, left empty when the structured filters fully
-    answer the request.
+  - structured filters over the user's own data only: type, watch status,
+    favorite, score range, first-air year range, and finish year range. Genres,
+    themes and studios belong to the criterion; see
+    [004](004-settings-and-described-categories.md) for why the genre filter was
+    removed;
+  - an `unsupportedRequest` for user-data constraints no filter can express,
+    which the review shows instead of silently dropping;
+  - a `semanticCriterion`, left empty when the structured filters fully answer the
+    request.
+  - Every field is required, with an empty list, 0 or `false` meaning "no
+    filter". Strict provider schemas reject optional properties.
 - **Local filter:** the structured filters are applied in code to visible library
   entries, which gives the candidates. Genre IDs come from each entry's cached
   `AnimeEntryDetail.genreIDs`, written when the entry is added and on metadata
@@ -264,11 +273,8 @@ need. If a later feature needs keyword retrieval, copy over `de239c2`
 
 - The runtime `contextSize` on iOS/macOS 27 is unmeasured; the plan reads it at
   runtime and assumes 4096.
-- The user-facing name for the feature in Settings and menus ("AI", "Assistant",
-  or something else) has to be decided before the strings go into
-  `Localizable.xcstrings`.
-- Whether to show a short reason per match in feature 1's review. The current plan
-  says no, to save tokens; revisit after trying it.
+- Feature 1's check favors recall, so its matches can include borderline anime.
+  Whether to tighten the check prompt, or to show a reason per match, is open.
 - How well the Apple on-device model judges `semanticCriterion` for anime is
   unknown until it can be tested on an eligible device.
 
@@ -276,3 +282,4 @@ need. If a later feature needs keyword retrieval, copy over `de239c2`
 
 - Updated 2026-10-28: Delivered the foundation slice without feature UI or Settings; validation and remaining boundaries are recorded in [002-foundation.md](002-foundation.md). The aggregate `001-action.md` is deferred until the last slice, following the multi-slice workflow.
 - Updated 2026-10-28: Provider reasoning is off by default (low/medium/high kept in code), the response reservation follows it, and the default models moved to `gpt-6-luna`; corrected the default-model text here and the budget row in 002 — see [003-reasoning-off.md](003-reasoning-off.md)
+- Updated 2026-10-29: Built the Smart Features settings page and "Describe a Category" (feature 1); the UI name is Smart Features. Corrected the Settings, entry-point, and plan-step text here, and resolved the naming question — see [004-settings-and-described-categories.md](004-settings-and-described-categories.md)

@@ -376,6 +376,7 @@ struct LibraryProfileSettingsView: View {
                 VStack(spacing: 20) {
                     workspaceGroup(.syncData)
                     workspaceGroup(.metadataImages)
+                    workspaceGroup(.smartFeatures)
                     VStack(alignment: .leading, spacing: 10) {
                         workspaceGroupTitle("App Info")
                         LibraryProfileAppInfoCard(
@@ -460,6 +461,8 @@ struct LibraryProfileSettingsView: View {
                 isRefreshingInfos: store.isRefreshingAllMetadata,
                 onPrefetchImages: { actions.prefetchAllImages() }
             )
+        case .smartFeatures:
+            LibraryProfileSmartFeaturesSettings()
         case .syncData:
             syncDataContent
         }
