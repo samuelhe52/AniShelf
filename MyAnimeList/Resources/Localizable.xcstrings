@@ -2304,22 +2304,6 @@
         }
       }
     },
-    "Batch Search" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一括検索"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "批量搜索"
-          }
-        }
-      }
-    },
     "Batch search failed" : {
       "localizations" : {
         "ja" : {

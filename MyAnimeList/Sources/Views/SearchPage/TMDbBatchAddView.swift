@@ -13,10 +13,6 @@ fileprivate enum TMDbBatchAddStep {
     case results
 }
 
-fileprivate enum TMDbBatchAddLayout {
-    static let promptHeight: CGFloat = 360
-}
-
 struct TMDbBatchAddView: View {
     @Environment(TMDbSearchService.self) private var tmdbSearchService: TMDbSearchService
 
@@ -126,54 +122,40 @@ struct TMDbBatchAddView: View {
             }
         }
     #else
+        /// The iOS input step: the instructions above a single editor surface that fills the
+        /// space above the search button.
         private var inputStep: some View {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    TMDbSetupPanel {
-                        VStack(alignment: .leading, spacing: 14) {
-                            Label {
-                                Text(inputSectionTitleResource)
-                            } icon: {
-                                Image(systemName: "text.badge.plus")
-                            }
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(inputSectionMessageResource)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                                Text(inputSectionMessageResource)
-                                    .fixedSize(horizontal: false, vertical: true)
-
-                                InfoTip(
-                                    title: inputTipTitleResource,
-                                    message: inputTipMessageResource,
-                                    copyText: inputTipCopyText,
-                                    width: 300,
-                                    iconFont: .caption
-                                )
-                            }
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-
-                            PlaceholderTextEditor(
-                                text: $promptInput,
-                                placeholder: inputPlaceholderResource,
-                                isLiteralInput: true
-                            )
-                            .frame(height: TMDbBatchAddLayout.promptHeight)
-                            .padding(12)
-                            .background(
-                                Color.platformSecondarySystemBackground,
-                                in: RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            )
-                        }
-                    }
+                    InfoTip(
+                        title: inputTipTitleResource,
+                        message: inputTipMessageResource,
+                        copyText: inputTipCopyText,
+                        width: 300,
+                        iconFont: .caption
+                    )
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 12)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 4)
+
+                PlaceholderTextEditor(
+                    text: $promptInput,
+                    placeholder: inputPlaceholderResource,
+                    isLiteralInput: true
+                )
+                .padding(12)
+                .background(
+                    Color.platformSecondarySystemBackground,
+                    in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                )
             }
-            .scrollBounceBehavior(.basedOnSize)
-            .scrollDismissesKeyboard(.interactively)
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
             .navigationTitle(Text(batchAddTitleResource))
             .inlineNavigationTitle()
             .toolbar {
@@ -602,10 +584,6 @@ struct TMDbBatchAddView: View {
 
     private var editTitleResource: LocalizedStringResource {
         "Edit"
-    }
-
-    private var inputSectionTitleResource: LocalizedStringResource {
-        "Batch Search"
     }
 
     private var inputSectionMessageResource: LocalizedStringResource {
