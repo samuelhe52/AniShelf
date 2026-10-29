@@ -85,6 +85,8 @@ struct CategoryQueryPlan {
 struct CategoryDraftEntry: Sendable {
     let id: LibraryEntryIdentity
     let title: String
+    /// The review row's content.
+    let metadata: EntryMetadata
     let kind: CategoryEntryKind
     let year: Int?
     let finishYear: Int?
@@ -97,6 +99,11 @@ struct CategoryDraftEntry: Sendable {
     init(_ entry: AnimeEntry, calendar: Calendar = .current) {
         id = entry.libraryIdentity
         title = entry.displayName
+        var metadata = entry.entryMetadata
+        metadata.name = entry.displayName
+        metadata.overview = entry.displayOverview
+        metadata.posterPath = entry.selectedPosterPath
+        self.metadata = metadata
         kind = CategoryEntryKind(entry.type)
         year = entry.onAirDate.map { calendar.component(.year, from: $0) }
         finishYear = entry.dateFinished.map { calendar.component(.year, from: $0) }

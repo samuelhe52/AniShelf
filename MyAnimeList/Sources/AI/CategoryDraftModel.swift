@@ -16,9 +16,8 @@ fileprivate let logger = Logger(subsystem: .bundleIdentifier, category: "Categor
 /// One anime the model proposes for the new category.
 struct CategoryDraftCandidate: Identifiable, Sendable {
     let id: LibraryEntryIdentity
-    let title: String
-    let year: Int?
-    let kind: CategoryEntryKind
+    /// What the review row shows, in the shape Batch Add's result rows take.
+    let metadata: EntryMetadata
 }
 
 struct CategoryDraftProposal {
@@ -219,9 +218,9 @@ final class CategoryDraftModel {
     private func finish(name: String, matches: [CategoryDraftEntry], uncheckedCount: Int, unsupported: String) {
         guard !Task.isCancelled else { return }
         let candidates = matches.map {
-            CategoryDraftCandidate(id: $0.id, title: $0.title, year: $0.year, kind: $0.kind)
+            CategoryDraftCandidate(id: $0.id, metadata: $0.metadata)
         }
-        .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+        .sorted { $0.metadata.name.localizedStandardCompare($1.metadata.name) == .orderedAscending }
         proposal = CategoryDraftProposal(
             name: name,
             items: AIProposal(items: candidates.map { AIProposal.Item(value: $0) }),

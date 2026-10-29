@@ -57,7 +57,8 @@ Details:
 - **Apply:** creates the category and adds the accepted anime through
   `LibraryBatchAction.category`, then saves. Presenters with a library window
   (`LibraryView`, `MacLibraryView`, the Mac sidebar) switch that window to the new
-  category. Presenters inside Settings do not.
+  category. Presenters inside Settings do not. The button was later renamed Create
+  Category; this record keeps the original name.
 
 **Privacy.** `PRIVACY_POLICY.md` gains an Optional Smart Features section and the
 OpenAI and OpenRouter services. Its effective date is unchanged until the release
