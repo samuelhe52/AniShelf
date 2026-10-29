@@ -21,6 +21,7 @@
   //
   ```
   Omit this header only when the user explicitly requests it.
+- Give scrollable content under a navigation bar (`Form`, `List`, `ScrollView`, including each step of a multi-step sheet) `.preferredNavigationBarScrollEdgeEffect()`, so it follows the soft-edges setting, followed by `.navigationTitle(...)`, `.inlineNavigationTitle()`, and `.toolbar`. In sheet toolbars, put a dismiss button at `.cancellationAction` with `SheetCloseLabel`, and other buttons at `.sheetLeading`/`.sheetTrailing`, never at raw `.topBar*` placements, which break the Mac's sheet bar.
 - Pass plain string literals to SwiftUI APIs that already take a `LocalizedStringKey` (`Text`, `Button`, `Label`, `.help`, and similar); do not wrap them in `LocalizedStringResource`. Use `LocalizedStringResource` for user-facing strings held in properties, models, or enums, or passed to APIs that do not localize literals.
 
 ## Testing
