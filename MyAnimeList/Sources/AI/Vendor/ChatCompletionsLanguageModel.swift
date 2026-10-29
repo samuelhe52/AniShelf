@@ -14,6 +14,8 @@
 // of truncated provider responses and streams without a completion signal.
 // MODIFIED by Claude Code on behalf of Samuel He on 2026/10/28.
 // Changes: optional provider reasoning control (`reasoning_effort` or OpenRouter `reasoning`).
+// MODIFIED by Claude Code on behalf of Samuel He on 2026/10/29.
+// Changes: the response_format schema omits `x-order`, which Anthropic models reject.
 //
 //===----------------------------------------------------------------------===//
 import Foundation
@@ -91,6 +93,7 @@ public struct ChatCompletionsLanguageModel: Sendable, LanguageModel {
     ///     (for example, an `Authorization` header).
     ///   - supportsGuidedGeneration: Whether the endpoint supports the
     ///     `response_format` field for structured output. Defaults to `true`.
+    ///   - reasoning: Reasoning control to send with each request. `nil` sends none.
     ///   - urlSessionConfiguration: An optional `URLSessionConfiguration` used
     ///     to build the `URLSession` that drives requests. Use this to tune
     ///     timeouts, proxies, or other transport settings. When `nil`, an
@@ -912,6 +915,74 @@ fileprivate struct ChatCompletionsClient {
             var description: String?
             var schema: GenerationSchema
             var strict = true
+
+            private enum CodingKeys: String, CodingKey {
+                case name, description, schema, strict
+            }
+
+            // AniShelf modification: Anthropic models reject the `x-order` keyword that
+            // GenerationSchema adds to every object, so the provider gets a copy without it.
+            func encode(to encoder: any Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(name, forKey: .name)
+                try container.encodeIfPresent(description, forKey: .description)
+                try container.encode(strict, forKey: .strict)
+                let object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(schema))
+                try container.encode(SchemaJSON(Self.removingKey("x-order", from: object)), forKey: .schema)
+            }
+
+            static func removingKey(_ key: String, from value: Any) -> Any {
+                if let object = value as? [String: Any] {
+                    return object.filter { $0.key != key }.mapValues { removingKey(key, from: $0) }
+                }
+                if let array = value as? [Any] {
+                    return array.map { removingKey(key, from: $0) }
+                }
+                return value
+            }
+        }
+
+        /// A `JSONSerialization` value, encoded back as the same JSON.
+        struct SchemaJSON: Encodable {
+            let value: Any
+
+            init(_ value: Any) { self.value = value }
+
+            private struct Key: CodingKey {
+                var stringValue: String
+                var intValue: Int? { nil }
+                init(stringValue: String) { self.stringValue = stringValue }
+                init?(intValue: Int) { nil }
+            }
+
+            func encode(to encoder: any Encoder) throws {
+                switch value {
+                case let object as [String: Any]:
+                    var container = encoder.container(keyedBy: Key.self)
+                    for (key, nested) in object {
+                        try container.encode(SchemaJSON(nested), forKey: Key(stringValue: key))
+                    }
+                case let array as [Any]:
+                    var container = encoder.unkeyedContainer()
+                    for nested in array { try container.encode(SchemaJSON(nested)) }
+                case let number as NSNumber where CFGetTypeID(number) == CFBooleanGetTypeID():
+                    var container = encoder.singleValueContainer()
+                    try container.encode(number.boolValue)
+                case let number as NSNumber:
+                    var container = encoder.singleValueContainer()
+                    if CFNumberIsFloatType(number) {
+                        try container.encode(number.doubleValue)
+                    } else {
+                        try container.encode(number.int64Value)
+                    }
+                case let string as String:
+                    var container = encoder.singleValueContainer()
+                    try container.encode(string)
+                default:
+                    var container = encoder.singleValueContainer()
+                    try container.encodeNil()
+                }
+            }
         }
     }
 
