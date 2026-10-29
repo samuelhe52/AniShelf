@@ -23,7 +23,6 @@ struct TMDbBatchAddView: View {
 
     @State private var step: TMDbBatchAddStep = .input
     @State private var promptInput = ""
-    @FocusState private var isPromptEditorFocused: Bool
 
     var body: some View {
         Group {
@@ -45,44 +44,47 @@ struct TMDbBatchAddView: View {
         .animation(batchStepAnimation, value: step)
     }
 
-    #if os(macOS)
-        /// The Mac input step: the instructions and one bordered editor filling the sheet,
-        /// without the nested iOS panel.
-        ///
-        /// Search sits in the bar's confirm slot.
-        private var inputStep: some View {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(inputSectionMessageResource)
-                        .fixedSize(horizontal: false, vertical: true)
-                    InfoTip(
-                        title: inputTipTitleResource,
-                        message: inputTipMessageResource,
-                        copyText: inputTipCopyText,
-                        width: 300,
-                        iconFont: .callout
-                    )
-                }
-                .foregroundStyle(.secondary)
-
-                PlaceholderTextEditor(
-                    text: $promptInput,
-                    placeholder: inputPlaceholderResource,
-                    isLiteralInput: true
+    /// The Mac's Search sits in the sheet bar's confirm slot; iOS puts it in the bottom bar.
+    private var inputStep: some View {
+        PromptEditorStep(
+            text: $promptInput,
+            placeholder: inputPlaceholderResource,
+            isLiteralInput: true,
+            autofocus: focusesEditorOnAppear
+        ) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(inputSectionMessageResource)
+                    .fixedSize(horizontal: false, vertical: true)
+                InfoTip(
+                    title: inputTipTitleResource,
+                    message: inputTipMessageResource,
+                    copyText: inputTipCopyText,
+                    width: 300,
+                    iconFont: inputTipIconFont
                 )
-                .focused($isPromptEditorFocused)
-                .padding(8)
-                .background(Color(nsColor: .textBackgroundColor), in: .rect(cornerRadius: 6))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(.separator, lineWidth: 1)
+            }
+        }
+        .navigationTitle(Text(batchAddTitleResource))
+        .inlineNavigationTitle()
+        #if os(macOS)
+            .toolbar { macSheetActions }
+        #else
+            .toolbar {
+                ToolbarItem(placement: .sheetLeading) {
+                    Button {
+                        exitBatchAdd()
+                    } label: {
+                        backLabel
+                    }
+                    .accessibilityLabel(Text(backTitleResource))
                 }
             }
-            .padding(20)
-            .onAppear { isPromptEditorFocused = true }
-            .navigationTitle(Text(batchAddTitleResource))
-            .toolbar { macSheetActions }
-        }
+        #endif
+    }
+
+    #if os(macOS)
+        private let focusesEditorOnAppear = true
+        private let inputTipIconFont: Font = .callout
 
         @ToolbarContentBuilder
         private var macSheetActions: some ToolbarContent {
@@ -122,53 +124,8 @@ struct TMDbBatchAddView: View {
             }
         }
     #else
-        /// The iOS input step: the instructions above a single editor surface that fills the
-        /// space above the search button.
-        private var inputStep: some View {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(inputSectionMessageResource)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    InfoTip(
-                        title: inputTipTitleResource,
-                        message: inputTipMessageResource,
-                        copyText: inputTipCopyText,
-                        width: 300,
-                        iconFont: .caption
-                    )
-                }
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 4)
-
-                PlaceholderTextEditor(
-                    text: $promptInput,
-                    placeholder: inputPlaceholderResource,
-                    isLiteralInput: true
-                )
-                .padding(12)
-                .background(
-                    Color.platformSecondarySystemBackground,
-                    in: RoundedRectangle(cornerRadius: 18, style: .continuous)
-                )
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
-            .padding(.bottom, 12)
-            .navigationTitle(Text(batchAddTitleResource))
-            .inlineNavigationTitle()
-            .toolbar {
-                ToolbarItem(placement: .sheetLeading) {
-                    Button {
-                        exitBatchAdd()
-                    } label: {
-                        backLabel
-                    }
-                    .accessibilityLabel(Text(backTitleResource))
-                }
-            }
-        }
+        private let focusesEditorOnAppear = false
+        private let inputTipIconFont: Font = .caption
     #endif
 
     private var resultsStep: some View {
@@ -353,9 +310,7 @@ struct TMDbBatchAddView: View {
     }
 
     private func dismissKeyboard() {
-        #if os(macOS)
-            isPromptEditorFocused = false
-        #else
+        #if !os(macOS)
             PlaceholderTextEditor.dismissKeyboard()
         #endif
     }
