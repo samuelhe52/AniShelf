@@ -152,6 +152,43 @@ changed three parts:
   take 16 check calls, and 800 take about 95. Eight requests in flight make a
   provider rate limit (HTTP 429) more likely, and those batches count as unchecked.
 
+**Cost and time.** Measured on OpenRouter with 135 entries: a genre request makes 1
+plan call (about 2 s) and 16 check calls. With 1 in flight it takes 32–39 s, with 8
+about 7 s. GPT-6 Luna costs about $0.004 per request from reported token usage.
+Scaled from that, 800 entries take about 95 calls, 30 s and $0.02. No HTTP 429
+appeared in 570 calls. Apple Intelligence was not eligible on the test Mac, so the
+sequential Apple setting is still unmeasured.
+
+**Model choice.** A Codex reviewer labeled every entry for 8 requests before seeing
+any output (one reviewer, with borderline entries excluded). Each model then ran
+each request twice:
+
+| Model | Precision | Recall | Same decision across runs |
+| --- | --- | --- | --- |
+| GPT-6 Luna | 96% | 96% | 98% |
+| DeepSeek V4.1 Flash | 79% | 96% | 96% |
+| Claude Haiku 5.5 | 53% | 94% | 89% |
+
+- **Haiku contradicted its cards.** It put 49 titles under Kyoto Animation whose
+  cards name other studios.
+- **DeepSeek confused fantasy and science fiction.**
+- **All three missed 君の名は。 as fantasy in every run.**
+- **Tuning didn't close the gap.** Temperature 0 and greedy sampling did not help,
+  and greedy once dropped the criterion. Low reasoning raised Haiku to 67% and
+  DeepSeek to about 91% precision. It took 4 times as long (26–28 s), because the
+  2,048-token reply reservation splits a library into about 75 batches.
+
+On the maintainer's approval, GPT-6 Luna is the only suggested OpenRouter model, and
+the others remain custom choices.
+
+Gemini 2.5 Flash-Lite failed every plan call with HTTP 400 ("function calling config is
+set without function_declarations"). The vendored client always sent `tools: []` and
+`tool_choice: "auto"`, and it now sends neither field when a request has no tools.
+With the fix, it scored 78% precision and 92% recall at 5 s and about $0.003 per
+request, so it stays a custom model. Its errors repeated across runs, such as Frieren and
+CLANNAD as sci-fi. It also reported 71 reasoning tokens over 258 calls, although
+reasoning was requested off.
+
 ## Refs
 
 - `MyAnimeList/Sources/AI/AISettingsModel.swift`
@@ -191,6 +228,9 @@ changed three parts:
 
 ## Current state
 
-The check prompt favors recall, so the review can include borderline anime: in the
-run above, some matches were arguably not fantasy. This is recorded as an open question
-in the plan.
+- GPT-6 Luna scores 96% precision and 96% recall on the labeled set. Its remaining
+  errors are stable: the Violet Evergarden films as fantasy, and 【推しの子】 missed
+  for music. The miss shared by all three models, 君の名は。, is not yet
+  investigated.
+- The labels and saved runs live outside the repository, because they contain the
+  maintainer's library.

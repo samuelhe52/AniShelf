@@ -35,7 +35,8 @@ enum AIBackend: String, CaseIterable, Sendable {
     /// The on-device model runs one response at a time, so Apple stays sequential.
     var maximumConcurrentBatches: Int { isProvider ? 8 : 1 }
 
-    /// Models checked with reasoning off and strict structured output (docs-ai 034.003).
+    /// Models checked with reasoning off and strict structured output (docs-ai 034.003), and
+    /// scored against a labeled library (docs-ai 034.004).
     ///
     /// Any other model ID is a custom choice the user makes at their own risk.
     var suggestedModels: [AISuggestedModel] {
@@ -43,11 +44,7 @@ enum AIBackend: String, CaseIterable, Sendable {
         case .apple: []
         case .openAI: [AISuggestedModel(id: "gpt-6-luna", name: "GPT-6 Luna")]
         case .openRouter:
-            [
-                AISuggestedModel(id: "openai/gpt-6-luna", name: "GPT-6 Luna"),
-                AISuggestedModel(id: "anthropic/claude-haiku-5.5", name: "Claude Haiku 5.5"),
-                AISuggestedModel(id: "deepseek/deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash")
-            ]
+            [AISuggestedModel(id: "openai/gpt-6-luna", name: "GPT-6 Luna")]
         }
     }
 }
