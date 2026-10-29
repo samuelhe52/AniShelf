@@ -15,7 +15,8 @@
 // MODIFIED by Claude Code on behalf of Samuel He on 2026/10/28.
 // Changes: optional provider reasoning control (`reasoning_effort` or OpenRouter `reasoning`).
 // MODIFIED by Claude Code on behalf of Samuel He on 2026/10/29.
-// Changes: the response_format schema omits `x-order`, which Anthropic models reject.
+// Changes: the response_format schema omits `x-order`, which Anthropic models reject;
+// `tools` and `tool_choice` are sent only with tools, since Google rejects a bare choice.
 //
 //===----------------------------------------------------------------------===//
 import Foundation
@@ -285,25 +286,31 @@ public struct ChatCompletionsLanguageModel: Sendable, LanguageModel {
                 temperature: request.generationOptions.temperature,
                 topP: try request.generationOptions.samplingMode.map(topP),
                 maxCompletionTokens: request.generationOptions.maximumResponseTokens,
-                tools: request.enabledToolDefinitions.map { tool in
-                    ChatCompletionsClient.Tool(
-                        function: ChatCompletionsClient.Tool.Function(
-                            name: tool.name,
-                            description: tool.description,
-                            parameters: tool.parameters
+                // AniShelf modification: Google rejects `tool_choice` without tool
+                // declarations, so a request without tools sends neither field.
+                tools: request.enabledToolDefinitions.isEmpty
+                    ? nil
+                    : request.enabledToolDefinitions.map { tool in
+                        ChatCompletionsClient.Tool(
+                            function: ChatCompletionsClient.Tool.Function(
+                                name: tool.name,
+                                description: tool.description,
+                                parameters: tool.parameters
+                            )
                         )
-                    )
-                },
-                toolChoice: ChatCompletionsClient.ChatCompletionRequest.ToolChoice(
-                    mode: {
-                        switch request.generationOptions.toolCallingMode?.kind {
-                        case .allowed, .none: .auto
-                        case .required: .required
-                        case .disallowed: .none
-                        @unknown default: .auto
-                        }
-                    }()
-                ),
+                    },
+                toolChoice: request.enabledToolDefinitions.isEmpty
+                    ? nil
+                    : ChatCompletionsClient.ChatCompletionRequest.ToolChoice(
+                        mode: {
+                            switch request.generationOptions.toolCallingMode?.kind {
+                            case .allowed, .none: .auto
+                            case .required: .required
+                            case .disallowed: .none
+                            @unknown default: .auto
+                            }
+                        }()
+                    ),
                 responseFormat: request.schema.map { schema in
                     ChatCompletionsClient.ResponseFormat(
                         jsonSchema: ChatCompletionsClient.ResponseFormat.JSONSchemaWrapper(

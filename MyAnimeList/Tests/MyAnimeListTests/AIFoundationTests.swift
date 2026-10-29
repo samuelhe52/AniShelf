@@ -260,7 +260,8 @@ struct AIFoundationTests {
             configuration: AIConfiguration(defaults: .standard), keys: AIProviderKeyStorage())
         #expect(factory.reasoning == .off)
         // The mock answers [0, 1] only when the body carries exactly this backend's "off" form,
-        // and a response schema without `x-order`, which Anthropic models reject.
+        // a response schema without `x-order`, which Anthropic models reject, and no tool
+        // fields, since Google rejects `tool_choice` without tools.
         let model = mockProvider(
             backend == .openAI ? "reasoningOffOpenAI" : "reasoningOffOpenRouter",
             reasoning: AISessionFactory.wireReasoning(factory.reasoning, for: backend)
@@ -385,7 +386,8 @@ fileprivate final class AIStreamURLProtocol: URLProtocol {
             data.append(buffer, count: count)
         }
         guard let body = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let format = body["response_format"], !String(describing: format).contains("x-order")
+            let format = body["response_format"], !String(describing: format).contains("x-order"),
+            body["tools"] == nil, body["tool_choice"] == nil
         else { return false }
         if scenario == "reasoningOffOpenAI" {
             return body["reasoning_effort"] as? String == "none" && body["reasoning"] == nil
