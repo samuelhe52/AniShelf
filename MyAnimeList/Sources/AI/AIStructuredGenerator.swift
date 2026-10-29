@@ -70,12 +70,21 @@ struct AISessionFactory {
             return LanguageModelSession(model: SystemLanguageModel.default, instructions: instructions)
         }
         if #available(iOS 27.0, macOS 27.0, *), let key = keys.key(for: backend) {
+            var url = URL(string: backend == .openAI ? "https://api.openai.com/v1" : "https://openrouter.ai/api/v1")!
+            var sessionConfiguration: URLSessionConfiguration?
+            #if DEBUG || LIBRARY_FIXTURES
+                if LibraryFixture.active != nil {
+                    url = AIFixtureProvider.baseURL
+                    sessionConfiguration = AIFixtureProvider.sessionConfiguration
+                }
+            #endif
             let model = ChatCompletionsLanguageModel(
                 name: configuration.model(for: backend),
-                url: URL(string: backend == .openAI ? "https://api.openai.com/v1" : "https://openrouter.ai/api/v1")!,
+                url: url,
                 additionalHeaders: ["Authorization": "Bearer \(key)"],
                 supportsGuidedGeneration: true,
-                reasoning: Self.wireReasoning(reasoning, for: backend)
+                reasoning: Self.wireReasoning(reasoning, for: backend),
+                urlSessionConfiguration: sessionConfiguration
             )
             return LanguageModelSession(model: model, instructions: instructions)
         }

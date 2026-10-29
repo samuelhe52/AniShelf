@@ -22,7 +22,8 @@
     /// `-library-fixture <N>` boots the real UI on N deterministic entries in an in-memory store.
     /// Library preferences, Smart Features choices, the TMDb key, What's New, review prompts, and the
     /// poster pipeline are isolated, and the app turns sync and airing reminders off, so nothing
-    /// reaches the real library or iCloud.
+    /// reaches the real library or iCloud. Smart Features run on OpenRouter, answered locally by
+    /// `AIFixtureProvider`.
     @MainActor
     struct LibraryFixture {
         static let launchArgument = "-library-fixture"
@@ -96,6 +97,8 @@
             preferences.saveCategoriesEnabled(true)
             preferences.saveCategoryStripEnabled(true)
             preferences.saveCategories(Self.categories)
+            // The simulated provider, not Apple Intelligence, which the Simulator often lacks.
+            AIConfiguration(defaults: defaults).selectedBackend = .openRouter
             seed(bootstrap.provider)
             Self.configurePosterLoading()
             LibraryBenchmarkSignposts.isEnabled = true
@@ -109,13 +112,8 @@
                 add: { _ in errSecSuccess },
                 update: { _, _ in errSecSuccess },
                 delete: { _ in errSecSuccess },
-                copyMatching: { query in
-                    // AI has no fixture credentials; never advertise a fake provider key as usable.
-                    if query[kSecAttrService as String] as? String == "\(String.bundleIdentifier).ai-provider" {
-                        return (errSecItemNotFound, nil)
-                    }
-                    return (errSecSuccess, Data("library-fixture".utf8) as AnyObject)
-                }
+                // The placeholder also keys both AI providers, whose requests go to `AIFixtureProvider`.
+                copyMatching: { _ in (errSecSuccess, Data("library-fixture".utf8) as AnyObject) }
             )
         }
 
