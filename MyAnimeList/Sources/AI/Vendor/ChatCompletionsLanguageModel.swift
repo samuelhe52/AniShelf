@@ -223,6 +223,24 @@ public struct ChatCompletionsLanguageModel: Sendable, LanguageModel {
             var type: String?
             var param: String?
             var code: String?
+
+            enum CodingKeys: String, CodingKey {
+                case message, type, param, code
+            }
+
+            init(from decoder: any Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                message = try container.decode(String.self, forKey: .message)
+                type = try container.decodeIfPresent(String.self, forKey: .type)
+                param = try container.decodeIfPresent(String.self, forKey: .param)
+                // AniShelf modification: OpenRouter reports mid-stream failures with a numeric
+                // HTTP-style code (`{"code":502}`), where OpenAI sends a string.
+                if let number = try? container.decodeIfPresent(Int.self, forKey: .code) {
+                    code = String(number)
+                } else {
+                    code = try container.decodeIfPresent(String.self, forKey: .code)
+                }
+            }
         }
     }
 

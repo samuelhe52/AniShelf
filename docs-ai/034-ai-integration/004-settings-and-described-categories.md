@@ -189,6 +189,24 @@ request, so it stays a custom model. Its errors repeated across runs, such as Fr
 CLANNAD as sci-fi. It also reported 71 reasoning tokens over 258 calls, although
 reasoning was requested off.
 
+**Retries.** One timing run lost 44 entries to four timeouts and a TLS error. The plan
+call and every check batch now go through `AIRetryPolicy`. A transient error is
+retried up to twice, after about 1 s and then 2 s, each stretched by a random 0–50%
+so parallel batches spread out. Transient errors are HTTP 408, 425, 429, 500 and
+502–504, and any network error except being offline. `Retry-After` is not honored,
+because the vendored client surfaces only the status code. A batch that still fails
+counts as unchecked, as before.
+
+**君の名は。** Every model missed it as fantasy in every run. Its card has only
+Romance and Drama as TMDb genres, and the overview frames the body swap as a dream.
+Replaying the fantasy check on GPT-6 Luna with three prompt variants did not change
+that (0 of 8 runs): dropping "or when you are unsure", adding "judge the premise as
+the story finally reveals it", and both together. The variants' overall scores
+differed less than one prompt does between its own runs. With a title-only card,
+which leaves only the model's own knowledge, Luna still excluded it in 3 of 3 runs.
+So the model draws the genre line there, as TMDb's tags do. The label is debatable,
+and the prompt stays as it was.
+
 ## Refs
 
 - `MyAnimeList/Sources/AI/AISettingsModel.swift`
@@ -230,7 +248,6 @@ reasoning was requested off.
 
 - GPT-6 Luna scores 96% precision and 96% recall on the labeled set. Its remaining
   errors are stable: the Violet Evergarden films as fantasy, and 【推しの子】 missed
-  for music. The miss shared by all three models, 君の名は。, is not yet
-  investigated.
+  for music. 君の名は。 is excluded by the model's own genre judgment (see above).
 - The labels and saved runs live outside the repository, because they contain the
   maintainer's library.

@@ -173,6 +173,41 @@ struct AIFoundationTests {
         #expect(result.values.map(\.identity) == input.map(\.identity))
     }
 
+    @Test func transientFailuresRetryWithBackoffAndOthersFailAtOnce() async throws {
+        var delays: [Duration] = []
+        let retry = AIRetryPolicy(sleep: { delays.append($0) })
+        let budget = AIContextBudget(contextSize: 10000, reservedTokens: 0, maximumResponseTokens: 10)
+
+        let recovering = AIOutputFake<AIBatchSelection> { call, _ in
+            if call == 1 { throw AIError.providerHTTPStatus(429) }
+            if call == 2 { throw AIError.network(URLError.timedOut.rawValue) }
+            return AIBatchSelection(matchingIndices: [0])
+        }
+        var runner = AIBatchRunner(generator: recovering, budget: budget, instructions: "classify")
+        runner.retry = retry
+        let recovered = try await runner.run(items(2), generating: AIBatchSelection.self)
+        #expect(recovering.prompts.count == 3)
+        #expect(recovered.failures.isEmpty)
+        #expect(delays.count == 2)
+        #expect(delays[0] >= .seconds(1) && delays[0] <= .seconds(1.5))
+        #expect(delays[1] >= .seconds(2) && delays[1] <= .seconds(3))
+
+        // Gives up after two retries; the batch counts as unchecked.
+        let overloaded = AIOutputFake<AIBatchSelection> { _, _ in throw AIError.providerHTTPStatus(503) }
+        runner = AIBatchRunner(generator: overloaded, budget: budget, instructions: "classify")
+        runner.retry = retry
+        let unavailable = try await runner.run(items(2), generating: AIBatchSelection.self)
+        #expect(overloaded.prompts.count == 3)
+        #expect(unavailable.failures.map(\.reason) == [.providerHTTPStatus(503)])
+
+        let rejected = AIOutputFake<AIBatchSelection> { _, _ in throw AIError.providerHTTPStatus(401) }
+        runner = AIBatchRunner(generator: rejected, budget: budget, instructions: "classify")
+        runner.retry = retry
+        _ = try await runner.run(items(2), generating: AIBatchSelection.self)
+        #expect(rejected.prompts.count == 1)
+        #expect(!AIError.network(URLError.notConnectedToInternet.rawValue).isTransient)
+    }
+
     @Test func cancellationStopsBeforeAnotherRequest() async throws {
         let fake = AIOutputFake<AIBatchSelection> { _, _ in throw CancellationError() }
         let budget = AIContextBudget(contextSize: 10000, reservedTokens: 0, maximumResponseTokens: 10)
@@ -284,7 +319,7 @@ struct AIFoundationTests {
         )
     }
 
-    @Test func providerErrorsAreReducedToSafeRetryCategories() throws {
+    @Test func providerErrorsAreReducedToSafeRetryCategories() async throws {
         guard #available(iOS 27.0, macOS 27.0, *) else { return }
         let overflow = ChatCompletionsLanguageModel.RequestError.httpError(
             statusCode: 400,
@@ -299,6 +334,15 @@ struct AIFoundationTests {
         )
         #expect(AILanguageModelGenerator.classify(denied) == .providerHTTPStatus(401))
         #expect(AILanguageModelGenerator.classify(URLError(.notConnectedToInternet)) == .network(-1009))
+        // OpenRouter reports a failure after HTTP 200 as an error event with a numeric code.
+        do {
+            _ = try await LanguageModelSession(model: mockProvider("streamError")).respond(
+                to: "Select.", generating: AIBatchSelection.self
+            )
+            Issue.record("Accepted an error event")
+        } catch {
+            #expect(AILanguageModelGenerator.classify(error) == .providerHTTPStatus(502))
+        }
     }
 
     #if DEBUG
@@ -358,6 +402,7 @@ fileprivate final class AIStreamURLProtocol: URLProtocol {
         let chunk: [String: Any] = ["id": "mock", "model": "mock", "choices": [["delta": ["content": content]]]]
         let data = try! JSONSerialization.data(withJSONObject: chunk)
         var body = "data: \(String(decoding: data, as: UTF8.self))\n\n"
+        if scenario == "streamError" { body = "data: {\"error\":{\"code\":502,\"message\":\"private\"}}\n\n" }
         if scenario.hasPrefix("truncated") || scenario == "finishOnly" || scenario.hasPrefix("reasoningOff") {
             let reason = scenario.hasPrefix("truncated") ? "length" : "stop"
             body +=

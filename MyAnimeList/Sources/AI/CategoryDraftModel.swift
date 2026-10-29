@@ -53,6 +53,7 @@ final class CategoryDraftModel {
     let backend: AIBackend
     private let makeGenerator: @MainActor () -> any AIStructuredGenerator
     private let budgetOverride: AIContextBudget?
+    private let retry: AIRetryPolicy
     private let calendar: Calendar
     private let now: () -> Date
     private var task: Task<Void, Never>?
@@ -61,6 +62,7 @@ final class CategoryDraftModel {
         backend: AIBackend,
         makeGenerator: (@MainActor () -> any AIStructuredGenerator)? = nil,
         budgetOverride: AIContextBudget? = nil,
+        retry: AIRetryPolicy = AIRetryPolicy(),
         calendar: Calendar = .current,
         now: @escaping () -> Date = Date.init
     ) {
@@ -75,6 +77,7 @@ final class CategoryDraftModel {
                 )
             }
         self.budgetOverride = budgetOverride
+        self.retry = retry
         self.calendar = calendar
         self.now = now
     }
@@ -162,10 +165,12 @@ final class CategoryDraftModel {
                 currentYear: calendar.component(.year, from: now()))
             let planBudget = try await budget(for: CategoryQueryPlan.self, instructions: planInstructions)
             guard try await planBudget.fits(request) else { throw AIError.itemTooLarge }
-            let plan = try await generator.generate(
-                CategoryQueryPlan.self, instructions: planInstructions, prompt: request,
-                maximumResponseTokens: planBudget.maximumResponseTokens
-            )
+            let plan = try await retry.run {
+                try await generator.generate(
+                    CategoryQueryPlan.self, instructions: planInstructions, prompt: request,
+                    maximumResponseTokens: planBudget.maximumResponseTokens
+                )
+            }
             try Task.checkCancellation()
 
             let candidates = plan.candidates(in: entries)
@@ -181,7 +186,7 @@ final class CategoryDraftModel {
             let items = candidates.map { AIBatchItem(identity: $0.id, text: $0.card) }
             let runner = AIBatchRunner(
                 generator: generator, budget: checkBudget, instructions: checkInstructions,
-                maximumConcurrentBatches: backend.maximumConcurrentBatches)
+                maximumConcurrentBatches: backend.maximumConcurrentBatches, retry: retry)
             let result = try await runner.run(items, generating: AIBatchSelection.self) { [weak self] done, total in
                 guard let self, !Task.isCancelled else { return }
                 state = .checking(done: done, total: total)

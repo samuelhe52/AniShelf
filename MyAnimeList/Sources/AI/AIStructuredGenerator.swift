@@ -13,6 +13,39 @@ enum AIError: Error, Equatable {
     case unavailable, contextSizeExceeded, decodingFailure, responseTruncated, requestFailed, itemTooLarge
     case providerHTTPStatus(Int)
     case network(Int)
+
+    /// Whether the same request can succeed on a later attempt.
+    var isTransient: Bool {
+        switch self {
+        case .providerHTTPStatus(let status): [408, 425, 429, 500, 502, 503, 504].contains(status)
+        // Offline stays offline within a retry window.
+        case .network(let code): code != URLError.notConnectedToInternet.rawValue
+        default: false
+        }
+    }
+}
+
+/// Bounded retries for transient failures, with exponential backoff and jitter.
+///
+/// `Retry-After` is not honored: the vendored client surfaces only the status code.
+struct AIRetryPolicy {
+    var maximumRetries = 2
+    var baseDelay: Duration = .seconds(1)
+    var sleep: @MainActor (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+
+    @MainActor
+    func run<Value>(_ operation: () async throws -> Value) async throws -> Value {
+        var attempt = 0
+        while true {
+            do {
+                return try await operation()
+            } catch let error as AIError where error.isTransient && attempt < maximumRetries {
+                // 1 s, then 2 s, each stretched by up to half again so parallel batches spread out.
+                try await sleep(baseDelay * (1 << attempt) * Double.random(in: 1...1.5))
+                attempt += 1
+            }
+        }
+    }
 }
 
 @MainActor
@@ -107,10 +140,12 @@ struct AILanguageModelGenerator: AIStructuredGenerator {
                 default: break
                 }
             }
-            if let provider = error as? ChatCompletionsLanguageModel.APIError,
-                provider.code == "context_length_exceeded"
-            {
-                return .contextSizeExceeded
+            if let provider = error as? ChatCompletionsLanguageModel.APIError {
+                if provider.code == "context_length_exceeded" { return .contextSizeExceeded }
+                // An error event after HTTP 200 carries the status the provider would have sent.
+                if let status = provider.code.flatMap(Int.init), (400..<600).contains(status) {
+                    return .providerHTTPStatus(status)
+                }
             }
         }
         if let legacy = error as? LanguageModelSession.GenerationError {
