@@ -25,7 +25,8 @@ struct PlaceholderTextEditor: View {
     /// Focuses the editor when it appears.
     var autofocus = false
     /// Optional touch navigation on iOS; leading is a left swipe, trailing a right swipe.
-    var onHorizontalSwipe: ((HorizontalEdge) -> Void)? = nil
+    /// The flag reports whether the editor had the keyboard when swiped.
+    var onHorizontalSwipe: ((HorizontalEdge, _ wasEditing: Bool) -> Void)? = nil
 
     var body: some View {
         #if os(macOS)
@@ -73,12 +74,21 @@ struct PlaceholderTextEditor: View {
         }
     }
 #else
+    extension PlaceholderTextEditor {
+        /// Ends editing so the keyboard animates away at once. SwiftUI focus does not reach the
+        /// bridged text view, which otherwise holds the keyboard until it leaves the window.
+        static func dismissKeyboard() {
+            UIApplication.shared.sendAction(
+                #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
+    }
+
     fileprivate struct PlaceholderTextView: UIViewRepresentable {
         @Binding var text: String
         let placeholder: String
         let isLiteralInput: Bool
         let autofocus: Bool
-        let onHorizontalSwipe: ((HorizontalEdge) -> Void)?
+        let onHorizontalSwipe: ((HorizontalEdge, Bool) -> Void)?
 
         func makeCoordinator() -> Coordinator {
             Coordinator(text: $text)
@@ -136,7 +146,7 @@ struct PlaceholderTextEditor: View {
 
         final class Coordinator: NSObject, UITextViewDelegate, UIGestureRecognizerDelegate {
             var text: Binding<String>
-            var onHorizontalSwipe: ((HorizontalEdge) -> Void)?
+            var onHorizontalSwipe: ((HorizontalEdge, Bool) -> Void)?
             /// The binding's value as of the last update, to tell outside changes from typing.
             var lastSyncedText = ""
 
@@ -167,7 +177,8 @@ struct PlaceholderTextEditor: View {
 
             @objc func swipe(_ gesture: UISwipeGestureRecognizer) {
                 guard gesture.state == .ended else { return }
-                onHorizontalSwipe?(gesture.direction == .left ? .leading : .trailing)
+                let wasEditing = gesture.view?.isFirstResponder ?? false
+                onHorizontalSwipe?(gesture.direction == .left ? .leading : .trailing, wasEditing)
             }
         }
     }

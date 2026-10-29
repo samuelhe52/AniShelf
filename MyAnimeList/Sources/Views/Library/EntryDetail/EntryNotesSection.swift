@@ -21,6 +21,8 @@ struct EntryNotesSection: View {
     @State private var selectedScope: EntryNoteScope
     @State private var sheet: NotesSheet?
     @State private var pendingCombine: PendingCombine?
+    /// Set by a swipe made while typing, so the next scope's editor takes the keyboard over.
+    @State private var editorKeepsKeyboard = false
     @Namespace private var chipSelection
 
     init(entry: AnimeEntry, originalNotes: String? = nil, originalEpisodeNotes: [EpisodeNote] = []) {
@@ -87,6 +89,7 @@ struct EntryNotesSection: View {
         .animation(.snappy, value: selectedScope)
         .animation(.snappy, value: chipAnchors)
         .onChange(of: entry.libraryIdentity) { _, _ in
+            editorKeepsKeyboard = false
             selectedScope = .defaultScope(for: entry)
         }
         .onChange(of: visibleNotes.isEmpty) { _, isEmpty in
@@ -102,7 +105,7 @@ struct EntryNotesSection: View {
                         choose(anchor, for: purpose)
                     }
                 case .all:
-                    EntryNotesReader(entry: entry, onSelect: select, onMove: { sheet = .picker(.move($0)) })
+                    EntryNotesReader(entry: entry, onSelect: { select($0) }, onMove: { sheet = .picker(.move($0)) })
                 }
             }
             .modifier(EntryNotesPresentationLifecycle())
@@ -292,7 +295,7 @@ struct EntryNotesSection: View {
             if isAll {
                 EntryNotesOverview(
                     entry: entry,
-                    onSelect: select,
+                    onSelect: { select($0) },
                     onExpand: { sheet = .all },
                     menu: { anchor in episodeMenu(for: anchor, hasText: true) }
                 )
@@ -317,7 +320,8 @@ struct EntryNotesSection: View {
             PlaceholderTextEditor(
                 text: Binding(get: { currentText }, set: setText),
                 placeholder: selectedAnchor == nil ? EntryDetailL10n.writeSomeThoughts : "Write an episode note…",
-                onHorizontalSwipe: { swipeScope($0) }
+                autofocus: editorKeepsKeyboard,
+                onHorizontalSwipe: { swipeScope($0, wasEditing: $1) }
             )
             .accessibilityLabel(Text(verbatim: scopeTitle.primary))
             .accessibilityIdentifier("entryNotes.editor")
@@ -372,18 +376,24 @@ struct EntryNotesSection: View {
 
     // MARK: Actions
 
-    private func select(_ scope: EntryNoteScope) {
+    /// Swapping scopes replaces the editor, so the keyboard either moves to the new editor or
+    /// is dismissed up front instead of waiting for the old editor's removal transition.
+    private func select(_ scope: EntryNoteScope, keepsKeyboard: Bool = false) {
+        editorKeepsKeyboard = keepsKeyboard
+        #if !os(macOS)
+            if !keepsKeyboard { PlaceholderTextEditor.dismissKeyboard() }
+        #endif
         withAnimation(.snappy) { selectedScope = scope }
     }
 
-    private func swipeScope(_ direction: HorizontalEdge) {
+    private func swipeScope(_ direction: HorizontalEdge, wasEditing: Bool) {
         guard supportsEpisodes else { return }
         // Start at the unselected overview, then follow the chips. Stop at either end.
         let scopes: [EntryNoteScope] = [.all, .overall] + chipAnchors.map { .episode($0) }
         guard let index = scopes.firstIndex(of: selectedScope) else { return }
         let nextIndex = index + (direction == .leading ? 1 : -1)
         guard scopes.indices.contains(nextIndex) else { return }
-        select(scopes[nextIndex])
+        select(scopes[nextIndex], keepsKeyboard: wasEditing && scopes[nextIndex] != .all)
     }
 
     private func setText(_ text: String) {

@@ -326,7 +326,7 @@ struct TMDbBatchAddView: View {
 
     private func beginBatchSearch() {
         guard canStartBatchSearch else { return }
-        isPromptEditorFocused = false
+        dismissKeyboard()
         withAnimation(batchStepAnimation) {
             step = .results
         }
@@ -348,8 +348,16 @@ struct TMDbBatchAddView: View {
     }
 
     private func exitBatchAdd() {
-        isPromptEditorFocused = false
+        dismissKeyboard()
         onExit()
+    }
+
+    private func dismissKeyboard() {
+        #if os(macOS)
+            isPromptEditorFocused = false
+        #else
+            PlaceholderTextEditor.dismissKeyboard()
+        #endif
     }
 
     private var resultsList: some View {
