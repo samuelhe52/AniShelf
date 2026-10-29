@@ -6,7 +6,7 @@
 - Run `make clean`, `make refresh-packages`, or `make format` only when the task needs it or the user asks. `make refresh-packages` deletes `Package.resolved`, so dependencies can move to newer versions; `make format` rewrites the whole repository. Format only the files you touched with `swift format -i <paths>`.
 - Validate on the affected platform. For iOS, use `make test-sim` for broad simulator-based validation and `make run-sim` when validating runtime or UI behavior rather than relying only on `make build`. For native macOS, verify with `make build-mac`; launch with `make run-mac` only when the user asks. `make run-mac` loads an 800-entry fixture library by default, not the real library.
 - Physical-device targets (`make run-device`, `make test`, `make test-app`, `make test-app-live-fetch`) run only when the user explicitly asks. If a check needs a device, explain why and ask.
-- If the user asks to perform a change in a new worktree, create that worktree under ../AniShelf-worktrees/.
+- If the user asks to perform a change in a new worktree, create that worktree under .worktrees/ in the repository root.
 - Use the `write-ai-doc` skill for substantial features and decision-shaping fixes, as defined in [`docs-ai/workflow.md`](docs-ai/workflow.md).
 
 ## Code Style

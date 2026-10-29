@@ -81,3 +81,5 @@ temp/
 .tmp/
 .temp/
 
+# Git worktrees
+.worktrees/
