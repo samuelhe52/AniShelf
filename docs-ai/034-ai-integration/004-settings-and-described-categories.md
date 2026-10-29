@@ -107,13 +107,13 @@ On the maintainer's approval (2026-10-29):
   `semanticCriterion`;
 - the local filter keeps only the user's own data, with a new finish-year range;
 - `unsupportedRequest` surfaces any other user-data constraint in the review;
-- cards carry up to three production companies and genres labeled "TMDb genres";
+- cards carry production companies and genres labeled "TMDb genres";
 - the check prompt says a missing tag is not evidence against a match, and it
   leaves out loose fits and unsure cases (the recheck below revised which).
 
-The cost is that every genre request goes through the model check. That is about
-3–5 batches for 135 entries and about 20 for 800 under the 4096 budget. The privacy
-policy and the in-app disclosure now list studios.
+The cost is that every genre request goes through the model check; the flow review
+below has the measured figures. The privacy policy and the in-app disclosure now
+list studios.
 
 **Recheck.** A second run (20 requests, 150 live requests) found the romance, music,
 mystery, finish-date and studio misses fixed, with errors left only in the model's
@@ -122,19 +122,35 @@ judgment. It also found these, now changed:
   is exactly that, such as 君の名は。. The check now asks whether the premise or main
   story meets the criterion, and excludes only single episodes, a story within the
   story, metaphors, loose resemblances, and unsure cases.
-- An English request got its name and warning in Spanish. The plan prompt now names
-  the output language, detected on-device by `NLLanguageRecognizer`. Below 0.8
-  confidence it falls back to the app's language, since short Latin-script
-  requests such as "mecha" are misdetected.
+- An English request got its name and warning in Spanish. On-device language
+  detection was tried and then dropped; see the flow review below.
 - With no matches, the review dropped the "Not applied" warning; the empty screen
   now shows it.
 - The 160-character overview often stopped before the premise (全修。, ATRI). Every
   non-empty overview in the library has kana, so it costs about a token per
   character: median 196 characters, p99 499. Cards now keep up to 500, which holds
-  99% whole. For 135 entries a romance request takes 15 batches instead of 11, the
-  same as no cap.
+  99% whole. For 135 entries a genre request takes 16 check calls instead of 11,
+  about the same as no cap.
 - Four of six seasons stored an empty overview rather than none, so their cards
   carried no overview. Empty now falls back to the series' overview, as missing did.
+
+**Flow review.** The third run (300 live requests) recovered 全修。 as fantasy and
+removed planetarian, but cards that did not change also flipped (Violet Evergarden
+TV as fantasy, Angel Beats! as sci-fi). So single runs measure model variance as
+much as code changes. The maintainer then reviewed the whole flow (2026-10-29) and
+changed three parts:
+- **Studios:** cards list every production company. With only the first three,
+  SHIROBAKO lost P.A.WORKS (fourth) and was missed twice.
+- **Language:** `NLLanguageRecognizer` detection is gone, and the plan again asks for
+  "the language of the request". Detection read mixed-script requests such as
+  P.A.WORKS制作のアニメ as English at 0.95, and the review lets the user edit the
+  name anyway.
+- **Parallel batches:** `AIBatchRunner` runs up to `maximumConcurrentBatches` at
+  once and merges results in batch order. Providers allow 8; Apple stays at 1,
+  because the on-device model answers one response at a time. That is an assumption,
+  not a measurement. Parallel requests save time, not tokens: 135 entries still
+  take 16 check calls, and 800 take about 95. Eight requests in flight make a
+  provider rate limit (HTTP 429) more likely, and those batches count as unchecked.
 
 ## Refs
 

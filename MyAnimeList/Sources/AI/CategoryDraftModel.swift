@@ -159,8 +159,7 @@ final class CategoryDraftModel {
         do {
             let generator = makeGenerator()
             let planInstructions = CategoryQueryPlan.planInstructions(
-                currentYear: calendar.component(.year, from: now()),
-                outputLanguage: CategoryQueryPlan.outputLanguage(for: request))
+                currentYear: calendar.component(.year, from: now()))
             let planBudget = try await budget(for: CategoryQueryPlan.self, instructions: planInstructions)
             guard try await planBudget.fits(request) else { throw AIError.itemTooLarge }
             let plan = try await generator.generate(
@@ -180,7 +179,9 @@ final class CategoryDraftModel {
             let checkInstructions = plan.checkInstructions()
             let checkBudget = try await budget(for: AIBatchSelection.self, instructions: checkInstructions)
             let items = candidates.map { AIBatchItem(identity: $0.id, text: $0.card) }
-            let runner = AIBatchRunner(generator: generator, budget: checkBudget, instructions: checkInstructions)
+            let runner = AIBatchRunner(
+                generator: generator, budget: checkBudget, instructions: checkInstructions,
+                maximumConcurrentBatches: backend.maximumConcurrentBatches)
             let result = try await runner.run(items, generating: AIBatchSelection.self) { [weak self] done, total in
                 guard let self, !Task.isCancelled else { return }
                 state = .checking(done: done, total: total)
@@ -246,7 +247,6 @@ final class CategoryDraftModel {
             .filter { $0 != "Animation" }
         let studios = (entry.detail?.productionCompanies ?? [])
             .sorted { $0.displayOrder < $1.displayOrder }
-            .prefix(3)
             .map(\.name)
         // Seasons often store an empty overview rather than none; both fall back to the series.
         // 500 characters keeps 99% of overviews whole; kana text costs about a token per character.

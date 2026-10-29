@@ -30,6 +30,11 @@ enum AIBackend: String, CaseIterable, Sendable {
 
     var isProvider: Bool { self != .apple }
 
+    /// Check batches in flight at once: parallel requests save time, not tokens.
+    ///
+    /// The on-device model runs one response at a time, so Apple stays sequential.
+    var maximumConcurrentBatches: Int { isProvider ? 8 : 1 }
+
     /// Models checked with reasoning off and strict structured output (docs-ai 034.003).
     ///
     /// Any other model ID is a custom choice the user makes at their own risk.

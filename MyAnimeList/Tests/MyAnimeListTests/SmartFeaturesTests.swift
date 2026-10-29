@@ -62,7 +62,7 @@ struct SmartFeaturesTests {
         let card = CategoryDraftModel.card(for: long)
         #expect(
             card.hasPrefix(
-                "Frieren · 2023 · movie · studios: Madhouse, Toho, Aniplex · TMDb genres: Sci-Fi & Fantasy · "))
+                "Frieren · 2023 · movie · studios: Madhouse, Toho, Aniplex, Dentsu · TMDb genres: Sci-Fi & Fantasy · "))
         #expect(!card.contains("777001"))
         #expect(!card.contains("Animation"))
         #expect(card.hasSuffix(" · " + String(repeating: "x", count: 500)))
@@ -76,16 +76,6 @@ struct SmartFeaturesTests {
         #expect(check.contains("a missing genre tag is not evidence against a match"))
         #expect(CategoryDraftModel.categoryName(from: "  ", request: "fantasy anime") == "fantasy anime")
         #expect(CategoryDraftModel.categoryName(from: String(repeating: "a", count: 60), request: "x").count == 40)
-    }
-
-    @Test func planNamesTheRequestLanguageOrFallsBackToTheApps() {
-        #expect(
-            CategoryQueryPlan.outputLanguage(for: "anime I started watching in 2024", appLanguage: "ja") == "English")
-        #expect(CategoryQueryPlan.outputLanguage(for: "2020年之前的悬疑动画", appLanguage: "en") == "Chinese, Simplified")
-        // Detected as Spanish with low confidence; the app's language wins.
-        #expect(CategoryQueryPlan.outputLanguage(for: "mecha", appLanguage: "ja") == "Japanese")
-        let instructions = CategoryQueryPlan.planInstructions(currentYear: 2026, outputLanguage: "English")
-        #expect(instructions.contains("name: a short category name in English."))
     }
 
     @Test func unsupportedConstraintsReachTheReview() async throws {

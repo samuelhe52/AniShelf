@@ -198,8 +198,9 @@ client. Feature UI and Settings come in later slices.
   - Category membership is not part of `UserEntryInfo`, so an open entry detail's
     Discard cannot undo it.
   - Undoing a mistake means deleting or editing the category.
-- **Cost on a large library:** an 800-entry library at roughly 80 tokens per card
-  is about 20 classify calls under a 4096 budget. Progress and Cancel are required,
+- **Cost on a large library:** cards with kana overviews cost about 300 tokens, so
+  an 800-entry library takes about 95 check calls under a 4096 budget (measured: 16
+  for 135 entries). Providers run up to 8 at once; Progress and Cancel are required,
   and the local filter should usually shrink the set first.
 
 ### Feature 2 (next): overall-note lines into episode notes

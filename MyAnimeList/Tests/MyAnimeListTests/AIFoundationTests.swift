@@ -159,6 +159,20 @@ struct AIFoundationTests {
         #expect(result.failures.map(\.reason).contains(.requestFailed))
     }
 
+    @Test func batchesRunConcurrentlyUpToTheLimitAndMergeInOrder() async throws {
+        let fake = AIConcurrencyFake()
+        // One card per batch.
+        let budget = AIContextBudget(
+            contextSize: 2, reservedTokens: 0, maximumResponseTokens: 1,
+            countPrompt: { $0.components(separatedBy: "\n").count - 1 })
+        let input = items(10)
+        var runner = AIBatchRunner(generator: fake, budget: budget, instructions: "classify")
+        runner.maximumConcurrentBatches = 4
+        let result = try await runner.run(input, generating: AIBatchSelection.self)
+        #expect(fake.peak == 4)
+        #expect(result.values.map(\.identity) == input.map(\.identity))
+    }
+
     @Test func cancellationStopsBeforeAnotherRequest() async throws {
         let fake = AIOutputFake<AIBatchSelection> { _, _ in throw CancellationError() }
         let budget = AIContextBudget(contextSize: 10000, reservedTokens: 0, maximumResponseTokens: 10)
@@ -394,6 +408,23 @@ fileprivate final class AIOutputFake<Output: Generable>: AIStructuredGenerator {
     ) async throws -> Value {
         prompts.append(prompt)
         return try Value(respond(prompts.count, prompt).generatedContent)
+    }
+}
+
+fileprivate final class AIConcurrencyFake: AIStructuredGenerator {
+    var inFlight = 0
+    var peak = 0
+
+    func generate<Value: Generable>(
+        _ type: Value.Type, instructions: String, prompt: String, maximumResponseTokens: Int
+    ) async throws -> Value {
+        inFlight += 1
+        peak = max(peak, inFlight)
+        // Earlier cards answer later, so batches finish out of order.
+        let card = Int(prompt.components(separatedBy: "card").last?.prefix(while: \.isNumber) ?? "") ?? 0
+        for _ in 0..<(10 - card) * 3 { await Task.yield() }
+        inFlight -= 1
+        return try Value(AIBatchSelection(matchingIndices: [0]).generatedContent)
     }
 }
 
