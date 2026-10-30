@@ -519,7 +519,8 @@ public struct ChatCompletionsLanguageModel: Sendable, LanguageModel {
                             let imageURL = ChatCompletionsClient.MessageContent.ImageURL(url: dataURL)
                             return [ChatCompletionsClient.MessageContent(imageURL: imageURL)]
                         #endif
-                    @unknown default:
+                    // Plain `default`: `.data` attachments are 27.2 SDK cases that this 27.0 target can't name.
+                    default:
                         throw LanguageModelError.unsupportedTranscriptContent(
                             LanguageModelError.UnsupportedTranscriptContent(
                                 unsupportedContent: [entry],
@@ -624,7 +625,8 @@ public struct ChatCompletionsLanguageModel: Sendable, LanguageModel {
                     }.joined()
                     pendingReasoning = (pendingReasoning ?? "") + text
 
-                @unknown default:
+                // Plain `default`: `.data` entries are 27.2 SDK cases that this 27.0 target can't name.
+                default:
                     continue
                 }
             }
