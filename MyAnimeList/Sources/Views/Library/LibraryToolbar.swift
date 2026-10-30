@@ -341,30 +341,11 @@ import SwiftUI
             applyBatchAction(.category(id, isMember: isMember, knownCategoryIDs: store.knownCategoryIDs))
         }
 
-        private func membership(of id: LibraryCategory.ID, in entries: [AnimeEntry]) -> Membership {
+        private func membership(of id: LibraryCategory.ID, in entries: [AnimeEntry]) -> LibraryCategoryMembership {
             let memberCount = entries.count { $0.categoryIDs.contains(id) }
             if memberCount == 0 { return .none }
             return memberCount == entries.count ? .all : .some
         }
-    }
-
-    fileprivate enum Membership {
-        case all, some, none
-
-        /// Every row carries an icon so menus keep the category names in one aligned column.
-        var icon: Image {
-            switch self {
-            case .all: Image(systemName: "checkmark")
-            case .some: Image(systemName: "minus")
-            case .none: Image(uiImage: Self.blankIcon)
-            }
-        }
-
-        /// A clear image the size of the checkmark symbol.
-        private static let blankIcon: UIImage = {
-            let size = UIImage(systemName: "checkmark")?.size ?? CGSize(width: 17, height: 16)
-            return UIGraphicsImageRenderer(size: size).image { _ in }
-        }()
     }
 
     struct LibrarySelectionActionsMenu: View {

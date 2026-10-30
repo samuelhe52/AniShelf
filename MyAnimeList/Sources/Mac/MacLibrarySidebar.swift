@@ -97,6 +97,9 @@
                                 count: counts.categories[category.id, default: 0]
                             )
                             .contextMenu { categoryMenu(for: category) }
+                            .dropDestination(for: LibraryEntryDragPayload.self) { payloads, _ in
+                                store.addDroppedEntries(payloads, to: category.id)
+                            }
                         }
                         .onMove { source, destination in
                             withAnimation(.snappy) {

@@ -47,6 +47,7 @@ historical runtime scenario was rerun. Entry 010 remains an unimplemented propos
 | 032 | 2026-10-23 | [Mac detail header modes](032-mac-detail-header/000-plan.md) | Implemented; fixture UI reviewed | [Action](032-mac-detail-header/001-action.md) |
 | 033 | 2026-10-26 | [Episode notes with scope chips](033-episode-notes/000-plan.md) | Implemented; production sync unverified | [Action](033-episode-notes/001-action.md), [unified editor](033-episode-notes/002-unified-placeholder-editor.md), [compact strip and macOS fade](033-episode-notes/003-compact-strip-and-macos-fade.md), [Overall default](033-episode-notes/004-overall-default-without-episode-notes.md), [scope swipes](033-episode-notes/005-swipe-scope-navigation.md), [return to All](033-episode-notes/006-return-to-all.md), [unselected overview](033-episode-notes/007-unselected-overview.md) |
 | 034 | 2026-10-28 | [AI integration](034-ai-integration/000-plan.md) | In progress — foundation, settings, and described categories (with the sieve review) | [Foundation](034-ai-integration/002-foundation.md), [reasoning off](034-ai-integration/003-reasoning-off.md), [settings and described categories](034-ai-integration/004-settings-and-described-categories.md), [category sieve](034-ai-integration/005-category-sieve.md) |
+| 035 | 2026-10-30 | [Single-entry category assignment](035-single-entry-categories/000-plan.md) | Implemented — maintainer accepted | [Action](035-single-entry-categories/001-action.md), [review fixes](035-single-entry-categories/002-maintainer-review.md) |
 
 ## Find a contract or source
 

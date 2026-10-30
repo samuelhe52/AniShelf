@@ -92,6 +92,7 @@
                 onToggleFavorite: toggleFavorite
             )
             .highlightEffect(trigger: highlightRequest?.trigger(for: item.id))
+            .macLibraryEntryDraggable(item.id, selection: selection)
             .tag(item.id)
             .listRowInsets(.init(top: 4, leading: 8, bottom: 4, trailing: 8))
             .listRowSeparator(.visible)

@@ -46,6 +46,9 @@ final class LibraryEntryActionState {
     var deletingEntryID: LibraryEntryIdentity?
     private(set) var pendingPasteRequest: LibraryEntryPasteRequest?
     private(set) var workflowPresentation: LibraryEntryWorkflowPresentation?
+    /// The entry that New Category… in its context menu adds to the new category.
+    private(set) var newCategoryEntryID: LibraryEntryIdentity?
+    var newCategoryPrompt: LibraryCategoryNamePrompt?
 
     /// Runs before a workflow presents; iOS uses it to retire a pending detail edit request.
     @ObservationIgnored var willPresentWorkflow: (@MainActor () -> Void)?
@@ -137,6 +140,11 @@ final class LibraryEntryActionState {
         guard pendingPasteRequest?.id == requestID else { return }
         pendingPasteRequest = nil
     }
+
+    func requestNewCategory(for entry: AnimeEntry) {
+        newCategoryEntryID = entry.libraryIdentity
+        newCategoryPrompt = .init(purpose: .create(memberCount: 0))
+    }
 }
 
 extension LibraryEntryActionState {
@@ -191,6 +199,12 @@ extension LibraryEntryActionState {
         }
     }
 
+    func categoriesMenu(for entry: AnimeEntry) -> some View {
+        EntryCategoriesSubmenu(entry: entry, keepsPresented: false) {
+            self.requestNewCategory(for: entry)
+        }
+    }
+
     func deleteButton(for entry: AnimeEntry) -> some View {
         Button("Delete", systemImage: "trash", role: .destructive) {
             self.prepareDeletion(for: entry)
@@ -207,6 +221,7 @@ extension LibraryEntryActionState {
             // A Mac menu turns a control group into a submenu, so the Mac lists each action.
             favoriteButton(for: entry, toggleFavorite: toggleFavorite)
             EntryScoreMenu(entry: entry)
+            categoriesMenu(for: entry)
             editButton(for: entry, editEntry: editEntry)
             Divider()
             shareButton(for: entry)
@@ -222,6 +237,7 @@ extension LibraryEntryActionState {
                 shareButton(for: entry)
             }
             editButton(for: entry, editEntry: editEntry)
+            categoriesMenu(for: entry)
             EntryOpenInSubmenu(entry: entry)
             switchPosterButton(for: entry)
             Divider()
@@ -311,6 +327,12 @@ extension View {
                 Button("Cancel", role: .cancel) {}
             } message: { _ in
                 Text("This anime already has edits. Pasting will overwrite current info.")
+            }
+            // New Category… from an entry context menu; the menu is gone when the prompt shows.
+            .entryNewCategoryPrompt(
+                Binding(get: { state.newCategoryPrompt }, set: { state.newCategoryPrompt = $0 })
+            ) {
+                state.newCategoryEntryID.flatMap(resolveEntry)
             }
     }
 }

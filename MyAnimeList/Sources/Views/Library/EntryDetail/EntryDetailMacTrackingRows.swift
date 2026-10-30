@@ -12,6 +12,7 @@
     /// The Mac tracking card: label/value rows with dividers, matching the stat card above
     /// it. iOS uses the disclosure editor in `EntryDetailTrackingComponents.swift`.
     struct MacEntryTrackingEditor: View {
+        @Environment(LibraryStore.self) private var store: LibraryStore?
         @Bindable var entry: AnimeEntry
         /// The notes when the inspector opened; a rewrite can be reverted to them.
         let originalNotes: String?
@@ -64,6 +65,13 @@
                     )
                     .id(entry.libraryIdentity.rawID)
                     .padding(.vertical, 7)
+                }
+
+                if let store, store.categoriesEnabled, !store.categories.isEmpty {
+                    Divider()
+                    EntryTrackingRow(EntryDetailL10n.categories) {
+                        MacEntryCategoriesMenu(store: store, entry: entry)
+                    }
                 }
 
                 Divider()

@@ -5,6 +5,7 @@
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/5/21.
 //
 
+import DataProvider
 import SwiftUI
 
 struct EntryDetailHeroSection: View {
@@ -242,7 +243,9 @@ struct DetailStatCard: View {
 struct EntryDetailQuickActionsRow: View {
     @Environment(\.popupPanelStyle) private var panelStyle
     @State private var editingReminder: AiringReminderSubscription?
+    @State private var newCategoryPrompt: LibraryCategoryNamePrompt?
 
+    let entry: AnimeEntry
     let openInLinks: EntryOpenInLinks
     let isFavorite: Bool
     let isCentered: Bool
@@ -307,6 +310,13 @@ struct EntryDetailQuickActionsRow: View {
                     Label(EntryDetailL10n.changePoster, systemImage: "photo.on.rectangle")
                 }
 
+                #if !os(macOS)
+                    // The Mac tracking card has a Categories row instead.
+                    EntryCategoriesSubmenu(entry: entry) {
+                        newCategoryPrompt = .init(purpose: .create(memberCount: 0))
+                    }
+                #endif
+
                 if showsConvertAction {
                     Button {
                         Task { await onConvert() }
@@ -347,6 +357,7 @@ struct EntryDetailQuickActionsRow: View {
                 )
             #endif
         }
+        .entryNewCategoryPrompt($newCategoryPrompt) { entry }
     }
 }
 

@@ -137,6 +137,7 @@
                 showsSelectionRing: selection.ids.contains(item.id)
             )
             .highlightEffect(trigger: highlightRequest?.trigger(for: item.id))
+            .macLibraryEntryDraggable(item.id, selection: selection)
             .contextMenu {
                 actions.contextMenu(
                     for: item.entry,

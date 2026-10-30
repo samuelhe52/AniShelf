@@ -17,6 +17,22 @@
         }
       }
     },
+    "%@ and %lld more" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ほか%lld件"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@等%lld个"
+          }
+        }
+      }
+    },
     "%@ found" : {
       "localizations" : {
         "ja" : {

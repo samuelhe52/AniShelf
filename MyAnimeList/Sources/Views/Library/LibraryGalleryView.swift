@@ -197,6 +197,7 @@ import SwiftUI
                 interaction.actions.editButton(for: entry, editEntry: editEntry)
                 interaction.actions.shareButton(for: entry)
             }
+            interaction.actions.categoriesMenu(for: entry)
             interaction.actions.switchPosterButton(for: entry)
             interaction.actions.savePosterButton(for: entry)
             interaction.actions.deleteButton(for: entry)

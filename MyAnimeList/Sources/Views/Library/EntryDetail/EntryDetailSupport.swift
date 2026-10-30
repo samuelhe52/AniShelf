@@ -21,6 +21,7 @@ enum EntryDetailL10n {
     static let overview: LocalizedStringResource = "Overview"
     static let tracking: LocalizedStringResource = "Tracking"
     static let watchStatus: LocalizedStringResource = "Watch Status"
+    static let categories: LocalizedStringResource = "Categories"
     static let planned: LocalizedStringResource = "Planned"
     static let watching: LocalizedStringResource = "Watching"
     static let watched: LocalizedStringResource = "Watched"

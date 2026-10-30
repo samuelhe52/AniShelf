@@ -309,6 +309,7 @@ struct EntryDetailView: View {
 
     private var quickActionsRow: some View {
         EntryDetailQuickActionsRow(
+            entry: session.entry,
             openInLinks: EntryOpenInLinks(
                 entry: session.entry,
                 homepageURL: session.model.primaryLinkURL ?? session.entry.linkToDetails
