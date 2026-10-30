@@ -408,7 +408,11 @@ fileprivate final class AIStreamURLProtocol: URLProtocol {
         let chunk: [String: Any] = ["id": "mock", "model": "mock", "choices": [["delta": ["content": content]]]]
         let data = try! JSONSerialization.data(withJSONObject: chunk)
         var body = "data: \(String(decoding: data, as: UTF8.self))\n\n"
-        if scenario == "streamError" { body = "data: {\"error\":{\"code\":502,\"message\":\"private\"}}\n\n" }
+        if scenario == "streamError" {
+            // OpenRouter's documented mid-stream error, which also carries the chunk fields.
+            body =
+                "data: {\"id\":\"mock\",\"model\":\"mock\",\"error\":{\"code\":502,\"message\":\"private\"},\"choices\":[{\"delta\":{\"content\":\"\"},\"finish_reason\":\"error\"}]}\n\n"
+        }
         if scenario.hasPrefix("truncated") || scenario == "finishOnly" || scenario.hasPrefix("reasoningOff") {
             let reason = scenario.hasPrefix("truncated") ? "length" : "stop"
             body +=

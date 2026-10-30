@@ -769,22 +769,20 @@ fileprivate struct ChatCompletionsClient {
             }
 
             let decoder = JSONDecoder()
-            do {
-                return try decoder.decode(ChatCompletionChunk.self, from: jsonData)
-            } catch {
-                if let response = try? decoder.decode(
-                    ChatCompletionsLanguageModel.ErrorResponse.self,
-                    from: jsonData
-                ) {
-                    throw ChatCompletionsLanguageModel.APIError(
-                        message: response.error.message,
-                        type: response.error.type,
-                        param: response.error.param,
-                        code: response.error.code
-                    )
-                }
-                throw error
+            // AniShelf modification: check for an error first. OpenRouter's mid-stream error event
+            // also carries `id`, `model`, and `choices`, so it decodes as an ordinary chunk.
+            if let response = try? decoder.decode(
+                ChatCompletionsLanguageModel.ErrorResponse.self,
+                from: jsonData
+            ) {
+                throw ChatCompletionsLanguageModel.APIError(
+                    message: response.error.message,
+                    type: response.error.type,
+                    param: response.error.param,
+                    code: response.error.code
+                )
             }
+            return try decoder.decode(ChatCompletionChunk.self, from: jsonData)
         }
 
         return nil
