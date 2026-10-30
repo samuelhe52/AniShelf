@@ -12,6 +12,10 @@ struct LibraryBrowseSummaryMenu: View {
     let scoringEnabled: Bool
     var usesSymbolLabel = false
 
+    @State private var namePrompt: LibraryCategoryNamePrompt?
+    @State private var describeBackend: AIBackend?
+    @State private var drafting: AIBackend?
+
     private var store: LibraryStore { scope.store }
 
     var body: some View {
@@ -31,19 +35,7 @@ struct LibraryBrowseSummaryMenu: View {
                 .pickerStyle(.menu)
 
                 if store.categoriesEnabled {
-                    // A category is a single-choice scope applied before the filters (AND),
-                    // so it is a picker here instead of a filter toggle.
-                    Picker(
-                        "Category",
-                        systemImage: "folder",
-                        selection: categoryBinding
-                    ) {
-                        Text("All").tag(LibraryCategory.ID?.none)
-                        ForEach(store.categories) { category in
-                            Text(category.name).tag(Optional(category.id))
-                        }
-                    }
-                    .pickerStyle(.menu)
+                    categoryMenu
                 }
             }
 
@@ -114,6 +106,60 @@ struct LibraryBrowseSummaryMenu: View {
             #endif
         }
         .keepsMenuPresentedAfterAction()
+        #if !os(macOS)
+            .libraryCategoryNamePrompt($namePrompt) { _, name in
+                store.createCategory(named: name)
+            }
+            .sheet(item: $drafting) { backend in
+                CategoryDraftSheet(backend: backend) { id in
+                    withAnimation(.snappy) { scope.activeCategoryID = id }
+                }
+            }
+            .onAppear { describeBackend = AIConfiguration.currentBackend() }
+            .onReceive(NotificationCenter.default.publisher(for: .aiConfigurationDidChange)) { _ in
+                describeBackend = AIConfiguration.currentBackend()
+            }
+        #endif
+    }
+
+    /// A category is a single-choice scope applied before the filters (AND),
+    /// so it is a picker here instead of a filter toggle.
+    ///
+    /// The iPhone and iPad menu ends with New Category, so a library without categories can
+    /// start one here. The Mac creates them from the sidebar.
+    private var categoryMenu: some View {
+        Menu {
+            Picker("Category", selection: categoryBinding) {
+                Text("All").tag(LibraryCategory.ID?.none)
+                ForEach(store.categories) { category in
+                    Text(category.name).tag(Optional(category.id))
+                }
+            }
+            .pickerStyle(.inline)
+            #if !os(macOS)
+                Section {
+                    if let describeBackend {
+                        Menu("New Category") {
+                            Button("Name…", systemImage: "character.cursor.ibeam") {
+                                namePrompt = .init(purpose: .create(memberCount: 0))
+                            }
+                            .menuActionDismissBehavior(.enabled)
+                            Button("Describe…", systemImage: "sparkles") {
+                                drafting = describeBackend
+                            }
+                            .menuActionDismissBehavior(.enabled)
+                        }
+                    } else {
+                        Button("New Category…") {
+                            namePrompt = .init(purpose: .create(memberCount: 0))
+                        }
+                        .menuActionDismissBehavior(.enabled)
+                    }
+                }
+            #endif
+        } label: {
+            Label("Category", systemImage: "folder")
+        }
     }
 
     private var availableGroupStrategies: [LibraryStore.LibraryGroupStrategy] {
