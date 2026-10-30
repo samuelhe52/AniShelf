@@ -15,13 +15,25 @@ import SwiftUI
         @Environment(LibraryStore.self) private var store
         @Environment(\.dismiss) private var dismiss
 
+        /// Called after "Describe…" creates a category, so the presenting window can show it.
+        var onCategoryCreated: ((LibraryCategory.ID) -> Void)? = nil
+
         @State private var namePrompt: LibraryCategoryNamePrompt?
         @State private var deletingCategory: LibraryCategory?
         @State private var selection: LibraryCategory.ID?
+        @State private var describeBackend: AIBackend?
+        @State private var drafting: AIBackend?
 
         var body: some View {
             content
                 .libraryCategoryEditing(namePrompt: $namePrompt, deletingCategory: $deletingCategory)
+                .sheet(item: $drafting) { backend in
+                    CategoryDraftSheet(backend: backend) { id in onCategoryCreated?(id) }
+                }
+                .onAppear { describeBackend = AIConfiguration.currentBackend() }
+                .onReceive(NotificationCenter.default.publisher(for: .aiConfigurationDidChange)) { _ in
+                    describeBackend = AIConfiguration.currentBackend()
+                }
         }
 
         private var content: some View {
@@ -31,10 +43,18 @@ import SwiftUI
                     Text("Categories")
                         .font(.title2.weight(.semibold))
                     Spacer()
-                    Button("New Category…", systemImage: "plus") {
-                        namePrompt = .init(purpose: .create(memberCount: 0))
+                    if let describeBackend {
+                        Menu("New Category", systemImage: "plus") {
+                            Button("Name…") { namePrompt = .init(purpose: .create(memberCount: 0)) }
+                            Button("Describe…") { drafting = describeBackend }
+                        }
+                        .fixedSize()
+                    } else {
+                        Button("New Category…", systemImage: "plus") {
+                            namePrompt = .init(purpose: .create(memberCount: 0))
+                        }
+                        .buttonStyle(.bordered)
                     }
-                    .buttonStyle(.bordered)
                 }
 
                 Text("Select anime in List or Grid view, then choose Category in the toolbar.")

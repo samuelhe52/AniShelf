@@ -50,6 +50,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Resources/Info.plist,
+				Tests/MyAnimeListTests/AIFoundationTests.swift,
 				Tests/MyAnimeListTests/AiringReminderManagerTests.swift,
 				Tests/MyAnimeListTests/AnimeSharingTests.swift,
 				Tests/MyAnimeListTests/AppLifecycleEventGateTests.swift,
@@ -98,6 +99,7 @@
 				Tests/MyAnimeListTests/LibrarySyncRecorderBehaviorTests.swift,
 				Tests/MyAnimeListTests/MacLibrarySelectionTests.swift,
 				Tests/MyAnimeListTests/MyAnimeListTestSupport.swift,
+				Tests/MyAnimeListTests/SmartFeaturesTests.swift,
 				Tests/MyAnimeListTests/SupportStoreTests.swift,
 				Tests/MyAnimeListTests/TMDbAPIKeyStorageTests.swift,
 				Tests/MyAnimeListTests/TMDbImageAndTranslationTests.swift,
@@ -121,6 +123,7 @@
 		9F93FC182DE1FD800071FB56 /* Exceptions for "MyAnimeList" folder in "MyAnimeListTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Tests/MyAnimeListTests/AIFoundationTests.swift,
 				Tests/MyAnimeListTests/AiringReminderManagerTests.swift,
 				Tests/MyAnimeListTests/AnimeSharingTests.swift,
 				Tests/MyAnimeListTests/AppLifecycleEventGateTests.swift,
@@ -169,6 +172,7 @@
 				Tests/MyAnimeListTests/LibrarySyncRecorderBehaviorTests.swift,
 				Tests/MyAnimeListTests/MacLibrarySelectionTests.swift,
 				Tests/MyAnimeListTests/MyAnimeListTestSupport.swift,
+				Tests/MyAnimeListTests/SmartFeaturesTests.swift,
 				Tests/MyAnimeListTests/SupportStoreTests.swift,
 				Tests/MyAnimeListTests/TMDbAPIKeyStorageTests.swift,
 				Tests/MyAnimeListTests/TMDbImageAndTranslationTests.swift,

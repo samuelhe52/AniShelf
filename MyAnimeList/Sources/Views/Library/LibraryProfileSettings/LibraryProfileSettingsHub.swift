@@ -18,6 +18,8 @@ struct LibraryProfileSettingsHub: View {
     let onShowSupport: () -> Void
     let onShowAbout: () -> Void
     private let reminders = AiringReminderCoordinator.shared
+    /// Read on appear, so a redraw never touches the Keychain.
+    @State private var smartFeaturesBackend: AIBackend?
 
     var body: some View {
         VStack(spacing: 16) {
@@ -40,6 +42,7 @@ struct LibraryProfileSettingsHub: View {
                 onShowSupport: onShowSupport, onShowAbout: onShowAbout
             )
         }
+        .onAppear { smartFeaturesBackend = AIConfiguration.currentBackend() }
     }
 
     private var cardTint: Color {
@@ -69,6 +72,10 @@ struct LibraryProfileSettingsHub: View {
             LibraryProfileHubRow(
                 title: destination.title, subtitle: "TMDb, cache, refresh", systemImage: "photo.stack",
                 tint: destination.tint)
+        case .smartFeatures:
+            LibraryProfileHubRow(
+                title: destination.title, systemImage: destination.systemImage, tint: destination.tint,
+                value: smartFeaturesBackend.map { "\($0.displayName)" } ?? "Off")
         case .syncData:
             LibraryProfileHubRow(
                 title: destination.title, systemImage: "icloud", tint: destination.tint,

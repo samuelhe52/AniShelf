@@ -55,6 +55,8 @@
 
         @State private var namePrompt: LibraryCategoryNamePrompt?
         @State private var deletingCategory: LibraryCategory?
+        @State private var describeBackend: AIBackend?
+        @State private var drafting: AIBackend?
 
         var body: some View {
             let counts = MacLibrarySidebarCounts(store: store)
@@ -111,12 +113,26 @@
             // instead of a bare plus in the section header.
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if store.categoriesEnabled {
-                    Button {
-                        namePrompt = .init(purpose: .create(memberCount: 0))
-                    } label: {
-                        Label("New Category…", systemImage: "plus.circle")
+                    Group {
+                        if let describeBackend {
+                            Menu {
+                                Button("Name…") { namePrompt = .init(purpose: .create(memberCount: 0)) }
+                                Button("Describe…") { drafting = describeBackend }
+                            } label: {
+                                Label("New Category…", systemImage: "plus.circle")
+                            }
+                            .menuStyle(.borderlessButton)
+                            .menuIndicator(.hidden)
+                            .fixedSize()
+                        } else {
+                            Button {
+                                namePrompt = .init(purpose: .create(memberCount: 0))
+                            } label: {
+                                Label("New Category…", systemImage: "plus.circle")
+                            }
+                            .buttonStyle(.borderless)
+                        }
                     }
-                    .buttonStyle(.borderless)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 16)
@@ -135,6 +151,13 @@
                 }
             }
             .libraryCategoryDeleteConfirmation($deletingCategory)
+            .sheet(item: $drafting) { backend in
+                CategoryDraftSheet(backend: backend) { id in scope.macLibraryScope = .category(id) }
+            }
+            .onAppear { describeBackend = AIConfiguration.currentBackend() }
+            .onReceive(NotificationCenter.default.publisher(for: .aiConfigurationDidChange)) { _ in
+                describeBackend = AIConfiguration.currentBackend()
+            }
         }
 
         private var scopeBinding: Binding<MacLibraryScope?> {

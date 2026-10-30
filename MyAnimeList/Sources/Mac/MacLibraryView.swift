@@ -180,7 +180,7 @@
                     .modifier(MacLibrarySubtitle(selection: selection, visibleCount: displayItems.count))
                     .animation(LibraryViewTransitions.libraryViewStyleAnimation(), value: libraryViewStyle)
                     .sheet(isPresented: $showCategoryManager) {
-                        MacLibraryCategoryManagerSheet()
+                        MacLibraryCategoryManagerSheet { id in scope.macLibraryScope = .category(id) }
                             .presentationDetents([.medium, .large])
                     }
                     .libraryBrowseSearch(

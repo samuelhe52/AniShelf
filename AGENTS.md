@@ -6,7 +6,7 @@
 - Run `make clean`, `make refresh-packages`, or `make format` only when the task needs it or the user asks. `make refresh-packages` deletes `Package.resolved`, so dependencies can move to newer versions; `make format` rewrites the whole repository. Format only the files you touched with `swift format -i <paths>`.
 - Validate on the affected platform. For iOS, use `make test-sim` for broad simulator-based validation and `make run-sim` when validating runtime or UI behavior rather than relying only on `make build`. For native macOS, verify with `make build-mac`; launch with `make run-mac` only when the user asks. `make run-mac` loads an 800-entry fixture library by default, not the real library.
 - Physical-device targets (`make run-device`, `make test`, `make test-app`, `make test-app-live-fetch`) run only when the user explicitly asks. If a check needs a device, explain why and ask.
-- If the user asks to perform a change in a new worktree, create that worktree under ../AniShelf-worktrees/.
+- If the user asks to perform a change in a new worktree, create that worktree under .worktrees/ in the repository root.
 - Use the `write-ai-doc` skill for substantial features and decision-shaping fixes, as defined in [`docs-ai/workflow.md`](docs-ai/workflow.md).
 
 ## Code Style
@@ -21,6 +21,7 @@
   //
   ```
   Omit this header only when the user explicitly requests it.
+- Give scrollable content under a navigation bar (`Form`, `List`, `ScrollView`, including each step of a multi-step sheet) `.preferredNavigationBarScrollEdgeEffect()`, so it follows the soft-edges setting, followed by `.navigationTitle(...)`, `.inlineNavigationTitle()`, and `.toolbar`. In sheet toolbars, put a dismiss button at `.cancellationAction` with `SheetCloseLabel`, and other buttons at `.sheetLeading`/`.sheetTrailing`, never at raw `.topBar*` placements, which break the Mac's sheet bar.
 - Pass plain string literals to SwiftUI APIs that already take a `LocalizedStringKey` (`Text`, `Button`, `Label`, `.help`, and similar); do not wrap them in `LocalizedStringResource`. Use `LocalizedStringResource` for user-facing strings held in properties, models, or enums, or passed to APIs that do not localize literals.
 
 ## Testing
@@ -32,7 +33,7 @@
 ## Commits
 
 - Commit only when the maintainer asks; pushing requires explicit authorization.
-- Organize work into coherent commits. Fold review corrections and reverts into the unpushed commit they fix rather than stacking them; this is always allowed. Changing pushed history requires the user's confirmation. Otherwise, do not amend, rebase, reset, or rewrite commits you did not create in the current task without asking.
+- Organize work into coherent commits. Fold small review corrections and reverts into the unpushed commit they fix rather than stacking them; this is always allowed. Give non-trivial work its own commit on top, such as a fix that took real diagnosis, even when it logically belongs to an earlier unpushed commit. Changing pushed history requires the user's confirmation. Otherwise, do not amend, rebase, reset, or rewrite commits you did not create in the current task without asking.
 - Other agents may be editing the same working tree. Stage only changes within the commit's scope, by path (`git add <paths>`); never use `git add -A`, `git add .`, or `git commit -a`. When a file also holds unrelated edits (often `Localizable.xcstrings`), stage selectively with `git add -p` or ask, and review the full staged diff before committing.
 - When splitting work across parallel agents, give each agent separate files.
 - Use conventional commits: `<type>: <subject>`, with imperative, capitalized, concise subjects and no trailing period.

@@ -20,9 +20,10 @@
     /// A generated library for scale checks and the UI benchmarks; see docs-ai 026.
     ///
     /// `-library-fixture <N>` boots the real UI on N deterministic entries in an in-memory store.
-    /// Library preferences, the TMDb key, What's New, review prompts, and the poster pipeline are
-    /// isolated, and the app turns sync and airing reminders off, so nothing reaches the real
-    /// library or iCloud.
+    /// Library preferences, Smart Features choices, the TMDb key, What's New, review prompts, and the
+    /// poster pipeline are isolated, and the app turns sync and airing reminders off, so nothing
+    /// reaches the real library or iCloud. Smart Features run on OpenRouter, answered locally by
+    /// `AIFixtureProvider`.
     @MainActor
     struct LibraryFixture {
         static let launchArgument = "-library-fixture"
@@ -96,6 +97,8 @@
             preferences.saveCategoriesEnabled(true)
             preferences.saveCategoryStripEnabled(true)
             preferences.saveCategories(Self.categories)
+            // The simulated provider, not Apple Intelligence, which the Simulator often lacks.
+            AIConfiguration(defaults: defaults).selectedBackend = .openRouter
             seed(bootstrap.provider)
             Self.configurePosterLoading()
             LibraryBenchmarkSignposts.isEnabled = true
@@ -109,6 +112,7 @@
                 add: { _ in errSecSuccess },
                 update: { _, _ in errSecSuccess },
                 delete: { _ in errSecSuccess },
+                // The placeholder also keys both AI providers, whose requests go to `AIFixtureProvider`.
                 copyMatching: { _ in (errSecSuccess, Data("library-fixture".utf8) as AnyObject) }
             )
         }

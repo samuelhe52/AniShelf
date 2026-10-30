@@ -331,7 +331,7 @@ import SwiftUI
                     if browse.isSearching { isReorderingCategories = false }
                 }
                 .sheet(isPresented: $showCategoryManager) {
-                    LibraryCategoryManagerSheet()
+                    LibraryCategoryManagerSheet { id in scope.activeCategoryID = id }
                         .presentationDetents([.medium, .large])
                 }
                 .libraryBrowseSearch(browse, scope: scope, appReview: appReview, reveal: { _ in })

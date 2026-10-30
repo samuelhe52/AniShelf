@@ -56,6 +56,11 @@ struct MyAnimeListApp: App {
                 nil
             }
         let keyStorage = TMDbAPIKeyStorage()
+        #if DEBUG
+            AIDebugLaunch.start(
+                configuration: AIConfiguration(defaults: startup.defaults), isFixture: startup.isLibraryFixture
+            )
+        #endif
         // A newer-store block never lifts: only an app update can open the library.
         // A fixture library stays blocked too, so sync and reminders never act on it.
         let recoveryActivityGate = StartupRecoveryActivityGate(
