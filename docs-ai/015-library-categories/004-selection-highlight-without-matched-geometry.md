@@ -21,7 +21,7 @@ several switches per launch.
 | Original code | Broken; 2 of 2 checked switches in one session |
 | Strip replaced by a plain colored view in the same `safeAreaInset` | Correct, so the inset is not the cause |
 | Strip without `matchedGeometryEffect` (glass kept) | Correct on 4 of 4 switches in one session; one earlier single run right after a fresh install was broken |
-| Final fix | Correct on 4 of 4 switches |
+| Final fix | Correct on 4 of 4 switches (none made right after scrolling; see Current state) |
 
 Earlier single-run bisect steps (`safeAreaBar`, an overlay with `safeAreaPadding`,
 removing `glassEffect`) were inconclusive because of the intermittency and are not
@@ -52,7 +52,19 @@ inset is not involved.
   crossfaded with blur; tapping a category slid the highlight onto the new tab;
   in reorder mode the highlight tracked a dragged selected tab and settled in its
   new slot (order restored afterwards). `make build-mac` passed.
-- Committed with this amendment.
+- Committed with this amendment in `3dc7e1a3`.
+
+## Current state (corrected 2026-10-31)
+
+The fix is incomplete. With `3dc7e1a3` and the strip shown, switching Grid → List right
+after scrolling the grid made the list pop in with no transition on 4 of 4 switches
+(simulator, 2026-10-31). The 2026-10-30 validation had no scroll before its switches.
+The maintainer isolated it by disabling the strip. However, one experimental
+transition variant still popped in once with the strip disabled (037's Codex runs), so
+the strip may not be the only factor. Removing the matched-geometry highlight did not
+remove every trigger, and the remaining cause is undiagnosed. The under-bar white-out
+and soft-edge snap found during that session are a separate issue, recorded in
+[037-view-style-transition-under-bars](../037-view-style-transition-under-bars/000-plan.md).
 
 ## Open questions
 
