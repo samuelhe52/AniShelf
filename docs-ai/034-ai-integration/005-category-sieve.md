@@ -271,9 +271,9 @@ slot of the settled grid, still in the accessibility tree as selected.
 - **Blank-poster follow-up, on the iPad Pro 13-inch simulator (iOS 27.2):**
   - 20 cold-cache runs with the `pops` scale: no blank slot.
   - `make build-mac` passed.
-  - Not watched frame by frame: whether the new pop looks the same as the keyframe one.
+- **Maintainer check on the native macOS app (2026-10-30):** the sieve's layout and
+  animations, including the new pop, checked out.
 - **Not checked:**
-  - the native macOS UI at runtime;
   - the Apple Intelligence backend and real providers;
   - the iPad layout (before the blank-poster follow-up);
   - the settle on a library large enough for hundreds of rejections.
