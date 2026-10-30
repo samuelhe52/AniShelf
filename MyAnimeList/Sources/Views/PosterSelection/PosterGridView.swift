@@ -21,8 +21,10 @@ struct PosterGridView: View {
         static let gridItemMaxSize: CGFloat = 200
         static let gridItemVerticalSpacing: CGFloat = 12
         static let gridItemHorizontalSpacing: CGFloat = 12
-        static let posterCornerRadius: CGFloat = 8
-        static let selectedStrokeWidth: CGFloat = 4
+        static let posterCornerRadius: CGFloat = 10
+        static let selectionRingGap: CGFloat = 3.5
+        static let selectionRingWidth: CGFloat = 3
+        static let badgeOffset: CGFloat = 6
         static let cacheExpiration: StorageExpiration = .transient
     }
 
@@ -56,44 +58,60 @@ struct PosterGridView: View {
         let aspectRatio = CGFloat(width) / CGFloat(max(height, 1))
         let selected = isSelected(poster)
 
-        VStack {
-            Color.clear
-                .aspectRatio(aspectRatio, contentMode: .fit)
-                .overlay {
-                    KFImageView(
-                        url: poster.url,
-                        targetWidth: 300,
-                        diskCacheExpiration: Constants.cacheExpiration
-                    )
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
+        Color.clear
+            .aspectRatio(aspectRatio, contentMode: .fit)
+            .overlay {
+                KFImageView(
+                    url: poster.url,
+                    targetWidth: 300,
+                    diskCacheExpiration: Constants.cacheExpiration
+                )
+                .scaledToFill()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .overlay {
+                posterShape.stroke(.white.opacity(0.18), lineWidth: 1)
+            }
+            .clipShape(posterShape)
+            // The ring and badge sit outside the clip, so the selection marks leave the art
+            // uncovered. The inset ring stays concentric with the poster's corners.
+            .overlay {
+                ZStack {
+                    if selected {
+                        posterShape
+                            .inset(by: -Constants.selectionRingGap)
+                            .stroke(Color.accentColor, lineWidth: Constants.selectionRingWidth)
+                            .transition(
+                                .asymmetric(
+                                    insertion: .opacity.combined(with: .scale(scale: 1.04)),
+                                    removal: .opacity
+                                )
+                            )
+                    }
                 }
-                .overlay {
-                    RoundedRectangle(cornerRadius: Constants.posterCornerRadius, style: .continuous)
-                        .strokeBorder(
-                            selected ? Color.accentColor : .white.opacity(0.18),
-                            lineWidth: selected ? Constants.selectedStrokeWidth : 1
-                        )
-                }
-                .overlay(alignment: .topTrailing) {
+            }
+            .overlay(alignment: .topTrailing) {
+                ZStack {
                     if selected {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.title3.weight(.semibold))
+                            .font(.system(size: 19, weight: .semibold))
                             .symbolRenderingMode(.palette)
                             .foregroundStyle(.white, Color.accentColor)
-                            .padding(7)
-                            .transition(.scale(scale: 0.7).combined(with: .opacity))
+                            .background(Circle().fill(.background).padding(-1.5))
+                            .transition(.scale(scale: 0.4).combined(with: .opacity))
                             .accessibilityHidden(true)
                     }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: Constants.posterCornerRadius))
-            Text("\(width) x \(height)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .matchedTransitionSource(id: poster.metadata.filePath, in: previewNamespace)
-        .animation(.snappy(duration: 0.2), value: selected)
+                .offset(x: Constants.badgeOffset, y: -Constants.badgeOffset)
+            }
+            .matchedTransitionSource(id: poster.metadata.filePath, in: previewNamespace)
+            .animation(.snappy(duration: 0.2), value: selected)
+            .help(Text("\(width) x \(height)"))
+            .accessibilityLabel(Text("\(width) x \(height)"))
+    }
+
+    private var posterShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: Constants.posterCornerRadius, style: .continuous)
     }
 
     private func isSelected(_ poster: Poster) -> Bool {
