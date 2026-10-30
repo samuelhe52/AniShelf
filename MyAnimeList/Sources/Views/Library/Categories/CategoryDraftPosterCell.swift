@@ -22,6 +22,8 @@ struct CategoryDraftPosterCell: View, @MainActor Equatable {
     /// Whether the cell sits under Not included, where rejections stay legible.
     var isNotIncluded = false
     let onToggle: () -> Void
+    /// Whether the poster is in its brief bump for a new match.
+    @State private var pops = false
 
     private let posterShape = RoundedRectangle(cornerRadius: 10, style: .continuous)
 
@@ -46,13 +48,13 @@ struct CategoryDraftPosterCell: View, @MainActor Equatable {
             badge
                 .offset(x: 6, y: -6)
         }
-        .keyframeAnimator(initialValue: 1.0, trigger: candidate.verdict == .match) { content, scale in
-            content.scaleEffect(scale)
-        } keyframes: { _ in
+        // A plain scale, not a `keyframeAnimator`: a keyframe-animated cell that the lazy grid
+        // builds during the settle could stay undrawn, laid out and tappable but invisible.
+        .scaleEffect(pops ? 1.08 : 1)
+        .onChange(of: candidate.verdict == .match) { _, isMatch in
             // A verdict only becomes a match, never leaves one, so this plays once.
-            LinearKeyframe(1.0, duration: revealDelay)
-            SpringKeyframe(1.08, duration: 0.18)
-            SpringKeyframe(1.0, duration: 0.3)
+            guard isMatch else { return }
+            Task { await pop() }
         }
         .contentShape(.rect)
         .simultaneousGesture(
@@ -137,6 +139,14 @@ struct CategoryDraftPosterCell: View, @MainActor Equatable {
         case .rejected where !isNotIncluded: return Look(opacity: 0.22, saturation: 0, scale: 0.9)
         default: return Look(opacity: 0.48, saturation: 1, scale: 0.95)
         }
+    }
+
+    /// Bumps the poster after its place in the batch's ripple, then lets it settle back.
+    private func pop() async {
+        try? await Task.sleep(for: .seconds(revealDelay))
+        withAnimation(.spring(duration: 0.18)) { pops = true }
+        try? await Task.sleep(for: .milliseconds(180))
+        withAnimation(.spring(duration: 0.3)) { pops = false }
     }
 
     /// Staggers a batch's results, so they ripple in rather than land at once.

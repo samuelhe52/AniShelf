@@ -462,9 +462,8 @@ struct CategoryDraftSieve: View {
         .padding(.top, 24)
     }
 
-    /// No insertion transition: during the settle, the lazy grid builds cells that scroll
-    /// into view, and an insertion transition there could stop at its start and leave a
-    /// tappable but invisible poster.
+    /// No insertion transition: during the settle, the lazy grid builds cells for posters
+    /// that move into view, and those posters should simply be there.
     private var gridCellTransition: AnyTransition {
         .asymmetric(insertion: .identity, removal: .opacity.combined(with: .scale(scale: 0.6)))
     }

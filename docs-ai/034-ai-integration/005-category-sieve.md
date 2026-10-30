@@ -165,8 +165,8 @@ The maintainer tried the build on their own library and reported four problems:
    - First guess: the matched-geometry flight into the pile. The flight was removed,
      but the blank still reproduced. The grid's empty slot belonged to "Harvest Blade
      Paradox Chronicle".
-   - The cause: that poster sat below the visible area during the check, so the lazy
-     grid had no cell for it. The settle moved it up, and the grid built its cell during
+   - The suspected cause (wrong; see "Follow-up: blank poster, again" below): that
+     poster sat below the visible area during the check, so the lazy grid had no cell for it. The settle moved it up, and the grid built its cell during
      the animated update with an insertion transition that never finished.
    - Fix: grid cells have no insertion transition. The arrival fade is now an
      `hasArrived` state with a per-cell delay, so a cell built later reads it as
@@ -202,6 +202,27 @@ multi-selection (`LibraryGridItem`). That supersedes items 1 and 2 above:
 
 Simulator check (Japanese, fixture library): a deselected match and the Not included
 posters showed the library's unselected look, and nothing flashed.
+
+### Follow-up: blank poster, again
+
+The maintainer hit the blank poster again on the iPad, on their own library: the second
+slot of the settled grid, still in the accessibility tree as selected.
+- **Repro:** a scripted run on the booted iPad Pro 13-inch simulator, with
+  `-library-fixture 135` and the fixture provider. It never blanked with a warm poster
+  cache (0 of 15 runs). With the fixture's Kingfisher cache deleted before each launch,
+  about one cold run in nine left a first-row slot blank. The three earlier clean runs
+  proved nothing.
+- **Symptoms:** the whole cell is undrawn. A tap still toggles it, and it stays blank
+  afterwards.
+- **Ruled out:** each of these variants still blanked at least once in 15 cold runs:
+  - no grid-cell transitions at all, with leaving posters faded in place first;
+  - that, plus no `hasArrived` arrival fade.
+- **Cause:** the cell's `keyframeAnimator` for the match pop. Without it, nothing else
+  changed, 35 cold runs had no blank, against 4 of 37 with it. Why a keyframe-animated
+  cell stays undrawn when the lazy grid builds it during the settle is not understood.
+- **Fix:** the pop is a plain `scaleEffect` on a `pops` state, which a match sets after
+  the cell's ripple delay and resets 0.18 s later. The grid transitions and the arrival
+  fade stay as they were.
 
 ## Refs
 
@@ -247,8 +268,12 @@ posters showed the library's unselected look, and nothing flashed.
   - Not included posters showed in full color.
   - The focused tests, `make build-mac` (the spurious line again on the first run,
     clean on rerun) passed.
+- **Blank-poster follow-up, on the iPad Pro 13-inch simulator (iOS 27.2):**
+  - 20 cold-cache runs with the `pops` scale: no blank slot.
+  - `make build-mac` passed.
+  - Not watched frame by frame: whether the new pop looks the same as the keyframe one.
 - **Not checked:**
   - the native macOS UI at runtime;
   - the Apple Intelligence backend and real providers;
-  - the iPad layout;
+  - the iPad layout (before the blank-poster follow-up);
   - the settle on a library large enough for hundreds of rejections.
