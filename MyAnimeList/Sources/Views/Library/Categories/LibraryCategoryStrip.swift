@@ -23,7 +23,6 @@ struct LibraryCategoryStrip: View {
     let openCategoryManager: () -> Void
     let allowsCategoryActions: Bool
 
-    @Namespace private var selectionHighlight
     @Binding var isReordering: Bool
 
     @State private var draftOrder: [LibraryCategory.ID]?
@@ -82,6 +81,7 @@ struct LibraryCategoryStrip: View {
                             .id(category.id)
                     }
                 }
+                .background(alignment: .leading) { selectionHighlight }
                 .padding(.horizontal, 4)
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -201,26 +201,46 @@ struct LibraryCategoryStrip: View {
             .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 12)
             .frame(minWidth: minimumTabWidth, minHeight: 36)
-            .background {
-                if isSelected {
-                    Capsule()
-                        .fill(.tint.opacity(0.14))
-                        .matchedGeometryEffect(id: "selection", in: selectionHighlight)
-                }
-            }
             // Keep the selection fill compact while the whole 44-point row is tappable.
             .padding(.vertical, 4)
             .contentShape(.rect)
     }
 
-    private func tabCenter(_ id: LibraryCategory.ID) -> CGFloat {
-        var x = 4 + (tabWidths["all"] ?? minimumTabWidth) + 4 - scrollOffset
-        for category in displayedCategories {
-            let width = tabWidths[category.id] ?? minimumTabWidth
-            if category.id == id { return x + width / 2 }
-            x += width + 4
+    /// One capsule slides between the tabs.
+    ///
+    /// Not a `matchedGeometryEffect`: with one on screen, the library's view-style switch lost
+    /// its page transitions, so the incoming page popped in.
+    private var selectionHighlight: some View {
+        let width = tabWidth(selectedTabID)
+        let isDragged = draggedCategoryID != nil && draggedCategoryID == scope.activeCategoryID
+        // The row's leading padding sits outside this background.
+        let minX = isDragged ? draggedCenter + scrollOffset - 4 - width / 2 : tabMinX(selectedTabID)
+        return Capsule()
+            .fill(.tint.opacity(0.14))
+            .frame(width: width, height: 36)
+            .offset(x: minX)
+            .opacity(tabWidths[selectedTabID] == nil ? 0 : 1)
+            .transaction { transaction in
+                if isDragged { transaction.animation = nil }
+            }
+    }
+
+    private func tabWidth(_ id: String) -> CGFloat {
+        tabWidths[id] ?? minimumTabWidth
+    }
+
+    /// The tab's leading edge within the tab row, before the row's padding.
+    private func tabMinX(_ id: String) -> CGFloat {
+        var x: CGFloat = 0
+        for tabID in ["all"] + displayedCategories.map(\.id) {
+            if tabID == id { return x }
+            x += tabWidth(tabID) + 4
         }
         return x
+    }
+
+    private func tabCenter(_ id: LibraryCategory.ID) -> CGFloat {
+        4 + tabMinX(id) + tabWidth(id) / 2 - scrollOffset
     }
 
     private func category(at x: CGFloat) -> LibraryCategory? {

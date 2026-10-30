@@ -25,7 +25,8 @@ treatment were revised after the same-day visual review, as recorded below:
 
 Initially implemented as a full-width `.bar` material surface in a top safe-area
 inset. The visual revision uses an inset `.glassEffect(.regular, in: .capsule)`
-surface and a matched-geometry selection capsule behind the text. It scrolls the
+surface and a sliding selection capsule behind the text (matched geometry until
+[004](004-selection-highlight-without-matched-geometry.md)). It scrolls the
 active tab into view on selection, definition/order changes, and reorder-mode changes.
 The inset and the title capsule share one visibility condition. Neither the
 selection snapshot pipeline nor the List row gesture mask changes.
@@ -65,7 +66,8 @@ and then supplied a current Telegram screenshot with a shared glass folder contr
 asking for a more floating feel. This replaces the earlier visual reference and
 the original rejection of a separate floating surface. The revision uses one
 native glass capsule with 16-point side margins, a soft neutral selection fill,
-and the existing `.snappy` matched-geometry movement. Unselected labels use medium
+and the existing `.snappy` matched-geometry movement (since replaced by a single
+sliding capsule; see [004](004-selection-highlight-without-matched-geometry.md)). Unselected labels use medium
 weight; the selected label keeps semibold weight and the app tint. Tab hit targets
 remain at least 44 points high, and the drop-hover highlight is rounded to match.
 The new surface stays in the existing safe-area inset; no scroll-driven visibility

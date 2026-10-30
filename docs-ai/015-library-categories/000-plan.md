@@ -101,3 +101,4 @@ proposed `MyAnimeList/Sources/Views/Library/Categories/`.
 
 - Updated 2026-10-13: Optional always-visible category strip for List and Grid — see [002-sticky-category-strip.md](002-sticky-category-strip.md)
 - Updated 2026-10-13: In-place animated tab reordering, upper-right Done, and long-press menus disabled during multi-selection — see [003-interactive-tab-reordering.md](003-interactive-tab-reordering.md)
+- Updated 2026-10-30: Selection highlight moved off `matchedGeometryEffect`, which broke view-style page transitions; 002's matched-geometry wording corrected — see [004-selection-highlight-without-matched-geometry.md](004-selection-highlight-without-matched-geometry.md)
