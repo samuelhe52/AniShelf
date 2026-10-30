@@ -60,8 +60,7 @@ struct LibraryGridItem: View {
 
     private var posterImage: some View {
         KFImageView(
-            url: snapshot.displayPosterURL(for: .grid),
-            targetSize: TMDbPosterDisplayType.grid.targetSize,
+            image: snapshot.displayPosterImage(.posterThumbnail),
             diskCacheExpiration: .longTerm
         )
         .scaledToFill()

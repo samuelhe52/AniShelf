@@ -63,7 +63,7 @@ struct PosterGridView: View {
             .overlay {
                 KFImageView(
                     url: poster.url,
-                    targetWidth: 300,
+                    maxPixelDimension: 450,
                     diskCacheExpiration: Constants.cacheExpiration
                 )
                 .scaledToFill()

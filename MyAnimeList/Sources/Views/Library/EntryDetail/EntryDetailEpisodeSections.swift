@@ -266,7 +266,7 @@ struct SeriesSeasonEpisodeGroupView: View {
             title: "\(dto.episodeNumber). \(dto.title)",
             subtitle: dto.airDate?.formatted(date: .abbreviated, time: .omitted)
                 ?? String(localized: EntryDetailL10n.episode),
-            imageURL: dto.resolvedImageURL,
+            stillImage: dto.resolvedStillImage,
             name: dto.title,
             airDate: dto.airDate
         )
@@ -293,8 +293,8 @@ struct EpisodePreviewCard: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 14) {
                 Group {
-                    if let imageURL = card.imageURL {
-                        KFImageView(url: imageURL, targetWidth: 500, diskCacheExpiration: .transient)
+                    if let stillImage = card.stillImage {
+                        KFImageView(image: stillImage, diskCacheExpiration: .transient)
                             .scaledToFill()
                             .frame(width: 126, height: 74)
                             .clipped()

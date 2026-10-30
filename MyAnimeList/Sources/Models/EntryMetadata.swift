@@ -34,24 +34,11 @@ struct EntryMetadata: Equatable, Identifiable, Hashable, Sendable {
     }
 
     var posterURL: URL? {
-        TMDbImageURLResolver.current.url(for: posterPath, role: .poster)
+        TMDbImageURLResolver.current.originalURL(for: posterPath, role: .poster)
     }
 
-    /// The rendition a display context requests, so its cache entries match the library's.
-    func posterURL(for displayType: TMDbPosterDisplayType) -> URL? {
-        TMDbImageURLResolver.current.url(for: posterPath, role: .poster, idealWidth: displayType.idealWidth)
-    }
-
-    var backdropURL: URL? {
-        TMDbImageURLResolver.current.url(
-            for: backdropPath,
-            role: .backdrop,
-            idealWidth: TMDbImageURLResolver.backdropIdealWidth
-        )
-    }
-
-    var logoURL: URL? {
-        TMDbImageURLResolver.current.url(for: logoPath, role: .logo, idealWidth: 500)
+    func posterImage(_ variant: TMDbImageVariant) -> TMDbImage? {
+        TMDbImage(path: posterPath, variant: variant)
     }
 
     init(

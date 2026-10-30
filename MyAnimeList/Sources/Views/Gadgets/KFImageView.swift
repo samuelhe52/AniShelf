@@ -20,42 +20,86 @@ struct KFImageView: View {
 
     let url: URL?
     let diskCacheExpiration: StorageExpiration
-    let targetSize: CGSize?
+    private let processor: (any ImageProcessor)?
     let cacheOriginalImage: Bool
     let animation: Animation?
     @Binding var imageLoaded: Bool
     @State private var loadState: LoadState = .loading
 
     private var requestID: String {
-        "\(url?.absoluteString ?? "nil")|\(targetSize?.debugDescription ?? "nil")|\(cacheOriginalImage)"
+        "\(url?.absoluteString ?? "nil")|\(processor?.identifier ?? "nil")|\(cacheOriginalImage)"
     }
 
+    /// Shows a library image at its catalog variant, so it shares cache entries with prefetch.
     init(
-        url: URL?,
-        targetWidth: CGFloat? = nil,
-        targetSize: CGSize? = nil,
+        image: TMDbImage?,
         cacheOriginalImage: Bool = false,
         animation: Animation? = .default,
         diskCacheExpiration: StorageExpiration,
         imageLoaded: Binding<Bool> = .constant(false)
     ) {
+        self.init(
+            url: image?.url,
+            processor: image?.processor,
+            cacheOriginalImage: cacheOriginalImage,
+            animation: animation,
+            diskCacheExpiration: diskCacheExpiration,
+            imageLoaded: imageLoaded
+        )
+    }
+
+    /// Shows an image outside the variant catalog, such as a search result or a poster picker
+    /// page. These are not prefetched or removed with library entries.
+    ///
+    /// - Parameter maxPixelDimension: The longest edge of the decoded bitmap; `nil` decodes at
+    ///   full size.
+    init(
+        url: URL?,
+        maxPixelDimension: CGFloat? = nil,
+        cacheOriginalImage: Bool = false,
+        animation: Animation? = .default,
+        diskCacheExpiration: StorageExpiration,
+        imageLoaded: Binding<Bool> = .constant(false)
+    ) {
+        self.init(
+            url: url,
+            processor: url.flatMap { url in
+                maxPixelDimension.map {
+                    LibraryImageProcessorFactory.processor(for: url, maxPixelDimension: $0)
+                } ?? LibraryImageProcessorFactory.unsizedProcessor(for: url)
+            },
+            cacheOriginalImage: cacheOriginalImage,
+            animation: animation,
+            diskCacheExpiration: diskCacheExpiration,
+            imageLoaded: imageLoaded
+        )
+    }
+
+    private init(
+        url: URL?,
+        processor: (any ImageProcessor)?,
+        cacheOriginalImage: Bool,
+        animation: Animation?,
+        diskCacheExpiration: StorageExpiration,
+        imageLoaded: Binding<Bool>
+    ) {
         self.url = url
+        self.processor = processor
         self.animation = animation
         self.diskCacheExpiration = diskCacheExpiration
-        self.targetSize = targetSize ?? targetWidth.map(PosterImageSize.targetSize(width:))
         self.cacheOriginalImage = cacheOriginalImage
         self._imageLoaded = imageLoaded
         // Lazy grids and lists recreate their cells, for example when a window resize changes the
         // column count. Starting from the memory cache keeps those cells from flashing a spinner.
-        if let cachedImage = Self.memoryCachedImage(url: url, targetSize: self.targetSize) {
+        if let cachedImage = Self.memoryCachedImage(url: url, processor: processor) {
             self._loadState = State(initialValue: .loaded(cachedImage))
         }
     }
 
-    private static func memoryCachedImage(url: URL?, targetSize: CGSize?) -> PlatformImage? {
+    private static func memoryCachedImage(url: URL?, processor: (any ImageProcessor)?) -> PlatformImage? {
         guard let url else { return nil }
         var options = KingfisherParsedOptionsInfo(nil)
-        if let processor = LibraryImageProcessorFactory.processor(for: url, targetSize: targetSize) {
+        if let processor {
             options.processor = processor
         }
         return KingfisherManager.shared.cache.retrieveImageInMemoryCache(
@@ -91,7 +135,7 @@ struct KFImageView: View {
             Image(systemName: "photo.badge.exclamationmark")
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.secondary)
-                .font(.system(size: targetSize == nil ? 28 : 48, weight: .regular))
+                .font(.system(size: processor == nil ? 28 : 48, weight: .regular))
         }
     }
 
@@ -103,7 +147,7 @@ struct KFImageView: View {
             return
         }
 
-        if let cachedImage = Self.memoryCachedImage(url: url, targetSize: targetSize) {
+        if let cachedImage = Self.memoryCachedImage(url: url, processor: processor) {
             loadState = .loaded(cachedImage)
             imageLoaded = true
             return
@@ -122,7 +166,7 @@ struct KFImageView: View {
             kfRetrieveOptions.append(.cacheOriginalImage)
         }
 
-        if let processor = LibraryImageProcessorFactory.processor(for: url, targetSize: targetSize) {
+        if let processor {
             kfRetrieveOptions.append(.processor(processor))
         }
 

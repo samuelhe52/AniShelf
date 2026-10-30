@@ -12,6 +12,9 @@ struct WhatsNewEntry: Identifiable {
     struct Action: Identifiable {
         enum Kind: Equatable {
             case refreshMetadata
+            /// Clears the image cache and prefetches the library again, for releases that change
+            /// which image variants are cached.
+            case clearImageCache
             case openURL(URL)
         }
 

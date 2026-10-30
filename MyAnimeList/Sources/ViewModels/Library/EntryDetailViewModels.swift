@@ -138,7 +138,7 @@ final class EntryDetailViewModel {
         var role: String
         var originalIndex: Int
         var bucketIndex: Int
-        var profileURL: URL?
+        var profileImage: TMDbImage?
     }
 
     private struct IndexedStaffJob {
@@ -153,8 +153,8 @@ final class EntryDetailViewModel {
 
     private(set) var isLoading = false
     private(set) var loadError: String?
-    private(set) var heroImageURL: URL?
-    private(set) var logoImageURL: URL?
+    private(set) var heroImage: TMDbImage?
+    private(set) var logoImage: TMDbImage?
     private(set) var primaryLinkURL: URL?
     private(set) var displayTitle = ""
     private(set) var subtitleText: String?
@@ -239,8 +239,8 @@ final class EntryDetailViewModel {
         collapseSeriesSeasonsByDefault = false
         characterSectionTitle = EntryDetailL10n.characters
         primaryLinkURL = entry.linkToDetails
-        heroImageURL = entry.backdropURL ?? entry.posterURL
-        logoImageURL = nil
+        heroImage = entry.backdropImage ?? entry.posterImage(.posterFull)
+        logoImage = nil
         loadError = nil
         if let detail = entry.detail, detail.language == language.rawValue {
             apply(detail: detail, entry: entry, language: language)
@@ -259,7 +259,7 @@ final class EntryDetailViewModel {
         let requestKey = Self.requestKey(for: entry, language: language)
         // A no-op when the session already prepared this entry and language.
         prepare(for: entry, language: language)
-        let needsLogo = includesTitleLogo && logoImageURL == nil && fetchedRequestKey != requestKey
+        let needsLogo = includesTitleLogo && logoImage == nil && fetchedRequestKey != requestKey
         guard loadedRequestKey != requestKey || needsLogo else { return }
 
         // Only a different request supersedes an in-flight load. SwiftUI can start a second
@@ -395,15 +395,15 @@ final class EntryDetailViewModel {
             detail.overview ?? entry.displayOverview
             ?? String(localized: EntryDetailL10n.noOverviewAvailable)
         genreNames = Self.localizedGenreNames(detail.genreIDs, language: language)
-        heroImageURL = detail.heroImageURL ?? entry.backdropURL ?? entry.posterURL
-        logoImageURL = detail.logoImageURL
+        heroImage = entry.backdropImage ?? entry.posterImage(.posterFull)
+        logoImage = detail.logoImage
         primaryLinkURL = detail.primaryLinkURL ?? entry.linkToDetails
         characterSectionTitle = EntryDetailL10n.characters
         productionCompanies = detail.orderedProductionCompanies.map {
             EntryDetailProductionCompanyCard(
                 id: $0.id,
                 name: $0.name,
-                logoURL: $0.logoURL
+                logoImage: $0.logoImage
             )
         }
         let primaryProductionCompany = productionCompanies.first
@@ -469,7 +469,7 @@ final class EntryDetailViewModel {
                 id: $0.id,
                 primaryText: $0.characterName,
                 secondaryText: $0.actorName,
-                profileURL: $0.profileURL
+                profileImage: $0.profileImage
             )
         }
         staffCards = Self.displayedStaffCards(from: detail.orderedStaff, language: language)
@@ -479,7 +479,7 @@ final class EntryDetailViewModel {
                 seasonNumber: $0.seasonNumber,
                 title: $0.title,
                 subtitle: Self.seasonLabelText($0.seasonNumber),
-                posterURL: $0.posterURL
+                posterImage: $0.posterImage
             )
         }
         collapseSeriesSeasonsByDefault =
@@ -496,7 +496,7 @@ final class EntryDetailViewModel {
                 title: "\($0.episodeNumber). \($0.title)",
                 subtitle: $0.airDate?.formatted(date: .abbreviated, time: .omitted)
                     ?? String(localized: EntryDetailL10n.episode),
-                imageURL: $0.imageURL,
+                stillImage: $0.stillImage,
                 name: $0.title,
                 airDate: $0.airDate
             )
@@ -524,7 +524,7 @@ final class EntryDetailViewModel {
                     id: $0.id,
                     primaryText: $0.name,
                     secondaryText: localizedStaffRole($0.role, language: language),
-                    profileURL: $0.profileURL
+                    profileImage: $0.profileImage
                 )
             }
     }
@@ -558,7 +558,7 @@ final class EntryDetailViewModel {
                     role: staffMember.role,
                     department: staffMember.department
                 ),
-                profileURL: staffMember.profileURL
+                profileImage: staffMember.profileImage
             )
         ]
     }
@@ -589,7 +589,7 @@ final class EntryDetailViewModel {
                 ),
                 originalIndex: originalIndex,
                 bucketIndex: bucketIndex,
-                profileURL: staffMember.profileURL
+                profileImage: staffMember.profileImage
             )
         }
     }

@@ -473,8 +473,7 @@ struct CategoryDraftSieve: View {
         ZStack {
             ForEach(Array(rest.suffix(3).reversed().enumerated()), id: \.element.id) { fromTop, item in
                 KFImageView(
-                    url: item.value.metadata.posterURL(for: .grid),
-                    targetSize: TMDbPosterDisplayType.grid.targetSize,
+                    image: item.value.metadata.posterImage(.posterThumbnail),
                     diskCacheExpiration: .shortTerm
                 )
                 .scaledToFill()

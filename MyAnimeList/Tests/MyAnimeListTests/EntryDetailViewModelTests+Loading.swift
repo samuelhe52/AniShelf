@@ -71,7 +71,7 @@ extension EntryDetailViewModelTests {
         await viewModel.load(for: entry, language: .english, includesTitleLogo: true)
         #expect(await loader.requestCount == 1)
         #expect(viewModel.displayTitle == "Refreshed Detail")
-        #expect((viewModel.logoImageURL != nil) == (logoPath != nil))
+        #expect((viewModel.logoImage != nil) == (logoPath != nil))
 
         await viewModel.load(for: entry, language: .english)
         await viewModel.load(for: entry, language: .english, includesTitleLogo: true)

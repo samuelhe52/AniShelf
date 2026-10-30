@@ -11,7 +11,7 @@ import SwiftUI
 struct EntryDetailProductionCompanyCard: Identifiable {
     let id: Int
     let name: String
-    let logoURL: URL?
+    let logoImage: TMDbImage?
 }
 
 /// Identity for a detail stat card.
@@ -52,7 +52,7 @@ struct EntryDetailPersonCard: Identifiable {
     let id: Int
     let primaryText: String
     let secondaryText: String
-    let profileURL: URL?
+    let profileImage: TMDbImage?
 }
 
 struct EntryDetailSeasonCard: Identifiable {
@@ -60,7 +60,7 @@ struct EntryDetailSeasonCard: Identifiable {
     let seasonNumber: Int
     let title: String
     let subtitle: String
-    let posterURL: URL?
+    let posterImage: TMDbImage?
 }
 
 struct EntryDetailEpisodeCard: Identifiable, Equatable {
@@ -68,7 +68,7 @@ struct EntryDetailEpisodeCard: Identifiable, Equatable {
     let episodeNumber: Int
     let title: String
     let subtitle: String
-    let imageURL: URL?
+    let stillImage: TMDbImage?
     /// The bare episode title and air date, for lists that format their own rows.
     let name: String
     let airDate: Date?

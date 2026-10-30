@@ -78,9 +78,8 @@ struct LibraryEntrySnapshot: Identifiable, Equatable {
 
     var posterMissing: Bool { posterPath == nil }
 
-    func displayPosterURL(for displayType: TMDbPosterDisplayType) -> URL? {
-        guard let posterPath else { return nil }
-        return TMDbImageURLResolver.current.url(for: posterPath, role: .poster, idealWidth: displayType.idealWidth)
+    func displayPosterImage(_ variant: TMDbImageVariant) -> TMDbImage? {
+        TMDbImage(path: posterPath, variant: variant)
     }
 
     private struct EpisodeProgressDisplay {

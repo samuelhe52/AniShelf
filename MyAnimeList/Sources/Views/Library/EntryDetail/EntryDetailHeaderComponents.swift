@@ -9,8 +9,8 @@ import DataProvider
 import SwiftUI
 
 struct EntryDetailHeroSection: View {
-    let imageURL: URL?
-    let logoImageURL: URL?
+    let image: TMDbImage?
+    let logoImage: TMDbImage?
     let displayTitle: String
     let subtitleText: String?
     let metadataLineItems: [String]
@@ -111,12 +111,8 @@ struct EntryDetailHeroSection: View {
             Spacer(minLength: 0)
 
             VStack(alignment: .center, spacing: 6) {
-                if let logoImageURL {
-                    KFImageView(
-                        url: logoImageURL,
-                        targetSize: CGSize(width: 500, height: 500),
-                        diskCacheExpiration: .longTerm
-                    )
+                if let logoImage {
+                    KFImageView(image: logoImage, diskCacheExpiration: .longTerm)
                     .scaledToFit()
                     .frame(maxWidth: 280)
                     .frame(height: 78)
@@ -162,12 +158,8 @@ struct EntryDetailHeroSection: View {
 
     @ViewBuilder
     private var heroArtwork: some View {
-        if let imageURL {
-            KFImageView(
-                url: imageURL,
-                targetSize: CGSize(width: 1_200, height: 675),
-                diskCacheExpiration: .longTerm
-            )
+        if let image {
+            KFImageView(image: image, diskCacheExpiration: .longTerm)
             .scaledToFill()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {

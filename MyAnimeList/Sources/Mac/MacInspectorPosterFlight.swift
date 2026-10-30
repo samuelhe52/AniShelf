@@ -19,7 +19,7 @@
     final class MacInspectorPosterFlight {
         struct Flight: Identifiable {
             let id = UUID()
-            let posterURL: URL?
+            let posterImage: TMDbImage?
             let source: CGRect
             let destination: CGRect
             let landed: () -> Void
@@ -35,13 +35,13 @@
         /// calls `landed` when it arrives.
         ///
         /// Without a visible detail poster it lands at once.
-        func fly(posterURL: URL?, to destination: CGRect, landed: @escaping () -> Void) {
+        func fly(posterImage: TMDbImage?, to destination: CGRect, landed: @escaping () -> Void) {
             guard let source = sourceFrame, source.intersects(bounds) else {
                 landed()
                 return
             }
             sourceFrame = nil
-            current = Flight(posterURL: posterURL, source: source, destination: destination, landed: landed)
+            current = Flight(posterImage: posterImage, source: source, destination: destination, landed: landed)
         }
 
         /// Drops a flight whose batch ended before it landed.
@@ -84,7 +84,7 @@
         var body: some View {
             let frame = hasLanded ? flight.destination : flight.source
             // Matches the stack's front poster, which the detail header's poster also matches.
-            KFImageView(url: flight.posterURL, targetWidth: 360, diskCacheExpiration: .longTerm)
+            KFImageView(image: flight.posterImage, diskCacheExpiration: .longTerm)
                 .scaledToFill()
                 .frame(width: frame.width, height: frame.height)
                 .background(.fill.tertiary)

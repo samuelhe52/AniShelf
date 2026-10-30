@@ -23,14 +23,18 @@ final class WhatsNewActionRunner {
 
     @ObservationIgnored
     private let refreshMetadata: @MainActor (LibraryRefreshOptions) -> Void
+    @ObservationIgnored
+    private let clearImageCache: @MainActor () -> Void
 
     private var refreshGeneration: Int = 0
     var refreshState: RefreshState = .idle
 
     init(
-        refreshMetadata: @escaping @MainActor (LibraryRefreshOptions) -> Void
+        refreshMetadata: @escaping @MainActor (LibraryRefreshOptions) -> Void,
+        clearImageCache: @escaping @MainActor () -> Void = {}
     ) {
         self.refreshMetadata = refreshMetadata
+        self.clearImageCache = clearImageCache
     }
 
     func run(
@@ -40,6 +44,8 @@ final class WhatsNewActionRunner {
         switch action {
         case .refreshMetadata:
             startRefreshMetadata()
+        case .clearImageCache:
+            clearImageCache()
         case .openURL(let url):
             openURL(url)
         }

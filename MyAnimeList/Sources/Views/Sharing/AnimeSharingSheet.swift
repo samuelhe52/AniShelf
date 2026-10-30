@@ -288,7 +288,7 @@ struct AnimeSharingSheet: View {
 
     private func selectEmbeddedPoster(_ poster: Poster) {
         let posterPath = TMDbImagePath.storagePath(from: poster.metadata.filePath)
-        let originalURL = TMDbImageURLResolver.current.url(for: posterPath, role: .poster)
+        let originalURL = TMDbImageURLResolver.current.originalURL(for: posterPath, role: .poster)
         withAnimation(.snappy(duration: 0.22)) {
             viewModel.updateSelectedPosterURL(originalURL ?? poster.url)
         }

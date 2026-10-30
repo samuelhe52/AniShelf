@@ -17,38 +17,7 @@ enum TMDbImageRole {
     case still
 }
 
-enum TMDbPosterDisplayType: CaseIterable {
-    case gallery
-    case list
-    case grid
-
-    var idealWidth: Int {
-        switch self {
-        case .gallery:
-            return 1000
-        case .list:
-            return 240
-        case .grid:
-            return 360
-        }
-    }
-
-    /// The processed cache variant used by both display and prefetch.
-    ///
-    /// The Mac's compact list uses a smaller bitmap while retaining the same server rendition URL.
-    var targetSize: CGSize {
-        #if os(macOS)
-            if self == .list {
-                return PosterImageSize.targetSize(width: 120)
-            }
-        #endif
-        return PosterImageSize.targetSize(width: CGFloat(idealWidth))
-    }
-}
-
 struct TMDbImageURLResolver {
-    static let backdropIdealWidth = 1_280
-
     var imagesConfiguration: ImagesConfiguration
 
     /// Shared resolver for persisted TMDb image paths.
@@ -65,22 +34,33 @@ struct TMDbImageURLResolver {
     /// if TMDb changes its image configuration again.
     static let current = TMDbImageURLResolver(imagesConfiguration: .tmdbStandardFallback)
 
-    func url(for path: String?, role: TMDbImageRole, idealWidth: Int = .max) -> URL? {
+    /// The URL of the original-size rendition, for export and other uses that need full resolution.
+    ///
+    /// Display code takes a `TMDbImage` instead, so its URL matches the cached variant.
+    func originalURL(for path: String?, role: TMDbImageRole) -> URL? {
+        url(for: path, role: role, size: .original)
+    }
+
+    func url(for path: String?, variant: TMDbImageVariant) -> URL? {
+        let pathURL = TMDbImagePath.urlPath(from: path)
+        // SVG logos are only served at their original size.
+        let size: ImageSize = pathURL?.isSVGImageURL == true ? .original : variant.rendition
+        return url(for: path, role: variant.role, size: size)
+    }
+
+    private func url(for path: String?, role: TMDbImageRole, size: ImageSize) -> URL? {
         let pathURL = TMDbImagePath.urlPath(from: path)
         switch role {
         case .poster:
-            return imagesConfiguration.posterURL(for: pathURL, idealWidth: idealWidth)
+            return imagesConfiguration.posterURL(for: pathURL, size: size)
         case .backdrop:
-            return imagesConfiguration.backdropURL(for: pathURL, idealWidth: idealWidth)
+            return imagesConfiguration.backdropURL(for: pathURL, size: size)
         case .logo:
-            if pathURL?.isSVGImageURL == true {
-                return imagesConfiguration.logoURL(for: pathURL, idealWidth: .max)
-            }
-            return imagesConfiguration.logoURL(for: pathURL, idealWidth: idealWidth)
+            return imagesConfiguration.logoURL(for: pathURL, size: size)
         case .profile:
-            return imagesConfiguration.profileURL(for: pathURL, idealWidth: idealWidth)
+            return imagesConfiguration.profileURL(for: pathURL, size: size)
         case .still:
-            return imagesConfiguration.stillURL(for: pathURL, idealWidth: idealWidth)
+            return imagesConfiguration.stillURL(for: pathURL, size: size)
         }
     }
 }
@@ -106,98 +86,89 @@ extension ImagesConfiguration {
 }
 
 extension AnimeEntry {
-    /// Resolves the poster URL through `selectedPosterPath`, so callers automatically use
-    /// `customPosterPath` when `usingCustomPoster` is true and `posterPath` otherwise.
-    ///
-    /// Note that this returns a URL for the original sized poster image.
+    /// The original-size poster through `selectedPosterPath`, so it follows `customPosterPath`
+    /// when `usingCustomPoster` is true and `posterPath` otherwise.
     var posterURL: URL? {
-        TMDbImageURLResolver.current.url(for: selectedPosterPath, role: .poster)
+        TMDbImageURLResolver.current.originalURL(for: selectedPosterPath, role: .poster)
     }
 
-    func posterURL(for displayType: TMDbPosterDisplayType) -> URL? {
-        TMDbImageURLResolver.current.url(for: selectedPosterPath, role: .poster, idealWidth: displayType.idealWidth)
+    /// The selected poster at a display variant.
+    func posterImage(_ variant: TMDbImageVariant) -> TMDbImage? {
+        TMDbImage(path: selectedPosterPath, variant: variant)
     }
 
-    var backdropURL: URL? {
-        TMDbImageURLResolver.current.url(
-            for: backdropPath,
-            role: .backdrop,
-            idealWidth: TMDbImageURLResolver.backdropIdealWidth
-        )
+    var backdropImage: TMDbImage? {
+        TMDbImage(path: backdropPath, variant: .backdrop)
     }
 }
 
 extension AnimeEntryDetail {
-    var heroImageURL: URL? {
-        entry?.backdropURL
-    }
-
-    var logoImageURL: URL? {
-        TMDbImageURLResolver.current.url(for: logoImagePath, role: .logo, idealWidth: 500)
+    var logoImage: TMDbImage? {
+        TMDbImage(path: logoImagePath, variant: .logo)
     }
 }
 
 extension AnimeEntryProductionCompany {
-    var logoURL: URL? {
-        TMDbImageURLResolver.current.url(for: logoPath, role: .logo, idealWidth: 500)
+    var logoImage: TMDbImage? {
+        TMDbImage(path: logoPath, variant: .logo)
     }
 }
 
 extension AnimeEntryCharacter {
-    var profileURL: URL? {
-        TMDbImageURLResolver.current.url(for: profilePath, role: .profile, idealWidth: 185)
+    var profileImage: TMDbImage? {
+        TMDbImage(path: profilePath, variant: .profile)
     }
 }
 
 extension AnimeEntryStaff {
-    var profileURL: URL? {
-        TMDbImageURLResolver.current.url(for: profilePath, role: .profile, idealWidth: 185)
+    var profileImage: TMDbImage? {
+        TMDbImage(path: profilePath, variant: .profile)
     }
 }
 
 extension AnimeEntrySeasonSummary {
-    var posterURL: URL? {
-        TMDbImageURLResolver.current.url(for: posterPath, role: .poster, idealWidth: 300)
+    var posterImage: TMDbImage? {
+        TMDbImage(path: posterPath, variant: .posterThumbnail)
     }
 }
 
 extension AnimeEntryEpisodeSummary {
-    var imageURL: URL? {
-        TMDbImageURLResolver.current.url(for: imagePath, role: .still, idealWidth: 500)
+    var stillImage: TMDbImage? {
+        TMDbImage(path: imagePath, variant: .still)
     }
 }
 
 extension AnimeEntryDetailDTO {
-    var resolvedLogoImageURL: URL? {
-        TMDbImageURLResolver.current.url(for: logoImagePath, role: .logo, idealWidth: 500)
-            ?? logoImageURL
+    var resolvedLogoImage: TMDbImage? {
+        TMDbImage(path: logoImagePath, variant: .logo)
+            ?? TMDbImage(fallbackURL: logoImageURL, variant: .logo)
     }
 }
 
 extension AnimeEntryCharacterDTO {
-    var resolvedProfileURL: URL? {
-        TMDbImageURLResolver.current.url(for: profilePath, role: .profile, idealWidth: 185)
-            ?? profileURL
+    var resolvedProfileImage: TMDbImage? {
+        TMDbImage(path: profilePath, variant: .profile)
+            ?? TMDbImage(fallbackURL: profileURL, variant: .profile)
     }
 }
 
 extension AnimeEntryStaffDTO {
-    var resolvedProfileURL: URL? {
-        TMDbImageURLResolver.current.url(for: profilePath, role: .profile, idealWidth: 185)
-            ?? profileURL
+    var resolvedProfileImage: TMDbImage? {
+        TMDbImage(path: profilePath, variant: .profile)
+            ?? TMDbImage(fallbackURL: profileURL, variant: .profile)
     }
 }
 
 extension AnimeEntrySeasonSummaryDTO {
-    var resolvedPosterURL: URL? {
-        TMDbImageURLResolver.current.url(for: posterPath, role: .poster, idealWidth: 300)
-            ?? posterURL
+    var resolvedPosterImage: TMDbImage? {
+        TMDbImage(path: posterPath, variant: .posterThumbnail)
+            ?? TMDbImage(fallbackURL: posterURL, variant: .posterThumbnail)
     }
 }
 
 extension AnimeEntryEpisodeSummaryDTO {
-    var resolvedImageURL: URL? {
-        TMDbImageURLResolver.current.url(for: imagePath, role: .still, idealWidth: 500)
-            ?? imageURL
+    var resolvedStillImage: TMDbImage? {
+        TMDbImage(path: imagePath, variant: .still)
+            ?? TMDbImage(fallbackURL: imageURL, variant: .still)
     }
 }

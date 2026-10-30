@@ -191,12 +191,12 @@ extension LibraryStore {
 
     @discardableResult
     func deleteEntry(_ entry: AnimeEntry) -> Bool {
-        let cachedImageURLs =
+        let cachedImageKeys =
             entry.childSeasonEntries.isEmpty
-            ? LibraryImageCacheService.relatedImageURLs(for: entry) : []
+            ? LibraryImageCacheService.relatedCacheKeys(for: entry) : []
         do {
             try repository.deleteEntry(entry)
-            LibraryImageCacheService.removeCachedImages(for: cachedImageURLs)
+            LibraryImageCacheService.removeCachedImages(cachedImageKeys)
             return true
         } catch {
             libraryStoreLogger.error("Failed to delete entry: \(error)")
@@ -208,14 +208,14 @@ extension LibraryStore {
     @discardableResult
     func deleteEntries(_ entries: [AnimeEntry]) -> Bool {
         let selectedIDs = Set(entries.map(\.id))
-        let cachedImageURLs = Set(
+        let cachedImageKeys = Set(
             entries.flatMap { entry in
                 entry.childSeasonEntries.contains(where: { !selectedIDs.contains($0.id) })
-                    ? [] : LibraryImageCacheService.relatedImageURLs(for: entry)
+                    ? [] : LibraryImageCacheService.relatedCacheKeys(for: entry)
             })
         do {
             try repository.deleteEntries(entries)
-            LibraryImageCacheService.removeCachedImages(for: cachedImageURLs)
+            LibraryImageCacheService.removeCachedImages(cachedImageKeys)
             return true
         } catch {
             libraryStoreLogger.error("Failed to delete entries: \(error)")

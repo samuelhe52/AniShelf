@@ -240,7 +240,7 @@
             return ZStack {
                 ForEach(Array(shown.enumerated()), id: \.element.libraryIdentity) { depth, entry in
                     let spread = CGFloat(depth)
-                    KFImageView(url: posterURL(for: entry), targetWidth: 360, diskCacheExpiration: .longTerm)
+                    KFImageView(image: entry.posterImage(.posterThumbnail), diskCacheExpiration: .longTerm)
                         .scaledToFill()
                         .frame(width: 96, height: 144)
                         .background(.fill.tertiary)
@@ -274,15 +274,6 @@
             .accessibilityHidden(true)
         }
 
-        /// The grid's poster variant, which is usually still in the memory cache, so a newly
-        /// selected poster is ready before its insertion animates.
-        private func posterURL(for entry: AnimeEntry) -> URL? {
-            entry.selectedPosterPath.flatMap {
-                TMDbImageURLResolver.current.url(
-                    for: $0, role: .poster, idealWidth: TMDbPosterDisplayType.grid.idealWidth)
-            }
-        }
-
         /// Flies the entry the detail showed into its place on the stack, then lets the rest of
         /// the selection drop onto it.
         private func beginEntrance(of entry: AnimeEntry, at frame: CGRect) {
@@ -292,7 +283,7 @@
                 return
             }
             isEntering = true
-            posterFlight.fly(posterURL: posterURL(for: entry), to: frame) {
+            posterFlight.fly(posterImage: entry.posterImage(.posterThumbnail), to: frame) {
                 isEntering = false
                 hasEntered = true
             }

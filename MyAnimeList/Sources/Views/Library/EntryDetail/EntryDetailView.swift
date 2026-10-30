@@ -382,10 +382,10 @@ struct EntryDetailView: View {
 
     private var heroSection: some View {
         EntryDetailHeroSection(
-            imageURL: session.model.heroImageURL
-                ?? session.entry.backdropURL
-                ?? session.entry.posterURL,
-            logoImageURL: session.model.logoImageURL,
+            image: session.model.heroImage
+                ?? session.entry.backdropImage
+                ?? session.entry.posterImage(.posterFull),
+            logoImage: session.model.logoImage,
             displayTitle: session.model.displayTitle,
             subtitleText: session.model.subtitleText,
             metadataLineItems: session.model.metadataLineItems,
@@ -429,7 +429,7 @@ struct EntryDetailView: View {
                 switch macHeaderStyle {
                 case .compact:
                     MacEntryDetailHeader(
-                        posterURL: session.entry.posterURL,
+                        posterImage: session.entry.posterImage(.posterThumbnail),
                         displayTitle: session.model.displayTitle,
                         subtitleText: session.model.subtitleText,
                         metadataLineItems: session.model.metadataLineItems,

@@ -248,7 +248,7 @@ struct EntryDetailBroadcastValidationSheet: View {
     private func showArtwork(_ show: TVMazeShow) -> some View {
         KFImageView(
             url: show.fullImageURL,
-            targetWidth: 240,
+            maxPixelDimension: 360,
             diskCacheExpiration: .transient
         )
         .scaledToFill()

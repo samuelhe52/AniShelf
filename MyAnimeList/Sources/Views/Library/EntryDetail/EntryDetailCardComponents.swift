@@ -34,8 +34,8 @@ struct PersonCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Group {
-                if let profileURL = card.profileURL {
-                    KFImageView(url: profileURL, targetWidth: 240, diskCacheExpiration: .shortTerm)
+                if let profileImage = card.profileImage {
+                    KFImageView(image: profileImage, diskCacheExpiration: .shortTerm)
                         .scaledToFill()
                 } else {
                     Rectangle()
@@ -105,8 +105,8 @@ struct EpisodeRowView: View {
 
         HStack(spacing: 0) {
             Group {
-                if let imageURL = card.imageURL {
-                    KFImageView(url: imageURL, targetWidth: 500, diskCacheExpiration: .transient)
+                if let stillImage = card.stillImage {
+                    KFImageView(image: stillImage, diskCacheExpiration: .transient)
                         .scaledToFill()
                         .frame(width: 126, height: 74)
                         .clipped()

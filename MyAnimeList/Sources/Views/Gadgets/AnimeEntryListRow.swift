@@ -78,8 +78,7 @@ struct AnimeEntryListRow: View {
         private var compactRow: some View {
             HStack(spacing: 10) {
                 KFImageView(
-                    url: snapshot.displayPosterURL(for: .list),
-                    targetSize: TMDbPosterDisplayType.list.targetSize,
+                    image: snapshot.displayPosterImage(.posterThumbnail),
                     diskCacheExpiration: .longTerm
                 )
                 .scaledToFill()
@@ -221,8 +220,7 @@ struct AnimeEntryListRow: View {
 
     private var poster: some View {
         KFImageView(
-            url: snapshot.displayPosterURL(for: .list),
-            targetSize: TMDbPosterDisplayType.list.targetSize,
+            image: snapshot.displayPosterImage(.posterThumbnail),
             diskCacheExpiration: .longTerm
         )
         .scaledToFill()
