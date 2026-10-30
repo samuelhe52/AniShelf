@@ -34,12 +34,21 @@ struct CategoryDraftPosterCell: View, @MainActor Equatable {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             poster
-            Text(candidate.metadata.name)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.primary.opacity(0.88))
-                .lineLimit(2)
-                .lineSpacing(-1)
-                .frame(maxWidth: .infinity, minHeight: 26, alignment: .topLeading)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(candidate.metadata.name)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.primary.opacity(0.88))
+                    .lineLimit(2)
+                    .lineSpacing(-1)
+                // A season shows its series' name, so its number tells sibling seasons apart.
+                if let seasonLabel {
+                    Text(seasonLabel)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 26, alignment: .topLeading)
         }
         .opacity(look.opacity)
         .scaleEffect(look.scale)
@@ -70,7 +79,7 @@ struct CategoryDraftPosterCell: View, @MainActor Equatable {
         .accessibilityAction {
             if candidate.verdict.isResolved { onToggle() }
         }
-        .accessibilityLabel(Text(verbatim: candidate.metadata.name))
+        .accessibilityLabel(accessibilityLabel)
         .accessibilityValue(accessibilityValue)
         .accessibilityAddTraits(isAccepted ? .isSelected : [])
     }
@@ -152,6 +161,16 @@ struct CategoryDraftPosterCell: View, @MainActor Equatable {
     /// Staggers a batch's results, so they ripple in rather than land at once.
     private var revealDelay: Double {
         candidate.verdict.isResolved ? min(Double(candidate.revealIndex) * 0.045, 0.6) : 0
+    }
+
+    private var seasonLabel: LocalizedStringResource? {
+        guard case .season(let seasonNumber, _) = candidate.metadata.type else { return nil }
+        return seasonNumber == 0 ? "Specials" : "Season \(seasonNumber)"
+    }
+
+    private var accessibilityLabel: Text {
+        guard let seasonLabel else { return Text(verbatim: candidate.metadata.name) }
+        return Text(verbatim: "\(candidate.metadata.name), \(String(localized: seasonLabel))")
     }
 
     private var accessibilityValue: Text {
