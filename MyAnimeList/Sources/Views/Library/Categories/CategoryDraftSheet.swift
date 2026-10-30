@@ -251,6 +251,7 @@ struct CategoryDraftSheet: View {
             }
             .buttonStyle(.glassProminent)
             .disabled(!isEnabled)
+            .animation(.spring(response: 0.32, dampingFraction: 0.86), value: isEnabled)
             .modifier(BottomButtonLayout())
         }
 
