@@ -37,6 +37,11 @@ struct EntryMetadata: Equatable, Identifiable, Hashable, Sendable {
         TMDbImageURLResolver.current.url(for: posterPath, role: .poster)
     }
 
+    /// The rendition a display context requests, so its cache entries match the library's.
+    func posterURL(for displayType: TMDbPosterDisplayType) -> URL? {
+        TMDbImageURLResolver.current.url(for: posterPath, role: .poster, idealWidth: displayType.idealWidth)
+    }
+
     var backdropURL: URL? {
         TMDbImageURLResolver.current.url(
             for: backdropPath,

@@ -89,7 +89,7 @@ struct CategoryDraftPosterCell: View, @MainActor Equatable {
             .aspectRatio(2.0 / 3.0, contentMode: .fit)
             .overlay {
                 KFImageView(
-                    url: candidate.metadata.posterURL,
+                    url: candidate.metadata.posterURL(for: .grid),
                     targetSize: TMDbPosterDisplayType.grid.targetSize,
                     diskCacheExpiration: .shortTerm
                 )
