@@ -33,7 +33,7 @@
 ## Commits
 
 - Commit only when the maintainer asks; pushing requires explicit authorization.
-- Organize work into coherent commits. Fold review corrections and reverts into the unpushed commit they fix rather than stacking them; this is always allowed. Changing pushed history requires the user's confirmation. Otherwise, do not amend, rebase, reset, or rewrite commits you did not create in the current task without asking.
+- Organize work into coherent commits. Fold small review corrections and reverts into the unpushed commit they fix rather than stacking them; this is always allowed. Give non-trivial work its own commit on top, such as a fix that took real diagnosis, even when it logically belongs to an earlier unpushed commit. Changing pushed history requires the user's confirmation. Otherwise, do not amend, rebase, reset, or rewrite commits you did not create in the current task without asking.
 - Other agents may be editing the same working tree. Stage only changes within the commit's scope, by path (`git add <paths>`); never use `git add -A`, `git add .`, or `git commit -a`. When a file also holds unrelated edits (often `Localizable.xcstrings`), stage selectively with `git add -p` or ask, and review the full staged diff before committing.
 - When splitting work across parallel agents, give each agent separate files.
 - Use conventional commits: `<type>: <subject>`, with imperative, capitalized, concise subjects and no trailing period.
