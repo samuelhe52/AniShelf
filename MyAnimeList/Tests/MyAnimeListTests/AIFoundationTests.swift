@@ -107,18 +107,24 @@ struct AIFoundationTests {
         fake.prompts = []
         let budget = AIContextBudget(
             contextSize: exact + 1, reservedTokens: 0, maximumResponseTokens: 1, countPrompt: { $0.count })
-        var progress: [Int] = []
+        var started: [LibraryEntryIdentity] = []
+        var finished: [LibraryEntryIdentity] = []
         let result = try await AIBatchRunner(generator: fake, budget: budget, instructions: "classify").run(
             input, generating: AIBatchSelection.self
-        ) {
-            done, _ in progress.append(done)
+        ) { event in
+            switch event {
+            case .started(let ids): started += ids
+            case .finished(let ids, _): finished += ids
+            }
         }
         #expect(fake.prompts.count == 2)
         #expect(fake.prompts[0].count == exact)
         #expect(fake.prompts[1].contains("0: \"card2\""))
         #expect(result.values.map(\.identity) == input.map(\.identity))
         #expect(result.failures.isEmpty)
-        #expect(progress.last == 3)
+        // Each card starts and finishes once, in its batch.
+        #expect(started == input.map(\.identity))
+        #expect(Set(finished) == Set(input.map(\.identity)) && finished.count == 3)
         #expect(!fake.prompts.joined().contains("movie:"))
     }
 

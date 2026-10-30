@@ -7,20 +7,26 @@
 
 import SwiftUI
 
-/// "Describe a Category": the user writes what the category holds, reviews the anime the
-/// model proposes, and applies the result.
+/// "Describe a Category": the user writes what the category holds, watches the model sort
+/// the library into it, adjusts the result, and applies it.
 ///
 /// The library changes only when the user taps Create Category.
 struct CategoryDraftSheet: View {
     /// The visible step.
     ///
-    /// Progress within a step, such as the checked count, does not change it, so only real step
-    /// changes cross-fade.
+    /// The plan, the check, and the review share the sieve, so only real step changes
+    /// cross-fade.
     private enum Step: Hashable {
         case describing
-        case working
-        case review
+        case sieve
         case failed
+    }
+
+    /// The iOS bottom bar's button, or the Mac's confirmation action.
+    private enum PrimaryAction: Hashable {
+        case find
+        case stop
+        case create
     }
 
     @Environment(LibraryStore.self) private var store
@@ -41,11 +47,8 @@ struct CategoryDraftSheet: View {
                 case .describing:
                     describeStep
                         .transition(.opacity)
-                case .working:
-                    progressView
-                        .transition(.opacity)
-                case .review:
-                    reviewContent
+                case .sieve:
+                    CategoryDraftSieve(draft: draft)
                         .transition(.opacity)
                 case .failed:
                     failureView
@@ -56,10 +59,10 @@ struct CategoryDraftSheet: View {
             .animation(stepAnimation, value: step)
             #if !os(macOS)
                 // The Mac puts these actions in the sheet's toolbar. A bar, not an inset, so the
-                // scroll edge effect keeps rows from showing through a disabled button.
+                // scroll edge effect keeps posters from showing through the button.
                 .safeAreaBar(edge: .bottom) {
                     bottomAction
-                    .animation(stepAnimation, value: step)
+                    .animation(stepAnimation, value: primaryAction)
                 }
             #endif
             .navigationTitle(title)
@@ -83,19 +86,27 @@ struct CategoryDraftSheet: View {
     private var step: Step {
         switch draft.state {
         case .describing: .describing
-        case .planning, .checking: .working
-        // Keep the review on screen while the sheet dismisses.
-        case .review, .applied: .review
+        // Keep the sieve on screen while the sheet dismisses.
+        case .planning, .checking, .review, .applied: .sieve
         case .failed: .failed
         }
     }
 
     private var title: LocalizedStringResource {
-        step == .review ? "New Category" : "Describe a Category"
+        step == .sieve && draft.proposal != nil ? "New Category" : "Describe a Category"
     }
 
     private var stepAnimation: Animation {
         .spring(response: 0.34, dampingFraction: 0.88)
+    }
+
+    private var primaryAction: PrimaryAction? {
+        switch draft.state {
+        case .describing: .find
+        case .checking: .stop
+        case .review where hasCandidates: .create
+        default: nil
+        }
     }
 
     // MARK: - Describe
@@ -134,53 +145,6 @@ struct CategoryDraftSheet: View {
         draft.start(library: store.library)
     }
 
-    // MARK: - Progress
-
-    /// The description leads, since it is what the search runs on; one status line under the
-    /// bar carries both the count and the total.
-    private var progressView: some View {
-        let checking: (done: Int, total: Int)? =
-            if case .checking(let done, let total) = draft.state { (done, total) } else { nil }
-        return VStack(spacing: 24) {
-            Text(verbatim: draft.trimmedRequest)
-                .font(.title3.weight(.semibold))
-                .multilineTextAlignment(.center)
-                .lineLimit(3)
-
-            VStack(spacing: 10) {
-                ZStack {
-                    if let checking {
-                        ProgressView(value: Double(checking.done), total: Double(max(checking.total, 1)))
-                            .transition(.opacity)
-                    } else {
-                        ProgressView()
-                            .transition(.opacity)
-                    }
-                }
-                .frame(maxWidth: 240, minHeight: 20)
-
-                Group {
-                    if let checking {
-                        // Plain digits: the count can tick faster than a numeric roll settles.
-                        Text("Checking \(checking.done) of \(checking.total) anime")
-                    } else {
-                        Text("Reading your request…")
-                    }
-                }
-                .font(.subheadline)
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
-            }
-
-            Button("Edit Description") { draft.edit() }
-                .buttonStyle(.bordered)
-        }
-        .frame(maxWidth: 400)
-        .padding(24)
-        .animation(.snappy, value: checking?.done)
-        .animation(stepAnimation, value: checking == nil)
-    }
-
     // MARK: - Failure
 
     @ViewBuilder
@@ -198,139 +162,19 @@ struct CategoryDraftSheet: View {
         }
     }
 
-    // MARK: - Review
+    // MARK: - Apply
 
-    @ViewBuilder
-    private var reviewContent: some View {
-        if let proposal = draft.proposal, !proposal.items.items.isEmpty {
-            reviewList(proposal)
-        } else {
-            ContentUnavailableView {
-                Label("No Matching Anime", systemImage: "folder.badge.questionmark")
-            } description: {
-                if let proposal = draft.proposal, proposal.uncheckedCount > 0 {
-                    Text(
-                        "\(proposal.uncheckedCount) anime could not be checked. Try again, or try a broader description."
-                    )
-                } else {
-                    Text("Try a broader description.")
-                }
-                // The search ran without this constraint, so the user should still see it here.
-                if let proposal = draft.proposal, !proposal.unsupportedRequest.isEmpty {
-                    unsupportedWarning(proposal.unsupportedRequest)
-                }
-            } actions: {
-                Button("Edit Description") { draft.edit() }
-                    .buttonStyle(.glassProminent)
-            }
-        }
-    }
-
-    /// Batch Add's result list and rows.
-    private func reviewList(_ proposal: CategoryDraftProposal) -> some View {
-        let acceptedCount = proposal.items.items.count(where: \.isAccepted)
-        let allAccepted = acceptedCount == proposal.items.items.count
-        return List {
-            if !proposal.unsupportedRequest.isEmpty {
-                Section {
-                    unsupportedWarning(proposal.unsupportedRequest)
-                }
-            }
-            Section {
-                TextField("Category Name", text: nameBinding)
-                    .submitLabel(.done)
-            } header: {
-                Text("Name")
-            } footer: {
-                if !isNameValid(proposal.name) {
-                    Text("Category names must not be empty, must be unique, and can have up to 40 characters.")
-                        .foregroundStyle(.orange)
-                }
-            }
-            Section {
-                ForEach(proposal.items.items) { item in
-                    MovieResultItem(
-                        movie: item.value.metadata,
-                        isSelected: item.isAccepted,
-                        onSelectionChanged: { setAccepted($0, for: item.id) }
-                    )
-                }
-            } header: {
-                HStack(alignment: .firstTextBaseline) {
-                    Text("\(acceptedCount) of \(proposal.items.items.count) anime")
-                        .monospacedDigit()
-                        .contentTransition(.numericText(value: Double(acceptedCount)))
-                    Spacer()
-                    Button(allAccepted ? "Deselect All" : "Select All") {
-                        setAllAccepted(!allAccepted)
-                    }
-                    .buttonStyle(.borderless)
-                    .font(.subheadline)
-                    .contentTransition(.opacity)
-                }
-            } footer: {
-                if proposal.uncheckedCount > 0 {
-                    Text("\(proposal.uncheckedCount) anime could not be checked. They are not in the list.")
-                }
-            }
-        }
-        .listStyle(.inset)
-        .textCase(nil)
-        .scrollDismissesKeyboard(.interactively)
-        .preferredNavigationBarScrollEdgeEffect()
-    }
-
-    private func unsupportedWarning(_ request: String) -> some View {
-        Label {
-            Text("Not applied: “\(request)”. AniShelf cannot filter by this, so the list ignores it.")
-        } icon: {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
-        }
-        .font(.subheadline)
-    }
-
-    /// Animates only the keystroke that shows or hides the name warning, inside the change
-    /// itself; the List's section footer does not reliably follow a value-keyed animation.
-    private var nameBinding: Binding<String> {
-        Binding(
-            get: { draft.proposal?.name ?? "" },
-            set: { name in
-                guard isNameValid(name) != isNameValid(draft.proposal?.name ?? "") else {
-                    draft.proposal?.name = name
-                    return
-                }
-                withAnimation(.snappy) { draft.proposal?.name = name }
-            }
-        )
-    }
-
-    private func setAccepted(_ isAccepted: Bool, for id: UUID) {
-        guard let index = draft.proposal?.items.items.firstIndex(where: { $0.id == id }) else { return }
-        withAnimation(.snappy) { draft.proposal?.items.items[index].isAccepted = isAccepted }
-    }
-
-    private func setAllAccepted(_ isAccepted: Bool) {
-        guard var items = draft.proposal?.items.items else { return }
-        for index in items.indices { items[index].isAccepted = isAccepted }
-        withAnimation(.snappy) { draft.proposal?.items.items = items }
-    }
-
-    private func isNameValid(_ name: String) -> Bool {
-        store.validatedCategoryName(name) != nil
+    private var hasCandidates: Bool {
+        draft.proposal?.items.items.isEmpty == false
     }
 
     private var canApply: Bool {
         guard draft.state == .review, let proposal = draft.proposal else { return false }
-        return isNameValid(proposal.name) && proposal.items.items.contains(where: \.isAccepted)
+        return store.validatedCategoryName(proposal.name) != nil && proposal.items.items.contains(where: \.isAccepted)
     }
 
     private func apply() {
         if draft.apply(in: store) == nil { showsApplyFailure = true }
-    }
-
-    private var hasMatches: Bool {
-        draft.proposal?.items.items.isEmpty == false
     }
 
     // MARK: - Chrome
@@ -343,7 +187,7 @@ struct CategoryDraftSheet: View {
             }
             .accessibilityLabel(Text("Cancel"))
         }
-        if step == .review, hasMatches {
+        if step == .sieve {
             #if os(macOS)
                 ToolbarItem(placement: .destructiveAction) {
                     Button("Edit Description") { draft.edit() }
@@ -355,13 +199,17 @@ struct CategoryDraftSheet: View {
             #endif
         }
         #if os(macOS)
-            if step == .describing {
+            if primaryAction == .find {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Find Anime", action: start)
                         .disabled(!draft.canStart)
                         .keyboardShortcut(.return, modifiers: .command)
                 }
-            } else if step == .review, hasMatches {
+            } else if primaryAction == .stop {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Stop and Review") { draft.stop() }
+                }
+            } else if primaryAction == .create {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create Category", action: apply)
                         .disabled(!canApply)
@@ -374,12 +222,20 @@ struct CategoryDraftSheet: View {
     #if !os(macOS)
         @ViewBuilder
         private var bottomAction: some View {
-            switch step {
-            case .describing:
+            switch primaryAction {
+            case .find:
                 bottomButton("Find Anime", systemImage: "sparkles", isEnabled: draft.canStart, action: start)
-            case .review where hasMatches:
+            case .stop:
+                Button {
+                    draft.stop()
+                } label: {
+                    bottomLabel("Stop and Review", systemImage: "stop.fill")
+                }
+                .buttonStyle(.glass)
+                .modifier(BottomButtonLayout())
+            case .create:
                 bottomButton("Create Category", systemImage: "folder.badge.plus", isEnabled: canApply, action: apply)
-            case .working, .failed, .review:
+            case nil:
                 EmptyView()
             }
         }
@@ -391,15 +247,26 @@ struct CategoryDraftSheet: View {
             action: @escaping () -> Void
         ) -> some View {
             Button(action: action) {
-                Label(title, systemImage: systemImage)
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
+                bottomLabel(title, systemImage: systemImage)
             }
             .buttonStyle(.glassProminent)
-            .controlSize(.large)
             .disabled(!isEnabled)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 8)
+            .modifier(BottomButtonLayout())
+        }
+
+        private func bottomLabel(_ title: LocalizedStringKey, systemImage: String) -> some View {
+            Label(title, systemImage: systemImage)
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+        }
+
+        private struct BottomButtonLayout: ViewModifier {
+            func body(content: Content) -> some View {
+                content
+                    .controlSize(.large)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+            }
         }
     #endif
 }

@@ -191,7 +191,8 @@ client. Feature UI and Settings come in later slices.
   into batches as compact cards: batch index, display name, original name, year,
   type, localized genre names, and a truncated overview. Each batch returns
   `matchingIndices: [Int]`. Reasons are left out to save output tokens.
-- **Review:** an editable name, plus the matches with toggles. Apply calls
+- **Review:** an editable name, plus the candidates with toggles: matches accepted,
+  rejections collapsed under Not included (since [005](005-category-sieve.md)). Apply calls
   `LibraryStore.createCategory(named:)` and then
   `AnimeEntry.updateCategoryMembership(_:isMember:knownCategoryIDs:)` for each
   accepted entry, then saves.
@@ -284,3 +285,4 @@ need. If a later feature needs keyword retrieval, copy over `de239c2`
 - Updated 2026-10-28: Delivered the foundation slice without feature UI or Settings; validation and remaining boundaries are recorded in [002-foundation.md](002-foundation.md). The aggregate `001-action.md` is deferred until the last slice, following the multi-slice workflow.
 - Updated 2026-10-28: Provider reasoning is off by default (low/medium/high kept in code), the response reservation follows it, and the default models moved to `gpt-6-luna`; corrected the default-model text here and the budget row in 002 — see [003-reasoning-off.md](003-reasoning-off.md)
 - Updated 2026-10-29: Built the Smart Features settings page and "Describe a Category" (feature 1); the UI name is Smart Features. Corrected the Settings, entry-point, and plan-step text here, and resolved the naming question — see [004-settings-and-described-categories.md](004-settings-and-described-categories.md)
+- Updated 2026-10-30: "Describe a Category" replaces its progress and review steps with a live sieve: plan chips, a poster grid that resolves per batch, and a Not included section that can add rejections back. The runner reports per-batch events instead of counts. Corrected the Review bullet above — see [005-category-sieve.md](005-category-sieve.md)

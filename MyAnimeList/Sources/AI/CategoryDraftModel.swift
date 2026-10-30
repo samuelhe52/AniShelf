@@ -13,25 +13,61 @@ import os
 
 fileprivate let logger = Logger(subsystem: .bundleIdentifier, category: "CategoryDraft")
 
-/// One anime the model proposes for the new category.
-struct CategoryDraftCandidate: Identifiable, Sendable {
+/// Where a candidate stands in the check.
+enum CategoryDraftVerdict: Equatable, Sendable {
+    /// Not sent yet.
+    case pending
+    /// In a batch that is in flight.
+    case checking
+    case match
+    case rejected
+    /// Its batch failed for good, or the user stopped the run first.
+    case unchecked
+
+    var isResolved: Bool {
+        switch self {
+        case .pending, .checking: false
+        case .match, .rejected, .unchecked: true
+        }
+    }
+}
+
+/// One anime that passed the plan's filters.
+struct CategoryDraftCandidate: Identifiable, Equatable, Sendable {
     let id: LibraryEntryIdentity
-    /// What the review row shows, in the shape Batch Add's result rows take.
+    /// What the poster shows.
     let metadata: EntryMetadata
+    var verdict: CategoryDraftVerdict
+    /// Whether the review lists it under the category rather than under Not included.
+    ///
+    /// Set when the check settles, never by a toggle, so a tap never moves a poster.
+    var isListed = false
+    /// The candidate's position in the batch that resolved it, so a batch's results ripple in.
+    var revealIndex = 0
 }
 
 struct CategoryDraftProposal {
     var name: String
+    /// The filters the request was read as; the sieve shows them.
+    let plan: CategoryQueryPlan
+    /// Every candidate, sorted by name; only matches start accepted.
     var items: AIProposal<CategoryDraftCandidate>
-    /// Candidates whose batch failed; they are not in `items`.
-    var uncheckedCount: Int
-    /// A part of the request no filter could express; the review shows it, so it is never
+
+    var uncheckedCount: Int {
+        items.items.count { $0.value.verdict == .unchecked }
+    }
+
+    /// A part of the request no filter could express; the sieve shows it, so it is never
     /// dropped silently.
-    var unsupportedRequest: String = ""
+    var unsupportedRequest: String {
+        plan.trimmedUnsupportedRequest
+    }
 }
 
 /// Runs "Describe a Category": the plan step, the local filter, the batched check, and Apply.
 ///
+/// The proposal exists from the moment the plan arrives, and each batch updates its
+/// candidates' verdicts as it finishes, so the sieve shows the result forming.
 /// Nothing writes to the library before `apply(in:)`.
 @Observable
 @MainActor
@@ -39,15 +75,25 @@ final class CategoryDraftModel {
     enum State: Equatable {
         case describing
         case planning
-        case checking(done: Int, total: Int)
+        case checking
         case review
         case failed(AIError)
         case applied(LibraryCategory.ID)
     }
 
+    /// What a check needs to run again over the unchecked candidates.
+    private struct CheckContext {
+        let generator: any AIStructuredGenerator
+        let instructions: String
+        let budget: AIContextBudget
+        let cards: [LibraryEntryIdentity: String]
+    }
+
     var request = ""
     var proposal: CategoryDraftProposal?
     private(set) var state: State = .describing
+    /// Whether Check Again is running over the unchecked candidates.
+    private(set) var isRechecking = false
 
     let backend: AIBackend
     private let makeGenerator: @MainActor () -> any AIStructuredGenerator
@@ -56,6 +102,7 @@ final class CategoryDraftModel {
     private let calendar: Calendar
     private let now: () -> Date
     private var task: Task<Void, Never>?
+    private var check: CheckContext?
 
     init(
         backend: AIBackend,
@@ -93,8 +140,13 @@ final class CategoryDraftModel {
     var isRunning: Bool {
         switch state {
         case .planning, .checking: true
-        default: false
+        default: isRechecking
         }
+    }
+
+    /// Whether Check Again can run: the check got far enough to have its instructions.
+    var canRecheck: Bool {
+        state == .review && !isRechecking && check != nil && (proposal?.uncheckedCount ?? 0) > 0
     }
 
     func start(library: [AnimeEntry]) {
@@ -104,6 +156,7 @@ final class CategoryDraftModel {
         let entries = library.filter(\.onDisplay).map { CategoryDraftEntry($0, calendar: calendar) }
         state = .planning
         proposal = nil
+        check = nil
         task = Task { [weak self] in
             await self?.run(request: request, entries: entries)
         }
@@ -113,6 +166,8 @@ final class CategoryDraftModel {
     func cancel() {
         task?.cancel()
         task = nil
+        check = nil
+        isRechecking = false
         if isRunning || state == .review || isFailed {
             state = .describing
             proposal = nil
@@ -130,13 +185,49 @@ final class CategoryDraftModel {
         start(library: library)
     }
 
+    /// Ends the check early and reviews what it found; the rest count as unchecked.
+    func stop() {
+        guard state == .checking, proposal != nil else { return }
+        task?.cancel()
+        task = nil
+        abandonUnresolved()
+        settle()
+    }
+
+    /// Checks the unchecked candidates again; new matches join the category's list.
+    func recheck() {
+        guard canRecheck, let check, let proposal else { return }
+        let ids = proposal.items.items.map(\.value).filter { $0.verdict == .unchecked }.map(\.id)
+        update(Set(ids)) { $0.verdict = .pending }
+        isRechecking = true
+        task = Task { [weak self] in
+            guard let self else { return }
+            do {
+                _ = try await runCheck(ids, context: check)
+            } catch {
+                guard !Task.isCancelled, !(error is CancellationError) else { return }
+                abandonUnresolved()
+            }
+            guard !Task.isCancelled else { return }
+            isRechecking = false
+            settle(only: Set(ids))
+        }
+    }
+
     /// Creates the category and adds the accepted anime to it.
     ///
     /// Returns `nil` for an invalid name, or when no accepted anime is still visible in the
     /// library (for example, another window deleted them during the review).
     @discardableResult
     func apply(in store: LibraryStore) -> LibraryCategory.ID? {
-        guard state == .review, let proposal else { return nil }
+        guard state == .review else { return nil }
+        if isRechecking {
+            task?.cancel()
+            task = nil
+            isRechecking = false
+            abandonUnresolved()
+        }
+        guard let proposal else { return nil }
         let accepted = Set(proposal.items.acceptedValues.map(\.id))
         let entries = store.library.filter { $0.onDisplay && accepted.contains($0.libraryIdentity) }
         guard !entries.isEmpty, let category = store.createCategory(named: proposal.name) else { return nil }
@@ -173,38 +264,68 @@ final class CategoryDraftModel {
             try Task.checkCancellation()
 
             let candidates = plan.candidates(in: entries)
-            let name = Self.categoryName(from: plan.name, request: request)
-            guard plan.needsCheck, !candidates.isEmpty else {
-                finish(name: name, matches: candidates, uncheckedCount: 0, unsupported: plan.trimmedUnsupportedRequest)
+            let needsCheck = plan.needsCheck && !candidates.isEmpty
+            propose(
+                plan: plan, name: Self.categoryName(from: plan.name, request: request), candidates: candidates,
+                verdict: needsCheck ? .pending : .match
+            )
+            guard needsCheck else {
+                settle()
                 return
             }
 
-            state = .checking(done: 0, total: candidates.count)
-            let checkInstructions = plan.checkInstructions()
-            let checkBudget = try await budget(for: AIBatchSelection.self, instructions: checkInstructions)
-            let items = candidates.map { AIBatchItem(identity: $0.id, text: $0.card) }
-            let runner = AIBatchRunner(
-                generator: generator, budget: checkBudget, instructions: checkInstructions,
-                maximumConcurrentBatches: backend.maximumConcurrentBatches, retry: retry)
-            let result = try await runner.run(items, generating: AIBatchSelection.self) { [weak self] done, total in
-                guard let self, !Task.isCancelled else { return }
-                state = .checking(done: done, total: total)
-            }
+            state = .checking
+            let instructions = plan.checkInstructions()
+            let context = CheckContext(
+                generator: generator, instructions: instructions,
+                budget: try await budget(for: AIBatchSelection.self, instructions: instructions),
+                cards: Dictionary(candidates.map { ($0.id, $0.card) }, uniquingKeysWith: { first, _ in first })
+            )
+            try Task.checkCancellation()
+            check = context
+            let result = try await runCheck(candidates.map(\.id), context: context)
             try Task.checkCancellation()
 
-            let uncheckedCount = result.failures.reduce(0) { $0 + $1.identities.count }
             // Every batch failed: there is no partial answer to review.
-            if result.values.isEmpty, uncheckedCount == candidates.count, let failure = result.failures.first {
+            if result.values.isEmpty, proposal?.uncheckedCount == candidates.count, let failure = result.failures.first
+            {
                 throw failure.reason
             }
-            let matched = Set(result.values.map(\.identity))
-            finish(
-                name: name, matches: candidates.filter { matched.contains($0.id) }, uncheckedCount: uncheckedCount,
-                unsupported: plan.trimmedUnsupportedRequest
-            )
+            settle()
         } catch {
             guard !Task.isCancelled, !(error is CancellationError) else { return }
             state = .failed(error as? AIError ?? .requestFailed)
+        }
+    }
+
+    /// Checks `ids` in library order, recording each batch's verdicts as it finishes.
+    private func runCheck(
+        _ ids: [LibraryEntryIdentity], context: CheckContext
+    ) async throws -> AIBatchResult<LibraryEntryIdentity, Bool> {
+        let runner = AIBatchRunner(
+            generator: context.generator, budget: context.budget, instructions: context.instructions,
+            maximumConcurrentBatches: backend.maximumConcurrentBatches, retry: retry)
+        let items = ids.compactMap { id in context.cards[id].map { AIBatchItem(identity: id, text: $0) } }
+        return try await runner.run(items, generating: AIBatchSelection.self) { [weak self] event in
+            guard let self, !Task.isCancelled else { return }
+            record(event)
+        }
+    }
+
+    private func record(_ event: AIBatchEvent<LibraryEntryIdentity, Bool>) {
+        switch event {
+        case .started(let ids):
+            update(Set(ids)) { $0.verdict = .checking }
+        case .finished(let ids, let result):
+            let matched = Set(result.values.map(\.identity))
+            let failed = Set(result.failures.flatMap(\.identities))
+            let order = Dictionary(ids.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
+            updateItems(Set(ids)) { candidate, isAccepted in
+                candidate.verdict =
+                    failed.contains(candidate.id) ? .unchecked : matched.contains(candidate.id) ? .match : .rejected
+                candidate.revealIndex = order[candidate.id] ?? 0
+                if candidate.verdict == .match { isAccepted = true }
+            }
         }
     }
 
@@ -215,19 +336,54 @@ final class CategoryDraftModel {
         return try await AIContextBudget.make(backend: backend, instructions: instructions, generating: type)
     }
 
-    private func finish(name: String, matches: [CategoryDraftEntry], uncheckedCount: Int, unsupported: String) {
+    private func propose(
+        plan: CategoryQueryPlan, name: String, candidates: [CategoryDraftEntry], verdict: CategoryDraftVerdict
+    ) {
         guard !Task.isCancelled else { return }
-        let candidates = matches.map {
-            CategoryDraftCandidate(id: $0.id, metadata: $0.metadata)
+        let items = candidates.map { CategoryDraftCandidate(id: $0.id, metadata: $0.metadata, verdict: verdict) }
+            .sorted { $0.metadata.name.localizedStandardCompare($1.metadata.name) == .orderedAscending }
+            .map { AIProposal.Item(value: $0, isAccepted: verdict == .match) }
+        proposal = CategoryDraftProposal(name: name, plan: plan, items: AIProposal(items: items))
+    }
+
+    /// Lists the matches and anything the user accepted, and shows the review.
+    ///
+    /// With `only`, just those candidates are placed; the rest keep their place.
+    private func settle(only ids: Set<LibraryEntryIdentity>? = nil) {
+        if let ids {
+            updateItems(ids) { candidate, _ in candidate.isListed = candidate.verdict == .match }
+        } else if var proposal {
+            for index in proposal.items.items.indices {
+                let item = proposal.items.items[index]
+                proposal.items.items[index].value.isListed = item.value.verdict == .match || item.isAccepted
+            }
+            self.proposal = proposal
         }
-        .sorted { $0.metadata.name.localizedStandardCompare($1.metadata.name) == .orderedAscending }
-        proposal = CategoryDraftProposal(
-            name: name,
-            items: AIProposal(items: candidates.map { AIProposal.Item(value: $0) }),
-            uncheckedCount: uncheckedCount,
-            unsupportedRequest: unsupported
-        )
         state = .review
+    }
+
+    /// Marks every candidate still waiting for an answer as unchecked.
+    private func abandonUnresolved() {
+        guard let proposal else { return }
+        let waiting = proposal.items.items.map(\.value).filter { !$0.verdict.isResolved }.map(\.id)
+        update(Set(waiting)) { $0.verdict = .unchecked }
+    }
+
+    private func update(_ ids: Set<LibraryEntryIdentity>, _ change: (inout CategoryDraftCandidate) -> Void) {
+        updateItems(ids) { candidate, _ in change(&candidate) }
+    }
+
+    /// Changes the given candidates in one write, so the sieve redraws once per batch.
+    private func updateItems(
+        _ ids: Set<LibraryEntryIdentity>, _ change: (inout CategoryDraftCandidate, inout Bool) -> Void
+    ) {
+        guard !ids.isEmpty, var proposal else { return }
+        for index in proposal.items.items.indices where ids.contains(proposal.items.items[index].value.id) {
+            var item = proposal.items.items[index]
+            change(&item.value, &item.isAccepted)
+            proposal.items.items[index] = item
+        }
+        self.proposal = proposal
     }
 
     /// The model's name, trimmed to the category limit, or the request when the model gave none.

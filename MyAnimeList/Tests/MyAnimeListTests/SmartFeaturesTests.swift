@@ -113,15 +113,19 @@ struct SmartFeaturesTests {
                 == Set(entries.filter { $0.watchStatus == .watched }.map(\.tmdbID)))
     }
 
-    @Test func criterionRequestReviewsMatchesAndCountsFailedBatches() async throws {
+    @Test func criterionRequestKeepsEveryVerdictAndListsOnlyMatches() async throws {
         let (store, _) = try makeStore()
         var plan = emptyPlan(name: "Fantasy")
         plan.semanticCriterion = "set in a fantasy world"
-        // Call 1 is the plan step. Each later call is one single-card batch: the card matches,
-        // the invented index 42 is dropped, and the second batch fails for good.
+        // Call 1 is the plan step. Each later call is one single-card batch: the card matches
+        // (the invented index 42 is dropped), except that the second batch fails for good and
+        // the third matches nothing.
         let fake = DraftFakeGenerator(plan: plan) { call in
-            if call == 3 { throw AIError.requestFailed }
-            return [0, 42]
+            switch call {
+            case 3: throw AIError.requestFailed
+            case 4: return []
+            default: return [0, 42]
+            }
         }
         let draft = makeDraft(fake, budget: oneCardBudget())
         draft.request = "fantasy"
@@ -131,8 +135,44 @@ struct SmartFeaturesTests {
         #expect(draft.state == .review)
         #expect(fake.prompts.count == 5)
         let proposal = try #require(draft.proposal)
-        #expect(proposal.items.items.count == 3)
+        let verdicts = proposal.items.items.map(\.value.verdict)
+        #expect(verdicts.count(where: { $0 == .match }) == 2)
+        #expect(verdicts.count(where: { $0 == .rejected }) == 1)
         #expect(proposal.uncheckedCount == 1)
+        // Only matches start accepted and listed; the rest wait under Not included.
+        for item in proposal.items.items {
+            #expect(item.isAccepted == (item.value.verdict == .match))
+            #expect(item.value.isListed == item.isAccepted)
+        }
+    }
+
+    @Test func stopReviewsWhatWasFoundAndCheckAgainListsNewMatches() async throws {
+        let (store, _) = try makeStore()
+        var plan = emptyPlan(name: "Fantasy")
+        plan.semanticCriterion = "set in a fantasy world"
+        // The four single-card batches run at once: the first matches, the others hang until
+        // the user stops. Check Again then matches the three it sends.
+        let fake = DraftFakeGenerator(plan: plan) { call in call == 2 || call > 5 ? [0] : [] }
+        fake.hangs = { (3...5).contains($0) }
+        let draft = makeDraft(fake, budget: oneCardBudget())
+        draft.request = "fantasy"
+        draft.start(library: store.library)
+        await waitUntil { draft.proposal?.items.items.contains { $0.value.verdict == .match } == true }
+
+        draft.stop()
+        #expect(draft.state == .review)
+        var proposal = try #require(draft.proposal)
+        #expect(proposal.uncheckedCount == 3)
+        #expect(proposal.items.items.count(where: \.value.isListed) == 1)
+        #expect(draft.canRecheck)
+
+        fake.hangs = { _ in false }
+        draft.recheck()
+        await settle(draft)
+        #expect(fake.prompts.count == 8)
+        proposal = try #require(draft.proposal)
+        #expect(proposal.uncheckedCount == 0)
+        #expect(proposal.items.items.allSatisfy { $0.isAccepted && $0.value.isListed })
     }
 
     @Test func everyBatchFailingShowsTheError() async throws {
@@ -249,7 +289,7 @@ struct SmartFeaturesTests {
         CategoryQueryPlan(
             name: name, kinds: [], watchStatuses: [], favoritesOnly: false, minimumScore: 0, maximumScore: 0,
             earliestYear: 0, latestYear: 0, earliestFinishYear: 0, latestFinishYear: 0, semanticCriterion: "",
-            unsupportedRequest: ""
+            criterionLabel: "", unsupportedRequest: ""
         )
     }
 
@@ -311,17 +351,24 @@ struct SmartFeaturesTests {
     }
 
     private func settle(_ draft: CategoryDraftModel) async {
-        for _ in 0..<2000 where draft.isRunning {
+        await waitUntil { !draft.isRunning }
+    }
+
+    private func waitUntil(_ condition: () -> Bool) async {
+        for _ in 0..<2000 where !condition() {
             try? await Task.sleep(for: .milliseconds(1))
         }
     }
 }
 
 /// Answers the plan step with a fixed plan and each batch with `select(callNumber)`.
+///
+/// A call that `hangs` waits until its task is cancelled.
 @MainActor
 fileprivate final class DraftFakeGenerator: AIStructuredGenerator {
     let plan: CategoryQueryPlan
     let select: (Int) throws -> [Int]
+    var hangs: (Int) -> Bool = { _ in false }
     private(set) var prompts: [String] = []
 
     init(plan: CategoryQueryPlan, select: @escaping (Int) throws -> [Int]) {
@@ -334,6 +381,7 @@ fileprivate final class DraftFakeGenerator: AIStructuredGenerator {
     ) async throws -> Value {
         prompts.append(prompt)
         if type == CategoryQueryPlan.self { return try Value(plan.generatedContent) }
+        if hangs(prompts.count) { try await Task.sleep(for: .seconds(60)) }
         return try Value(AIBatchSelection(matchingIndices: select(prompts.count)).generatedContent)
     }
 }

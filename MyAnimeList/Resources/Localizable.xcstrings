@@ -17,6 +17,22 @@
         }
       }
     },
+    "%@ found" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@作品が該当"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "找到%@部"
+          }
+        }
+      }
+    },
     "%@ receives the titles, studios, genres, and overviews of the anime it checks, with your description. Requests go from this device to %@ with your key." : {
       "localizations" : {
         "ja" : {
@@ -33,6 +49,86 @@
         }
       }
     },
+    "%@★ or higher" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@★以上"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@★及以上"
+          }
+        }
+      }
+    },
+    "%@★ or lower" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@★以下"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@★及以下"
+          }
+        }
+      }
+    },
+    "%lld could not be checked" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld作品を確認できませんでした"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld部未能检查"
+          }
+        }
+      }
+    },
+    "%lld of %lld checked" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld作品中%1$lld作品を確認済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已检查%1$lld/%2$lld部"
+          }
+        }
+      }
+    },
+    "%lld selected" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld作品を選択中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已选择%lld部"
+          }
+        }
+      }
+    },
     "AniShelf did not check this model. It must support structured output, or every request fails. Some models are slower, cost more, or answer less accurately. Use Test to check it." : {
       "localizations" : {
         "ja" : {
@@ -45,6 +141,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "AniShelf未验证此模型。模型必须支持结构化输出，否则所有请求都会失败。部分模型速度较慢、费用更高或准确度较低。请使用“测试”进行检查。"
+          }
+        }
+      }
+    },
+    "Check Again" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新检查"
+          }
+        }
+      }
+    },
+    "Checking" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在检查"
+          }
+        }
+      }
+    },
+    "Checking %lld again…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld作品を再確認中…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在重新检查%lld部…"
+          }
+        }
+      }
+    },
+    "Could not be checked" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認できませんでした"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未能检查"
           }
         }
       }
@@ -81,18 +241,114 @@
         }
       }
     },
-    "Not applied: “%@”. AniShelf cannot filter by this, so the list ignores it." : {
+    "Finished %@" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "未適用：「%@」。AniShelfではこの条件で絞り込めないため、一覧には反映されていません。"
+            "value" : "%@に視聴完了"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "未应用：“%@”。AniShelf无法按此条件筛选，列表已忽略它。"
+            "value" : "%@看完"
+          }
+        }
+      }
+    },
+    "In this category" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このカテゴリ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此分类中"
+          }
+        }
+      }
+    },
+    "No matches. Pick from Not included below, or edit the description." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一致するアニメはありません。下の「対象外」から選ぶか、説明を編集してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有匹配的动画。可从下方“未包含”中选择，或编辑描述。"
+          }
+        }
+      }
+    },
+    "Not applied. AniShelf cannot filter by this, so the list ignores it." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未適用。AniShelfではこの条件で絞り込めないため、一覧には反映されていません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未应用。AniShelf无法按此条件筛选，列表已忽略它。"
+          }
+        }
+      }
+    },
+    "Not included" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "対象外"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未包含"
+          }
+        }
+      }
+    },
+    "Not selected" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未選択"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未选择"
+          }
+        }
+      }
+    },
+    "Stop and Review" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止して確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止并查看"
           }
         }
       }
@@ -113,6 +369,22 @@
         }
       }
     },
+    "The model left these out. Tap a poster to add it." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "モデルが除外した作品です。ポスターをタップすると追加できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模型排除了这些动画。轻点海报即可添加。"
+          }
+        }
+      }
+    },
     "The name is already taken, or the selected anime are no longer in your library." : {
       "localizations" : {
         "ja" : {
@@ -125,6 +397,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "名称已被使用，或所选动画已不在资料库中。"
+          }
+        }
+      }
+    },
+    "“%@”" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「%@」"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%@”"
           }
         }
       }
@@ -10832,7 +11120,6 @@
       }
     },
     "Selected" : {
-      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -14048,54 +14335,6 @@
         }
       }
     },
-    "%lld anime could not be checked. They are not in the list." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld作品を確認できませんでした。一覧には含まれていません。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "有%lld部动画未能检查，未列入列表。"
-          }
-        }
-      }
-    },
-    "%lld anime could not be checked. Try again, or try a broader description." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld作品を確認できませんでした。再試行するか、より広い説明を試してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "有%lld部动画未能检查。请重试，或尝试更宽泛的描述。"
-          }
-        }
-      }
-    },
-    "%lld of %lld anime" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%2$lld作品中%1$lld作品"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%2$lld部动画中的%1$lld部"
-          }
-        }
-      }
-    },
     "API Key" : {
       "localizations" : {
         "ja" : {
@@ -15116,38 +15355,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "查找动画"
-          }
-        }
-      }
-    },
-    "Select All" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "すべて選択"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "全选"
-          }
-        }
-      }
-    },
-    "Checking %lld of %lld anime" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%2$lld作品中%1$lld作品を確認中"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正在检查第%1$lld/%2$lld部动画"
           }
         }
       }

@@ -13,7 +13,7 @@ import Foundation
 struct AIProposal<Value> {
     struct Item: Identifiable {
         let id: UUID
-        let value: Value
+        var value: Value
         var isAccepted: Bool
 
         init(id: UUID = UUID(), value: Value, isAccepted: Bool = true) {

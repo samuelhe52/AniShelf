@@ -16,12 +16,14 @@
     /// requests, and retries, but costs nothing and never leaves the device. Each reply arrives
     /// after a latency similar to a real one.
     ///
-    /// - Planning keeps every filter open and passes the whole description on as the criterion.
+    /// - Planning passes the whole description on as the criterion. Only three words set a
+    ///   filter: "movies" (kind), "finished" (watch status), and "favorites".
     /// - A check matches cards that contain a word of the criterion, such as a genre, and about
     ///   a fifth of the rest, so non-English descriptions find something too.
     /// - Markers in a description simulate failures: `#fail` fails planning with HTTP 500,
-    ///   `#flaky` fails about a third of the check batches with HTTP 503 on every attempt, and
-    ///   `#none` matches nothing.
+    ///   `#flaky` fails about a third of the check batches with HTTP 503 on every attempt for
+    ///   15 s (longer than the retries take, so the run counts them unchecked, and short
+    ///   enough for Check Again to recover them), and `#none` matches nothing.
     final class AIFixtureProvider: URLProtocol, @unchecked Sendable {
         /// A reserved host, so a request that escapes the protocol cannot reach a real server.
         static let baseURL = URL(string: "https://ai-fixture.invalid/v1")!
@@ -109,7 +111,9 @@
                     } ?? ""
                 let seed = fnv1a(prompt)
                 let latency = 0.6 + Double(seed % 1_000) / 1_000 * 1.4
-                if criterion.contains("#flaky"), seed % 3 == 0 { return Reply(status: 503, latency: latency) }
+                if criterion.contains("#flaky"), seed % 3 == 0, isStillFlaky(seed) {
+                    return Reply(status: 503, latency: latency)
+                }
                 let indices =
                     criterion.contains("#none")
                     ? [] : cards(in: prompt).filter { matches($0.text, criterion: criterion) }.map(\.index)
@@ -120,14 +124,28 @@
             return Reply(status: 400, latency: 0.2)
         }
 
+        /// When each failing `#flaky` prompt first failed.
+        private static let flakyFailures = OSAllocatedUnfairLock<[UInt64: Date]>(initialState: [:])
+
+        private static func isStillFlaky(_ seed: UInt64) -> Bool {
+            flakyFailures.withLock { failures in
+                let first = failures[seed] ?? .now
+                failures[seed] = first
+                return Date.now.timeIntervalSince(first) < 15
+            }
+        }
+
         private static func plan(for request: String) -> [String: Any] {
             let name = request.replacing(#/[#]\w+/#, with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let words = Set(request.lowercased().split { !$0.isLetter }.map(String.init))
             return [
                 "name": String(name.prefix(40)),
-                "kinds": [String](), "watchStatuses": [String](), "favoritesOnly": false,
+                "kinds": words.contains("movies") ? ["movie"] : [String](),
+                "watchStatuses": words.contains("finished") ? ["watched"] : [String](),
+                "favoritesOnly": words.contains("favorites"),
                 "minimumScore": 0, "maximumScore": 0, "earliestYear": 0, "latestYear": 0,
                 "earliestFinishYear": 0, "latestFinishYear": 0,
-                "semanticCriterion": request, "unsupportedRequest": ""
+                "semanticCriterion": request, "criterionLabel": String(name.prefix(30)), "unsupportedRequest": ""
             ]
         }
 
