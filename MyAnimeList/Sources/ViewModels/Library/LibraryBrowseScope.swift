@@ -173,45 +173,176 @@ final class LibraryBrowseScope {
         display.entriesByID[identity]
     }
 
-    /// The filtered, sorted display list, recomputed only after something it read changes
-    /// (docs-ai 023).
+    /// The filtered, sorted display list, rebuilt only where something it read changed
+    /// (docs-ai 023 and 040).
     ///
     /// Observation tracking covers every input the computation reads, including the entries'
     /// own properties, so unsaved edits such as favorite toggles invalidate it like saves do.
-    /// The cache is cleared in the input's `willSet` and rebuilt on the next read, which runs in
-    /// the mutating caller's transaction and keeps its animation.
+    /// Each entry has its own registration: a change to one entry rebuilds only that entry's
+    /// row and order inputs, and re-sorts only if those inputs changed. The assembled list is
+    /// cleared in the input's `willSet` and rebuilt on the next read, which runs in the
+    /// mutating caller's transaction and keeps its animation.
     private var display: LibraryDisplayCache {
         _ = displayGeneration
         if let displayCache { return displayCache }
         displayComputeCount += 1
-        let cache = withObservationTracking {
-            // Background writes and import replays reach these models without observation, so
-            // their explicit refresh signals rebuild the rows too (docs-ai 039).
-            _ = store.libraryRevision
-            _ = store.backgroundWriteRevision
-            return LibraryDisplayCache(
-                items: filterAndSort(store.library).map { entry in
-                    // SwiftData can hand out new instances of child models such as episode
-                    // progress between reads, so edits to them may never reach this tracking.
-                    // Tracked edits also stamp the entry's own clock, which is observed reliably.
-                    _ = entry.trackingUpdatedAt
-                    return LibraryEntryDisplayItem(entry: entry)
-                }
-            )
-        } onChange: { [weak self] in
-            if Thread.isMainThread {
-                MainActor.assumeIsolated { self?.invalidateDisplay() }
-            } else {
-                Task { @MainActor in self?.invalidateDisplay() }
-            }
+        // A read during an invalidation runs in the input's `willSet` and sees the old values;
+        // answer it without storing anything, as the next read rebuilds anyway.
+        guard !isInvalidatingDisplay else {
+            return LibraryDisplayCache(items: filterAndSort(store.library).map(LibraryEntryDisplayItem.init))
         }
-        if !isInvalidatingDisplay {
-            displayCache = cache
-        }
+        isComputingDisplay = true
+        let cache = computeDisplay()
+        isComputingDisplay = false
+        displayCache = cache
+        // Changes reported while computing apply now, so none is lost to the stored records.
+        let deferred = deferredInvalidations
+        deferredInvalidations = []
+        for invalidation in deferred { invalidation(self) }
         return cache
     }
 
+    private func computeDisplay() -> LibraryDisplayCache {
+        let library = trackListInputs()
+        var needsSort = order == nil
+        var keptRecords: [ObjectIdentifier: EntryRecord] = [:]
+        keptRecords.reserveCapacity(library.count)
+        for entry in library {
+            let id = ObjectIdentifier(entry)
+            let record: EntryRecord
+            if let cached = records[id], !cached.isStale {
+                record = cached
+            } else {
+                record = track(entry)
+            }
+            if records[id]?.inputs != record.inputs { needsSort = true }
+            keptRecords[id] = record
+        }
+        records = keptRecords
+
+        if needsSort {
+            let definition = orderDefinition
+            order =
+                library
+                .compactMap { entry in
+                    records[ObjectIdentifier(entry)].map { (entry, definition.key(for: $0.inputs)) }
+                }
+                .filter(\.1.isShown)
+                .sorted { definition.precedes($0.1, $1.1) }
+                .map(\.0)
+        }
+        return LibraryDisplayCache(items: (order ?? []).compactMap { records[ObjectIdentifier($0)]?.item })
+    }
+
+    // MARK: - Display records
+
+    /// One entry's row and order inputs, observed by one registration.
+    ///
+    /// The registration reads the same values whatever this window's filters or sort, so a
+    /// setting change reuses it: Observation offers no way to cancel a registration before
+    /// it fires, and replacing registrations on every change would pile up observers on each
+    /// entry. A record registers again only after its registration fired.
+    private struct EntryRecord {
+        let item: LibraryEntryDisplayItem
+        let inputs: LibraryDisplayOrderInputs
+        let token: UInt64
+        var isStale = false
+    }
+
+    @ObservationIgnored private var records: [ObjectIdentifier: EntryRecord] = [:]
+    /// The shown entries in display order; `nil` once they need sorting again.
+    @ObservationIgnored private var order: [AnimeEntry]?
+    @ObservationIgnored private var trackedLibrary: [AnimeEntry]?
+    @ObservationIgnored private var listToken: UInt64?
+    @ObservationIgnored private var trackingToken: UInt64 = 0
+    /// How many row snapshots were built; tests use it to check that updates stay per entry.
+    @ObservationIgnored private(set) var rowBuildCount = 0
+
+    private var orderDefinition: LibraryDisplayOrderDefinition {
+        LibraryDisplayOrderDefinition(
+            filters: filters,
+            activeCategoryID: activeCategoryID,
+            hidesDropped: store.hideDroppedByDefault,
+            sortStrategy: sortStrategy,
+            sortReversed: sortReversed,
+            groupStrategy: groupStrategy
+        )
+    }
+
+    /// Reads the library and this window's settings; a change to them sorts again.
+    private func trackListInputs() -> [AnimeEntry] {
+        if let trackedLibrary { return trackedLibrary }
+        let token = nextToken()
+        listToken = token
+        let library = withObservationTracking {
+            _ = orderDefinition
+            return store.library
+        } onChange: { [weak self] in
+            self?.onMain { scope in
+                guard scope.listToken == token else { return }
+                scope.listToken = nil
+                scope.trackedLibrary = nil
+                scope.order = nil
+                scope.invalidateDisplay()
+            }
+        }
+        trackedLibrary = library
+        return library
+    }
+
+    private func track(_ entry: AnimeEntry) -> EntryRecord {
+        let id = ObjectIdentifier(entry)
+        let token = nextToken()
+        rowBuildCount += 1
+        let (item, inputs) = withObservationTracking {
+            // SwiftData can hand out new instances of child models such as episode progress
+            // between reads, so edits to them may never reach this tracking. Tracked edits also
+            // stamp the entry's own clock, which is observed reliably.
+            _ = entry.trackingUpdatedAt
+            // Background writes and import replays change values without observation, and a
+            // refetch can hand out new child-model instances that this registration does not
+            // observe. Their explicit refresh signals fire every record's registration, which
+            // also removes it, so each entry registers again on current instances (docs-ai 039).
+            _ = store.libraryRevision
+            _ = store.backgroundWriteRevision
+            return (LibraryEntryDisplayItem(entry: entry), LibraryDisplayOrderInputs(entry: entry))
+        } onChange: { [weak self] in
+            self?.onMain { scope in
+                guard scope.records[id]?.token == token else { return }
+                scope.records[id]?.isStale = true
+                scope.invalidateDisplay()
+            }
+        }
+        return EntryRecord(item: item, inputs: inputs, token: token)
+    }
+
+    private func nextToken() -> UInt64 {
+        trackingToken &+= 1
+        return trackingToken
+    }
+
+    @ObservationIgnored private var isComputingDisplay = false
+    @ObservationIgnored private var deferredInvalidations: [@MainActor (LibraryBrowseScope) -> Void] = []
+
+    private nonisolated func onMain(_ body: @escaping @MainActor (LibraryBrowseScope) -> Void) {
+        let run: @MainActor (LibraryBrowseScope) -> Void = { scope in
+            if scope.isComputingDisplay {
+                scope.deferredInvalidations.append(body)
+            } else {
+                body(scope)
+            }
+        }
+        if Thread.isMainThread {
+            MainActor.assumeIsolated { run(self) }
+        } else {
+            Task { @MainActor in run(self) }
+        }
+    }
+
     private func invalidateDisplay() {
+        // Many records can report one change together, as a revision bump does; the first
+        // report already told readers to rebuild.
+        guard displayCache != nil else { return }
         isInvalidatingDisplay = true
         defer { isInvalidatingDisplay = false }
         displayCache = nil
@@ -220,14 +351,11 @@ final class LibraryBrowseScope {
     }
 
     func filterAndSort(_ entries: [AnimeEntry]) -> [AnimeEntry] {
-        // The active category narrows the library before the status and type filters (AND).
-        let scopedEntries: [AnimeEntry]
-        if let activeCategoryID {
-            scopedEntries = entries.filter { $0.categoryIDs.contains(activeCategoryID) }
-        } else {
-            scopedEntries = entries
-        }
-        return scopedEntries.filter(matchesBrowseFilters).sorted(by: compareEntriesForDisplay)
+        let definition = orderDefinition
+        return entries.map { ($0, definition.key(for: LibraryDisplayOrderInputs(entry: $0))) }
+            .filter(\.1.isShown)
+            .sorted { definition.precedes($0.1, $1.1) }
+            .map(\.0)
     }
 
     // MARK: - Scope
@@ -269,37 +397,6 @@ final class LibraryBrowseScope {
             return false
         }
         return filters.isEmpty || filters.contains { $0.evaluate(entry) }
-    }
-
-    private func compareEntriesForDisplay(_ lhs: AnimeEntry, _ rhs: AnimeEntry) -> Bool {
-        let lhsGroupRank = groupStrategy.rank(for: lhs)
-        let rhsGroupRank = groupStrategy.rank(for: rhs)
-
-        if lhsGroupRank != rhsGroupRank {
-            return lhsGroupRank < rhsGroupRank
-        }
-
-        return compareWithinCurrentGroup(lhs, rhs)
-    }
-
-    private func compareWithinCurrentGroup(_ lhs: AnimeEntry, _ rhs: AnimeEntry) -> Bool {
-        let comparisons: [(AnimeEntry, AnimeEntry) -> Bool] = [
-            sortStrategy.compare,
-            { $0.dateSaved < $1.dateSaved },
-            { $0.tmdbID < $1.tmdbID }
-        ]
-
-        // Reverse only applies to the ordering inside each active group.
-        for comparison in comparisons {
-            if comparison(lhs, rhs) {
-                return !sortReversed
-            }
-            if comparison(rhs, lhs) {
-                return sortReversed
-            }
-        }
-
-        return false
     }
 
     private static var isScoringEnabled: Bool {

@@ -414,9 +414,11 @@ struct LibrarySortingAndDeletionTests {
         // Edits to child models can miss observation, so the entry's tracking clock alone
         // must invalidate the list.
         let computeCount = scope.displayComputeCount
+        let rowBuilds = scope.rowBuildCount
         favorite.markTrackingModified()
         _ = scope.entriesOnDisplay
         #expect(scope.displayComputeCount == computeCount + 1)
+        #expect(scope.rowBuildCount == rowBuilds + 1)
 
         scope.filters = []
         store.hideDroppedByDefault = true
@@ -434,6 +436,48 @@ struct LibrarySortingAndDeletionTests {
 
         store.hideDroppedByDefault = false
         #expect(scope.entriesOnDisplay.contains { $0.tmdbID == dropped.tmdbID })
+    }
+
+    @Test @MainActor func testDisplayUpdatesRebuildOnlyTheChangedEntry() throws {
+        try withRestoredLibrarySortingPreferences {
+            let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+            let scope = LibraryBrowseScope(store: store)
+            let entries = ["Alpha", "Bravo", "Charlie"].enumerated().map { index, name in
+                let entry = makeLibraryEntry(name: name, tmdbID: 501 + index, daySaved: index + 1)
+                entry.detail = AnimeEntryDetail(language: "en-US", title: name, runtimeMinutes: 90)
+                return entry
+            }
+            for entry in entries { try store.repository.newEntry(entry) }
+            scope.sortStrategy = .alphabetical
+            scope.sortReversed = false
+            scope.filters = [.planToWatch]
+            let order = scope.displayIDs
+            #expect(order == entries.map(\.libraryIdentity))
+
+            // A row-only value rebuilds that row and keeps the order without re-sorting.
+            var rowBuilds = scope.rowBuildCount
+            entries[0].detail?.runtimeMinutes = 120
+            #expect(scope.displayItems.first?.snapshot.primaryMetadata.contains { $0.contains("120") } == true)
+            #expect(scope.rowBuildCount == rowBuilds + 1)
+            #expect(scope.displayIDs == order)
+
+            // A sort value moves the entry; the other rows are reused.
+            rowBuilds = scope.rowBuildCount
+            entries[0].name = "Zulu"
+            #expect(scope.displayIDs == [entries[1], entries[2], entries[0]].map(\.libraryIdentity))
+            #expect(scope.rowBuildCount <= rowBuilds + 1)
+
+            // A filter input hides the entry.
+            entries[1].watchStatus = .watched
+            #expect(scope.displayIDs == [entries[2], entries[0]].map(\.libraryIdentity))
+
+            // A refetch can hand out new child-model instances, so it must not leave rows
+            // observing the old ones.
+            try store.refreshLibrary()
+            _ = scope.displayItems
+            entries[2].detail?.runtimeMinutes = 150
+            #expect(scope.displayItems.first?.snapshot.primaryMetadata.contains { $0.contains("150") } == true)
+        }
     }
 
     @Test @MainActor func testActiveCategoryNarrowsLibraryBeforeFilters() throws {
