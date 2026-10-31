@@ -35,9 +35,22 @@ fileprivate struct LibraryBrowseScopeHost<Content: View>: View {
                     let restored = storedState.flatMap {
                         try? JSONDecoder().decode(LibraryBrowseScope.State.self, from: $0)
                     }
-                    scope = LibraryBrowseScope(store: store, restoring: restored)
+                    let scope = LibraryBrowseScope(store: store, restoring: ignoresSceneState ? nil : restored)
+                    // Late Mac restoration is refused too; the live state then overwrites it.
+                    if ignoresSceneState { scope.acceptsSceneRestoration = false }
+                    self.scope = scope
                 }
         }
+    }
+
+    /// A fixture launch starts from its launch-argument preferences, not the window state a
+    /// previous run left behind, so benchmarks always measure the requested layout.
+    private var ignoresSceneState: Bool {
+        #if DEBUG || LIBRARY_FIXTURES
+            LibraryFixture.active != nil
+        #else
+            false
+        #endif
     }
 }
 
