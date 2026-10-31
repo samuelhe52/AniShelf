@@ -173,7 +173,21 @@ extension SchemaV2_8_5.AnimeEntryDetail {
                 modelContext.delete(crewMember)
             }
         }
-        staff = Self.makeStaff(from: dtos)
+        let replacementStaff = Self.makeStaff(from: dtos)
+        if let modelContext {
+            for member in replacementStaff {
+                // This detail is already persisted. Register the new nested graph before
+                // attaching it: otherwise the jobs can disappear when the staff is saved.
+                let jobs = member.jobs
+                modelContext.insert(member)
+                for job in jobs {
+                    modelContext.insert(job)
+                    job.staff = member
+                }
+                member.jobs = jobs
+            }
+        }
+        staff = replacementStaff
         staff.forEach { $0.detail = self }
     }
 
