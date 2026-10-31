@@ -58,6 +58,7 @@ final class EntryDetailSession {
     let broadcast: EntryDetailBroadcastModel
     private let repository: LibraryRepository
     private let broadcastEligibilityChecker: TMDbBroadcastEligibilityChecker
+    @ObservationIgnored private var loadingTasks: [UUID: Task<Void, Never>] = [:]
 
     var presentation = EntryDetailPresentationState()
     /// Whether Tracking is expanded. The Mac inspector opens with it expanded, since tracking
@@ -89,6 +90,7 @@ final class EntryDetailSession {
         repository: LibraryRepository,
         broadcastEligibilityChecker: TMDbBroadcastEligibilityChecker = .init(),
         broadcastResolver: TVMazeResolver = TVMazeResolver(),
+        detailInfoLoader: EntryDetailInfoLoader? = nil,
         isCharacterExpanded: Bool? = nil,
         isStaffExpanded: Bool? = nil
     ) {
@@ -97,7 +99,7 @@ final class EntryDetailSession {
         self.repository = repository
         let broadcastEligibilityChecker = broadcastEligibilityChecker.forDetailSession()
         self.broadcastEligibilityChecker = broadcastEligibilityChecker
-        self.model = EntryDetailViewModel(repository: repository)
+        self.model = EntryDetailViewModel(repository: repository, detailInfoLoader: detailInfoLoader)
         self.broadcast = EntryDetailBroadcastModel(
             entryType: entry.type,
             tmdbID: entry.tmdbID,
@@ -120,6 +122,37 @@ final class EntryDetailSession {
             )
         // The first frame shows the stored detail; the view's load task only refreshes it.
         model.prepare(for: entry, language: .resolvedAnimeInfoLanguage())
+    }
+
+    /// Owns the whole detail pipeline independently of an outgoing view's transition lifetime.
+    func loadDetails(
+        language: Language,
+        includesTitleLogo: Bool,
+        restoreMissingParent: @escaping @MainActor () async -> Void
+    ) async {
+        guard !Task.isCancelled else { return }
+        let id = UUID()
+        let task = Task { @MainActor in
+            guard !Task.isCancelled else { return }
+            await model.load(for: entry, language: language, includesTitleLogo: includesTitleLogo)
+            guard !Task.isCancelled else { return }
+            await refreshEpisodeCountsIfEligible(language: language)
+            guard !Task.isCancelled else { return }
+            await restoreMissingParent()
+        }
+        loadingTasks[id] = task
+        defer { loadingTasks[id] = nil }
+        await withTaskCancellationHandler {
+            await task.value
+        } onCancel: {
+            task.cancel()
+        }
+    }
+
+    func cancelPendingWork() {
+        for task in loadingTasks.values { task.cancel() }
+        loadingTasks.removeAll()
+        broadcast.cancel()
     }
 
     func save() throws {
@@ -217,13 +250,16 @@ final class EntryDetailSessionStore {
     private(set) var presentedSession: EntryDetailSession?
     private let broadcastEligibilityChecker: TMDbBroadcastEligibilityChecker
     private let broadcastResolver: TVMazeResolver
+    private let detailInfoLoader: EntryDetailInfoLoader?
 
     init(
         broadcastEligibilityChecker: TMDbBroadcastEligibilityChecker = .init(),
-        broadcastResolver: TVMazeResolver = TVMazeResolver()
+        broadcastResolver: TVMazeResolver = TVMazeResolver(),
+        detailInfoLoader: EntryDetailInfoLoader? = nil
     ) {
         self.broadcastEligibilityChecker = broadcastEligibilityChecker
         self.broadcastResolver = broadcastResolver
+        self.detailInfoLoader = detailInfoLoader
     }
 
     @discardableResult
@@ -233,23 +269,24 @@ final class EntryDetailSessionStore {
         resolveEntry: (LibraryEntryIdentity) -> AnimeEntry?
     ) -> Bool {
         guard let identity else {
-            presentedSession?.broadcast.cancel()
+            presentedSession?.cancelPendingWork()
             presentedSession = nil
             return true
         }
 
         guard let entry = resolveEntry(identity) else {
-            presentedSession?.broadcast.cancel()
+            presentedSession?.cancelPendingWork()
             presentedSession = nil
             return false
         }
         guard presentedSession?.entry === entry else {
-            presentedSession?.broadcast.cancel()
+            presentedSession?.cancelPendingWork()
             presentedSession = EntryDetailSession(
                 entry: entry,
                 repository: repository,
                 broadcastEligibilityChecker: broadcastEligibilityChecker,
-                broadcastResolver: broadcastResolver
+                broadcastResolver: broadcastResolver,
+                detailInfoLoader: detailInfoLoader
             )
             return true
         }

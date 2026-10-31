@@ -81,16 +81,21 @@ extension LibraryStore {
     ///
     /// Tries once per launch and defers to a running Refresh All, which repairs the link itself.
     func restoreMissingParentSeries(for entry: AnimeEntry) async {
-        guard case .season = entry.type, entry.parentSeriesEntry == nil, !isRefreshingAllMetadata,
+        guard !Task.isCancelled, case .season = entry.type, entry.parentSeriesEntry == nil, !isRefreshingAllMetadata,
             parentSeriesRestoreAttemptedIDs.insert(entry.id).inserted
         else { return }
+        let entryID = entry.id
+        defer {
+            if Task.isCancelled { parentSeriesRestoreAttemptedIDs.remove(entryID) }
+        }
         libraryStoreLogger.info("Restoring the missing parent series of a season entry.")
         let writer = LibraryMetadataRefreshWriter(modelContainer: dataProvider.sharedModelContainer)
         let refresher = LibraryMetadataRefresher(
             repository: repository,
             longTermGalleryPosterCachingEnabled: longTermGalleryPosterCachingEnabled,
             applyMetadataRefresh: { updates, parentUpdates in
-                try await writer.apply(updates: updates, parentUpdates: parentUpdates)
+                try Task.checkCancellation()
+                return try await writer.apply(updates: updates, parentUpdates: parentUpdates)
             }
         )
         await performWithDeferredLibrarySaveRefresh {

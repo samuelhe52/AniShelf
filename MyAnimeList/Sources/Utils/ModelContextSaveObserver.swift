@@ -13,23 +13,48 @@ struct ModelContextSaveChanges: Sendable {
     var insertedIdentifiers: Set<PersistentIdentifier>
     var updatedIdentifiers: Set<PersistentIdentifier>
     var deletedIdentifiers: Set<PersistentIdentifier>
+    var invalidatedAllIdentifiers: Bool
+    /// The container of the context that saved, when the notification names one.
+    var containerID: ObjectIdentifier?
+    /// The context that saved, when the notification names one.
+    var contextID: ObjectIdentifier?
 
     init(
         insertedIdentifiers: Set<PersistentIdentifier>,
         updatedIdentifiers: Set<PersistentIdentifier>,
-        deletedIdentifiers: Set<PersistentIdentifier>
+        deletedIdentifiers: Set<PersistentIdentifier>,
+        invalidatedAllIdentifiers: Bool = false,
+        containerID: ObjectIdentifier? = nil,
+        contextID: ObjectIdentifier? = nil
     ) {
         self.insertedIdentifiers = insertedIdentifiers
         self.updatedIdentifiers = updatedIdentifiers
         self.deletedIdentifiers = deletedIdentifiers
+        self.invalidatedAllIdentifiers = invalidatedAllIdentifiers
+        self.containerID = containerID
+        self.contextID = contextID
     }
 
     init(from notification: Notification) {
         self.init(
             insertedIdentifiers: Self.persistentIdentifiers(for: .insertedIdentifiers, in: notification),
             updatedIdentifiers: Self.persistentIdentifiers(for: .updatedIdentifiers, in: notification),
-            deletedIdentifiers: Self.persistentIdentifiers(for: .deletedIdentifiers, in: notification)
+            deletedIdentifiers: Self.persistentIdentifiers(for: .deletedIdentifiers, in: notification),
+            invalidatedAllIdentifiers: notification.userInfo?[
+                ModelContext.NotificationKey.invalidatedAllIdentifiers.rawValue]
+                as? Bool ?? false,
+            containerID: (notification.object as? ModelContext).map { ObjectIdentifier($0.container) },
+            contextID: (notification.object as? ModelContext).map(ObjectIdentifier.init)
         )
+    }
+
+    /// Merges another save's identifiers; callers merge only saves from one container and
+    /// track the saving contexts themselves.
+    mutating func formUnion(_ other: Self) {
+        insertedIdentifiers.formUnion(other.insertedIdentifiers)
+        updatedIdentifiers.formUnion(other.updatedIdentifiers)
+        deletedIdentifiers.formUnion(other.deletedIdentifiers)
+        invalidatedAllIdentifiers = invalidatedAllIdentifiers || other.invalidatedAllIdentifiers
     }
 
     private static func persistentIdentifiers(

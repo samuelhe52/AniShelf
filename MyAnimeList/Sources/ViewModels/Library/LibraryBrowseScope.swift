@@ -185,7 +185,11 @@ final class LibraryBrowseScope {
         if let displayCache { return displayCache }
         displayComputeCount += 1
         let cache = withObservationTracking {
-            LibraryDisplayCache(
+            // Background writes and import replays reach these models without observation, so
+            // their explicit refresh signals rebuild the rows too (docs-ai 039).
+            _ = store.libraryRevision
+            _ = store.backgroundWriteRevision
+            return LibraryDisplayCache(
                 items: filterAndSort(store.library).map { entry in
                     // SwiftData can hand out new instances of child models such as episode
                     // progress between reads, so edits to them may never reach this tracking.

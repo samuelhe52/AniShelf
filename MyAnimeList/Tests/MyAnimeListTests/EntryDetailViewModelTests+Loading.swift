@@ -14,6 +14,66 @@ import Testing
 @testable import MyAnimeList
 
 extension EntryDetailViewModelTests {
+    @Test(arguments: [false, true])
+    @MainActor func testLogoLookupOnlyWritesChangedDetailAndInvalidatesRowsWhenNeeded(changesRuntime: Bool)
+        async throws
+    {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let scope = LibraryBrowseScope(store: store)
+        let entry = AnimeEntry(
+            name: "Movie", type: .movie, tmdbID: 804,
+            detail: AnimeEntryDetail(language: Language.english.rawValue, title: "Movie", runtimeMinutes: 90)
+        )
+        try store.repository.newEntry(entry)
+        try store.refreshLibrary()
+        _ = scope.displayItems
+        let computeCount = scope.displayComputeCount
+        var saveCount = 0
+        let model = EntryDetailViewModel(
+            repository: store.repository,
+            detailInfoLoader: { _, _, language in
+                AnimeEntryDetailDTO(
+                    language: language.rawValue, title: "Movie", runtimeMinutes: changesRuntime ? 95 : 90
+                )
+            },
+            detailPersistenceSaver: { saveCount += 1 }
+        )
+
+        // Each visit creates a fresh detail model. A title with no logo must not rewrite
+        // identical metadata on every visit, but changed metadata still needs saving.
+        await model.load(for: entry, language: .english, includesTitleLogo: true)
+        _ = scope.displayItems
+
+        #expect(saveCount == (changesRuntime ? 1 : 0))
+        #expect(entry.detail?.runtimeMinutes == (changesRuntime ? 95 : 90))
+        #expect(scope.displayComputeCount == computeCount + (changesRuntime ? 1 : 0))
+        #expect(model.loadError == nil)
+    }
+
+    @Test @MainActor func testSecondModelAppliesResponseAnotherModelAlreadySaved() async throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let entry = AnimeEntry(
+            name: "Movie", type: .movie, tmdbID: 805,
+            detail: AnimeEntryDetail(language: Language.english.rawValue, title: "Old", runtimeMinutes: 90)
+        )
+        try store.repository.newEntry(entry)
+        let loader: EntryDetailInfoLoader = { _, _, language in
+            AnimeEntryDetailDTO(language: language.rawValue, title: "New", runtimeMinutes: 95)
+        }
+        // Two inspectors show the same cached entry, then both look up its missing logo.
+        let first = EntryDetailViewModel(repository: store.repository, detailInfoLoader: loader)
+        let second = EntryDetailViewModel(repository: store.repository, detailInfoLoader: loader)
+        first.prepare(for: entry, language: .english)
+        second.prepare(for: entry, language: .english)
+
+        await first.load(for: entry, language: .english, includesTitleLogo: true)
+        await second.load(for: entry, language: .english, includesTitleLogo: true)
+
+        #expect(entry.detail?.title == "New")
+        #expect(first.displayTitle == "New")
+        #expect(second.displayTitle == "New")
+    }
+
     @Test @MainActor func testEntryDetailUsesCachedSameLanguageDetailWhenLogoIsPresent() async {
         let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
         let httpClient = RecordingTMDbHTTPClient { _ in

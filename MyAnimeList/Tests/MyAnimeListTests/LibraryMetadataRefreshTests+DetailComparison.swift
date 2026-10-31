@@ -14,7 +14,7 @@ import Testing
 @testable import MyAnimeList
 
 extension LibraryMetadataRefreshTests {
-    @Test @MainActor func testDetailComparatorTreatsReorderedEquivalentPayloadsAsEqual() throws {
+    @Test @MainActor func testDetailComparatorIgnoresOrderOnlyWhereTheDisplayDoes() throws {
         let persisted = AnimeEntryDetail(
             language: "en-US",
             title: "Frieren",
@@ -137,38 +137,19 @@ extension LibraryMetadataRefreshTests {
             seasonCount: 1,
             characters: [
                 AnimeEntryCharacterDTO(
-                    id: 1,
-                    characterName: "Frieren",
-                    actorName: "Atsumi Tanezaki",
-                    profilePath: "/profiles/frieren.jpg"
-                ),
-                AnimeEntryCharacterDTO(
                     id: 2,
                     characterName: "Fern",
                     actorName: "Kana Ichinose",
                     profilePath: "/profiles/fern.jpg"
+                ),
+                AnimeEntryCharacterDTO(
+                    id: 1,
+                    characterName: "Frieren",
+                    actorName: "Atsumi Tanezaki",
+                    profilePath: "/profiles/frieren.jpg"
                 )
             ],
             staff: [
-                AnimeEntryStaffDTO(
-                    id: 10,
-                    name: "Keiichiro Saito",
-                    role: "Director",
-                    department: "Directing",
-                    profilePath: "/staff/director.jpg",
-                    jobs: [
-                        AnimeEntryStaffJobDTO(
-                            creditID: "director-main",
-                            job: "Director",
-                            episodeCount: 28
-                        ),
-                        AnimeEntryStaffJobDTO(
-                            creditID: "director-secondary",
-                            job: "Storyboard",
-                            episodeCount: 4
-                        )
-                    ]
-                ),
                 AnimeEntryStaffDTO(
                     id: 11,
                     name: "Tomohiro Suzuki",
@@ -179,6 +160,25 @@ extension LibraryMetadataRefreshTests {
                         AnimeEntryStaffJobDTO(
                             creditID: "writer-main",
                             job: "Writer",
+                            episodeCount: 28
+                        )
+                    ]
+                ),
+                AnimeEntryStaffDTO(
+                    id: 10,
+                    name: "Keiichiro Saito",
+                    role: "Director",
+                    department: "Directing",
+                    profilePath: "/staff/director.jpg",
+                    jobs: [
+                        AnimeEntryStaffJobDTO(
+                            creditID: "director-secondary",
+                            job: "Storyboard",
+                            episodeCount: 4
+                        ),
+                        AnimeEntryStaffJobDTO(
+                            creditID: "director-main",
+                            job: "Director",
                             episodeCount: 28
                         )
                     ]
@@ -202,28 +202,47 @@ extension LibraryMetadataRefreshTests {
             ],
             episodes: [
                 AnimeEntryEpisodeSummaryDTO(
-                    id: 1000,
-                    episodeNumber: 1,
-                    title: "The Journey's End",
-                    airDate: referenceDate(year: 2026, month: 6, day: 2),
-                    imagePath: "/episodes/1.jpg"
-                ),
-                AnimeEntryEpisodeSummaryDTO(
                     id: 1001,
                     episodeNumber: 2,
                     title: "A Better Start",
                     airDate: referenceDate(year: 2026, month: 6, day: 3),
                     imagePath: "/episodes/2.jpg"
+                ),
+                AnimeEntryEpisodeSummaryDTO(
+                    id: 1000,
+                    episodeNumber: 1,
+                    title: "The Journey's End",
+                    airDate: referenceDate(year: 2026, month: 6, day: 2),
+                    imagePath: "/episodes/1.jpg"
                 )
             ]
         )
 
+        // Genres and seasons arrive in another order; credits and episodes keep their display order.
         #expect(
             LibraryMetadataRefreshDetailComparator.matches(
                 existing: persisted,
                 fetched: fetched
             )
         )
+
+        // Credit and episode order is displayed, so reordering any of them is a change.
+        var reorderedCast = fetched
+        reorderedCast.characters.reverse()
+        var reorderedStaff = fetched
+        reorderedStaff.staff.reverse()
+        var reorderedJobs = fetched
+        reorderedJobs.staff[1].jobs.reverse()
+        var reorderedEpisodes = fetched
+        reorderedEpisodes.episodes.reverse()
+        for reordered in [reorderedCast, reorderedStaff, reorderedJobs, reorderedEpisodes] {
+            #expect(
+                !LibraryMetadataRefreshDetailComparator.matches(
+                    existing: persisted,
+                    fetched: reordered
+                )
+            )
+        }
     }
 
     @Test @MainActor func testDetailComparatorDetectsSemanticDifferences() throws {

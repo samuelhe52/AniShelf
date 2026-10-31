@@ -51,6 +51,7 @@ historical runtime scenario was rerun. Entry 010 remains an unimplemented propos
 | 036 | 2026-10-30 | [Image variant catalog](036-image-variant-catalog/000-plan.md) | Implemented; runtime pass and release What's New entry pending | [Action](036-image-variant-catalog/001-action.md) |
 | 037 | 2026-10-31 | [View-style transition under the top bars](037-view-style-transition-under-bars/000-plan.md) | Implemented — maintainer accepted | [Action](037-view-style-transition-under-bars/001-action.md) |
 | 038 | 2026-10-31 | [Library scroll bookmark](038-library-scroll-bookmark/000-plan.md) | Implemented — maintainer checked iOS and Mac | [Action](038-library-scroll-bookmark/001-action.md) |
+| 039 | 2026-10-31 | [Library membership changes drive save refreshes](039-library-save-invalidation/000-plan.md) | Implemented | [Action](039-library-save-invalidation/001-action.md) |
 
 ## Find a contract or source
 

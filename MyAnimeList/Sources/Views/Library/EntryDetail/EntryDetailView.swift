@@ -87,13 +87,12 @@ struct EntryDetailView: View {
         pageWithPrompts
             .environment(session)
             .task(id: "\(session.instanceID)-\(currentLanguage.rawValue)-\(showsHero)") {
-                await session.model.load(
-                    for: session.entry,
+                await session.loadDetails(
                     language: currentLanguage,
                     includesTitleLogo: showsHero
-                )
-                await session.refreshEpisodeCountsIfEligible(language: currentLanguage)
-                await store?.restoreMissingParentSeries(for: session.entry)
+                ) {
+                    await store?.restoreMissingParentSeries(for: session.entry)
+                }
             }
             .onChange(of: session.entry.supportsEpisodeNotes) { hadOwner, hasOwner in
                 // Without an owner the snapshot read no episode notes, and note editing was

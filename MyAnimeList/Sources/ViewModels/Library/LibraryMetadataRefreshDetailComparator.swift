@@ -9,26 +9,26 @@ import DataProvider
 import Foundation
 
 enum LibraryMetadataRefreshDetailComparator {
-    private struct ComparableProductionCompany: Equatable {
+    fileprivate struct ComparableProductionCompany: Equatable {
         let id: Int
         let name: String
         let logoPath: String?
     }
 
-    private struct ComparableCharacter: Equatable {
+    fileprivate struct ComparableCharacter: Equatable {
         let id: Int
         let characterName: String
         let actorName: String
         let profilePath: String?
     }
 
-    private struct ComparableStaffJob: Equatable {
+    fileprivate struct ComparableStaffJob: Equatable {
         let creditID: String
         let job: String
         let episodeCount: Int
     }
 
-    private struct ComparableStaff: Equatable {
+    fileprivate struct ComparableStaff: Equatable {
         let id: Int
         let name: String
         let role: String
@@ -37,7 +37,7 @@ enum LibraryMetadataRefreshDetailComparator {
         let jobs: [ComparableStaffJob]
     }
 
-    private struct ComparableSeason: Equatable {
+    fileprivate struct ComparableSeason: Equatable {
         let id: Int
         let seasonNumber: Int
         let title: String
@@ -45,7 +45,7 @@ enum LibraryMetadataRefreshDetailComparator {
         let episodeCount: Int?
     }
 
-    private struct ComparableEpisode: Equatable {
+    fileprivate struct ComparableEpisode: Equatable {
         let id: Int
         let episodeNumber: Int
         let title: String
@@ -53,7 +53,7 @@ enum LibraryMetadataRefreshDetailComparator {
         let imagePath: String?
     }
 
-    private struct ComparableDetail: Equatable {
+    fileprivate struct ComparableDetail: Equatable {
         let language: String
         let title: String
         let subtitle: String?
@@ -74,12 +74,25 @@ enum LibraryMetadataRefreshDetailComparator {
         let episodes: [ComparableEpisode]
     }
 
+    /// The compared metadata of one detail, for callers that keep it to compare later.
+    struct Content: Equatable {
+        fileprivate let detail: ComparableDetail
+    }
+
     static func matches(
         existing detail: AnimeEntryDetail?,
         fetched dto: AnimeEntryDetailDTO
     ) -> Bool {
         guard let detail else { return false }
-        return comparableDetail(from: detail) == comparableDetail(from: dto)
+        return content(of: detail) == content(of: dto)
+    }
+
+    static func content(of detail: AnimeEntryDetail) -> Content {
+        Content(detail: comparableDetail(from: detail))
+    }
+
+    static func content(of dto: AnimeEntryDetailDTO) -> Content {
+        Content(detail: comparableDetail(from: dto))
     }
 
     private static func comparableDetail(from detail: AnimeEntryDetail) -> ComparableDetail {
@@ -104,36 +117,35 @@ enum LibraryMetadataRefreshDetailComparator {
                     logoPath: $0.logoPath
                 )
             },
-            characters: normalizedCharacters(
-                detail.characters.map {
-                    ComparableCharacter(
-                        id: $0.id,
-                        characterName: $0.characterName,
-                        actorName: $0.actorName,
-                        profilePath: $0.profilePath
-                    )
-                }
-            ),
-            staff: normalizedStaff(
-                detail.staff.map {
-                    ComparableStaff(
-                        id: $0.id,
-                        name: $0.name,
-                        role: $0.role,
-                        department: $0.department,
-                        profilePath: $0.profilePath,
-                        jobs: normalizedStaffJobs(
-                            $0.jobs.map {
-                                ComparableStaffJob(
-                                    creditID: $0.creditID,
-                                    job: $0.job,
-                                    episodeCount: $0.episodeCount
-                                )
-                            }
+            // Credits and episodes compare in stored display order; genres and seasons, which the
+            // detail view sorts itself, are normalized. The view lists cast and episodes in this
+            // order and uses it to order staff within a role, so a response that only reorders
+            // them is a change. If TMDb's order jitters, the cost is a local rewrite of this
+            // detail; detail writes advance no sync clock.
+            characters: detail.orderedCharacters.map {
+                ComparableCharacter(
+                    id: $0.id,
+                    characterName: $0.characterName,
+                    actorName: $0.actorName,
+                    profilePath: $0.profilePath
+                )
+            },
+            staff: detail.orderedStaff.map {
+                ComparableStaff(
+                    id: $0.id,
+                    name: $0.name,
+                    role: $0.role,
+                    department: $0.department,
+                    profilePath: $0.profilePath,
+                    jobs: $0.orderedJobs.map {
+                        ComparableStaffJob(
+                            creditID: $0.creditID,
+                            job: $0.job,
+                            episodeCount: $0.episodeCount
                         )
-                    )
-                }
-            ),
+                    }
+                )
+            },
             seasons: normalizedSeasons(
                 detail.seasons.map {
                     ComparableSeason(
@@ -145,17 +157,15 @@ enum LibraryMetadataRefreshDetailComparator {
                     )
                 }
             ),
-            episodes: normalizedEpisodes(
-                detail.episodes.map {
-                    ComparableEpisode(
-                        id: $0.id,
-                        episodeNumber: $0.episodeNumber,
-                        title: $0.title,
-                        airDate: $0.airDate,
-                        imagePath: $0.imagePath
-                    )
-                }
-            )
+            episodes: detail.orderedEpisodes.map {
+                ComparableEpisode(
+                    id: $0.id,
+                    episodeNumber: $0.episodeNumber,
+                    title: $0.title,
+                    airDate: $0.airDate,
+                    imagePath: $0.imagePath
+                )
+            }
         )
     }
 
@@ -184,42 +194,37 @@ enum LibraryMetadataRefreshDetailComparator {
                     logoPath: TMDbImagePath.storagePath(from: $0.logoPath)
                 )
             },
-            characters: normalizedCharacters(
-                dto.characters.map {
-                    ComparableCharacter(
-                        id: $0.id,
-                        characterName: $0.characterName,
-                        actorName: $0.actorName,
-                        profilePath: TMDbImagePath.storagePath(
-                            from: $0.profilePath,
-                            fallback: $0.profileURL
-                        )
+            // A replacement stores credits and episodes in the response's order as `displayOrder`.
+            characters: dto.characters.map {
+                ComparableCharacter(
+                    id: $0.id,
+                    characterName: $0.characterName,
+                    actorName: $0.actorName,
+                    profilePath: TMDbImagePath.storagePath(
+                        from: $0.profilePath,
+                        fallback: $0.profileURL
                     )
-                }
-            ),
-            staff: normalizedStaff(
-                dto.staff.map {
-                    ComparableStaff(
-                        id: $0.id,
-                        name: $0.name,
-                        role: $0.role,
-                        department: $0.department,
-                        profilePath: TMDbImagePath.storagePath(
-                            from: $0.profilePath,
-                            fallback: $0.profileURL
-                        ),
-                        jobs: normalizedStaffJobs(
-                            $0.jobs.map {
-                                ComparableStaffJob(
-                                    creditID: $0.creditID,
-                                    job: $0.job,
-                                    episodeCount: $0.episodeCount
-                                )
-                            }
+                )
+            },
+            staff: dto.staff.map {
+                ComparableStaff(
+                    id: $0.id,
+                    name: $0.name,
+                    role: $0.role,
+                    department: $0.department,
+                    profilePath: TMDbImagePath.storagePath(
+                        from: $0.profilePath,
+                        fallback: $0.profileURL
+                    ),
+                    jobs: $0.jobs.map {
+                        ComparableStaffJob(
+                            creditID: $0.creditID,
+                            job: $0.job,
+                            episodeCount: $0.episodeCount
                         )
-                    )
-                }
-            ),
+                    }
+                )
+            },
             seasons: normalizedSeasons(
                 dto.seasons.map {
                     ComparableSeason(
@@ -234,67 +239,19 @@ enum LibraryMetadataRefreshDetailComparator {
                     )
                 }
             ),
-            episodes: normalizedEpisodes(
-                dto.episodes.map {
-                    ComparableEpisode(
-                        id: $0.id,
-                        episodeNumber: $0.episodeNumber,
-                        title: $0.title,
-                        airDate: $0.airDate,
-                        imagePath: TMDbImagePath.storagePath(
-                            from: $0.imagePath,
-                            fallback: $0.imageURL
-                        )
+            episodes: dto.episodes.map {
+                ComparableEpisode(
+                    id: $0.id,
+                    episodeNumber: $0.episodeNumber,
+                    title: $0.title,
+                    airDate: $0.airDate,
+                    imagePath: TMDbImagePath.storagePath(
+                        from: $0.imagePath,
+                        fallback: $0.imageURL
                     )
-                }
-            )
+                )
+            }
         )
-    }
-
-    private static func normalizedCharacters(
-        _ characters: [ComparableCharacter]
-    ) -> [ComparableCharacter] {
-        characters.sorted {
-            if $0.id != $1.id { return $0.id < $1.id }
-            if $0.characterName != $1.characterName { return $0.characterName < $1.characterName }
-            if $0.actorName != $1.actorName { return $0.actorName < $1.actorName }
-            return ($0.profilePath ?? "") < ($1.profilePath ?? "")
-        }
-    }
-
-    private static func normalizedStaffJobs(
-        _ jobs: [ComparableStaffJob]
-    ) -> [ComparableStaffJob] {
-        jobs.sorted {
-            staffJobSortKey($0) < staffJobSortKey($1)
-        }
-    }
-
-    private static func normalizedStaff(
-        _ staff: [ComparableStaff]
-    ) -> [ComparableStaff] {
-        staff.sorted {
-            staffSortKey($0) < staffSortKey($1)
-        }
-    }
-
-    private static func staffJobSortKey(_ job: ComparableStaffJob) -> String {
-        [
-            job.creditID,
-            job.job,
-            String(job.episodeCount)
-        ].joined(separator: "\u{1F}")
-    }
-
-    private static func staffSortKey(_ staff: ComparableStaff) -> String {
-        [
-            String(staff.id),
-            staff.name,
-            staff.role,
-            staff.department ?? "",
-            staff.profilePath ?? "",
-            staff.jobs.map(staffJobSortKey).joined(separator: "\u{1E}")
-        ].joined(separator: "\u{1F}")
     }
 
     private static func normalizedSeasons(
@@ -308,20 +265,6 @@ enum LibraryMetadataRefreshDetailComparator {
                 return ($0.posterPath ?? "") < ($1.posterPath ?? "")
             }
             return ($0.episodeCount ?? -1) < ($1.episodeCount ?? -1)
-        }
-    }
-
-    private static func normalizedEpisodes(
-        _ episodes: [ComparableEpisode]
-    ) -> [ComparableEpisode] {
-        episodes.sorted {
-            if $0.episodeNumber != $1.episodeNumber { return $0.episodeNumber < $1.episodeNumber }
-            if $0.id != $1.id { return $0.id < $1.id }
-            if $0.title != $1.title { return $0.title < $1.title }
-            if $0.airDate != $1.airDate {
-                return ($0.airDate ?? .distantPast) < ($1.airDate ?? .distantPast)
-            }
-            return ($0.imagePath ?? "") < ($1.imagePath ?? "")
         }
     }
 

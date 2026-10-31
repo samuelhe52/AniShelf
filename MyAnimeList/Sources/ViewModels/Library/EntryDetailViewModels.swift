@@ -175,6 +175,9 @@ final class EntryDetailViewModel {
     /// refreshes without animating a switch to another entry.
     private(set) var fetchedDetailRevision = 0
     private var loadedRequestKey: String?
+    /// The detail metadata the display last applied. The shared stored detail is not a
+    /// proxy for it: another model can save a newer response for the same entry.
+    private var appliedDetailContent: LibraryMetadataRefreshDetailComparator.Content?
     /// The request whose stored values are showing; `loadedRequestKey` is set once they are
     /// also current.
     private var preparedRequestKey: String?
@@ -224,6 +227,7 @@ final class EntryDetailViewModel {
         guard preparedRequestKey != requestKey else { return }
         preparedRequestKey = requestKey
         loadedRequestKey = nil
+        appliedDetailContent = nil
 
         displayTitle = entry.displayName
         subtitleText = nil
@@ -285,12 +289,18 @@ final class EntryDetailViewModel {
             let detailDTO = try await detailInfoLoader(entry.type, entry.tmdbID, language)
             guard loadGeneration == generation, !Task.isCancelled else { return }
 
+            let fetchedContent = LibraryMetadataRefreshDetailComparator.content(of: detailDTO)
             let detail = try replaceAndPersistDetail(
                 for: entry,
-                with: detailDTO
+                with: detailDTO,
+                fetchedContent: fetchedContent
             )
-            apply(detail: detail, entry: entry, language: language)
-            fetchedDetailRevision += 1
+            // Skip reapplying, and its refresh animation, only when this display already
+            // shows the response. The stored detail can match because another model saved it.
+            if loadedRequestKey != requestKey || appliedDetailContent != fetchedContent {
+                apply(detail: detail, entry: entry, language: language)
+                fetchedDetailRevision += 1
+            }
             loadedRequestKey = requestKey
             fetchedRequestKey = requestKey
         } catch {
@@ -301,8 +311,16 @@ final class EntryDetailViewModel {
 
     private func replaceAndPersistDetail(
         for entry: AnimeEntry,
-        with detailDTO: AnimeEntryDetailDTO
+        with detailDTO: AnimeEntryDetailDTO,
+        fetchedContent: LibraryMetadataRefreshDetailComparator.Content
     ) throws -> AnimeEntryDetail {
+        // A header can fetch again to look for a missing logo. An unchanged response must
+        // not rewrite the SwiftData graph and invalidate every library row's snapshot.
+        if let detail = entry.detail,
+            LibraryMetadataRefreshDetailComparator.content(of: detail) == fetchedContent
+        {
+            return detail
+        }
         let previousDetailSnapshot = entry.detail?.snapshotDTO()
         let detail = entry.replaceDetail(from: detailDTO)
 
@@ -389,6 +407,7 @@ final class EntryDetailViewModel {
     }
 
     private func apply(detail: AnimeEntryDetail, entry: AnimeEntry, language: Language) {
+        appliedDetailContent = LibraryMetadataRefreshDetailComparator.content(of: detail)
         displayTitle = detail.title
         subtitleText = detail.subtitle
         overviewText =
