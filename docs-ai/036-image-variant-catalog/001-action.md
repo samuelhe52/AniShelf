@@ -50,7 +50,9 @@ Key files:
 - `make test-app-mac` (full app suite): one failure,
   `LibrarySyncCoordinatorTests/categoryDefinitionsRoundTripThroughSettingsPayload`
   (expects `categoriesEnabled`/`categoryStripEnabled` false, reads true). The diff does
-  not touch category settings; not checked against `main`.
+  not touch category settings; not checked against `main`. Updated 2026-10-31: the
+  test predated `466ad2a8`, which turned both defaults on; it now expects the on
+  defaults and passes on macOS.
 - Acceptance grep for `targetWidth:|targetSize:|TMDbPosterDisplayType|PosterImageSize`
   outside `SVGImageProcessor`: no matches.
 - Not run: simulator tests (simulator in use by another agent), any runtime or visual
