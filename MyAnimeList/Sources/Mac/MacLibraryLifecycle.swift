@@ -17,7 +17,7 @@
     )
 
     /// The Mac application delegate: CloudKit pushes, airing-reminder notifications, periodic
-    /// reminder refresh, and finishing local sync work before quitting.
+    /// reminder refresh, and quitting.
     @MainActor
     final class LibrarySyncNotificationBridge: NSObject, NSApplicationDelegate {
         enum SyncResult { case noData, newData, failed }
@@ -26,27 +26,14 @@
             "com.samuelhe.MyAnimeList.airing-reminder-refresh"
         /// Matches the iOS background refresh cadence.
         static let airingReminderRefreshInterval: TimeInterval = 6 * 60 * 60
-        /// How long quitting waits for pending local changes to reach iCloud.
-        static let terminationSyncTimeout: Duration = .seconds(10)
 
         private static var syncHandler: (@MainActor () async -> SyncResult)?
-        private static var terminationFlushHandler: (@MainActor () async -> Void)?
-        private static var needsTerminationFlush: @MainActor () -> Bool = { false }
         private static var reminderRefreshActivity: NSBackgroundActivityScheduler?
         private static var sleepWakeObservers: [NSObjectProtocol] = []
         private static var activationObserver: NSObjectProtocol?
 
         static func configureSyncHandler(_ handler: @escaping @MainActor () async -> SyncResult) {
             syncHandler = handler
-        }
-
-        /// Lets quitting finish pending local sync work first, as iOS does when backgrounding.
-        static func configureTerminationFlush(
-            isNeeded: @escaping @MainActor () -> Bool,
-            flush: @escaping @MainActor () async -> Void
-        ) {
-            needsTerminationFlush = isNeeded
-            terminationFlushHandler = flush
         }
 
         /// Pushes pending edits before the Mac sleeps and catches up after it wakes, once per
@@ -136,40 +123,17 @@
             false
         }
 
+        /// Quits without waiting on iCloud: every edit is already in the on-disk dirty queue, which
+        /// the next launch uploads.
+        ///
+        /// One main-queue hop first lets save notifications that background contexts already
+        /// posted reach the change recorder; the next launch's baseline would otherwise absorb
+        /// those edits without queuing them.
         func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-            guard Self.needsTerminationFlush(), let flush = Self.terminationFlushHandler else {
-                return .terminateNow
-            }
-            // The flush may wait on a CloudKit pass that ignores cancellation, so the timeout
-            // replies on its own instead of awaiting the cancelled flush.
-            let reply = TerminationReply(application: sender)
-            let flushTask = Task { @MainActor in
-                await flush()
-                reply.send()
-            }
-            Task { @MainActor in
-                try? await Task.sleep(for: Self.terminationSyncTimeout)
-                flushTask.cancel()
-                reply.send()
+            DispatchQueue.main.async {
+                sender.reply(toApplicationShouldTerminate: true)
             }
             return .terminateLater
-        }
-    }
-
-    /// Answers a deferred termination request exactly once.
-    @MainActor
-    fileprivate final class TerminationReply {
-        private let application: NSApplication
-        private var hasReplied = false
-
-        init(application: NSApplication) {
-            self.application = application
-        }
-
-        func send() {
-            guard !hasReplied else { return }
-            hasReplied = true
-            application.reply(toApplicationShouldTerminate: true)
         }
     }
 

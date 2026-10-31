@@ -151,10 +151,6 @@ struct MyAnimeListApp: App {
                     _ = await AiringReminderCoordinator.shared.refreshAll()
                 }
             }
-            LibrarySyncNotificationBridge.configureTerminationFlush(
-                isNeeded: { canSyncLibrary() && libraryStore.needsBackgroundLibrarySyncProtection },
-                flush: { _ = await libraryStore.flushPendingLocalLibrarySyncAndWait() }
-            )
             LibrarySyncNotificationBridge.configureSleepAndWake(
                 willSleep: {
                     guard canSyncLibrary(), libraryStore.needsBackgroundLibrarySyncProtection else { return }
