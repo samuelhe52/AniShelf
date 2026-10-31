@@ -133,9 +133,7 @@
             }
             .libraryEntryActionOverlays(
                 state: actions,
-                deleteEntry: { entry in
-                    scope.deleteEntry(entry) { browse.requestScroll(to: $0) }
-                },
+                deleteEntry: { store.deleteEntry($0) },
                 resolveEntry: { store.repository.existingEntry(identity: $0) }
             )
             .libraryWindowBehaviors(
@@ -202,17 +200,21 @@
 
         @ViewBuilder
         private func libraryPage(displayItems: [LibraryEntryDisplayItem]) -> some View {
-            @Bindable var scrollState = browse.scrollState
             let layoutIDs = displayItems.map(\.id)
             let detailActions = LibraryEntryDetailActions(open: openDetails, edit: editDetails)
+            let scrollInputs = LibraryScrollInputs(
+                definition: scope.displayDefinition,
+                findQuery: find.query,
+                request: browse.scrollRequest
+            )
             // `libraryViewStyle` never resolves to Gallery on the Mac.
             if libraryViewStyle == .list {
                 LibraryEntryPage(id: .list, layoutIDs: layoutIDs) {
                     MacLibraryList(
                         detailActions: detailActions,
                         displayItems: displayItems,
-                        scrolledID: $scrollState.scrolledID,
-                        scrollRequest: browse.scrollRequest,
+                        bookmark: browse.bookmark,
+                        scrollInputs: scrollInputs,
                         highlightRequest: browse.highlightRequest
                     )
                     .safeAreaPadding(.bottom, 20)
@@ -222,8 +224,8 @@
                     MacLibraryGrid(
                         detailActions: detailActions,
                         displayItems: displayItems,
-                        scrolledID: $scrollState.scrolledID,
-                        scrollRequest: browse.scrollRequest,
+                        bookmark: browse.bookmark,
+                        scrollInputs: scrollInputs,
                         highlightRequest: browse.highlightRequest,
                         isInspectorPresented: isInspectorShown
                     )
@@ -237,6 +239,8 @@
                 get: { libraryViewStyle },
                 set: { style in
                     guard style != libraryViewStyle else { return }
+                    // Hold the bookmark before the outgoing page's last callbacks can move it.
+                    browse.bookmark.freeze()
                     withAnimation(LibraryViewTransitions.libraryViewStyleAnimation()) {
                         libraryViewStyle = style
                     }

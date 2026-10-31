@@ -21,11 +21,12 @@
         @Environment(MacLibrarySelection.self) private var selection
         @FocusState private var isListFocused: Bool
         @State private var openInRequest: EntryOpenInRequest?
+        @State private var visibleEntries = LibraryVisibleEntryTracker()
 
         let detailActions: LibraryEntryDetailActions
         let displayItems: [LibraryEntryDisplayItem]
-        @Binding var scrolledID: LibraryEntryIdentity?
-        let scrollRequest: LibraryScrollRequest?
+        let bookmark: LibraryScrollBookmark
+        let scrollInputs: LibraryScrollInputs
         let highlightRequest: LibraryHighlightRequest?
 
         var body: some View {
@@ -54,16 +55,19 @@
                 .animation(.default, value: scope.sortReversed)
                 .animation(.default, value: scope.sortStrategy)
                 .animation(.default, value: scope.filters)
-                .onAppear {
-                    if let scrolledID { proxy.scrollTo(scrolledID) }
-                }
-                .onChange(of: scrollRequest) {
-                    if let entryID = scrollRequest?.entryID {
-                        withAnimation(.bouncy) {
-                            proxy.scrollTo(entryID)
-                        }
-                    }
-                }
+                // The table reports what is on screen; SwiftUI's row visibility and scroll
+                // phases are unreliable for the Mac List (docs-ai 038).
+                .macLibraryListScrollObserver(
+                    visibleRowsChanged: { rows in visibleEntries.setVisibleRows(rows, recordingInto: bookmark) },
+                    userDidScroll: { bookmark.userDidScroll() }
+                )
+                .libraryScrollBookmark(
+                    bookmark,
+                    tracker: visibleEntries,
+                    displayIDs: displayItems.map(\.id),
+                    inputs: scrollInputs,
+                    proxy: proxy
+                )
             }
         }
 
@@ -74,6 +78,9 @@
                 set: { ids in
                     // Keep arrow keys in the list after a click instead of the sidebar.
                     isListFocused = true
+                    // Arrow keys scroll the list natively without a user scroll phase, so any
+                    // selection change counts as the user moving on from a restored position.
+                    bookmark.userDidScroll()
                     selection.select(ids)
                 }
             )

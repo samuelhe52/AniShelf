@@ -127,10 +127,8 @@
 
         func deleteEntries(_ entries: [AnimeEntry]) {
             guard !entries.isEmpty else { return }
-            let deleted = Set(entries.map(\.libraryIdentity))
-            let scrollTarget = visibleDisplayItems.first { !deleted.contains($0.id) }?.id
+            // The page keeps its position; entries after the deleted ones move up into place.
             guard store.deleteEntries(entries) else { return }
-            browse.requestScroll(to: scrollTarget)
             pruneSelection()
         }
 

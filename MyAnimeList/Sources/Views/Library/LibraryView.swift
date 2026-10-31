@@ -180,9 +180,7 @@ import SwiftUI
                 }
                 .libraryEntryActionOverlays(
                     state: interaction.actions,
-                    deleteEntry: { entry in
-                        scope.deleteEntry(entry) { browse.requestScroll(to: $0) }
-                    },
+                    deleteEntry: { store.deleteEntry($0) },
                     resolveEntry: { store.repository.existingEntry(identity: $0) }
                 )
         }
@@ -357,14 +355,18 @@ import SwiftUI
                 open: openDetails,
                 edit: editDetails
             )
+            let scrollInputs = LibraryScrollInputs(
+                definition: scope.displayDefinition,
+                request: browse.scrollRequest
+            )
 
-            @Bindable var scrollState = browse.scrollState
             switch libraryViewStyle {
             case .gallery:
                 LibraryEntryPage(id: .gallery, layoutIDs: layoutIDs) {
                     LibraryGalleryView(
-                        scrolledID: $scrollState.scrolledID,
-                        scrollRequest: browse.scrollRequest,
+                        bookmark: browse.bookmark,
+                        scrollInputs: scrollInputs,
+                        displayIDs: layoutIDs,
                         detailActions: detailActions
                     )
                     .scenePadding(.vertical)
@@ -375,8 +377,8 @@ import SwiftUI
                     LibraryListView(
                         detailActions: detailActions,
                         displayItems: displayItems,
-                        scrolledID: $scrollState.scrolledID,
-                        scrollRequest: browse.scrollRequest,
+                        bookmark: browse.bookmark,
+                        scrollInputs: scrollInputs,
                         highlightRequest: browse.highlightRequest
                     )
                     .safeAreaPadding(.bottom, 20)
@@ -386,8 +388,8 @@ import SwiftUI
                     LibraryGridView(
                         detailActions: detailActions,
                         displayItems: displayItems,
-                        scrolledID: $scrollState.scrolledID,
-                        scrollRequest: browse.scrollRequest,
+                        bookmark: browse.bookmark,
+                        scrollInputs: scrollInputs,
                         highlightRequest: browse.highlightRequest,
                         isInspectorPresented: interaction.inspectorPresentation != nil
                     )
@@ -401,6 +403,8 @@ import SwiftUI
                 get: { libraryViewStyle },
                 set: { newValue in
                     guard newValue != libraryViewStyle else { return }
+                    // Hold the bookmark before the outgoing page's last callbacks can move it.
+                    browse.bookmark.freeze()
                     withAnimation(libraryViewStyleAnimation) {
                         libraryViewStyle = newValue
                     }

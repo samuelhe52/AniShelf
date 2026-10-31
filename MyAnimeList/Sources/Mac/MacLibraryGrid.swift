@@ -19,10 +19,11 @@
         @Environment(LibraryBrowseScope.self) private var scope
         @Environment(LibraryEntryActionState.self) private var actions
         @Environment(MacLibrarySelection.self) private var selection
+        @State private var visibleEntries = LibraryVisibleEntryTracker()
         let detailActions: LibraryEntryDetailActions
         let displayItems: [LibraryEntryDisplayItem]
-        @Binding var scrolledID: LibraryEntryIdentity?
-        let scrollRequest: LibraryScrollRequest?
+        let bookmark: LibraryScrollBookmark
+        let scrollInputs: LibraryScrollInputs
         let highlightRequest: LibraryHighlightRequest?
         /// Whether the trailing inspector is showing; the grid reflows smoothly when it changes.
         var isInspectorPresented = false
@@ -46,11 +47,10 @@
                                         .geometryGroup()
                                 }
                             }
+                            .scrollTargetLayout()
                             .transaction(value: hasInspectorInset) { transaction in
                                 transaction.animation = .smooth(duration: 0.3)
                             }
-                            .onChange(of: scrollRequest) { handleScrollRequest(proxy: proxy) }
-                            .onAppear { onGridViewAppear(proxy: proxy) }
                             .onGeometryChange(for: Int.self) { geometry in
                                 Self.columnCount(forWidth: geometry.size.width)
                             } action: {
@@ -66,6 +66,19 @@
                         // Layout the grid at its destination, while the native safe area controls
                         // the visible scroll viewport. Do not animate either sizing proposal.
                         .transaction(value: hasInspectorInset) { $0.animation = nil }
+                        .onScrollTargetVisibilityChange(idType: LibraryEntryIdentity.self, threshold: 0.5) {
+                            ids in
+                            visibleEntries.setVisible(ids, recordingInto: bookmark)
+                        }
+                        .libraryScrollBookmark(
+                            bookmark,
+                            tracker: visibleEntries,
+                            displayIDs: displayItems.map(\.id),
+                            inputs: scrollInputs,
+                            proxy: proxy
+                        )
+                        // The reflow moves cards between rows; keep the entry the user was on.
+                        .onChange(of: hasInspectorInset) { bookmark.freeze() }
                         .preferredNavigationBarScrollEdgeEffect()
                         .animation(.spring, value: scope.groupStrategy)
                         .animation(.spring, value: scope.sortReversed)
@@ -111,23 +124,10 @@
                 }
             // At an edge the key is still consumed so the scroll view does not jump.
             if let id = selection.move(by: offset, in: displayItems.map(\.id)) {
-                scrolledID = id
+                bookmark.userDidScroll()
                 proxy.scrollTo(id)
             }
             return true
-        }
-
-        private func handleScrollRequest(proxy: ScrollViewProxy) {
-            guard let entryID = scrollRequest?.entryID else { return }
-            withAnimation(.bouncy) {
-                proxy.scrollTo(entryID)
-            }
-        }
-
-        private func onGridViewAppear(proxy: ScrollViewProxy) {
-            if let scrolledID {
-                proxy.scrollTo(scrolledID, anchor: .center)
-            }
         }
 
         private func configuredGridItem(for item: LibraryEntryDisplayItem) -> some View {
@@ -144,20 +144,16 @@
                     toggleFavorite: toggleFavorite,
                     editEntry: editEntry
                 )
-                .onAppear { scrolledID = item.id }
             } preview: {
                 EntryContextMenuPreview(snapshot: item.snapshot)
-                    .onAppear { scrolledID = item.id }
             }
             .modifier(
                 MacLibraryGridClickModifier(
                     onClick: {
                         isGridFocused = true
-                        scrolledID = item.id
                         selection.click(item.id, .current, layoutIDs: displayItems.map(\.id))
                     },
                     onDoubleClick: {
-                        scrolledID = item.id
                         detailActions.open(item.entry)
                     }
                 )
@@ -193,8 +189,8 @@
                 edit: { _ in }
             ),
             displayItems: LibraryBrowseScope(store: store).displayItems,
-            scrolledID: .constant(nil),
-            scrollRequest: nil,
+            bookmark: LibraryScrollBookmark(),
+            scrollInputs: LibraryScrollInputs(definition: LibraryBrowseScope(store: store).displayDefinition),
             highlightRequest: nil
         )
         .onAppear {

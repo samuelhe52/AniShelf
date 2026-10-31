@@ -230,90 +230,24 @@ struct LibrarySortingAndDeletionTests {
         #expect(store.syncChangeRecorder.dirtyQueueStore.load() == initialQueue)
     }
 
-    @Test @MainActor func testDeletionScrollTargetFallbacks() throws {
-        let sortStrategyKey = String.librarySortStrategy
-        let sortReversedKey = String.librarySortReversed
-        let defaults = UserDefaults.standard
-        let originalSortStrategy = defaults.object(forKey: sortStrategyKey)
-        let originalSortReversed = defaults.object(forKey: sortReversedKey)
+    @Test @MainActor func testScrollBookmarkHoldsWhileSettlingAndFallsBackToNeighbors() {
+        let ids = (1...5).map { LibraryEntryIdentity(entryType: .movie, tmdbID: $0) }
+        let bookmark = LibraryScrollBookmark()
 
-        defer {
-            if let originalSortStrategy {
-                defaults.set(originalSortStrategy, forKey: sortStrategyKey)
-            } else {
-                defaults.removeObject(forKey: sortStrategyKey)
-            }
+        // A restore or command holds the bookmark until the user scrolls.
+        bookmark.record(ids[2], order: ids)
+        bookmark.settle(on: ids[3], order: ids)
+        bookmark.record(ids[1], order: ids)
+        #expect(bookmark.entryID == ids[3])
+        bookmark.userDidScroll()
+        bookmark.record(ids[2], order: ids)
+        #expect(bookmark.entryID == ids[2])
 
-            if let originalSortReversed {
-                defaults.set(originalSortReversed, forKey: sortReversedKey)
-            } else {
-                defaults.removeObject(forKey: sortReversedKey)
-            }
-        }
-
-        func makeEntry(name: String, tmdbID: Int, day: Int) -> AnimeEntry {
-            AnimeEntry(
-                name: name,
-                type: .movie,
-                tmdbID: tmdbID,
-                dateSaved: referenceDate(year: 2026, month: 1, day: day)
-            )
-        }
-
-        func makeScope(with entries: [AnimeEntry]) throws -> LibraryBrowseScope {
-            let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
-            let scope = LibraryBrowseScope(store: store)
-            scope.sortStrategy = .dateSaved
-            scope.sortReversed = false
-
-            for entry in entries {
-                try store.repository.newEntry(entry)
-            }
-            try store.refreshLibrary()
-            return scope
-        }
-
-        do {
-            let first = makeEntry(name: "First", tmdbID: 1, day: 1)
-            let second = makeEntry(name: "Second", tmdbID: 2, day: 2)
-            let third = makeEntry(name: "Third", tmdbID: 3, day: 3)
-            let scope = try makeScope(with: [first, second, third])
-            var scrolledID: LibraryEntryIdentity?
-
-            #expect(scope.deleteEntry(second) { scrolledID = $0 })
-            #expect(scrolledID == first.libraryIdentity)
-        }
-
-        do {
-            let first = makeEntry(name: "First", tmdbID: 1, day: 1)
-            let second = makeEntry(name: "Second", tmdbID: 2, day: 2)
-            let third = makeEntry(name: "Third", tmdbID: 3, day: 3)
-            let scope = try makeScope(with: [first, second, third])
-            var scrolledID: LibraryEntryIdentity?
-
-            #expect(scope.deleteEntry(first) { scrolledID = $0 })
-            #expect(scrolledID == second.libraryIdentity)
-        }
-
-        do {
-            let first = makeEntry(name: "First", tmdbID: 1, day: 1)
-            let second = makeEntry(name: "Second", tmdbID: 2, day: 2)
-            let third = makeEntry(name: "Third", tmdbID: 3, day: 3)
-            let scope = try makeScope(with: [first, second, third])
-            var scrolledID: LibraryEntryIdentity?
-
-            #expect(scope.deleteEntry(third) { scrolledID = $0 })
-            #expect(scrolledID == second.libraryIdentity)
-        }
-
-        do {
-            let solo = makeEntry(name: "Solo", tmdbID: 10, day: 10)
-            let scope = try makeScope(with: [solo])
-            var scrolledID: LibraryEntryIdentity? = solo.libraryIdentity
-
-            #expect(scope.deleteEntry(solo) { scrolledID = $0 })
-            #expect(scrolledID == nil)
-        }
+        // A removed entry restores to the one that takes its place, then the one before it.
+        #expect(bookmark.target(in: ids) == ids[2])
+        #expect(bookmark.target(in: [ids[0], ids[1], ids[3], ids[4]]) == ids[3])
+        #expect(bookmark.target(in: [ids[0], ids[1]]) == ids[1])
+        #expect(bookmark.target(in: []) == nil)
     }
 
     @Test @MainActor func testWatchStatusGroupingUsesCurrentSortWithinBuckets() throws {

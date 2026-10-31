@@ -38,13 +38,8 @@ import SwiftUI
                 return
             }
 
-            let scrollTarget = scope.displayIDs.first { id in
-                !interaction.selectedEntryIDs.contains(id)
-            }
-
+            // The page keeps its position; rows below move up into the deleted ones' places.
             guard store.deleteEntries(entries) else { return }
-
-            browse.requestScroll(to: scrollTarget)
             exitMultiSelection()
         }
 

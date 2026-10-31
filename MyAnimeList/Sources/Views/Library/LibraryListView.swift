@@ -16,11 +16,12 @@ import SwiftUI
         @Environment(LibraryEntryInteractionState.self) private var interaction
         @Environment(LibraryEntryActionState.self) private var actions
         @State private var openInRequest: EntryOpenInRequest?
+        @State private var visibleEntries = LibraryVisibleEntryTracker()
 
         let detailActions: LibraryEntryDetailActions
         let displayItems: [LibraryEntryDisplayItem]
-        @Binding var scrolledID: LibraryEntryIdentity?
-        let scrollRequest: LibraryScrollRequest?
+        let bookmark: LibraryScrollBookmark
+        let scrollInputs: LibraryScrollInputs
         let highlightRequest: LibraryHighlightRequest?
 
         var body: some View {
@@ -40,16 +41,13 @@ import SwiftUI
                 .animation(.default, value: scope.sortReversed)
                 .animation(.default, value: scope.sortStrategy)
                 .animation(.default, value: scope.filters)
-                .onAppear {
-                    if let scrolledID { proxy.scrollTo(scrolledID) }
-                }
-                .onChange(of: scrollRequest) {
-                    if let entryID = scrollRequest?.entryID {
-                        withAnimation(.bouncy) {
-                            proxy.scrollTo(entryID)
-                        }
-                    }
-                }
+                .libraryScrollBookmark(
+                    bookmark,
+                    tracker: visibleEntries,
+                    displayIDs: displayItems.map(\.id),
+                    inputs: scrollInputs,
+                    proxy: proxy
+                )
             }
         }
 
@@ -73,12 +71,10 @@ import SwiftUI
                 // Masked, not removed, so edit-mode taps reach the List's selection.
                 tapGesturesEnabled: !interaction.isMultiSelecting,
                 onTap: {
-                    scrolledID = item.id
                     interaction.focus(item.entry)
                 },
                 onOpenDetails: {
                     guard !interaction.isMultiSelecting else { return }
-                    scrolledID = item.id
                     openDetails(for: item.entry)
                 },
                 onToggleFavorite: toggleFavorite
@@ -94,6 +90,12 @@ import SwiftUI
                 value: !interaction.isMultiSelecting || interaction.isSelected(item.id)
             )
             .highlightEffect(trigger: highlightRequest?.trigger(for: item.id))
+            // A List has no scroll-target layout, so each row reports its own visibility;
+            // callbacks fire only when a row crosses the threshold. It stays inside the row
+            // modifiers below: applied outside them, it hid them from the List.
+            .onScrollVisibilityChange(threshold: 0.5) { isVisible in
+                visibleEntries.setVisible(item.id, isVisible, recordingInto: bookmark)
+            }
             .tag(item.id)
             .listRowInsets(.init(top: 8, leading: 10, bottom: 8, trailing: 10))
             .listRowSeparator(.visible)
@@ -107,7 +109,6 @@ import SwiftUI
                 )
             } preview: {
                 EntryContextMenuPreview(snapshot: item.snapshot)
-                    .onAppear { scrolledID = item.id }
             }
             .entryOpenInAlert(request: $openInRequest, entryID: item.id)
             .swipeActions(edge: .trailing) {

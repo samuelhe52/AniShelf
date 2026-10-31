@@ -16,20 +16,23 @@ import SwiftUI
         @Environment(LibraryBrowseScope.self) private var scope
         @Environment(LibraryEntryInteractionState.self) var interaction
         @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-        @Binding var scrolledID: LibraryEntryIdentity?
-        let scrollRequest: LibraryScrollRequest?
+        let bookmark: LibraryScrollBookmark
+        let scrollInputs: LibraryScrollInputs
         let detailActions: LibraryEntryDetailActions
-        @State private var localScrolledID: LibraryEntryIdentity?
+        /// The aligned card; the gallery's own position, which the bookmark follows.
+        @State private var currentEntryID: LibraryEntryIdentity?
 
         init(
-            scrolledID: Binding<LibraryEntryIdentity?>,
-            scrollRequest: LibraryScrollRequest?,
+            bookmark: LibraryScrollBookmark,
+            scrollInputs: LibraryScrollInputs,
+            displayIDs: [LibraryEntryIdentity],
             detailActions: LibraryEntryDetailActions
         ) {
-            self._scrolledID = scrolledID
-            self.scrollRequest = scrollRequest
+            self.bookmark = bookmark
+            self.scrollInputs = scrollInputs
             self.detailActions = detailActions
-            self._localScrolledID = State(initialValue: scrolledID.wrappedValue)
+            // Start on the bookmarked card, so the first frame does not show the first one.
+            self._currentEntryID = State(initialValue: bookmark.target(in: displayIDs))
         }
 
         var body: some View {
@@ -87,7 +90,6 @@ import SwiftUI
                         AnimeEntryCardWrapper(
                             entry: item.entry,
                             snapshot: item.snapshot,
-                            scrolledID: $scrolledID,
                             detailActions: detailActions,
                             onToggleFavorite: toggleFavorite
                         )
@@ -115,31 +117,36 @@ import SwiftUI
                     .accessibilityHidden(true)
                 }
             }
-            .scrollPosition(id: $localScrolledID)
+            .scrollPosition(id: $currentEntryID)
             .scrollTargetBehavior(.viewAligned)
-            .onChange(of: localScrolledID, initial: true) { _, entryID in
+            // Hold the restored card until the user swipes.
+            .onAppear { bookmark.settle(on: currentEntryID, order: scope.displayIDs) }
+            .onChange(of: currentEntryID, initial: true) { _, entryID in
                 guard let entryID,
                     let entry = scope.displayItems.first(where: { $0.id == entryID })?.entry
                 else { return }
+                bookmark.record(entryID, order: scope.displayIDs)
                 interaction.focus(entry)
             }
-            .onChange(of: scrollRequest) {
-                guard localScrolledID != scrollRequest?.entryID else { return }
-                localScrolledID = scrollRequest?.entryID
+            // One handler for both, so a jump that also leaves a category goes to its entry.
+            .onChange(of: scrollInputs) { old, new in
+                let target = new.request != old.request ? new.request?.entryID : scope.displayIDs.first
+                guard let target, target != currentEntryID else { return }
+                bookmark.settle(on: target, order: scope.displayIDs)
+                currentEntryID = target
             }
-            .onScrollPhaseChange { _, newPhase in
-                if !newPhase.isScrolling {
-                    commitLocalScrollPosition()
-                }
+            // When the aligned card is deleted or leaves the list, align its nearest neighbor.
+            // Settle rather than record: a restore may still hold the bookmark, and a held
+            // bookmark left on the removed card would restore elsewhere after a second removal.
+            .onChange(of: scope.displayIDs) { old, new in
+                guard let currentEntryID, !new.contains(currentEntryID) else { return }
+                let neighbor = LibraryScrollBookmark.nearest(to: currentEntryID, in: old, surviving: new)
+                bookmark.settle(on: neighbor, order: new)
+                self.currentEntryID = neighbor
             }
-            .onDisappear {
-                commitLocalScrollPosition()
+            .onScrollPhaseChange { _, phase in
+                if phase.isUserScroll { bookmark.userDidScroll() }
             }
-        }
-
-        private func commitLocalScrollPosition() {
-            guard scrolledID != localScrolledID else { return }
-            scrolledID = localScrolledID
         }
 
         private var emptyLibraryResource: LocalizedStringResource {
@@ -155,7 +162,6 @@ import SwiftUI
     fileprivate struct AnimeEntryCardWrapper: View {
         var entry: AnimeEntry
         var snapshot: LibraryEntrySnapshot
-        @Binding var scrolledID: LibraryEntryIdentity?
         let detailActions: LibraryEntryDetailActions
         let onToggleFavorite: (AnimeEntry) -> Void
 
@@ -170,19 +176,14 @@ import SwiftUI
                 AnimeEntryCard(
                     entry: entry,
                     snapshot: snapshot,
-                    onOpenDetails: {
-                        openDetails()
-                        scrolledID = snapshot.id
-                    },
+                    onOpenDetails: openDetails,
                     onToggleFavorite: onToggleFavorite,
                     imageLoaded: $imageLoaded
                 )
                 .contextMenu {
                     contextMenu(for: entry)
-                        .onAppear { scrolledID = snapshot.id }
                 } preview: {
                     EntryContextMenuPreview(snapshot: snapshot)
-                        .onAppear { scrolledID = snapshot.id }
                 }
             }
             .padding(.horizontal, 14)

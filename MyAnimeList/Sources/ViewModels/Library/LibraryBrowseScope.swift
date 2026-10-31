@@ -116,6 +116,26 @@ final class LibraryBrowseScope {
         state.groupStrategy == .score && !isScoringEnabled ? .none : state.groupStrategy
     }
 
+    /// What this window shows and in which order; changing it scrolls back to the top
+    /// (docs-ai 038). View style is not part of it: a style switch keeps the position.
+    struct DisplayDefinition: Equatable {
+        var filters: Set<LibraryStore.AnimeFilter>
+        var activeCategoryID: LibraryCategory.ID?
+        var sortStrategy: LibraryStore.AnimeSortStrategy
+        var sortReversed: Bool
+        var groupStrategy: LibraryStore.LibraryGroupStrategy
+    }
+
+    var displayDefinition: DisplayDefinition {
+        DisplayDefinition(
+            filters: filters,
+            activeCategoryID: activeCategoryID,
+            sortStrategy: sortStrategy,
+            sortReversed: sortReversed,
+            groupStrategy: groupStrategy
+        )
+    }
+
     var state: State {
         State(
             filterIDs: filters.map(\.id).sorted(),
@@ -238,47 +258,7 @@ final class LibraryBrowseScope {
         filters = store.defaultFilters
     }
 
-    /// Deletes an entry and moves the scroll position to its neighbor in this window's order.
-    @discardableResult
-    func deleteEntry(
-        _ entry: AnimeEntry,
-        updateScrolledID: (LibraryEntryIdentity?) -> Void
-    ) -> Bool {
-        let scrollTarget = deletionScrollTarget(for: entry)
-        guard store.deleteEntry(entry) else { return false }
-        switch scrollTarget {
-        case .preserveCurrent:
-            break
-        case .clear:
-            updateScrolledID(nil)
-        case .entry(let targetID):
-            updateScrolledID(targetID)
-        }
-        return true
-    }
-
     // MARK: - Private
-
-    private enum DeletionScrollTarget: Equatable {
-        case preserveCurrent
-        case clear
-        case entry(LibraryEntryIdentity)
-    }
-
-    private func deletionScrollTarget(for entry: AnimeEntry) -> DeletionScrollTarget {
-        let ids = displayIDs
-        guard let index = ids.firstIndex(of: entry.libraryIdentity) else {
-            return .preserveCurrent
-        }
-        if index > 0 {
-            return .entry(ids[index - 1])
-        }
-        let nextIndex = index + 1
-        guard nextIndex < ids.endIndex else {
-            return .clear
-        }
-        return .entry(ids[nextIndex])
-    }
 
     private func matchesBrowseFilters(_ entry: AnimeEntry) -> Bool {
         if store.hideDroppedByDefault && !filters.contains(.dropped) && entry.watchStatus == .dropped {
