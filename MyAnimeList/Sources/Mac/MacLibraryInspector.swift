@@ -36,27 +36,17 @@
         @State private var lastSingleID: LibraryEntryIdentity?
         @State private var posterFlight = MacInspectorPosterFlight()
 
+        private var selectedEntry: AnimeEntry? {
+            guard isPresented, let identity = selection.single else { return nil }
+            return displayItems.first { $0.id == identity }?.entry
+        }
+
         var body: some View {
-            let selectedEntries = selectedEntries
             ZStack {
-                if selectedEntries.count > 1 {
-                    MacBatchSelectionPanel(
-                        store: store,
-                        selectedEntries: selectedEntries,
-                        lastClickedID: selection.anchor,
-                        enteringFromID: lastSingleID,
-                        scoringEnabled: scoringEnabled,
-                        apply: applyBatchAction,
-                        deleteSelectedEntries: { deleteEntries(selectedEntries) }
-                    )
-                } else if let identity = selection.single {
-                    // The session is created right after the selection changes; until then
-                    // show nothing rather than flash No Selection.
-                    if let session = detailSessionStore.session(for: identity) {
-                        entryDetail(session: session)
-                    }
-                } else {
-                    ContentUnavailableView("No Selection", systemImage: "sidebar.trailing")
+                // SwiftUI keeps the inspector alive while collapsed. Remove its content
+                // explicitly so arrow navigation cannot load and save hidden entry details.
+                if isPresented {
+                    selectionContent
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -83,8 +73,10 @@
                     .help(Text(title))
                 }
             }
-            .onChange(of: selection.single, initial: true) { _, identity in
-                synchronizeDetailSession(identity)
+            // Import can replace the object behind the selected identity. Changes to that
+            // same object's metadata do not recreate its session or restart its load.
+            .onChange(of: selectedEntry.map(ObjectIdentifier.init), initial: true) {
+                synchronizeDetailSession(selectedEntry?.libraryIdentity)
             }
             .onChange(of: selection.ids, initial: true) {
                 // A batch keeps the entry it grew from; clearing the selection forgets it.
@@ -97,11 +89,31 @@
                     posterFlight.cancel()
                 }
             }
-            .onChange(of: store.libraryRevision) {
-                // Sync can replace the entry object behind an unchanged identity.
-                synchronizeDetailSession(selection.single)
-            }
             .inspectorColumnWidth(min: 340, ideal: 400, max: 560)
+        }
+
+        @ViewBuilder
+        private var selectionContent: some View {
+            if selection.ids.count > 1 {
+                let selectedEntries = selectedEntries
+                MacBatchSelectionPanel(
+                    store: store,
+                    selectedEntries: selectedEntries,
+                    lastClickedID: selection.anchor,
+                    enteringFromID: lastSingleID,
+                    scoringEnabled: scoringEnabled,
+                    apply: applyBatchAction,
+                    deleteSelectedEntries: { deleteEntries(selectedEntries) }
+                )
+            } else if let identity = selection.single {
+                // The session is created right after the selection changes; until then
+                // show nothing rather than flash No Selection.
+                if let session = detailSessionStore.session(for: identity) {
+                    entryDetail(session: session)
+                }
+            } else {
+                ContentUnavailableView("No Selection", systemImage: "sidebar.trailing")
+            }
         }
 
         /// The selection in layout order.

@@ -20,7 +20,6 @@
         @Environment(LibraryEntryActionState.self) private var actions
         @Environment(MacLibrarySelection.self) private var selection
         @FocusState private var isListFocused: Bool
-        @State private var openInRequest: EntryOpenInRequest?
         @State private var visibleEntries = LibraryVisibleEntryTracker()
 
         let detailActions: LibraryEntryDetailActions
@@ -35,7 +34,12 @@
                     displayItems,
                     selection: listSelection
                 ) { item in
-                    rowContent(for: item)
+                    MacLibraryListRow(
+                        item: item,
+                        detailActions: detailActions,
+                        highlightTrigger: highlightRequest?.trigger(for: item.id)
+                    )
+                    .tag(item.id)
                 }
                 // The inset style draws a rounded, inset selection like Mail's instead of an
                 // edge-to-edge bar.
@@ -77,7 +81,7 @@
                 get: { selection.ids },
                 set: { ids in
                     // Keep arrow keys in the list after a click instead of the sidebar.
-                    isListFocused = true
+                    if !isListFocused { isListFocused = true }
                     // Arrow keys scroll the list natively without a user scroll phase, so any
                     // selection change counts as the user moving on from a restored position.
                     bookmark.userDidScroll()
@@ -90,7 +94,28 @@
             displayItems.first { $0.id == id }?.entry
         }
 
-        private func rowContent(for item: LibraryEntryDisplayItem) -> some View {
+        private func editEntry(_ entry: AnimeEntry) {
+            detailActions.edit(entry)
+        }
+
+        private func toggleFavorite(_ entry: AnimeEntry) {
+            store.repository.toggleFavorite(entry)
+        }
+    }
+
+    /// Keeps row content and action construction behind a view boundary: native selection
+    /// repeatedly evaluates the List's data closure.
+    fileprivate struct MacLibraryListRow: View {
+        @Environment(LibraryStore.self) private var store
+        @Environment(LibraryEntryActionState.self) private var actions
+        @Environment(MacLibrarySelection.self) private var selection
+        @State private var openInRequest: EntryOpenInRequest?
+
+        let item: LibraryEntryDisplayItem
+        let detailActions: LibraryEntryDetailActions
+        let highlightTrigger: UUID?
+
+        var body: some View {
             // Rows leave clicks to the list's native selection.
             AnimeEntryListRow(
                 entry: item.entry,
@@ -98,9 +123,8 @@
                 tapGesturesEnabled: false,
                 onToggleFavorite: toggleFavorite
             )
-            .highlightEffect(trigger: highlightRequest?.trigger(for: item.id))
+            .highlightEffect(trigger: highlightTrigger)
             .macLibraryEntryDraggable(item.id, selection: selection)
-            .tag(item.id)
             .listRowInsets(.init(top: 4, leading: 8, bottom: 4, trailing: 8))
             .listRowSeparator(.visible)
             .listRowSeparatorTint(.white.opacity(0.06))
