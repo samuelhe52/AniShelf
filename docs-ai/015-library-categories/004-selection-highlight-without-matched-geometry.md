@@ -56,14 +56,18 @@ inset is not involved.
 
 ## Current state (corrected 2026-10-31)
 
-The fix is incomplete. With `3dc7e1a3` and the strip shown, switching Grid → List right
-after scrolling the grid made the list pop in with no transition on 4 of 4 switches
-(simulator, 2026-10-31). The 2026-10-30 validation had no scroll before its switches.
-The maintainer isolated it by disabling the strip. However, one experimental
-transition variant still popped in once with the strip disabled (037's Codex runs), so
-the strip may not be the only factor. Removing the matched-geometry highlight did not
-remove every trigger, and the remaining cause is undiagnosed. The under-bar white-out
-and soft-edge snap found during that session are a separate issue, recorded in
+The `3dc7e1a3` fix was incomplete. The remaining glass/animation interaction is now
+addressed by [005](005-page-insertion-after-scrolling.md), validated on `59c6ad64`
+with that fix applied. The historical reproduction remains valid: with
+`3dc7e1a3` and the strip shown, switching Grid → List right after scrolling the grid
+made the list pop in with no transition on 4 of 4 switches (simulator, 2026-10-31).
+The 2026-10-30 validation had no scroll before its switches. The maintainer isolated
+it by disabling the strip. However, one experimental transition variant still popped
+in once with the strip disabled (037's Codex runs), so the strip may not be the only
+factor. Removing the matched-geometry highlight did not remove every trigger. 005
+traced the remaining one to the strip's glass taking part in the view-style animation;
+SwiftUI's underlying cause is still unknown. The under-bar white-out and soft-edge
+snap found during that session are a separate issue, recorded in
 [037-view-style-transition-under-bars](../037-view-style-transition-under-bars/000-plan.md).
 
 ## Open questions

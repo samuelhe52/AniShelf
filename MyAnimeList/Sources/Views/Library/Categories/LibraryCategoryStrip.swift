@@ -135,6 +135,8 @@ struct LibraryCategoryStrip: View {
         .padding(.bottom, 4)
         .animation(.snappy, value: scope.activeCategoryID)
         .animation(reorderAnimation, value: store.categories)
+        // Keep page-style transactions out of the strip's glass subtree.
+        .animation(nil, value: scope.viewStyle)
         .sensoryFeedback(.impact(weight: .light), trigger: draggedCategoryID) { _, newValue in
             newValue != nil
         }
