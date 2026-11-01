@@ -416,7 +416,7 @@ struct EntryNotesReader: View {
                                 Button("Move to Episode…", systemImage: "arrow.right") { onMove(note.anchor) }
                                 Button("Delete Note", systemImage: "trash", role: .destructive) {
                                     withAnimation {
-                                        entry.updateEpisodeNote(at: note.anchor, text: "", recordingIn: session)
+                                        _ = entry.updateEpisodeNote(at: note.anchor, text: "", recordingIn: session)
                                     }
                                 }
                             }
