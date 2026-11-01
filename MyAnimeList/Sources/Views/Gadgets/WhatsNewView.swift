@@ -175,9 +175,11 @@ import SwiftUI
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(.primary)
                                 Spacer(minLength: 12)
-                                Image(systemName: "arrow.up.right")
-                                    .font(.footnote.weight(.bold))
-                                    .foregroundStyle(.tertiary)
+                                if case .openURL = action.kind {
+                                    Image(systemName: "arrow.up.right")
+                                        .font(.footnote.weight(.bold))
+                                        .foregroundStyle(.tertiary)
+                                }
                             }
                             .padding(.horizontal, 12)
                             .padding(.vertical, 10)

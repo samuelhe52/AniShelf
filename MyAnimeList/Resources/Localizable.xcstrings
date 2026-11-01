@@ -1,6 +1,118 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Add notes for individual episodes. Existing notes are kept under Overall." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エピソードごとにメモを追加できます。既存のメモは「全体」に保持されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "支持分集笔记；现有笔记自动被归为“整体”。"
+          }
+        }
+      }
+    },
+    "Choose the new cinematic detail header in macOS settings." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOSの設定で、映画のような新しい詳細画面のヘッダーを選べます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS版新增电影感详情页顶部样式，可在设置中选择。"
+          }
+        }
+      }
+    },
+    "Clear Image Cache and Prefetch" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像キャッシュを消去して再取得"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除图片缓存并重新预取"
+          }
+        }
+      }
+    },
+    "Create smart categories by describing what you want, then review and select matches. Supports Apple Intelligence, OpenAI, and OpenRouter." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作りたいカテゴリを言葉で説明し、候補を確認して選べます。Apple Intelligence、OpenAI、OpenRouterに対応しています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增智能分类：用自然语言描述想要的分类，预览匹配结果后选择要添加的作品。支持Apple Intelligence、OpenAI和OpenRouter。"
+          }
+        }
+      }
+    },
+    "Fixed performance issues on macOS." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOSのパフォーマンスに関する問題を修正しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修复macOS版本的一些性能问题。"
+          }
+        }
+      }
+    },
+    "Improved List view performance for large libraries, category switching, poster loading, and Batch Add." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大規模なライブラリでのリスト表示のパフォーマンスを改善し、カテゴリの切り替え、ポスターの読み込み、一括追加を最適化しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "改善大型资料库下列表视图的性能；优化分类切换、海报加载及批量添加体验。"
+          }
+        }
+      }
+    },
+    "This release adds episode notes and smart categories, improves library performance, and makes image caching more efficient. We recommend existing users to clear and reload the image cache below to reclaim disk space." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このバージョンではエピソードメモとスマートカテゴリを追加し、ライブラリのパフォーマンスと画像キャッシュの効率を改善しました。既存のユーザーは、ストレージ容量を確保するために、下のボタンから画像キャッシュを消去して再取得することをおすすめします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本次更新新增分集笔记和智能分类，改善资料库性能，并提高图片缓存效率。建议现有用户通过下方按钮清除并重新预取图片缓存，以释放存储空间。"
+          }
+        }
+      }
+    },
     "" : {
       "localizations" : {
         "ja" : {

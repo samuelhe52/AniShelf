@@ -485,6 +485,38 @@ enum WhatsNewRegistry {
                     kind: .openURL(projectURL)
                 )
             ]
+        ),
+        "1.105.0": .init(
+            version: "1.105.0",
+            summary:
+                "This release adds episode notes and smart categories, improves library performance, and makes image caching more efficient. We recommend existing users to clear and reload the image cache below to reclaim disk space.",
+            highlights: [
+                "Add notes for individual episodes. Existing notes are kept under Overall.",
+                "Create smart categories by describing what you want, then review and select matches. Supports Apple Intelligence, OpenAI, and OpenRouter.",
+                "Choose the new cinematic detail header in macOS settings.",
+                "Improved List view performance for large libraries, category switching, poster loading, and Batch Add.",
+                "Fixed performance issues on macOS."
+            ],
+            primaryAction: .init(
+                id: "refresh-metadata",
+                title: "Refresh Metadata",
+                systemImage: "arrow.clockwise",
+                kind: .refreshMetadata
+            ),
+            secondaryActions: [
+                .init(
+                    id: "clear-image-cache",
+                    title: "Clear Image Cache and Prefetch",
+                    systemImage: "photo.stack",
+                    kind: .clearImageCache
+                ),
+                .init(
+                    id: "project-github",
+                    title: "AniShelf on GitHub",
+                    systemImage: "arrow.up.right.square",
+                    kind: .openURL(projectURL)
+                )
+            ]
         )
     ]
 
