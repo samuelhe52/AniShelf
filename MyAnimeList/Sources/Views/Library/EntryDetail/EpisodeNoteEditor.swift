@@ -11,6 +11,7 @@ import SwiftUI
 /// The episode-list shortcut edits a draft; Cancel never touches the saved note.
 struct EpisodeNoteEditor: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(EntryDetailSession.self) private var session: EntryDetailSession?
     let entry: AnimeEntry
     let anchor: EpisodeNoteAnchor
     @State private var text: String
@@ -43,13 +44,13 @@ struct EpisodeNoteEditor: View {
     private func save() {
         // An unchanged normalized draft (such as whitespace only) is a no-op save;
         // keep the draft only if the season lost its parent series mid-edit.
-        if entry.updateEpisodeNote(at: anchor, text: text) || entry.supportsEpisodeNotes {
+        if entry.updateEpisodeNote(at: anchor, text: text, recordingIn: session) || entry.supportsEpisodeNotes {
             dismiss()
         }
     }
 
     private func delete() {
-        entry.updateEpisodeNote(at: anchor, text: "")
+        entry.updateEpisodeNote(at: anchor, text: "", recordingIn: session)
         dismiss()
     }
 

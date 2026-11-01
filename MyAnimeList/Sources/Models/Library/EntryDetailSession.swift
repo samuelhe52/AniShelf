@@ -70,6 +70,10 @@ final class EntryDetailSession {
     #endif
     var originalUserInfo: UserEntryInfo
     var originalTrackingUpdatedAt: Date?
+    /// Episode notes this session edited since its baseline.
+    ///
+    /// Discard reverts only these, so notes that sync or another window changed meanwhile survive.
+    private(set) var editedEpisodeNoteAnchors: Set<EpisodeNoteAnchor> = []
     var conversion = EntryDetailConversionState()
     var isPresentingNotes = false
     var hasPendingWatchedReviewOpportunity = false
@@ -157,6 +161,36 @@ final class EntryDetailSession {
 
     func save() throws {
         try repository.save()
+    }
+
+    func recordEpisodeNoteEdit(at anchor: EpisodeNoteAnchor) {
+        editedEpisodeNoteAnchors.insert(anchor)
+    }
+
+    /// Saves the user's edits and makes them the new Discard baseline.
+    func saveUserEdits() throws {
+        try save()
+        originalUserInfo = entry.userInfo
+        originalTrackingUpdatedAt = entry.trackingUpdatedAt
+        editedEpisodeNoteAnchors.removeAll()
+    }
+
+    /// Restores the baseline.
+    ///
+    /// Restored episode notes get new clocks, so restoring one this session never edited
+    /// would delete or overwrite another device's note everywhere.
+    func discardUserEdits() throws {
+        var userInfo = originalUserInfo
+        let originalNotes = Dictionary(
+            uniqueKeysWithValues: originalUserInfo.episodeNotes.map { ($0.anchor, $0) })
+        // Unedited anchors replay their current note, which restores as a no-op.
+        userInfo.episodeNotes =
+            entry.episodeNotes.filter { !editedEpisodeNoteAnchors.contains($0.anchor) }
+            + editedEpisodeNoteAnchors.compactMap { originalNotes[$0] }
+        entry.updateUserInfo(from: userInfo)
+        entry.trackingUpdatedAt = originalTrackingUpdatedAt
+        editedEpisodeNoteAnchors.removeAll()
+        try save()
     }
 
     func toggleFavorite() {

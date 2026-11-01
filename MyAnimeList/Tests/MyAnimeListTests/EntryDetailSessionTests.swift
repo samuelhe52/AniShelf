@@ -97,6 +97,31 @@ struct EntryDetailSessionTests {
         #expect(session.model.subtitleText == "Stored Subtitle")
     }
 
+    @Test @MainActor func discardRevertsOnlyEpisodeNotesTheSessionEdited() throws {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let entry = AnimeEntry(name: "Series", type: .series, tmdbID: 43)
+        try repository.newEntry(entry)
+        let rewritten = EpisodeNoteAnchor(seasonNumber: 1, episodeNumber: 1)
+        let syncedEdit = EpisodeNoteAnchor(seasonNumber: 1, episodeNumber: 2)
+        let added = EpisodeNoteAnchor(seasonNumber: 1, episodeNumber: 3)
+        let syncedAddition = EpisodeNoteAnchor(seasonNumber: 1, episodeNumber: 5)
+        entry.updateEpisodeNote(at: rewritten, text: "Original")
+        entry.updateEpisodeNote(at: syncedEdit, text: "Original")
+        let session = EntryDetailSession(entry: entry, repository: repository)
+
+        entry.updateEpisodeNote(at: rewritten, text: "Rewritten", recordingIn: session)
+        entry.updateEpisodeNote(at: added, text: "Added", recordingIn: session)
+        // Changes that sync or another window make while the detail is open.
+        entry.updateEpisodeNote(at: syncedEdit, text: "Synced edit")
+        entry.updateEpisodeNote(at: syncedAddition, text: "Synced addition")
+        try session.discardUserEdits()
+
+        #expect(entry.episodeNote(at: rewritten)?.text == "Original")
+        #expect(entry.episodeNote(at: added)?.isEmpty == true)
+        #expect(entry.episodeNote(at: syncedEdit)?.text == "Synced edit")
+        #expect(entry.episodeNote(at: syncedAddition)?.text == "Synced addition")
+    }
+
     @Test @MainActor func airingSeriesRefreshesPersistedSeasonCountWithoutRepeatingTheRequest()
         async throws
     {

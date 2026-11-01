@@ -395,6 +395,7 @@ fileprivate struct EpisodeNumberSection: View {
 /// Selecting one returns to its editor.
 struct EntryNotesReader: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(EntryDetailSession.self) private var session: EntryDetailSession?
     let entry: AnimeEntry
     let onSelect: (EntryNoteScope) -> Void
     let onMove: (EpisodeNoteAnchor) -> Void
@@ -414,7 +415,9 @@ struct EntryNotesReader: View {
                             .contextMenu {
                                 Button("Move to Episode…", systemImage: "arrow.right") { onMove(note.anchor) }
                                 Button("Delete Note", systemImage: "trash", role: .destructive) {
-                                    withAnimation { _ = entry.updateEpisodeNote(at: note.anchor, text: "") }
+                                    withAnimation {
+                                        entry.updateEpisodeNote(at: note.anchor, text: "", recordingIn: session)
+                                    }
                                 }
                             }
                     } header: {

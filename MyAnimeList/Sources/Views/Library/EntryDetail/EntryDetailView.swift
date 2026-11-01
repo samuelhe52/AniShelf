@@ -889,19 +889,15 @@ struct EntryDetailView: View {
 
     private func saveUserEdits() {
         do {
-            try session.save()
-            session.originalUserInfo = session.entry.userInfo
-            session.originalTrackingUpdatedAt = session.entry.trackingUpdatedAt
+            try session.saveUserEdits()
         } catch {
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }
     }
 
     private func discardUserEdits() {
-        session.entry.updateUserInfo(from: session.originalUserInfo)
-        session.entry.trackingUpdatedAt = session.originalTrackingUpdatedAt
         do {
-            try session.save()
+            try session.discardUserEdits()
         } catch {
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)
         }

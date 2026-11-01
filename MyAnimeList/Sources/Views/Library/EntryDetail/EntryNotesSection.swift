@@ -14,6 +14,7 @@ import SwiftUI
 
 /// Design A: the editor stays in place while chips inside its box select the note scope.
 struct EntryNotesSection: View {
+    @Environment(EntryDetailSession.self) private var session: EntryDetailSession?
     let entry: AnimeEntry
     let originalNotes: String?
     let originalEpisodeNotes: [EpisodeNote]
@@ -398,7 +399,7 @@ struct EntryNotesSection: View {
 
     private func setText(_ text: String) {
         if let selectedAnchor, supportsEpisodes {
-            entry.updateEpisodeNote(at: selectedAnchor, text: text)
+            entry.updateEpisodeNote(at: selectedAnchor, text: text, recordingIn: session)
         } else {
             entry.updateNotes(text)
         }
@@ -427,8 +428,12 @@ struct EntryNotesSection: View {
         guard let text = entry.episodeNote(at: source)?.text, source != target else { return }
         let existing = entry.episodeNote(at: target)?.text ?? ""
         withAnimation(.snappy) {
-            entry.updateEpisodeNote(at: target, text: combining && !existing.isEmpty ? existing + "\n\n" + text : text)
-            entry.updateEpisodeNote(at: source, text: "")
+            entry.updateEpisodeNote(
+                at: target,
+                text: combining && !existing.isEmpty ? existing + "\n\n" + text : text,
+                recordingIn: session
+            )
+            entry.updateEpisodeNote(at: source, text: "", recordingIn: session)
             selectedScope = .episode(target)
         }
         pendingCombine = nil
@@ -436,7 +441,7 @@ struct EntryNotesSection: View {
 
     private func delete(_ anchor: EpisodeNoteAnchor) {
         withAnimation(.snappy) {
-            entry.updateEpisodeNote(at: anchor, text: "")
+            entry.updateEpisodeNote(at: anchor, text: "", recordingIn: session)
             if selectedAnchor == anchor {
                 selectedScope = .defaultScope(for: entry)
             }
@@ -693,6 +698,18 @@ extension View {
         font(.footnote.weight(.semibold))
             .lineLimit(1)
             .fixedSize()
+    }
+}
+
+extension AnimeEntry {
+    /// Edits an episode note and records the edit with the open detail session, so its
+    /// Discard reverts this note but leaves notes changed elsewhere alone.
+    @MainActor @discardableResult
+    func updateEpisodeNote(at anchor: EpisodeNoteAnchor, text: String, recordingIn session: EntryDetailSession?) -> Bool
+    {
+        guard updateEpisodeNote(at: anchor, text: text) else { return false }
+        session?.recordEpisodeNoteEdit(at: anchor)
+        return true
     }
 }
 

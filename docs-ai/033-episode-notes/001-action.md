@@ -13,8 +13,9 @@
 | 2026-10-27 | Add iOS swipe navigation between scopes; follow up on reported skipping in All by replacing its simultaneous drag with discrete swipes. | Same commit as [005 amendment](005-swipe-scope-navigation.md) and [006 amendment](006-return-to-all.md) |
 | 2026-10-27 | Add a small All return button at the bottom-right of inline episode and Global/Overall editors on iOS and macOS for entries supporting episode notes. | [006 amendment](006-return-to-all.md) |
 | 2026-10-27 | Remove the All chip and let selected-chip taps return to the overview with no chip selected. | [007 amendment](007-unselected-overview.md) |
+| 2026-11-01 | Track the episode notes each detail session edits so Discard reverts only those, after a pre-release review found Discard could delete notes synced from other devices. | Same commit as [008 amendment](008-discard-session-edits.md) |
 
-## Outcome and current state (as of 2026-10-27)
+## Outcome and current state (as of 2026-11-01)
 
 - Overall notes keep their original entry-specific meaning. Movies retain the overall editor alone.
 - Series and season views share one evolving note per season/episode anchor. Season zero and episodes absent from metadata remain valid. Empty text is retained as a timestamped deletion marker. Note changes do not advance the unrelated tracking-field clock.
@@ -26,7 +27,7 @@
 - Episode rows offer Add/Edit Note as a swipe action on iOS, a context menu on macOS, and an accessibility action. Long press stays the iOS preview gesture; the preview shows existing note text and hands off to a separate editor sheet after the popover closes. Cancel leaves the saved text unchanged; Save and Delete Note update the shared note, and a whitespace-only draft for a new note saves as a no-op. Open note sheets block detail-host migration.
 - A season whose parent series link is missing hides every episode-note entry point. Opening its detail runs a silent single-entry metadata refresh once per launch that relinks or recreates the parent; when the owner appears, the Discard baseline adopts its existing notes.
 - Pasting user info never changes the target's episode notes, and the paste-overwrite confirmation ignores them; copied text still carries them.
-- Revert restores only the selected note. The existing detail Discard action restores the season-scoped episode-note snapshot as well as the overall note. Restoring changed episode text advances its clock so already-synced edits cannot override the revert.
+- Revert restores only the selected note. The existing detail Discard action restores the overall note and the episode notes that detail session edited; notes that sync or another window changed meanwhile are left alone. Restoring changed episode text advances its clock so already-synced edits cannot override the revert. See [008 amendment](008-discard-session-edits.md).
 - JSON exports contain structured notes, tabular exports append an `episode_notes` JSON column, and plain-text exports label episode notes. A season-only export includes its parent-owned notes for that season. The With Notes statistic includes entries with episode notes.
 
 Key source files:
@@ -41,6 +42,7 @@ Key source files:
 - `MyAnimeList/Sources/Views/Library/EntryDetail/EntryNotesSheets.swift`
 - `MyAnimeList/Sources/Views/Library/EntryDetail/EpisodeNoteEditor.swift`
 - `MyAnimeList/Sources/Views/Library/EntryDetail/EntryDetailView.swift`
+- `MyAnimeList/Sources/Models/Library/EntryDetailSession.swift`
 - `MyAnimeList/Sources/ViewModels/Library/LibraryStore+Entries.swift`
 - `MyAnimeList/Sources/ViewModels/Library/LibraryEntryConverter.swift`
 - `MyAnimeList/Sources/ViewModels/Library/LibraryDuplicateRepair.swift`
@@ -80,6 +82,7 @@ Key source files:
 | 2026-10-27 scope swipes and All correction | The initial swipe implementation passed `make run-sim` and `make build-mac` after fixing an initial compilation failure. Limited simulator interaction and initial maintainer acceptance were followed by a report of skipping in All. Its correction passed `make build`, `make build-mac`, and the diff check; no further runtime checks or automated tests were run. See [005 amendment](005-swipe-scope-navigation.md) for evidence and limits. |
 | 2026-10-27 return-to-All button | `make build` and `make build-mac` passed, including reruns after extending the button to Overall; diff and documentation-link checks passed. No runtime checks or automated tests were run for this local UI wiring change. See [006 amendment](006-return-to-all.md). |
 | 2026-10-27 unselected overview | `make build` and `make build-mac` passed. No simulator was booted, so runtime checks were not run; no automated tests were added. See [007 amendment](007-unselected-overview.md). |
+| 2026-11-01 Discard session edits | `make test-app-sim APP_TEST_ONLY='MyAnimeListTests/EntryDetailSessionTests'` passed, including the new regression test, and `make build-mac` succeeded. The two-device flow was not exercised in the running app. See [008 amendment](008-discard-session-edits.md). |
 
 Initial incremental package attempts failed to compile. Rerunning without `--quiet` exposed missing `try` and use of app-only user-info convenience helpers in the new package tests; these were corrected before the successful runs above. The simulator's Japanese IME altered an initial hardware-keyboard test string; native Paste then entered and verified the intended Unicode text. A transient edit-menu readiness error was resolved by targeting the editor's native menu. These automation failures were not app crashes.
 
@@ -89,6 +92,6 @@ Initial incremental package attempts failed to compile. Rerunning without `--qui
 - Production CloudKit sync and two-device convergence were not exercised. Verify/promote the new `LibraryEntry.episodeNotes` Bytes field in the release environment before distribution; sync schema version 4 causes older clients to quarantine new snapshots rather than overwrite note state.
 - The initial feature validation compiled native macOS without launching it. The later [compact-strip follow-up](003-compact-strip-and-macos-fade.md) built and launched the Mac fixture repeatedly and obtained maintainer visual acceptance of the fade fix before its final platform guard. Complete pointer/keyboard interaction and narrow-inspector acceptance remain unverified. No device was booted and no physical device was used for that follow-up.
 - Host-migration blocking is implemented; a fold/unfold interaction while a notes draft is open was not exercised.
-- The simulator interaction checks above predate the swipe-to-edit rework; validation of the reworked UI was not recorded here. The parent-restore and Discard-baseline paths have no automated coverage and were not exercised in the running app.
+- The simulator interaction checks above predate the swipe-to-edit rework; validation of the reworked UI was not recorded here. The parent-restore and Discard-baseline paths were not exercised in the running app; only Discard's restriction to session-edited notes has automated coverage ([008 amendment](008-discard-session-edits.md)).
 - Update episode-note feature copy and, when selected, refreshed screenshots in `../anishelf-site`. That repository was not edited.
 - No commits were pushed and no release or production schema deployment was performed.
