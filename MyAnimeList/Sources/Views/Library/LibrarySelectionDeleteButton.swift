@@ -2,7 +2,7 @@
 //  LibrarySelectionDeleteButton.swift
 //  AniShelf
 //
-//  Created by Claude Code on behalf of samuelhe52 on 2026/10/17.
+//  Created by Claude Code on behalf of Samuel He on 2026/10/17.
 //
 
 import DataProvider
@@ -23,13 +23,12 @@ struct LibrarySelectionDeleteButton: View {
         }
         .disabled(selectedEntries.isEmpty)
         .tint(.red)
-        .alert(LocalizedStringResource("Delete Selected Anime?"), isPresented: $isShowingConfirmation) {
+        .alert("Delete Selected Anime?", isPresented: $isShowingConfirmation) {
             Button("Delete", role: .destructive, action: deleteSelectedEntries)
             Button("Cancel", role: .cancel) {}
         } message: {
             Text(
-                LocalizedStringResource(
-                    "This will delete \(selectedEntries.count) selected anime from your library."))
+                "This will delete \(selectedEntries.count) selected anime from your library.")
         }
     }
 }

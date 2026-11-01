@@ -31,17 +31,27 @@ extension TMDbImageAndTranslationTests {
         detail.entry = entry
 
         #expect(entry.posterURL?.absoluteString == "https://image.tmdb.org/t/p/original/poster.jpg")
-        #expect(entry.backdropURL?.absoluteString == "https://image.tmdb.org/t/p/w1280/backdrop.jpg")
-        #expect(entry.backdropURL?.absoluteString == "https://image.tmdb.org/t/p/w1280/backdrop.jpg")
-        #expect(detail.heroImageURL?.absoluteString == "https://image.tmdb.org/t/p/w1280/backdrop.jpg")
-        #expect(detail.logoImageURL?.absoluteString == "https://image.tmdb.org/t/p/w500/logo.png")
+        #expect(entry.backdropImage?.url.absoluteString == "https://image.tmdb.org/t/p/w1280/backdrop.jpg")
+        #expect(detail.logoImage?.url.absoluteString == "https://image.tmdb.org/t/p/w500/logo.png")
 
         let svgDetail = AnimeEntryDetail(
             language: "en-US",
             title: "SVG Logo Entry",
             logoImagePath: "/logo.svg"
         )
-        #expect(svgDetail.logoImageURL?.absoluteString == "https://image.tmdb.org/t/p/original/logo.svg")
+        #expect(svgDetail.logoImage?.url.absoluteString == "https://image.tmdb.org/t/p/original/logo.svg")
+    }
+
+    /// A variant whose rendition is missing from the size catalog resolves no URL at all, so
+    /// every variant must resolve.
+    @Test func everyImageVariantResolvesItsRendition() {
+        for variant in TMDbImageVariant.allCases {
+            #expect(TMDbImage(path: "/image.jpg", variant: variant) != nil, "\(variant)")
+        }
+        #expect(
+            TMDbImage(path: "/image.jpg", variant: .still)?.url.absoluteString
+                == "https://image.tmdb.org/t/p/w300/image.jpg"
+        )
     }
 
     @Test func fetchDTOImageURLsResolveFromPathsBeforeLegacyURLs() throws {
@@ -83,7 +93,7 @@ extension TMDbImageAndTranslationTests {
         )
 
         #expect(
-            detail.resolvedLogoImageURL?.absoluteString
+            detail.resolvedLogoImage?.url.absoluteString
                 == "https://image.tmdb.org/t/p/w500/logos/title.png"
         )
         #expect(
@@ -91,24 +101,24 @@ extension TMDbImageAndTranslationTests {
                 language: "en-US",
                 title: "SVG Path Detail",
                 logoImagePath: "/logos/title.svg"
-            ).resolvedLogoImageURL?.absoluteString
+            ).resolvedLogoImage?.url.absoluteString
                 == "https://image.tmdb.org/t/p/original/logos/title.svg"
         )
         #expect(
-            character.resolvedProfileURL?.absoluteString
+            character.resolvedProfileImage?.url.absoluteString
                 == "https://image.tmdb.org/t/p/w185/profiles/character.jpg"
         )
         #expect(
-            staff.resolvedProfileURL?.absoluteString
+            staff.resolvedProfileImage?.url.absoluteString
                 == "https://image.tmdb.org/t/p/w185/profiles/staff.jpg"
         )
         #expect(
-            season.resolvedPosterURL?.absoluteString
-                == "https://image.tmdb.org/t/p/w342/seasons/one.jpg"
+            season.resolvedPosterImage?.url.absoluteString
+                == "https://image.tmdb.org/t/p/w500/seasons/one.jpg"
         )
         #expect(
-            episode.resolvedImageURL?.absoluteString
-                == "https://image.tmdb.org/t/p/original/episodes/still.jpg"
+            episode.resolvedStillImage?.url.absoluteString
+                == "https://image.tmdb.org/t/p/w300/episodes/still.jpg"
         )
     }
 
@@ -121,7 +131,7 @@ extension TMDbImageAndTranslationTests {
                 characterName: "Character",
                 actorName: "Actor",
                 profileURL: legacyURL
-            ).resolvedProfileURL == legacyURL
+            ).resolvedProfileImage?.url == legacyURL
         )
         #expect(
             AnimeEntrySeasonSummaryDTO(
@@ -129,7 +139,7 @@ extension TMDbImageAndTranslationTests {
                 seasonNumber: 1,
                 title: "Season",
                 posterURL: legacyURL
-            ).resolvedPosterURL == legacyURL
+            ).resolvedPosterImage?.url == legacyURL
         )
         #expect(
             AnimeEntryEpisodeSummaryDTO(
@@ -137,11 +147,11 @@ extension TMDbImageAndTranslationTests {
                 episodeNumber: 1,
                 title: "Episode",
                 imageURL: legacyURL
-            ).resolvedImageURL == legacyURL
+            ).resolvedStillImage?.url == legacyURL
         )
     }
 
-    @Test func lazySeasonEpisodeMappingUsesResolvedStillURL() {
+    @Test func lazySeasonEpisodeMappingUsesResolvedStillImage() {
         let card = SeriesSeasonEpisodeGroupView.episodeCard(
             from: AnimeEntryEpisodeSummaryDTO(
                 id: 1,
@@ -151,10 +161,10 @@ extension TMDbImageAndTranslationTests {
             )
         )
 
-        #expect(card.imageURL?.absoluteString == "https://image.tmdb.org/t/p/original/episodes/still.jpg")
+        #expect(card.stillImage?.url.absoluteString == "https://image.tmdb.org/t/p/w300/episodes/still.jpg")
     }
 
-    @Test func displayPosterURLResolvesContextSizedRenditions() throws {
+    @Test func displayPosterImageResolvesVariantRenditions() throws {
         let entry = AnimeEntry(
             name: "Display Poster Entry",
             type: .series,
@@ -165,20 +175,16 @@ extension TMDbImageAndTranslationTests {
 
         #expect(snapshot.posterMissing == false)
         #expect(
-            snapshot.displayPosterURL(for: .list)?.absoluteString
-                == "https://image.tmdb.org/t/p/w342/poster.jpg"
-        )
-        #expect(
-            snapshot.displayPosterURL(for: .grid)?.absoluteString
+            snapshot.displayPosterImage(.posterThumbnail)?.url.absoluteString
                 == "https://image.tmdb.org/t/p/w500/poster.jpg"
         )
         #expect(
-            snapshot.displayPosterURL(for: .gallery)?.absoluteString
+            snapshot.displayPosterImage(.posterFull)?.url.absoluteString
                 == "https://image.tmdb.org/t/p/original/poster.jpg"
         )
     }
 
-    @Test func displayPosterURLHonorsCustomPosterSelection() throws {
+    @Test func displayPosterImageHonorsCustomPosterSelection() throws {
         let entry = AnimeEntry(
             name: "Custom Poster Entry",
             type: .series,
@@ -191,12 +197,12 @@ extension TMDbImageAndTranslationTests {
 
         #expect(snapshot.posterMissing == false)
         #expect(
-            snapshot.displayPosterURL(for: .grid)?.absoluteString
+            snapshot.displayPosterImage(.posterThumbnail)?.url.absoluteString
                 == "https://image.tmdb.org/t/p/w500/custom.jpg"
         )
     }
 
-    @Test func displayPosterURLReportsMissingWhenNoSelectedPoster() throws {
+    @Test func displayPosterImageReportsMissingWhenNoSelectedPoster() throws {
         let entry = AnimeEntry(
             name: "No Poster Entry",
             type: .series,
@@ -205,6 +211,6 @@ extension TMDbImageAndTranslationTests {
         let snapshot = LibraryEntrySnapshot(entry: entry)
 
         #expect(snapshot.posterMissing == true)
-        #expect(snapshot.displayPosterURL(for: .gallery) == nil)
+        #expect(snapshot.displayPosterImage(.posterFull) == nil)
     }
 }

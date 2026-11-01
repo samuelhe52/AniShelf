@@ -44,13 +44,13 @@ struct StartupRecoveryView: View {
         }
         .interactiveDismissDisabled()
         .alert(
-            LocalizedStringResource("Unable to Prepare Export"),
+            "Unable to Prepare Export",
             isPresented: Binding(
                 get: { exportError != nil },
                 set: { if !$0 { exportError = nil } }
             ),
             actions: {
-                Button(LocalizedStringResource("OK")) {
+                Button("OK") {
                     exportError = nil
                 }
             },
@@ -69,13 +69,11 @@ struct StartupRecoveryView: View {
                 .foregroundStyle(.orange)
                 .accessibilityHidden(true)
 
-            Text(LocalizedStringResource("Library Recovery Required"))
+            Text("Library Recovery Required")
                 .font(.largeTitle.bold())
 
             Text(
-                LocalizedStringResource(
-                    "AniShelf was unable to open your database because it is corrupted or unreadable."
-                )
+                "AniShelf was unable to open your database because it is corrupted or unreadable."
             )
             .font(.title3)
             .foregroundStyle(.secondary)
@@ -86,24 +84,20 @@ struct StartupRecoveryView: View {
         VStack(alignment: .leading, spacing: 16) {
             recoveryPoint(
                 icon: "archivebox",
-                title: LocalizedStringResource("Your original files were preserved"),
-                detail: LocalizedStringResource(
-                    "AniShelf quarantined the unreadable database files instead of deleting them."
-                )
+                title: "Your original files were preserved",
+                detail: "AniShelf quarantined the unreadable database files instead of deleting them."
             )
             recoveryPoint(
                 icon: "sparkles",
-                title: LocalizedStringResource("A clean library was created"),
-                detail: LocalizedStringResource(
+                title: "A clean library was created",
+                detail:
                     "The replacement library is empty. A backup from an earlier build or iCloud Sync may help recover your data."
-                )
             )
             recoveryPoint(
                 icon: "envelope",
-                title: LocalizedStringResource("Developer assistance"),
-                detail: LocalizedStringResource(
+                title: "Developer assistance",
+                detail:
                     "Contact samuelhe52@outlook.com and attach an export below if you want the developer to investigate."
-                )
             )
         }
         .padding(20)
@@ -112,12 +106,10 @@ struct StartupRecoveryView: View {
 
     private var exportActions: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(LocalizedStringResource("Optional Exports"))
+            Text("Optional Exports")
                 .font(.headline)
             Text(
-                LocalizedStringResource(
-                    "Nothing is uploaded automatically. An export is prepared only when you choose an action."
-                )
+                "Nothing is uploaded automatically. An export is prepared only when you choose an action."
             )
             .font(.subheadline)
             .foregroundStyle(.secondary)
@@ -133,7 +125,7 @@ struct StartupRecoveryView: View {
             RecoveryExportManager.cleanupTemporaryExports(for: recovery)
             onContinue()
         } label: {
-            Text(LocalizedStringResource("Continue with Empty Library"))
+            Text("Continue with Empty Library")
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)
@@ -194,9 +186,7 @@ struct StartupRecoveryView: View {
                 }.value
                 ShareSheetPresenter.present(items: [exportURL], sceneIdentifier: sceneIdentifier)
             } catch {
-                exportError = LocalizedStringResource(
-                    "AniShelf could not prepare this export. Please try again."
-                )
+                exportError = "AniShelf could not prepare this export. Please try again."
             }
             preparingExport = nil
         }
@@ -207,9 +197,9 @@ extension StartupRecoveryExportKind {
     fileprivate var title: LocalizedStringResource {
         switch self {
         case .diagnostic:
-            LocalizedStringResource("Export Diagnostic")
+            "Export Diagnostic"
         case .recoveryBundle:
-            LocalizedStringResource("Export Recovery Bundle")
+            "Export Recovery Bundle"
         }
     }
 

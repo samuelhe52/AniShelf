@@ -73,7 +73,7 @@ struct CloudLibrarySyncClientTests {
         #expect(record.recordID == client.recordID(for: snapshot.identity))
         #expect(record["customPosterPath"] as? String == "/custom.jpg")
         // Version 3 records hold half scores; builds before it quarantine them.
-        #expect(record["schemaVersion"] as? Int == 3)
+        #expect(record["schemaVersion"] as? Int == LibraryEntrySyncSnapshot.currentSchemaVersion)
         #expect(record["scoreHasHalf"] as? Bool == true)
         // The legacy `customPosterURL` is still written so retired-but-live old builds can read
         // it. It must mirror the path. Drop this expectation once the old build is retired.

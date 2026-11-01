@@ -29,6 +29,7 @@ struct AnimeSharingSheet: View {
         static let horizontalPadding: CGFloat = 20
         static let wideColumnSpacing: CGFloat = 24
         static let previewColumnWidth: CGFloat = 400
+        static let posterSelectionOutset: CGFloat = 8
     }
 
     init(entry: AnimeEntry) {
@@ -236,8 +237,12 @@ struct AnimeSharingSheet: View {
                         selectEmbeddedPoster(poster)
                     }
                 )
-                .padding(.bottom, 4)
+                // The selection ring and badge reach past the posters' edges; the padding keeps
+                // them inside the scroll view's clip, and the negative padding keeps the grid
+                // aligned with the controls above.
+                .padding(Constants.posterSelectionOutset)
             }
+            .padding(.horizontal, -Constants.posterSelectionOutset)
             .scrollBounceBehavior(.basedOnSize)
             .preferredNavigationBarScrollEdgeEffect()
         }
@@ -283,7 +288,7 @@ struct AnimeSharingSheet: View {
 
     private func selectEmbeddedPoster(_ poster: Poster) {
         let posterPath = TMDbImagePath.storagePath(from: poster.metadata.filePath)
-        let originalURL = TMDbImageURLResolver.current.url(for: posterPath, role: .poster)
+        let originalURL = TMDbImageURLResolver.current.originalURL(for: posterPath, role: .poster)
         withAnimation(.snappy(duration: 0.22)) {
             viewModel.updateSelectedPosterURL(originalURL ?? poster.url)
         }

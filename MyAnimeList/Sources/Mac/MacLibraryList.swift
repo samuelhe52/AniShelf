@@ -2,7 +2,7 @@
 //  MacLibraryList.swift
 //  AniShelf
 //
-//  Created by Claude Code on behalf of samuelhe52 on 2026/10/17.
+//  Created by Claude Code on behalf of Samuel He on 2026/10/17.
 //
 
 #if os(macOS)
@@ -20,12 +20,12 @@
         @Environment(LibraryEntryActionState.self) private var actions
         @Environment(MacLibrarySelection.self) private var selection
         @FocusState private var isListFocused: Bool
-        @State private var openInRequest: EntryOpenInRequest?
+        @State private var visibleEntries = LibraryVisibleEntryTracker()
 
         let detailActions: LibraryEntryDetailActions
         let displayItems: [LibraryEntryDisplayItem]
-        @Binding var scrolledID: LibraryEntryIdentity?
-        let scrollRequest: LibraryScrollRequest?
+        let bookmark: LibraryScrollBookmark
+        let scrollInputs: LibraryScrollInputs
         let highlightRequest: LibraryHighlightRequest?
 
         var body: some View {
@@ -34,7 +34,12 @@
                     displayItems,
                     selection: listSelection
                 ) { item in
-                    rowContent(for: item)
+                    MacLibraryListRow(
+                        item: item,
+                        detailActions: detailActions,
+                        highlightTrigger: highlightRequest?.trigger(for: item.id)
+                    )
+                    .tag(item.id)
                 }
                 // The inset style draws a rounded, inset selection like Mail's instead of an
                 // edge-to-edge bar.
@@ -54,16 +59,19 @@
                 .animation(.default, value: scope.sortReversed)
                 .animation(.default, value: scope.sortStrategy)
                 .animation(.default, value: scope.filters)
-                .onAppear {
-                    if let scrolledID { proxy.scrollTo(scrolledID) }
-                }
-                .onChange(of: scrollRequest) {
-                    if let entryID = scrollRequest?.entryID {
-                        withAnimation(.bouncy) {
-                            proxy.scrollTo(entryID)
-                        }
-                    }
-                }
+                // The table reports what is on screen; SwiftUI's row visibility and scroll
+                // phases are unreliable for the Mac List (docs-ai 038).
+                .macLibraryListScrollObserver(
+                    visibleRowsChanged: { rows in visibleEntries.setVisibleRows(rows, recordingInto: bookmark) },
+                    userDidScroll: { bookmark.userDidScroll() }
+                )
+                .libraryScrollBookmark(
+                    bookmark,
+                    tracker: visibleEntries,
+                    displayIDs: displayItems.map(\.id),
+                    inputs: scrollInputs,
+                    proxy: proxy
+                )
             }
         }
 
@@ -73,7 +81,10 @@
                 get: { selection.ids },
                 set: { ids in
                     // Keep arrow keys in the list after a click instead of the sidebar.
-                    isListFocused = true
+                    if !isListFocused { isListFocused = true }
+                    // Arrow keys scroll the list natively without a user scroll phase, so any
+                    // selection change counts as the user moving on from a restored position.
+                    bookmark.userDidScroll()
                     selection.select(ids)
                 }
             )
@@ -83,7 +94,28 @@
             displayItems.first { $0.id == id }?.entry
         }
 
-        private func rowContent(for item: LibraryEntryDisplayItem) -> some View {
+        private func editEntry(_ entry: AnimeEntry) {
+            detailActions.edit(entry)
+        }
+
+        private func toggleFavorite(_ entry: AnimeEntry) {
+            store.repository.toggleFavorite(entry)
+        }
+    }
+
+    /// Keeps row content and action construction behind a view boundary: native selection
+    /// repeatedly evaluates the List's data closure.
+    fileprivate struct MacLibraryListRow: View {
+        @Environment(LibraryStore.self) private var store
+        @Environment(LibraryEntryActionState.self) private var actions
+        @Environment(MacLibrarySelection.self) private var selection
+        @State private var openInRequest: EntryOpenInRequest?
+
+        let item: LibraryEntryDisplayItem
+        let detailActions: LibraryEntryDetailActions
+        let highlightTrigger: UUID?
+
+        var body: some View {
             // Rows leave clicks to the list's native selection.
             AnimeEntryListRow(
                 entry: item.entry,
@@ -91,8 +123,8 @@
                 tapGesturesEnabled: false,
                 onToggleFavorite: toggleFavorite
             )
-            .highlightEffect(trigger: highlightRequest?.trigger(for: item.id))
-            .tag(item.id)
+            .highlightEffect(trigger: highlightTrigger)
+            .macLibraryEntryDraggable(item.id, selection: selection)
             .listRowInsets(.init(top: 4, leading: 8, bottom: 4, trailing: 8))
             .listRowSeparator(.visible)
             .listRowSeparatorTint(.white.opacity(0.06))

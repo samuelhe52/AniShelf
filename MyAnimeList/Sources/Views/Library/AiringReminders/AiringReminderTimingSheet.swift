@@ -95,7 +95,10 @@ struct AiringReminderOffsetSummary: View {
                 .inlineNavigationTitle()
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { dismiss() }
+                        Button(action: dismiss.callAsFunction) {
+                            SheetCloseLabel(title: "Cancel")
+                        }
+                        .accessibilityLabel(Text("Cancel"))
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") {

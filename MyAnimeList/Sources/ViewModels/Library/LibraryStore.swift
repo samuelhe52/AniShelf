@@ -34,12 +34,20 @@ class LibraryStore {
     @ObservationIgnored private var cancellables = Set<AnyCancellable>()
     @ObservationIgnored private var saveObserver: ModelContextSaveObserver?
     @ObservationIgnored private var deferredLibraryRefreshDepth = 0
-    @ObservationIgnored private var needsDeferredLibraryRefresh = false
+    @ObservationIgnored private var deferredSaveChanges = ModelContextSaveChanges(
+        insertedIdentifiers: [], updatedIdentifiers: [], deletedIdentifiers: []
+    )
+    @ObservationIgnored private var deferredSavesIncludeBackgroundWrite = false
+    @ObservationIgnored private var membershipSnapshot = LibraryMembershipSnapshot()
     @ObservationIgnored private var airingReminderPruningEnabled: Bool
     /// False for generated fixture libraries (docs-ai 026): no sync coordinator or scheduler
     /// exists, so every sync path, including Settings' enable and retry, does nothing.
     @ObservationIgnored let allowsCloudSync: Bool
     private(set) var libraryRevision = 0
+    /// Changes after a save from a context other than the main one, such as Refresh All's
+    /// writer. Merging those values into the UI's models bypasses their observation, so
+    /// display caches read this to rebuild their row snapshots.
+    private(set) var backgroundWriteRevision = 0
 
     // MARK: - State
 
@@ -53,6 +61,10 @@ class LibraryStore {
     ///
     /// Only `LibraryProfileSettingsActions` should write this.
     var isRefreshingAllMetadata = false
+    /// Seasons whose missing parent series this launch already tried to restore.
+    ///
+    /// Only `restoreMissingParentSeries(for:)` should write this.
+    @ObservationIgnored var parentSeriesRestoreAttemptedIDs: Set<PersistentIdentifier> = []
     @ObservationIgnored var infoFetcher: InfoFetcher
     var language: Language = .resolvedAnimeInfoLanguage()
     /// Read at each fetch so a settings change applies to the next library write.
@@ -115,17 +127,17 @@ class LibraryStore {
 
     // MARK: - Categories State
 
-    /// Opt-in switch for library categories.
+    /// Switch for library categories, enabled by default.
     ///
     /// Turning it off keeps categories and memberships.
-    var categoriesEnabled: Bool = false {
+    var categoriesEnabled: Bool = true {
         willSet {
             preferences.saveCategoriesEnabled(newValue)
             libraryStoreLogger.debug("Updated categories enabled to \(newValue)")
         }
     }
     /// Optional pinned switcher for List and Grid; retained when categories are disabled.
-    var categoryStripEnabled: Bool = false {
+    var categoryStripEnabled: Bool = true {
         willSet { preferences.saveCategoryStripEnabled(newValue) }
     }
     /// Category definitions in display order.
@@ -267,6 +279,7 @@ class LibraryStore {
         library = entriesByIdentity.values.compactMap {
             AnimeEntryDuplicateResolver.preferredEntry(from: $0)
         }
+        membershipSnapshot = LibraryMembershipSnapshot(entriesByIdentity: entriesByIdentity)
         libraryRevision &+= 1
 
         if requiresDuplicateRepair {
@@ -290,18 +303,48 @@ class LibraryStore {
     }
 
     func setupUpdateLibrary() {
-        saveObserver = ModelContextSaveObserver { [weak self] _ in
-            self?.handleLibrarySaveNotification()
+        saveObserver = ModelContextSaveObserver { [weak self] changes in
+            self?.handleLibrarySaveNotification(changes)
         }
     }
 
-    private func handleLibrarySaveNotification() {
-        if deferredLibraryRefreshDepth > 0 {
-            needsDeferredLibraryRefresh = true
+    private func handleLibrarySaveNotification(_ changes: ModelContextSaveChanges) {
+        // Compare with the current container: restoring a backup replaces it, and saves from
+        // another store must not refresh this library.
+        if let containerID = changes.containerID,
+            containerID != ObjectIdentifier(dataProvider.sharedModelContainer)
+        {
             return
         }
+        let isBackgroundWrite =
+            changes.contextID.map {
+                $0 != ObjectIdentifier(dataProvider.sharedModelContainer.mainContext)
+            } ?? false
+        if deferredLibraryRefreshDepth > 0 {
+            deferredSaveChanges.formUnion(changes)
+            deferredSavesIncludeBackgroundWrite = deferredSavesIncludeBackgroundWrite || isBackgroundWrite
+            return
+        }
+        applySaveChanges(changes, includesBackgroundWrite: isBackgroundWrite)
+    }
 
+    private func applySaveChanges(_ changes: ModelContextSaveChanges, includesBackgroundWrite: Bool) {
+        if includesBackgroundWrite { backgroundWriteRevision &+= 1 }
         do {
+            // Read changed entry IDs through a fresh context: a background writer's saved
+            // visibility must not be classified from the UI context's older registered object.
+            // Child-only saves never create this context or fetch an entry.
+            var reader: ModelContext?
+            let needsRefresh = try membershipSnapshot.requiresRefresh(after: changes) { id in
+                if reader == nil {
+                    reader = ModelContext(dataProvider.sharedModelContainer)
+                    reader?.autosaveEnabled = false
+                }
+                var descriptor = FetchDescriptor<AnimeEntry>(predicate: #Predicate { $0.persistentModelID == id })
+                descriptor.fetchLimit = 1
+                return try reader?.fetch(descriptor).first
+            }
+            guard needsRefresh else { return }
             try refreshLibrary()
         } catch {
             libraryStoreLogger.error("Error refreshing library: \(error)")
@@ -353,14 +396,12 @@ class LibraryStore {
     private func finishDeferredLibrarySaveRefresh() {
         guard deferredLibraryRefreshDepth > 0 else { return }
         deferredLibraryRefreshDepth -= 1
-        guard deferredLibraryRefreshDepth == 0, needsDeferredLibraryRefresh else { return }
-
-        needsDeferredLibraryRefresh = false
-        do {
-            try refreshLibrary()
-        } catch {
-            libraryStoreLogger.error("Error refreshing library after deferred saves: \(error)")
-        }
+        guard deferredLibraryRefreshDepth == 0 else { return }
+        let changes = deferredSaveChanges
+        let includesBackgroundWrite = deferredSavesIncludeBackgroundWrite
+        deferredSaveChanges = .init(insertedIdentifiers: [], updatedIdentifiers: [], deletedIdentifiers: [])
+        deferredSavesIncludeBackgroundWrite = false
+        applySaveChanges(changes, includesBackgroundWrite: includesBackgroundWrite)
     }
 
     private func drainQueuedMainThreadSaveNotifications() async {

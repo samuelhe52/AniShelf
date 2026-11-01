@@ -174,7 +174,7 @@ struct EntryDetailBroadcastSearchSheet: View {
         HStack(spacing: 14) {
             KFImageView(
                 url: result.fullImageURL,
-                targetWidth: 160,
+                maxPixelDimension: 240,
                 diskCacheExpiration: .transient
             )
             .scaledToFill()

@@ -2,7 +2,7 @@
 //  SupportAniShelfContent.swift
 //  AniShelf
 //
-//  Created by Claude Code on behalf of samuelhe52 on 2026/10/17.
+//  Created by Claude Code on behalf of Samuel He on 2026/10/17.
 //
 
 import StoreKit
@@ -17,7 +17,7 @@ enum SupportAniShelfCopy {
     static let disclosure: LocalizedStringResource =
         "These are optional tips that unlock no features, content, or services. All purchases are processed by the App Store."
     static let productsTitle: LocalizedStringResource = "Support Options"
-    static let loading: LocalizedStringResource = "Loading support options from the App Store..."
+    static let loading: LocalizedStringResource = "Loading support options from the App Store…"
     static let retry: LocalizedStringResource = "Try Again"
     static let purchaseProblem: LocalizedStringResource = "Purchase problem"
     static let thankYouTitle: LocalizedStringResource = "Thank you!"

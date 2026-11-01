@@ -14,6 +14,8 @@ is used, and the choices available to you.
 - AniShelf does not require an AniShelf account. iCloud Sync uses your Apple
   Account, and TMDb features use a TMDb API key you provide.
 - Search, metadata, artwork, and broadcast features contact external services.
+- Optional Smart Features use Apple Intelligence on your device, or an OpenAI or
+  OpenRouter account whose API key you provide.
 - AniShelf does not sell your personal information.
 - AniShelf does not use third-party advertising SDKs.
 - AniShelf does not use cross-app tracking.
@@ -135,6 +137,26 @@ details in the report may include local file paths. AniShelf does not
 automatically upload these files to the publisher. Share them only with a
 recipient you intend to receive that information.
 
+### 10. Optional Smart Features
+
+Smart Features, such as creating a category from a description, are off until
+you set them up. With Apple Intelligence, the requests run through Apple's
+Foundation Models framework under Apple's terms.
+
+If you instead add an OpenAI or OpenRouter API key, AniShelf sends each request
+directly from your device to that provider with your key. A request contains
+the description you type and, for the anime AniShelf checks, their titles,
+release years, kinds, production companies, genres, and the start of their
+overviews. It does not
+contain your notes, ratings, watch dates, or library identifiers. The provider
+receives your IP address and standard network metadata, and handles the request
+under its own terms and privacy policy, including any retention or model
+training settings of your account.
+
+AniShelf stores provider keys in the system Keychain on your device. They are
+not included in backups or CloudKit sync. Removing a key in Smart Features
+settings deletes it from the Keychain.
+
 ## How AniShelf Uses Information
 
 AniShelf uses the information it handles to:
@@ -145,6 +167,7 @@ AniShelf uses the information it handles to:
 - synchronize library tracking data and selected preferences through iCloud
   when enabled
 - retrieve TVMaze broadcast information and schedule reminders you enable
+- run Smart Features you request, with the backend you choose
 - create backups and restore your library when you request it
 - generate images or files for sharing and export when you request it
 - maintain app functionality and performance
@@ -173,7 +196,8 @@ AniShelf currently does not:
   remain to prevent deleted entries from being restored by an older device.
   Removing a series while keeping its seasons can retain the parent record
   needed by those seasons.
-- TMDb API keys are stored in your device Keychain.
+- TMDb API keys and Smart Features provider keys are stored in your device
+  Keychain.
 - Cached images and temporary export files may remain on device storage until
   they are cleared by the app or the operating system.
 - Backups you create are stored wherever you choose to save or share them.
@@ -204,10 +228,20 @@ episode information.
 
 [TVMaze Privacy Policy](https://www.tvmaze.com/site/privacy)
 
+### OpenAI and OpenRouter
+
+If you add an OpenAI or OpenRouter API key for Smart Features, AniShelf sends
+Smart Features requests to that provider. OpenRouter forwards each request to
+the company that runs the model you choose.
+
+[OpenAI Privacy Policy](https://openai.com/policies/privacy-policy/)
+[OpenRouter Privacy Policy](https://openrouter.ai/privacy)
+
 ### Apple iCloud and System Services
 
-AniShelf uses Apple's CloudKit service for optional iCloud Sync and Apple's
-system services for notifications, Keychain storage, and file sharing. Apple's
+AniShelf uses Apple's CloudKit service for optional iCloud Sync, Apple
+Intelligence for optional Smart Features, and Apple's system services for
+notifications, Keychain storage, and file sharing. Apple's
 handling of information is governed by its own privacy policy and your Apple
 Account and device settings.
 
@@ -227,6 +261,7 @@ You can choose to:
 - turn iCloud Sync on or off in AniShelf settings
 - disable the TMDb relay to send API requests directly to TMDb
 - turn off broadcast schedules and remove airing reminder subscriptions
+- leave Smart Features unset, or remove a provider key at any time
 - control notification permission and previews in system settings
 - delete your library entries within the app
 - delete cached data where such controls are provided
@@ -237,7 +272,7 @@ You can choose to:
 ## International Users
 
 If you use AniShelf, requests to Apple iCloud, TMDb, TVMaze, the optional relay,
-or related content providers may be processed in countries other than your own,
+Smart Features providers, or related content providers may be processed in countries other than your own,
 subject to those providers'
 infrastructure and policies.
 

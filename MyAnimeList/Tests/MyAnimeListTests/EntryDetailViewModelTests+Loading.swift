@@ -14,6 +14,66 @@ import Testing
 @testable import MyAnimeList
 
 extension EntryDetailViewModelTests {
+    @Test(arguments: [false, true])
+    @MainActor func testLogoLookupOnlyWritesChangedDetailAndInvalidatesRowsWhenNeeded(changesRuntime: Bool)
+        async throws
+    {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let scope = LibraryBrowseScope(store: store)
+        let entry = AnimeEntry(
+            name: "Movie", type: .movie, tmdbID: 804,
+            detail: AnimeEntryDetail(language: Language.english.rawValue, title: "Movie", runtimeMinutes: 90)
+        )
+        try store.repository.newEntry(entry)
+        try store.refreshLibrary()
+        _ = scope.displayItems
+        let computeCount = scope.displayComputeCount
+        var saveCount = 0
+        let model = EntryDetailViewModel(
+            repository: store.repository,
+            detailInfoLoader: { _, _, language in
+                AnimeEntryDetailDTO(
+                    language: language.rawValue, title: "Movie", runtimeMinutes: changesRuntime ? 95 : 90
+                )
+            },
+            detailPersistenceSaver: { saveCount += 1 }
+        )
+
+        // Each visit creates a fresh detail model. A title with no logo must not rewrite
+        // identical metadata on every visit, but changed metadata still needs saving.
+        await model.load(for: entry, language: .english, includesTitleLogo: true)
+        _ = scope.displayItems
+
+        #expect(saveCount == (changesRuntime ? 1 : 0))
+        #expect(entry.detail?.runtimeMinutes == (changesRuntime ? 95 : 90))
+        #expect(scope.displayComputeCount == computeCount + (changesRuntime ? 1 : 0))
+        #expect(model.loadError == nil)
+    }
+
+    @Test @MainActor func testSecondModelAppliesResponseAnotherModelAlreadySaved() async throws {
+        let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+        let entry = AnimeEntry(
+            name: "Movie", type: .movie, tmdbID: 805,
+            detail: AnimeEntryDetail(language: Language.english.rawValue, title: "Old", runtimeMinutes: 90)
+        )
+        try store.repository.newEntry(entry)
+        let loader: EntryDetailInfoLoader = { _, _, language in
+            AnimeEntryDetailDTO(language: language.rawValue, title: "New", runtimeMinutes: 95)
+        }
+        // Two inspectors show the same cached entry, then both look up its missing logo.
+        let first = EntryDetailViewModel(repository: store.repository, detailInfoLoader: loader)
+        let second = EntryDetailViewModel(repository: store.repository, detailInfoLoader: loader)
+        first.prepare(for: entry, language: .english)
+        second.prepare(for: entry, language: .english)
+
+        await first.load(for: entry, language: .english, includesTitleLogo: true)
+        await second.load(for: entry, language: .english, includesTitleLogo: true)
+
+        #expect(entry.detail?.title == "New")
+        #expect(first.displayTitle == "New")
+        #expect(second.displayTitle == "New")
+    }
+
     @Test @MainActor func testEntryDetailUsesCachedSameLanguageDetailWhenLogoIsPresent() async {
         let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
         let httpClient = RecordingTMDbHTTPClient { _ in
@@ -46,41 +106,36 @@ extension EntryDetailViewModelTests {
         #expect(await httpClient.requests.isEmpty)
     }
 
-    @Test @MainActor func testEntryDetailRefetchesMissingLogoOnlyWhereTheLogoIsShown() async {
+    @Test(arguments: ["/logo.png", nil] as [String?])
+    @MainActor func testTitleLogoHeaderFetchesMissingCachedLogoOnce(logoPath: String?) async {
         let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
-        let httpClient = RecordingTMDbHTTPClient { _ in
-            HTTPResponse(statusCode: 500, data: Data())
-        }
-        let fetcher = InfoFetcher(
-            client: TMDbClient(
-                apiKey: "test-key",
-                httpClient: httpClient,
-                configuration: .default
-            ),
-            fetchTMDbResponseData: { _ in Data() }
+        let loader = HeaderLogoEntryDetailLoader(logoPath: logoPath)
+        let viewModel = EntryDetailViewModel(
+            repository: repository,
+            detailInfoLoader: { _, _, language in
+                await loader.load(language: language)
+            },
+            detailPersistenceSaver: {}
         )
-        let viewModel = EntryDetailViewModel(repository: repository, infoFetcher: fetcher)
         let entry = AnimeEntry(
             name: "Series",
             type: .series,
             tmdbID: 38,
-            detail: AnimeEntryDetail(
-                language: Language.english.rawValue,
-                title: "Cached Detail"
-            )
+            detail: AnimeEntryDetail(language: Language.english.rawValue, title: "Cached Detail")
         )
 
         await viewModel.load(for: entry, language: .english)
-
+        #expect(await loader.requestCount == 0)
         #expect(viewModel.displayTitle == "Cached Detail")
-        #if os(macOS)
-            // The Mac shows no title logo, so the stored detail is already current.
-            #expect(viewModel.loadError == nil)
-            #expect(await httpClient.requests.isEmpty)
-        #else
-            #expect(viewModel.loadError != nil)
-            #expect(!(await httpClient.requests).isEmpty)
-        #endif
+
+        await viewModel.load(for: entry, language: .english, includesTitleLogo: true)
+        #expect(await loader.requestCount == 1)
+        #expect(viewModel.displayTitle == "Refreshed Detail")
+        #expect((viewModel.logoImage != nil) == (logoPath != nil))
+
+        await viewModel.load(for: entry, language: .english)
+        await viewModel.load(for: entry, language: .english, includesTitleLogo: true)
+        #expect(await loader.requestCount == 1)
     }
 
     @Test @MainActor func testEntryDetailRetriesSameRequestAfterFailure() async {
@@ -168,12 +223,11 @@ extension EntryDetailViewModelTests {
                     throw EntryDetailPersistenceError()
                 }
                 try dataProvider.dataHandler.modelContext.save()
-            },
-            // The logo-less stored detail is what makes this load fetch.
-            refetchesForMissingLogo: true
+            }
         )
 
-        await viewModel.load(for: entry, language: .english)
+        // The logo-less stored detail is what makes this load fetch.
+        await viewModel.load(for: entry, language: .english, includesTitleLogo: true)
 
         #expect(await loader.requestCount == 1)
         #expect(saveAttemptCount == 1)
@@ -210,7 +264,7 @@ extension EntryDetailViewModelTests {
         #expect(persistedEntry.detail?.seasons.map(\.title) == ["Persisted Season"])
         #expect(persistedEntry.detail?.orderedEpisodes.map(\.title) == ["Persisted Episode"])
 
-        await viewModel.load(for: entry, language: .english)
+        await viewModel.load(for: entry, language: .english, includesTitleLogo: true)
 
         #expect(await loader.requestCount == 2)
         #expect(saveAttemptCount == 2)
@@ -324,6 +378,39 @@ extension EntryDetailViewModelTests {
 
         #expect(viewModel.displayTitle == "English Detail")
         #expect(entry.detail?.language == Language.english.rawValue)
+        #expect(viewModel.loadError == nil)
+        #expect(!viewModel.isLoading)
+    }
+
+    @Test @MainActor func testCancelledDuplicateLoadDoesNotDiscardSameRequest() async {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let loader = DelayedLanguageEntryDetailLoader()
+        let viewModel = EntryDetailViewModel(
+            repository: repository,
+            detailInfoLoader: { entryType, tmdbID, language in
+                try await loader.load(entryType: entryType, tmdbID: tmdbID, language: language)
+            }
+        )
+        let entry = AnimeEntry.template(id: 43)
+
+        // As at launch: a second view starts the same load, then SwiftUI discards it.
+        let survivingLoad = Task {
+            await viewModel.load(for: entry, language: .japanese)
+        }
+        while await loader.requestCount == 0 {
+            await Task.yield()
+        }
+        let discardedLoad = Task {
+            await viewModel.load(for: entry, language: .japanese)
+        }
+        while await loader.requestCount < 2 {
+            await Task.yield()
+        }
+        discardedLoad.cancel()
+        await discardedLoad.value
+        await survivingLoad.value
+
+        #expect(viewModel.displayTitle == "Japanese Detail")
         #expect(viewModel.loadError == nil)
         #expect(!viewModel.isLoading)
     }

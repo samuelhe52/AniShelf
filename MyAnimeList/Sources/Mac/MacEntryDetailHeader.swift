@@ -2,16 +2,28 @@
 //  MacEntryDetailHeader.swift
 //  AniShelf
 //
-//  Created by Claude Code on behalf of samuelhe52 on 2026/10/16.
+//  Created by Claude Code on behalf of Samuel He on 2026/10/16.
 //
 
 #if os(macOS)
     import SwiftUI
 
+    enum MacEntryDetailHeaderStyle: String, CaseIterable {
+        case compact
+        case cinematic
+
+        var title: LocalizedStringResource {
+            switch self {
+            case .compact: "Compact"
+            case .cinematic: "Cinematic"
+            }
+        }
+    }
+
     /// The inspector's entry header on the Mac: a small poster beside the title, metadata,
     /// and the quick actions, in place of the iOS full-width hero artwork.
     struct MacEntryDetailHeader<Actions: View>: View {
-        let posterURL: URL?
+        let posterImage: TMDbImage?
         let displayTitle: String
         let subtitleText: String?
         let metadataLineItems: [String]
@@ -61,11 +73,7 @@
         }
 
         private var poster: some View {
-            KFImageView(
-                url: posterURL,
-                targetSize: CGSize(width: posterSize.width * 2, height: posterSize.height * 2),
-                diskCacheExpiration: .longTerm
-            )
+            KFImageView(image: posterImage, diskCacheExpiration: .longTerm)
             .scaledToFill()
             .frame(width: posterSize.width, height: posterSize.height)
             .background(.fill.tertiary)

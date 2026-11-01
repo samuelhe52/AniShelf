@@ -407,6 +407,7 @@ struct UserEntryInfoAndLibraryStatsTests {
             dateSaved: referenceDate(year: 2026, month: 2, day: 8)
         )
         series.setWatchStatus(.watching)
+        series.updateEpisodeNote(at: .init(seasonNumber: 1, episodeNumber: 4), text: "Episode-only note")
 
         let plannedSeason = AnimeEntry(
             name: "Planned Season",
@@ -439,7 +440,7 @@ struct UserEntryInfoAndLibraryStatsTests {
         #expect(stats.movieCount == 1)
         #expect(stats.seriesCount == 1)
         #expect(stats.seasonCount == 2)
-        #expect(stats.entriesWithNotesCount == 1)
+        #expect(stats.entriesWithNotesCount == 2)
         #expect(stats.totalRuntimeMinutes == 688)
         #expect(stats.watchedRuntimeMinutes == 100)
         #expect(stats.plannedRuntimeMinutes == 300)

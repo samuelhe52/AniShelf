@@ -2,7 +2,7 @@
 //  LibraryBenchmarkTests.swift
 //  MyAnimeListUITests
 //
-//  Created by Claude Code on behalf of samuelhe52 on 2026/10/17.
+//  Created by Claude Code on behalf of Samuel He on 2026/10/17.
 //
 
 import XCTest
@@ -96,11 +96,11 @@ final class LibraryBenchmarkTests: XCTestCase {
 
     private func launch(style: String) -> XCUIApplication {
         let app = XCUIApplication()
-        // English labels, a fixed layout, and no restored scroll position, so runs match.
+        // English labels and a fixed layout, so runs match. Fixture launches ignore restored
+        // window state, and the scroll position is never persisted.
         app.launchArguments = [
             "-library-fixture", "\(fixtureSize)",
             "-LibraryViewStyle", style,
-            "-PersistedScrolledID", "",
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US"
         ]

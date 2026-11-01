@@ -12,6 +12,72 @@ import Testing
 @testable import MyAnimeList
 
 struct EntryDetailSessionTests {
+    @Test @MainActor func replacingSessionCancelsLoadingAndRejectsALateResult() async throws {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let loader = HeldSessionDetailLoader()
+        let first = AnimeEntry(name: "First", type: .movie, tmdbID: 801)
+        let second = AnimeEntry(name: "Second", type: .movie, tmdbID: 802)
+        try repository.newEntry(first)
+        try repository.newEntry(second)
+        let store = EntryDetailSessionStore(detailInfoLoader: { _, id, language in
+            await loader.load(id: id, language: language)
+        })
+        store.synchronizePresentedDetail(identity: first.libraryIdentity, repository: repository) { _ in first }
+        let outgoing = try #require(store.presentedSession)
+        var restoredOutgoingParent = false
+        let outgoingLoad = Task {
+            await outgoing.loadDetails(language: .english, includesTitleLogo: false) {
+                restoredOutgoingParent = true
+            }
+        }
+        while await !loader.requestedIDs.contains(first.tmdbID) { await Task.yield() }
+
+        store.synchronizePresentedDetail(identity: second.libraryIdentity, repository: repository) { _ in second }
+        let current = try #require(store.presentedSession)
+        #expect(current.entry === second)
+        // The old provider deliberately stays suspended despite cancellation. The new
+        // selection's load can finish independently, without waiting for it.
+        let currentLoad = Task {
+            await current.loadDetails(language: .english, includesTitleLogo: false) {}
+        }
+        while await !loader.requestedIDs.contains(second.tmdbID) { await Task.yield() }
+        await loader.finish(id: second.tmdbID)
+        await currentLoad.value
+        await loader.finish(id: first.tmdbID)
+        await outgoingLoad.value
+
+        #expect(await loader.cancelledIDs.contains(first.tmdbID))
+        #expect(first.detail == nil)
+        #expect(!restoredOutgoingParent)
+        #expect(second.detail?.title == "Detail 802")
+        #expect(current.model.displayTitle == "Detail 802")
+        #expect(outgoing.model.loadError == nil)
+    }
+
+    @Test @MainActor func cancellingTheViewTaskCancelsItsDetailPipeline() async throws {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let loader = HeldSessionDetailLoader()
+        let entry = AnimeEntry(name: "Movie", type: .movie, tmdbID: 803)
+        try repository.newEntry(entry)
+        let session = EntryDetailSession(
+            entry: entry, repository: repository,
+            detailInfoLoader: { _, id, language in
+                await loader.load(id: id, language: language)
+            })
+        let load = Task {
+            await session.loadDetails(language: .english, includesTitleLogo: false) {
+                Issue.record("A cancelled view task must not start follow-up work")
+            }
+        }
+        while await !loader.requestedIDs.contains(entry.tmdbID) { await Task.yield() }
+        load.cancel()
+        await loader.finish(id: entry.tmdbID)
+        await load.value
+        #expect(await loader.cancelledIDs.contains(entry.tmdbID))
+        #expect(entry.detail == nil)
+        #expect(session.model.loadError == nil)
+    }
+
     @Test @MainActor func newSessionShowsStoredDetailBeforeLoading() {
         let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
         let entry = AnimeEntry(
@@ -29,6 +95,31 @@ struct EntryDetailSessionTests {
 
         #expect(session.model.displayTitle == "Stored Detail")
         #expect(session.model.subtitleText == "Stored Subtitle")
+    }
+
+    @Test @MainActor func discardRevertsOnlyEpisodeNotesTheSessionEdited() throws {
+        let repository = LibraryRepository(dataProvider: DataProvider(inMemory: true))
+        let entry = AnimeEntry(name: "Series", type: .series, tmdbID: 43)
+        try repository.newEntry(entry)
+        let rewritten = EpisodeNoteAnchor(seasonNumber: 1, episodeNumber: 1)
+        let syncedEdit = EpisodeNoteAnchor(seasonNumber: 1, episodeNumber: 2)
+        let added = EpisodeNoteAnchor(seasonNumber: 1, episodeNumber: 3)
+        let syncedAddition = EpisodeNoteAnchor(seasonNumber: 1, episodeNumber: 5)
+        entry.updateEpisodeNote(at: rewritten, text: "Original")
+        entry.updateEpisodeNote(at: syncedEdit, text: "Original")
+        let session = EntryDetailSession(entry: entry, repository: repository)
+
+        entry.updateEpisodeNote(at: rewritten, text: "Rewritten", recordingIn: session)
+        entry.updateEpisodeNote(at: added, text: "Added", recordingIn: session)
+        // Changes that sync or another window make while the detail is open.
+        entry.updateEpisodeNote(at: syncedEdit, text: "Synced edit")
+        entry.updateEpisodeNote(at: syncedAddition, text: "Synced addition")
+        try session.discardUserEdits()
+
+        #expect(entry.episodeNote(at: rewritten)?.text == "Original")
+        #expect(entry.episodeNote(at: added)?.isEmpty == true)
+        #expect(entry.episodeNote(at: syncedEdit)?.text == "Synced edit")
+        #expect(entry.episodeNote(at: syncedAddition)?.text == "Synced addition")
     }
 
     @Test @MainActor func airingSeriesRefreshesPersistedSeasonCountWithoutRepeatingTheRequest()
@@ -448,4 +539,22 @@ private actor BroadcastDetailRequestCounter {
     private(set) var count = 0
 
     func record() { count += 1 }
+}
+
+/// Holds a response past cancellation to exercise providers that finish late.
+private actor HeldSessionDetailLoader {
+    private(set) var requestedIDs: Set<Int> = []
+    private(set) var cancelledIDs: Set<Int> = []
+    private var responses: [Int: CheckedContinuation<Void, Never>] = [:]
+
+    func load(id: Int, language: MyAnimeList.Language) async -> AnimeEntryDetailDTO {
+        requestedIDs.insert(id)
+        await withCheckedContinuation { responses[id] = $0 }
+        if Task.isCancelled { cancelledIDs.insert(id) }
+        return AnimeEntryDetailDTO(language: language.rawValue, title: "Detail \(id)")
+    }
+
+    func finish(id: Int) {
+        responses.removeValue(forKey: id)?.resume()
+    }
 }

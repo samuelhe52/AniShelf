@@ -2,7 +2,7 @@
 //  CloudLibrarySyncOperation.swift
 //  AniShelf
 //
-//  Created by OpenAI Codex on behalf of samuelhe52 on 2026/10/3.
+//  Created by OpenAI Codex on behalf of Samuel He on 2026/10/3.
 //
 
 import CloudKit

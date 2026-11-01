@@ -138,7 +138,7 @@ final class EntryDetailViewModel {
         var role: String
         var originalIndex: Int
         var bucketIndex: Int
-        var profileURL: URL?
+        var profileImage: TMDbImage?
     }
 
     private struct IndexedStaffJob {
@@ -153,8 +153,8 @@ final class EntryDetailViewModel {
 
     private(set) var isLoading = false
     private(set) var loadError: String?
-    private(set) var heroImageURL: URL?
-    private(set) var logoImageURL: URL?
+    private(set) var heroImage: TMDbImage?
+    private(set) var logoImage: TMDbImage?
     private(set) var primaryLinkURL: URL?
     private(set) var displayTitle = ""
     private(set) var subtitleText: String?
@@ -175,19 +175,18 @@ final class EntryDetailViewModel {
     /// refreshes without animating a switch to another entry.
     private(set) var fetchedDetailRevision = 0
     private var loadedRequestKey: String?
+    /// The detail metadata the display last applied. The shared stored detail is not a
+    /// proxy for it: another model can save a newer response for the same entry.
+    private var appliedDetailContent: LibraryMetadataRefreshDetailComparator.Content?
     /// The request whose stored values are showing; `loadedRequestKey` is set once they are
     /// also current.
     private var preparedRequestKey: String?
+    /// The request last fetched from the network, which also settles whether a logo exists.
+    private var fetchedRequestKey: String?
+    /// The request the current generation loads; only a different request starts a new one.
+    private var loadingRequestKey: String?
     private var loadGeneration = 0
-
-    /// Only the iOS hero shows the title logo, so only iOS refetches a stored detail that
-    /// predates logos.
-    #if os(macOS)
-        static let platformRefetchesForMissingLogo = false
-    #else
-        static let platformRefetchesForMissingLogo = true
-    #endif
-    private let refetchesForMissingLogo: Bool
+    private var activeLoadCount = 0
 
     private static func requestKey(for entry: AnimeEntry, language: Language) -> String {
         "\(entry.tmdbID)-\(language.rawValue)"
@@ -197,24 +196,28 @@ final class EntryDetailViewModel {
         repository: LibraryRepository,
         infoFetcher: InfoFetcher = .init(),
         detailInfoLoader: EntryDetailInfoLoader? = nil,
-        detailPersistenceSaver: EntryDetailPersistenceSaver? = nil,
-        refetchesForMissingLogo: Bool = platformRefetchesForMissingLogo
+        detailPersistenceSaver: EntryDetailPersistenceSaver? = nil
     ) {
         self.repository = repository
-        self.refetchesForMissingLogo = refetchesForMissingLogo
         self.infoFetcher = infoFetcher
-        self.detailInfoLoader =
-            detailInfoLoader
-            ?? { entryType, tmdbID, language in
-                try await infoFetcher.detailInfo(
-                    entryType: entryType,
-                    tmdbID: tmdbID,
-                    language: language
-                )
-            }
+        self.detailInfoLoader = detailInfoLoader ?? Self.defaultDetailInfoLoader(infoFetcher)
         self.detailPersistenceSaver =
             detailPersistenceSaver
             ?? repository.save
+    }
+
+    private static func defaultDetailInfoLoader(_ infoFetcher: InfoFetcher) -> EntryDetailInfoLoader {
+        #if DEBUG || LIBRARY_FIXTURES
+            // Fixture entries have no TMDb records (docs-ai 026).
+            if LibraryFixture.active != nil {
+                return { _, tmdbID, language in
+                    try LibraryFixture.detail(tmdbID: tmdbID, language: language)
+                }
+            }
+        #endif
+        return { entryType, tmdbID, language in
+            try await infoFetcher.detailInfo(entryType: entryType, tmdbID: tmdbID, language: language)
+        }
     }
 
     /// Shows what the library already stores for `entry`, synchronously, so a new detail
@@ -224,6 +227,7 @@ final class EntryDetailViewModel {
         guard preparedRequestKey != requestKey else { return }
         preparedRequestKey = requestKey
         loadedRequestKey = nil
+        appliedDetailContent = nil
 
         displayTitle = entry.displayName
         subtitleText = nil
@@ -239,65 +243,84 @@ final class EntryDetailViewModel {
         collapseSeriesSeasonsByDefault = false
         characterSectionTitle = EntryDetailL10n.characters
         primaryLinkURL = entry.linkToDetails
-        heroImageURL = entry.backdropURL ?? entry.posterURL
-        logoImageURL = nil
+        heroImage = entry.backdropImage ?? entry.posterImage(.posterFull)
+        logoImage = nil
         loadError = nil
         if let detail = entry.detail, detail.language == language.rawValue {
             apply(detail: detail, entry: entry, language: language)
-            if detail.logoImageURL != nil || !refetchesForMissingLogo {
-                loadedRequestKey = requestKey
-                isLoading = false
-            }
+            loadedRequestKey = requestKey
+            isLoading = false
         }
     }
 
-    func load(for entry: AnimeEntry, language: Language) async {
+    /// Fetches unless the stored detail is current.
+    ///
+    /// A header that shows the title logo passes `includesTitleLogo`, so a stored detail
+    /// predating logos is fetched once.
+    func load(for entry: AnimeEntry, language: Language, includesTitleLogo: Bool = false) async {
         guard !Task.isCancelled else { return }
 
         let requestKey = Self.requestKey(for: entry, language: language)
-        guard loadedRequestKey != requestKey else { return }
-
         // A no-op when the session already prepared this entry and language.
         prepare(for: entry, language: language)
-        guard loadedRequestKey != requestKey else { return }
+        let needsLogo = includesTitleLogo && logoImage == nil && fetchedRequestKey != requestKey
+        guard loadedRequestKey != requestKey || needsLogo else { return }
 
-        loadGeneration += 1
+        // Only a different request supersedes an in-flight load. SwiftUI can start a second
+        // load for the same request from a view it then discards, as when the inspector
+        // restores its selection at launch; whichever load finishes uncancelled applies.
+        if loadingRequestKey != requestKey {
+            loadGeneration += 1
+            loadingRequestKey = requestKey
+            activeLoadCount = 0
+        }
         let generation = loadGeneration
+        activeLoadCount += 1
         loadError = nil
         isLoading = true
+        defer {
+            if loadGeneration == generation {
+                activeLoadCount -= 1
+                isLoading = activeLoadCount > 0
+            }
+        }
+
         do {
             let detailDTO = try await detailInfoLoader(entry.type, entry.tmdbID, language)
-            guard loadGeneration == generation else { return }
-            guard !Task.isCancelled else {
-                isLoading = false
-                return
-            }
+            guard loadGeneration == generation, !Task.isCancelled else { return }
 
+            let fetchedContent = LibraryMetadataRefreshDetailComparator.content(of: detailDTO)
             let detail = try replaceAndPersistDetail(
                 for: entry,
-                with: detailDTO
+                with: detailDTO,
+                fetchedContent: fetchedContent
             )
-            apply(detail: detail, entry: entry, language: language)
-            fetchedDetailRevision += 1
-            loadedRequestKey = requestKey
-        } catch {
-            guard loadGeneration == generation else { return }
-            if Task.isCancelled || Self.isCancellation(error) {
-                loadError = nil
-                isLoading = false
-                return
+            // Skip reapplying, and its refresh animation, only when this display already
+            // shows the response. The stored detail can match because another model saved it.
+            if loadedRequestKey != requestKey || appliedDetailContent != fetchedContent {
+                apply(detail: detail, entry: entry, language: language)
+                fetchedDetailRevision += 1
             }
+            loadedRequestKey = requestKey
+            fetchedRequestKey = requestKey
+        } catch {
+            guard loadGeneration == generation, !Task.isCancelled, !Self.isCancellation(error) else { return }
             loadError = error.localizedDescription
-        }
-        if loadGeneration == generation {
-            isLoading = false
         }
     }
 
     private func replaceAndPersistDetail(
         for entry: AnimeEntry,
-        with detailDTO: AnimeEntryDetailDTO
+        with detailDTO: AnimeEntryDetailDTO,
+        fetchedContent: LibraryMetadataRefreshDetailComparator.Content
     ) throws -> AnimeEntryDetail {
+        // A header can fetch again to look for a missing logo. An unchanged response must
+        // not rewrite the SwiftData graph and invalidate every library row's snapshot.
+        if let detail = entry.detail,
+            LibraryMetadataRefreshDetailComparator.content(of: detail) == fetchedContent
+        {
+            return detail
+        }
         let previousDetailSnapshot = entry.detail?.snapshotDTO()
         let detail = entry.replaceDetail(from: detailDTO)
 
@@ -384,21 +407,22 @@ final class EntryDetailViewModel {
     }
 
     private func apply(detail: AnimeEntryDetail, entry: AnimeEntry, language: Language) {
+        appliedDetailContent = LibraryMetadataRefreshDetailComparator.content(of: detail)
         displayTitle = detail.title
         subtitleText = detail.subtitle
         overviewText =
             detail.overview ?? entry.displayOverview
             ?? String(localized: EntryDetailL10n.noOverviewAvailable)
         genreNames = Self.localizedGenreNames(detail.genreIDs, language: language)
-        heroImageURL = detail.heroImageURL ?? entry.backdropURL ?? entry.posterURL
-        logoImageURL = detail.logoImageURL
+        heroImage = entry.backdropImage ?? entry.posterImage(.posterFull)
+        logoImage = detail.logoImage
         primaryLinkURL = detail.primaryLinkURL ?? entry.linkToDetails
         characterSectionTitle = EntryDetailL10n.characters
         productionCompanies = detail.orderedProductionCompanies.map {
             EntryDetailProductionCompanyCard(
                 id: $0.id,
                 name: $0.name,
-                logoURL: $0.logoURL
+                logoImage: $0.logoImage
             )
         }
         let primaryProductionCompany = productionCompanies.first
@@ -464,7 +488,7 @@ final class EntryDetailViewModel {
                 id: $0.id,
                 primaryText: $0.characterName,
                 secondaryText: $0.actorName,
-                profileURL: $0.profileURL
+                profileImage: $0.profileImage
             )
         }
         staffCards = Self.displayedStaffCards(from: detail.orderedStaff, language: language)
@@ -474,7 +498,7 @@ final class EntryDetailViewModel {
                 seasonNumber: $0.seasonNumber,
                 title: $0.title,
                 subtitle: Self.seasonLabelText($0.seasonNumber),
-                posterURL: $0.posterURL
+                posterImage: $0.posterImage
             )
         }
         collapseSeriesSeasonsByDefault =
@@ -491,7 +515,9 @@ final class EntryDetailViewModel {
                 title: "\($0.episodeNumber). \($0.title)",
                 subtitle: $0.airDate?.formatted(date: .abbreviated, time: .omitted)
                     ?? String(localized: EntryDetailL10n.episode),
-                imageURL: $0.imageURL
+                stillImage: $0.stillImage,
+                name: $0.title,
+                airDate: $0.airDate
             )
         }
     }
@@ -517,7 +543,7 @@ final class EntryDetailViewModel {
                     id: $0.id,
                     primaryText: $0.name,
                     secondaryText: localizedStaffRole($0.role, language: language),
-                    profileURL: $0.profileURL
+                    profileImage: $0.profileImage
                 )
             }
     }
@@ -551,7 +577,7 @@ final class EntryDetailViewModel {
                     role: staffMember.role,
                     department: staffMember.department
                 ),
-                profileURL: staffMember.profileURL
+                profileImage: staffMember.profileImage
             )
         ]
     }
@@ -582,7 +608,7 @@ final class EntryDetailViewModel {
                 ),
                 originalIndex: originalIndex,
                 bucketIndex: bucketIndex,
-                profileURL: staffMember.profileURL
+                profileImage: staffMember.profileImage
             )
         }
     }

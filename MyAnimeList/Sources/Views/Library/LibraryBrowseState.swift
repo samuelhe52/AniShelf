@@ -2,7 +2,7 @@
 //  LibraryBrowseState.swift
 //  AniShelf
 //
-//  Created by Claude Code on behalf of samuelhe52 on 2026/10/17.
+//  Created by Claude Code on behalf of Samuel He on 2026/10/17.
 //
 
 import Collections
@@ -13,7 +13,7 @@ import SwiftUI
 struct LibraryScrollRequest: Equatable {
     // Keep repeated explicit requests to the same entry observable.
     let token = UUID()
-    let entryID: LibraryEntryIdentity?
+    let entryID: LibraryEntryIdentity
 }
 
 struct LibraryHighlightRequest: Equatable {
@@ -29,12 +29,12 @@ struct LibraryHighlightRequest: Equatable {
     }
 }
 
-/// A library window's scroll position, jump highlight, and search sheet, shared by the iOS
+/// A library window's scroll bookmark, jump highlight, and search sheet, shared by the iOS
 /// and Mac library roots.
 @Observable
 @MainActor
 final class LibraryBrowseState {
-    let scrollState = ScrollState()
+    let bookmark = LibraryScrollBookmark()
     private(set) var scrollRequest: LibraryScrollRequest?
     var highlightRequest: LibraryHighlightRequest?
     var isSearching = false
@@ -43,8 +43,8 @@ final class LibraryBrowseState {
     private var isSearchSheetOnScreen = false
     private var pendingJumpEntryID: LibraryEntryIdentity?
 
-    func requestScroll(to entryID: LibraryEntryIdentity?) {
-        scrollState.scrolledID = entryID
+    /// Scrolls the current page to an entry; the page settles the bookmark on it.
+    func requestScroll(to entryID: LibraryEntryIdentity) {
         scrollRequest = LibraryScrollRequest(entryID: entryID)
     }
 
@@ -95,7 +95,7 @@ final class LibraryBrowseState {
     ) {
         isSearching = false
         Task {
-            ToastCenter.global.loadingMessage = .message("Loading...")
+            ToastCenter.global.loadingMessage = .message("Loading…")
             let success = await scope.store.newEntryFromSearchResults(results)
             // A failure shows its own toast; the loading toast never dismisses itself.
             ToastCenter.global.loadingMessage = nil

@@ -14,9 +14,10 @@ import Foundation
 /// the library membership, display, tracking, poster override, note, episode
 /// progress fields needed to replay a user's library state on another device.
 public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
-    /// Version 3 adds `scoreHasHalf`. Builds before it quarantine version 3
-    /// records and never upload over them.
-    public static let currentSchemaVersion = 3
+    /// Version 4 adds independently clocked episode notes.
+    ///
+    /// Older builds quarantine these records rather than overwrite note state.
+    public static let currentSchemaVersion = 4
 
     private enum CodingKeys: String, CodingKey {
         case schemaVersion
@@ -35,6 +36,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         case scoreHasHalf
         case favorite
         case notes
+        case episodeNotes
         case usingCustomPoster
         case customPosterPath
         case customPosterURL
@@ -81,10 +83,13 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     public var dateFinished: Date?
     public var isDateTrackingEnabled: Bool
     public var score: Int?
-    /// Adds 0.5 to `score`. Always false when `score` is nil or 5.
+    /// Adds 0.5 to `score`.
+    ///
+    /// Always false when `score` is nil or 5.
     public var scoreHasHalf: Bool
     public var favorite: Bool
     public var notes: String
+    public var episodeNotes: [EpisodeNote]
     public var usingCustomPoster: Bool
     public var customPosterPath: String?
     public var episodeProgresses: [EpisodeProgress]
@@ -106,7 +111,8 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             libraryUpdatedAt,
             trackingUpdatedAt,
             categoriesUpdatedAt,
-            episodeProgresses.map(\.updatedAt).max()
+            episodeProgresses.map(\.updatedAt).max(),
+            episodeNotes.map(\.updatedAt).max()
         ]
         .compactMap(\.self)
         .max()
@@ -119,7 +125,8 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             libraryUpdatedAt,
             trackingUpdatedAt,
             categoriesUpdatedAt,
-            episodeProgresses.map(\.updatedAt).max()
+            episodeProgresses.map(\.updatedAt).max(),
+            episodeNotes.map(\.updatedAt).max()
         ]
         .compactMap(\.self)
         .max()
@@ -149,6 +156,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
     ///   - scoreHasHalf: Adds 0.5 to `score`. Dropped without a score or at 5.
     ///   - favorite: Favorite flag.
     ///   - notes: User notes.
+    ///   - episodeNotes: Independently clocked notes for individual episodes.
     ///   - usingCustomPoster: Whether `customPosterPath` should be applied.
     ///   - customPosterPath: User-selected TMDb poster path. Ignored unless
     ///     `usingCustomPoster` is true.
@@ -180,6 +188,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         scoreHasHalf: Bool = false,
         favorite: Bool,
         notes: String,
+        episodeNotes: [EpisodeNote] = [],
         usingCustomPoster: Bool,
         customPosterPath: String?,
         episodeProgresses: [EpisodeProgress],
@@ -207,6 +216,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         self.scoreHasHalf = entryScore?.hasHalf ?? false
         self.favorite = favorite
         self.notes = notes
+        self.episodeNotes = EpisodeNote.merged(episodeNotes, [])
         self.usingCustomPoster = usingCustomPoster
         self.customPosterPath = usingCustomPoster ? TMDbImagePath.storagePath(from: customPosterPath) : nil
         self.episodeProgresses = Self.normalizedEpisodeProgresses(episodeProgresses)
@@ -235,6 +245,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         scoreHasHalf: Bool = false,
         favorite: Bool,
         notes: String,
+        episodeNotes: [EpisodeNote] = [],
         usingCustomPoster: Bool,
         customPosterURL: URL?,
         episodeProgresses: [EpisodeProgress],
@@ -262,6 +273,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             scoreHasHalf: scoreHasHalf,
             favorite: favorite,
             notes: notes,
+            episodeNotes: episodeNotes,
             usingCustomPoster: usingCustomPoster,
             customPosterPath: TMDbImagePath.storagePath(from: customPosterURL),
             episodeProgresses: episodeProgresses,
@@ -292,6 +304,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             scoreHasHalf: entry.scoreHasHalf,
             favorite: entry.favorite,
             notes: entry.notes,
+            episodeNotes: entry.storedEpisodeNotes,
             usingCustomPoster: entry.usingCustomPoster,
             customPosterPath: entry.usingCustomPoster ? entry.customPosterPath : nil,
             episodeProgresses: entry.orderedEpisodeProgresses.map {
@@ -333,6 +346,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             scoreHasHalf: try container.decodeIfPresent(Bool.self, forKey: .scoreHasHalf) ?? false,
             favorite: try container.decode(Bool.self, forKey: .favorite),
             notes: try container.decode(String.self, forKey: .notes),
+            episodeNotes: try container.decodeIfPresent([EpisodeNote].self, forKey: .episodeNotes) ?? [],
             usingCustomPoster: try container.decode(Bool.self, forKey: .usingCustomPoster),
             customPosterPath: try container.decodeIfPresent(String.self, forKey: .customPosterPath)
                 ?? TMDbImagePath.storagePath(
@@ -369,6 +383,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         }
         try container.encode(favorite, forKey: .favorite)
         try container.encode(notes, forKey: .notes)
+        try container.encode(episodeNotes, forKey: .episodeNotes)
         try container.encode(usingCustomPoster, forKey: .usingCustomPoster)
         try container.encodeIfPresent(customPosterPath, forKey: .customPosterPath)
         // Write the legacy URL key so old builds whose synthesised decoder reads
@@ -441,6 +456,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
             merged.trackingUpdatedAt = candidate.trackingUpdatedAt
         }
 
+        merged.episodeNotes = EpisodeNote.merged(merged.episodeNotes, candidate.episodeNotes)
         merged.episodeProgresses = Self.mergedEpisodeProgresses(
             merged.episodeProgresses,
             candidate.episodeProgresses
@@ -478,6 +494,7 @@ public struct LibraryEntrySyncSnapshot: Codable, Equatable, Sendable {
         copy.libraryUpdatedAt = libraryUpdatedAt.map(LibrarySyncTimestamp.normalized)
         copy.trackingUpdatedAt = trackingUpdatedAt.map(LibrarySyncTimestamp.normalized)
         copy.categoriesUpdatedAt = categoriesUpdatedAt.map(LibrarySyncTimestamp.normalized)
+        copy.episodeNotes = EpisodeNote.merged(episodeNotes, [])
         copy.episodeProgresses = episodeProgresses.map {
             .init(
                 seasonNumber: $0.seasonNumber,
@@ -657,6 +674,7 @@ extension AnimeEntry {
         setEntryScore(merged.entryScore)
         favorite = merged.favorite
         notes = merged.notes
+        storedEpisodeNotes = merged.episodeNotes
         let wasUsingCustomPoster = usingCustomPoster
         usingCustomPoster = merged.usingCustomPoster
         if merged.usingCustomPoster {
@@ -703,6 +721,7 @@ extension AnimeEntry {
         setEntryScore(snapshot.entryScore)
         favorite = snapshot.favorite
         notes = snapshot.notes
+        storedEpisodeNotes = snapshot.episodeNotes
         usingCustomPoster = snapshot.usingCustomPoster
         if snapshot.usingCustomPoster {
             customPosterPath = snapshot.customPosterPath
@@ -737,7 +756,8 @@ extension AnimeEntry {
     private func applySyncTombstone(deletedAt: Date) {
         if let latestLocalClock = [
             dateSaved, libraryUpdatedAt, trackingUpdatedAt, categoriesUpdatedAt,
-            episodeProgresses.map(\.updatedAt).max()
+            episodeProgresses.map(\.updatedAt).max(),
+            storedEpisodeNotes.map(\.updatedAt).max()
         ]
         .compactMap(\.self)
         .max() {

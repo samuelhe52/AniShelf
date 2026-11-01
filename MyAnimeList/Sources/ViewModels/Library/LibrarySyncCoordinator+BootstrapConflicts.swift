@@ -259,6 +259,9 @@ fileprivate func hasAuthoritativeLocalWork(
     if hasNewerClock(localSnapshot.categoriesUpdatedAt, than: remoteSnapshot.categoriesUpdatedAt) {
         return true
     }
+    if EpisodeNote.merged(remoteSnapshot.episodeNotes, localSnapshot.episodeNotes) != remoteSnapshot.episodeNotes {
+        return true
+    }
     return hasNewerLocalEpisodeProgress(localSnapshot, remoteSnapshot: remoteSnapshot)
 }
 

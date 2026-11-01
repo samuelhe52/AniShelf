@@ -47,12 +47,8 @@ struct EntryDetailProductionCompaniesPopover: View {
 
     @ViewBuilder
     private func companyLogo(_ company: EntryDetailProductionCompanyCard) -> some View {
-        if let logoURL = company.logoURL {
-            KFImageView(
-                url: logoURL,
-                targetSize: CGSize(width: 500, height: 500),
-                diskCacheExpiration: .shortTerm
-            )
+        if let logoImage = company.logoImage {
+            KFImageView(image: logoImage, diskCacheExpiration: .shortTerm)
             .scaledToFit()
         } else {
             Image(systemName: "building.2")

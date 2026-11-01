@@ -2,7 +2,7 @@
 //  AnimeEntryV2_8_4.swift
 //  AniShelf
 //
-//  Created by Claude Code on behalf of samuelhe52 on 2026/10/18.
+//  Created by Claude Code on behalf of Samuel He on 2026/10/18.
 //
 
 import Foundation
@@ -42,7 +42,9 @@ extension SchemaV2_8_4 {
         public var dateFinished: Date?
         public var isDateTrackingEnabled: Bool = true
         public var score: Int?
-        /// Adds 0.5 to `score`. Always false when `score` is nil or 5.
+        /// Adds 0.5 to `score`.
+        ///
+        /// Always false when `score` is nil or 5.
         public var scoreHasHalf: Bool = false
         public var favorite: Bool = false
         public var notes: String = ""

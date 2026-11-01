@@ -119,3 +119,4 @@ Key files: `MyAnimeList/Sources/ViewModels/Library/LibraryStore.swift`,
 ## Amendments
 
 - Updated 2026-10-18: child-model edits such as episode progress missed observation; the tracking also reads `entry.trackingUpdatedAt` — see [002-child-model-edits.md](002-child-model-edits.md)
+- Updated 2026-10-31: the single whole-list tracking was replaced by one registration per entry and value-based ordering — see [040](../040-per-entry-display-updates/000-plan.md)

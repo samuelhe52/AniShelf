@@ -76,6 +76,7 @@ struct LibrarySortingAndDeletionTests {
             tmdbID: 500_003
         )
         childSeason.parentSeriesEntry = discarded
+        discarded.updateEpisodeNote(at: .init(seasonNumber: 1, episodeNumber: 4), text: "Kept annotation")
 
         try store.repository.newEntry(keeper)
         try store.repository.newEntry(discarded)
@@ -105,6 +106,7 @@ struct LibrarySortingAndDeletionTests {
         #expect(storedEntries.filter { $0.libraryIdentity == identity }.count == 1)
         #expect(storedEntries.contains { $0 === keeper })
         #expect(childSeason.parentSeriesEntry === keeper)
+        #expect(keeper.episodeNote(at: .init(seasonNumber: 1, episodeNumber: 4))?.text == "Kept annotation")
         #expect(!store.requiresDuplicateRepair)
         #expect(store.library.contains { $0 === keeper })
 
@@ -228,90 +230,24 @@ struct LibrarySortingAndDeletionTests {
         #expect(store.syncChangeRecorder.dirtyQueueStore.load() == initialQueue)
     }
 
-    @Test @MainActor func testDeletionScrollTargetFallbacks() throws {
-        let sortStrategyKey = String.librarySortStrategy
-        let sortReversedKey = String.librarySortReversed
-        let defaults = UserDefaults.standard
-        let originalSortStrategy = defaults.object(forKey: sortStrategyKey)
-        let originalSortReversed = defaults.object(forKey: sortReversedKey)
+    @Test @MainActor func testScrollBookmarkHoldsWhileSettlingAndFallsBackToNeighbors() {
+        let ids = (1...5).map { LibraryEntryIdentity(entryType: .movie, tmdbID: $0) }
+        let bookmark = LibraryScrollBookmark()
 
-        defer {
-            if let originalSortStrategy {
-                defaults.set(originalSortStrategy, forKey: sortStrategyKey)
-            } else {
-                defaults.removeObject(forKey: sortStrategyKey)
-            }
+        // A restore or command holds the bookmark until the user scrolls.
+        bookmark.record(ids[2], order: ids)
+        bookmark.settle(on: ids[3], order: ids)
+        bookmark.record(ids[1], order: ids)
+        #expect(bookmark.entryID == ids[3])
+        bookmark.userDidScroll()
+        bookmark.record(ids[2], order: ids)
+        #expect(bookmark.entryID == ids[2])
 
-            if let originalSortReversed {
-                defaults.set(originalSortReversed, forKey: sortReversedKey)
-            } else {
-                defaults.removeObject(forKey: sortReversedKey)
-            }
-        }
-
-        func makeEntry(name: String, tmdbID: Int, day: Int) -> AnimeEntry {
-            AnimeEntry(
-                name: name,
-                type: .movie,
-                tmdbID: tmdbID,
-                dateSaved: referenceDate(year: 2026, month: 1, day: day)
-            )
-        }
-
-        func makeScope(with entries: [AnimeEntry]) throws -> LibraryBrowseScope {
-            let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
-            let scope = LibraryBrowseScope(store: store)
-            scope.sortStrategy = .dateSaved
-            scope.sortReversed = false
-
-            for entry in entries {
-                try store.repository.newEntry(entry)
-            }
-            try store.refreshLibrary()
-            return scope
-        }
-
-        do {
-            let first = makeEntry(name: "First", tmdbID: 1, day: 1)
-            let second = makeEntry(name: "Second", tmdbID: 2, day: 2)
-            let third = makeEntry(name: "Third", tmdbID: 3, day: 3)
-            let scope = try makeScope(with: [first, second, third])
-            var scrolledID: LibraryEntryIdentity?
-
-            #expect(scope.deleteEntry(second) { scrolledID = $0 })
-            #expect(scrolledID == first.libraryIdentity)
-        }
-
-        do {
-            let first = makeEntry(name: "First", tmdbID: 1, day: 1)
-            let second = makeEntry(name: "Second", tmdbID: 2, day: 2)
-            let third = makeEntry(name: "Third", tmdbID: 3, day: 3)
-            let scope = try makeScope(with: [first, second, third])
-            var scrolledID: LibraryEntryIdentity?
-
-            #expect(scope.deleteEntry(first) { scrolledID = $0 })
-            #expect(scrolledID == second.libraryIdentity)
-        }
-
-        do {
-            let first = makeEntry(name: "First", tmdbID: 1, day: 1)
-            let second = makeEntry(name: "Second", tmdbID: 2, day: 2)
-            let third = makeEntry(name: "Third", tmdbID: 3, day: 3)
-            let scope = try makeScope(with: [first, second, third])
-            var scrolledID: LibraryEntryIdentity?
-
-            #expect(scope.deleteEntry(third) { scrolledID = $0 })
-            #expect(scrolledID == second.libraryIdentity)
-        }
-
-        do {
-            let solo = makeEntry(name: "Solo", tmdbID: 10, day: 10)
-            let scope = try makeScope(with: [solo])
-            var scrolledID: LibraryEntryIdentity? = solo.libraryIdentity
-
-            #expect(scope.deleteEntry(solo) { scrolledID = $0 })
-            #expect(scrolledID == nil)
-        }
+        // A removed entry restores to the one that takes its place, then the one before it.
+        #expect(bookmark.target(in: ids) == ids[2])
+        #expect(bookmark.target(in: [ids[0], ids[1], ids[3], ids[4]]) == ids[3])
+        #expect(bookmark.target(in: [ids[0], ids[1]]) == ids[1])
+        #expect(bookmark.target(in: []) == nil)
     }
 
     @Test @MainActor func testWatchStatusGroupingUsesCurrentSortWithinBuckets() throws {
@@ -478,9 +414,11 @@ struct LibrarySortingAndDeletionTests {
         // Edits to child models can miss observation, so the entry's tracking clock alone
         // must invalidate the list.
         let computeCount = scope.displayComputeCount
+        let rowBuilds = scope.rowBuildCount
         favorite.markTrackingModified()
         _ = scope.entriesOnDisplay
         #expect(scope.displayComputeCount == computeCount + 1)
+        #expect(scope.rowBuildCount == rowBuilds + 1)
 
         scope.filters = []
         store.hideDroppedByDefault = true
@@ -498,6 +436,48 @@ struct LibrarySortingAndDeletionTests {
 
         store.hideDroppedByDefault = false
         #expect(scope.entriesOnDisplay.contains { $0.tmdbID == dropped.tmdbID })
+    }
+
+    @Test @MainActor func testDisplayUpdatesRebuildOnlyTheChangedEntry() throws {
+        try withRestoredLibrarySortingPreferences {
+            let store = LibraryStore(dataProvider: DataProvider(inMemory: true))
+            let scope = LibraryBrowseScope(store: store)
+            let entries = ["Alpha", "Bravo", "Charlie"].enumerated().map { index, name in
+                let entry = makeLibraryEntry(name: name, tmdbID: 501 + index, daySaved: index + 1)
+                entry.detail = AnimeEntryDetail(language: "en-US", title: name, runtimeMinutes: 90)
+                return entry
+            }
+            for entry in entries { try store.repository.newEntry(entry) }
+            scope.sortStrategy = .alphabetical
+            scope.sortReversed = false
+            scope.filters = [.planToWatch]
+            let order = scope.displayIDs
+            #expect(order == entries.map(\.libraryIdentity))
+
+            // A row-only value rebuilds that row and keeps the order without re-sorting.
+            var rowBuilds = scope.rowBuildCount
+            entries[0].detail?.runtimeMinutes = 120
+            #expect(scope.displayItems.first?.snapshot.primaryMetadata.contains { $0.contains("120") } == true)
+            #expect(scope.rowBuildCount == rowBuilds + 1)
+            #expect(scope.displayIDs == order)
+
+            // A sort value moves the entry; the other rows are reused.
+            rowBuilds = scope.rowBuildCount
+            entries[0].name = "Zulu"
+            #expect(scope.displayIDs == [entries[1], entries[2], entries[0]].map(\.libraryIdentity))
+            #expect(scope.rowBuildCount <= rowBuilds + 1)
+
+            // A filter input hides the entry.
+            entries[1].watchStatus = .watched
+            #expect(scope.displayIDs == [entries[2], entries[0]].map(\.libraryIdentity))
+
+            // A refetch can hand out new child-model instances, so it must not leave rows
+            // observing the old ones.
+            try store.refreshLibrary()
+            _ = scope.displayItems
+            entries[2].detail?.runtimeMinutes = 150
+            #expect(scope.displayItems.first?.snapshot.primaryMetadata.contains { $0.contains("150") } == true)
+        }
     }
 
     @Test @MainActor func testActiveCategoryNarrowsLibraryBeforeFilters() throws {

@@ -65,6 +65,7 @@ fileprivate struct LibrarySearchSheet: ViewModifier {
                     )
                     .navigationTitle("Search")
                     .inlineNavigationTitle()
+                    .preferredNavigationBarScrollEdgeEffect()
                     .alert(
                         "Entry Hidden",
                         isPresented: Binding(

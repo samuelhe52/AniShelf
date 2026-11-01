@@ -15,7 +15,6 @@ extension String {
     static let searchTMDbLanguage = "SearchTMDbLanguage"
     static let searchPageQuery = "SearchPageQuery"
     static let searchMode = "SearchMode"
-    static let persistedScrolledID = "PersistedScrolledID"
     static let libraryLastInspectorDetailEntryIdentity = "LibraryLastInspectorDetailEntryIdentity"
     static let libraryGroupStrategy = "LibraryGroupStrategy"
     static let librarySortStrategy = "LibrarySortStrategy"
@@ -24,6 +23,8 @@ extension String {
     static let libraryOpenDetailWithSingleTap = "LibraryOpenDetailWithSingleTap"
     static let entryDetailCharactersExpandedByDefault = "EntryDetailCharactersExpandedByDefault"
     static let entryDetailStaffExpandedByDefault = "EntryDetailStaffExpandedByDefault"
+    // Mac-only presentation. Keep out of backup and CloudKit allowlists.
+    static let macEntryDetailHeaderStyle = "MacEntryDetailHeaderStyle"
     static let showProductionCompanyInsteadOfRuntime = "ShowProductionCompanyInsteadOfRuntime"
     static let libraryScoringEnabled = "LibraryScoringEnabled"
     // Device-local. Keep out of backup and CloudKit allowlists.
@@ -85,7 +86,6 @@ extension String {
         .defaultPosterLanguage,
         .searchTMDbLanguage,
         .searchPageQuery,
-        .persistedScrolledID,
         .libraryGroupStrategy,
         .librarySortStrategy,
         .librarySortReversed,

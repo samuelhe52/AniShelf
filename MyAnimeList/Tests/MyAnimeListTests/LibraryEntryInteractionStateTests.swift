@@ -346,6 +346,22 @@ struct LibraryEntryInteractionStateTests {
         #expect(state.pendingPasteRequest == nil)
     }
 
+    @Test @MainActor func pasteKeepsTargetEpisodeNotesWhileCopiedTextCarriesThem() {
+        let state = LibraryEntryActionState()
+        let target = AnimeEntry(name: "Target", type: .series, tmdbID: 1)
+        target.updateEpisodeNote(at: .init(seasonNumber: 1, episodeNumber: 1), text: "Target episode")
+        let source = AnimeEntry(name: "Source", type: .series, tmdbID: 2)
+        source.notes = "Pasted note"
+        source.updateEpisodeNote(at: .init(seasonNumber: 1, episodeNumber: 2), text: "Source episode")
+
+        #expect(source.userInfo.description.contains("S1 E2: Source episode"))
+        state.preparePaste(source.userInfo, for: target)
+
+        #expect(state.pendingPasteRequest == nil)
+        #expect(target.notes == "Pasted note")
+        #expect(target.episodeNotes.map(\.text) == ["Target episode"])
+    }
+
     @Test @MainActor func stalePasteCallbacksCannotAffectANewerRequest() throws {
         let state = LibraryEntryActionState()
         let first = AnimeEntry.template(id: 41)

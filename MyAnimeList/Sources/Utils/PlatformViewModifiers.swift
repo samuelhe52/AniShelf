@@ -2,7 +2,7 @@
 //  PlatformViewModifiers.swift
 //  AniShelf
 //
-//  Created by OpenAI Codex on behalf of samuelhe52 on 2026/10/15.
+//  Created by OpenAI Codex on behalf of Samuel He on 2026/10/15.
 //
 
 import SwiftUI
@@ -24,6 +24,14 @@ extension EnvironmentValues {
 }
 
 extension View {
+    @ViewBuilder func supportedSwipeActionsContainer() -> some View {
+        if #available(iOS 27.0, macOS 27.0, *) {
+            swipeActionsContainer()
+        } else {
+            self
+        }
+    }
+
     @ViewBuilder func inlineNavigationTitle() -> some View {
         #if os(macOS)
             self
@@ -32,12 +40,16 @@ extension View {
         #endif
     }
 
-    /// Lets the iOS hero artwork run under the navigation bar.
+    /// Lets the hero artwork run under the navigation bar or window toolbar.
     ///
-    /// The Mac inspector has no hero.
-    @ViewBuilder func heroIgnoresTopSafeArea() -> some View {
+    /// The Mac inspector's compact header has no hero, so it stays below the toolbar.
+    @ViewBuilder func heroIgnoresTopSafeArea(_ showsHero: Bool) -> some View {
         #if os(macOS)
-            self
+            if showsHero {
+                ignoresSafeArea(edges: .top)
+            } else {
+                self
+            }
         #else
             ignoresSafeArea(edges: .top)
         #endif
@@ -213,9 +225,11 @@ extension View {
 
 /// Label for a sheet's dismiss button: a glyph on iOS, and the text button macOS sheets use.
 struct SheetCloseLabel: View {
+    var title: LocalizedStringResource = "Close"
+
     var body: some View {
         #if os(macOS)
-            Text("Close")
+            Text(title)
         #else
             Image(systemName: "xmark")
         #endif

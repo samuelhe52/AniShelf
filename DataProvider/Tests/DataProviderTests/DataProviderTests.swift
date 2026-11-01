@@ -500,8 +500,13 @@ fileprivate enum TestStartupError: Error {
     #expect(companies.first?.detail?.entry?.tmdbID == 808_101)
 }
 
-@Test func replaceDetailPersistsAggregateStaffJobs() async throws {
+@Test @MainActor func replaceDetailPersistsAggregateStaffJobs() throws {
+    let provider = DataProvider(inMemory: true)
+    let context = provider.dataHandler.modelContext
     let entry = AnimeEntry.template()
+    entry.detail = AnimeEntryDetail(language: "en-US", title: "Old")
+    context.insert(entry)
+    try context.save()
 
     let detail = entry.replaceDetail(
         from: AnimeEntryDetailDTO(
@@ -529,12 +534,19 @@ fileprivate enum TestStartupError: Error {
             ]
         )
     )
+    try context.save()
 
     let staff = try #require(detail.orderedStaff.first)
     #expect(detail.orderedStaff.count == 1)
     #expect(staff.role == "Directing")
     #expect(staff.orderedJobs.map(\.creditID) == ["director", "music"])
     #expect(staff.orderedJobs.map(\.job) == ["Director", "Music"])
+
+    // Replacing an existing persisted graph must register the nested jobs as well.
+    // Read through a fresh context so a transient in-memory relationship cannot pass.
+    let verification = ModelContext(provider.sharedModelContainer)
+    let persisted = try #require(verification.fetch(FetchDescriptor<AnimeEntry>()).first)
+    #expect(persisted.detail?.orderedStaff.first?.orderedJobs.map(\.creditID) == ["director", "music"])
 }
 
 @Test func episodeProgressSetIncrementClearAndClamp() async throws {

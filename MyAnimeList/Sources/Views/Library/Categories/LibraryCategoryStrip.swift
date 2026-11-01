@@ -2,7 +2,7 @@
 //  LibraryCategoryStrip.swift
 //  AniShelf
 //
-//  Created by OpenAI Codex on behalf of samuelhe52 on 2026/10/13.
+//  Created by OpenAI Codex on behalf of Samuel He on 2026/10/13.
 //
 
 import SwiftUI
@@ -23,7 +23,6 @@ struct LibraryCategoryStrip: View {
     let openCategoryManager: () -> Void
     let allowsCategoryActions: Bool
 
-    @Namespace private var selectionHighlight
     @Binding var isReordering: Bool
 
     @State private var draftOrder: [LibraryCategory.ID]?
@@ -60,12 +59,12 @@ struct LibraryCategoryStrip: View {
             ScrollView(.horizontal) {
                 HStack(spacing: 4) {
                     if isReordering {
-                        tabLabel(Text(LocalizedStringResource("All")), isSelected: scope.activeCategoryID == nil)
+                        tabLabel(Text("All"), isSelected: scope.activeCategoryID == nil)
                             .accessibilityAddTraits(scope.activeCategoryID == nil ? .isSelected : [])
                             .measureTabWidth("all", in: $tabWidths)
                             .id("all")
                     } else {
-                        menuTab(nil, title: Text(LocalizedStringResource("All")))
+                        menuTab(nil, title: Text("All"))
                             .measureTabWidth("all", in: $tabWidths)
                             .id("all")
                     }
@@ -82,6 +81,7 @@ struct LibraryCategoryStrip: View {
                             .id(category.id)
                     }
                 }
+                .background(alignment: .leading) { selectionHighlight }
                 .padding(.horizontal, 4)
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -135,6 +135,8 @@ struct LibraryCategoryStrip: View {
         .padding(.bottom, 4)
         .animation(.snappy, value: scope.activeCategoryID)
         .animation(reorderAnimation, value: store.categories)
+        // Keep page-style transactions out of the strip's glass subtree.
+        .animation(nil, value: scope.viewStyle)
         .sensoryFeedback(.impact(weight: .light), trigger: draggedCategoryID) { _, newValue in
             newValue != nil
         }
@@ -159,11 +161,11 @@ struct LibraryCategoryStrip: View {
             tabLabel(Text(category.name), isSelected: scope.activeCategoryID == category.id)
                 .modifier(CategoryTabWiggle(isActive: draggedCategoryID != category.id))
                 .accessibilityAddTraits(scope.activeCategoryID == category.id ? .isSelected : [])
-                .accessibilityHint(Text(LocalizedStringResource("Hold and drag to reorder.")))
-                .accessibilityAction(named: Text(LocalizedStringResource("Move Left"))) {
+                .accessibilityHint(Text("Hold and drag to reorder."))
+                .accessibilityAction(named: Text("Move Left")) {
                     moveAccessibly(category.id, by: -1)
                 }
-                .accessibilityAction(named: Text(LocalizedStringResource("Move Right"))) {
+                .accessibilityAction(named: Text("Move Right")) {
                     moveAccessibly(category.id, by: 1)
                 }
         } else {
@@ -201,26 +203,46 @@ struct LibraryCategoryStrip: View {
             .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 12)
             .frame(minWidth: minimumTabWidth, minHeight: 36)
-            .background {
-                if isSelected {
-                    Capsule()
-                        .fill(.tint.opacity(0.14))
-                        .matchedGeometryEffect(id: "selection", in: selectionHighlight)
-                }
-            }
             // Keep the selection fill compact while the whole 44-point row is tappable.
             .padding(.vertical, 4)
             .contentShape(.rect)
     }
 
-    private func tabCenter(_ id: LibraryCategory.ID) -> CGFloat {
-        var x = 4 + (tabWidths["all"] ?? minimumTabWidth) + 4 - scrollOffset
-        for category in displayedCategories {
-            let width = tabWidths[category.id] ?? minimumTabWidth
-            if category.id == id { return x + width / 2 }
-            x += width + 4
+    /// One capsule slides between the tabs.
+    ///
+    /// Not a `matchedGeometryEffect`: with one on screen, the library's view-style switch lost
+    /// its page transitions, so the incoming page popped in.
+    private var selectionHighlight: some View {
+        let width = tabWidth(selectedTabID)
+        let isDragged = draggedCategoryID != nil && draggedCategoryID == scope.activeCategoryID
+        // The row's leading padding sits outside this background.
+        let minX = isDragged ? draggedCenter + scrollOffset - 4 - width / 2 : tabMinX(selectedTabID)
+        return Capsule()
+            .fill(.tint.opacity(0.14))
+            .frame(width: width, height: 36)
+            .offset(x: minX)
+            .opacity(tabWidths[selectedTabID] == nil ? 0 : 1)
+            .transaction { transaction in
+                if isDragged { transaction.animation = nil }
+            }
+    }
+
+    private func tabWidth(_ id: String) -> CGFloat {
+        tabWidths[id] ?? minimumTabWidth
+    }
+
+    /// The tab's leading edge within the tab row, before the row's padding.
+    private func tabMinX(_ id: String) -> CGFloat {
+        var x: CGFloat = 0
+        for tabID in ["all"] + displayedCategories.map(\.id) {
+            if tabID == id { return x }
+            x += tabWidth(tabID) + 4
         }
         return x
+    }
+
+    private func tabCenter(_ id: LibraryCategory.ID) -> CGFloat {
+        4 + tabMinX(id) + tabWidth(id) / 2 - scrollOffset
     }
 
     private func category(at x: CGFloat) -> LibraryCategory? {
@@ -307,22 +329,22 @@ struct LibraryCategoryStrip: View {
     private func categoryMenu(for category: LibraryCategory?) -> some View {
         Section {
             if let category {
-                Button(LocalizedStringResource("Rename"), systemImage: "pencil") {
+                Button("Rename", systemImage: "pencil") {
                     namePrompt = .init(purpose: .rename(category))
                 }
             }
-            Button(LocalizedStringResource("Edit Categories…"), systemImage: "list.bullet") {
+            Button("Edit Categories…", systemImage: "list.bullet") {
                 isReordering = false
                 openCategoryManager()
             }
             if let category {
-                Button(LocalizedStringResource("Delete"), systemImage: "trash", role: .destructive) {
+                Button("Delete", systemImage: "trash", role: .destructive) {
                     deletingCategory = category
                 }
             }
         }
         Section {
-            Button(LocalizedStringResource("Reorder Tabs"), systemImage: "arrow.left.arrow.right") {
+            Button("Reorder Tabs", systemImage: "arrow.left.arrow.right") {
                 withAnimation(.snappy) { isReordering = true }
             }
             .disabled(store.categories.count < 2)

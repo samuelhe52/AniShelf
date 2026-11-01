@@ -252,9 +252,9 @@ struct SearchPage: View {
     private var searchPrompt: LocalizedStringKey {
         switch mode {
         case .tmdb:
-            "Search TV animation or movies..."
+            "Search TV animation or movies"
         case .library:
-            "Search in your library..."
+            "Search in your library"
         }
     }
 

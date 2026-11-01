@@ -5,11 +5,12 @@
 //  Created by OpenAI Codex on behalf of Samuel He on 2026/5/21.
 //
 
+import DataProvider
 import SwiftUI
 
 struct EntryDetailHeroSection: View {
-    let imageURL: URL?
-    let logoImageURL: URL?
+    let image: TMDbImage?
+    let logoImage: TMDbImage?
     let displayTitle: String
     let subtitleText: String?
     let metadataLineItems: [String]
@@ -27,13 +28,13 @@ struct EntryDetailHeroSection: View {
             )
             let stretchedHeight = height + overscroll
 
-            hero(height: stretchedHeight)
+            hero(width: proxy.size.width, height: stretchedHeight)
                 .offset(y: -overscroll)
         }
         .frame(height: height)
     }
 
-    private func hero(height: CGFloat) -> some View {
+    private func hero(width: CGFloat, height: CGFloat) -> some View {
         ZStack(alignment: .bottom) {
             heroBackground
                 .clipped()
@@ -41,41 +42,68 @@ struct EntryDetailHeroSection: View {
 
             heroText
         }
-        .containerRelativeFrame(.horizontal)
-        .frame(height: height)
+        // A portrait fallback must fill these bounds without increasing the layout height
+        // and pushing the title over the controls below it.
+        .frame(width: width, height: height)
     }
 
     /// The artwork and its scrims, which extend under iPhone Duo's vertical bar; the text stays
     /// inset.
+    @ViewBuilder
     private var heroBackground: some View {
-        ZStack(alignment: .bottom) {
-            heroArtwork
+        #if os(macOS)
+            // The inspector sits on a system material, so the artwork fades to transparent
+            // instead of to a color.
+            Color.clear
+                .overlay { heroArtwork }
+                // A lighter top scrim than iOS; the toolbar's glass controls need less help.
+                .overlay {
+                    LinearGradient(
+                        colors: [.black.opacity(0.25), .clear],
+                        startPoint: .top,
+                        endPoint: UnitPoint(x: 0.5, y: 0.2)
+                    )
+                }
+                .overlay { textScrim }
+                .mask {
+                    LinearGradient(
+                        // Like the iOS fade, the text overlaps the lower part.
+                        stops: [.init(color: .black, location: 0.7), .init(color: .clear, location: 1)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                }
+        #else
+            Color.clear
+                .overlay { heroArtwork }
+                // Top scrim — keeps toolbar buttons legible
+                .overlay {
+                    LinearGradient(
+                        colors: [.black.opacity(0.42), .clear],
+                        startPoint: .top,
+                        endPoint: UnitPoint(x: 0.5, y: 0.22)
+                    )
+                }
+                .overlay { textScrim }
+                // Fade bottom edge into page background
+                .overlay(alignment: .bottom) {
+                    LinearGradient(
+                        colors: [.clear, pageBackground],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: 120)
+                }
+        #endif
+    }
 
-            // Top scrim — keeps toolbar buttons legible
-            LinearGradient(
-                colors: [.black.opacity(0.42), .clear],
-                startPoint: .top,
-                endPoint: UnitPoint(x: 0.5, y: 0.22)
-            )
-
-            // Gradient scrim for text legibility
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.78)],
-                startPoint: UnitPoint(x: 0.5, y: 0.35),
-                endPoint: .bottom
-            )
-
-            // Fade bottom edge into page background
-            VStack(spacing: 0) {
-                Spacer()
-                LinearGradient(
-                    colors: [.clear, pageBackground],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 120)
-            }
-        }
+    /// Gradient scrim for text legibility.
+    private var textScrim: some View {
+        LinearGradient(
+            colors: [.clear, .black.opacity(0.78)],
+            startPoint: UnitPoint(x: 0.5, y: 0.35),
+            endPoint: .bottom
+        )
     }
 
     private var heroText: some View {
@@ -83,12 +111,8 @@ struct EntryDetailHeroSection: View {
             Spacer(minLength: 0)
 
             VStack(alignment: .center, spacing: 6) {
-                if let logoImageURL {
-                    KFImageView(
-                        url: logoImageURL,
-                        targetSize: CGSize(width: 500, height: 500),
-                        diskCacheExpiration: .longTerm
-                    )
+                if let logoImage {
+                    KFImageView(image: logoImage, diskCacheExpiration: .longTerm)
                     .scaledToFit()
                     .frame(maxWidth: 280)
                     .frame(height: 78)
@@ -134,12 +158,8 @@ struct EntryDetailHeroSection: View {
 
     @ViewBuilder
     private var heroArtwork: some View {
-        if let imageURL {
-            KFImageView(
-                url: imageURL,
-                targetSize: CGSize(width: 1_200, height: 675),
-                diskCacheExpiration: .longTerm
-            )
+        if let image {
+            KFImageView(image: image, diskCacheExpiration: .longTerm)
             .scaledToFill()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -215,9 +235,12 @@ struct DetailStatCard: View {
 struct EntryDetailQuickActionsRow: View {
     @Environment(\.popupPanelStyle) private var panelStyle
     @State private var editingReminder: AiringReminderSubscription?
+    @State private var newCategoryPrompt: LibraryCategoryNamePrompt?
 
+    let entry: AnimeEntry
     let openInLinks: EntryOpenInLinks
     let isFavorite: Bool
+    let isCentered: Bool
     let showsConvertAction: Bool
     let conversionInProgress: Bool
     let convertMenuTitle: () -> LocalizedStringResource
@@ -235,13 +258,12 @@ struct EntryDetailQuickActionsRow: View {
     let onConvert: () async -> Void
     let onToggleDroppedStatus: () -> Void
 
-    /// The Mac inspector lines compact bordered buttons up under the title instead of
-    /// centering large glass circles.
+    /// The Mac inspector uses compact bordered buttons instead of large glass circles.
     private var isCompact: Bool { panelStyle == .grouped }
 
     var body: some View {
         HStack(spacing: isCompact ? 6 : 10) {
-            if !isCompact {
+            if isCentered {
                 Spacer(minLength: 0)
             }
 
@@ -252,7 +274,7 @@ struct EntryDetailQuickActionsRow: View {
                 verticalOffset: -1,
                 action: onShare
             )
-            .macHelp(Text("Share…"))
+            .macHelp(Text("Share"))
 
             PopupActionCircleButton(
                 systemImage: isFavorite ? "heart.fill" : "heart",
@@ -279,6 +301,13 @@ struct EntryDetailQuickActionsRow: View {
                 Button(action: onChangePoster) {
                     Label(EntryDetailL10n.changePoster, systemImage: "photo.on.rectangle")
                 }
+
+                #if !os(macOS)
+                    // The Mac tracking card has a Categories row instead.
+                    EntryCategoriesSubmenu(entry: entry) {
+                        newCategoryPrompt = .init(purpose: .create(memberCount: 0))
+                    }
+                #endif
 
                 if showsConvertAction {
                     Button {
@@ -320,6 +349,7 @@ struct EntryDetailQuickActionsRow: View {
                 )
             #endif
         }
+        .entryNewCategoryPrompt($newCategoryPrompt) { entry }
     }
 }
 

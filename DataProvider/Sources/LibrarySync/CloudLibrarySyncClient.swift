@@ -123,6 +123,7 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
         record[Field.scoreHasHalf] = snapshot.scoreHasHalf
         record[Field.favorite] = snapshot.favorite
         record[Field.notes] = snapshot.notes
+        record[Field.episodeNotes] = try JSONEncoder().encode(snapshot.episodeNotes)
         record[Field.usingCustomPoster] = snapshot.usingCustomPoster
         let customPosterPath = snapshot.usingCustomPoster ? snapshot.customPosterPath : nil
         record[Field.customPosterPath] = customPosterPath
@@ -175,6 +176,7 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
         record[Field.scoreHasHalf] = nil
         record[Field.favorite] = nil
         record[Field.notes] = nil
+        record[Field.episodeNotes] = nil
         record[Field.usingCustomPoster] = nil
         record[Field.customPosterPath] = nil
         record[Field.customPosterURL] = nil
@@ -344,6 +346,19 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
             && (Self.optionalValue(for: Field.scoreHasHalf, in: record) ?? false)
         let favorite: Bool = try Self.requiredValue(for: Field.favorite, in: record)
         let notes: String = try Self.requiredValue(for: Field.notes, in: record)
+        let episodeNotes: [EpisodeNote]
+        if let data: Data = try Self.optionalValue(for: Field.episodeNotes, in: record) {
+            do {
+                episodeNotes = try JSONDecoder().decode([EpisodeNote].self, from: data)
+            } catch {
+                throw CloudLibrarySyncDecodeError.corruptEpisodeNotesPayload
+            }
+            guard episodeNotes.allSatisfy({ $0.anchor.seasonNumber >= 0 && $0.anchor.episodeNumber > 0 }) else {
+                throw CloudLibrarySyncDecodeError.corruptEpisodeNotesPayload
+            }
+        } else {
+            episodeNotes = []
+        }
         let usingCustomPoster: Bool = try Self.requiredValue(for: Field.usingCustomPoster, in: record)
         let customPosterPath = try Self.customPosterPath(from: record)
         let episodeProgressData: Data = try Self.requiredValue(for: Field.episodeProgresses, in: record)
@@ -373,6 +388,7 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
             scoreHasHalf: scoreHasHalf,
             favorite: favorite,
             notes: notes,
+            episodeNotes: episodeNotes,
             usingCustomPoster: usingCustomPoster,
             customPosterPath: customPosterPath,
             episodeProgresses: Self.decodeEpisodeProgresses(episodeProgressData),
@@ -447,6 +463,8 @@ public struct CloudLibrarySyncClient: @unchecked Sendable {
             cloudLibrarySyncLogger.error(
                 "Failed to decode iCloud sync record \(record.recordType, privacy: .public) because record identity \(recordName, privacy: .private) was invalid."
             )
+        case .corruptEpisodeNotesPayload:
+            cloudLibrarySyncLogger.error("Corrupt episode notes payload in iCloud record.")
         case .corruptEpisodeProgressPayload:
             cloudLibrarySyncLogger.error(
                 "Failed to decode iCloud sync record \(record.recordType, privacy: .public) because the \(Field.episodeProgresses, privacy: .public) payload was corrupt."
@@ -495,6 +513,7 @@ extension CloudLibrarySyncClient {
         fileprivate static let scoreHasHalf = "scoreHasHalf"
         fileprivate static let favorite = "favorite"
         fileprivate static let notes = "notes"
+        fileprivate static let episodeNotes = "episodeNotes"
         fileprivate static let usingCustomPoster = "usingCustomPoster"
         fileprivate static let customPosterPath = "customPosterPath"
         fileprivate static let customPosterURL = "customPosterURL"

@@ -15,6 +15,24 @@ import Testing
 
 struct EntryDetailLoaderError: Error {}
 
+actor HeaderLogoEntryDetailLoader {
+    let logoPath: String?
+    private(set) var requestCount = 0
+
+    init(logoPath: String?) {
+        self.logoPath = logoPath
+    }
+
+    func load(language: MyAnimeList.Language) -> AnimeEntryDetailDTO {
+        requestCount += 1
+        return AnimeEntryDetailDTO(
+            language: language.rawValue,
+            title: "Refreshed Detail",
+            logoImagePath: logoPath
+        )
+    }
+}
+
 struct EntryDetailPersistenceError: LocalizedError {
     var errorDescription: String? { "The detail could not be saved." }
 }
@@ -213,7 +231,9 @@ func makeEpisodePreviewCard() -> EntryDetailEpisodeCard {
         episodeNumber: 1,
         title: "1. Preview",
         subtitle: "Apr 7, 2013",
-        imageURL: nil
+        stillImage: nil,
+        name: "Preview",
+        airDate: nil
     )
 }
 

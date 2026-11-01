@@ -45,7 +45,7 @@ struct SupportAniShelfSheet: View {
         .inlineNavigationTitle()
         .toolbar {
             ToolbarItem(placement: .sheetTrailing) {
-                Button(LocalizedStringResource("Done")) { dismiss() }
+                Button("Done") { dismiss() }
             }
         }
         .sensoryFeedback(.success, trigger: purchaseFlow.didSucceed)

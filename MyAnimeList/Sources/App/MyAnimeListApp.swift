@@ -56,6 +56,11 @@ struct MyAnimeListApp: App {
                 nil
             }
         let keyStorage = TMDbAPIKeyStorage()
+        #if DEBUG
+            AIDebugLaunch.start(
+                configuration: AIConfiguration(defaults: startup.defaults), isFixture: startup.isLibraryFixture
+            )
+        #endif
         // A newer-store block never lifts: only an app update can open the library.
         // A fixture library stays blocked too, so sync and reminders never act on it.
         let recoveryActivityGate = StartupRecoveryActivityGate(
@@ -146,10 +151,6 @@ struct MyAnimeListApp: App {
                     _ = await AiringReminderCoordinator.shared.refreshAll()
                 }
             }
-            LibrarySyncNotificationBridge.configureTerminationFlush(
-                isNeeded: { canSyncLibrary() && libraryStore.needsBackgroundLibrarySyncProtection },
-                flush: { _ = await libraryStore.flushPendingLocalLibrarySyncAndWait() }
-            )
             LibrarySyncNotificationBridge.configureSleepAndWake(
                 willSleep: {
                     guard canSyncLibrary(), libraryStore.needsBackgroundLibrarySyncProtection else { return }
@@ -409,7 +410,7 @@ struct MyAnimeListApp: App {
     }
 
     private var checkingTMDbAPIKeyResource: LocalizedStringResource {
-        "Checking TMDb API key..."
+        "Checking TMDb API key…"
     }
 }
 

@@ -2,7 +2,7 @@
 //  LibraryFixture.swift
 //  AniShelf
 //
-//  Created by Claude Code on behalf of samuelhe52 on 2026/10/17.
+//  Created by Claude Code on behalf of Samuel He on 2026/10/17.
 //
 
 #if DEBUG || LIBRARY_FIXTURES
@@ -20,9 +20,10 @@
     /// A generated library for scale checks and the UI benchmarks; see docs-ai 026.
     ///
     /// `-library-fixture <N>` boots the real UI on N deterministic entries in an in-memory store.
-    /// Library preferences, the TMDb key, What's New, review prompts, and the poster pipeline are
-    /// isolated, and the app turns sync and airing reminders off, so nothing reaches the real
-    /// library or iCloud.
+    /// Restored window state is ignored. Library preferences, Smart Features choices, the TMDb
+    /// key, What's New, review prompts, and the poster pipeline are isolated, and the app turns
+    /// sync and airing reminders off, so nothing reaches the real library or iCloud. Smart
+    /// Features run on OpenRouter, answered locally by `AIFixtureProvider`.
     @MainActor
     struct LibraryFixture {
         static let launchArgument = "-library-fixture"
@@ -32,6 +33,38 @@
 
         /// The fixture this launch runs on, set before any shared service is created.
         private(set) static var active: LibraryFixture?
+
+        /// Full entry details by TMDb ID, served in place of TMDb, which has no fixture IDs.
+        nonisolated private static let details = OSAllocatedUnfairLock<[Int: AnimeEntryDetailDTO]>(
+            initialState: [:]
+        )
+
+        /// The detail TMDb would return for a fixture entry, so the detail view shows its
+        /// complete layout: hero artwork and logo, metadata, stats, cast, and staff.
+        nonisolated static func detail(tmdbID: Int, language: Language) throws -> AnimeEntryDetailDTO {
+            guard var detail = details.withLock({ $0[tmdbID] }) else { throw URLError(.fileDoesNotExist) }
+            detail.language = language.rawValue
+            return detail
+        }
+
+        /// Local episode rows let detail interactions work without fixture TMDb requests.
+        nonisolated static func episodeSummaries(seriesTMDbID: Int, seasonNumber: Int) -> [AnimeEntryEpisodeSummaryDTO]?
+        {
+            guard
+                let season = details.withLock({ $0[seriesTMDbID]?.seasons.first { $0.seasonNumber == seasonNumber } }),
+                let count = season.episodeCount, count > 0
+            else { return nil }
+            return (1...count).map { number in
+                AnimeEntryEpisodeSummaryDTO(
+                    id: seriesTMDbID * 1_000 + seasonNumber * 100 + number,
+                    episodeNumber: number,
+                    title: "Episode \(number)",
+                    // Weekly, like most TMDb seasons, so rows show dates as they would live.
+                    airDate: referenceDate.addingTimeInterval(
+                        86_400 * Double(seasonNumber * 120 + number * 7 - seriesTMDbID % 1_000 * 10))
+                )
+            }
+        }
 
         let size: Int
         let defaults: UserDefaults
@@ -64,6 +97,8 @@
             preferences.saveCategoriesEnabled(true)
             preferences.saveCategoryStripEnabled(true)
             preferences.saveCategories(Self.categories)
+            // The simulated provider, not Apple Intelligence, which the Simulator often lacks.
+            AIConfiguration(defaults: defaults).selectedBackend = .openRouter
             seed(bootstrap.provider)
             Self.configurePosterLoading()
             LibraryBenchmarkSignposts.isEnabled = true
@@ -77,6 +112,7 @@
                 add: { _ in errSecSuccess },
                 update: { _, _ in errSecSuccess },
                 delete: { _ in errSecSuccess },
+                // The placeholder also keys both AI providers, whose requests go to `AIFixtureProvider`.
                 copyMatching: { _ in (errSecSuccess, Data("library-fixture".utf8) as AnyObject) }
             )
         }
@@ -115,7 +151,7 @@
             }
         }
 
-        private static let referenceDate = Date(timeIntervalSince1970: 1_790_000_000)  // 2026-09
+        nonisolated private static let referenceDate = Date(timeIntervalSince1970: 1_790_000_000)  // 2026-09
 
         private static func makeEntry(index: Int, generator: inout SplitMix64) -> AnimeEntry {
             let type: AnimeType = generator.chance(0.25) ? .movie : .series
@@ -151,10 +187,27 @@
             }
             entry.favorite = generator.chance(0.12)
             entry.categoryIDs = categories.filter { _ in generator.chance(0.2) }.map(\.id)
+            // Most entries have landscape artwork; the rest exercise the poster fallback.
+            if index % 4 != 3 {
+                entry.backdropPath = "/library-fixture-backdrop-\(index).jpg"
+            }
             if type == .series {
                 seedSeasons(of: entry, index: index, saved: saved)
             }
+            let detail = makeDetail(for: entry, index: index)
+            details.withLock { [tmdbID = entry.tmdbID] in $0[tmdbID] = detail }
             return entry
+        }
+
+        private static func makeSeasons(index: Int) -> [AnimeEntrySeasonSummaryDTO] {
+            (1...(1 + index % 3)).map { seasonNumber in
+                AnimeEntrySeasonSummaryDTO(
+                    id: (firstTMDbID + index) * 10 + seasonNumber,
+                    seasonNumber: seasonNumber,
+                    title: "Season \(seasonNumber)",
+                    episodeCount: seasonNumber.isMultiple(of: 2) ? 24 : 12
+                )
+            }
         }
 
         /// Gives a series one to three seasons, and a watching series progress in its latest one,
@@ -164,12 +217,12 @@
         /// earlier fixtures.
         private static func seedSeasons(of entry: AnimeEntry, index: Int, saved: Date) {
             let seasonCount = 1 + index % 3
-            let seasons = (1...seasonCount).map { seasonNumber in
+            let seasons = makeSeasons(index: index).map {
                 AnimeEntrySeasonSummary(
-                    id: (firstTMDbID + index) * 10 + seasonNumber,
-                    seasonNumber: seasonNumber,
-                    title: "Season \(seasonNumber)",
-                    episodeCount: seasonNumber.isMultiple(of: 2) ? 24 : 12
+                    id: $0.id,
+                    seasonNumber: $0.seasonNumber,
+                    title: $0.title,
+                    episodeCount: $0.episodeCount
                 )
             }
             entry.detail = AnimeEntryDetail(
@@ -179,6 +232,7 @@
                 seasonCount: seasonCount,
                 seasons: seasons
             )
+            seedEpisodeNotes(of: entry, index: index, seasons: seasons, saved: saved)
             guard entry.watchStatus == .watching else { return }
             for season in seasons {
                 let episodeCount = season.episodeCount ?? 12
@@ -189,6 +243,108 @@
                     updatedAt: saved.addingTimeInterval(86_400 * Double(2 + season.seasonNumber))
                 )
             }
+        }
+
+        /// Gives every other series lorem ipsum notes on about a quarter of its episodes, from
+        /// one line to several paragraphs, so the notes chips, All, and episode rows have content.
+        private static func seedEpisodeNotes(
+            of entry: AnimeEntry,
+            index: Int,
+            seasons: [AnimeEntrySeasonSummary],
+            saved: Date
+        ) {
+            guard index.isMultiple(of: 2) else { return }
+            for season in seasons {
+                for episode in 1...(season.episodeCount ?? 12) where (episode + index) % 4 == 1 {
+                    entry.updateEpisodeNote(
+                        at: .init(seasonNumber: season.seasonNumber, episodeNumber: episode),
+                        text: loremNotes[(index + episode) % loremNotes.count],
+                        date: saved.addingTimeInterval(86_400 * Double(season.seasonNumber * 30 + episode))
+                    )
+                }
+            }
+        }
+
+        private static let loremNotes = [
+            "Lorem ipsum dolor sit amet.",
+            "Consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            """
+            Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+            """,
+            "Excepteur sint occaecat cupidatat non proident.",
+            """
+            Sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam.
+
+            Eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+
+            Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit.
+            """
+        ]
+
+        // MARK: - Details
+
+        private static let givenNames = ["Aoi", "Haru", "Ren", "Mio", "Sora", "Yuki", "Kai", "Rin", "Nao", "Emi"]
+        private static let familyNames = ["Tanaka", "Sato", "Mori", "Kimura", "Ishida", "Fujii", "Ono", "Hayashi"]
+        private static let studios = ["Studio Lumen", "Kagerou Works", "Northwind Animation", "Hoshizora Pictures"]
+        private static let seriesGenreIDs = [16, 10759, 35, 18, 10765, 9648]
+        private static let movieGenreIDs = [16, 28, 12, 14, 878, 10749]
+        private static let staffJobs = ["Director", "Series Composition", "Character Design", "Music"]
+
+        /// A complete detail, drawn from its own generator so the entries' other values match
+        /// earlier fixtures.
+        ///
+        /// Every other entry has a title logo; the rest use the text title.
+        private static func makeDetail(for entry: AnimeEntry, index: Int) -> AnimeEntryDetailDTO {
+            var generator = SplitMix64(seed: UInt64(entry.tmdbID))
+            func pick<T>(_ values: [T]) -> T { values[Int(generator.next() % UInt64(values.count))] }
+            func personName() -> String { "\(pick(givenNames)) \(pick(familyNames))" }
+
+            let isSeries = entry.type == .series
+            let seasons = isSeries ? makeSeasons(index: index) : []
+            let genres = isSeries ? seriesGenreIDs : movieGenreIDs
+            let personID = entry.tmdbID * 10
+            return AnimeEntryDetailDTO(
+                language: Language.english.rawValue,
+                title: entry.name,
+                subtitle: generator.chance(0.5) ? (0..<2).map { _ in pick(cjkWords) }.joined() : nil,
+                overview: entry.overview,
+                status: isSeries ? pick(["Ended", "Returning Series"]) : "Released",
+                airDate: entry.onAirDate,
+                logoImagePath: index.isMultiple(of: 2) ? "/library-fixture-logo-\(index).png" : nil,
+                genreIDs: Array(genres.shuffled(using: &generator).prefix(2 + index % 2)),
+                voteAverage: (60 + Double(generator.next() % 31)) / 10,
+                runtimeMinutes: isSeries ? 22 + Int(generator.next() % 4) : 85 + Int(generator.next() % 46),
+                episodeCount: isSeries ? seasons.compactMap(\.episodeCount).reduce(0, +) : nil,
+                seasonCount: isSeries ? seasons.count : nil,
+                productionCompanies: [AnimeEntryProductionCompanyDTO(id: entry.tmdbID, name: pick(studios))],
+                characters: (0..<6).map { offset in
+                    AnimeEntryCharacterDTO(
+                        id: personID + offset,
+                        characterName: pick(givenNames),
+                        actorName: personName(),
+                        profilePath: "/library-fixture-person-\(offset).jpg"
+                    )
+                },
+                staff: staffJobs.enumerated().map { offset, job in
+                    AnimeEntryStaffDTO(
+                        id: personID + 6 + offset,
+                        name: personName(),
+                        role: job,
+                        department: offset == 3 ? "Sound" : "Production",
+                        profilePath: "/library-fixture-person-\(6 + offset).jpg",
+                        jobs: [
+                            AnimeEntryStaffJobDTO(
+                                creditID: "library-fixture-\(entry.tmdbID)-\(offset)",
+                                job: job,
+                                episodeCount: seasons.compactMap(\.episodeCount).reduce(0, +)
+                            )
+                        ]
+                    )
+                },
+                seasons: seasons
+            )
         }
 
         private static let latinWords = [
@@ -275,7 +431,8 @@
         }
     }
 
-    /// Serves a generated JPEG poster for any request, sized like the TMDb rendition it names.
+    /// Serves a generated image for any request, sized like the TMDb rendition it names: a JPEG
+    /// poster or backdrop, or a transparent PNG title logo.
     final class LibraryFixturePosterProtocol: URLProtocol {
         private static let posters = OSAllocatedUnfairLock<[String: Data]>(initialState: [:])
         private static let variantCount = 8
@@ -294,7 +451,7 @@
                 url: url,
                 statusCode: 200,
                 httpVersion: "HTTP/1.1",
-                headerFields: ["Content-Type": "image/jpeg", "Content-Length": "\(data.count)"]
+                headerFields: ["Content-Length": "\(data.count)"]
             )
             if let response {
                 client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
@@ -318,15 +475,24 @@
                 ($0 ^ UInt64($1)) &* 0x100_0000_01B3
             }
             let variant = Int(hash % UInt64(variantCount))
-            let key = "\(width)-\(variant)"
+            let name = url.lastPathComponent
+            let shape =
+                name.hasPrefix("library-fixture-logo")
+                ? "logo"
+                : name.hasPrefix("library-fixture-backdrop") ? "backdrop" : "poster"
+            let key = "\(width)-\(variant)-\(shape)"
             if let cached = posters.withLock({ $0[key] }) { return cached }
-            let data = makePoster(width: width, variant: variant)
+            let data =
+                switch shape {
+                case "logo": makeLogo(width: width, variant: variant)
+                case "backdrop": makePoster(width: width, height: width * 9 / 16, variant: variant)
+                default: makePoster(width: width, height: width * 3 / 2, variant: variant)
+                }
             posters.withLock { $0[key] = data }
             return data
         }
 
-        private static func makePoster(width: Int, variant: Int) -> Data {
-            let height = width * 3 / 2
+        private static func makePoster(width: Int, height: Int, variant: Int) -> Data {
             guard
                 let context = CGContext(
                     data: nil,
@@ -357,11 +523,53 @@
                     )
                 )
             }
+            return encode(context, as: .jpeg)
+        }
+
+        /// A transparent wordmark-shaped logo: a bold line over a thinner one, like a title logo.
+        private static func makeLogo(width: Int, variant: Int) -> Data {
+            let height = width / 3
+            guard
+                let context = CGContext(
+                    data: nil,
+                    width: width,
+                    height: height,
+                    bitsPerComponent: 8,
+                    bytesPerRow: 0,
+                    space: CGColorSpaceCreateDeviceRGB(),
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                )
+            else { return Data() }
+            let unit = Double(height) / 10
+            let lines = [
+                (y: 4.5 * unit, height: 4.5 * unit, inset: 0.0, color: CGColor(gray: 1, alpha: 1)),
+                (
+                    y: 0.5 * unit, height: 2.5 * unit, inset: Double(width) * 0.18,
+                    color: color(hue: Double(variant) / Double(variantCount), brightness: 1)
+                )
+            ]
+            for line in lines {
+                context.setFillColor(line.color)
+                context.addPath(
+                    CGPath(
+                        roundedRect: CGRect(
+                            x: line.inset, y: line.y, width: Double(width) - line.inset * 2, height: line.height),
+                        cornerWidth: line.height / 3,
+                        cornerHeight: line.height / 3,
+                        transform: nil
+                    )
+                )
+                context.fillPath()
+            }
+            return encode(context, as: .png)
+        }
+
+        private static func encode(_ context: CGContext, as type: UTType) -> Data {
             guard let image = context.makeImage() else { return Data() }
             let data = NSMutableData()
             guard
                 let destination = CGImageDestinationCreateWithData(
-                    data, UTType.jpeg.identifier as CFString, 1, nil)
+                    data, type.identifier as CFString, 1, nil)
             else { return Data() }
             CGImageDestinationAddImage(
                 destination, image, [kCGImageDestinationLossyCompressionQuality: 0.8] as CFDictionary)

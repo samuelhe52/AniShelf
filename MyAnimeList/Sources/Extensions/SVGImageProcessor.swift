@@ -129,18 +129,19 @@ struct SVGImageProcessor: ImageProcessor {
 }
 
 enum LibraryImageProcessorFactory {
-    static func processor(for url: URL, targetSize: CGSize?) -> (any ImageProcessor)? {
+    /// Downsamples raster images so their longest edge is at most `maxPixelDimension` pixels,
+    /// and rasterizes SVGs to fit a square of that many points.
+    static func processor(for url: URL, maxPixelDimension: CGFloat) -> any ImageProcessor {
+        let bounds = CGSize(width: maxPixelDimension, height: maxPixelDimension)
         if url.isSVGImageURL {
-            return SVGImageProcessor(targetSize: targetSize)
+            return SVGImageProcessor(targetSize: bounds)
         }
-
-        guard let targetSize else { return nil }
-        return DownsamplingImageProcessor(size: targetSize)
+        return DownsamplingImageProcessor(size: bounds)
     }
 
-    static func downloadProcessor(for url: URL, targetSize: CGSize?) -> (any ImageProcessor)? {
-        guard url.isSVGImageURL else { return nil }
-        return SVGImageProcessor(targetSize: targetSize)
+    /// The processor for an image displayed without a size limit; SVGs still need rasterizing.
+    static func unsizedProcessor(for url: URL) -> (any ImageProcessor)? {
+        url.isSVGImageURL ? SVGImageProcessor() : nil
     }
 }
 

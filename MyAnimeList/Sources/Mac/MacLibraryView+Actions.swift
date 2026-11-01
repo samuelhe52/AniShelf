@@ -2,7 +2,7 @@
 //  MacLibraryView+Actions.swift
 //  AniShelf
 //
-//  Created by Claude Code on behalf of samuelhe52 on 2026/10/15.
+//  Created by Claude Code on behalf of Samuel He on 2026/10/15.
 //
 
 #if os(macOS)
@@ -127,10 +127,8 @@
 
         func deleteEntries(_ entries: [AnimeEntry]) {
             guard !entries.isEmpty else { return }
-            let deleted = Set(entries.map(\.libraryIdentity))
-            let scrollTarget = visibleDisplayItems.first { !deleted.contains($0.id) }?.id
+            // The page keeps its position; entries after the deleted ones move up into place.
             guard store.deleteEntries(entries) else { return }
-            browse.requestScroll(to: scrollTarget)
             pruneSelection()
         }
 

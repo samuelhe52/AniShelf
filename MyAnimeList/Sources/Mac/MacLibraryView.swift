@@ -2,7 +2,7 @@
 //  MacLibraryView.swift
 //  AniShelf
 //
-//  Created by Claude Code on behalf of samuelhe52 on 2026/10/17.
+//  Created by Claude Code on behalf of Samuel He on 2026/10/17.
 //
 
 #if os(macOS)
@@ -46,9 +46,10 @@
         /// saves one, so a new window falls back to the last-inspected entry.
         @SceneStorage("librarySelection") var storedSelection: String?
         @SceneStorage("libraryFind") var storedFindText = ""
-        /// Find text and selection as the window started or last restored them. Scene storage
-        /// can arrive after the window appears; it applies until the user changes the value,
-        /// and after that the live value replaces it.
+        /// Find text and selection as the window started or last restored them.
+        ///
+        /// Scene storage can arrive after the window appears; it applies until the user changes the
+        /// value, and after that the live value replaces it.
         @State var lastAppliedFindText = ""
         @State var findAcceptsRestoration = true
         @State var lastAppliedSelection: Set<LibraryEntryIdentity> = []
@@ -115,7 +116,7 @@
                 Text("This may take considerable time.")
             }
             .alert(
-                LocalizedStringResource("Delete Selected Anime?"),
+                "Delete Selected Anime?",
                 isPresented: Binding(
                     get: { pendingBatchDeletion != nil },
                     set: { if !$0 { pendingBatchDeletion = nil } }
@@ -125,16 +126,14 @@
                 Button("Delete", role: .destructive) { deleteEntries(entries) }
                 Button("Cancel", role: .cancel) {}
             } message: { entries in
-                Text(LocalizedStringResource("This will delete \(entries.count) selected anime from your library."))
+                Text("This will delete \(entries.count) selected anime from your library.")
             }
             .sheet(item: workflowPresentation) { presentation in
                 LibraryEntryWorkflowSheet(store: store, presentation: presentation)
             }
             .libraryEntryActionOverlays(
                 state: actions,
-                deleteEntry: { entry in
-                    scope.deleteEntry(entry) { browse.requestScroll(to: $0) }
-                },
+                deleteEntry: { store.deleteEntry($0) },
                 resolveEntry: { store.repository.existingEntry(identity: $0) }
             )
             .libraryWindowBehaviors(
@@ -179,7 +178,7 @@
                     .modifier(MacLibrarySubtitle(selection: selection, visibleCount: displayItems.count))
                     .animation(LibraryViewTransitions.libraryViewStyleAnimation(), value: libraryViewStyle)
                     .sheet(isPresented: $showCategoryManager) {
-                        MacLibraryCategoryManagerSheet()
+                        MacLibraryCategoryManagerSheet { id in scope.macLibraryScope = .category(id) }
                             .presentationDetents([.medium, .large])
                     }
                     .libraryBrowseSearch(
@@ -201,17 +200,21 @@
 
         @ViewBuilder
         private func libraryPage(displayItems: [LibraryEntryDisplayItem]) -> some View {
-            @Bindable var scrollState = browse.scrollState
             let layoutIDs = displayItems.map(\.id)
             let detailActions = LibraryEntryDetailActions(open: openDetails, edit: editDetails)
+            let scrollInputs = LibraryScrollInputs(
+                definition: scope.displayDefinition,
+                findQuery: find.query,
+                request: browse.scrollRequest
+            )
             // `libraryViewStyle` never resolves to Gallery on the Mac.
             if libraryViewStyle == .list {
                 LibraryEntryPage(id: .list, layoutIDs: layoutIDs) {
                     MacLibraryList(
                         detailActions: detailActions,
                         displayItems: displayItems,
-                        scrolledID: $scrollState.scrolledID,
-                        scrollRequest: browse.scrollRequest,
+                        bookmark: browse.bookmark,
+                        scrollInputs: scrollInputs,
                         highlightRequest: browse.highlightRequest
                     )
                     .safeAreaPadding(.bottom, 20)
@@ -221,8 +224,8 @@
                     MacLibraryGrid(
                         detailActions: detailActions,
                         displayItems: displayItems,
-                        scrolledID: $scrollState.scrolledID,
-                        scrollRequest: browse.scrollRequest,
+                        bookmark: browse.bookmark,
+                        scrollInputs: scrollInputs,
                         highlightRequest: browse.highlightRequest,
                         isInspectorPresented: isInspectorShown
                     )
@@ -236,6 +239,8 @@
                 get: { libraryViewStyle },
                 set: { style in
                     guard style != libraryViewStyle else { return }
+                    // Hold the bookmark before the outgoing page's last callbacks can move it.
+                    browse.bookmark.freeze()
                     withAnimation(LibraryViewTransitions.libraryViewStyleAnimation()) {
                         libraryViewStyle = style
                     }

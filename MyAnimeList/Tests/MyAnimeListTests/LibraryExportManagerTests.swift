@@ -41,6 +41,8 @@ struct LibraryExportManagerTests {
         season.parentSeriesEntry = AnimeEntry(name: "Parent Series", type: .series, tmdbID: 202)
         season.setWatchStatus(.watching)
         season.setScore(3)
+        season.updateEpisodeNote(at: .init(seasonNumber: 2, episodeNumber: 4), text: "Episode export")
+        season.parentSeriesEntry?.updateEpisodeNote(at: .init(seasonNumber: 1, episodeNumber: 4), text: "Other season")
 
         let manager = LibraryExportManager(exportDate: utcDate("2026-05-09T12:00:00Z"))
         let url = try manager.createExport(for: [season, movie], format: .json)
@@ -73,6 +75,8 @@ struct LibraryExportManagerTests {
         #expect(exportedSeason.parentSeriesTitle == "Parent Series")
         #expect(exportedSeason.seasonNumber == 2)
         #expect(exportedSeason.score == 3)
+        #expect(exportedSeason.episodeNotes.count == 1)
+        #expect(exportedSeason.episodeNotes.first?.text == "Episode export")
     }
 
     @Test func testDelimitedExportsQuoteStructuredNotes() throws {
@@ -84,6 +88,7 @@ struct LibraryExportManagerTests {
         )
         entry.notes = "Line 1, with comma\nLine\t2"
         entry.setEntryScore(EntryScore(halves: 9))
+        entry.updateEpisodeNote(at: .init(seasonNumber: 0, episodeNumber: 99), text: "Episode, with comma")
 
         let manager = LibraryExportManager(exportDate: utcDate("2026-05-09T12:00:00Z"))
 
@@ -94,6 +99,8 @@ struct LibraryExportManagerTests {
         #expect(!csv.contains("parent_series_tmdb_id"))
         #expect(csv.contains("\"Line 1, with comma\nLine\t2\""))
         #expect(csv.contains(",4.5,"))
+        #expect(csv.contains("episode_notes"))
+        #expect(csv.contains("Episode, with comma"))
 
         let tsvURL = try manager.createExport(for: [entry], format: .tsv)
         defer { try? FileManager.default.removeItem(at: tsvURL) }

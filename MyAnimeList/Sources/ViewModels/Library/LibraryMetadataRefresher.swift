@@ -80,7 +80,7 @@ final class LibraryMetadataRefresher {
         var refreshedCount = 0
         var writtenCount = 0
         var skippedCount = 0
-        var imagePrefetchTargets: [LibraryImageCacheService.ImagePrefetchTarget] = []
+        var imagePrefetchTargets: [TMDbImage] = []
         var failures: [LatestInfoFailure] = []
         var applyFailureCount = 0
 
@@ -116,7 +116,7 @@ final class LibraryMetadataRefresher {
 
             var updates: [LibraryMetadataRefreshUpdate] = []
             var parentUpdates: [LibraryMetadataRefreshParentUpdate] = []
-            var chunkImagePrefetchTargets: [LibraryImageCacheService.ImagePrefetchTarget] = []
+            var chunkImagePrefetchTargets: [TMDbImage] = []
             updates.reserveCapacity(chunkInfos.successes.count)
 
             for (id, info, detailDTO) in chunkInfos.successes {
@@ -213,7 +213,7 @@ final class LibraryMetadataRefresher {
 
     private func imagePrefetchTargetsForRefreshPhase(
         from update: LibraryMetadataRefreshUpdate
-    ) -> [LibraryImageCacheService.ImagePrefetchTarget] {
+    ) -> [TMDbImage] {
         // Refresh prefetch should follow the poster the UI will show after the write:
         // custom poster when preserved, otherwise the refreshed TMDb poster.
         let posterPath =
@@ -222,8 +222,8 @@ final class LibraryMetadataRefresher {
             : update.info.posterPath
         return LibraryImageCacheService.imagePrefetchTargets(
             posterPath: posterPath,
-            backdropURL: update.info.backdropURL,
-            logoImageURL: update.info.logoURL,
+            backdropPath: update.info.backdropPath,
+            logoPath: update.info.logoPath,
             longTermGalleryPosterCachingEnabled: longTermGalleryPosterCachingEnabled
         )
     }

@@ -57,8 +57,8 @@ struct LibraryPreferences {
                 forKey: .libraryLongTermGalleryPosterCachingEnabled,
                 defaultValue: false
             ),
-            categoryStripEnabled: loadBool(forKey: .libraryCategoryStripEnabled, defaultValue: false),
-            categoriesEnabled: loadBool(forKey: .libraryCategoriesEnabled, defaultValue: false),
+            categoryStripEnabled: loadBool(forKey: .libraryCategoryStripEnabled, defaultValue: true),
+            categoriesEnabled: loadBool(forKey: .libraryCategoriesEnabled, defaultValue: true),
             categories: loadCategories(),
             cloudSyncStatus: loadCloudSyncStatus()
         )

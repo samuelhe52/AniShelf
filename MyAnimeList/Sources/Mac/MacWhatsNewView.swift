@@ -2,7 +2,7 @@
 //  MacWhatsNewView.swift
 //  AniShelf
 //
-//  Created by Claude Code on behalf of samuelhe52 on 2026/10/17.
+//  Created by Claude Code on behalf of Samuel He on 2026/10/17.
 //
 
 #if os(macOS)
@@ -70,7 +70,7 @@
             .formStyle(.grouped)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(LocalizedStringResource("Done"), action: onDismiss)
+                    Button("Done", action: onDismiss)
                 }
             }
             .macSheetFrame(width: 600, height: 640)

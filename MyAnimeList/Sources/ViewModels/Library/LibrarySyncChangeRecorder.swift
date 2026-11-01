@@ -34,15 +34,20 @@ final class LibrarySyncChangeRecorder {
         var libraryUpdatedAt: Date?
         var trackingUpdatedAt: Date?
         var categoriesUpdatedAt: Date?
+        var episodeNoteClocks: [EpisodeNoteAnchor: Date]
 
         init(entry: AnimeEntry) {
             libraryUpdatedAt = entry.libraryUpdatedAt
             trackingUpdatedAt = entry.trackingUpdatedAt
             categoriesUpdatedAt = entry.categoriesUpdatedAt
+            episodeNoteClocks = Dictionary(
+                uniqueKeysWithValues: entry.storedEpisodeNotes.map { ($0.anchor, $0.updatedAt) })
         }
 
         var dirtyAt: Date? {
-            [libraryUpdatedAt, trackingUpdatedAt, categoriesUpdatedAt].compactMap(\.self).max()
+            [libraryUpdatedAt, trackingUpdatedAt, categoriesUpdatedAt, episodeNoteClocks.values.max()].compactMap(
+                \.self
+            ).max()
         }
 
         func hasAdvanced(since previous: ClockBaseline?) -> Bool {
@@ -52,6 +57,9 @@ final class LibrarySyncChangeRecorder {
             return Self.isNewer(libraryUpdatedAt, than: previous.libraryUpdatedAt)
                 || Self.isNewer(trackingUpdatedAt, than: previous.trackingUpdatedAt)
                 || Self.isNewer(categoriesUpdatedAt, than: previous.categoriesUpdatedAt)
+                || episodeNoteClocks.contains { anchor, clock in
+                    Self.isNewer(clock, than: previous.episodeNoteClocks[anchor])
+                }
         }
 
         private static func isNewer(_ candidate: Date?, than existing: Date?) -> Bool {
@@ -283,6 +291,17 @@ final class LibrarySyncChangeRecorder {
         }
 
         guard !pendingUpserts.isEmpty else { return }
+        // Field clocks can stay flat when one note carries a future clock, so
+        // each detected edit must outrank the queued upsert an in-flight export
+        // would otherwise remove.
+        let queue = dirtyQueueStore.load()
+        pendingUpserts = pendingUpserts.map { upsert in
+            guard case .upsert(let queued) = queue.entry(for: upsert.identity) else { return upsert }
+            return .init(
+                identity: upsert.identity,
+                dirtyAt: LibrarySyncTimestamp.next(upsert.dirtyAt, after: queued.dirtyAt)
+            )
+        }
         do {
             try dirtyQueueStore.setPendingUpserts(pendingUpserts)
             lastSeenClocksByIdentifier.merge(pendingBaselines) { _, current in current }

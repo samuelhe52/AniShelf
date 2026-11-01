@@ -12,6 +12,39 @@ import Testing
 @testable import DataProvider
 
 struct MigrationTests {
+    @Test @MainActor func episodeNotesMigrationFromV284PreservesParentGraphAndOverallNotes() throws {
+        let storeURL = temporaryStoreURL(name: "episode-notes-v285")
+        do {
+            let schema = Schema(versionedSchema: SchemaV2_8_4.self)
+            let container = try ModelContainer(
+                for: schema, configurations: ModelConfiguration(schema: schema, url: storeURL))
+            let parent = SchemaV2_8_4.AnimeEntry(name: "Series", type: .series, tmdbID: 900)
+            parent.notes = "Series overall"
+            parent.onDisplay = false
+            let season = SchemaV2_8_4.AnimeEntry(
+                name: "Season", type: .season(seasonNumber: 1, parentSeriesID: 900), tmdbID: 901)
+            season.notes = "Season overall"
+            season.parentSeriesEntry = parent
+            container.mainContext.insert(parent)
+            container.mainContext.insert(season)
+            try container.mainContext.save()
+        }
+        let provider = DataProvider(url: storeURL)
+        let entries = try provider.getAllModels(ofType: AnimeEntry.self)
+        let season = try #require(entries.first { $0.tmdbID == 901 })
+        #expect(season.notes == "Season overall")
+        #expect(season.parentSeriesEntry?.notes == "Series overall")
+        #expect(season.parentSeriesEntry?.onDisplay == false)
+        #expect(season.episodeNotes.isEmpty)
+        let anchor = EpisodeNoteAnchor(seasonNumber: 1, episodeNumber: 999)
+        season.updateEpisodeNote(at: anchor, text: "Persisted episode")
+        try provider.dataHandler.modelContext.save()
+        let reopened = DataProvider(url: storeURL)
+        let restored = try #require(reopened.getAllModels(ofType: AnimeEntry.self).first { $0.tmdbID == 901 })
+        #expect(restored.episodeNote(at: anchor)?.text == "Persisted episode")
+        #expect(restored.storedEpisodeNotes.isEmpty)
+    }
+
     @Test @MainActor func scoreMigrationFromV271DefaultsToNil() throws {
         let storeURL = temporaryStoreURL(name: "score-migration")
 

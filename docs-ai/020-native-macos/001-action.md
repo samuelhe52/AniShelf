@@ -36,7 +36,8 @@ UUID data container of the iPad-on-Mac build. The Mac app has:
 - About and Support windows, and What's New in the Help menu.
 - Multiple windows and tabs, and save panels for exports and posters.
 - An `NSApplicationDelegate` for CloudKit pushes, reminder notifications,
-  periodic reminder refresh, and quit/sleep sync.
+  periodic reminder refresh, and sleep sync. (Corrected 2026-10-31: quitting
+  no longer flushes sync; see [011](011-quit-without-icloud-wait.md).)
 
 iOS behavior is unchanged, except for two changes that apply to both platforms:
 the poster memory-cache start, and the shared airing-reminder handling.

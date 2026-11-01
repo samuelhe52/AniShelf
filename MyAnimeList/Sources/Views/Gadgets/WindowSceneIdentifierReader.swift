@@ -77,9 +77,10 @@ fileprivate struct WindowSceneIdentifierProvider: ViewModifier {
     @MainActor fileprivate var appWindowRoleKey: UInt8 = 0
 
     extension NSWindow {
-        /// A UUID assigned on first use: stable for the window's lifetime and never reused by
-        /// a later window, unlike an address-derived value. Valid before the window has a
-        /// window device.
+        /// A UUID assigned on first use: stable for the window's lifetime and never reused by a
+        /// later window, unlike an address-derived value.
+        ///
+        /// Valid before the window has a window device.
         var sceneIdentifier: String {
             if let identifier = objc_getAssociatedObject(self, &sceneIdentifierKey) as? String {
                 return identifier

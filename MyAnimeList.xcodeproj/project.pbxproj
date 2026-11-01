@@ -50,6 +50,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Resources/Info.plist,
+				Tests/MyAnimeListTests/AIFoundationTests.swift,
 				Tests/MyAnimeListTests/AiringReminderManagerTests.swift,
 				Tests/MyAnimeListTests/AnimeSharingTests.swift,
 				Tests/MyAnimeListTests/AppLifecycleEventGateTests.swift,
@@ -83,6 +84,7 @@
 				Tests/MyAnimeListTests/LibraryProfileSettingsLayoutPolicyTests.swift,
 				Tests/MyAnimeListTests/LibraryProfileSettingsStateTests.swift,
 				Tests/MyAnimeListTests/LibraryRelationshipAndConversionTests.swift,
+				Tests/MyAnimeListTests/LibrarySaveInvalidationTests.swift,
 				Tests/MyAnimeListTests/LibrarySortingAndDeletionTests.swift,
 				Tests/MyAnimeListTests/LibrarySyncCoordinatorTests.swift,
 				"Tests/MyAnimeListTests/LibrarySyncCoordinatorTests+Bootstrap.swift",
@@ -98,6 +100,7 @@
 				Tests/MyAnimeListTests/LibrarySyncRecorderBehaviorTests.swift,
 				Tests/MyAnimeListTests/MacLibrarySelectionTests.swift,
 				Tests/MyAnimeListTests/MyAnimeListTestSupport.swift,
+				Tests/MyAnimeListTests/SmartFeaturesTests.swift,
 				Tests/MyAnimeListTests/SupportStoreTests.swift,
 				Tests/MyAnimeListTests/TMDbAPIKeyStorageTests.swift,
 				Tests/MyAnimeListTests/TMDbImageAndTranslationTests.swift,
@@ -121,6 +124,7 @@
 		9F93FC182DE1FD800071FB56 /* Exceptions for "MyAnimeList" folder in "MyAnimeListTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Tests/MyAnimeListTests/AIFoundationTests.swift,
 				Tests/MyAnimeListTests/AiringReminderManagerTests.swift,
 				Tests/MyAnimeListTests/AnimeSharingTests.swift,
 				Tests/MyAnimeListTests/AppLifecycleEventGateTests.swift,
@@ -154,6 +158,7 @@
 				Tests/MyAnimeListTests/LibraryProfileSettingsLayoutPolicyTests.swift,
 				Tests/MyAnimeListTests/LibraryProfileSettingsStateTests.swift,
 				Tests/MyAnimeListTests/LibraryRelationshipAndConversionTests.swift,
+				Tests/MyAnimeListTests/LibrarySaveInvalidationTests.swift,
 				Tests/MyAnimeListTests/LibrarySortingAndDeletionTests.swift,
 				Tests/MyAnimeListTests/LibrarySyncCoordinatorTests.swift,
 				"Tests/MyAnimeListTests/LibrarySyncCoordinatorTests+Bootstrap.swift",
@@ -169,6 +174,7 @@
 				Tests/MyAnimeListTests/LibrarySyncRecorderBehaviorTests.swift,
 				Tests/MyAnimeListTests/MacLibrarySelectionTests.swift,
 				Tests/MyAnimeListTests/MyAnimeListTestSupport.swift,
+				Tests/MyAnimeListTests/SmartFeaturesTests.swift,
 				Tests/MyAnimeListTests/SupportStoreTests.swift,
 				Tests/MyAnimeListTests/TMDbAPIKeyStorageTests.swift,
 				Tests/MyAnimeListTests/TMDbImageAndTranslationTests.swift,
@@ -620,7 +626,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.104.0;
+				MARKETING_VERSION = 1.105.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelhe.MyAnimeList;
 				PRODUCT_MODULE_NAME = MyAnimeList;
 				PRODUCT_NAME = AniShelf;
@@ -666,7 +672,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.104.0;
+				MARKETING_VERSION = 1.105.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelhe.MyAnimeList;
 				PRODUCT_MODULE_NAME = MyAnimeList;
 				PRODUCT_NAME = AniShelf;

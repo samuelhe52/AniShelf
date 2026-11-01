@@ -62,7 +62,7 @@ struct TMDbAPIConfigurator: View {
     }
 
     private var confirmButtonTitleResource: LocalizedStringResource {
-        keyEntryViewModel.checking ? "Checking..." : "Save API Key"
+        keyEntryViewModel.checking ? "Checking…" : "Save API Key"
     }
 
     private func validateKey() {
@@ -253,7 +253,7 @@ struct TMDbAPIKeyEntryCard: View {
     }
 
     private var validateButtonTitleResource: LocalizedStringResource {
-        isChecking ? "Checking..." : "Validate Key"
+        isChecking ? "Checking…" : "Validate Key"
     }
 }
 
@@ -273,7 +273,7 @@ struct TMDbProminentButton: View {
     private var effectiveTitle: LocalizedStringResource {
         switch validationStatus {
         case .checking:
-            "Checking..."
+            "Checking…"
         case .valid:
             "Key saved."
         case .invalid:

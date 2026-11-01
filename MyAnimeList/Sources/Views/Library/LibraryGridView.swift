@@ -20,10 +20,11 @@ import SwiftUI
         @Environment(LibraryBrowseScope.self) private var scope
         @Environment(LibraryEntryInteractionState.self) private var interaction
         @Environment(LibraryEntryActionState.self) private var actions
+        @State private var visibleEntries = LibraryVisibleEntryTracker()
         let detailActions: LibraryEntryDetailActions
         let displayItems: [LibraryEntryDisplayItem]
-        @Binding var scrolledID: LibraryEntryIdentity?
-        let scrollRequest: LibraryScrollRequest?
+        let bookmark: LibraryScrollBookmark
+        let scrollInputs: LibraryScrollInputs
         let highlightRequest: LibraryHighlightRequest?
         /// Whether the trailing inspector is showing; the grid reflows smoothly when it changes.
         var isInspectorPresented = false
@@ -43,34 +44,32 @@ import SwiftUI
                                 .geometryGroup()
                         }
                     }
+                    .scrollTargetLayout()
                     .transaction(value: isInspectorPresented) { transaction in
                         transaction.animation = .smooth(duration: 0.3)
                     }
-                    .onChange(of: scrollRequest) { handleScrollRequest(proxy: proxy) }
-                    .onAppear { onGridViewAppear(proxy: proxy) }
                     .padding(.horizontal, 14)
                     .padding(.top, 6)
                     .padding(.bottom, 104)
                 }
+                .onScrollTargetVisibilityChange(idType: LibraryEntryIdentity.self, threshold: 0.5) { ids in
+                    visibleEntries.setVisible(ids, recordingInto: bookmark)
+                }
+                .libraryScrollBookmark(
+                    bookmark,
+                    tracker: visibleEntries,
+                    displayIDs: displayItems.map(\.id),
+                    inputs: scrollInputs,
+                    proxy: proxy
+                )
+                // The reflow moves cards between rows; keep the entry the user was on.
+                .onChange(of: isInspectorPresented) { bookmark.freeze() }
                 .accessibilityIdentifier("library-grid")
                 .preferredNavigationBarScrollEdgeEffect()
                 .animation(.spring, value: scope.groupStrategy)
                 .animation(.spring, value: scope.sortReversed)
                 .animation(.spring, value: scope.sortStrategy)
                 .animation(.spring, value: scope.filters)
-            }
-        }
-
-        private func handleScrollRequest(proxy: ScrollViewProxy) {
-            guard let entryID = scrollRequest?.entryID else { return }
-            withAnimation(.bouncy) {
-                proxy.scrollTo(entryID)
-            }
-        }
-
-        private func onGridViewAppear(proxy: ScrollViewProxy) {
-            if let scrolledID {
-                proxy.scrollTo(scrolledID, anchor: .center)
             }
         }
 
@@ -87,10 +86,8 @@ import SwiftUI
                     toggleFavorite: toggleFavorite,
                     editEntry: editEntry
                 )
-                .onAppear { scrolledID = item.id }
             } preview: {
                 EntryContextMenuPreview(snapshot: item.snapshot)
-                    .onAppear { scrolledID = item.id }
             }
             .modifier(gestures(for: item))
         }
@@ -102,7 +99,6 @@ import SwiftUI
                     userPreference: openDetailWithSingleTap
                 ),
                 onPrimaryTap: {
-                    scrolledID = item.id
                     if interaction.isMultiSelecting {
                         toggleSelection(for: item.id)
                     } else {
@@ -110,7 +106,6 @@ import SwiftUI
                     }
                 },
                 onFocusTap: {
-                    scrolledID = item.id
                     interaction.focus(item.entry)
                     if interaction.isMultiSelecting {
                         toggleSelection(for: item.id)
@@ -118,7 +113,6 @@ import SwiftUI
                 },
                 onDoubleTap: {
                     openDetails(for: item.entry)
-                    scrolledID = item.id
                 }
             )
         }
@@ -179,8 +173,8 @@ import SwiftUI
                 edit: { _ in }
             ),
             displayItems: LibraryBrowseScope(store: store).displayItems,
-            scrolledID: .constant(nil),
-            scrollRequest: nil,
+            bookmark: LibraryScrollBookmark(),
+            scrollInputs: LibraryScrollInputs(definition: LibraryBrowseScope(store: store).displayDefinition),
             highlightRequest: nil
         )
         .onAppear {

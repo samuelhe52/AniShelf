@@ -57,6 +57,14 @@ not stamp the clock. Those flows save and refresh `store.library`, which invalid
 the cache through the store. Detail-only changes on child models, such as
 `EntryDetailSession.refreshEpisodeCountsIfEligible`, also save immediately.
 
+Corrected 2026-10-31: since [039](../039-library-save-invalidation/000-plan.md), an
+ordinary save no longer refreshes `store.library`, and a refresh that returns the same
+entries in the same order would not invalidate the cache by itself. The cache now also
+reads `libraryRevision`, which explicit import and restore refreshes still bump, and
+`backgroundWriteRevision` for background writes.
+Main-context child edits such as the episode-count refresh rely on observation; see
+039's open risk.
+
 ## Refs
 
 - `MyAnimeList/Sources/ViewModels/Library/LibraryBrowseScope.swift`: the read and its comment.

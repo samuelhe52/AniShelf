@@ -20,23 +20,27 @@ struct MovieResultItem: View {
                 .clipShape(.rect(cornerRadius: 6))
                 .frame(width: 60, height: 90)
             VStack(alignment: .leading) {
-                HStack {
-                    Text(movie.name)
-                        .bold()
-                        .lineLimit(1)
+                HStack(alignment: .center) {
+                    VStack(alignment: .leading) {
+                        Text(movie.name)
+                            .bold()
+                            .lineLimit(1)
+                        if let date = movie.onAirDate {
+                            Text(date.formatted(date: .abbreviated, time: .omitted))
+                                .font(.caption)
+                                .padding(.bottom, 1)
+                        }
+                    }
                     Spacer()
+                    // Zero height keeps the circular toggle from padding the title block.
                     Toggle(isOn: selectionBinding) {
                         Image(systemName: "checkmark")
                     }
                     .toggleStyle(.button)
                     .buttonStyle(.bordered)
                     .buttonBorderShape(.circle)
+                    .frame(height: 0)
                     .sensoryFeedback(.selection, trigger: isSelected)
-                }
-                if let date = movie.onAirDate {
-                    Text(date.formatted(date: .abbreviated, time: .omitted))
-                        .font(.caption)
-                        .padding(.bottom, 1)
                 }
                 Text(movie.overview ?? "No overview available")
                     .font(.caption2)

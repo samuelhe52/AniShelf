@@ -98,6 +98,15 @@ final class LibraryProfileSettingsActions {
         KingfisherManager.shared.cache.clearCache()
     }
 
+    /// Clears the image cache, then warms it again with the library's current variants.
+    func clearImageCacheAndPrefetch() {
+        Task {
+            // Prefetch skips variants it finds cached, so it must start after the clear lands.
+            await KingfisherManager.shared.cache.clearCache()
+            prefetchAllImages()
+        }
+    }
+
     /// Runs the canonical metadata refresh flow for the current library.
     ///
     /// Production uses `performRefreshInfos(for:options:)`; tests can inject a stub.
@@ -113,6 +122,9 @@ final class LibraryProfileSettingsActions {
         WhatsNewActionRunner(
             refreshMetadata: { options in
                 self.refreshInfos(options: options)
+            },
+            clearImageCache: {
+                self.clearImageCacheAndPrefetch()
             }
         )
     }
@@ -242,10 +254,10 @@ final class LibraryProfileSettingsActions {
     }
 
     func clearLibrary() {
-        let cachedImageURLs = Set(store.library.flatMap { LibraryImageCacheService.relatedImageURLs(for: $0) })
+        let cachedImageKeys = Set(store.library.flatMap { LibraryImageCacheService.relatedCacheKeys(for: $0) })
         do {
             try store.repository.clearLibrary()
-            LibraryImageCacheService.removeCachedImages(for: cachedImageURLs)
+            LibraryImageCacheService.removeCachedImages(cachedImageKeys)
         } catch {
             libraryStoreLogger.error("Error clearing library: \(error)")
             ToastCenter.global.completionState = .failed(message: error.localizedDescription)

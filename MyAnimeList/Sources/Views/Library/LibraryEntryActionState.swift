@@ -2,7 +2,7 @@
 //  LibraryEntryActionState.swift
 //  AniShelf
 //
-//  Created by Claude Code on behalf of samuelhe52 on 2026/10/17.
+//  Created by Claude Code on behalf of Samuel He on 2026/10/17.
 //
 
 import DataProvider
@@ -46,6 +46,9 @@ final class LibraryEntryActionState {
     var deletingEntryID: LibraryEntryIdentity?
     private(set) var pendingPasteRequest: LibraryEntryPasteRequest?
     private(set) var workflowPresentation: LibraryEntryWorkflowPresentation?
+    /// The entry that New Category… in its context menu adds to the new category.
+    private(set) var newCategoryEntryID: LibraryEntryIdentity?
+    var newCategoryPrompt: LibraryCategoryNamePrompt?
 
     /// Runs before a workflow presents; iOS uses it to retire a pending detail edit request.
     @ObservationIgnored var willPresentWorkflow: (@MainActor () -> Void)?
@@ -96,8 +99,10 @@ final class LibraryEntryActionState {
     }
 
     func preparePaste(_ userInfo: UserEntryInfo, for entry: AnimeEntry) {
-        if entry.userInfo.isEmpty {
-            entry.updateUserInfoFromUserAction(userInfo)
+        var target = entry.userInfo
+        target.episodeNotes = []
+        if target.isEmpty {
+            Self.applyPaste(userInfo, to: entry)
             ToastCenter.global.pasted = true
         } else {
             pendingPasteRequest = LibraryEntryPasteRequest(
@@ -117,13 +122,28 @@ final class LibraryEntryActionState {
 
         pendingPasteRequest = nil
         guard let entry = resolveEntry(request.entryIdentity) else { return }
-        entry.updateUserInfoFromUserAction(request.userInfo)
+        Self.applyPaste(request.userInfo, to: entry)
         ToastCenter.global.pasted = true
+    }
+
+    /// Episode notes are anchored to one show's numbering and already shared within a show, so
+    /// pasting keeps the target's notes.
+    ///
+    /// They still travel in copied text.
+    private static func applyPaste(_ userInfo: UserEntryInfo, to entry: AnimeEntry) {
+        var userInfo = userInfo
+        userInfo.episodeNotes = entry.episodeNotes
+        entry.updateUserInfoFromUserAction(userInfo)
     }
 
     func clearPasteRequest(requestID: UUID) {
         guard pendingPasteRequest?.id == requestID else { return }
         pendingPasteRequest = nil
+    }
+
+    func requestNewCategory(for entry: AnimeEntry) {
+        newCategoryEntryID = entry.libraryIdentity
+        newCategoryPrompt = .init(purpose: .create(memberCount: 0))
     }
 }
 
@@ -179,6 +199,12 @@ extension LibraryEntryActionState {
         }
     }
 
+    func categoriesMenu(for entry: AnimeEntry) -> some View {
+        EntryCategoriesSubmenu(entry: entry, keepsPresented: false) {
+            self.requestNewCategory(for: entry)
+        }
+    }
+
     func deleteButton(for entry: AnimeEntry) -> some View {
         Button("Delete", systemImage: "trash", role: .destructive) {
             self.prepareDeletion(for: entry)
@@ -195,6 +221,7 @@ extension LibraryEntryActionState {
             // A Mac menu turns a control group into a submenu, so the Mac lists each action.
             favoriteButton(for: entry, toggleFavorite: toggleFavorite)
             EntryScoreMenu(entry: entry)
+            categoriesMenu(for: entry)
             editButton(for: entry, editEntry: editEntry)
             Divider()
             shareButton(for: entry)
@@ -210,6 +237,7 @@ extension LibraryEntryActionState {
                 shareButton(for: entry)
             }
             editButton(for: entry, editEntry: editEntry)
+            categoriesMenu(for: entry)
             EntryOpenInSubmenu(entry: entry)
             switchPosterButton(for: entry)
             Divider()
@@ -299,6 +327,12 @@ extension View {
                 Button("Cancel", role: .cancel) {}
             } message: { _ in
                 Text("This anime already has edits. Pasting will overwrite current info.")
+            }
+            // New Category… from an entry context menu; the menu is gone when the prompt shows.
+            .entryNewCategoryPrompt(
+                Binding(get: { state.newCategoryPrompt }, set: { state.newCategoryPrompt = $0 })
+            ) {
+                state.newCategoryEntryID.flatMap(resolveEntry)
             }
     }
 }

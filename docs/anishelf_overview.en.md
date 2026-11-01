@@ -10,7 +10,7 @@ AniShelf helps you track, record, and manage the anime series and films you've w
   - Start and finish dates
   - Episode-level watch progress
   - Rewatch status and rewatch count
-- Write notes and give ratings
+- Write notes and give ratings, including a note for each episode
 - Favorite entries, then filter or group the library by favorite status
 - Batch add from search: add multiple entries at once by title or TMDb ID
 - Multi-select entries in list and grid views to change watch status, rating, favorite, and date tracking in bulk, or delete them in bulk
@@ -21,6 +21,7 @@ AniShelf helps you track, record, and manage the anime series and films you've w
 - Sync your library, settings, and watch progress across devices with iCloud Sync
 - Back up and restore your AniShelf library and settings, or export the library as TXT, CSV, TSV, JSON, or XLSX
 - Show anime info in English, Chinese, or Japanese
+- Group anime into your own categories, or describe a category in your own words and let Smart Features find the matching anime
 - Use AniShelf on iPhone, iPad, and as a native Mac app. On iPad and Mac, each window keeps its own category, filters, sorting, and view mode
 - A polished UI and smooth interactions
 
@@ -61,8 +62,8 @@ AniShelf requires a TMDb API key, which is free for personal use. To get one:
    2. You can also join the TestFlight beta to try new features early: [AniShelf TestFlight](https://testflight.apple.com/join/ns3sR38X). If you don't have TestFlight installed, install the TestFlight app first, then open the link again and tap "View in TestFlight".
 2. On first launch, enter your TMDb API key when prompted.
 3. Tap the search button at the bottom right, enter the name of a series or film, and add the matching entry to your library.
-   1. For series, you can add the whole series or individual seasons (switch modes with the slider below). Use the button at the top right to select the series or one or more seasons, then tap "Add To Library...".
-   2. For films, select the entry and tap "Add To Library...".
+   1. For series, you can add the whole series or individual seasons (switch modes with the slider below). Use the button at the top right to select the series or one or more seasons, then tap "Add to Library".
+   2. For films, select the entry and tap "Add to Library".
    3. Some shows air in multiple seasons, but the official release doesn't separate them into seasons (episode numbering is continuous). A typical example is *Frieren: Beyond Journey's End*, where "Season 1" contains all 38 episodes. In cases like this, add the whole series instead.
    4. To add several entries at once, tap "Batch Add" at the top right of the search page and enter multiple titles or TMDb IDs.
 4. Tap the icon at the bottom left to switch between library views.
@@ -77,17 +78,21 @@ AniShelf requires a TMDb API key, which is free for personal use. To get one:
    7. Eligible series show their air times. For a currently airing show, open the "···" menu and choose "Notifications" > "Enable" to get a reminder for each new episode. To change when one show's reminders arrive, choose "Reminder Timing" in the same menu, turn off "Use Default", and set a time before or after airtime.
    8. Episode progress is off by default. Turn on "Track Episode Progress" under Library & Tracking in Settings. The progress control then appears while an entry is Watching.
    9. To rewatch an entry, change its status from Watched to Watching. When asked "Are You Rewatching?", tap "Start Rewatch". This clears episode progress, and marking the entry Watched again adds one to its rewatch count. Tap the badge next to the watch status to turn "Rewatching" on or off or to correct "Times Rewatched".
+   10. Series and seasons can have a note for each episode as well as an overall note. In the Notes section, tap "Overall" or an episode to write its note, or tap "Other…" to pick another episode. Notes you already wrote are kept under Overall. A series and its seasons share their episode notes. Touch and hold an episode chip to move the note to another episode or delete it. You can also add a note from an episode in the episode list: on iPhone and iPad, touch and hold the episode and choose to add a note from its preview; on Mac, right-click it and choose "Add Note".
 7. Long-press an entry on the main screen for more actions. In list view, swipe right or left on an entry to quickly update its watch status or delete it. Swipe left and tap "Open", or swipe all the way, to open the entry in another app. To skip the choice, pick an app under "Swipe Action Opens" in Appearance & Interaction in Settings.
 8. In list or grid view, tap "Select" at the top right to enter multi-select mode, where you can change status, rating, favorite, and date tracking in bulk, or delete entries in bulk.
 9. To group anime your own way, turn on "Library Categories" under Library & Tracking in Settings.
    1. In multi-select mode, select some entries and tap "Category". Pick a category to add or remove them, or tap "New Category…" to create one with them.
    2. Tap the title at the top of the library, or use "Category" in the status bar's menu, to switch categories. "All" shows the whole library. Choose "Edit Categories…" in the title menu, or tap "Manage Categories" in Settings, to rename, delete, or reorder categories. Deleting a category keeps its anime in your library.
    3. Turn on "Sticky Category Strip" to keep category tabs below the navigation bar in list and grid views. Touch and hold a tab to rename or delete it, or choose "Reorder Tabs", drag the tabs, and tap "Done".
-10. Tap the settings icon at the top right to open Settings. It shows your library statistics, followed by six groups of settings: Language, Library & Tracking, Appearance & Interaction, Airing & Reminders, Metadata & Images, and Sync & Data.
+   4. To change one entry's categories, touch and hold it (right-click on Mac) and use "Categories", or use the detail page. On Mac, you can also drag entries onto a category in the sidebar.
+   5. With Smart Features turned on, choose "Describe…" from "Category" in the status bar's menu or in the category manager, and describe the category you want, such as "mecha shows I rated 4 stars or higher". AniShelf proposes a name and checks your library; tap posters to include or leave out anime, then tap "Create Category".
+10. Tap the settings icon at the top right to open Settings. It shows your library statistics, followed by seven groups of settings: Language, Library & Tracking, Appearance & Interaction, Airing & Reminders, Metadata & Images, Smart Features, and Sync & Data.
    1. To sync your library, settings, and watch progress across devices, turn on iCloud Sync in Sync & Data and make sure every device is signed in to the same Apple Account.
    2. In Sync & Data, "Backup" saves your library and settings as a `.mallib` file (your TMDb API key isn't included), and "Restore" replaces the current library with a backup. Turn off iCloud Sync before restoring. "Export as..." exports the library to common file formats; these files can't be restored.
    3. In Language, turn off "Follow System" to choose English, Chinese, or Japanese for anime info. Under "Default Poster", choose "Follow Anime Info Language" to show posters in that language when TMDb has one. Both changes apply only to info fetched afterward, so tap "Refresh" when asked, or "Refresh Infos" later, to update existing entries; posters you picked yourself are kept. "Refresh Infos" is in Metadata & Images, along with the TMDb proxy, API key, and cache controls.
    4. In Airing & Reminders, choose the "Default Timing" for all reminders, and tap "Reminders" to review, retime, or remove each reminder.
+   5. In Smart Features, choose which model to use. Apple Intelligence runs on your device when it's supported and turned on. On iOS, iPadOS, and macOS 27 or later, you can instead add your own OpenAI or OpenRouter API key. With those providers, AniShelf sends your description and, for the anime it checks, their titles, years, kinds, studios, genres, and the start of their overviews to that provider. Your notes, ratings, and watch dates aren't sent.
 11. On Mac, AniShelf is a native app. Library scopes and categories are in the sidebar, and the selected entry's details appear in the inspector beside the library. Choose File > "New Window" to open another window; on iPad and Mac, each window keeps its own category, filters, sorting, and view mode.
 
 ## FAQ

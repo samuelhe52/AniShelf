@@ -9,7 +9,7 @@ import DataProvider
 import SwiftUI
 
 enum EntryDetailL10n {
-    static let loading: LocalizedStringResource = "Loading..."
+    static let loading: LocalizedStringResource = "Loading…"
     static let done: LocalizedStringResource = "Done"
     static let showDetail: LocalizedStringResource = "Show Detail"
     static let save: LocalizedStringResource = "Save"
@@ -21,6 +21,7 @@ enum EntryDetailL10n {
     static let overview: LocalizedStringResource = "Overview"
     static let tracking: LocalizedStringResource = "Tracking"
     static let watchStatus: LocalizedStringResource = "Watch Status"
+    static let categories: LocalizedStringResource = "Categories"
     static let planned: LocalizedStringResource = "Planned"
     static let watching: LocalizedStringResource = "Watching"
     static let watched: LocalizedStringResource = "Watched"
@@ -49,7 +50,7 @@ enum EntryDetailL10n {
     static let droppedDatesLocked: LocalizedStringResource =
         "Dates are locked while this entry is dropped."
     static let notes: LocalizedStringResource = "Notes"
-    static let writeSomeThoughts: LocalizedStringResource = "Write some thoughts..."
+    static let writeSomeThoughts: LocalizedStringResource = "Write some thoughts…"
     static let score: LocalizedStringResource = "Score"
     static let noScore: LocalizedStringResource = "No score"
     static func scoreValue(_ score: String) -> LocalizedStringResource {
@@ -145,7 +146,7 @@ enum EntryDetailL10n {
     static let notThisAnime: LocalizedStringResource = "Not This Anime"
     static let notAMatch: LocalizedStringResource = "Not a Match"
     static let searchTVMaze: LocalizedStringResource = "Search TVMaze"
-    static let searchAnimePrompt: LocalizedStringResource = "Search for an anime..."
+    static let searchAnimePrompt: LocalizedStringResource = "Search for an anime"
     static let searchTVMazeHelp: LocalizedStringResource = "Enter a title to search TVMaze."
     static let noResults: LocalizedStringResource = "No Results"
     static let tryDifferentSearchTerm: LocalizedStringResource = "Try a different search term"
