@@ -1,6 +1,6 @@
 # Privacy Policy for AniShelf
 
-Effective date: October 2, 2026
+Effective date: November 1, 2026
 
 AniShelf is an anime library management app for iPhone, iPad, and Mac. This
 Privacy Policy explains what information the app handles, how that information
