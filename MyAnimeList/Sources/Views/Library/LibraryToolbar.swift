@@ -137,16 +137,11 @@ import SwiftUI
             } else if !isReorderingCategories {
                 ToolbarItem(placement: .platformTrailing) {
                     if supportsMultiSelection {
-                        Button(action: enterMultiSelection) {
-                            Text("Select").font(.headline.weight(.semibold))
-                        }
-                        .accessibilityLabel(Text("Anime Multi-selection"))
-                        .padding(.leading, 3)
+                        LibrarySelectButton(action: enterMultiSelection)
                     }
                 }
                 ToolbarItem(placement: .platformTrailing) {
                     LibraryProfileSettingsButton(action: openProfileSettings)
-                        .padding(.trailing, 3)
                 }
             }
         }
@@ -387,6 +382,21 @@ import SwiftUI
         }
     }
 
+    // Keep this button's and the profile button's modifiers inside their own views. Applied in the
+    // ToolbarItem closure, they stop the bars morphing back when multi-selection ends: everything
+    // snaps into place instead.
+    fileprivate struct LibrarySelectButton: View {
+        let action: () -> Void
+
+        var body: some View {
+            Button(action: action) {
+                Text("Select").font(.headline.weight(.semibold))
+            }
+            .accessibilityLabel(Text("Anime Multi-selection"))
+            .padding(.leading, 3)
+        }
+    }
+
     fileprivate struct LibraryProfileSettingsButton: View {
         let action: () -> Void
 
@@ -407,6 +417,7 @@ import SwiftUI
                 }
             }
             .accessibilityLabel(Text("Open Library Profile"))
+            .padding(.trailing, 3)
         }
     }
 
