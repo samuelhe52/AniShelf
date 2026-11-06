@@ -10,6 +10,8 @@ import SwiftUI
 
 #if !os(macOS)
     struct LibraryToolbar: ToolbarContent {
+        static let profileSettingsSourceID = "profileSettings"
+
         @Environment(\.self) private var environment
         let store: LibraryStore
         let scope: LibraryBrowseScope
@@ -26,6 +28,8 @@ import SwiftUI
         let deleteSelectedEntries: () -> Void
         let openProfileSettings: () -> Void
         let openCategoryManager: () -> Void
+        /// Shared with the cover the profile button expands into.
+        let profileSettingsTransition: Namespace.ID
 
         @ToolbarContentBuilder
         var body: some ToolbarContent {
@@ -143,6 +147,8 @@ import SwiftUI
                 ToolbarItem(placement: .platformTrailing) {
                     LibraryProfileSettingsButton(action: openProfileSettings)
                 }
+                // Select shares this button's glass, so the cover expands out of the combined capsule.
+                .matchedTransitionSource(id: Self.profileSettingsSourceID, in: profileSettingsTransition)
             }
         }
 

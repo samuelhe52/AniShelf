@@ -10,8 +10,6 @@ import Kingfisher
 import SwiftUI
 
 struct LibraryProfileSettingsView: View {
-    var onDismiss: (() -> Void)? = nil
-
     @Environment(LibraryStore.self) private var store
     @Environment(WhatsNewController.self) private var whatsNew
     @Environment(\.dismiss) private var dismiss
@@ -54,10 +52,6 @@ struct LibraryProfileSettingsView: View {
             case destination(LibraryProfileSettingsDestination)
         }
     #endif
-
-    init(onDismiss: (() -> Void)? = nil) {
-        self.onDismiss = onDismiss
-    }
 
     private var stats: LibraryProfileStats {
         LibraryProfileStats(entries: store.library)
@@ -582,11 +576,7 @@ struct LibraryProfileSettingsView: View {
     }
 
     private func dismissSettings() {
-        if let onDismiss {
-            onDismiss()
-        } else {
-            dismiss()
-        }
+        dismiss()
     }
 
     private func handleAppear() {

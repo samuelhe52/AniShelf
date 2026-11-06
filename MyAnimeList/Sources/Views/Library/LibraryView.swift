@@ -27,6 +27,7 @@ import SwiftUI
 
         // UI state
         @State private var showProfileSettings = false
+        @Namespace private var profileSettingsTransition
         @State private var showCategoryManager = false
         @State private var isReorderingCategories = false
         @State private var inspectorDetailWorkspaceState = LibraryInspectorDetailWorkspaceState()
@@ -58,41 +59,27 @@ import SwiftUI
         // MARK: - Body
 
         var body: some View {
-            ZStack {
-                libraryNavigation
-                    .opacity(showProfileSettings ? 0 : 1)
-                    .allowsHitTesting(!showProfileSettings)
-                    .accessibilityHidden(showProfileSettings)
-
-                if showProfileSettings {
-                    LibraryProfileSettingsView {
-                        closeProfileSettings()
+            libraryNavigation
+                .libraryDetailHostCoordination(
+                    store: store,
+                    interaction: interaction,
+                    detailSessionStore: detailSessionStore,
+                    horizontalSizeClass: horizontalSizeClass,
+                    isSearching: browse.isSearching,
+                    isShowingProfileSettings: showProfileSettings,
+                    workspaceState: $inspectorDetailWorkspaceState,
+                    persistedLastInspectorDetailEntryIdentity: persistedInspectorDetailEntryIdentity,
+                    adaptsInspectorNatively: $adaptsInspectorNatively
+                )
+                .libraryWindowBehaviors(
+                    store: store,
+                    browse: browse,
+                    openRoutedEntry: { entry in
+                        showProfileSettings = false
+                        openDetails(entry)
                     }
-                    .transition(profileSettingsTransition)
-                    .zIndex(1)
-                }
-            }
-            .animation(profileSettingsAnimation, value: showProfileSettings)
-            .libraryDetailHostCoordination(
-                store: store,
-                interaction: interaction,
-                detailSessionStore: detailSessionStore,
-                horizontalSizeClass: horizontalSizeClass,
-                isSearching: browse.isSearching,
-                isShowingProfileSettings: showProfileSettings,
-                workspaceState: $inspectorDetailWorkspaceState,
-                persistedLastInspectorDetailEntryIdentity: persistedInspectorDetailEntryIdentity,
-                adaptsInspectorNatively: $adaptsInspectorNatively
-            )
-            .libraryWindowBehaviors(
-                store: store,
-                browse: browse,
-                openRoutedEntry: { entry in
-                    showProfileSettings = false
-                    openDetails(entry)
-                }
-            )
-            .onChange(of: scope.displayIDs) { pruneSelection() }
+                )
+                .onChange(of: scope.displayIDs) { pruneSelection() }
         }
 
         /// This window's inspector entry, falling back to the shared last-inspected entry for a
@@ -311,7 +298,8 @@ import SwiftUI
                         applyBatchAction: applyBatchAction,
                         deleteSelectedEntries: deleteSelectedEntries,
                         openProfileSettings: openProfileSettings,
-                        openCategoryManager: openCategoryManager
+                        openCategoryManager: openCategoryManager,
+                        profileSettingsTransition: profileSettingsTransition
                     )
                 }
                 .environment(interaction)
@@ -333,8 +321,12 @@ import SwiftUI
                         .presentationDetents([.medium, .large])
                 }
                 .libraryBrowseSearch(browse, scope: scope, appReview: appReview, reveal: { _ in })
-                .allowsHitTesting(!showProfileSettings)
-                .accessibilityHidden(showProfileSettings)
+                .fullScreenCover(isPresented: $showProfileSettings) {
+                    LibraryProfileSettingsView()
+                        .navigationTransition(
+                            .zoom(sourceID: LibraryToolbar.profileSettingsSourceID, in: profileSettingsTransition)
+                        )
+                }
             }
         }
 
@@ -416,14 +408,6 @@ import SwiftUI
             LibraryViewTransitions.libraryViewStyleAnimation()
         }
 
-        private var profileSettingsAnimation: Animation {
-            LibraryViewTransitions.profileSettingsAnimation()
-        }
-
-        private var profileSettingsTransition: AnyTransition {
-            LibraryViewTransitions.profileSettingsTransition()
-        }
-
         // MARK: - Entry Actions
 
         private var detailHostPolicy: LibraryEntryDetailHostPolicy {
@@ -493,20 +477,12 @@ import SwiftUI
 
         private func openProfileSettings() {
             isReorderingCategories = false
-            withAnimation(profileSettingsAnimation) {
-                showProfileSettings = true
-            }
+            showProfileSettings = true
         }
 
         func openCategoryManager() {
             isReorderingCategories = false
             showCategoryManager = true
-        }
-
-        private func closeProfileSettings() {
-            withAnimation(profileSettingsAnimation) {
-                showProfileSettings = false
-            }
         }
     }
 
