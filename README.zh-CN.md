@@ -44,9 +44,11 @@ AniShelf 现已上架 [App Store](https://apps.apple.com/app/id6759359144)，支
 ## ✨ 功能
 
 - **📚 资料库管理** - 整理收藏所有动漫作品
-- **🔍 智能检索** - 依托 TMDb 数据库多语言检索动漫资源
+- **🗂️ 分类** - 用自定义分类整理番剧，也可以用自然语言描述想要的分类，由智能功能找出匹配的作品，支持 Apple Intelligence 或你自己的 OpenAI、OpenRouter 密钥
+- **🔍 检索** - 依托 TMDb 数据库多语言检索动漫资源
 - **🎨 精致界面** - 基于原生 SwiftUI 搭建，视觉风格统一精致
 - **📊 进度追踪** - 标记观看状态、打分，精准记录单集观看进度和重看次数
+- **📝 分集笔记** - 为每一集单独记录笔记，也可以为系列或单季写整体笔记
 - **▶️ 打开方式** - 从条目直接跳转到 Infuse、Kazumi 或哔哩哔哩
 - **⏰ 播出与提醒** - 查看符合条件番剧的播出时间，并为新番每集设置播出前或播出后的提醒
 - **💾 备份还原** - 备份和恢复资料库与设置，也可以将资料库导出为常用文件格式
@@ -67,7 +69,7 @@ AniShelf 还提供配套 CLI：[anishelf-cli](https://github.com/samuelhe52/anis
 ### 📋 构建与运行要求
 
 - iOS/iPadOS 26.0+ 或 macOS 26.0+
-- Xcode 26.0+
+- Xcode 27.0+
 - Swift 6.0+
 - TMDb API 密钥（可从 [The Movie Database](https://www.themoviedb.org/settings/api) 免费获取）
 

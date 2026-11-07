@@ -44,9 +44,11 @@ New features will be released on TestFlight before being pushed to the App Store
 ## ✨ Features
 
 - **📚 Library Management** - Keep track of all your anime in one place
-- **🔍 Smart Search** - Find anime using The Movie Database (TMDb) with multi-language support
+- **🗂️ Categories** - Group anime into your own categories, or describe one in your own words and let Smart Features find the matches, using Apple Intelligence or your own OpenAI or OpenRouter key
+- **🔍 Search** - Find anime using The Movie Database (TMDb) with multi-language support
 - **🎨 Beautiful UI** - Native SwiftUI interface, polished and consistent design language
 - **📊 Track Progress** - Track watch status, scores, episode-level progress, and rewatches
+- **📝 Episode Notes** - Write a note for each episode, alongside an overall note for the series or season
 - **▶️ Open In** - Jump from an entry to Infuse, Kazumi, or bilibili
 - **⏰ Broadcast & Reminders** - View broadcast airtimes for eligible anime and set reminders for each new episode, before or after airtime
 - **💾 Backup & Restore** - Back up and restore your library and settings, or export your library to common file formats
@@ -67,7 +69,7 @@ For manual installation and setup, follow the [anishelf-cli README](https://gith
 ### 📋 Build/Run Requirements
 
 - iOS/iPadOS 26.0+ or macOS 26.0+
-- Xcode 26.0+
+- Xcode 27.0+
 - Swift 6.0+
 - TMDb API key (free from [The Movie Database](https://www.themoviedb.org/settings/api))
 
