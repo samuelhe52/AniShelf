@@ -10023,6 +10023,22 @@
         }
       }
     },
+    "Remember Last Choice" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前回の選択を記憶"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记住上次选择"
+          }
+        }
+      }
+    },
     "Remember language, corner style, image format, and export size preferences in the share sheet." : {
       "localizations" : {
         "ja" : {
@@ -13742,6 +13758,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用iCloud"
+          }
+        }
+      }
+    },
+    "Use the last app opened for each entry when swiping. Otherwise, use the swipe default." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スワイプ時に各作品で最後に開いたアプリを使います。選択がない場合はスワイプのデフォルトを使います。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "滑动时使用该条目上次打开的应用；没有上次选择时使用滑动默认设置。"
           }
         }
       }

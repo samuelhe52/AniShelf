@@ -267,7 +267,7 @@ struct EntryDetailQuickActionsRow: View {
                 Spacer(minLength: 0)
             }
 
-            EntryDetailOpenInMenu(links: openInLinks)
+            EntryDetailOpenInMenu(links: openInLinks, entryID: entry.libraryIdentity)
 
             PopupActionCircleButton(
                 systemImage: "square.and.arrow.up",

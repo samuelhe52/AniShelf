@@ -55,6 +55,8 @@ extension String {
     static let shareSheetExportSize = "ShareSheetExportSize"
     // Device-local, since installed apps differ per device. Keep out of backup and CloudKit allowlists.
     static let libraryOpenInSwipeDestination = "LibraryOpenInSwipeDestination"
+    static let libraryOpenInRememberLastChoice = "LibraryOpenInRememberLastChoice"
+    static let libraryOpenInLastChoice = "LibraryOpenInLastChoice"
     static let libraryCloudSyncEnabled = "LibraryCloudSyncEnabled"
     static let libraryCloudSyncBootstrapState = "LibraryCloudSyncBootstrapState"
     static let libraryCloudSyncCloudKitAvailability = "LibraryCloudSyncCloudKitAvailability"

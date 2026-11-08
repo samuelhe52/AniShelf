@@ -89,6 +89,28 @@ enum EntryOpenInSwipeDestination: Hashable, CaseIterable, RawRepresentable {
     }
 }
 
+enum EntryOpenInChoice {
+    static func swipeDestination(
+        default destination: EntryOpenInSwipeDestination, entryID: LibraryEntryIdentity,
+        defaults: UserDefaults = .standard
+    ) -> EntryOpenInSwipeDestination {
+        guard defaults.bool(forKey: .libraryOpenInRememberLastChoice),
+            let rawValue = defaults.dictionary(forKey: .libraryOpenInLastChoice)?[entryID.rawID] as? String,
+            let app = EntryOpenInApp(rawValue: rawValue)
+        else { return destination }
+        return .app(app)
+    }
+
+    static func recordSuccessfulOpen(
+        _ app: EntryOpenInApp, entryID: LibraryEntryIdentity, defaults: UserDefaults = .standard
+    ) {
+        guard defaults.bool(forKey: .libraryOpenInRememberLastChoice) else { return }
+        var choices = defaults.dictionary(forKey: .libraryOpenInLastChoice) as? [String: String] ?? [:]
+        choices[entryID.rawID] = app.rawValue
+        defaults.set(choices, forKey: .libraryOpenInLastChoice)
+    }
+}
+
 /// Destinations offered by the "Open In" menus on entry details and library context menus.
 struct EntryOpenInLinks: Equatable {
     var infuseURL: URL?
@@ -210,11 +232,12 @@ enum EntryOpenInL10n {
 /// Apps that aren't installed stay listed but disabled, so people can discover them.
 struct EntryOpenInMenuItems: View {
     let links: EntryOpenInLinks
+    let entryID: LibraryEntryIdentity
 
     var body: some View {
         ForEach(EntryOpenInApp.allCases) { app in
             if let url = links.url(for: app) {
-                AppItem(app: app, url: url)
+                AppItem(app: app, url: url, entryID: entryID)
             }
         }
 
@@ -234,11 +257,14 @@ struct EntryOpenInMenuItems: View {
 
         let app: EntryOpenInApp
         let url: URL
+        let entryID: LibraryEntryIdentity
 
         var body: some View {
             let isInstalled = EntryOpenInLinks.hasHandler(for: url)
             Button {
-                openURL(url)
+                openURL(url) { accepted in
+                    if accepted { EntryOpenInChoice.recordSuccessfulOpen(app, entryID: entryID) }
+                }
             } label: {
                 Label {
                     Text(app.name)
@@ -330,7 +356,9 @@ fileprivate struct EntryOpenInAlertModifier: ViewModifier {
     private func appButton(app: EntryOpenInApp, url: URL?) -> some View {
         if let url {
             Button {
-                openURL(url)
+                openURL(url) { accepted in
+                    if accepted { EntryOpenInChoice.recordSuccessfulOpen(app, entryID: entryID) }
+                }
             } label: {
                 Text(app.name)
             }
@@ -355,7 +383,10 @@ struct EntryOpenInSwipeButton: View {
     var body: some View {
         Button {
             let request = EntryOpenInRequest(entry: entry)
-            if case .app(let app) = destination,
+            let effectiveDestination = EntryOpenInChoice.swipeDestination(
+                default: destination, entryID: request.entryID
+            )
+            if case .app(let app) = effectiveDestination,
                 let url = request.links.url(for: app),
                 EntryOpenInLinks.hasHandler(for: url)
             {
@@ -377,7 +408,7 @@ struct EntryOpenInSubmenu: View {
         let links = EntryOpenInLinks(entry: entry, homepageURL: entry.linkToDetails)
         if !links.isEmpty {
             Menu {
-                EntryOpenInMenuItems(links: links)
+                EntryOpenInMenuItems(links: links, entryID: entry.libraryIdentity)
             } label: {
                 Label(EntryOpenInL10n.openIn, systemImage: EntryOpenInL10n.systemImage)
             }
@@ -390,11 +421,12 @@ struct EntryDetailOpenInMenu: View {
     @Environment(\.popupPanelStyle) private var panelStyle
 
     let links: EntryOpenInLinks
+    let entryID: LibraryEntryIdentity
 
     var body: some View {
         if !links.isEmpty {
             Menu {
-                EntryOpenInMenuItems(links: links)
+                EntryOpenInMenuItems(links: links, entryID: entryID)
             } label: {
                 PopupActionButtonLabel(systemImage: EntryOpenInL10n.systemImage)
             }
