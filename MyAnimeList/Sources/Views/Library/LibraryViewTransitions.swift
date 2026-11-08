@@ -48,6 +48,47 @@ enum LibraryViewTransitions {
             )
         )
     }
+
+    static func profileSettingsAnimation() -> Animation {
+        .smooth(duration: 0.45, extraBounce: 0)
+    }
+
+    static func profileSettingsTransition() -> AnyTransition {
+        .asymmetric(
+            insertion: .modifier(
+                active: LibraryProfileSettingsBlendModifier(
+                    opacity: 0,
+                    blurRadius: 22
+                ),
+                identity: LibraryProfileSettingsBlendModifier(
+                    opacity: 1,
+                    blurRadius: 0
+                )
+            ),
+            removal: .modifier(
+                active: LibraryProfileSettingsBlendModifier(
+                    opacity: 0,
+                    blurRadius: 14
+                ),
+                identity: LibraryProfileSettingsBlendModifier(
+                    opacity: 1,
+                    blurRadius: 0
+                )
+            )
+        )
+    }
+}
+
+fileprivate struct LibraryProfileSettingsBlendModifier: ViewModifier {
+    let opacity: Double
+    let blurRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .blur(radius: blurRadius)
+            .opacity(opacity)
+            .compositingGroup()
+    }
 }
 
 fileprivate nonisolated struct LibraryViewTransitionModifier: ViewModifier, Animatable {
