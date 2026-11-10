@@ -59,7 +59,7 @@
         @State private var drafting: AIBackend?
 
         var body: some View {
-            let counts = MacLibrarySidebarCounts(store: store)
+            let counts = scope.displayCounts
 
             List(selection: scopeBinding) {
                 Section {
@@ -176,7 +176,7 @@
             _ filter: LibraryStore.AnimeFilter,
             systemImage: String,
             tint: Color?,
-            counts: MacLibrarySidebarCounts
+            counts: LibraryDisplayCounts
         ) -> some View {
             row(
                 .filter(filter.id),
@@ -214,31 +214,6 @@
             Divider()
             Button("Delete Category…", systemImage: "trash", role: .destructive) {
                 deletingCategory = category
-            }
-        }
-    }
-
-    /// Entry counts for every sidebar row, computed in one pass over the library.
-    fileprivate struct MacLibrarySidebarCounts {
-        var all = 0
-        var filters: [String: Int] = [:]
-        var categories: [LibraryCategory.ID: Int] = [:]
-
-        @MainActor
-        init(store: LibraryStore) {
-            let filterCases = LibraryStore.AnimeFilter.allCases
-            for entry in store.library {
-                // Mirrors browsing: hidden dropped entries only count under Dropped.
-                let hiddenByDefault = store.hideDroppedByDefault && entry.watchStatus == .dropped
-                for filter in filterCases where filter.evaluate(entry) {
-                    if hiddenByDefault && filter != .dropped { continue }
-                    filters[filter.id, default: 0] += 1
-                }
-                guard !hiddenByDefault else { continue }
-                all += 1
-                for categoryID in entry.categoryIDs {
-                    categories[categoryID, default: 0] += 1
-                }
             }
         }
     }

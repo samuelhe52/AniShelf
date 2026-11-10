@@ -168,6 +168,22 @@ final class LibraryBrowseScope {
 
     var entriesOnDisplay: [AnimeEntry] { display.items.map(\.entry) }
 
+    /// Entry counts for the sidebar, kept with the display records.
+    var displayCounts: LibraryDisplayCounts {
+        _ = display
+        let hidesDropped = store.hideDroppedByDefault
+        guard !isInvalidatingDisplay else {
+            return LibraryDisplayCounts(
+                inputs: store.library.lazy.map(LibraryDisplayOrderInputs.init), hidesDropped: hidesDropped)
+        }
+        if let countsCache, countsCache.generation == displayGeneration { return countsCache.counts }
+        let counts = LibraryDisplayCounts(inputs: records.values.lazy.map(\.inputs), hidesDropped: hidesDropped)
+        countsCache = (displayGeneration, counts)
+        return counts
+    }
+
+    @ObservationIgnored private var countsCache: (generation: Int, counts: LibraryDisplayCounts)?
+
     /// The shown entry with this identity, if this window's scope and filters show it.
     func displayedEntry(for identity: LibraryEntryIdentity) -> AnimeEntry? {
         display.entriesByID[identity]
