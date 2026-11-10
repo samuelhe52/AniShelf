@@ -35,9 +35,15 @@
         /// The last entry selected alone, for the batch panel to open its stack on.
         @State private var lastSingleID: LibraryEntryIdentity?
         @State private var posterFlight = MacInspectorPosterFlight()
+        /// The selection the content shows, one beat behind `selection` (docs-ai 041).
+        @State private var shownIDs: Set<LibraryEntryIdentity> = []
+
+        private var shownSingle: LibraryEntryIdentity? {
+            shownIDs.count == 1 ? shownIDs.first : nil
+        }
 
         private var selectedEntry: AnimeEntry? {
-            guard isPresented, let identity = selection.single else { return nil }
+            guard isPresented, let identity = shownSingle else { return nil }
             return displayItems.first { $0.id == identity }?.entry
         }
 
@@ -78,7 +84,19 @@
             .onChange(of: selectedEntry.map(ObjectIdentifier.init), initial: true) {
                 synchronizeDetailSession(selectedEntry?.libraryIdentity)
             }
+            // The List commits its highlight in its own update, then the content follows. A
+            // newer selection cancels the wait, so key repeat skips entries it passes.
+            .task(id: selection.ids) {
+                guard shownIDs != selection.ids else { return }
+                try? await Task.sleep(for: .milliseconds(20))
+                guard !Task.isCancelled else { return }
+                shownIDs = selection.ids
+            }
             .onChange(of: selection.ids, initial: true) {
+                // Nothing on screen to keep: show the first selection, or none, at once.
+                if shownIDs.isEmpty || selection.isEmpty {
+                    shownIDs = selection.ids
+                }
                 // A batch keeps the entry it grew from; clearing the selection forgets it.
                 if let single = selection.single {
                     lastSingleID = single
@@ -94,7 +112,7 @@
 
         @ViewBuilder
         private var selectionContent: some View {
-            if selection.ids.count > 1 {
+            if shownIDs.count > 1 {
                 let selectedEntries = selectedEntries
                 MacBatchSelectionPanel(
                     store: store,
@@ -105,7 +123,7 @@
                     apply: applyBatchAction,
                     deleteSelectedEntries: { deleteEntries(selectedEntries) }
                 )
-            } else if let identity = selection.single {
+            } else if let identity = shownSingle {
                 // The session is created right after the selection changes; until then
                 // show nothing rather than flash No Selection.
                 if let session = detailSessionStore.session(for: identity) {
@@ -116,9 +134,9 @@
             }
         }
 
-        /// The selection in layout order.
+        /// The shown selection in layout order.
         private var selectedEntries: [AnimeEntry] {
-            let ids = selection.ids
+            let ids = shownIDs
             guard !ids.isEmpty else { return [] }
             return displayItems.lazy.filter { ids.contains($0.id) }.map(\.entry)
         }
