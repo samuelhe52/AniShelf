@@ -79,7 +79,13 @@ final class EntryDetailSession {
     var hasPendingWatchedReviewOpportunity = false
     var isCharacterExpanded: Bool
     var isStaffExpanded: Bool
-    var scrollPosition = ScrollPosition()
+    #if os(macOS)
+        /// The Mac inspector reuses its scroll view across entries, so a new session asks for
+        /// the top instead of keeping the previous entry's offset.
+        var scrollPosition = ScrollPosition(edge: .top)
+    #else
+        var scrollPosition = ScrollPosition()
+    #endif
     private(set) var isAwaitingActiveSheetDismissalForHostChange = false
 
     var blocksHostMigration: Bool {

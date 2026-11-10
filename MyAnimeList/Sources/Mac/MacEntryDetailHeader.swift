@@ -73,7 +73,9 @@
         }
 
         private var poster: some View {
+            // A new image is a new view, so a reused header never shows the last entry's poster.
             KFImageView(image: posterImage, diskCacheExpiration: .longTerm)
+            .id(posterImage)
             .scaledToFill()
             .frame(width: posterSize.width, height: posterSize.height)
             .background(.fill.tertiary)

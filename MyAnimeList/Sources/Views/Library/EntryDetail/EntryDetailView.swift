@@ -135,7 +135,17 @@ struct EntryDetailView: View {
             }
             // A fetched detail fills in place; switching entries is not animated here.
             .animation(fetchedDetailAnimation, value: session.model.fetchedDetailRevision)
-            .id(session.instanceID)
+            #if os(macOS)
+                // The Mac inspector keeps this tree across entries: rebuilding it on every
+                // selection made the List lag (docs-ai 041). A switch updates it in place,
+                // without the animations its entry values would otherwise trigger.
+                .transaction(value: session.instanceID) { transaction in
+                    transaction.animation = nil
+                    transaction.disablesAnimations = true
+                }
+            #else
+                .id(session.instanceID)
+            #endif
             .transition(.opacity)
         }
         .animation(entryReplacementAnimation, value: session.instanceID)
