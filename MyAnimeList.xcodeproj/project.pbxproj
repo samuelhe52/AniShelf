@@ -602,6 +602,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=macosx*]" = MacAppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = MyAnimeList/MyAnimeList.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "MyAnimeList/MyAnimeList-macOS.entitlements";
@@ -648,6 +649,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=macosx*]" = MacAppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = MyAnimeList/MyAnimeList.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "MyAnimeList/MyAnimeList-macOS.entitlements";
