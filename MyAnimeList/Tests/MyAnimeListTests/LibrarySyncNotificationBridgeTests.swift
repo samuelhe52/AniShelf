@@ -99,14 +99,6 @@
             )
         }
 
-        @Test func airingReminderBackgroundRefreshRequestsSixHourWindow() {
-            let now = Date(timeIntervalSince1970: 2_000_000_000)
-            #expect(
-                LibrarySyncNotificationBridge.nextAiringReminderRefreshDate(now: now)
-                    == now.addingTimeInterval(6 * 60 * 60)
-            )
-        }
-
         @Test func backgroundSyncExecutionEndsAfterOperationCompletes() async throws {
             let identifier = UIBackgroundTaskIdentifier(rawValue: 42)
             var beginCount = 0

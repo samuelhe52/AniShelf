@@ -486,6 +486,26 @@ enum WhatsNewRegistry {
                 )
             ]
         ),
+        "1.106.0": .init(
+            version: "1.106.0",
+            summary:
+                "This version includes feature updates and visual improvements.",
+            highlights: [
+                "Choose a category when adding anime, and set a default category.",
+                "Remember the last app used to open each anime.",
+                "Added a dark app icon on macOS and improved responsiveness when selecting library entries and viewing details.",
+                "Fixed the transition animation when leaving multi-select mode."
+            ],
+            primaryAction: nil,
+            secondaryActions: [
+                .init(
+                    id: "project-github",
+                    title: "AniShelf on GitHub",
+                    systemImage: "arrow.up.right.square",
+                    kind: .openURL(projectURL)
+                )
+            ]
+        ),
         "1.105.0": .init(
             version: "1.105.0",
             summary:

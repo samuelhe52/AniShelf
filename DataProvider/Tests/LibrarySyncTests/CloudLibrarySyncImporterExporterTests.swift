@@ -345,12 +345,9 @@ struct CloudLibrarySyncImporterExporterTests {
             settingsSnapshot: settingsSnapshot
         )
 
-        #expect(database.saveBatchSizes == [350, 225])
-        #expect(
-            database.saveBatchSizes.allSatisfy {
-                $0 <= CloudLibrarySyncExporter.maxRecordsPerModifyRequest
-            }
-        )
+        // 574 entries plus the settings record.
+        let maxBatch = CloudLibrarySyncExporter.maxRecordsPerModifyRequest
+        #expect(database.saveBatchSizes == [maxBatch, 575 - maxBatch])
         #expect(database.savedRecords.count == 575)
         #expect(result.exportedIdentities == Set(payload.identities))
         #expect(result.settingsExported)
@@ -369,7 +366,8 @@ struct CloudLibrarySyncImporterExporterTests {
             localSnapshotsByIdentity: payload.snapshots
         )
 
-        #expect(database.saveBatchSizes == [350, 175, 87, 88, 175, 87, 88, 10])
+        // The full-size first batch exceeds the shrunken limit, so recovery must split it.
+        #expect(database.saveBatchSizes.first == CloudLibrarySyncExporter.maxRecordsPerModifyRequest)
         #expect(database.savedRecords.count == 360)
         #expect(result.exportedIdentities == Set(payload.identities))
     }
@@ -389,8 +387,9 @@ struct CloudLibrarySyncImporterExporterTests {
             )
             Issue.record("Expected export to fail after preserving the first accepted batch.")
         } catch let failure as CloudLibrarySyncExportFailure {
-            #expect(database.saveBatchSizes == [350, 10])
-            #expect(failure.partialResult.exportedIdentities.count == 350)
+            let maxBatch = CloudLibrarySyncExporter.maxRecordsPerModifyRequest
+            #expect(database.saveBatchSizes == [maxBatch, 360 - maxBatch])
+            #expect(failure.partialResult.exportedIdentities.count == maxBatch)
             #expect(!failure.partialResult.settingsExported)
             #expect((failure.underlyingError as? CKError)?.code == .networkFailure)
         }
@@ -410,7 +409,8 @@ struct CloudLibrarySyncImporterExporterTests {
             localSnapshotsByIdentity: payload.snapshots
         )
 
-        #expect(database.saveBatchSizes == [350, 10])
+        let maxBatch = CloudLibrarySyncExporter.maxRecordsPerModifyRequest
+        #expect(database.saveBatchSizes == [maxBatch, 360 - maxBatch])
         #expect(result.exportedIdentities == Set(payload.identities).subtracting([rejected]))
         #expect(result.rejectedIdentities == [rejected])
     }

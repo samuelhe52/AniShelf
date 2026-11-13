@@ -8,6 +8,16 @@
 import Foundation
 
 extension LibraryStore {
+    /// Resolves a usable category without constructing the full membership set.
+    func category(for id: LibraryCategory.ID?) -> LibraryCategory? {
+        guard categoriesEnabled, let id else { return nil }
+        return categories.first { $0.id == id }
+    }
+
+    func validCategoryID(_ id: LibraryCategory.ID?) -> LibraryCategory.ID? {
+        category(for: id)?.id
+    }
+
     var knownCategoryIDs: Set<LibraryCategory.ID> {
         Set(categories.map(\.id))
     }

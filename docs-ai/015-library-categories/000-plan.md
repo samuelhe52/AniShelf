@@ -104,3 +104,7 @@ proposed `MyAnimeList/Sources/Views/Library/Categories/`.
 - Updated 2026-10-30: Selection highlight moved off `matchedGeometryEffect`, which broke view-style page transitions; 002's matched-geometry wording corrected — see [004-selection-highlight-without-matched-geometry.md](004-selection-highlight-without-matched-geometry.md)
 - Updated 2026-10-31: 004 corrected in place — its fix is incomplete; with the strip shown, the incoming page still pops in when switching right after a scroll — see [004-selection-highlight-without-matched-geometry.md](004-selection-highlight-without-matched-geometry.md#current-state-corrected-2026-10-31)
 - Updated 2026-10-31: Strip isolated from view-style animations, so the incoming page no longer pops in — see [005-page-insertion-after-scrolling.md](005-page-insertion-after-scrolling.md)
+
+- Updated 2026-11-13: Explicit search add destination and optional current-category default — see [006-search-add-destination.md](006-search-add-destination.md)
+
+- Updated 2026-11-13: Search-add review corrections and destination-aware navigation — see [007-search-add-review-fixes.md](007-search-add-review-fixes.md)

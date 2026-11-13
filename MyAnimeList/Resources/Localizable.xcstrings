@@ -1,6 +1,70 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Choose a category when adding anime, and set a default category." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アニメを追加するときにカテゴリを選択でき、デフォルトのカテゴリも設定できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加动画时可直接选择分类，也可设置默认分类。"
+          }
+        }
+      }
+    },
+    "Remember the last app used to open each anime." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アニメごとに、最後に開いたアプリを記憶できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可为每部动画记住上次选择的打开应用。"
+          }
+        }
+      }
+    },
+    "Added a dark app icon on macOS and improved responsiveness when selecting library entries and viewing details." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOSにダークモード用のアプリアイコンを追加し、ライブラリでの選択と詳細画面の応答性を改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS新增深色应用图标，同时优化资料库选择和详情页的响应速度。"
+          }
+        }
+      }
+    },
+    "Fixed the transition animation when leaving multi-select mode." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複数選択モードを終了するときの切り替えアニメーションを修正しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修复结束多选时的过渡动画。"
+          }
+        }
+      }
+    },
     "Add notes for individual episodes. Existing notes are kept under Overall." : {
       "localizations" : {
         "ja" : {
@@ -10023,6 +10087,22 @@
         }
       }
     },
+    "Remember Last Choice" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前回の選択を記憶"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记住上次选择"
+          }
+        }
+      }
+    },
     "Remember language, corner style, image format, and export size preferences in the share sheet." : {
       "localizations" : {
         "ja" : {
@@ -13746,6 +13826,22 @@
         }
       }
     },
+    "Use the last app opened for each entry when swiping. Otherwise, use the swipe default." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スワイプ時に各作品で最後に開いたアプリを使います。選択がない場合はスワイプのデフォルトを使います。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "滑动时使用该条目上次打开的应用；没有上次选择时使用滑动默认设置。"
+          }
+        }
+      }
+    },
     "Use Poster" : {
       "localizations" : {
         "ja" : {
@@ -15483,6 +15579,76 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "查找动画"
+          }
+        }
+      }
+    },
+    "No Category" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "None"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "なし"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不分组"
+          }
+        }
+      }
+    },
+    "Current Category" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在のカテゴリ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沿用当前分组"
+          }
+        }
+      }
+    },
+    "Default Category for Add" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "追加時のカテゴリ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加时的默认分组"
+          }
+        }
+      }
+    },
+    "Add to Category" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "追加先"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加到分组"
           }
         }
       }

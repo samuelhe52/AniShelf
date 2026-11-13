@@ -95,6 +95,10 @@
 
         private var notesSection: some View {
             EntryNotesSection(entry: entry, originalNotes: originalNotes, originalEpisodeNotes: originalEpisodeNotes)
+                // The inspector reuses this card across entries (docs-ai 041). A new section
+                // starts on the entry's own scope in the switch frame; resetting the scope in
+                // its `onChange` would land a frame later and animate the chips.
+                .id(entry.libraryIdentity)
         }
     }
 

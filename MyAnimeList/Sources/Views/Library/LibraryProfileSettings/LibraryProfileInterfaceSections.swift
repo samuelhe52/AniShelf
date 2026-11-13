@@ -184,6 +184,7 @@ struct LibraryProfileTrackingSettingsSection: View {
 fileprivate struct LibraryProfileOpenInSettingsSection: View {
     @AppStorage(.libraryOpenInSwipeDestination)
     private var swipeDestination: EntryOpenInSwipeDestination = .ask
+    @AppStorage(.libraryOpenInRememberLastChoice) private var rememberLastChoice = false
 
     var body: some View {
         // Capture the value before the section's escaping content closure so SwiftUI
@@ -220,6 +221,11 @@ fileprivate struct LibraryProfileOpenInSettingsSection: View {
                 }
                 .padding(.vertical, 2)
             #endif
+            LibraryProfileSettingsToggleRow(
+                title: "Remember Last Choice",
+                subtitle: "Use the last app opened for each entry when swiping. Otherwise, use the swipe default.",
+                isOn: $rememberLastChoice
+            )
         }
     }
 

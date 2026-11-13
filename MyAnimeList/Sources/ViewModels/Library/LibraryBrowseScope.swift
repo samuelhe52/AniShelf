@@ -34,12 +34,7 @@ final class LibraryBrowseScope {
     ///
     /// Reads as `nil` while categories are disabled or after the category was deleted.
     var activeCategoryID: LibraryCategory.ID? {
-        get {
-            guard store.categoriesEnabled, let storedCategoryID,
-                store.categories.contains(where: { $0.id == storedCategoryID })
-            else { return nil }
-            return storedCategoryID
-        }
+        get { store.validCategoryID(storedCategoryID) }
         set { storedCategoryID = newValue }
     }
     private var storedCategoryID: LibraryCategory.ID?
@@ -167,6 +162,22 @@ final class LibraryBrowseScope {
     var displayIDs: [LibraryEntryIdentity] { display.ids }
 
     var entriesOnDisplay: [AnimeEntry] { display.items.map(\.entry) }
+
+    /// Entry counts for the sidebar, kept with the display records.
+    var displayCounts: LibraryDisplayCounts {
+        _ = display
+        let hidesDropped = store.hideDroppedByDefault
+        guard !isInvalidatingDisplay else {
+            return LibraryDisplayCounts(
+                inputs: store.library.lazy.map(LibraryDisplayOrderInputs.init), hidesDropped: hidesDropped)
+        }
+        if let countsCache, countsCache.generation == displayGeneration { return countsCache.counts }
+        let counts = LibraryDisplayCounts(inputs: records.values.lazy.map(\.inputs), hidesDropped: hidesDropped)
+        countsCache = (displayGeneration, counts)
+        return counts
+    }
+
+    @ObservationIgnored private var countsCache: (generation: Int, counts: LibraryDisplayCounts)?
 
     /// The shown entry with this identity, if this window's scope and filters show it.
     func displayedEntry(for identity: LibraryEntryIdentity) -> AnimeEntry? {
@@ -361,8 +372,7 @@ final class LibraryBrowseScope {
     // MARK: - Scope
 
     var activeCategory: LibraryCategory? {
-        guard let activeCategoryID else { return nil }
-        return store.categories.first { $0.id == activeCategoryID }
+        store.category(for: storedCategoryID)
     }
 
     /// Whether a jump can show the entry; the jump itself leaves a category that hides it.

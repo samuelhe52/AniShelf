@@ -125,3 +125,4 @@ verified.
   swipe, and add a device-local default swipe destination; corrects the full-swipe
   text above — see
   [002-swipe-default-destination.md](002-swipe-default-destination.md)
+- Updated 2026-11-08: Optionally remember successful app choices per entry for swipe actions — see [003-remember-last-choice.md](003-remember-last-choice.md).

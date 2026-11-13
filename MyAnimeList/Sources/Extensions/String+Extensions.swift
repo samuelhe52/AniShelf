@@ -15,6 +15,8 @@ extension String {
     static let searchTMDbLanguage = "SearchTMDbLanguage"
     static let searchPageQuery = "SearchPageQuery"
     static let searchMode = "SearchMode"
+    // Device-local search interaction; no entry schema or CloudKit setting.
+    static let searchAddCategoryDefault = "SearchAddCategoryDefault"
     static let libraryLastInspectorDetailEntryIdentity = "LibraryLastInspectorDetailEntryIdentity"
     static let libraryGroupStrategy = "LibraryGroupStrategy"
     static let librarySortStrategy = "LibrarySortStrategy"
@@ -55,6 +57,8 @@ extension String {
     static let shareSheetExportSize = "ShareSheetExportSize"
     // Device-local, since installed apps differ per device. Keep out of backup and CloudKit allowlists.
     static let libraryOpenInSwipeDestination = "LibraryOpenInSwipeDestination"
+    static let libraryOpenInRememberLastChoice = "LibraryOpenInRememberLastChoice"
+    static let libraryOpenInLastChoice = "LibraryOpenInLastChoice"
     static let libraryCloudSyncEnabled = "LibraryCloudSyncEnabled"
     static let libraryCloudSyncBootstrapState = "LibraryCloudSyncBootstrapState"
     static let libraryCloudSyncCloudKitAvailability = "LibraryCloudSyncCloudKitAvailability"

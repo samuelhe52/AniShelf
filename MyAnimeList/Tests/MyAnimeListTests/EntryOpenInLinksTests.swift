@@ -72,4 +72,38 @@ struct EntryOpenInLinksTests {
         #expect(!String.allPreferenceKeys.contains(.libraryOpenInSwipeDestination))
         #expect(!String.cloudSyncedPreferenceKeys.contains(.libraryOpenInSwipeDestination))
     }
+
+    @Test func testRememberedChoicesAreIndependentPerEntry() {
+        let suite = "EntryOpenInLinksTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let first = LibraryEntryIdentity(entryType: .series, tmdbID: 100)
+        let second = LibraryEntryIdentity(entryType: .series, tmdbID: 200)
+        let fallback = EntryOpenInSwipeDestination.app(.infuse)
+
+        defaults.set(true, forKey: .libraryOpenInRememberLastChoice)
+        // A legacy global value must not become an arbitrary entry's choice.
+        defaults.set("kazumi", forKey: .libraryOpenInLastChoice)
+        #expect(EntryOpenInChoice.swipeDestination(default: fallback, entryID: first, defaults: defaults) == fallback)
+        EntryOpenInChoice.recordSuccessfulOpen(.kazumi, entryID: first, defaults: defaults)
+        #expect(
+            EntryOpenInChoice.swipeDestination(default: fallback, entryID: first, defaults: defaults) == .app(.kazumi)
+        )
+        #expect(EntryOpenInChoice.swipeDestination(default: fallback, entryID: second, defaults: defaults) == fallback)
+        EntryOpenInChoice.recordSuccessfulOpen(.bilibili, entryID: second, defaults: defaults)
+        #expect(
+            EntryOpenInChoice.swipeDestination(default: fallback, entryID: second, defaults: defaults)
+                == .app(.bilibili)
+        )
+        #expect(
+            EntryOpenInChoice.swipeDestination(default: fallback, entryID: first, defaults: defaults) == .app(.kazumi)
+        )
+        defaults.set(false, forKey: .libraryOpenInRememberLastChoice)
+        EntryOpenInChoice.recordSuccessfulOpen(.infuse, entryID: first, defaults: defaults)
+        #expect(EntryOpenInChoice.swipeDestination(default: fallback, entryID: first, defaults: defaults) == fallback)
+        defaults.set(true, forKey: .libraryOpenInRememberLastChoice)
+        #expect(
+            EntryOpenInChoice.swipeDestination(default: fallback, entryID: first, defaults: defaults) == .app(.kazumi)
+        )
+    }
 }

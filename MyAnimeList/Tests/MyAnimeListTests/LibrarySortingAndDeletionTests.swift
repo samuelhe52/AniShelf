@@ -408,7 +408,10 @@ struct LibrarySortingAndDeletionTests {
         // The cached display list follows unsaved entry edits, not only saves.
         store.repository.toggleFavorite(plain)
         #expect(scope.entriesOnDisplay.contains { $0.tmdbID == plain.tmdbID })
+        // Sidebar counts follow the same records.
+        #expect(scope.displayCounts.filters[LibraryStore.AnimeFilter.favorited.id] == 2)
         store.repository.toggleFavorite(plain)
+        #expect(scope.displayCounts.filters[LibraryStore.AnimeFilter.favorited.id] == 1)
         #expect(!scope.entriesOnDisplay.contains { $0.tmdbID == plain.tmdbID })
 
         // Edits to child models can miss observation, so the entry's tracking clock alone
@@ -423,6 +426,9 @@ struct LibrarySortingAndDeletionTests {
         scope.filters = []
         store.hideDroppedByDefault = true
         #expect(!scope.entriesOnDisplay.contains { $0.tmdbID == dropped.tmdbID })
+        // A hidden dropped entry counts only under Dropped.
+        #expect(scope.displayCounts.all == 2)
+        #expect(scope.displayCounts.filters[LibraryStore.AnimeFilter.dropped.id] == 1)
 
         // Resetting filters for a search jump opts into Dropped without changing the preference.
         scope.filters = [.favorited]

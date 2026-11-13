@@ -26,6 +26,8 @@
     final class LibrarySyncNotificationBridge: NSObject, UIApplicationDelegate {
         static let airingReminderRefreshTaskIdentifier =
             "com.samuelhe.MyAnimeList.airing-reminder-refresh"
+        /// Matches the Mac reminder refresh cadence.
+        static let airingReminderRefreshInterval: TimeInterval = 6 * 60 * 60
 
         var onSyncRequested: (() async -> UIBackgroundFetchResult)? {
             get { LibrarySyncNotificationRouting.onSyncRequested }
@@ -46,7 +48,7 @@
             let request = BGAppRefreshTaskRequest(
                 identifier: airingReminderRefreshTaskIdentifier
             )
-            request.earliestBeginDate = nextAiringReminderRefreshDate()
+            request.earliestBeginDate = Date(timeIntervalSinceNow: airingReminderRefreshInterval)
             do {
                 try scheduler.submit(request)
             } catch {
@@ -54,12 +56,6 @@
                     "Failed to schedule airing reminder refresh: \(error.localizedDescription, privacy: .public)"
                 )
             }
-        }
-
-        nonisolated static func nextAiringReminderRefreshDate(
-            now: Date = .now
-        ) -> Date {
-            now.addingTimeInterval(6 * 60 * 60)
         }
 
         func application(

@@ -19,10 +19,12 @@ extension View {
         checkDuplicate: @escaping (LibraryEntryIdentity) -> Bool,
         canRevealEntry: @escaping (LibraryEntryIdentity) -> Bool,
         resetFiltersToReveal: @escaping (LibraryEntryIdentity) -> Void,
-        processTMDbSearchResults: @escaping (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void,
+        processTMDbSearchResults:
+            @escaping (OrderedSet<SearchResult>, SearchSubmissionOrigin, LibraryCategory.ID?) -> Void,
         jumpToEntryInLibrary: @escaping (LibraryEntryIdentity) -> Void,
         onDismiss: @escaping () -> Void,
-        initialMode: SearchMode? = nil
+        initialMode: SearchMode? = nil,
+        initialCategoryID: LibraryCategory.ID? = nil
     ) -> some View {
         modifier(
             LibrarySearchSheet(
@@ -33,7 +35,8 @@ extension View {
                 processTMDbSearchResults: processTMDbSearchResults,
                 jumpToEntryInLibrary: jumpToEntryInLibrary,
                 onDismiss: onDismiss,
-                initialMode: initialMode
+                initialMode: initialMode,
+                initialCategoryID: initialCategoryID
             )
         )
     }
@@ -44,11 +47,13 @@ fileprivate struct LibrarySearchSheet: ViewModifier {
     let checkDuplicate: (LibraryEntryIdentity) -> Bool
     let canRevealEntry: (LibraryEntryIdentity) -> Bool
     let resetFiltersToReveal: (LibraryEntryIdentity) -> Void
-    let processTMDbSearchResults: (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void
+    let processTMDbSearchResults: (OrderedSet<SearchResult>, SearchSubmissionOrigin, LibraryCategory.ID?) -> Void
     let jumpToEntryInLibrary: (LibraryEntryIdentity) -> Void
     let onDismiss: () -> Void
     /// Opens the page in this mode instead of the last-used one.
     let initialMode: SearchMode?
+    let initialCategoryID: LibraryCategory.ID?
+    @AppStorage(.searchAddCategoryDefault) private var defaultCategoryRule: SearchAddCategoryDefault = .noCategory
 
     @State private var hiddenEntryID: LibraryEntryIdentity?
 
@@ -61,7 +66,9 @@ fileprivate struct LibrarySearchSheet: ViewModifier {
                         checkDuplicate: checkDuplicate,
                         processTMDbSearchResults: processTMDbSearchResults,
                         jumpToEntryInLibrary: jumpIfRevealable,
-                        initialMode: initialMode
+                        initialMode: initialMode,
+                        initialCategoryID: initialCategoryID,
+                        defaultCategoryRule: defaultCategoryRule
                     )
                     .navigationTitle("Search")
                     .inlineNavigationTitle()

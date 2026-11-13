@@ -13,6 +13,7 @@ import SwiftUI
 struct TMDbSearchContent: View {
     @Environment(TMDbSearchService.self) private var tmdbSearchService: TMDbSearchService
     @Binding var language: Language
+    @Binding var categoryID: LibraryCategory.ID?
 
     let onRetry: () -> Void
     let onDuplicateTapped: (LibraryEntryIdentity) -> Void
@@ -219,11 +220,16 @@ struct TMDbSearchContent: View {
     @ViewBuilder
     private var submitMenu: some View {
         if tmdbSearchService.registeredCount != 0 {
-            Button("Add to Library") {
-                tmdbSearchService.submit()
+            HStack(spacing: 12) {
+                SearchAddCategoryPicker(categoryID: $categoryID)
+                Button("Add to Library") {
+                    tmdbSearchService.submit()
+                }
+                .buttonStyle(.glassProminent)
+                .fixedSize(horizontal: true, vertical: false)
+                .shadow(color: .blue, radius: 5)
             }
-            .buttonStyle(.glassProminent)
-            .shadow(color: .blue, radius: 5)
+            .padding(.horizontal, 20)
             .transition(.opacity.animation(.interactiveSpring(duration: 0.3)))
         }
     }

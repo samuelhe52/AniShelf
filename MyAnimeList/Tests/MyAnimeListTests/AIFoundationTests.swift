@@ -181,7 +181,7 @@ struct AIFoundationTests {
 
     @Test func transientFailuresRetryWithBackoffAndOthersFailAtOnce() async throws {
         var delays: [Duration] = []
-        let retry = AIRetryPolicy(sleep: { delays.append($0) })
+        let retry = AIRetryPolicy(baseDelay: .seconds(1), sleep: { delays.append($0) })
         let budget = AIContextBudget(contextSize: 10000, reservedTokens: 0, maximumResponseTokens: 10)
 
         let recovering = AIOutputFake<AIBatchSelection> { call, _ in

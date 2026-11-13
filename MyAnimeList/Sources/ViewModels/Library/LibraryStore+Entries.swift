@@ -14,14 +14,12 @@ extension LibraryStore {
     func createNewEntry(
         tmdbID id: Int,
         type: AnimeType,
+        categoryID: LibraryCategory.ID? = nil,
         latestInfoFetcher: LibraryEntryLatestInfoFetcher? = nil
     ) async throws -> AnimeEntry? {
         let identity = LibraryEntryIdentity(entryType: type, tmdbID: id)
-        if let existingEntry = repository.existingEntry(identity: identity) {
-            if !existingEntry.onDisplay {
-                try await hydrateExistingEntry(existingEntry, type: type)
-                return existingEntry
-            }
+        let existingEntry = repository.existingEntry(identity: identity)
+        if let existingEntry, existingEntry.onDisplay {
             return try revealExistingEntry(existingEntry)
         }
         libraryStoreLogger.debug("Creating new entry with id: \(id), type: \(type)...")
@@ -37,7 +35,7 @@ extension LibraryStore {
                 )
             }
         var generatedParentSeriesEntry: AnimeEntry?
-        if let parentSeriesID = type.parentSeriesID,
+        if existingEntry == nil, let parentSeriesID = type.parentSeriesID,
             repository.existingEntry(identity: .init(entryType: .series, tmdbID: parentSeriesID)) == nil
         {
             if let latestInfoFetcher {
@@ -61,12 +59,19 @@ extension LibraryStore {
         // suspends between here and the insert, so the check holds (docs-ai 028).
         if let existingEntry = repository.existingEntry(identity: identity) {
             guard !existingEntry.onDisplay else { return try revealExistingEntry(existingEntry) }
-            try hydrateExistingEntry(existingEntry, from: latestInfo.0, detail: latestInfo.1)
+            try hydrateExistingEntry(
+                existingEntry, from: latestInfo.0, detail: latestInfo.1, categoryID: categoryID
+            )
             return existingEntry
         }
         let entry = AnimeEntry(fromInfo: latestInfo.0)
         applyNewEntryDefaults(to: entry)
         entry.replaceDetail(from: latestInfo.1)
+        // Resolve after the fetch: another window may delete the destination or disable categories.
+        // Visible duplicates return above; explicitly restored entries use the same rule below.
+        if let categoryID = validCategoryID(categoryID) {
+            entry.updateCategoryMembership(categoryID, isMember: true)
+        }
         if let parentSeriesID = entry.parentSeriesID {
             entry.parentSeriesEntry =
                 repository.existingEntry(identity: .init(entryType: .series, tmdbID: parentSeriesID))
@@ -119,30 +124,19 @@ extension LibraryStore {
         return nil
     }
 
-    func hydrateExistingEntry(_ entry: AnimeEntry, type: AnimeType) async throws {
-        let tmdbID = entry.tmdbID
-        let latestInfo = try await infoFetcher.latestInfo(
-            entryType: entry.type,
-            tmdbID: tmdbID,
-            language: language,
-            posterLanguage: posterLanguage
-        )
-        try hydrateExistingEntry(
-            entry,
-            from: latestInfo.0,
-            detail: latestInfo.1
-        )
-    }
-
     func hydrateExistingEntry(
         _ entry: AnimeEntry,
         from info: EntryMetadata,
-        detail: AnimeEntryDetailDTO
+        detail: AnimeEntryDetailDTO,
+        categoryID: LibraryCategory.ID? = nil
     ) throws {
         entry.replaceMetadata(from: info, preservingCustomPoster: entry.usingCustomPoster)
         entry.replaceDetail(from: detail)
         if entry.userInfo.isEmpty {
             applyNewEntryDefaults(to: entry)
+        }
+        if let categoryID = validCategoryID(categoryID) {
+            entry.updateCategoryMembership(categoryID, isMember: true)
         }
         entry.updateDisplayState(true)
         try repository.save()
@@ -164,13 +158,18 @@ extension LibraryStore {
         }
     }
 
-    func newEntryFromSearchResults<Sources: Collection<SearchResult>>(_ results: Sources) async
-        -> Bool
-    {
+    func newEntryFromSearchResults<Sources: Collection<SearchResult>>(
+        _ results: Sources,
+        categoryID: LibraryCategory.ID? = nil,
+        latestInfoFetcher: LibraryEntryLatestInfoFetcher? = nil
+    ) async -> Bool {
         do {
             var createdEntries: [AnimeEntry] = []
             for result in results {
-                if let entry = try await createNewEntry(tmdbID: result.tmdbID, type: result.type) {
+                if let entry = try await createNewEntry(
+                    tmdbID: result.tmdbID, type: result.type, categoryID: categoryID,
+                    latestInfoFetcher: latestInfoFetcher
+                ) {
                     createdEntries.append(entry)
                 }
             }

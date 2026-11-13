@@ -113,6 +113,7 @@ struct EntryDetailHeroSection: View {
             VStack(alignment: .center, spacing: 6) {
                 if let logoImage {
                     KFImageView(image: logoImage, diskCacheExpiration: .longTerm)
+                    .id(logoImage)
                     .scaledToFit()
                     .frame(maxWidth: 280)
                     .frame(height: 78)
@@ -159,7 +160,9 @@ struct EntryDetailHeroSection: View {
     @ViewBuilder
     private var heroArtwork: some View {
         if let image {
+            // The Mac inspector reuses this view across entries; a new image is a new view.
             KFImageView(image: image, diskCacheExpiration: .longTerm)
+            .id(image)
             .scaledToFill()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -267,7 +270,7 @@ struct EntryDetailQuickActionsRow: View {
                 Spacer(minLength: 0)
             }
 
-            EntryDetailOpenInMenu(links: openInLinks)
+            EntryDetailOpenInMenu(links: openInLinks, entryID: entry.libraryIdentity)
 
             PopupActionCircleButton(
                 systemImage: "square.and.arrow.up",

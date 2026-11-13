@@ -41,6 +41,34 @@ struct LibraryDisplayOrderInputs: Equatable {
     }
 }
 
+/// How many library entries each sidebar row covers.
+///
+/// Built from the display records' cached inputs, so counting reads no SwiftData properties
+/// (docs-ai 041).
+struct LibraryDisplayCounts: Equatable {
+    var all = 0
+    var filters: [String: Int] = [:]
+    var categories: [LibraryCategory.ID: Int] = [:]
+
+    init() {}
+
+    init(inputs: some Sequence<LibraryDisplayOrderInputs>, hidesDropped: Bool) {
+        let droppedID = LibraryStore.AnimeFilter.dropped.id
+        for input in inputs {
+            // Mirrors browsing: hidden dropped entries only count under Dropped.
+            let hidden = hidesDropped && input.isDropped
+            for filterID in input.passingFilterIDs where !hidden || filterID == droppedID {
+                filters[filterID, default: 0] += 1
+            }
+            guard !hidden else { continue }
+            all += 1
+            for categoryID in input.categoryIDs {
+                categories[categoryID, default: 0] += 1
+            }
+        }
+    }
+}
+
 /// The window settings that decide which entries show and in which order.
 struct LibraryDisplayOrderDefinition: Equatable {
     var filters: Set<LibraryStore.AnimeFilter>
