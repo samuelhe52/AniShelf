@@ -1,6 +1,70 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Choose a category when adding anime, and set a default category." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アニメを追加するときにカテゴリを選択でき、デフォルトのカテゴリも設定できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加动画时可直接选择分类，也可设置默认分类。"
+          }
+        }
+      }
+    },
+    "Remember the last app used to open each anime." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アニメごとに、最後に開いたアプリを記憶できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可为每部动画记住上次选择的打开应用。"
+          }
+        }
+      }
+    },
+    "Added a dark app icon on macOS and improved responsiveness when selecting library entries and viewing details." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOSにダークモード用のアプリアイコンを追加し、ライブラリでの選択と詳細画面の応答性を改善しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS新增深色应用图标，同时优化资料库选择和详情页的响应速度。"
+          }
+        }
+      }
+    },
+    "Fixed the transition animation when leaving multi-select mode." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複数選択モードを終了するときの切り替えアニメーションを修正しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修复结束多选时的过渡动画。"
+          }
+        }
+      }
+    },
     "Add notes for individual episodes. Existing notes are kept under Overall." : {
       "localizations" : {
         "ja" : {
