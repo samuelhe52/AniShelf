@@ -15,6 +15,8 @@ extension String {
     static let searchTMDbLanguage = "SearchTMDbLanguage"
     static let searchPageQuery = "SearchPageQuery"
     static let searchMode = "SearchMode"
+    // Device-local search interaction; no entry schema or CloudKit setting.
+    static let searchAddCategoryDefault = "SearchAddCategoryDefault"
     static let libraryLastInspectorDetailEntryIdentity = "LibraryLastInspectorDetailEntryIdentity"
     static let libraryGroupStrategy = "LibraryGroupStrategy"
     static let librarySortStrategy = "LibrarySortStrategy"

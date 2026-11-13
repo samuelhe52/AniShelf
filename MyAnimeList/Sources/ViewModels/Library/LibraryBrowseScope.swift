@@ -34,12 +34,7 @@ final class LibraryBrowseScope {
     ///
     /// Reads as `nil` while categories are disabled or after the category was deleted.
     var activeCategoryID: LibraryCategory.ID? {
-        get {
-            guard store.categoriesEnabled, let storedCategoryID,
-                store.categories.contains(where: { $0.id == storedCategoryID })
-            else { return nil }
-            return storedCategoryID
-        }
+        get { store.validCategoryID(storedCategoryID) }
         set { storedCategoryID = newValue }
     }
     private var storedCategoryID: LibraryCategory.ID?
@@ -377,8 +372,7 @@ final class LibraryBrowseScope {
     // MARK: - Scope
 
     var activeCategory: LibraryCategory? {
-        guard let activeCategoryID else { return nil }
-        return store.categories.first { $0.id == activeCategoryID }
+        store.category(for: storedCategoryID)
     }
 
     /// Whether a jump can show the entry; the jump itself leaves a category that hides it.

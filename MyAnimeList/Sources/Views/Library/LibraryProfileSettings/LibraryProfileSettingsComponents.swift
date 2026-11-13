@@ -7,6 +7,39 @@
 
 import SwiftUI
 
+/// Shared shell for settings menus, including both single-choice pickers and multi-select filters.
+struct LibraryProfileMenuRow<MenuContent: View>: View {
+    let title: LocalizedStringResource
+    let selection: LocalizedStringResource
+    let tint: Color
+    var keepsPresented = false
+    @ViewBuilder let content: () -> MenuContent
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(title)
+                .settingsRowTitleFont()
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 12)
+            Menu(content: content) {
+                #if os(macOS)
+                    Text(selection)
+                #else
+                    LibraryProfileSelectionCapsule(title: selection, tint: tint)
+                #endif
+            }
+            #if !os(macOS)
+                .customLabeledMenu()
+                .fixedSize()
+                .menuActionDismissBehavior(keepsPresented ? .disabled : .automatic)
+            #endif
+            .accessibilityLabel(Text(title))
+            .accessibilityValue(Text(selection))
+        }
+        .padding(.vertical, 2)
+    }
+}
+
 struct LibraryProfileMetricCard: View {
     let title: LocalizedStringResource
     let value: Int

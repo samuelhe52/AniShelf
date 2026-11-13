@@ -45,11 +45,13 @@ struct SearchPage: View {
     @AppStorage(.searchTMDbLanguage) private var tmdbLanguage: Language = .english
     @State private var tmdbContentMode: TMDbContentMode = .search
     @State private var isShowingBatchAddEntryAlert = false
+    @State private var addCategorySelection: SearchAddCategorySelection
 
     // Callbacks for TMDb search interactions
     private let onDuplicateTapped: (LibraryEntryIdentity) -> Void
     private let checkDuplicate: (LibraryEntryIdentity) -> Bool
-    private let processTMDbSearchResults: (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void
+    private let processTMDbSearchResults:
+        (OrderedSet<SearchResult>, SearchSubmissionOrigin, LibraryCategory.ID?) -> Void
     private let jumpToEntryInLibrary: (LibraryEntryIdentity) -> Void
 
     // View models owned by SearchPage
@@ -59,10 +61,17 @@ struct SearchPage: View {
     init(
         onDuplicateTapped: @escaping (_ tappedID: LibraryEntryIdentity) -> Void,
         checkDuplicate: @escaping (_ identity: LibraryEntryIdentity) -> Bool,
-        processTMDbSearchResults: @escaping (OrderedSet<SearchResult>, SearchSubmissionOrigin) -> Void,
+        processTMDbSearchResults:
+            @escaping (OrderedSet<SearchResult>, SearchSubmissionOrigin, LibraryCategory.ID?) -> Void,
         jumpToEntryInLibrary: @escaping (LibraryEntryIdentity) -> Void = { _ in },
-        initialMode: SearchMode? = nil
+        initialMode: SearchMode? = nil,
+        initialCategoryID: LibraryCategory.ID? = nil,
+        defaultCategoryRule: SearchAddCategoryDefault = .noCategory
     ) {
+        _addCategorySelection = State(
+            initialValue: SearchAddCategorySelection(
+                defaultRule: defaultCategoryRule, currentCategoryID: initialCategoryID)
+        )
         self.onDuplicateTapped = onDuplicateTapped
         self.checkDuplicate = checkDuplicate
         self.processTMDbSearchResults = processTMDbSearchResults
@@ -86,6 +95,7 @@ struct SearchPage: View {
             if isShowingTMDbBatchAdd {
                 TMDbBatchAddView(
                     language: tmdbLanguage,
+                    categoryID: $addCategorySelection.categoryID,
                     checkDuplicate: checkDuplicate,
                     onDuplicateTapped: onDuplicateTapped,
                     onExit: { leaveTMDbBatchAdd() }
@@ -169,6 +179,7 @@ struct SearchPage: View {
 
                 TMDbSearchContent(
                     language: $tmdbLanguage,
+                    categoryID: $addCategorySelection.categoryID,
                     onRetry: performSearch,
                     onDuplicateTapped: onDuplicateTapped,
                     checkDuplicate: checkDuplicate
@@ -213,6 +224,7 @@ struct SearchPage: View {
                 case .tmdb:
                     TMDbSearchContent(
                         language: $tmdbLanguage,
+                        categoryID: $addCategorySelection.categoryID,
                         onRetry: performSearch,
                         onDuplicateTapped: onDuplicateTapped,
                         checkDuplicate: checkDuplicate
@@ -273,7 +285,11 @@ struct SearchPage: View {
     }
 
     private func configureSearchServices() {
-        tmdbSearchService.processResults = processTMDbSearchResults
+        tmdbSearchService.processResults = { results, origin in
+            processTMDbSearchResults(
+                results, origin, addCategorySelection.categoryID
+            )
+        }
         tmdbSearchService.checkDuplicate = checkDuplicate
         librarySearchService.entriesProvider = { store.library }
         librarySearchService.jumpToEntryInLibrary = jumpToEntryInLibrary
@@ -330,7 +346,7 @@ struct SearchPage: View {
         SearchPage(
             onDuplicateTapped: { _ in },
             checkDuplicate: { _ in true },
-            processTMDbSearchResults: { results, _ in
+            processTMDbSearchResults: { results, _, _ in
                 print(results)
             }
         )

@@ -41,7 +41,17 @@ final class LibraryBrowseState {
     private(set) var newEntriesAddedToggle = false
     // A jump from search waits for the sheet to finish dismissing so it is not hidden behind it.
     private var isSearchSheetOnScreen = false
-    private var pendingJumpEntryID: LibraryEntryIdentity?
+    private enum SearchJump {
+        case existing(LibraryEntryIdentity)
+        case added(LibraryEntryIdentity, categoryID: LibraryCategory.ID?)
+
+        var entryID: LibraryEntryIdentity {
+            switch self {
+            case .existing(let id), .added(let id, _): id
+            }
+        }
+    }
+    private var pendingJump: SearchJump?
 
     /// Scrolls the current page to an entry; the page settles the bookmark on it.
     func requestScroll(to entryID: LibraryEntryIdentity) {
@@ -59,29 +69,58 @@ final class LibraryBrowseState {
         scope: LibraryBrowseScope,
         reveal: (LibraryEntryIdentity) -> Void
     ) {
-        // Defer a jump from search until the sheet has dismissed so the scroll and pulse play in view.
+        requestJump(.existing(id), scope: scope, reveal: reveal)
+    }
+
+    /// An explicit add follows its destination; regular library-search jumps retain their scope rules.
+    func jumpAfterAdd(
+        to id: LibraryEntryIdentity,
+        categoryID: LibraryCategory.ID?,
+        scope: LibraryBrowseScope,
+        reveal: (LibraryEntryIdentity) -> Void
+    ) {
+        requestJump(.added(id, categoryID: categoryID), scope: scope, reveal: reveal)
+    }
+
+    private func requestJump(
+        _ request: SearchJump,
+        scope: LibraryBrowseScope,
+        reveal: (LibraryEntryIdentity) -> Void
+    ) {
         if isSearchSheetOnScreen {
-            pendingJumpEntryID = id
+            pendingJump = request
         } else {
-            performJump(to: id, scope: scope, reveal: reveal)
+            performJump(request, scope: scope, reveal: reveal)
         }
     }
 
     func searchSheetDidDismiss(scope: LibraryBrowseScope, reveal: (LibraryEntryIdentity) -> Void) {
         isSearchSheetOnScreen = false
-        guard let pendingJumpEntryID else { return }
-        self.pendingJumpEntryID = nil
-        performJump(to: pendingJumpEntryID, scope: scope, reveal: reveal)
+        guard let pendingJump else { return }
+        self.pendingJump = nil
+        performJump(pendingJump, scope: scope, reveal: reveal)
     }
 
     private func performJump(
-        to id: LibraryEntryIdentity,
+        _ request: SearchJump,
         scope: LibraryBrowseScope,
         reveal: (LibraryEntryIdentity) -> Void
     ) {
-        reveal(id)
-        // Search spans the whole library, so leave a category that hides the entry.
-        withAnimation(.snappy) { scope.leaveCategoryToReveal(id) }
+        let id = request.entryID
+        switch request {
+        case .existing:
+            reveal(id)
+            // Ordinary library search spans the whole library.
+            withAnimation(.snappy) { scope.leaveCategoryToReveal(id) }
+        case .added(_, let categoryID):
+            withAnimation(.snappy) {
+                scope.activeCategoryID = scope.store.validCategoryID(categoryID)
+                if !scope.canRevealEntry(id) { scope.resetFiltersToReveal(id) }
+                // A concurrent visible duplicate may not belong to the requested destination.
+                scope.leaveCategoryToReveal(id)
+            }
+            reveal(id)
+        }
         requestScroll(to: id)
         highlightRequest = LibraryHighlightRequest(entryID: id)
     }
@@ -89,6 +128,7 @@ final class LibraryBrowseState {
     func processTMDbSearchResults(
         _ results: OrderedSet<SearchResult>,
         origin: SearchSubmissionOrigin,
+        categoryID: LibraryCategory.ID?,
         scope: LibraryBrowseScope,
         appReview: AppReviewPromptController,
         reveal: @escaping (LibraryEntryIdentity) -> Void
@@ -96,7 +136,7 @@ final class LibraryBrowseState {
         isSearching = false
         Task {
             ToastCenter.global.loadingMessage = .message("Loading…")
-            let success = await scope.store.newEntryFromSearchResults(results)
+            let success = await scope.store.newEntryFromSearchResults(results, categoryID: categoryID)
             // A failure shows its own toast; the loading toast never dismisses itself.
             ToastCenter.global.loadingMessage = nil
             if success {
@@ -104,7 +144,7 @@ final class LibraryBrowseState {
                 withAnimation {
                     newEntriesAddedToggle.toggle()
                     if let id = results.first?.libraryIdentity {
-                        jump(to: id, scope: scope, reveal: reveal)
+                        jumpAfterAdd(to: id, categoryID: categoryID, scope: scope, reveal: reveal)
                     }
                 }
             }
@@ -133,13 +173,15 @@ extension View {
                 checkDuplicate: scope.store.containsEntry,
                 canRevealEntry: scope.canRevealEntry,
                 resetFiltersToReveal: scope.resetFiltersToReveal,
-                processTMDbSearchResults: { results, origin in
+                processTMDbSearchResults: { results, origin, categoryID in
                     browse.processTMDbSearchResults(
-                        results, origin: origin, scope: scope, appReview: appReview, reveal: reveal)
+                        results, origin: origin, categoryID: categoryID, scope: scope, appReview: appReview,
+                        reveal: reveal)
                 },
                 jumpToEntryInLibrary: { browse.jump(to: $0, scope: scope, reveal: reveal) },
                 onDismiss: { browse.searchSheetDidDismiss(scope: scope, reveal: reveal) },
-                initialMode: initialMode
+                initialMode: initialMode,
+                initialCategoryID: scope.activeCategoryID
             )
     }
 }

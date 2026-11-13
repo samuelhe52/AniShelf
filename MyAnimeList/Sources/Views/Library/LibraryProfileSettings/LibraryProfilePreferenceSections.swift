@@ -146,60 +146,38 @@ struct LibraryProfilePreferencesSection: View {
             }
             .pickerStyle(.menu)
         #else
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text("New Entries Start As")
-                    .settingsRowTitleFont()
-                Spacer(minLength: 12)
-                Menu {
-                    Picker("New Entries Start As", selection: $defaultNewEntryWatchStatus) {
-                        ForEach(AnimeEntry.WatchStatus.allCases, id: \.self) { status in
-                            Text(status.localizedStringResource).tag(status)
-                        }
+            LibraryProfileMenuRow(
+                title: "New Entries Start As",
+                selection: defaultNewEntryWatchStatus.localizedStringResource,
+                tint: LibraryProfileSettingsDestination.libraryTracking.tint
+            ) {
+                Picker("New Entries Start As", selection: $defaultNewEntryWatchStatus) {
+                    ForEach(AnimeEntry.WatchStatus.allCases, id: \.self) { status in
+                        Text(status.localizedStringResource).tag(status)
                     }
-                } label: {
-                    LibraryProfileSelectionCapsule(
-                        title: defaultNewEntryWatchStatus.localizedStringResource,
-                        tint: LibraryProfileSettingsDestination.libraryTracking.tint
-                    )
                 }
-                .customLabeledMenu()
             }
-            .padding(.vertical, 2)
         #endif
     }
 
     private var defaultFiltersRow: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text("Default Filters")
-                .settingsRowTitleFont()
-            Spacer(minLength: 12)
-            Menu {
-                Toggle("All", isOn: allDefaultFiltersBinding)
-                ForEach(LibraryStore.AnimeFilter.typeCases, id: \.self) { filter in
+        LibraryProfileMenuRow(
+            title: "Default Filters",
+            selection: defaultFiltersSummaryResource,
+            tint: LibraryProfileSettingsDestination.libraryTracking.tint,
+            keepsPresented: true
+        ) {
+            Toggle("All", isOn: allDefaultFiltersBinding)
+            ForEach(LibraryStore.AnimeFilter.typeCases, id: \.self) { filter in
+                defaultFilterToggle(for: filter)
+            }
+            Menu("Watch Status") {
+                ForEach(LibraryStore.AnimeFilter.watchStatusCases, id: \.self) { filter in
                     defaultFilterToggle(for: filter)
                 }
-                Menu("Watch Status") {
-                    ForEach(LibraryStore.AnimeFilter.watchStatusCases, id: \.self) { filter in
-                        defaultFilterToggle(for: filter)
-                    }
-                }
-                defaultFilterToggle(for: .favorited)
-            } label: {
-                #if os(macOS)
-                    Text(defaultFiltersSummaryResource)
-                #else
-                    LibraryProfileSelectionCapsule(
-                        title: defaultFiltersSummaryResource,
-                        tint: LibraryProfileSettingsDestination.libraryTracking.tint
-                    )
-                #endif
             }
-            #if !os(macOS)
-                .customLabeledMenu()
-            #endif
-            .keepsMenuPresentedAfterAction()
+            defaultFilterToggle(for: .favorited)
         }
-        .padding(.vertical, 2)
     }
 
     private var orderedDefaultFilters: [LibraryStore.AnimeFilter] {
@@ -336,6 +314,8 @@ struct LibraryProfileCategorySettingsRows: View {
                             .presentationDetents([.medium, .large])
                     }
                 #endif
+
+                LibraryProfileSearchAddCategoryDefaultRow()
             }
         }
     }
@@ -349,5 +329,34 @@ struct LibraryProfileCategorySettingsRows: View {
                 }
             }
         )
+    }
+}
+
+/// Uses the same labeled capsule as the other iOS default rules; a bare menu picker
+/// hides its title outside a Form.
+fileprivate struct LibraryProfileSearchAddCategoryDefaultRow: View {
+    @AppStorage(.searchAddCategoryDefault) private var rule: SearchAddCategoryDefault = .noCategory
+
+    var body: some View {
+        #if os(macOS)
+            Picker("Default Category for Add", selection: $rule) {
+                ForEach(SearchAddCategoryDefault.allCases, id: \.self) { option in
+                    Text(option.title).tag(option)
+                }
+            }
+            .pickerStyle(.menu)
+        #else
+            LibraryProfileMenuRow(
+                title: "Default Category for Add",
+                selection: rule.title,
+                tint: LibraryProfileSettingsDestination.libraryTracking.tint
+            ) {
+                Picker("Default Category for Add", selection: $rule) {
+                    ForEach(SearchAddCategoryDefault.allCases, id: \.self) { option in
+                        Text(option.title).tag(option)
+                    }
+                }
+            }
+        #endif
     }
 }

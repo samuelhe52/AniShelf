@@ -17,6 +17,7 @@ struct TMDbBatchAddView: View {
     @Environment(TMDbSearchService.self) private var tmdbSearchService: TMDbSearchService
 
     let language: Language
+    @Binding var categoryID: LibraryCategory.ID?
     let checkDuplicate: (LibraryEntryIdentity) -> Bool
     let onDuplicateTapped: (LibraryEntryIdentity) -> Void
     let onExit: () -> Void
@@ -101,6 +102,11 @@ struct TMDbBatchAddView: View {
             case .results:
                 ToolbarItem(placement: .destructiveAction) {
                     Button(editTitleResource, action: returnToInputStep)
+                }
+                if case .loaded = tmdbSearchService.batchStatus, tmdbSearchService.batchRegisteredCount > 0 {
+                    ToolbarItem(placement: .sheetLeading) {
+                        SearchAddCategoryPicker(categoryID: $categoryID)
+                    }
                 }
                 switch tmdbSearchService.batchStatus {
                 case .loaded:
@@ -234,14 +240,18 @@ struct TMDbBatchAddView: View {
             switch tmdbSearchService.batchStatus {
             case .loaded:
                 if tmdbSearchService.batchRegisteredCount != 0 {
-                    Button {
-                        tmdbSearchService.submitBatch()
-                        exitBatchAdd()
-                    } label: {
-                        Text(addToLibraryTitleResource)
+                    HStack(spacing: 12) {
+                        SearchAddCategoryPicker(categoryID: $categoryID)
+                        Button {
+                            tmdbSearchService.submitBatch()
+                            exitBatchAdd()
+                        } label: {
+                            Text(addToLibraryTitleResource)
+                        }
+                        .buttonStyle(.glassProminent)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .shadow(color: .blue, radius: 5)
                     }
-                    .buttonStyle(.glassProminent)
-                    .shadow(color: .blue, radius: 5)
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
                     .padding(.bottom, 8)
