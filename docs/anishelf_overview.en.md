@@ -22,15 +22,14 @@ AniShelf helps you track, record, and manage the anime series and films you've w
 - Back up and restore your AniShelf library and settings, or export the library as TXT, CSV, TSV, JSON, or XLSX
 - Show anime info in English, Chinese, or Japanese
 - Group anime into your own categories, or describe a category in your own words and let Smart Features find the matching anime
-- Use AniShelf on iPhone, iPad, and as a native Mac app. On iPad and Mac, each window keeps its own category, filters, sorting, and view mode
-- A polished UI and smooth interactions
+- Use AniShelf on iPhone, iPad, and as a native Mac app
 
 AniShelf also has a companion command-line tool, [anishelf-cli](https://github.com/samuelhe52/anishelf-cli). With iCloud Sync enabled, the `ani` command gives you read-only access to your AniShelf library. See the [anishelf-cli README](https://github.com/samuelhe52/anishelf-cli#readme) for installation and usage.
 
 **What it is not:**
 
 - **A streaming or download tool (it provides no download links or playback)**
-- **A novel or manga reader (the "shelf" is a metaphor, not an actual bookshelf)**
+- **A novel or manga reader**
 
 Not yet available:
 
@@ -77,9 +76,9 @@ AniShelf requires a TMDb API key, which is free for personal use. To get one:
    6. Scroll down to see the overview, voice cast, episode summaries, and more.
    7. Eligible series show their air times. For a currently airing show, open the "···" menu and choose "Notifications" > "Enable" to get a reminder for each new episode. To change when one show's reminders arrive, choose "Reminder Timing" in the same menu, turn off "Use Default", and set a time before or after airtime.
    8. Episode progress is off by default. Turn on "Track Episode Progress" under Library & Tracking in Settings. The progress control then appears while an entry is Watching.
-   9. To rewatch an entry, change its status from Watched to Watching. When asked "Are You Rewatching?", tap "Start Rewatch". This clears episode progress, and marking the entry Watched again adds one to its rewatch count. Tap the badge next to the watch status to turn "Rewatching" on or off or to correct "Times Rewatched".
-   10. Series and seasons can have a note for each episode as well as an overall note. In the Notes section, tap "Overall" or an episode to write its note, or tap "Other…" to pick another episode. Notes you already wrote are kept under Overall. A series and its seasons share their episode notes. Touch and hold an episode chip to move the note to another episode or delete it. You can also add a note from an episode in the episode list: on iPhone and iPad, touch and hold the episode and choose to add a note from its preview; on Mac, right-click it and choose "Add Note".
-7. Long-press an entry on the main screen for more actions. In list view, swipe right or left on an entry to quickly update its watch status or delete it. Swipe left and tap "Open", or swipe all the way, to open the entry in another app. To skip the choice, pick an app under "Swipe Action Opens" in Appearance & Interaction in Settings. Turn on "Remember Last Choice" to use the last app successfully opened for each entry instead; the configured swipe action applies to an entry until its choice is remembered.
+   9. To rewatch an entry, change its status from Watched to Watching and tap "Start Rewatch" when asked "Are You Rewatching?". This clears episode progress, and marking the entry Watched again adds one to its rewatch count. Tap the badge next to the watch status to turn "Rewatching" on or off or to correct "Times Rewatched".
+   10. Series and seasons can have a note for each episode as well as an overall note, shared between a series and its seasons. In the Notes section, tap "Overall" or an episode to write its note, or tap "Other…" to pick another episode. Touch and hold an episode chip to move or delete its note. You can also add a note from the episode list: touch and hold the episode on iPhone and iPad, or right-click it on Mac and choose "Add Note".
+7. Long-press an entry on the main screen for more actions. In list view, swipe right or left on an entry to quickly update its watch status or delete it. Swipe left and tap "Open", or swipe all the way, to open the entry in another app. To skip the choice, pick an app under "Swipe Action Opens" in Appearance & Interaction in Settings, or turn on "Remember Last Choice" to reuse the last app that opened each entry.
 8. In list or grid view, tap "Select" at the top right to enter multi-select mode, where you can change status, rating, favorite, and date tracking in bulk, or delete entries in bulk.
 9. To group anime your own way, turn on "Library Categories" under Library & Tracking in Settings.
    1. In multi-select mode, select some entries and tap "Category". Pick a category to add or remove them, or tap "New Category…" to create one with them.
@@ -87,18 +86,18 @@ AniShelf requires a TMDb API key, which is free for personal use. To get one:
    3. Turn on "Sticky Category Strip" to keep category tabs below the navigation bar in list and grid views. Touch and hold a tab to rename or delete it, or choose "Reorder Tabs", drag the tabs, and tap "Done".
    4. To change one entry's categories, touch and hold it (right-click on Mac) and use "Categories", or use the detail page. On Mac, you can also drag entries onto a category in the sidebar.
    5. With Smart Features turned on, choose "Describe…" from "Category" in the status bar's menu or in the category manager, and describe the category you want, such as "mecha shows I rated 4 stars or higher". AniShelf proposes a name and checks your library; tap posters to include or leave out anime, then tap "Create Category".
-10. Tap the settings icon at the top right to open Settings. It shows your library statistics, followed by seven groups of settings: Language, Library & Tracking, Appearance & Interaction, Airing & Reminders, Metadata & Images, Smart Features, and Sync & Data.
+10. Tap the settings icon at the top right to open Settings. It shows your library statistics, followed by the settings.
    1. To sync your library, settings, and watch progress across devices, turn on iCloud Sync in Sync & Data and make sure every device is signed in to the same Apple Account.
    2. In Sync & Data, "Backup" saves your library and settings as a `.mallib` file (your TMDb API key isn't included), and "Restore" replaces the current library with a backup. Turn off iCloud Sync before restoring. "Export as..." exports the library to common file formats; these files can't be restored.
-   3. In Language, turn off "Follow System" to choose English, Chinese, or Japanese for anime info. Under "Default Poster", choose "Follow Anime Info Language" to show posters in that language when TMDb has one. Both changes apply only to info fetched afterward, so tap "Refresh" when asked, or "Refresh Infos" later, to update existing entries; posters you picked yourself are kept. "Refresh Infos" is in Metadata & Images, along with the TMDb proxy, API key, and cache controls.
+   3. In Language, turn off "Follow System" to choose English, Chinese, or Japanese for anime info. Under "Default Poster", choose "Follow Anime Info Language" to show posters in that language when TMDb has one. Both changes apply only to info fetched afterward, so tap "Refresh" when asked, or "Refresh Infos" in Metadata & Images later, to update existing entries.
    4. In Airing & Reminders, choose the "Default Timing" for all reminders, and tap "Reminders" to review, retime, or remove each reminder.
    5. In Smart Features, choose which model to use. Apple Intelligence runs on your device when it's supported and turned on. On iOS, iPadOS, and macOS 27 or later, you can instead add your own OpenAI or OpenRouter API key. With those providers, AniShelf sends your description and, for the anime it checks, their titles, years, kinds, studios, genres, and the start of their overviews to that provider. Your notes, ratings, and watch dates aren't sent.
 11. On Mac, AniShelf is a native app. Library scopes and categories are in the sidebar, and the selected entry's details appear in the inspector beside the library. Choose File > "New Window" to open another window; on iPad and Mac, each window keeps its own category, filters, sorting, and view mode.
 
 ## FAQ
 
-- What is the TMDb API? What is an API key? **AniShelf uses the TMDb API to fetch data for series and films, such as titles, overviews, and posters. A TMDb API key is a credential you request from the TMDb website that authorizes AniShelf to access TMDb data. Because the app is completely free, there is no shared API key; you need to request your own by following the guide above.**
-- My API key won't validate, loading is slow, or search returns nothing? **Try turning your VPN on or off, since some network proxy rules can interfere with access. The app connects to TMDb directly by default; if that's unreliable, turn on "Use TMDb Proxy" in Settings. If you already use a VPN or another network proxy, it's usually best to leave that option off.**
+- What is the TMDb API? What is an API key? **AniShelf fetches titles, overviews, and posters from the TMDb API. An API key is a credential you request from TMDb to authorize that access. AniShelf has no shared key, so you request your own by following the guide above.**
+- My API key won't validate, loading is slow, or search returns nothing? **Try turning your VPN on or off, since some network proxy rules can interfere with access. If that doesn't help, turn on "Use TMDb Proxy" in Settings, unless you already use a VPN or another network proxy (see the note near the top).**
 - How do I sync my library across devices? **Turn on iCloud Sync in Settings and make sure every device is signed in to the same Apple Account. It syncs your library, related settings, and watch progress. Syncing watch data with TMDb, AniList, Bangumi, and similar platforms isn't supported yet.**
 - Why can't I find episode progress? **It's off by default. Turn on "Track Episode Progress" under Library & Tracking in Settings. The progress control appears on the detail page only while an entry is Watching.**
 - Why can't I restore my library? **Turn off iCloud Sync first, then turn it on again after the restore. Only `.mallib` backup files can be restored; files made with "Export as..." (TXT, CSV, TSV, JSON, XLSX) can't.**
@@ -111,11 +110,9 @@ AniShelf requires a TMDb API key, which is free for personal use. To get one:
 
 ## Roadmap
 
-**AniShelf started as a personal project. I know the current version doesn't cover everything many users need, but this is a passion project and I also have school and work, so updates won't be very frequent. Thanks for understanding. I'll prioritize bugs that affect the experience and add new features where it makes sense.**
+**AniShelf is a passion project, and I also have school and work, so updates won't be very frequent. I'll prioritize bugs that affect the experience and add new features where it makes sense.**
 
 Planned updates:
 
 - Ongoing bug fixes
-- Syncing watch data with platforms such as TMDb, AniList, or Bangumi (an ambitious goal; this is fairly complex, and I'm not sure when I'll have time for it)
-
-Note: The order of this list does not reflect the order in which features will be implemented.
+- Syncing watch data with platforms such as TMDb, AniList, or Bangumi (complex, with no date yet)
