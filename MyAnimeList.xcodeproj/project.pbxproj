@@ -616,6 +616,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MyAnimeList/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = AniShelf;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save posters and Anime Sharing Cards into Photos. ";
@@ -663,6 +664,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = MyAnimeList/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = AniShelf;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save posters and Anime Sharing Cards into Photos. ";
