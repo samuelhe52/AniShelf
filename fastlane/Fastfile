@@ -49,6 +49,17 @@ def find_build(version, build, platform)
   Spaceship::ConnectAPI::Build.all(app_id: app.id, version: version, build_number: build, platform: platform).first
 end
 
+# The processed iOS and macOS builds with the number `wait_builds` reported. Lanes that publish
+# take it explicitly: the newest upload could change between lanes if Xcode Cloud runs again.
+def release_builds(version, build)
+  UI.user_error!("Pass build:<number>, the number wait_builds reported") if build.to_s.empty?
+  PLATFORMS.keys.to_h do |platform|
+    b = find_build(version, build.to_s, platform)
+    UI.user_error!("#{platform} build #{version} (#{build}) is not processed (#{b&.processing_state || 'missing'})") unless b&.processing_state == "VALID"
+    [platform, b]
+  end
+end
+
 def read_notes(path)
   UI.user_error!("Missing notes file") unless path
   text = File.read(File.expand_path(path, ROOT)).strip
@@ -112,7 +123,7 @@ platform :ios do
 
   desc "Set What to Test on both builds, add them to the external group, notify testers and submit Beta App Review"
   desc "The internal group gets every build automatically"
-  desc "Options: notes (path to the approved Chinese release notes, one \"- \" line each, required), version, build, preview (true: print What to Test and stop)"
+  desc "Options: notes (path to the approved Chinese release notes, one \"- \" line each, required), build (required), version, preview (true: print What to Test and stop)"
   lane :beta do |options|
     version = (options[:version] || project_version).to_s
     notes = testflight_notes(version, read_notes(options[:notes]))
@@ -120,8 +131,9 @@ platform :ios do
       UI.message("What to Test:\n#{notes}")
       next
     end
+    builds = release_builds(version, options[:build])
     PLATFORMS.each do |platform, fastlane_platform|
-      b = find_build(version, options[:build], platform) || UI.user_error!("No #{platform} build #{version} on App Store Connect")
+      b = builds[platform]
       upload_to_testflight(
         api_key_path: API_KEY_PATH,
         app_identifier: APP_IDENTIFIER,
@@ -139,15 +151,13 @@ platform :ios do
   end
 
   desc "Create both App Store versions if needed, set What's New, attach the builds and submit both for App Review"
-  desc "Releases stay manual after approval. Options: notes (path to the en-US What's New, required), version, build"
+  desc "Releases stay manual after approval. Options: notes (path to the en-US What's New, required), build (required), version"
   lane :submit do |options|
     version = (options[:version] || project_version).to_s
     notes = read_notes(options[:notes])
-    builds = PLATFORMS.keys.to_h do |platform|
-      b = find_build(version, options[:build], platform)
-      UI.user_error!("#{platform} build #{version} is not processed (#{b&.processing_state || 'missing'})") unless b&.processing_state == "VALID"
+    builds = release_builds(version, options[:build])
+    builds.each do |platform, b|
       UI.user_error!("#{platform} build #{version} (#{b.version}) declares non-exempt encryption") unless b.uses_non_exempt_encryption == false
-      [platform, b]
     end
     PLATFORMS.each do |platform, fastlane_platform|
       # An empty metadata folder, so only What's New is uploaded and the rest of the listing stays as it is.
