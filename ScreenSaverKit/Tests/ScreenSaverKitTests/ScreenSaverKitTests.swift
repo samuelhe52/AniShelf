@@ -7,6 +7,7 @@
 
 import Foundation
 import ImageIO
+import QuartzCore
 import Testing
 import UniformTypeIdentifiers
 
@@ -38,6 +39,18 @@ struct ScreenSaverKitTests {
         #expect(fixture.reader.read() == .ready(expected))
         let encoded = try expected.encoded()
         #expect(String(decoding: encoded, as: UTF8.self).contains("2026-09-21T14:13:20Z"))
+        #expect(expected.rendererVersion == ScreenSaverManifest.currentRendererVersion)
+
+        var legacy = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        legacy["rendererVersion"] = nil
+        legacy["schemaVersion"] = 1
+        try JSONSerialization.data(withJSONObject: legacy).write(to: fixture.manifestURL)
+        guard case .ready(let legacyManifest) = fixture.reader.read() else {
+            Issue.record("The renderer should be able to read an existing snapshot")
+            return
+        }
+        #expect(legacyManifest.entries == expected.entries)
+        #expect(legacyManifest.rendererVersion == nil)
     }
 
     @Test
@@ -50,7 +63,9 @@ struct ScreenSaverKitTests {
         #expect(fixture.reader.read() == .empty)
         try Data(#"{"schemaVersion":0}"#.utf8).write(to: fixture.manifestURL)
         #expect(fixture.reader.read() == .empty)
-        try Data(#"{"schemaVersion":2,"payload":"future format"}"#.utf8).write(to: fixture.manifestURL)
+        try Data(#"{"schemaVersion":999,"payload":"future format"}"#.utf8).write(to: fixture.manifestURL)
+        #expect(fixture.reader.read() == .requiresUpdate)
+        try Data(#"{"schemaVersion":2,"rendererVersion":999}"#.utf8).write(to: fixture.manifestURL)
         #expect(fixture.reader.read() == .requiresUpdate)
         try fixture.write(
             ScreenSaverManifest(settings: .init(layout: .coverWall, showsTitles: true, interval: 12), entries: []))
@@ -205,6 +220,52 @@ struct ScreenSaverKitTests {
         #expect(!session.contains(first))
         #expect(!session.contains(second))
         #expect(session.contains(third))
+    }
+
+    @Test
+    @MainActor
+    func inMemoryPreviewRespondsToPresentationChangesWithTheSameArtwork() async throws {
+        let bitmap = try #require(
+            CGContext(
+                data: nil, width: 20, height: 30, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+            )?.makeImage())
+        let renderer = ScreenSaverRenderer { _ in "Empty" }
+        defer { renderer.stop() }
+        renderer.resize(to: CGSize(width: 800, height: 500), scale: 1)
+        let entries: [ScreenSaverManifest.Entry] = [
+            .init(id: "first", title: "Poster title", poster: "memory", posterPixelSize: .init(width: 20, height: 30))
+        ]
+        renderer.updatePreview(
+            .init(
+                settings: .init(layout: .posterFocus, showsTitles: true, interval: 60),
+                entries: entries, images: ["memory": bitmap]
+            ))
+
+        func waitForScene(after previous: CALayer?) async throws -> CALayer {
+            let clock = ContinuousClock()
+            let deadline = clock.now + .seconds(2)
+            while clock.now < deadline {
+                if let scene = renderer.layer.sublayers?.last, scene !== previous { return scene }
+                try await Task.sleep(for: .milliseconds(5))
+            }
+            throw CocoaError(.coderInvalidValue)
+        }
+
+        let withTitle = try await waitForScene(after: nil)
+        #expect(withTitle.sublayers?.contains { $0 is CATextLayer } == true)
+        let alternate = try #require(bitmap.cropping(to: CGRect(x: 0, y: 0, width: 10, height: 15)))
+        let other = ScreenSaverManifest.Entry(
+            id: "other", title: "Other title", poster: "alternate", posterPixelSize: .init(width: 10, height: 15)
+        )
+        renderer.updatePreview(
+            .init(
+                settings: .init(layout: .posterFocus, showsTitles: false, interval: 60),
+                entries: [other] + entries, images: ["memory": bitmap, "alternate": alternate]
+            ))
+        let withoutTitle = try await waitForScene(after: withTitle)
+        #expect(withoutTitle.sublayers?.contains { $0 is CATextLayer } == false)
+        #expect(withoutTitle.sublayers?.contains { ($0.contents as AnyObject?) === bitmap } == true)
     }
 
     @Test

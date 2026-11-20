@@ -8,7 +8,9 @@
 import Foundation
 
 public struct ScreenSaverManifest: Codable, Equatable, Sendable {
-    public static let currentSchemaVersion = 1
+    // Version 1 readers did not check the renderer version. Bump the schema so they show the update notice.
+    public static let currentSchemaVersion = 2
+    public static let currentRendererVersion = 2
 
     public enum Layout: String, Codable, CaseIterable, Sendable {
         case coverWall
@@ -70,6 +72,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
     }
 
     public let schemaVersion: Int
+    public let rendererVersion: Int?
     public let generation: UUID
     public let createdAt: Date
     public let settings: Settings
@@ -77,6 +80,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
 
     public init(generation: UUID = UUID(), createdAt: Date = .now, settings: Settings, entries: [Entry]) {
         self.schemaVersion = Self.currentSchemaVersion
+        self.rendererVersion = Self.currentRendererVersion
         self.generation = generation
         // The snapshot wire format uses UTC ISO 8601 dates with second precision.
         self.createdAt = Date(timeIntervalSince1970: floor(createdAt.timeIntervalSince1970))

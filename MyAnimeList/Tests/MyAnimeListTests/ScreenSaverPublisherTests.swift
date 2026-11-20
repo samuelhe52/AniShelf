@@ -78,7 +78,8 @@
             #expect(japanese.id == "season:11:2:12")
             #expect(japanese.title == "Library series")
             #expect(japanese.subtitle == "シーズン2")
-            #expect(japanese.poster?.variant == .posterFull)
+            #expect(japanese.poster?.url.pathComponents.suffix(2) == ["w780", "chosen.jpg"])
+            #expect(japanese.previewPoster?.variant == .posterThumbnail)
             #expect(japanese.poster?.url.lastPathComponent == "chosen.jpg")
             #expect(japanese.backdrop?.pathComponents.suffix(2) == ["original", "scene.jpg"])
             #expect(japanese.logo?.url.lastPathComponent == "logo.svg")
@@ -94,7 +95,9 @@
 
             settings.showsTitles = false
             let hiddenTitles = try #require(fixture.draft(settings).entries.only)
-            #expect(hiddenTitles.title == nil && hiddenTitles.subtitle == nil && hiddenTitles.logo == nil)
+            #expect(
+                hiddenTitles.title == nil && hiddenTitles.subtitle == nil
+                    && hiddenTitles.logo == japanese.logo)
         }
 
         @Test
@@ -102,27 +105,30 @@
             let fixture = try Fixture()
             defer { fixture.cleanup() }
             let writer = ScreenSaverSnapshotWriter(directory: fixture.snapshot)
-            let a = try fixture.stageImage(1)
-            let b = try fixture.stageImage(2)
-            let c = try fixture.stageImage(3)
+            let a = fixture.encodedImage(1).image
+            let b = fixture.encodedImage(2).image
+            let c = fixture.encodedImage(3).image
             let initial = fixture.manifest(images: [a, b])
-            try await writer.publish(initial, stagedImages: fixture.staging)
+            try await writer.store(fixture.encodedImage(1))
+            try await writer.store(fixture.encodedImage(2))
+            _ = try await writer.publish(initial, complete: true)
             let originalFile =
                 try FileManager.default.attributesOfItem(atPath: fixture.manifestURL.path())[.systemFileNumber]
                 as? NSNumber
             let originalBytes = try Data(contentsOf: fixture.manifestURL)
             let missing = ScreenSaverImageExporter.Image(
                 filename: String(repeating: "0", count: 64) + ".heic", pixelSize: a.pixelSize)
+            try await writer.store(fixture.encodedImage(3))
             await #expect(throws: CocoaError.self) {
-                try await writer.publish(fixture.manifest(images: [c, missing]), stagedImages: fixture.staging)
+                _ = try await writer.publish(fixture.manifest(images: [c, missing]))
             }
             #expect(try Data(contentsOf: fixture.manifestURL) == originalBytes)
-            #expect(!fixture.hasImage(c))
+            #expect(fixture.hasImage(c))
 
             let userFile = fixture.snapshot.appending(component: "images").appending(component: "keep.txt")
             try Data().write(to: userFile)
             let second = fixture.manifest(images: [b])
-            try await writer.publish(second)
+            _ = try await writer.publish(second, complete: true, keeping: [c.filename])
             #expect(await writer.readManifest() == second)
             let replacedFile =
                 try FileManager.default.attributesOfItem(atPath: fixture.manifestURL.path())[.systemFileNumber]
@@ -131,7 +137,7 @@
             #expect(fixture.hasImage(a) && fixture.hasImage(b))
 
             let third = fixture.manifest(images: [c])
-            try await writer.publish(third, stagedImages: fixture.staging)
+            _ = try await writer.publish(third, complete: true)
             #expect(await writer.readManifest() == third)
             #expect(!fixture.hasImage(a) && fixture.hasImage(b) && fixture.hasImage(c))
             #expect(FileManager.default.fileExists(atPath: userFile.path()))
@@ -156,9 +162,9 @@
                     builds += 1
                     return ScreenSaverSnapshotBuilder.build(from: fixture.store, settings: settings, language: language)
                 },
-                exportImage: { request, staging in
+                exportImage: { request in
                     exports += 1
-                    return try fixture.stageImage(for: request, to: staging)
+                    return try fixture.encodedImage(for: request)
                 }
             )
             let writer = ScreenSaverSnapshotWriter(directory: fixture.snapshot)
@@ -172,7 +178,8 @@
             #expect(exports == 1)
             #expect(await writer.readManifest()?.generation == generation)
 
-            await publisher.refreshNow()
+            publisher.settings.interval = 20
+            try await waitUntil { await writer.readManifest()?.settings.interval == 20 }
             #expect(exports == 1)
             #expect(await writer.readManifest()?.generation != generation)
 
@@ -199,7 +206,10 @@
             settings.isEnabled = false
             settings.save(to: fixture.defaults)
             try await waitUntil { await writer.readManifest()?.entries.isEmpty == true }
+            try await waitUntil { !publisher.status.isPublishing }
             #expect(exports == 2)
+            let imageFolder = fixture.snapshot.appending(component: "images")
+            #expect(try FileManager.default.contentsOfDirectory(atPath: imageFolder.path()).isEmpty)
         }
 
         @Test
@@ -220,12 +230,12 @@
                 buildDraft: { settings, language in
                     ScreenSaverSnapshotBuilder.build(from: fixture.store, settings: settings, language: language)
                 },
-                exportImage: { request, staging in
+                exportImage: { request in
                     if case .poster(let image) = request, image.url.lastPathComponent == "slow.jpg" {
                         await gate.wait()
                         throw CocoaError(.fileReadCorruptFile)
                     }
-                    return try fixture.stageImage(for: request, to: staging)
+                    return try fixture.encodedImage(for: request)
                 }
             )
             defer { gate.release() }
@@ -239,10 +249,10 @@
             settings.save(to: fixture.defaults)
 
             try await waitUntil { gate.isWaiting }
-            #expect(await writer.readManifest()?.entries.map(\.id) == ["movie:1"])
+            try await waitUntil { await writer.readManifest()?.entries.map(\.id) == ["movie:1"] }
             gate.release()
             try await waitUntil { !publisher.status.isPublishing }
-            #expect(publisher.status.eligibleCount == 2)
+            #expect(publisher.draft.entries.count == 2)
             #expect(publisher.status.unavailableImageCount == 1)
             #expect(await writer.readManifest()?.entries.map(\.id) == ["movie:1"])
         }
@@ -252,28 +262,30 @@
             let fixture = try Fixture()
             defer { fixture.cleanup() }
             let writer = ScreenSaverSnapshotWriter(directory: fixture.snapshot)
-            let image = try fixture.stageImage(1)
-            let existing = fixture.manifest(images: [image])
-            try await writer.publish(existing, stagedImages: fixture.staging)
+            let encoded = fixture.encodedImage(1)
+            try await writer.store(encoded)
+            let existing = fixture.manifest(images: [encoded.image])
+            _ = try await writer.publish(existing)
 
+            var draftsBuilt = 0
             let publisher = ScreenSaverPublisher(
                 defaults: fixture.defaults, directory: fixture.snapshot, debounce: .milliseconds(30),
                 preserveSnapshotUntilEnabled: true,
                 buildDraft: { settings, language in
-                    ScreenSaverSnapshotBuilder.build(from: fixture.store, settings: settings, language: language)
+                    draftsBuilt += 1
+                    return ScreenSaverSnapshotBuilder.build(from: fixture.store, settings: settings, language: language)
                 }
             )
-            await publisher.refreshNow()
+            try await waitUntil { draftsBuilt == 1 }
             #expect(await writer.readManifest() == existing)
-            #expect(publisher.status.generation == nil)
+            #expect(publisher.status.lastPublication == nil)
 
             publisher.settings.isEnabled = true
             #expect(fixture.defaults.bool(forKey: ScreenSaverSettings.enabledKey))
             try await waitUntil {
                 await writer.readManifest()?.entries.isEmpty == true && !publisher.status.isPublishing
             }
-            #expect(publisher.status.generation != nil)
-            #expect(publisher.status.generation == (await writer.readManifest())?.generation)
+            #expect(publisher.status.lastPublication != nil)
         }
 
         @Test
@@ -287,7 +299,7 @@
                     draftsBuilt += 1
                     return ScreenSaverSnapshotBuilder.build(from: fixture.store, settings: settings, language: language)
                 },
-                exportImage: { _, _ in
+                exportImage: { _ in
                     Issue.record("An empty scope has no images to export")
                     throw CocoaError(.fileReadNoSuchFile)
                 }
@@ -318,13 +330,13 @@
                 buildDraft: { settings, language in
                     ScreenSaverSnapshotBuilder.build(from: fixture.store, settings: settings, language: language)
                 },
-                exportImage: { request, staging in
+                exportImage: { request in
                     if pauseNextImage {
                         pauseNextImage = false
                         await gate.wait()
                     }
                     try Task.checkCancellation()
-                    return try fixture.stageImage(for: request, to: staging)
+                    return try fixture.encodedImage(for: request)
                 }
             )
             defer { gate.release() }
@@ -336,7 +348,7 @@
             try fixture.save()
             fixture.defaults.set(ScreenSaverSettings.Scope.favorites.rawValue, forKey: ScreenSaverSettings.scopeKey)
             try await waitUntil { gate.isWaiting }
-            #expect(await writer.readManifest()?.entries.map(\.id) == ["movie:1"])
+            try await waitUntil { await writer.readManifest()?.entries.map(\.id) == ["movie:1"] }
 
             kept.posterPath = "/keep.jpg"
             try fixture.save()
@@ -362,6 +374,8 @@
             let noPoster = AnimeEntry(
                 name: "No poster", type: .movie, posterPath: "/broken.jpg", tmdbID: 3
             )
+            noBackdrop.favorite = true
+            noLogo.favorite = true
             try fixture.insert(noBackdrop, noLogo, noPoster)
             var settings = ScreenSaverSettings()
             settings.isEnabled = true
@@ -373,7 +387,7 @@
                 buildDraft: { settings, language in
                     ScreenSaverSnapshotBuilder.build(from: fixture.store, settings: settings, language: language)
                 },
-                exportImage: { request, staging in
+                exportImage: { request in
                     switch request {
                     case .poster(let image) where image.url.lastPathComponent == "broken.jpg",
                         .logo(let image) where image.url.lastPathComponent == "broken.svg":
@@ -381,7 +395,7 @@
                     case .backdrop(let url) where url.lastPathComponent == "broken.jpg":
                         throw CocoaError(.fileReadCorruptFile)
                     default:
-                        return try fixture.stageImage(for: request, to: staging)
+                        return try fixture.encodedImage(for: request)
                     }
                 }
             )
@@ -393,6 +407,65 @@
             #expect(entries.last?.backdrop != nil && entries.last?.logo == nil)
             #expect(entries.last?.title == "Text instead")
             #expect(publisher.status.unavailableImageCount == 1)
+            #expect(publisher.status.failedPosterCount == 1)
+
+            publisher.settings.scope = .favorites
+            try await waitUntil { publisher.status.unavailableImageCount == 0 && !publisher.status.isPublishing }
+            #expect(publisher.status.failedPosterCount == 0)
+            #expect(publisher.status.hasFailedArtwork)
+        }
+
+        @Test
+        func presentationEditsCommitWhileArtworkIsPendingAndScopeChangesReuseCompletedFiles() async throws {
+            let fixture = try Fixture()
+            defer { fixture.cleanup() }
+            let fast = AnimeEntry(name: "Fast", type: .movie, posterPath: "/fast.jpg", tmdbID: 1)
+            let slow = AnimeEntry(name: "Slow", type: .movie, posterPath: "/slow.jpg", tmdbID: 2)
+            fast.favorite = true
+            try fixture.insert(fast, slow)
+            var settings = ScreenSaverSettings()
+            settings.scope = .all
+            settings.isEnabled = true
+            settings.save(to: fixture.defaults)
+
+            let gate = ImageGate()
+            defer { gate.release() }
+            var requests: [String: Int] = [:]
+            let publisher = ScreenSaverPublisher(
+                defaults: fixture.defaults, directory: fixture.snapshot, debounce: .seconds(30),
+                buildDraft: { ScreenSaverSnapshotBuilder.build(from: fixture.store, settings: $0, language: $1) },
+                exportImage: { request in
+                    guard case .poster(let source) = request else { throw CocoaError(.fileReadCorruptFile) }
+                    let name = source.url.lastPathComponent
+                    requests[name, default: 0] += 1
+                    if name == "slow.jpg", requests[name] == 1 {
+                        await gate.wait()
+                    }
+                    try Task.checkCancellation()
+                    return try fixture.encodedImage(for: request)
+                }
+            )
+            let writer = ScreenSaverSnapshotWriter(directory: fixture.snapshot)
+            try await waitUntil { gate.isWaiting }
+            try await waitUntil { await writer.readManifest()?.entries.map(\.id) == ["movie:1"] }
+            #expect(publisher.status.isPublishing)
+
+            publisher.settings.layout = .posterFocus
+            publisher.settings.showsTitles = false
+            publisher.settings.interval = 20
+            try await waitUntil {
+                guard let manifest = await writer.readManifest() else { return false }
+                return manifest.settings.layout == .posterFocus && manifest.settings.interval == 20
+                    && manifest.entries.first?.title == nil
+            }
+            #expect(requests == ["fast.jpg": 1, "slow.jpg": 1])
+
+            publisher.settings.scope = .favorites
+            try await waitUntil { !publisher.status.isPublishing }
+            gate.release()
+            publisher.settings.scope = .all
+            try await waitUntil { await writer.readManifest()?.entries.count == 2 }
+            #expect(requests == ["fast.jpg": 1, "slow.jpg": 2])
         }
 
         private func waitUntil(_ predicate: () async -> Bool) async throws {
@@ -435,10 +508,8 @@
                 dataProvider: library.makeBootstrap().provider, preferences: LibraryPreferences(defaults: defaults),
                 allowsCloudSync: false
             )
-            try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
         }
 
-        var staging: URL { directory.appending(component: "staging") }
         var snapshot: URL { directory.appending(component: "snapshot") }
         var manifestURL: URL { snapshot.appending(component: "manifest.json") }
 
@@ -459,17 +530,16 @@
             )
         }
 
-        func stageImage(_ value: UInt8, to location: URL? = nil) throws -> ScreenSaverImageExporter.Image {
+        func encodedImage(_ value: UInt8) -> ScreenSaverImageExporter.EncodedImage {
             let data = Data([value])
             let hash = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-            let filename = "\(hash).heic"
-            try data.write(to: (location ?? staging).appending(component: filename), options: .atomic)
-            return .init(filename: filename, pixelSize: .init(width: 10, height: 15))
+            return .init(
+                image: .init(filename: "\(hash).heic", pixelSize: .init(width: 10, height: 15)), data: data
+            )
         }
 
-        func stageImage(
-            for request: ScreenSaverImageExporter.Request, to location: URL
-        ) throws -> ScreenSaverImageExporter.Image {
+        func encodedImage(for request: ScreenSaverImageExporter.Request) throws -> ScreenSaverImageExporter.EncodedImage
+        {
             let context = try #require(
                 CGContext(
                     data: nil, width: 64, height: 96, bitsPerComponent: 8, bytesPerRow: 0,
@@ -479,14 +549,16 @@
             context.fill(CGRect(x: 0, y: 0, width: 64, height: 96))
             let pixels = try #require(context.makeImage())
             let filename = request.filename
-            let url = location.appending(component: filename)
-            let type: UTType = url.pathExtension == "heic" ? .heic : .png
+            let type: UTType = filename.hasSuffix(".heic") ? .heic : .png
+            let buffer = NSMutableData()
             let destination = try #require(
-                CGImageDestinationCreateWithURL(url as CFURL, type.identifier as CFString, 1, nil)
+                CGImageDestinationCreateWithData(buffer, type.identifier as CFString, 1, nil)
             )
             CGImageDestinationAddImage(destination, pixels, nil)
             try #require(CGImageDestinationFinalize(destination))
-            return .init(filename: filename, pixelSize: .init(width: 64, height: 96))
+            return .init(
+                image: .init(filename: filename, pixelSize: .init(width: 64, height: 96)), data: buffer as Data
+            )
         }
 
         func manifest(images: [ScreenSaverImageExporter.Image]) -> ScreenSaverManifest {

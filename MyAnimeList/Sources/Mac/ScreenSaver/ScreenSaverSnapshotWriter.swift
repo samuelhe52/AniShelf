@@ -7,11 +7,11 @@
 
 #if os(macOS)
     import Foundation
-    import OSLog
     import ScreenSaverKit
 
     actor ScreenSaverSnapshotWriter {
         private let directory: URL
+        private var lastCompletedFiles: Set<String>?
 
         init(directory: URL) {
             self.directory = directory
@@ -30,7 +30,8 @@
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             guard let manifest = try? decoder.decode(ScreenSaverManifest.self, from: data),
-                manifest.schemaVersion == ScreenSaverManifest.currentSchemaVersion
+                (1...ScreenSaverManifest.currentSchemaVersion).contains(manifest.schemaVersion),
+                manifest.rendererVersion ?? 1 <= ScreenSaverManifest.currentRendererVersion
             else { return nil }
             return manifest
         }
@@ -39,79 +40,92 @@
             FileManager.default.fileExists(atPath: manifestURL.path())
         }
 
-        func existingImage(named filename: String) -> ScreenSaverImageExporter.Image? {
-            let file = imagesURL.appending(component: filename, directoryHint: .notDirectory)
-            guard Self.isImageFilename(filename),
-                (try? directory.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true,
-                (try? imagesURL.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true,
-                Self.isRegularFile(file)
-            else { return nil }
+        func existingImage(named filename: String) throws -> ScreenSaverImageExporter.Image? {
+            try validateDirectories()
+            let file = try imageURL(named: filename)
+            guard Self.isRegularFile(file) else { return nil }
             return ScreenSaverImageExporter.Image.read(from: file)
         }
 
-        func publish(_ manifest: ScreenSaverManifest, stagedImages: URL? = nil) throws {
+        func store(_ encoded: ScreenSaverImageExporter.EncodedImage) throws {
             try Task.checkCancellation()
+            try validateDirectories()
+            let destination = try imageURL(named: encoded.image.filename)
+            let properties = try? destination.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+            if properties?.isSymbolicLink == true
+                || (FileManager.default.fileExists(atPath: destination.path()) && properties?.isRegularFile != true)
+            {
+                throw CocoaError(.fileWriteInvalidFileName)
+            }
+            try FileManager.default.createDirectory(at: imagesURL, withIntermediateDirectories: true)
+            try encoded.data.write(to: destination, options: .atomic)
+        }
+
+        /// Partial manifests leave the image cache alone. A completed update retains the previous
+        /// completed snapshot for a renderer that is still displaying it.
+        func publish(
+            _ manifest: ScreenSaverManifest, complete: Bool = false, keeping extraFiles: Set<String> = []
+        ) throws -> ScreenSaverManifest {
+            try Task.checkCancellation()
+            try validateDirectories()
             let previous = readManifest()
-            let mayPrune = previous != nil || !hasManifest()
+            let hasManifest = hasManifest()
             let referenced = try Self.imageFilenames(in: manifest)
-            let fileManager = FileManager.default
+            let previousFiles = previous.flatMap { try? Self.imageFilenames(in: $0) } ?? []
+            let mayPrune = previous != nil || !hasManifest
+            if lastCompletedFiles == nil, mayPrune { lastCompletedFiles = previousFiles }
+
+            let unchanged =
+                previous?.schemaVersion == manifest.schemaVersion
+                && previous?.rendererVersion == manifest.rendererVersion
+                && previous?.settings == manifest.settings && previous?.entries == manifest.entries
+            if !unchanged {
+                for name in referenced.subtracting(previousFiles) {
+                    guard Self.isRegularFile(try imageURL(named: name)) else { throw CocoaError(.fileReadNoSuchFile) }
+                }
+                try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                try manifest.encoded().write(to: manifestURL, options: .atomic)
+            }
+
+            if complete, mayPrune {
+                try prune(keeping: referenced.union(previousFiles).union(lastCompletedFiles ?? []).union(extraFiles))
+                lastCompletedFiles = referenced
+            }
+            return unchanged ? previous ?? manifest : manifest
+        }
+
+        func removeArtwork(settings: ScreenSaverManifest.Settings) throws {
+            try Task.checkCancellation()
+            try validateDirectories()
+            if hasManifest() {
+                _ = try publish(.init(settings: settings, entries: []))
+            }
+            try prune(keeping: [])
+            lastCompletedFiles = []
+        }
+
+        private func validateDirectories() throws {
             for folder in [directory, imagesURL]
             where (try? folder.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == true {
                 throw CocoaError(.fileWriteInvalidFileName)
             }
-            try fileManager.createDirectory(at: imagesURL, withIntermediateDirectories: true)
-
-            var added: [URL] = []
-            do {
-                for name in referenced {
-                    try Task.checkCancellation()
-                    let destination = imagesURL.appending(component: name, directoryHint: .notDirectory)
-                    let exists = Self.isRegularFile(destination)
-                    if !exists,
-                        fileManager.fileExists(atPath: destination.path())
-                            || (try? destination.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == true
-                    {
-                        throw CocoaError(.fileWriteInvalidFileName)
-                    }
-                    let source = stagedImages?.appending(component: name, directoryHint: .notDirectory)
-                    if let source, Self.isRegularFile(source) {
-                        let data = try Data(contentsOf: source, options: .mappedIfSafe)
-                        try data.write(to: destination, options: .atomic)
-                        if !exists { added.append(destination) }
-                    } else if !exists {
-                        throw CocoaError(.fileReadNoSuchFile)
-                    }
-                }
-
-                try Task.checkCancellation()
-                try manifest.encoded().write(to: manifestURL, options: .atomic)
-            } catch {
-                for file in added { try? fileManager.removeItem(at: file) }
-                throw error
-            }
-
-            if mayPrune {
-                let previousFiles = previous.flatMap { try? Self.imageFilenames(in: $0) } ?? []
-                prune(keeping: referenced.union(previousFiles))
-            }
         }
 
-        private func prune(keeping filenames: Set<String>) {
+        private func imageURL(named filename: String) throws -> URL {
+            guard Self.isImageFilename(filename) else { throw CocoaError(.fileWriteInvalidFileName) }
+            return imagesURL.appending(component: filename, directoryHint: .notDirectory)
+        }
+
+        private func prune(keeping filenames: Set<String>) throws {
             let fileManager = FileManager.default
-            do {
-                let contents = try fileManager.contentsOfDirectory(
-                    at: imagesURL, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles])
-                for file in contents {
-                    let name = file.lastPathComponent
-                    guard Self.isImageFilename(name), !filenames.contains(name),
-                        (try? file.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
-                    else { continue }
-                    try fileManager.removeItem(at: file)
-                }
-            } catch {
-                Logger(subsystem: .bundleIdentifier, category: "ScreenSaver").error(
-                    "Could not prune screen saver assets: \(error.localizedDescription, privacy: .private)"
-                )
+            guard fileManager.fileExists(atPath: imagesURL.path()) else { return }
+            let contents = try fileManager.contentsOfDirectory(
+                at: imagesURL, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles])
+            for file in contents {
+                let name = file.lastPathComponent
+                guard Self.isImageFilename(name), !filenames.contains(name), Self.isRegularFile(file)
+                else { continue }
+                try fileManager.removeItem(at: file)
             }
         }
 

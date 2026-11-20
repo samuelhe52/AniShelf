@@ -17,7 +17,9 @@
             let subtitle: String?
             let meta: String?
             let poster: TMDbImage?
+            let previewPoster: TMDbImage?
             let backdrop: URL?
+            let previewBackdrop: TMDbImage?
             let logo: TMDbImage?
         }
 
@@ -32,8 +34,6 @@
             settings: ScreenSaverSettings,
             language: Language
         ) -> ScreenSaverSnapshotDraft {
-            guard settings.isEnabled else { return .init(settings: settings.manifestSettings, entries: []) }
-
             let entries = store.library.lazy
                 .filter(settings.scope.includes)
                 .map { makeEntry($0, settings: settings, language: language) }
@@ -63,9 +63,11 @@
                 title: settings.showsTitles ? entry.displayName : nil,
                 subtitle: subtitle,
                 meta: isHero ? heroMetadata(for: entry, language: language, locale: locale) : nil,
-                poster: entry.posterImage(.posterFull),
+                poster: entry.posterImage(.screenSaverPoster),
+                previewPoster: entry.posterImage(.posterThumbnail),
                 backdrop: backdrop,
-                logo: isHero && settings.showsTitles ? detail?.logoImage : nil
+                previewBackdrop: isHero ? entry.backdropImage : nil,
+                logo: isHero ? detail?.logoImage : nil
             )
         }
 

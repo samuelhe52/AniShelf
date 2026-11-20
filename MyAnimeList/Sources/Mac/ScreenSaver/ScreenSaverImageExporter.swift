@@ -14,7 +14,7 @@
     import UniformTypeIdentifiers
 
     struct ScreenSaverImageExporter {
-        enum Request: Hashable {
+        enum Request: Hashable, Sendable {
             case poster(TMDbImage)
             case backdrop(URL)
             case logo(TMDbImage)
@@ -54,12 +54,17 @@
             }
         }
 
+        struct EncodedImage: Sendable {
+            let image: Image
+            let data: Data
+        }
+
         enum ExportError: Error {
             case invalidImage
             case encodingFailed
         }
 
-        static func export(_ request: Request, to directory: URL) async throws -> Image {
+        static func export(_ request: Request) async throws -> EncodedImage {
             let (url, processor, type) = request.recipe
             let filename = request.filename
             let result = try await KingfisherManager.shared.retrieveImage(
@@ -70,7 +75,7 @@
             guard let image = result.image.exportCGImage else { throw ExportError.invalidImage }
 
             let encoding = Task.detached(priority: .utility) {
-                try encode(image, type: type, filename: filename, to: directory)
+                try encode(image, type: type, filename: filename)
             }
             return try await withTaskCancellationHandler {
                 try await encoding.value
@@ -80,8 +85,8 @@
         }
 
         nonisolated private static func encode(
-            _ image: CGImage, type: UTType, filename: String, to directory: URL
-        ) throws -> Image {
+            _ image: CGImage, type: UTType, filename: String
+        ) throws -> EncodedImage {
             try Task.checkCancellation()
             let buffer = NSMutableData()
             guard let destination = CGImageDestinationCreateWithData(buffer, type.identifier as CFString, 1, nil) else {
@@ -93,8 +98,10 @@
                 throw ExportError.encodingFailed
             }
             try Task.checkCancellation()
-            try (buffer as Data).write(to: directory.appending(component: filename), options: .atomic)
-            return Image(filename: filename, pixelSize: .init(width: image.width, height: image.height))
+            return EncodedImage(
+                image: Image(filename: filename, pixelSize: .init(width: image.width, height: image.height)),
+                data: buffer as Data
+            )
         }
     }
 #endif

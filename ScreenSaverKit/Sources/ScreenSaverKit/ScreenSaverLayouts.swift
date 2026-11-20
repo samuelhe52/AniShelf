@@ -201,7 +201,9 @@ struct ScreenSaverLayouts {
         layer.contentsScale = scale
         layer.isWrapped = lines > 1
         layer.truncationMode = .end
-        layer.frame.size = CGSize(width: width, height: min(ceil(measure.height), lineHeight * CGFloat(lines)) + 1)
+        let measuredHeight = min(max(ceil(measure.height), lineHeight), lineHeight * CGFloat(lines))
+        // CATextLayer needs a little room below the measured lines for descenders at preview sizes.
+        layer.frame.size = CGSize(width: width, height: measuredHeight + ceil(size * 0.25))
         return layer
     }
 }

@@ -15,9 +15,25 @@ import QuartzCore
 public final class ScreenSaverRenderer {
     public enum Notice: Equatable, Sendable { case empty, requiresUpdate }
 
+    public struct Preview: Sendable {
+        public let settings: ScreenSaverManifest.Settings
+        public let entries: [ScreenSaverManifest.Entry]
+        public let images: [String: CGImage]
+
+        public init(
+            settings: ScreenSaverManifest.Settings, entries: [ScreenSaverManifest.Entry], images: [String: CGImage]
+        ) {
+            self.settings = settings
+            self.entries = entries
+            self.images = images
+        }
+    }
+
     public let layer = CALayer()
     private let message: (Notice) -> String
     private var directory: URL?
+    private var preview: Preview?
+    private var previewEntryID: String?
     private var size = CGSize.zero
     private var scale: CGFloat = 1
     private var session = ScreenSaverSession()
@@ -48,6 +64,7 @@ public final class ScreenSaverRenderer {
             layer.contentsScale = scale
         }
         if let directory { play(in: directory) }
+        if let preview { play(preview) }
     }
 
     public func start(in directory: URL) {
@@ -89,8 +106,54 @@ public final class ScreenSaverRenderer {
         }
     }
 
+    /// The preview owner supplies a stable entry order for the lifetime of its view.
+    public func updatePreview(_ preview: Preview) {
+        if directory != nil { stop() }
+        self.preview = preview
+        play(preview)
+    }
+
+    private func play(_ preview: Preview) {
+        playback?.cancel()
+        guard size.width >= 1, size.height >= 1 else { return }
+        let token = session.start()
+        let index = preview.entries.firstIndex { $0.id == previewEntryID } ?? 0
+        playback = Task.detached { [weak self, size, scale] in
+            var cursor = ScreenSaverScene.Cursor(index: index)
+            var animated = false
+            while !Task.isCancelled {
+                let scene = ScreenSaverSceneLoader.prepare(
+                    entries: preview.entries, settings: preview.settings, cursor: cursor, size: size, scale: scale
+                ) { path, _ in preview.images[path] }
+                guard !Task.isCancelled,
+                    await self?.presentPreview(scene, token: token, animated: animated) == true
+                else { return }
+                cursor = scene.next
+                animated = true
+                do {
+                    try await Task.sleep(for: .seconds(scene.duration))
+                } catch {
+                    return
+                }
+            }
+        }
+    }
+
+    private func presentPreview(_ scene: ScreenSaverScene, token: UUID, animated: Bool) -> Bool {
+        guard present(scene, token: token, animated: animated) else { return false }
+        switch scene.content {
+        case .poster(let entry, _, _), .hero(let entry, _, _):
+            previewEntryID = entry.id
+        default:
+            break
+        }
+        return true
+    }
+
     public func stop() {
         directory = nil
+        preview = nil
+        previewEntryID = nil
         session.stop()
         playback?.cancel()
         playback = nil

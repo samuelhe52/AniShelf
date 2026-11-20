@@ -44,6 +44,7 @@ public struct ScreenSaverSnapshotReader: Sendable {
     public func read() -> Snapshot {
         struct Header: Decodable {
             let schemaVersion: Int
+            let rendererVersion: Int?
         }
 
         let url = directory.appending(component: Self.manifestFilename, directoryHint: .notDirectory)
@@ -52,10 +53,12 @@ public struct ScreenSaverSnapshotReader: Sendable {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         guard let header = try? decoder.decode(Header.self, from: data) else { return .empty }
-        if header.schemaVersion > ScreenSaverManifest.currentSchemaVersion {
+        if header.schemaVersion > ScreenSaverManifest.currentSchemaVersion
+            || (header.rendererVersion ?? 1) > ScreenSaverManifest.currentRendererVersion
+        {
             return .requiresUpdate
         }
-        guard header.schemaVersion == ScreenSaverManifest.currentSchemaVersion,
+        guard (1...ScreenSaverManifest.currentSchemaVersion).contains(header.schemaVersion),
             let manifest = try? decoder.decode(ScreenSaverManifest.self, from: data),
             !manifest.entries.isEmpty
         else { return .empty }

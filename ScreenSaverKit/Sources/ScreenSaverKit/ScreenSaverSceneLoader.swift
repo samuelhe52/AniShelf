@@ -68,10 +68,22 @@ actor ScreenSaverSceneLoader {
         case .ready(let value): manifest = value
         }
 
-        let entries = manifest.entries
-        let settings = manifest.settings
+        return Self.prepare(
+            entries: manifest.entries, settings: manifest.settings, cursor: cursor, size: size, scale: scale,
+            image: reader.image(at:maximumPixelSize:)
+        )
+    }
+
+    static func prepare(
+        entries: [ScreenSaverManifest.Entry],
+        settings: ScreenSaverManifest.Settings,
+        cursor: ScreenSaverScene.Cursor,
+        size: CGSize,
+        scale: CGFloat,
+        image: (String, Int) -> CGImage?
+    ) -> ScreenSaverScene {
         if settings.layout == .coverWall, entries.count >= 4,
-            let wall = loadWall(entries, cursor: cursor, size: size, scale: scale)
+            let wall = loadWall(entries, cursor: cursor, size: size, scale: scale, image: image)
         {
             return wall
         }
@@ -84,15 +96,12 @@ actor ScreenSaverSceneLoader {
             let next = ScreenSaverScene.Cursor(index: (index + 1) % entries.count)
             let content: ScreenSaverScene.Content
             if settings.layout == .heroStill, let path = entry.backdrop,
-                let backdrop = reader.image(
-                    at: path, maximumPixelSize: pixelLimit(max(size.width, size.height) * scale, 2_560))
+                let backdrop = image(path, pixelLimit(max(size.width, size.height) * scale, 2_560))
             {
                 let logo =
-                    settings.showsTitles ? entry.logo.flatMap { reader.image(at: $0, maximumPixelSize: 1_024) } : nil
+                    settings.showsTitles ? entry.logo.flatMap { image($0, 1_024) } : nil
                 content = .hero(entry, backdrop: backdrop, logo: logo)
-            } else if let poster = reader.image(
-                at: entry.poster, maximumPixelSize: pixelLimit(size.height * scale, 1_500))
-            {
+            } else if let poster = image(entry.poster, pixelLimit(size.height * scale, 1_500)) {
                 content = .poster(entry, poster, averageColor(of: poster))
             } else {
                 continue
@@ -102,11 +111,12 @@ actor ScreenSaverSceneLoader {
         return ScreenSaverScene(content: .notice(.empty))
     }
 
-    private func loadWall(
+    private static func loadWall(
         _ entries: [ScreenSaverManifest.Entry],
         cursor: ScreenSaverScene.Cursor,
         size: CGSize,
-        scale: CGFloat
+        scale: CGFloat,
+        image: (String, Int) -> CGImage?
     ) -> ScreenSaverScene? {
         let grid = CoverWallGrid(viewport: size)
         let columnCount = cursor.wallColumn == nil ? grid.columns : 1
@@ -119,7 +129,7 @@ actor ScreenSaverSceneLoader {
             let path = entries[index].poster
             if imagesByPath[path] == nil {
                 guard !unreadable.contains(path) else { return nil }
-                guard let image = reader.image(at: path, maximumPixelSize: pixelSize) else {
+                guard let image = image(path, pixelSize) else {
                     unreadable.insert(path)
                     return nil
                 }
@@ -165,11 +175,11 @@ actor ScreenSaverSceneLoader {
         )
     }
 
-    private func pixelLimit(_ size: CGFloat, _ limit: Int) -> Int {
+    private static func pixelLimit(_ size: CGFloat, _ limit: Int) -> Int {
         Int(ceil(min(max(size, 1), CGFloat(limit))))
     }
 
-    private func averageColor(of image: CGImage) -> CGColor? {
+    private static func averageColor(of image: CGImage) -> CGColor? {
         var pixel = [UInt8](repeating: 0, count: 4)
         let drewPixel = pixel.withUnsafeMutableBytes { bytes in
             guard
