@@ -25,8 +25,8 @@ struct ScreenSaverMesh: Equatable, Sendable {
     )
 }
 
-/// Drives the flowing colour field behind the layouts that use one. The points drift on slow,
-/// independent orbits; a new palette blends in over a couple of seconds.
+/// Drives the flowing colour field behind the layouts that use one. The points drift on a
+/// shared current; a new palette blends in over a couple of seconds.
 @MainActor
 @Observable
 public final class ScreenSaverWash {
@@ -42,7 +42,7 @@ public final class ScreenSaverWash {
     private var flows = true
     private var speed: Double = 1
     /// The flow clock, which runs at `speed` times the wash's own clock, read at `flowRebase`.
-    /// Rebasing on a speed change keeps every point where it is instead of jumping along its orbit.
+    /// Rebasing on a speed change keeps every point where it is instead of jumping along its path.
     private var flowBase: TimeInterval = 0
     private var flowRebase: TimeInterval = 0
 
@@ -119,8 +119,16 @@ public final class ScreenSaverWash {
             rowStops: target.rowStops)
     }
 
-    /// Corners stay put, border points slide along their border, and inner points orbit freely,
-    /// so the field always covers the whole screen.
+    private static let field = ScreenSaverFlowField()
+    /// How far a point may travel, as a fraction of the gap to its nearest neighbour. Past 0.5 two
+    /// neighbours could meet; `keepApart` stops them in the rare moments the current pushes them
+    /// together that hard.
+    private static let reach: Float = 0.65
+    /// The closest two neighbours may come, as a fraction of their resting gap.
+    private static let minimumGap: Float = 0.15
+
+    /// Every point drifts with one shared current (see `ScreenSaverFlowField`). Corners stay put and
+    /// border points slide along their border, so the field always covers the whole screen.
     func points(at time: TimeInterval) -> [SIMD2<Float>] {
         let mesh = target
         let flow = flowTime(at: time)
@@ -133,24 +141,46 @@ public final class ScreenSaverWash {
         for row in 0..<mesh.rows {
             for column in 0..<mesh.columns {
                 var point = SIMD2(xs[column], ys[row])
-                let seed = Double(row * 7 + column * 13)
-                let period = 22 + (seed.truncatingRemainder(dividingBy: 9))
-                let phase = seed * 1.7
                 // A still wash rests every point at its stop.
-                let angle = flows ? flow / period * 2 * .pi + phase : 0
-                let reach: Float = flows ? 0.28 : 0
-                let spanX = Self.span(xs, column)
-                let spanY = Self.span(ys, row)
+                guard flows else {
+                    points.append(point)
+                    continue
+                }
+                let push = Self.field.displacement(x: Double(point.x), y: Double(point.y), time: flow)
                 if column != 0, column != mesh.columns - 1 {
-                    point.x += Float(sin(angle)) * spanX * reach
+                    point.x += Float(push.x) * Self.span(xs, column) * Self.reach
                 }
                 if row != 0, row != mesh.rows - 1 {
-                    point.y += Float(cos(angle * 0.83 + 1)) * spanY * reach
+                    point.y += Float(push.y) * Self.span(ys, row) * Self.reach
                 }
                 points.append(point)
             }
         }
+        if flows { Self.keepApart(&points, xs: xs, ys: ys) }
         return points
+    }
+
+    /// Keeps every row's points in order along x and every column's along y, at least
+    /// `minimumGap` of their resting gap apart, so the mesh never folds over itself. Edge points
+    /// are left where they are; only inner points give way.
+    private static func keepApart(_ points: inout [SIMD2<Float>], xs: [Float], ys: [Float]) {
+        let (columns, rows) = (xs.count, ys.count)
+        func separate(_ count: Int, _ stops: [Float], get: (Int) -> Float, set: (Int, Float) -> Void) {
+            guard count > 2 else { return }
+            for index in 1..<count - 1 {
+                set(index, max(get(index), get(index - 1) + (stops[index] - stops[index - 1]) * minimumGap))
+            }
+            for index in (1..<count - 1).reversed() {
+                set(index, min(get(index), get(index + 1) - (stops[index + 1] - stops[index]) * minimumGap))
+            }
+        }
+        for row in 0..<rows {
+            separate(
+                columns, xs, get: { points[row * columns + $0].x }, set: { points[row * columns + $0].x = $1 })
+        }
+        for column in 0..<columns {
+            separate(rows, ys, get: { points[$0 * columns + column].y }, set: { points[$0 * columns + column].y = $1 })
+        }
     }
 
     private static func span(_ stops: [Float], _ index: Int) -> Float {
