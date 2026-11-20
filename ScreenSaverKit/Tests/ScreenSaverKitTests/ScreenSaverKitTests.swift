@@ -220,6 +220,47 @@ struct ScreenSaverKitTests {
         #expect(await otherSeed.read() != initial)
     }
 
+    @Test(arguments: [ScreenSaverManifest.Layout.posterFocus, .backdrop])
+    func slideshowReshufflesEachPassWithoutRepeatingAcrossTheBoundary(_ layout: ScreenSaverManifest.Layout) async throws {
+        let fixture = try SnapshotFixture()
+        defer { fixture.remove() }
+        try fixture.writeImage("poster.png")
+        try fixture.writeImage("backdrop.png")
+        let entries = (0..<5).map { index in
+            fixture.entry(
+                index, poster: index.isMultiple(of: 2) ? "images/poster.png" : "images/missing.png",
+                backdrop: index == 2 ? "images/backdrop.png" : "images/missing-backdrop.png")
+        }
+        try fixture.write(.init(settings: .init(layout: layout, interval: 12), entries: entries))
+        let loader = ScreenSaverSceneLoader(directory: fixture.directory, seed: 42)
+        let snapshot = await loader.read()
+        let viewport = CGSize(width: 800, height: 500)
+        let expected = Set([entries[0].id, entries[2].id, entries[4].id])
+        var cursor = ScreenSaverScene.Cursor()
+        var previousID: String?
+        var orders: Set<[String]> = []
+        for _ in 0..<6 {
+            var pass: [String] = []
+            for _ in expected {
+                let scene = await loader.prepare(snapshot, cursor: cursor, size: viewport, scale: 1)
+                let entry: ScreenSaverManifest.Entry
+                switch scene.content {
+                case .poster(let displayed, _, _), .backdrop(let displayed, _, _): entry = displayed
+                default:
+                    Issue.record("Expected a readable slide")
+                    return
+                }
+                #expect(entry.id != previousID)
+                previousID = entry.id
+                pass.append(entry.id)
+                cursor = scene.next
+            }
+            #expect(Set(pass) == expected)
+            orders.insert(pass)
+        }
+        #expect(orders.count > 1)
+    }
+
     @Test(arguments: [ScreenSaverManifest.Layout.coverWall, .backdrop])
     func layoutFallbackUsesOnlySuppliedEntries(_ layout: ScreenSaverManifest.Layout) async throws {
         let fixture = try SnapshotFixture()
@@ -229,17 +270,20 @@ struct ScreenSaverKitTests {
         let loader = ScreenSaverSceneLoader(directory: fixture.directory)
         let manifest = ScreenSaverManifest(
             settings: .init(layout: layout, interval: 7),
-            entries: [entry]
+            entries: [entry, fixture.entry(1, poster: "images/missing.png")]
         )
-        let scene = await loader.prepare(
-            .ready(manifest), cursor: .init(), size: CGSize(width: 180, height: 320), scale: 2)
-        guard case .poster(let displayed, _, _) = scene.content else {
-            Issue.record("Expected Poster Focus")
-            return
+        var cursor = ScreenSaverScene.Cursor()
+        for _ in 0..<3 {
+            let scene = await loader.prepare(
+                .ready(manifest), cursor: cursor, size: CGSize(width: 180, height: 320), scale: 2)
+            guard case .poster(let displayed, _, _) = scene.content else {
+                Issue.record("Expected Poster Focus")
+                return
+            }
+            #expect(displayed == entry)
+            #expect(scene.duration == 7)
+            cursor = scene.next
         }
-        #expect(displayed == entry)
-        #expect(scene.next.index == 0)
-        #expect(scene.duration == 7)
     }
 
     @Test

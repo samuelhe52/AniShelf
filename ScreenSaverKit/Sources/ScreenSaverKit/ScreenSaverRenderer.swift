@@ -138,7 +138,7 @@ public final class ScreenSaverRenderer {
         let token = session.start()
         let index = preview.entries.firstIndex { $0.id == previewEntryID } ?? 0
         playback = Task.detached { [weak self, size, scale] in
-            var cursor = ScreenSaverScene.Cursor(index: index)
+            var cursor = ScreenSaverScene.Cursor(startIndex: index)
             var animated = false
             while !Task.isCancelled {
                 let scene = ScreenSaverSceneLoader.prepare(

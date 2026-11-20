@@ -11,7 +11,8 @@ import Foundation
 
 struct ScreenSaverScene: Sendable {
     struct Cursor: Sendable {
-        var index = 0
+        var startIndex = 0
+        var slides: ScreenSaverSlideOrder?
         var wall: CoverWallShuffleBag?
     }
 
@@ -27,6 +28,44 @@ struct ScreenSaverScene: Sendable {
     var details: Set<ScreenSaverManifest.Detail> = []
     var duration: TimeInterval = 4
     var next = Cursor()
+}
+
+struct ScreenSaverSlideOrder: Sendable {
+    private var order: [Int]
+    private var position = 0
+    private var lastDisplayed: Int?
+    private var random: ScreenSaverRandomGenerator
+
+    init(count: Int, startingAt startIndex: Int, seed: UInt64) {
+        order = (0..<count).map { (startIndex + $0) % count }
+        random = ScreenSaverRandomGenerator(state: seed)
+    }
+
+    mutating func next(load: (Int) -> ScreenSaverScene.Content?) -> ScreenSaverScene.Content? {
+        var openedNewPass = false
+        while !order.isEmpty, !Task.isCancelled {
+            if position == order.count {
+                // Try at most the rest of the current pass and one full new pass.
+                guard lastDisplayed != nil, !openedNewPass else { return nil }
+                order.shuffle(using: &random)
+                position = 0
+                openedNewPass = true
+            }
+
+            // Defer the previous slide until another readable slide opens the pass.
+            // Unreadable candidates may bring it to the front more than once.
+            if openedNewPass, order[position] == lastDisplayed, position + 1 < order.count {
+                order.swapAt(position, Int.random(in: (position + 1)..<order.count, using: &random))
+            }
+            let index = order[position]
+            position += 1
+            if let slide = load(index) {
+                lastDisplayed = index
+                return slide
+            }
+        }
+        return nil
+    }
 }
 
 actor ScreenSaverSceneLoader {
@@ -93,27 +132,25 @@ actor ScreenSaverSceneLoader {
             return wall
         }
 
-        let interval = settings.interval.isFinite ? min(max(settings.interval, 1), 3_600) : 12
-        for offset in entries.indices {
-            guard !Task.isCancelled else { break }
-            let index = (cursor.index + offset) % entries.count
+        var slides = cursor.slides ?? ScreenSaverSlideOrder(
+            count: entries.count, startingAt: cursor.startIndex, seed: seed)
+        let content = slides.next { index in
             let entry = entries[index]
-            let next = ScreenSaverScene.Cursor(index: (index + 1) % entries.count)
-            let content: ScreenSaverScene.Content
             if settings.layout == .backdrop, let path = entry.backdrop,
                 let backdrop = image(path, pixelLimit(max(size.width, size.height) * scale, 2_560))
             {
                 let logo = entry.logo.flatMap { image($0, 1_024) }
-                content = .backdrop(entry, image: backdrop, logo: logo)
-            } else if let poster = image(entry.poster, pixelLimit(size.height * scale, 1_500)) {
-                content = .poster(entry, poster, background: blurredBackground(of: poster))
-            } else {
-                continue
+                return .backdrop(entry, image: backdrop, logo: logo)
             }
-            return ScreenSaverScene(
-                content: content, details: Set(settings.details), duration: interval, next: next)
+            if let poster = image(entry.poster, pixelLimit(size.height * scale, 1_500)) {
+                return .poster(entry, poster, background: blurredBackground(of: poster))
+            }
+            return nil
         }
-        return ScreenSaverScene(content: .notice(.empty))
+        guard let content else { return ScreenSaverScene(content: .notice(.empty)) }
+        let interval = settings.interval.isFinite ? min(max(settings.interval, 1), 3_600) : 12
+        return ScreenSaverScene(
+            content: content, details: Set(settings.details), duration: interval, next: .init(slides: slides))
     }
 
     private static func loadWall(
