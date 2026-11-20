@@ -19,6 +19,7 @@
             var eligibleCount = 0
             var unavailableImageCount = 0
             var lastPublication: Date?
+            var generation: UUID?
             var error: (any Error)?
         }
 
@@ -36,13 +37,25 @@
         typealias ExportImage =
             @MainActor (ScreenSaverImageExporter.Request, URL) async throws -> ScreenSaverImageExporter.Image
 
+        let directory: URL
         private(set) var status = Status()
+
+        var settings: ScreenSaverSettings {
+            get { observedPreferences.settings }
+            set {
+                guard newValue != observedPreferences.settings else { return }
+                newValue.save(to: defaults)
+                preferencesDidChange()
+            }
+        }
+
         private let defaults: UserDefaults
         private let builder: BuildDraft
         private let exportImage: ExportImage
         private let writer: ScreenSaverSnapshotWriter
         private let debounce: Duration
-        @ObservationIgnored private var observedPreferences: Preferences
+        private var observedPreferences: Preferences
+        @ObservationIgnored private var canManageSnapshot: Bool
         @ObservationIgnored private var preferenceObserver: AnyCancellable?
         @ObservationIgnored private var pendingRefresh: Task<Void, Never>?
         @ObservationIgnored private var requestID = 0
@@ -53,10 +66,13 @@
             defaults: UserDefaults,
             directory: URL,
             debounce: Duration = .seconds(5),
+            preserveSnapshotUntilEnabled: Bool = false,
             buildDraft: @escaping BuildDraft,
             exportImage: @escaping ExportImage = ScreenSaverImageExporter.export
         ) {
             self.defaults = defaults
+            self.directory = directory
+            self.canManageSnapshot = !preserveSnapshotUntilEnabled
             self.builder = buildDraft
             self.exportImage = exportImage
             self.debounce = debounce
@@ -116,7 +132,8 @@
                     forceRequested = false
                 }
             }
-            guard force || draft != lastDraft else { return }
+            canManageSnapshot = canManageSnapshot || preferences.settings.isEnabled
+            guard canManageSnapshot, force || draft != lastDraft else { return }
 
             status.isPublishing = true
             status.eligibleCount = draft.entries.count
@@ -192,7 +209,7 @@
             staging: URL?
         ) async throws {
             if !force, let baseline, baseline.settings == draft.settings, baseline.entries == entries {
-                status.lastPublication = baseline.createdAt
+                recordPublication(baseline)
                 return
             }
             let manifest = ScreenSaverManifest(settings: draft.settings, entries: entries)
@@ -205,7 +222,12 @@
             lastDraft = nil
             try await writer.publish(manifest, stagedImages: staging)
             try Task.checkCancellation()
+            recordPublication(manifest)
+        }
+
+        private func recordPublication(_ manifest: ScreenSaverManifest) {
             status.lastPublication = manifest.createdAt
+            status.generation = manifest.generation
         }
 
         private func exportEntries(

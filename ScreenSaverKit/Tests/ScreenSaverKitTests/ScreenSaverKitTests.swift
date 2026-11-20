@@ -102,11 +102,12 @@ struct ScreenSaverKitTests {
     func repeatedWallArtworkAvoidsNeighboursIncludingRecycledColumns() async throws {
         let fixture = try SnapshotFixture()
         defer { fixture.remove() }
-        let names = ["one", "alias-one", "two", "three", "four"]
-        for (index, name) in names.enumerated() {
-            let red = CGFloat(max(index - 1, 0)) / 4
-            try fixture.writeImage("\(name).png", red: red)
+        let posters = ["one", "two", "three", "four"]
+        // Each width identifies one exported path, including across separate decodes.
+        for (index, name) in posters.enumerated() {
+            try fixture.writeImage("\(name).png", width: 20 + index)
         }
+        let names = ["one"] + posters
         let manifest = ScreenSaverManifest(
             settings: .init(layout: .coverWall, showsTitles: true, interval: 12),
             entries: names.enumerated().map { index, name in
@@ -121,9 +122,9 @@ struct ScreenSaverKitTests {
             return
         }
         #expect(images.count == grid.rows * grid.columns)
-        var previous: [CoverWallArtworkIdentity] = []
+        var previous: [Int] = []
         func verifyColumn(_ images: ArraySlice<CGImage>) {
-            let identities = images.map { CoverWallArtworkIdentity(image: $0, path: "") }
+            let identities = images.map(\.width)
             #expect(identities.count == grid.rows)
             for index in identities.indices {
                 if index > 0 { #expect(identities[index] != identities[index - 1]) }
@@ -248,12 +249,12 @@ fileprivate struct SnapshotFixture {
             posterPixelSize: .init(width: 20, height: 30), backdrop: backdrop)
     }
 
-    func writeImage(_ name: String, width: Int = 20, height: Int = 30, red: CGFloat = 0.5) throws {
+    func writeImage(_ name: String, width: Int = 20, height: Int = 30) throws {
         let context = try #require(
             CGContext(
                 data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
                 space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))
-        context.setFillColor(CGColor(red: red, green: 0.3, blue: 0.2, alpha: 1))
+        context.setFillColor(CGColor(red: 0.5, green: 0.3, blue: 0.2, alpha: 1))
         context.fill(CGRect(x: 0, y: 0, width: width, height: height))
         let image = try #require(context.makeImage())
         let url = directory.appending(component: "images").appending(component: name)

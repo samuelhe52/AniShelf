@@ -47,6 +47,7 @@ extension LibraryProfileSettingsPage {
             // section and each row a standard form row.
             Form(content: content)
                 .formStyle(.grouped)
+                .preferredNavigationBarScrollEdgeEffect()
         #else
             ZStack {
                 LibraryProfileBackdrop()

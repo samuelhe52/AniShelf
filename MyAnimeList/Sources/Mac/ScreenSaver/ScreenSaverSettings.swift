@@ -6,6 +6,7 @@
 //
 
 #if os(macOS)
+    import DataProvider
     import Foundation
     import ScreenSaverKit
 
@@ -14,6 +15,14 @@
             case favorites
             case watched
             case all
+
+            func includes(_ entry: AnimeEntry) -> Bool {
+                switch self {
+                case .favorites: entry.favorite
+                case .watched: entry.watchStatus == .watched
+                case .all: true
+                }
+            }
         }
 
         static let enabledKey = "screenSaverEnabled"

@@ -211,9 +211,13 @@ class LibraryStore {
     }
 
     #if os(macOS)
-        func startScreenSaverPublisher(defaults: UserDefaults, directory: URL) {
+        func startScreenSaverPublisher(
+            defaults: UserDefaults, directory: URL, preserveSnapshotUntilEnabled: Bool
+        ) {
             guard screenSaverPublisher == nil else { return }
-            screenSaverPublisher = ScreenSaverPublisher(defaults: defaults, directory: directory) {
+            screenSaverPublisher = ScreenSaverPublisher(
+                defaults: defaults, directory: directory, preserveSnapshotUntilEnabled: preserveSnapshotUntilEnabled
+            ) {
                 [weak self] settings, language in
                 guard let self else { return .init(settings: settings.manifestSettings, entries: []) }
                 return ScreenSaverSnapshotBuilder.build(from: self, settings: settings, language: language)

@@ -6,13 +6,12 @@
 //
 
 import CoreGraphics
-import CryptoKit
 import Foundation
 
 struct ScreenSaverScene: Sendable {
     struct Cursor: Sendable {
         var index = 0
-        var wallColumn: [CoverWallArtworkIdentity]?
+        var wallColumn: [String]?
     }
 
     enum Content: Sendable {
@@ -27,20 +26,6 @@ struct ScreenSaverScene: Sendable {
     var showsTitles = false
     var duration: TimeInterval = 4
     var next = Cursor()
-}
-
-/// Files from different requests can still contain the same artwork.
-enum CoverWallArtworkIdentity: Hashable, Sendable {
-    case pixels(Data)
-    case path(String)
-
-    init(image: CGImage, path: String) {
-        if let data = image.dataProvider?.data {
-            self = .pixels(Data(SHA256.hash(data: data as Data)))
-        } else {
-            self = .path(path)
-        }
-    }
 }
 
 actor ScreenSaverSceneLoader {
@@ -126,50 +111,45 @@ actor ScreenSaverSceneLoader {
         let grid = CoverWallGrid(viewport: size)
         let columnCount = cursor.wallColumn == nil ? grid.columns : 1
         let pixelSize = pixelLimit(grid.tileSize.height * scale * 1.25, 1_500)
-        var identityByPath: [String: CoverWallArtworkIdentity] = [:]
-        var imagesByIdentity: [CoverWallArtworkIdentity: CGImage] = [:]
+        var imagesByPath: [String: CGImage] = [:]
         var unreadable: Set<String> = []
         var readableEntries: Set<Int> = []
 
-        func identity(at index: Int) -> CoverWallArtworkIdentity? {
+        func readablePath(at index: Int) -> String? {
             let path = entries[index].poster
-            if let cached = identityByPath[path] {
-                readableEntries.insert(index)
-                return cached
+            if imagesByPath[path] == nil {
+                guard !unreadable.contains(path) else { return nil }
+                guard let image = reader.image(at: path, maximumPixelSize: pixelSize) else {
+                    unreadable.insert(path)
+                    return nil
+                }
+                imagesByPath[path] = image
             }
-            guard !unreadable.contains(path) else { return nil }
-            guard let image = reader.image(at: path, maximumPixelSize: pixelSize) else {
-                unreadable.insert(path)
-                return nil
-            }
-            let identity = CoverWallArtworkIdentity(image: image, path: path)
-            if imagesByIdentity[identity] == nil { imagesByIdentity[identity] = image }
-            identityByPath[path] = identity
             readableEntries.insert(index)
-            return identity
+            return path
         }
 
         var index = cursor.index
         var leftColumn = cursor.wallColumn ?? []
         var images: [CGImage] = []
         for _ in 0..<columnCount {
-            var column: [CoverWallArtworkIdentity] = []
+            var column: [String] = []
             for row in 0..<grid.rows {
                 let horizontal = leftColumn.indices.contains(row) ? leftColumn[row] : nil
                 let vertical = column.last
-                var candidate: (index: Int, artwork: CoverWallArtworkIdentity)?
+                var candidate: (index: Int, path: String)?
                 for offset in entries.indices {
                     guard !Task.isCancelled else { return nil }
                     let nextIndex = (index + offset) % entries.count
-                    guard let artwork = identity(at: nextIndex) else { continue }
-                    if artwork != horizontal, artwork != vertical {
-                        candidate = (nextIndex, artwork)
+                    guard let path = readablePath(at: nextIndex) else { continue }
+                    if path != horizontal, path != vertical {
+                        candidate = (nextIndex, path)
                         break
                     }
-                    if candidate == nil { candidate = (nextIndex, artwork) }
+                    if candidate == nil { candidate = (nextIndex, path) }
                 }
-                guard let candidate, let image = imagesByIdentity[candidate.artwork] else { return nil }
-                column.append(candidate.artwork)
+                guard let candidate, let image = imagesByPath[candidate.path] else { return nil }
+                column.append(candidate.path)
                 images.append(image)
                 index = (candidate.index + 1) % entries.count
             }

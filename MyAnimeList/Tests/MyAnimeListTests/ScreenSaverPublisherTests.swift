@@ -248,6 +248,35 @@
         }
 
         @Test
+        func fixtureSettingsPreserveExistingSnapshotUntilEnabled() async throws {
+            let fixture = try Fixture()
+            defer { fixture.cleanup() }
+            let writer = ScreenSaverSnapshotWriter(directory: fixture.snapshot)
+            let image = try fixture.stageImage(1)
+            let existing = fixture.manifest(images: [image])
+            try await writer.publish(existing, stagedImages: fixture.staging)
+
+            let publisher = ScreenSaverPublisher(
+                defaults: fixture.defaults, directory: fixture.snapshot, debounce: .milliseconds(30),
+                preserveSnapshotUntilEnabled: true,
+                buildDraft: { settings, language in
+                    ScreenSaverSnapshotBuilder.build(from: fixture.store, settings: settings, language: language)
+                }
+            )
+            await publisher.refreshNow()
+            #expect(await writer.readManifest() == existing)
+            #expect(publisher.status.generation == nil)
+
+            publisher.settings.isEnabled = true
+            #expect(fixture.defaults.bool(forKey: ScreenSaverSettings.enabledKey))
+            try await waitUntil {
+                await writer.readManifest()?.entries.isEmpty == true && !publisher.status.isPublishing
+            }
+            #expect(publisher.status.generation != nil)
+            #expect(publisher.status.generation == (await writer.readManifest())?.generation)
+        }
+
+        @Test
         func enablingAnEmptyScopePublishesItsFirstManifest() async throws {
             let fixture = try Fixture()
             defer { fixture.cleanup() }

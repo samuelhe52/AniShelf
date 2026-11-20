@@ -109,11 +109,9 @@ struct MyAnimeListApp: App {
             }
         }
         #if os(macOS)
-            // Fixture launches opt into writing to Pictures through their own defaults.
-            if !isSimulatedStartup, startupRecovery == nil, newerLibraryStoreVersion == nil,
-                !startup.isLibraryFixture || ScreenSaverSettings(defaults: startup.defaults).isEnabled
-            {
-                Self.startScreenSaverPublisher(for: libraryStore, defaults: startup.defaults)
+            if !isSimulatedStartup, startupRecovery == nil, newerLibraryStoreVersion == nil {
+                Self.startScreenSaverPublisher(
+                    for: libraryStore, defaults: startup.defaults, isLibraryFixture: startup.isLibraryFixture)
             }
             Self.configureMacLifecycle(
                 libraryStore: libraryStore,
@@ -127,10 +125,14 @@ struct MyAnimeListApp: App {
     }
 
     #if os(macOS)
-        private static func startScreenSaverPublisher(for store: LibraryStore, defaults: UserDefaults) {
+        private static func startScreenSaverPublisher(
+            for store: LibraryStore, defaults: UserDefaults, isLibraryFixture: Bool = false
+        ) {
             guard let home = FileManager.default.homeDirectory(forUser: NSUserName()) else { return }
             store.startScreenSaverPublisher(
-                defaults: defaults, directory: ScreenSaverSnapshotReader.snapshotDirectory(in: home))
+                defaults: defaults, directory: ScreenSaverSnapshotReader.snapshotDirectory(in: home),
+                preserveSnapshotUntilEnabled: isLibraryFixture
+            )
         }
 
         /// Wires app-lifetime events into the shared objects directly: the App value captured

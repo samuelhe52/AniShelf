@@ -35,13 +35,7 @@
             guard settings.isEnabled else { return .init(settings: settings.manifestSettings, entries: []) }
 
             let entries = store.library.lazy
-                .filter { entry in
-                    switch settings.scope {
-                    case .all: true
-                    case .favorites: entry.favorite
-                    case .watched: entry.watchStatus == .watched
-                    }
-                }
+                .filter(settings.scope.includes)
                 .map { makeEntry($0, settings: settings, language: language) }
                 .sorted { $0.id < $1.id }
             return .init(settings: settings.manifestSettings, entries: entries)

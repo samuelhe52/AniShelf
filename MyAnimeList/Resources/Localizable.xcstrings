@@ -2063,6 +2063,22 @@
         }
       }
     },
+    "All Library Entries" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリの全作品"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "资料库中的全部作品"
+          }
+        }
+      }
+    },
     "All Notes" : {
       "localizations" : {
         "ja" : {
@@ -4119,6 +4135,22 @@
         }
       }
     },
+    "Couldn’t Open Screen Saver" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンセーバーを開けませんでした"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法打开屏幕保护程序"
+          }
+        }
+      }
+    },
     "Couldn’t Save Selection" : {
       "localizations" : {
         "ja" : {
@@ -4147,6 +4179,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法保存API密钥，请重试。"
+          }
+        }
+      }
+    },
+    "Cover Wall" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ポスターウォール"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "海报墙"
           }
         }
       }
@@ -4968,6 +5016,22 @@
         }
       }
     },
+    "Eligible Entries" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "対象作品数"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "符合条件的作品数"
+          }
+        }
+      }
+    },
     "Enable" : {
       "localizations" : {
         "ja" : {
@@ -4996,6 +5060,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "启用评分"
+          }
+        }
+      }
+    },
+    "Enable Screen Saver" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンセーバーを有効にする"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用屏幕保护程序"
+          }
+        }
+      }
+    },
+    "Enable the screen saver to see a preview." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンセーバーを有効にするとプレビューが表示されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用屏幕保护程序后即可预览。"
           }
         }
       }
@@ -5126,6 +5222,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "TMDb上已不存在的条目可以从iCloud删除。其他条目会自动重试。"
+          }
+        }
+      }
+    },
+    "Entries Without Artwork" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像のない作品数"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缺少图片的作品数"
           }
         }
       }
@@ -6422,6 +6534,22 @@
         }
       }
     },
+    "Hero Still" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キービジュアル"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "主视觉静帧"
+          }
+        }
+      }
+    },
     "Hide Dates" : {
       "localizations" : {
         "ja" : {
@@ -6911,6 +7039,22 @@
     "Injected failures are off. Upload This Library re-creates the iCloud data and completes sync." : {
 
     },
+    "Install Screen Saver…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンセーバーをインストール…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装屏幕保护程序…"
+          }
+        }
+      }
+    },
     "Interface" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -6924,6 +7068,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "界面"
+          }
+        }
+      }
+    },
+    "Interval" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切り替え間隔"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换间隔"
           }
         }
       }
@@ -7239,6 +7399,22 @@
         }
       }
     },
+    "Last Published" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最終公開日時"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上次发布时间"
+          }
+        }
+      }
+    },
     "Last sync: %@" : {
       "localizations" : {
         "ja" : {
@@ -7267,6 +7443,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "稍后"
+          }
+        }
+      }
+    },
+    "Layout" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レイアウト"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "布局"
           }
         }
       }
@@ -7396,6 +7588,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "需要恢复资料库"
+          }
+        }
+      }
+    },
+    "Library Scope" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "対象範囲"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "资料库范围"
           }
         }
       }
@@ -8106,6 +8314,22 @@
         }
       }
     },
+    "Never" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未公開"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未发布"
+          }
+        }
+      }
+    },
     "New Category" : {
       "localizations" : {
         "ja" : {
@@ -8278,6 +8502,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "下次提醒"
+          }
+        }
+      }
+    },
+    "No artwork to preview." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プレビューできる画像がありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有可预览的图片。"
           }
         }
       }
@@ -9376,6 +9616,22 @@
         }
       }
     },
+    "Poster Focus" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ポスター表示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "单张海报"
+          }
+        }
+      }
+    },
     "Prefer Original Language" : {
       "localizations" : {
         "ja" : {
@@ -9572,6 +9828,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "制作公司"
+          }
+        }
+      }
+    },
+    "Publication" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公開状況"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发布状态"
+          }
+        }
+      }
+    },
+    "Publication Error" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公開エラー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发布错误"
+          }
+        }
+      }
+    },
+    "Publishing…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公開中…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在发布…"
           }
         }
       }
@@ -9908,6 +10212,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "刷新元数据"
+          }
+        }
+      }
+    },
+    "Refresh Now" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今すぐ更新"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即刷新"
           }
         }
       }
@@ -11023,6 +11343,38 @@
         }
       }
     },
+    "Screen Saver" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンセーバー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "屏幕保护程序"
+          }
+        }
+      }
+    },
+    "Screen saver preview" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンセーバーのプレビュー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "屏幕保护程序预览"
+          }
+        }
+      }
+    },
     "Search" : {
       "localizations" : {
         "ja" : {
@@ -11551,6 +11903,22 @@
         }
       }
     },
+    "Show in Finder" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finderに表示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在访达中显示"
+          }
+        }
+      }
+    },
     "Show Inspector" : {
       "localizations" : {
         "ja" : {
@@ -11595,6 +11963,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "显示制作公司而非时长"
+          }
+        }
+      }
+    },
+    "Show Titles" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タイトルを表示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示标题"
           }
         }
       }
@@ -12854,6 +13238,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此版本适配iOS 27，并增强了AniShelf在iPhone和iPad上的分享体验。"
+          }
+        }
+      }
+    },
+    "This snapshot needs a newer version of AniShelf." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このスナップショットを表示するには、新しいバージョンのAniShelfが必要です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此快照需要较新版本的AniShelf。"
           }
         }
       }

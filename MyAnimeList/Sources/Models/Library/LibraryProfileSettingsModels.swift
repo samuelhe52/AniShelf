@@ -28,13 +28,20 @@ struct LibraryProfileSettingsLayoutPolicy {
 }
 
 enum LibraryProfileSettingsDestination: Hashable, CaseIterable {
-    case language, libraryTracking, appearance, reminders, metadataImages, smartFeatures, syncData
+    case language, libraryTracking, appearance
+    #if os(macOS)
+        case screenSaver
+    #endif
+    case reminders, metadataImages, smartFeatures, syncData
 
     var title: LocalizedStringResource {
         switch self {
         case .language: "Language"
         case .libraryTracking: "Library & Tracking"
         case .appearance: "Appearance & Interaction"
+        #if os(macOS)
+            case .screenSaver: "Screen Saver"
+        #endif
         case .reminders: "Airing & Reminders"
         case .metadataImages: "Metadata & Images"
         case .smartFeatures: "Smart Features"
@@ -47,6 +54,9 @@ enum LibraryProfileSettingsDestination: Hashable, CaseIterable {
         case .language: "globe"
         case .libraryTracking: "slider.horizontal.3"
         case .appearance: "rectangle.3.group.fill"
+        #if os(macOS)
+            case .screenSaver: "display"
+        #endif
         case .reminders: "bell.badge.fill"
         case .metadataImages: "photo.stack"
         case .smartFeatures: "sparkles"
@@ -60,6 +70,9 @@ enum LibraryProfileSettingsDestination: Hashable, CaseIterable {
         case .language: LibraryProfileSettingsPalette.language
         case .libraryTracking: LibraryProfileSettingsPalette.muted(.mint)
         case .appearance: LibraryProfileSettingsPalette.muted(.teal)
+        #if os(macOS)
+            case .screenSaver: LibraryProfileSettingsPalette.muted(.purple)
+        #endif
         case .reminders: LibraryProfileSettingsPalette.muted(.orange)
         case .metadataImages: LibraryProfileSettingsPalette.muted(.cyan)
         case .smartFeatures: LibraryProfileSettingsPalette.muted(.green.mix(with: .blue, by: 0.3))
