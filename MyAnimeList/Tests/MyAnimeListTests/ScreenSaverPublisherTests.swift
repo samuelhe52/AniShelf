@@ -186,7 +186,7 @@
                 }
             )
             let writer = ScreenSaverSnapshotWriter(directory: fixture.snapshot)
-            try await waitUntil { publisher.status.lastPublication != nil && !publisher.status.isPublishing }
+            try await waitUntil { publisher.status.hasPublished && !publisher.status.isPublishing }
             let generation = try #require(await writer.readManifest()).generation
             #expect(builds == 1 && exports == 1)
 
@@ -310,14 +310,14 @@
             )
             try await waitUntil { draftsBuilt == 1 }
             #expect(await writer.readManifest() == existing)
-            #expect(publisher.status.lastPublication == nil)
+            #expect(!publisher.status.hasPublished)
 
             publisher.settings.isEnabled = true
             #expect(fixture.defaults.bool(forKey: ScreenSaverSettings.enabledKey))
             try await waitUntil {
                 await writer.readManifest()?.entries.isEmpty == true && !publisher.status.isPublishing
             }
-            #expect(publisher.status.lastPublication != nil)
+            #expect(publisher.status.hasPublished)
         }
 
         @Test
@@ -373,7 +373,7 @@
             )
             defer { gate.release() }
             let writer = ScreenSaverSnapshotWriter(directory: fixture.snapshot)
-            try await waitUntil { publisher.status.lastPublication != nil && !publisher.status.isPublishing }
+            try await waitUntil { publisher.status.hasPublished && !publisher.status.isPublishing }
 
             pauseNextImage = true
             kept.posterPath = "/replacement.jpg"
@@ -431,7 +431,7 @@
                     }
                 }
             )
-            try await waitUntil { publisher.status.lastPublication != nil && !publisher.status.isPublishing }
+            try await waitUntil { publisher.status.hasPublished && !publisher.status.isPublishing }
             let writer = ScreenSaverSnapshotWriter(directory: fixture.snapshot)
             let entries = try #require(await writer.readManifest()?.entries)
             #expect(entries.map(\.id) == ["movie:1", "series:2"])

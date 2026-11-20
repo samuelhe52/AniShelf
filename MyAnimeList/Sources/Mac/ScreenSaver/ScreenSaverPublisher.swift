@@ -27,7 +27,7 @@
             var isPublishing = false
             var availableCount = 0
             var unavailableImageCount = 0
-            var lastPublication: Date?
+            var hasPublished = false
             var error: (any Error)?
             var failedPosterCount = 0
             var hasFailedArtwork = false
@@ -91,7 +91,6 @@
         @ObservationIgnored private var libraryRefresh: Task<Void, Never>?
         @ObservationIgnored private var artworkTask: Task<Void, Never>?
         @ObservationIgnored private var manifestTask: Task<Void, Never>?
-        @ObservationIgnored private var artworkRun = 0
         @ObservationIgnored private var loadingPosters = false
         @ObservationIgnored private var artwork: Artwork?
         @ObservationIgnored private var images: [Request: Image] = [:]
@@ -198,7 +197,6 @@
         }
 
         private func cancelArtwork() {
-            artworkRun &+= 1
             artworkTask?.cancel()
             artworkTask = nil
             loadingPosters = false
@@ -246,7 +244,6 @@
 
         private func startArtwork() {
             guard let artwork else { return }
-            let run = artworkRun
             loadingPosters = true
             status.isPublishing = true
             status.error = nil
@@ -266,7 +263,8 @@
                     artworkTask = nil
                     commit()
                 } catch {
-                    guard !Task.isCancelled, run == artworkRun else { return }
+                    // A replaced task is always cancelled first, so it stops here.
+                    guard !Task.isCancelled else { return }
                     loadingPosters = false
                     artworkTask = nil
                     manifestTask?.cancel()
@@ -355,7 +353,7 @@
                         isPublishing: artworkTask != nil,
                         availableCount: readyCount,
                         unavailableImageCount: draft.entries.count - written.entries.count,
-                        lastPublication: written.createdAt,
+                        hasPublished: true,
                         failedPosterCount: failedPosterCount,
                         hasFailedArtwork: hasFailedArtwork
                     )

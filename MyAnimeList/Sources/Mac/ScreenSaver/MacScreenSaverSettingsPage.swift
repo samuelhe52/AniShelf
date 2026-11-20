@@ -147,7 +147,7 @@
                     ? Text("Removing artwork…")
                     : Text("Artwork updates start when you install the screen saver.")
             }
-            if status.isPublishing || status.lastPublication == nil {
+            if status.isPublishing || !status.hasPublished {
                 let total = publisher.draft.entries.count
                 let prepared = min(status.availableCount, total)
                 return prepared > 0
