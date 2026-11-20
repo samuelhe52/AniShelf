@@ -14,13 +14,17 @@ struct ScreenSaverScene: Sendable {
         var startIndex = 0
         var slides: ScreenSaverSlideOrder?
         var wall: CoverWallShuffleBag?
+        var stage: (any ScreenSaverStageDirector)?
     }
 
     enum Content: Sendable {
         case wall(CoverWallGrid, [CGImage])
         case wallColumn([CGImage])
-        case poster(ScreenSaverManifest.Entry, CGImage, background: CGImage?)
+        case poster(ScreenSaverManifest.Entry, CGImage, wash: ScreenSaverMesh)
         case backdrop(ScreenSaverManifest.Entry, image: CGImage, logo: CGImage?)
+        case stage(any ScreenSaverStageStep)
+        case fusion(ScreenSaverManifest.Entry, poster: CGImage, posterRatio: CGFloat, wash: ScreenSaverMesh)
+        case editorial(ScreenSaverManifest.Entry, poster: CGImage, accent: ScreenSaverColor, wash: ScreenSaverMesh)
         case notice(ScreenSaverRenderer.Notice)
     }
 
@@ -28,6 +32,7 @@ struct ScreenSaverScene: Sendable {
     var details: Set<ScreenSaverManifest.Detail> = []
     var duration: TimeInterval = 4
     var next = Cursor()
+    var washFlows = true
 }
 
 struct ScreenSaverSlideOrder: Sendable {
@@ -71,11 +76,13 @@ struct ScreenSaverSlideOrder: Sendable {
 actor ScreenSaverSceneLoader {
     private let reader: ScreenSaverSnapshotReader
     private let seed: UInt64
+    private let draft: ScreenSaverDraft?
     private var orderedSnapshot: ScreenSaverSnapshotReader.Snapshot = .empty
 
-    init(directory: URL, build: String? = nil, seed: UInt64 = 0) {
+    init(directory: URL, build: String? = nil, seed: UInt64 = 0, draft: ScreenSaverDraft? = nil) {
         reader = ScreenSaverSnapshotReader(directory: directory, build: build)
         self.seed = seed
+        self.draft = draft
     }
 
     func read() -> ScreenSaverSnapshotReader.Snapshot {
@@ -84,10 +91,12 @@ actor ScreenSaverSceneLoader {
 
         if case .ready(let manifest) = current {
             var random = ScreenSaverRandomGenerator(state: seed)
+            var entries = manifest.entries.shuffled(using: &random)
+            if let limit = draft?.entryLimit { entries = Array(entries.prefix(max(limit, 1))) }
             orderedSnapshot = .ready(
                 ScreenSaverManifest(
-                    generation: manifest.generation, createdAt: manifest.createdAt, settings: manifest.settings,
-                    entries: manifest.entries.shuffled(using: &random)
+                    generation: manifest.generation, createdAt: manifest.createdAt,
+                    settings: draft?.settings ?? manifest.settings, entries: entries
                 ))
         } else {
             orderedSnapshot = current
@@ -110,7 +119,7 @@ actor ScreenSaverSceneLoader {
 
         return Self.prepare(
             entries: manifest.entries, settings: manifest.settings, cursor: cursor, size: size, scale: scale,
-            seed: seed,
+            seed: seed, draft: draft,
             image: reader.image(at:maximumPixelSize:)
         )
     }
@@ -122,18 +131,44 @@ actor ScreenSaverSceneLoader {
         size: CGSize,
         scale: CGFloat,
         seed: UInt64 = 0,
+        draft: ScreenSaverDraft? = nil,
         image: (String, Int) -> CGImage?
     ) -> ScreenSaverScene {
+        var scene = prepareContent(
+            entries: entries, settings: settings, cursor: cursor, size: size, scale: scale, seed: seed, draft: draft,
+            image: image)
+        scene.washFlows = settings.washFlows
+        return scene
+    }
+
+    private static func prepareContent(
+        entries: [ScreenSaverManifest.Entry],
+        settings: ScreenSaverManifest.Settings,
+        cursor: ScreenSaverScene.Cursor,
+        size: CGSize,
+        scale: CGFloat,
+        seed: UInt64,
+        draft: ScreenSaverDraft?,
+        image: (String, Int) -> CGImage?
+    ) -> ScreenSaverScene {
+        if let layout = draft?.layout {
+            return prepareDraft(
+                layout, draft: draft!, entries: entries, settings: settings, cursor: cursor, size: size, scale: scale,
+                seed: seed, image: image)
+        }
         if settings.layout == .coverWall, entries.count >= 4,
             let wall = loadWall(
-                entries, cursor: cursor, size: size, scale: scale, rows: settings.coverWallRows, seed: seed, image: image
+                entries, cursor: cursor, size: size, scale: scale, rows: settings.coverWallRows, seed: seed,
+                image: image
             )
         {
             return wall
         }
 
-        var slides = cursor.slides ?? ScreenSaverSlideOrder(
-            count: entries.count, startingAt: cursor.startIndex, seed: seed)
+        var slides =
+            cursor.slides
+            ?? ScreenSaverSlideOrder(
+                count: entries.count, startingAt: cursor.startIndex, seed: seed)
         let content = slides.next { index in
             let entry = entries[index]
             if settings.layout == .backdrop, let path = entry.backdrop,
@@ -143,7 +178,11 @@ actor ScreenSaverSceneLoader {
                 return .backdrop(entry, image: backdrop, logo: logo)
             }
             if let poster = image(entry.poster, pixelLimit(size.height * scale, 1_500)) {
-                return .poster(entry, poster, background: blurredBackground(of: poster))
+                return .poster(
+                    entry, poster,
+                    wash: .shaded(
+                        ScreenSaverArt.samples(of: poster, columns: 3, rows: 3), columns: 3, rows: 3,
+                        brightness: 0.5))
             }
             return nil
         }
@@ -187,37 +226,64 @@ actor ScreenSaverSceneLoader {
         )
     }
 
-    private static func pixelLimit(_ size: CGFloat, _ limit: Int) -> Int {
+    private static func prepareDraft(
+        _ layout: ScreenSaverDraftLayout,
+        draft: ScreenSaverDraft,
+        entries: [ScreenSaverManifest.Entry],
+        settings: ScreenSaverManifest.Settings,
+        cursor: ScreenSaverScene.Cursor,
+        size: CGSize,
+        scale: CGFloat,
+        seed: UInt64,
+        image: (String, Int) -> CGImage?
+    ) -> ScreenSaverScene {
+        if layout.isStage {
+            let context = ScreenSaverDraftContext(
+                entries: entries, settings: settings, draft: draft, size: size, scale: scale, seed: seed)
+            guard var director = cursor.stage ?? context.makeDirector(layout),
+                let next = director.next(image: image)
+            else { return ScreenSaverScene(content: .notice(.empty)) }
+            return ScreenSaverScene(content: .stage(next.step), duration: next.duration, next: .init(stage: director))
+        }
+
+        var slides =
+            cursor.slides
+            ?? ScreenSaverSlideOrder(
+                count: entries.count, startingAt: cursor.startIndex, seed: seed)
+        let content = slides.next { index in
+            let entry = entries[index]
+            switch layout {
+            case .coverFusion:
+                let canvasScale = min(scale, 3_000 / max(size.width, size.height, 1))
+                let canvas = CGSize(
+                    width: (size.width * canvasScale).rounded(), height: (size.height * canvasScale).rounded())
+                guard let poster = image(entry.poster, pixelLimit(size.height * scale, 1_500)),
+                    let feathered = ScreenSaverArt.fusion(poster: poster, canvas: canvas)
+                else { return nil }
+                let ratio = CGFloat(poster.width) / CGFloat(poster.height)
+                let wash = ScreenSaverMesh.fusion(
+                    poster: poster, frame: ScreenSaverArt.fusionPosterFrame(in: size, ratio: ratio), canvas: size)
+                return .fusion(entry, poster: feathered, posterRatio: ratio, wash: wash)
+            default:
+                guard let poster = image(entry.poster, pixelLimit(size.height * scale, 1_500)) else { return nil }
+                // A dark ground in the poster's own shades, so the accent type stands out.
+                return .editorial(
+                    entry, poster: poster, accent: ScreenSaverArt.accent(of: poster),
+                    wash: .shaded(
+                        ScreenSaverArt.samples(of: poster, columns: 3, rows: 3), columns: 3, rows: 3,
+                        brightness: 0.2))
+            }
+        }
+        guard let content else { return ScreenSaverScene(content: .notice(.empty)) }
+        let interval = settings.interval.isFinite ? min(max(settings.interval, 1), 3_600) : 12
+        return ScreenSaverScene(
+            content: content, details: Set(settings.details), duration: interval, next: .init(slides: slides))
+    }
+
+    static func pixelLimit(_ size: CGFloat, _ limit: Int) -> Int {
         Int(ceil(min(max(size, 1), CGFloat(limit))))
     }
-
-    // CIContext is thread-safe; one shared context avoids rebuilding its caches for every slide.
-    private static let imageContext = CIContext(options: [.cacheIntermediates: false])
-
-    /// A small, heavily blurred copy of the poster that the layout stretches across the screen.
-    private static func blurredBackground(of poster: CGImage) -> CGImage? {
-        let width = 96
-        let height = max(1, Int((CGFloat(poster.height) / CGFloat(max(poster.width, 1)) * CGFloat(width)).rounded()))
-        guard
-            let context = CGContext(
-                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
-                space: CGColorSpace(name: CGColorSpace.sRGB)!,
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            )
-        else { return nil }
-        context.interpolationQuality = .medium
-        context.draw(poster, in: CGRect(x: 0, y: 0, width: width, height: height))
-        guard let small = context.makeImage() else { return nil }
-
-        let input = CIImage(cgImage: small)
-        let output = input.clampedToExtent()
-            .applyingGaussianBlur(sigma: 7)
-            .applyingFilter("CIColorControls", parameters: [kCIInputSaturationKey: 1.25])
-            .cropped(to: input.extent)
-        return imageContext.createCGImage(output, from: input.extent)
-    }
 }
-
 
 /// SplitMix64 keeps a session's shuffle reproducible for any given seed.
 struct ScreenSaverRandomGenerator: RandomNumberGenerator, Sendable {

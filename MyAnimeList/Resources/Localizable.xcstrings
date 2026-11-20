@@ -6422,6 +6422,22 @@
         }
       }
     },
+    "Flowing Background" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流れる背景"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流动背景"
+          }
+        }
+      }
+    },
     "Follow Anime Info Language" : {
       "localizations" : {
         "ja" : {

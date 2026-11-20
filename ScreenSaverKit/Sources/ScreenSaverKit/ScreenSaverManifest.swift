@@ -66,11 +66,15 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         public let details: [Detail]
         public let interval: TimeInterval
         public let coverWallRows: Int
+        /// Whether the colour wash behind Poster Focus drifts. Off, it holds still and only blends
+        /// from one poster's colours to the next.
+        public let washFlows: Bool
 
         public init(
             layout: Layout, details: [Detail]? = nil, interval: TimeInterval,
-            coverWallRows: Int = Self.defaultCoverWallRows
+            coverWallRows: Int = Self.defaultCoverWallRows, washFlows: Bool = true
         ) {
+            self.washFlows = washFlows
             self.layout = layout
             self.details = Detail.normalized(details ?? Detail.defaults(for: layout))
             self.interval = interval
@@ -85,7 +89,10 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
                 // Unknown future details are dropped rather than failing the whole snapshot.
                 details: try values.decodeIfPresent([String].self, forKey: .details)?.compactMap(Detail.init),
                 interval: try values.decode(TimeInterval.self, forKey: .interval),
-                coverWallRows: try values.decodeIfPresent(Int.self, forKey: .coverWallRows) ?? Self.defaultCoverWallRows
+                coverWallRows: try values.decodeIfPresent(Int.self, forKey: .coverWallRows)
+                    ?? Self.defaultCoverWallRows,
+                // Snapshots written before this option flow, as the saver always did.
+                washFlows: try values.decodeIfPresent(Bool.self, forKey: .washFlows) ?? true
             )
         }
     }

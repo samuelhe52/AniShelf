@@ -298,6 +298,10 @@
                         }
                     }
                 }
+                // Poster Focus, and Cover Wall's fallback to it, draws over the colour background.
+                if publisher.showsSlideOptions, publisher.settings.layout != .backdrop {
+                    Toggle("Flowing Background", isOn: $publisher.settings.washFlows)
+                }
             }
             .frame(maxWidth: .infinity)
         }

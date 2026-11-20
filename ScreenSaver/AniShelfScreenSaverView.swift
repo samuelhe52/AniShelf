@@ -88,8 +88,7 @@ final class AniShelfScreenSaverView: ScreenSaverView {
     }
 
     private func configureView() {
-        layer = renderer.layer
-        wantsLayer = true
+        renderer.install(in: self)
         animationTimeInterval = 1
         updateViewport()
     }

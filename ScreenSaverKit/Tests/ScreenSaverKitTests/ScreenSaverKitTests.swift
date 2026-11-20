@@ -20,7 +20,9 @@ struct ScreenSaverKitTests {
         defer { fixture.remove() }
         let expected = ScreenSaverManifest(
             createdAt: Date(timeIntervalSince1970: 1_790_000_000.123),
-            settings: .init(layout: .backdrop, details: [.score, .userScore, .year], interval: 12, coverWallRows: 8),
+            settings: .init(
+                layout: .backdrop, details: [.score, .userScore, .year], interval: 12, coverWallRows: 8,
+                washFlows: false),
             entries: [
                 .init(
                     id: "fixture-1",

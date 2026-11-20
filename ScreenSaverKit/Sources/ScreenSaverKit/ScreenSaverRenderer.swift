@@ -30,6 +30,8 @@ public final class ScreenSaverRenderer {
     }
 
     public let layer = CALayer()
+    /// The flowing colour field some draft layouts draw over; see `makeWashView()`.
+    public let wash = ScreenSaverWash()
     private let message: (Notice) -> String
     private var directory: URL?
     private var build: String?
@@ -45,10 +47,14 @@ public final class ScreenSaverRenderer {
     private var currentLayer: CALayer?
     private var currentNotice: Notice?
     private var wall: CoverWall?
+    private var stage: (any ScreenSaverStage)?
+    private var draft: ScreenSaverDraft?
+    private var timeScale: Double { max(draft?.timeScale ?? 1, 0.05) }
 
+    /// The layer is clear: hosts put `makeWashView()` under it, and scenes with a ground of their
+    /// own cover the wash.
     public init(message: @escaping (Notice) -> String) {
         self.message = message
-        layer.backgroundColor = CGColor(gray: 0.025, alpha: 1)
         layer.masksToBounds = true
     }
 
@@ -84,10 +90,13 @@ public final class ScreenSaverRenderer {
         if let preview { play(preview) }
     }
 
-    /// - Parameter build: the saver's own build ID, checked against the snapshot's.
-    public func start(in directory: URL, build: String? = nil) {
+    /// - Parameters:
+    ///   - build: the saver's own build ID, checked against the snapshot's.
+    ///   - draft: playback overrides from the Screen Saver Demo; the saver passes none.
+    public func start(in directory: URL, build: String? = nil, draft: ScreenSaverDraft? = nil) {
         self.build = build
-        shuffleSeed = UInt64.random(in: .min ... .max)
+        self.draft = draft
+        shuffleSeed = draft?.seed ?? UInt64.random(in: .min ... .max)
         play(in: directory)
     }
 
@@ -96,8 +105,10 @@ public final class ScreenSaverRenderer {
         self.directory = directory
         guard size.width >= 1, size.height >= 1 else { return }
         let token = session.start()
-        let loader = ScreenSaverSceneLoader(directory: directory, build: build, seed: shuffleSeed)
-        playback = Task { [weak self, size, scale] in
+        let loader = ScreenSaverSceneLoader(directory: directory, build: build, seed: shuffleSeed, draft: draft)
+        layer.speed = Float(timeScale)
+        wash.start(timeScale: timeScale)
+        playback = Task { [weak self, size, scale, timeScale] in
             var snapshot = await loader.read()
             var scene = await loader.prepare(snapshot, cursor: .init(), size: size, scale: scale)
             var animated = false
@@ -107,7 +118,7 @@ public final class ScreenSaverRenderer {
                 let cursor = scene.next
                 async let buffered = loader.prepare(publication, cursor: cursor, size: size, scale: scale)
                 do {
-                    try await Task.sleep(for: .seconds(scene.duration))
+                    try await Task.sleep(for: .seconds(scene.duration / timeScale))
                 } catch {
                     return
                 }
@@ -136,6 +147,7 @@ public final class ScreenSaverRenderer {
         playback?.cancel()
         guard viewport.width >= 1, viewport.height >= 1, size.width >= 1, size.height >= 1 else { return }
         let token = session.start()
+        wash.start(timeScale: 1)
         let index = preview.entries.firstIndex { $0.id == previewEntryID } ?? 0
         playback = Task.detached { [weak self, size, scale] in
             var cursor = ScreenSaverScene.Cursor(startIndex: index)
@@ -161,7 +173,8 @@ public final class ScreenSaverRenderer {
     private func presentPreview(_ scene: ScreenSaverScene, token: UUID, animated: Bool) -> Bool {
         guard present(scene, token: token, animated: animated) else { return false }
         switch scene.content {
-        case .poster(let entry, _, _), .backdrop(let entry, _, _):
+        case .poster(let entry, _, _), .backdrop(let entry, _, _), .fusion(let entry, _, _, _),
+            .editorial(let entry, _, _, _):
             previewEntryID = entry.id
         default:
             break
@@ -174,9 +187,11 @@ public final class ScreenSaverRenderer {
         preview = nil
         previewEntryID = nil
         session.stop()
+        wash.stop()
         playback?.cancel()
         playback = nil
         wall = nil
+        stage = nil
         currentLayer = nil
         currentNotice = nil
         withoutImplicitAnimations {
@@ -186,6 +201,7 @@ public final class ScreenSaverRenderer {
 
     private func present(_ scene: ScreenSaverScene, token: UUID, animated: Bool) -> Bool {
         guard session.contains(token) else { return false }
+        wash.setFlows(scene.washFlows)
 
         withoutImplicitAnimations {
             let layouts = ScreenSaverLayouts(size: size, scale: scale)
@@ -197,14 +213,34 @@ public final class ScreenSaverRenderer {
             case .wall(let grid, let images):
                 let wall = CoverWall(grid: grid, images: images)
                 self.wall = wall
+                stage = nil
                 currentNotice = nil
-                replaceScene(with: wall.layer, animated: animated)
+                replaceScene(with: wall.layer, animated: animated, overWash: false)
                 return
-            case .poster(let entry, let image, let background):
-                next = layouts.posterFocus(entry, poster: image, background: background, details: scene.details)
+            case .poster(let entry, let image, let mesh):
+                wash.show(mesh)
+                next = layouts.posterFocus(entry, poster: image, details: scene.details)
                 currentNotice = nil
             case .backdrop(let entry, let image, let logo):
                 next = layouts.backdrop(entry, image: image, logo: logo, details: scene.details)
+                currentNotice = nil
+            case .stage(let step):
+                if let opened = step.makeStage(size: size, scale: scale, wash: wash) {
+                    stage = opened
+                    wall = nil
+                    currentNotice = nil
+                    replaceScene(with: opened.layer, animated: animated, overWash: opened.usesWash)
+                } else {
+                    stage?.apply(step)
+                }
+                return
+            case .fusion(let entry, let poster, let ratio, let mesh):
+                wash.show(mesh)
+                next = layouts.coverFusion(entry, poster: poster, posterRatio: ratio, details: scene.details)
+                currentNotice = nil
+            case .editorial(let entry, let poster, let accent, let mesh):
+                wash.show(mesh)
+                next = layouts.editorialCover(entry, poster: poster, accent: accent, details: scene.details)
                 currentNotice = nil
             case .notice(let notice):
                 guard notice != currentNotice else { return }
@@ -212,12 +248,20 @@ public final class ScreenSaverRenderer {
                 currentNotice = notice
             }
             wall = nil
-            replaceScene(with: next, animated: animated)
+            stage = nil
+            let overWash =
+                switch scene.content {
+                case .poster, .fusion, .editorial: true
+                default: false
+                }
+            replaceScene(with: next, animated: animated, overWash: overWash)
         }
         return true
     }
 
-    private func replaceScene(with next: CALayer, animated: Bool) {
+    /// - Parameter overWash: the new scene is clear where the wash shows.
+    private func replaceScene(with next: CALayer, animated: Bool, overWash: Bool) {
+        wash.setActive(overWash)
         let outgoing = currentLayer
         currentLayer = next
         next.position = CGPoint(x: layer.bounds.midX, y: layer.bounds.midY)
@@ -234,6 +278,16 @@ public final class ScreenSaverRenderer {
         fade.toValue = 1
         fade.duration = 0.85
         fade.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        if overWash {
+            // A clear scene cannot cover the old one, which would vanish only when removed; fade it out too.
+            let out = CABasicAnimation(keyPath: "opacity")
+            out.fromValue = 1
+            out.toValue = 0
+            out.duration = fade.duration
+            out.timingFunction = fade.timingFunction
+            outgoing.opacity = 0
+            outgoing.add(out, forKey: "crossfade")
+        }
         CATransaction.setCompletionBlock {
             // This layer belongs only to the outgoing scene, even if the view has since restarted.
             outgoing.removeFromSuperlayer()

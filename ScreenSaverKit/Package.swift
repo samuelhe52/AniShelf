@@ -14,6 +14,8 @@ let package = Package(
     products: [.library(name: "ScreenSaverKit", targets: ["ScreenSaverKit"])],
     targets: [
         .target(name: "ScreenSaverKit"),
+        // Plays draft layouts over the local snapshot for design review: `make run-saver-demo`.
+        .executableTarget(name: "ScreenSaverDemo", dependencies: ["ScreenSaverKit"]),
         .testTarget(name: "ScreenSaverKitTests", dependencies: ["ScreenSaverKit"])
     ]
 )

@@ -14,25 +14,21 @@ struct ScreenSaverLayouts {
     let size: CGSize
     let scale: CGFloat
 
-    private var bounds: CGRect { CGRect(origin: .zero, size: size) }
-    private var unit: CGFloat { min(size.width, size.height) }
-    private var ink: CGColor { CGColor(gray: 0.025, alpha: 1) }
+    var bounds: CGRect { CGRect(origin: .zero, size: size) }
+    var unit: CGFloat { min(size.width, size.height) }
+    var ink: CGColor { CGColor(gray: 0.025, alpha: 1) }
 
     // MARK: - Poster Focus
 
+    /// Drawn over the renderer's wash, which carries the poster's colours; the scene itself is clear.
     func posterFocus(
         _ entry: ScreenSaverManifest.Entry,
         poster: CGImage,
-        background backdrop: CGImage?,
         details: Set<ScreenSaverManifest.Detail>
     ) -> CALayer {
-        let scene = background()
-        if let backdrop {
-            let blur = imageLayer(backdrop, frame: bounds)
-            blur.contentsGravity = .resizeAspectFill
-            scene.addSublayer(blur)
-            scene.addSublayer(fill(CGColor(gray: 0, alpha: 0.5)))
-        }
+        let scene = CALayer()
+        scene.frame = bounds
+        scene.masksToBounds = true
 
         let portrait = size.height > size.width
         let ratio = CGFloat(poster.width) / CGFloat(max(poster.height, 1))
@@ -63,12 +59,12 @@ struct ScreenSaverLayouts {
             let block = stack(posterFocusLines(entry, details: details, width: textWidth), width: textWidth)
             place(block, x: posterFrame.maxX + gap, top: bounds.midY + block.height / 2, in: scene)
         }
-        scene.insertSublayer(posterCard(poster, frame: posterFrame), at: UInt32(backdrop == nil ? 0 : 2))
+        scene.insertSublayer(posterCard(poster, frame: posterFrame), at: 0)
         return scene
     }
 
     /// Three blocks: the title with its season, one line of facts, and the overview.
-    private func posterFocusLines(
+    func posterFocusLines(
         _ entry: ScreenSaverManifest.Entry, details: Set<ScreenSaverManifest.Detail>, width: CGFloat
     ) -> [Line] {
         var lines: [Line] = []
@@ -167,11 +163,11 @@ struct ScreenSaverLayouts {
 
     // MARK: - Text
 
-    private static let separator = " · "
+    static let separator = " · "
     static let textLayerName = "text"
 
     /// Year, genres, airing status, TMDb score, watch status, and the user's score, in that order, on one line of facts.
-    private func factsLine(_ entry: ScreenSaverManifest.Entry, details: Set<ScreenSaverManifest.Detail>) -> String {
+    func factsLine(_ entry: ScreenSaverManifest.Entry, details: Set<ScreenSaverManifest.Detail>) -> String {
         // Two genres at most: more turns the line into a list of tags.
         let genres = entry.genres.map { Array($0.prefix(2)) } ?? []
         return [
@@ -188,13 +184,13 @@ struct ScreenSaverLayouts {
         .joined(separator: Self.separator)
     }
 
-    private static func unbreakable(_ item: String) -> String {
+    static func unbreakable(_ item: String) -> String {
         item.replacingOccurrences(of: " ", with: "\u{00A0}").map(String.init).joined(separator: "\u{2060}")
     }
 
     /// Genres are one item in the facts line, so they use their script's list separator. Japanese
     /// genre names such as アクション・アドベンチャー already contain a middle dot.
-    private static func joinedGenres(_ genres: [String]) -> String {
+    static func joinedGenres(_ genres: [String]) -> String {
         let isCJK = genres.joined().unicodeScalars.contains {
             $0.properties.isIdeographic || (0x3040...0x30FF).contains($0.value)
         }
@@ -203,7 +199,7 @@ struct ScreenSaverLayouts {
 
     /// Shrinks the title to fit one line, down to `smallest`. A longer title wraps at `smallest`
     /// size, or a little larger when that still avoids a short last line.
-    private func fittedTitle(_ title: String, width: CGFloat, largest: CGFloat, smallest: CGFloat) -> CGFloat {
+    func fittedTitle(_ title: String, width: CGFloat, largest: CGFloat, smallest: CGFloat) -> CGFloat {
         let step = (largest - smallest) / 6
         let sizes = stride(from: largest, through: smallest - step / 2, by: -step).map { unit * $0 }
         func metrics(_ size: CGFloat) -> Metrics {
@@ -217,7 +213,7 @@ struct ScreenSaverLayouts {
         return wrapped ?? unit * smallest
     }
 
-    private struct Line {
+    struct Line {
         let text: String
         let size: CGFloat
         let weight: NSFont.Weight
@@ -227,12 +223,12 @@ struct ScreenSaverLayouts {
         var spaceBefore: CGFloat = 0
     }
 
-    private struct Stack {
+    struct Stack {
         var layers: [(layer: CALayer, spaceBefore: CGFloat)]
         var height: CGFloat
     }
 
-    private func stack(_ lines: [Line], width: CGFloat, center: Bool = false) -> Stack {
+    func stack(_ lines: [Line], width: CGFloat, center: Bool = false) -> Stack {
         var result = Stack(layers: [], height: 0)
         for line in lines {
             guard
@@ -248,7 +244,7 @@ struct ScreenSaverLayouts {
     }
 
     /// Lays the stack out downward from `top`; layer coordinates grow upward.
-    private func place(_ stack: Stack, x: CGFloat, top: CGFloat, in scene: CALayer) {
+    func place(_ stack: Stack, x: CGFloat, top: CGFloat, in scene: CALayer) {
         var y = top
         for (layer, space) in stack.layers {
             y -= space + layer.bounds.height
@@ -257,25 +253,26 @@ struct ScreenSaverLayouts {
         }
     }
 
-    private func attributed(
+    func attributed(
         _ text: String, size: CGFloat, weight: NSFont.Weight, alpha: CGFloat, lineSpacing: CGFloat = 1,
-        center: Bool = false
+        center: Bool = false, color: CGColor? = nil, tracking: CGFloat = 0
     ) -> NSAttributedString {
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = center ? .center : .natural
         paragraph.lineBreakMode = .byWordWrapping
         paragraph.lineHeightMultiple = lineSpacing
-        return NSAttributedString(
-            string: text,
-            attributes: [
-                .font: NSFont.systemFont(ofSize: size, weight: weight),
-                // CoreText draws with its own colour key.
-                NSAttributedString.Key(kCTForegroundColorAttributeName as String): CGColor(gray: 1, alpha: alpha),
-                .paragraphStyle: paragraph
-            ])
+        var attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: size, weight: weight),
+            // CoreText draws with its own colour key.
+            NSAttributedString.Key(kCTForegroundColorAttributeName as String):
+                color?.copy(alpha: alpha) ?? CGColor(gray: 1, alpha: alpha),
+            .paragraphStyle: paragraph
+        ]
+        if tracking != 0 { attributes[.kern] = tracking * size }
+        return NSAttributedString(string: text, attributes: attributes)
     }
 
-    private struct Metrics {
+    struct Metrics {
         let lines: Int
         let height: CGFloat
         let lastLineWidth: CGFloat
@@ -283,7 +280,7 @@ struct ScreenSaverLayouts {
         let lineEnds: [Int]
     }
 
-    private func measure(_ string: NSAttributedString, width: CGFloat) -> Metrics {
+    func measure(_ string: NSAttributedString, width: CGFloat) -> Metrics {
         let setter = CTFramesetterCreateWithAttributedString(string)
         let path = CGPath(rect: CGRect(x: 0, y: 0, width: width, height: 100_000), transform: nil)
         let frame = CTFramesetterCreateFrame(setter, CFRange(), path, nil)
@@ -298,7 +295,7 @@ struct ScreenSaverLayouts {
     /// Text is laid out, truncated, and drawn by CoreText into an image, so what is measured is
     /// exactly what is drawn. (CATextLayer ignores line spacing and cannot truncate wrapped text.)
     /// A longer text is cut to `lines` lines and ends with an ellipsis.
-    private func textLayer(
+    func textLayer(
         _ text: String?,
         width: CGFloat,
         size: CGFloat,
@@ -306,11 +303,15 @@ struct ScreenSaverLayouts {
         alpha: CGFloat = 0.96,
         lines: Int,
         lineSpacing: CGFloat = 1,
-        center: Bool = false
+        center: Bool = false,
+        color: CGColor? = nil,
+        tracking: CGFloat = 0
     ) -> CALayer? {
         guard let text = text.nonEmpty, width > 0, size > 0 else { return nil }
         func make(_ text: String) -> NSAttributedString {
-            attributed(text, size: size, weight: weight, alpha: alpha, lineSpacing: lineSpacing, center: center)
+            attributed(
+                text, size: size, weight: weight, alpha: alpha, lineSpacing: lineSpacing, center: center,
+                color: color, tracking: tracking)
         }
         var string = make(text)
         var metrics = measure(string, width: width)
@@ -347,7 +348,7 @@ struct ScreenSaverLayouts {
 
     // MARK: - Shapes
 
-    private func posterCard(_ poster: CGImage, frame: CGRect) -> CALayer {
+    func posterCard(_ poster: CGImage, frame: CGRect) -> CALayer {
         let radius = unit * 0.01
         let card = CALayer()
         card.frame = frame
@@ -365,7 +366,7 @@ struct ScreenSaverLayouts {
         return card
     }
 
-    private func background() -> CALayer {
+    func background() -> CALayer {
         let layer = CALayer()
         layer.frame = bounds
         layer.backgroundColor = ink
@@ -373,14 +374,14 @@ struct ScreenSaverLayouts {
         return layer
     }
 
-    private func fill(_ color: CGColor) -> CALayer {
+    func fill(_ color: CGColor) -> CALayer {
         let layer = CALayer()
         layer.frame = bounds
         layer.backgroundColor = color
         return layer
     }
 
-    private func gradient(colors: [CGColor], start: CGPoint, end: CGPoint) -> CAGradientLayer {
+    func gradient(colors: [CGColor], start: CGPoint, end: CGPoint) -> CAGradientLayer {
         let layer = CAGradientLayer()
         layer.frame = bounds
         layer.colors = colors
@@ -389,21 +390,21 @@ struct ScreenSaverLayouts {
         return layer
     }
 
-    private func imageLayer(_ image: CGImage, frame: CGRect) -> CALayer {
+    func imageLayer(_ image: CGImage, frame: CGRect) -> CALayer {
         let layer = CALayer()
         layer.frame = frame
         layer.contents = image
         return layer
     }
 
-    private func aspectFit(_ image: CGImage, in frame: CGRect) -> CGRect {
+    func aspectFit(_ image: CGImage, in frame: CGRect) -> CGRect {
         let ratio = min(frame.width / CGFloat(image.width), frame.height / CGFloat(image.height))
         let width = CGFloat(image.width) * ratio
         let height = CGFloat(image.height) * ratio
         return CGRect(x: frame.midX - width / 2, y: frame.midY - height / 2, width: width, height: height)
     }
 
-    private func addShadow(to layer: CALayer, opacity: Float = 0.45) {
+    func addShadow(to layer: CALayer, opacity: Float = 0.45) {
         layer.shadowColor = CGColor(gray: 0, alpha: 1)
         layer.shadowOpacity = opacity
         layer.shadowRadius = unit * 0.012
@@ -412,12 +413,12 @@ struct ScreenSaverLayouts {
 }
 
 extension Optional where Wrapped == String {
-    fileprivate var nonEmpty: String? {
+    var nonEmpty: String? {
         guard let self, !self.isEmpty else { return nil }
         return self
     }
 }
 
 extension String {
-    fileprivate var nonEmpty: String? { isEmpty ? nil : self }
+    var nonEmpty: String? { isEmpty ? nil : self }
 }

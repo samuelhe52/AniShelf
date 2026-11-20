@@ -47,8 +47,7 @@
             init(layoutSize: CGSize) {
                 self.layoutSize = layoutSize
                 super.init(frame: .zero)
-                layer = renderer.layer
-                wantsLayer = true
+                renderer.install(in: self)
             }
 
             @available(*, unavailable)

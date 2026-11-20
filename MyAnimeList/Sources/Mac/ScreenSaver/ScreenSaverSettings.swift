@@ -61,6 +61,7 @@
         static let backdropDetailsKey = "screenSaverBackdropDetails"
         static let intervalKey = "screenSaverInterval"
         static let coverWallRowsKey = "screenSaverCoverWallRows"
+        static let washFlowsKey = "screenSaverWashFlows"
 
         var isEnabled = false
         var scope = Scope.favorites
@@ -69,6 +70,8 @@
         var backdropDetails = ScreenSaverManifest.Detail.defaults(for: .backdrop)
         var interval: TimeInterval = 12
         var coverWallRows = ScreenSaverManifest.Settings.defaultCoverWallRows
+        /// Whether Poster Focus's colour background drifts.
+        var washFlows = true
 
         init() {}
 
@@ -90,6 +93,7 @@
             if seconds.isFinite, (1...3_600).contains(seconds) { interval = seconds }
             let rows = defaults.integer(forKey: Self.coverWallRowsKey)
             if ScreenSaverManifest.Settings.coverWallRowRange.contains(rows) { coverWallRows = rows }
+            washFlows = defaults.object(forKey: Self.washFlowsKey) as? Bool ?? true
         }
 
         func save(to defaults: UserDefaults) {
@@ -100,10 +104,13 @@
             defaults.set(backdropDetails.map(\.rawValue), forKey: Self.backdropDetailsKey)
             defaults.set(interval, forKey: Self.intervalKey)
             defaults.set(coverWallRows, forKey: Self.coverWallRowsKey)
+            defaults.set(washFlows, forKey: Self.washFlowsKey)
         }
 
         var manifestSettings: ScreenSaverManifest.Settings {
-            .init(layout: layout, details: details(for: layout), interval: interval, coverWallRows: coverWallRows)
+            .init(
+                layout: layout, details: details(for: layout), interval: interval, coverWallRows: coverWallRows,
+                washFlows: washFlows)
         }
 
         func details(for layout: ScreenSaverManifest.Layout) -> [ScreenSaverManifest.Detail] {

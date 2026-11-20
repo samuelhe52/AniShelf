@@ -235,6 +235,10 @@ launch-mac: ## Relaunch the last built native macOS app, without building
 	pkill -f "$$app_path/Contents/MacOS/" && sleep 1; \
 	open -n "$$app_path" $(if $(strip $(MAC_LAUNCH_ARGS)),--args $(MAC_LAUNCH_ARGS),)
 
+.PHONY: run-saver-demo
+run-saver-demo: ## Open the Screen Saver Demo, which plays draft layouts over ~/Pictures/AniShelf Screen Saver
+	@swift run --package-path ScreenSaverKit ScreenSaverDemo
+
 # Maintenance
 .PHONY: clean
 clean: ## Clean the Xcode build products and local build artifacts
