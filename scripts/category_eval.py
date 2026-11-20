@@ -249,7 +249,13 @@ def evaluate(client, route, entries, case):
         elif candidates:
             instructions = CHECK.format(criterion=criterion)
             # Like the app, pack every cloud route with the same budget; the JSON-object example is added afterward.
-            batches = list(pack(candidates, instructions))
+            try:
+                batches = list(pack(candidates, instructions))
+            except ValueError as error:
+                # A long criterion can leave a card no room. Record it as unchecked rather than end the paid run.
+                result['pack_error'] = str(error)
+                decisions.update(dict.fromkeys((e['id'] for e in candidates), 'unchecked'))
+                batches = []
 
             def check(batch):
                 ids, prompt = batch
