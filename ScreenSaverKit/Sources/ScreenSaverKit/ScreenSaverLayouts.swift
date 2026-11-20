@@ -322,7 +322,8 @@ struct ScreenSaverLayouts {
                 let kept = source.substring(to: end).trimmingCharacters(in: .whitespacesAndNewlines)
                 string = make(kept + "…")
                 metrics = measure(string, width: width)
-                end -= 1
+                // Step back a whole character, so an emoji or accented letter is never split.
+                end = source.rangeOfComposedCharacterSequence(at: end - 1).location
             } while metrics.lines > lines && end > 0
         }
         // Room below the last line for descenders.
