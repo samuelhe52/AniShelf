@@ -17,6 +17,7 @@
 // MODIFIED by Claude Code on behalf of Samuel He on 2026/10/29.
 // Changes: the response_format schema omits `x-order`, which Anthropic models reject;
 // `tools` and `tool_choice` are sent only with tools, since Google rejects a bare choice.
+// AniShelf also supports JSON-object structured generation for Bailian and DeepSeek.
 //
 //===----------------------------------------------------------------------===//
 import Foundation
@@ -81,6 +82,13 @@ public struct ChatCompletionsLanguageModel: Sendable, LanguageModel {
         case openRouter(enabled: Bool, effort: String?)
     }
 
+    // These routes use JSON-object mode instead of sending a guided schema to the provider.
+    enum JSONObjectProvider: Hashable, Sendable {
+        case bailian, deepSeek
+    }
+
+    var jsonObjectProvider: JSONObjectProvider?
+
     // Overridden in tests to inject a URLSession with mock protocol handlers.
     var urlSession: URLSession?
 
@@ -130,6 +138,7 @@ public struct ChatCompletionsLanguageModel: Sendable, LanguageModel {
             url: url,
             additionalHeaders: additionalHeaders,
             reasoning: reasoning,
+            jsonObjectProvider: jsonObjectProvider,
             urlSession: urlSession
         )
     }
@@ -257,6 +266,7 @@ public struct ChatCompletionsLanguageModel: Sendable, LanguageModel {
             fileprivate let url: URL
             fileprivate let additionalHeaders: [String: String]
             fileprivate let reasoning: Reasoning?
+            fileprivate let jsonObjectProvider: JSONObjectProvider?
             fileprivate let urlSession: URLSession?
 
             public static func == (lhs: Configuration, rhs: Configuration) -> Bool {
@@ -264,6 +274,7 @@ public struct ChatCompletionsLanguageModel: Sendable, LanguageModel {
                     && lhs.url == rhs.url
                     && lhs.additionalHeaders == rhs.additionalHeaders
                     && lhs.reasoning == rhs.reasoning
+                    && lhs.jsonObjectProvider == rhs.jsonObjectProvider
             }
 
             public func hash(into hasher: inout Hasher) {
@@ -271,6 +282,7 @@ public struct ChatCompletionsLanguageModel: Sendable, LanguageModel {
                 hasher.combine(url)
                 hasher.combine(additionalHeaders)
                 hasher.combine(reasoning)
+                hasher.combine(jsonObjectProvider)
             }
         }
 
@@ -297,13 +309,21 @@ public struct ChatCompletionsLanguageModel: Sendable, LanguageModel {
                 session: configuration.urlSession ?? URLSession(configuration: .ephemeral)
             )
 
+            let jsonObjectProvider = configuration.jsonObjectProvider
+            let maxTokens = request.generationOptions.maximumResponseTokens
+            let responseFormat: ChatCompletionsClient.ResponseFormat? = request.schema.map { schema in
+                if jsonObjectProvider != nil { return .init(type: "json_object") }
+                return .init(jsonSchema: .init(name: schema.name, schema: schema))
+            }
+
             // Translate the framework's request into the OpenAI-compatible wire format.
             let chatRequest = ChatCompletionsClient.ChatCompletionRequest(
                 model: configuration.modelName,
                 messages: try convertedTranscript(request.transcript),
                 temperature: request.generationOptions.temperature,
                 topP: try request.generationOptions.samplingMode.map(topP),
-                maxCompletionTokens: request.generationOptions.maximumResponseTokens,
+                maxCompletionTokens: jsonObjectProvider == nil ? maxTokens : nil,
+                maxTokens: jsonObjectProvider != nil ? maxTokens : nil,
                 // AniShelf modification: Google rejects `tool_choice` without tool
                 // declarations, so a request without tools sends neither field.
                 tools: request.enabledToolDefinitions.isEmpty
@@ -329,14 +349,7 @@ public struct ChatCompletionsLanguageModel: Sendable, LanguageModel {
                             }
                         }()
                     ),
-                responseFormat: request.schema.map { schema in
-                    ChatCompletionsClient.ResponseFormat(
-                        jsonSchema: ChatCompletionsClient.ResponseFormat.JSONSchemaWrapper(
-                            name: schema.name,
-                            schema: schema
-                        )
-                    )
-                },
+                responseFormat: responseFormat,
                 reasoningEffort: {
                     if case .effort(let effort) = configuration.reasoning { effort } else { nil }
                 }(),
@@ -346,7 +359,9 @@ public struct ChatCompletionsLanguageModel: Sendable, LanguageModel {
                     } else {
                         nil
                     }
-                }()
+                }(),
+                enableThinking: jsonObjectProvider == .bailian ? false : nil,
+                thinking: jsonObjectProvider == .deepSeek ? .init(type: "disabled") : nil
             )
 
             // Stream the response back into the framework via `channel`.
@@ -811,17 +826,24 @@ fileprivate struct ChatCompletionsClient {
         var temperature: Double?
         var topP: Double?
         var maxCompletionTokens: Int?
+        var maxTokens: Int?
         var tools: [Tool]?
         var toolChoice: ChatCompletionRequest.ToolChoice?
         var responseFormat: ResponseFormat?
         var reasoningEffort: String?
         var reasoning: ReasoningObject?
+        var enableThinking: Bool?
+        var thinking: Thinking?
         var stream = true
         var streamOptions = StreamOptions(includeUsage: true)
 
         struct ReasoningObject: Encodable {
             var enabled: Bool
             var effort: String?
+        }
+
+        struct Thinking: Encodable {
+            var type: String
         }
 
         struct StreamOptions: Encodable {
@@ -838,10 +860,13 @@ fileprivate struct ChatCompletionsClient {
             case temperature
             case topP = "top_p"
             case maxCompletionTokens = "max_completion_tokens"
+            case maxTokens = "max_tokens"
             case tools
             case responseFormat = "response_format"
             case reasoningEffort = "reasoning_effort"
             case reasoning
+            case enableThinking = "enable_thinking"
+            case thinking
             case stream
             case streamOptions = "stream_options"
             case toolChoice = "tool_choice"
@@ -928,7 +953,7 @@ fileprivate struct ChatCompletionsClient {
 
     struct ResponseFormat: Encodable {
         var type = "json_schema"
-        var jsonSchema: JSONSchemaWrapper
+        var jsonSchema: JSONSchemaWrapper?
 
         private enum CodingKeys: String, CodingKey {
             case type

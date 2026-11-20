@@ -225,18 +225,18 @@
         }
       }
     },
-    "%@ receives the titles, studios, genres, and overviews of the anime it checks, with your description. Requests go from this device to %@ with your key." : {
+    "Cloud providers receive the titles, studios, genres, and overviews being checked, plus your description." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@は、確認するアニメのタイトル、制作会社、ジャンル、あらすじと、入力した説明を受け取ります。リクエストはあなたのキーを使い、このデバイスから%2$@へ送られます。"
+            "value" : "クラウドのサービスは、確認するアニメのタイトル、制作会社、ジャンル、あらすじと、入力した説明を受け取ります。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@会收到所检查动画的标题、制作公司、类型和简介，以及你输入的描述。请求会使用你的密钥，从此设备发送到%2$@。"
+            "value" : "云端服务商会收到所检查动画的标题、制作公司、类型和简介，以及你输入的描述。"
           }
         }
       }
@@ -2287,6 +2287,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已加入资料库。"
+          }
+        }
+      }
+    },
+    "Always review the results before creating a category." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カテゴリを作成する前に、必ず結果を確認してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "创建分类前，请务必检查结果。"
           }
         }
       }
@@ -6582,6 +6598,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "登录后前往API页面。"
+          }
+        }
+      }
+    },
+    "GPT‑6 Luna is recommended. Always review results before creating a category." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GPT‑6 Lunaをおすすめします。カテゴリを作成する前に、必ず結果を確認してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "推荐使用GPT‑6 Luna。创建分类前请务必检查结果。"
           }
         }
       }
@@ -15283,6 +15315,22 @@
         }
       }
     },
+    "Use an API key from the China (Beijing) region. AniShelf keeps your Bailian key in the Keychain on this device. It does not sync." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中国（北京）リージョンのAPIキーを使用してください。AniShelfはBailianのキーをこのデバイスのキーチェーンに保存します。同期はされません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请使用华北2（北京）地域的API密钥。AniShelf会将你的Bailian密钥保存在此设备的钥匙串中，不会同步。"
+          }
+        }
+      }
+    },
     "Backend" : {
       "localizations" : {
         "ja" : {
@@ -15759,70 +15807,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "智能功能"
-          }
-        }
-      }
-    },
-    "Smart Features need Apple Intelligence on this Mac. macOS 27 also accepts an OpenAI or OpenRouter key." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スマート機能にはこのMacでApple Intelligenceが必要です。macOS 27以降ではOpenAIまたはOpenRouterのキーも使えます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "智能功能需要此Mac支持Apple Intelligence。macOS 27及更高版本也可使用OpenAI或OpenRouter密钥。"
-          }
-        }
-      }
-    },
-    "Smart Features need Apple Intelligence on this device. iOS 27 also accepts an OpenAI or OpenRouter key." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スマート機能にはこのデバイスでApple Intelligenceが必要です。iOS 27以降ではOpenAIまたはOpenRouterのキーも使えます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "智能功能需要此设备支持Apple Intelligence。iOS 27及更高版本也可使用OpenAI或OpenRouter密钥。"
-          }
-        }
-      }
-    },
-    "Smart Features need Apple Intelligence, or an OpenAI or OpenRouter key." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スマート機能にはApple Intelligence、またはOpenAIかOpenRouterのキーが必要です。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "智能功能需要Apple Intelligence，或OpenAI、OpenRouter的密钥。"
-          }
-        }
-      }
-    },
-    "Smart Features use the checked backend. Describe a category from the Categories manager." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スマート機能はチェックしたバックエンドを使います。カテゴリの管理画面で、説明からカテゴリを作成できます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "智能功能使用勾选的后端。可在分类管理中通过描述创建分类。"
           }
         }
       }

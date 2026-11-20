@@ -45,7 +45,13 @@ enum CategoryWatchStatus: String, CaseIterable, Sendable {
 /// studios go into `semanticCriterion` for the model to judge: TMDb's genre IDs fit anime
 /// poorly (romance and music exist only for movies) and are often incomplete.
 @Generable
-struct CategoryQueryPlan {
+struct CategoryQueryPlan: AIJSONExample {
+    static let jsonObjectExample = """
+        {"name":"Example","kinds":[],"watchStatuses":[],"favoritesOnly":false,"minimumScore":0,"maximumScore":0,\
+        "earliestYear":0,"latestYear":0,"earliestFinishYear":0,"latestFinishYear":0,"semanticCriterion":"",\
+        "criterionLabel":"","unsupportedRequest":""}
+        """
+
     @Guide(description: "A short category name in the language of the request, at most 40 characters")
     var name: String
     @Guide(description: "Entry kinds to keep; empty keeps every kind")

@@ -26,7 +26,9 @@ protocol AIBatchOutput: Generable {
 }
 
 @Generable
-struct AIBatchSelection: AIBatchOutput {
+struct AIBatchSelection: AIBatchOutput, AIJSONExample {
+    static let jsonObjectExample = #"{"matchingIndices":[0,2]}"#
+
     var matchingIndices: [Int]
     var indexedValues: [AIIndexedValue<Bool>] {
         matchingIndices.map { AIIndexedValue(index: $0, value: true) }
