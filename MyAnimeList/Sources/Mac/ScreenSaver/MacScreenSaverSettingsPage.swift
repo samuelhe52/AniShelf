@@ -72,9 +72,7 @@
         }
 
         private func openSettings() {
-            guard let url = URL(string: "x-apple.systempreferences:com.apple.Wallpaper-Settings.extension"),
-                NSWorkspace.shared.open(url)
-            else {
+            guard NSWorkspace.shared.open(ScreenSaverSettingsLink.wallpaper) else {
                 launchError = "Couldn’t Open System Settings"
                 return
             }
@@ -84,36 +82,34 @@
 
     fileprivate struct ScreenSaverUninstallSection: View {
         let publisher: ScreenSaverPublisher
-        @State private var showsFinishInFinder = false
+        @State private var showsRemovalSteps = false
 
         var body: some View {
             Section {
                 LabeledContent {
-                    Button("Uninstall Screen Saver…", action: uninstall)
+                    Button("Uninstall Screen Saver…") {
+                        // The sandbox can't delete the installed saver, but System Settings can.
+                        publisher.settings.isEnabled = false
+                        showsRemovalSteps = true
+                    }
                 } label: {
                     Text("Uninstalling makes the AniShelf option disappear in the screen saver settings.")
                 }
             }
-            .alert("Finish in Finder", isPresented: $showsFinishInFinder) {
-                Button("OK", role: .cancel) {}
+            .alert("Remove AniShelf from Screen Savers", isPresented: $showsRemovalSteps) {
+                Button("Open Wallpaper Settings") { NSWorkspace.shared.open(ScreenSaverSettingsLink.wallpaper) }
+                Button("Done", role: .cancel) {}
             } message: {
-                Text("Move AniShelf.saver to the Trash. Finder asks for your password if it’s installed for all users.")
+                Text(
+                    "AniShelf stopped updating the screen saver and deleted its artwork. To finish, click Screen Saver… in Wallpaper settings, Control-click AniShelf, then choose Delete “AniShelf”."
+                )
             }
         }
+    }
 
-        /// The sandbox can't delete the installed bundle, so stop updates, then let Finder remove it.
-        private func uninstall() {
-            publisher.settings.isEnabled = false
-            let name = "Screen Savers/AniShelf.saver"
-            var candidates = [URL(filePath: "/Library").appending(path: name, directoryHint: .isDirectory)]
-            if let home = FileManager.default.homeDirectory(forUser: NSUserName()) {
-                candidates.insert(home.appending(path: "Library/" + name, directoryHint: .isDirectory), at: 0)
-            }
-            // The sandbox may hide these paths; reveal both when neither is visible.
-            let found = candidates.filter { FileManager.default.fileExists(atPath: $0.path(percentEncoded: false)) }
-            NSWorkspace.shared.activateFileViewerSelecting(found.isEmpty ? candidates : found)
-            showsFinishInFinder = true
-        }
+    /// macOS 27 keeps screen savers in the Wallpaper pane; there is no separate Screen Saver pane.
+    fileprivate enum ScreenSaverSettingsLink {
+        static let wallpaper = URL(string: "x-apple.systempreferences:com.apple.Wallpaper-Settings.extension")!
     }
 
     fileprivate struct ScreenSaverArtworkStatus: View {

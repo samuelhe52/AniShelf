@@ -16377,38 +16377,6 @@
         }
       }
     },
-    "Finish in Finder" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Finderで完了"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在访达中完成"
-          }
-        }
-      }
-    },
-    "Move AniShelf.saver to the Trash. Finder asks for your password if it’s installed for all users." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AniShelf.saverをゴミ箱に入れてください。すべてのユーザ用にインストールした場合は、Finderがパスワードを求めます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请将AniShelf.saver移到废纸篓。如果是为所有用户安装的，访达会要求输入密码。"
-          }
-        }
-      }
-    },
     "Deleted Category" : {
       "localizations" : {
         "ja" : {
@@ -16421,6 +16389,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已删除的分类"
+          }
+        }
+      }
+    },
+    "Remove AniShelf from Screen Savers" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンセーバからAniShelfを削除"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从屏幕保护程序中移除AniShelf"
+          }
+        }
+      }
+    },
+    "AniShelf stopped updating the screen saver and deleted its artwork. To finish, click Screen Saver… in Wallpaper settings, Control-click AniShelf, then choose Delete “AniShelf”." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfはスクリーンセーバの更新を停止し、画像を削除しました。最後に、「壁紙」設定で「スクリーンセーバ…」をクリックし、AniShelfをControlキーを押しながらクリックして「“AniShelf”を削除」を選択してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf已停止更新屏幕保护程序并删除了图像。最后，请在“墙纸”设置中点按“屏幕保护程序…”，按住Control键点按AniShelf，然后选取删除“AniShelf”。"
           }
         }
       }

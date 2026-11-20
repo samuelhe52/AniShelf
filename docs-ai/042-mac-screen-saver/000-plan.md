@@ -190,3 +190,4 @@ and links `ScreenSaverKit` on macOS only, for the manifest type and the live pre
 - Updated 2026-11-20: slide typography reworked, text drawn with CoreText — see [008-slide-typography.md](008-slide-typography.md)
 - Updated 2026-11-20: custom categories as a scope — see [009-category-scope.md](009-category-scope.md)
 - Updated 2026-11-20: saver build ID and reinstall notice — see [010-saver-build-id.md](010-saver-build-id.md)
+- Updated 2026-11-20: Uninstall now deletes the artwork and points to System Settings' Delete command; the Finder reveal did not work from the sandbox (007 corrected in place)
