@@ -187,3 +187,4 @@ and links `ScreenSaverKit` on macOS only, for the manifest type and the live pre
 - Updated 2026-11-20: setup steps replace the enable toggle, publish wording and Refresh Now / Show in Finder go, export and preview reworked for speed — see [005-export-speed-and-pane-revision.md](005-export-speed-and-pane-revision.md)
 - Updated 2026-11-20: true-scale preview, Cover Wall rows, per-layout detail toggles, Poster Focus and Hero Still redesigned — see [006-preview-rows-and-details.md](006-preview-rows-and-details.md)
 - Updated 2026-11-20: Uninstall via Finder, System Settings thumbnail, title always on, overview / TMDb score / watch status details — see [007-uninstall-thumbnail-and-more-details.md](007-uninstall-thumbnail-and-more-details.md)
+- Updated 2026-11-20: slide typography reworked, text drawn with CoreText — see [008-slide-typography.md](008-slide-typography.md)

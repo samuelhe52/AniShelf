@@ -278,7 +278,7 @@ struct ScreenSaverKitTests {
         let withTitle = try await waitForScene(after: nil)
         #expect(withTitle.bounds.size == layoutSize)
         #expect(withTitle.frame == CGRect(origin: .zero, size: viewport))
-        #expect(withTitle.sublayers?.contains { $0 is CATextLayer } == true)
+        #expect(withTitle.sublayers?.contains { $0.name == ScreenSaverLayouts.textLayerName } == true)
         let alternate = try #require(bitmap.cropping(to: CGRect(x: 0, y: 0, width: 10, height: 15)))
         let other = ScreenSaverManifest.Entry(
             id: "other", title: "Other title", poster: "alternate", posterPixelSize: .init(width: 10, height: 15)
@@ -290,7 +290,7 @@ struct ScreenSaverKitTests {
             ))
         // The title is always shown; the overview detail adds a second text layer.
         let withOverview = try await waitForScene(after: withTitle)
-        #expect(withOverview.sublayers?.filter { $0 is CATextLayer }.count == 2)
+        #expect(withOverview.sublayers?.filter { $0.name == ScreenSaverLayouts.textLayerName }.count == 2)
         let layers = (withOverview.sublayers ?? []).flatMap { [$0] + ($0.sublayers ?? []) }
         #expect(layers.contains { ($0.contents as AnyObject?) === bitmap })
     }
