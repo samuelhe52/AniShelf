@@ -375,23 +375,12 @@
                     guard artworkTask != nil, !failed.contains(request), let prior = displayed[entry.id] else {
                         return nil
                     }
-                    return .init(
-                        id: entry.id, title: entry.title, season: entry.season, year: entry.year,
-                        genres: entry.genres, status: entry.status, score: entry.score,
-                        watchStatus: entry.watchStatus, userScore: entry.userScore, overview: entry.overview,
-                        poster: prior.poster,
-                        posterPixelSize: prior.posterPixelSize
-                    )
+                    return entry.manifestEntry(poster: prior.poster, posterPixelSize: prior.posterPixelSize)
                 }
                 let backdrop = entry.backdrop.flatMap { images[.backdrop($0)] }
-                return .init(
-                    id: entry.id, title: entry.title, season: entry.season, year: entry.year,
-                    genres: entry.genres, status: entry.status, score: entry.score,
-                    watchStatus: entry.watchStatus, userScore: entry.userScore, overview: entry.overview,
-                    poster: poster.path,
-                    posterPixelSize: poster.pixelSize, backdrop: backdrop?.path,
-                    logo: backdrop != nil ? entry.logo.flatMap { images[.logo($0)]?.path } : nil
-                )
+                return entry.manifestEntry(
+                    poster: poster.path, posterPixelSize: poster.pixelSize, backdrop: backdrop?.path,
+                    logo: backdrop != nil ? entry.logo.flatMap { images[.logo($0)]?.path } : nil)
             }
         }
 

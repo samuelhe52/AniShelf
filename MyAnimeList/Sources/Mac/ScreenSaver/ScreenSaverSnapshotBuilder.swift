@@ -27,6 +27,17 @@
             let backdrop: URL?
             let previewBackdrop: TMDbImage?
             let logo: TMDbImage?
+
+            /// This entry's text with the given artwork, as the saver reads it.
+            func manifestEntry(
+                poster: String, posterPixelSize: ScreenSaverManifest.Entry.PixelSize, backdrop: String? = nil,
+                logo: String? = nil
+            ) -> ScreenSaverManifest.Entry {
+                .init(
+                    id: id, title: title, season: season, year: year, genres: genres, status: status, score: score,
+                    watchStatus: watchStatus, userScore: userScore, overview: overview, poster: poster,
+                    posterPixelSize: posterPixelSize, backdrop: backdrop, logo: logo)
+            }
         }
 
         let settings: ScreenSaverManifest.Settings

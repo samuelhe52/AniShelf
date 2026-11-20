@@ -173,14 +173,9 @@
                 }
                 let ready: [ScreenSaverManifest.Entry] = entries.compactMap { entry in
                     guard let poster = add(entry.previewPoster), let bitmap = bitmaps[poster] else { return nil }
-                    return .init(
-                        id: entry.id, title: entry.title, season: entry.season, year: entry.year,
-                        genres: entry.genres, status: entry.status, score: entry.score,
-                        watchStatus: entry.watchStatus, userScore: entry.userScore, overview: entry.overview,
-                        poster: poster,
-                        posterPixelSize: .init(width: bitmap.width, height: bitmap.height),
-                        backdrop: add(entry.previewBackdrop), logo: add(entry.logo)
-                    )
+                    return entry.manifestEntry(
+                        poster: poster, posterPixelSize: .init(width: bitmap.width, height: bitmap.height),
+                        backdrop: add(entry.previewBackdrop), logo: add(entry.logo))
                 }
                 renderer.updatePreview(.init(settings: draft.settings, entries: ready, images: bitmaps))
             }
