@@ -22,7 +22,7 @@ slice 2–3 code.
 ## Decisions
 | Choice | Reason and alternative |
 | --- | --- |
-| Setup steps instead of an on/off toggle | "Enable Screen Saver" only controlled the artwork folder. The pane shows: 1. **Install Screen Saver…** (also starts keeping artwork), 2. **Open Screen Saver Settings** and choose AniShelf. A small **Stop Updating and Remove Artwork** action undoes it. Rejected: a renamed toggle; always on. |
+| Setup steps instead of an on/off toggle | "Enable Screen Saver" only controlled the artwork folder. The pane shows: 1. Install AniShelf’s screen saver with **Install…** (also starts keeping artwork), 2. Choose AniShelf with **Open Wallpaper Settings**. A small **Stop Updating and Remove Artwork** action undoes it. Rejected: a renamed toggle; always on. |
 | Drop Refresh Now and Show in Finder | Updates are automatic; both exposed the mechanism. **Try Again** appears only after a failed update. |
 | No "publish" wording | One status line in plain words, for example "Up to date · 48 posters" or "Preparing artwork… 12 of 48". |
 
@@ -57,9 +57,12 @@ slice 2–3 code.
 - Preview: `ScreenSaverRenderer.updatePreview` plays an in-memory sample of up to 24
   entries from the library's own Kingfisher variants (`posterThumbnail`, `backdrop`),
   ranked by a per-view seed so scope changes keep the order of surviving entries.
-- Setup: Install Screen Saver… turns artwork updates on when macOS accepts the open;
-  Open Screen Saver Settings goes to the Wallpaper pane, where macOS 27 keeps screen
-  savers (no separate Screen Saver pane exists on this system).
+- Setup: Install… turns artwork updates on when macOS accepts the open; Open Wallpaper
+  Settings goes to the Wallpaper pane, where macOS 27 keeps screen savers (no separate
+  Screen Saver pane exists on this system). The buttons first read "Install Screen
+  Saver…" and "Open Screen Saver Settings", with an "In System Settings, under
+  Wallpaper." caption; Samuel's review of the Japanese pane found the repetition and the
+  inaccurate button name, so the buttons were renamed and the caption removed.
 - Note: the catalog key "Show" is generic and its `ja` value (表示する作品) fits only this
   picker; reuse of `Text("Show")` elsewhere would inherit it.
 

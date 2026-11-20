@@ -34,13 +34,10 @@
         var body: some View {
             Section("Setup") {
                 LabeledContent("1. Install AniShelf’s screen saver") {
-                    Button("Install Screen Saver…", action: install)
+                    Button("Install…", action: install)
                 }
-                LabeledContent {
-                    Button("Open Screen Saver Settings", action: openSettings)
-                } label: {
-                    Text("2. Choose AniShelf")
-                    Text("In System Settings, under Wallpaper.")
+                LabeledContent("2. Choose AniShelf") {
+                    Button("Open Wallpaper Settings", action: openSettings)
                 }
                 ScreenSaverArtworkStatus(publisher: publisher)
                 if publisher.settings.isEnabled {

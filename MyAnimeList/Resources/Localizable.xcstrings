@@ -517,22 +517,6 @@
         }
       }
     },
-    "In System Settings, under Wallpaper." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "システム設定の「壁紙」で選択します。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在系统设置的“墙纸”中选择。"
-          }
-        }
-      }
-    },
     "In this category" : {
       "localizations" : {
         "ja" : {
@@ -7219,18 +7203,18 @@
     "Injected failures are off. Upload This Library re-creates the iCloud data and completes sync." : {
 
     },
-    "Install Screen Saver…" : {
+    "Install…" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "スクリーンセーバーをインストール…"
+            "value" : "インストール…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "安装屏幕保护程序…"
+            "value" : "安装…"
           }
         }
       }
@@ -9346,18 +9330,18 @@
         }
       }
     },
-    "Open Screen Saver Settings" : {
+    "Open Wallpaper Settings" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "スクリーンセーバー設定を開く"
+            "value" : "壁紙設定を開く"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打开屏幕保护程序设置"
+            "value" : "打开墙纸设置"
           }
         }
       }
