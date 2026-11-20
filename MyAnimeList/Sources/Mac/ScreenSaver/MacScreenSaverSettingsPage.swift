@@ -63,8 +63,7 @@
         }
 
         private func install() {
-            let bundle = Bundle.main.bundleURL
-                .appending(path: "Contents/Library/Screen Savers/AniShelf.saver", directoryHint: .isDirectory)
+            let bundle = ScreenSaverPublisher.embeddedSaverURL
             if NSWorkspace.shared.open(bundle) {
                 publisher.settings.isEnabled = true
             } else {

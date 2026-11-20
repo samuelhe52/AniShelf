@@ -32,6 +32,7 @@ public final class ScreenSaverRenderer {
     public let layer = CALayer()
     private let message: (Notice) -> String
     private var directory: URL?
+    private var build: String?
     private var preview: Preview?
     private var previewEntryID: String?
     private var viewport = CGSize.zero
@@ -83,7 +84,9 @@ public final class ScreenSaverRenderer {
         if let preview { play(preview) }
     }
 
-    public func start(in directory: URL) {
+    /// - Parameter build: the saver's own build ID, checked against the snapshot's.
+    public func start(in directory: URL, build: String? = nil) {
+        self.build = build
         shuffleSeed = UInt64.random(in: .min ... .max)
         play(in: directory)
     }
@@ -93,7 +96,7 @@ public final class ScreenSaverRenderer {
         self.directory = directory
         guard size.width >= 1, size.height >= 1 else { return }
         let token = session.start()
-        let loader = ScreenSaverSceneLoader(directory: directory, seed: shuffleSeed)
+        let loader = ScreenSaverSceneLoader(directory: directory, build: build, seed: shuffleSeed)
         playback = Task { [weak self, size, scale] in
             var snapshot = await loader.read()
             var scene = await loader.prepare(snapshot, cursor: .init(), size: size, scale: scale)

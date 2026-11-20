@@ -17,7 +17,9 @@ final class AniShelfScreenSaverView: ScreenSaverView {
         case .empty:
             return String(localized: "Set up the screen saver in AniShelf.", bundle: bundle)
         case .requiresUpdate:
-            return String(localized: "Update the screen saver from AniShelf.", bundle: bundle)
+            return String(
+                localized: "AniShelf has a newer screen saver. Install it from AniShelf Settings › Screen Saver.",
+                bundle: bundle)
         }
     }
     private var stopObserver: NSObjectProtocol?
@@ -53,7 +55,10 @@ final class AniShelfScreenSaverView: ScreenSaverView {
             }
         }
         updateViewport()
-        renderer.start(in: ScreenSaverSnapshotReader.snapshotDirectory(in: home))
+        let build =
+            Bundle(for: AniShelfScreenSaverView.self).object(forInfoDictionaryKey: ScreenSaverManifest.buildInfoKey)
+            as? String
+        renderer.start(in: ScreenSaverSnapshotReader.snapshotDirectory(in: home), build: build)
     }
 
     override func stopAnimation() {

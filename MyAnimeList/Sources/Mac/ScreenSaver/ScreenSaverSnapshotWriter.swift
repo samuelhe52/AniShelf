@@ -79,6 +79,8 @@
                 previous?.schemaVersion == manifest.schemaVersion
                 && previous?.rendererVersion == manifest.rendererVersion
                 && previous?.settings == manifest.settings && previous?.entries == manifest.entries
+                // A new AniShelf build must restamp the snapshot so an old installed saver notices.
+                && previous?.saverBuild == manifest.saverBuild
             if !unchanged {
                 for name in referenced.subtracting(previousFiles) {
                     guard Self.isRegularFile(try imageURL(named: name)) else { throw CocoaError(.fileReadNoSuchFile) }

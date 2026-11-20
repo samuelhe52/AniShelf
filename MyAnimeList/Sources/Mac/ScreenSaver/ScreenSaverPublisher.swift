@@ -14,6 +14,15 @@
 
     @MainActor @Observable
     final class ScreenSaverPublisher {
+        /// The saver AniShelf installs, inside the app bundle.
+        static let embeddedSaverURL = Bundle.main.bundleURL
+            .appending(path: "Contents/Library/Screen Savers/AniShelf.saver", directoryHint: .isDirectory)
+
+        /// Build ID of the embedded saver, written into each snapshot so an installed saver built
+        /// from other code asks to be reinstalled.
+        static let embeddedSaverBuild =
+            Bundle(url: embeddedSaverURL)?.object(forInfoDictionaryKey: ScreenSaverManifest.buildInfoKey) as? String
+
         struct Status {
             var isPublishing = false
             var availableCount = 0
@@ -317,7 +326,8 @@
             manifestTask?.cancel()
             let draft = draft
             let entries = resolvedEntries()
-            let manifest = ScreenSaverManifest(settings: draft.settings, entries: entries)
+            let manifest = ScreenSaverManifest(
+                settings: draft.settings, entries: entries, saverBuild: Self.embeddedSaverBuild)
             let complete = needsPruning && artworkTask == nil
             let extraFiles = Set(artwork.requests.compactMap { images[$0]?.filename })
             let hasFailedArtwork = !failed.isDisjoint(with: artwork.requests)

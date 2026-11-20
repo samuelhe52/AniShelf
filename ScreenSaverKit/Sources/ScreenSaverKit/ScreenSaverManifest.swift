@@ -11,6 +11,9 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
     // The schema version also keeps version 1 readers, which did not check rendererVersion, on the update notice.
     public static let currentSchemaVersion = 2
     public static let currentRendererVersion = 4
+    /// Info.plist key holding the saver's build ID: a hash of its source files, stamped by a build
+    /// phase of the saver target. Any change to the saver's code gives a new ID.
+    public static let buildInfoKey = "AniShelfScreenSaverBuild"
 
     public enum Layout: String, Codable, CaseIterable, Sendable {
         case coverWall
@@ -147,8 +150,15 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
     public let createdAt: Date
     public let settings: Settings
     public let entries: [Entry]
+    /// Build ID of the saver embedded in the AniShelf that wrote this snapshot. An installed saver
+    /// with another ID is out of date and asks to be reinstalled.
+    public let saverBuild: String?
 
-    public init(generation: UUID = UUID(), createdAt: Date = .now, settings: Settings, entries: [Entry]) {
+    public init(
+        generation: UUID = UUID(), createdAt: Date = .now, settings: Settings, entries: [Entry],
+        saverBuild: String? = nil
+    ) {
+        self.saverBuild = saverBuild
         self.schemaVersion = Self.currentSchemaVersion
         self.rendererVersion = Self.currentRendererVersion
         self.generation = generation

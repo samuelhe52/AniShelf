@@ -308,6 +308,25 @@ struct ScreenSaverKitTests {
         try await Task.sleep(for: .milliseconds(50))
         #expect(renderer.layer.sublayers?.isEmpty != false)
     }
+
+    @Test
+    func aSaverBuiltFromOtherCodeAsksToBeReinstalled() throws {
+        let fixture = try SnapshotFixture()
+        defer { fixture.remove() }
+        let settings = ScreenSaverManifest.Settings(layout: .coverWall, interval: 12)
+        try fixture.write(.init(settings: settings, entries: [fixture.entry(1)], saverBuild: "new"))
+        #expect(ScreenSaverSnapshotReader(directory: fixture.directory, build: "old").read() == .requiresUpdate)
+        guard case .ready = ScreenSaverSnapshotReader(directory: fixture.directory, build: "new").read() else {
+            Issue.record("A matching build should play the snapshot")
+            return
+        }
+        // Snapshots from AniShelf builds before the build ID, and readers without one, skip the check.
+        try fixture.write(.init(settings: settings, entries: [fixture.entry(1)]))
+        guard case .ready = ScreenSaverSnapshotReader(directory: fixture.directory, build: "old").read() else {
+            Issue.record("A snapshot without a build ID should play")
+            return
+        }
+    }
 }
 
 fileprivate struct SnapshotFixture {

@@ -17,18 +17,18 @@
         }
       }
     },
-    "Update the screen saver from AniShelf." : {
+    "AniShelf has a newer screen saver. Install it from AniShelf Settings › Screen Saver." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AniShelfからスクリーンセーバをアップデートしてください。"
+            "value" : "AniShelfに新しいスクリーンセーバがあります。AniShelfの設定 › スクリーンセーバからインストールしてください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请从AniShelf更新屏幕保护程序。"
+            "value" : "AniShelf有更新的屏幕保护程序。请在AniShelf设置 › 屏幕保护程序中安装。"
           }
         }
       }

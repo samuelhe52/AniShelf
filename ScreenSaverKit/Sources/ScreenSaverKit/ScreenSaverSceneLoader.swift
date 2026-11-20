@@ -34,8 +34,8 @@ actor ScreenSaverSceneLoader {
     private let seed: UInt64
     private var orderedSnapshot: ScreenSaverSnapshotReader.Snapshot = .empty
 
-    init(directory: URL, seed: UInt64 = 0) {
-        reader = ScreenSaverSnapshotReader(directory: directory)
+    init(directory: URL, build: String? = nil, seed: UInt64 = 0) {
+        reader = ScreenSaverSnapshotReader(directory: directory, build: build)
         self.seed = seed
     }
 

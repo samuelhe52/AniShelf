@@ -270,6 +270,20 @@
         }
 
         @Test
+        func anotherSaverBuildRestampsAnUnchangedSnapshot() async throws {
+            let fixture = try Fixture()
+            defer { fixture.cleanup() }
+            let writer = ScreenSaverSnapshotWriter(directory: fixture.snapshot)
+            let encoded = fixture.encodedImage(1)
+            try await writer.store(encoded)
+            let first = fixture.manifest(images: [encoded.image])
+            _ = try await writer.publish(first)
+            let next = ScreenSaverManifest(settings: first.settings, entries: first.entries, saverBuild: "next")
+            _ = try await writer.publish(next)
+            #expect(await writer.readManifest()?.saverBuild == "next")
+        }
+
+        @Test
         func fixtureSettingsPreserveExistingSnapshotUntilEnabled() async throws {
             let fixture = try Fixture()
             defer { fixture.cleanup() }

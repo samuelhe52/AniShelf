@@ -412,6 +412,7 @@
 				9FC4E0422F0000000000000F /* Sources */,
 				9FC4E0422F0000000000000C /* Frameworks */,
 				9FC4E0422F00000000000010 /* Resources */,
+				9FC4E0422F00000000000020 /* Stamp Screen Saver Build */,
 			);
 			buildRules = (
 			);
@@ -514,6 +515,29 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		9FC4E0422F00000000000020 /* Stamp Screen Saver Build */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
+			);
+			name = "Stamp Screen Saver Build";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -euo pipefail\n# The build ID is a hash of everything the saver is built from, so any code change gives a new ID.\ncd \"${SRCROOT}\"\nbuild=$(find ScreenSaver ScreenSaverKit/Sources ScreenSaverKit/Package.swift -type f ! -name .DS_Store -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256 | shasum -a 256 | cut -c1-16)\nplist=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"\n/usr/libexec/PlistBuddy -c \"Delete :AniShelfScreenSaverBuild\" \"${plist}\" 2>/dev/null || true\n/usr/libexec/PlistBuddy -c \"Add :AniShelfScreenSaverBuild string ${build}\" \"${plist}\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		9F8D662C2D055FEF00CF355D /* Sources */ = {
@@ -875,6 +899,7 @@
 				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 768QBKMWKW;
 				GENERATE_INFOPLIST_FILE = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_KEY_NSPrincipalClass = AniShelfScreenSaverView;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
@@ -898,6 +923,7 @@
 				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 768QBKMWKW;
 				GENERATE_INFOPLIST_FILE = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_KEY_NSPrincipalClass = AniShelfScreenSaverView;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;

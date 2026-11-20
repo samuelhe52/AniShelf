@@ -31,9 +31,12 @@ public struct ScreenSaverSnapshotReader: Sendable {
     }
 
     public let directory: URL
+    /// The reading saver's own build ID; nil skips the build check.
+    public let build: String?
 
-    public init(directory: URL) {
+    public init(directory: URL, build: String? = nil) {
         self.directory = directory
+        self.build = build
     }
 
     public static func snapshotDirectory(in userHome: URL) -> URL {
@@ -45,6 +48,7 @@ public struct ScreenSaverSnapshotReader: Sendable {
         struct Header: Decodable {
             let schemaVersion: Int
             let rendererVersion: Int?
+            let saverBuild: String?
         }
 
         let url = directory.appending(component: Self.manifestFilename, directoryHint: .notDirectory)
@@ -56,6 +60,11 @@ public struct ScreenSaverSnapshotReader: Sendable {
         if header.schemaVersion > ScreenSaverManifest.currentSchemaVersion
             || (header.rendererVersion ?? 1) > ScreenSaverManifest.currentRendererVersion
         {
+            return .requiresUpdate
+        }
+        // AniShelf embeds a different saver than the one installed: ask for a reinstall rather than
+        // keep drawing with old code.
+        if let expected = header.saverBuild, let build, expected != build {
             return .requiresUpdate
         }
         guard (1...ScreenSaverManifest.currentSchemaVersion).contains(header.schemaVersion),
