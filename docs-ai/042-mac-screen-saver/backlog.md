@@ -26,6 +26,10 @@ caption changes as the outgoing card clears the new front, and the new rear card
 from behind the hand. Exit travel is sized in card widths so the reveal does not depend on
 the display aspect ratio.
 
+In the Deck · Pile draft, the front card grows and turns as it is tossed up and left, then
+fades once the next poster is readable. The rest of the pile advances together, with the
+incoming card joining from one slot deeper. The caption follows the reveal.
+
 ## Considered and set aside
 
 Sketched in the 2026-11-21 brainstorm and not picked. Kept so they are not re-proposed from scratch.

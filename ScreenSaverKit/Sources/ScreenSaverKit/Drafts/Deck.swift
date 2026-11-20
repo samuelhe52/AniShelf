@@ -114,6 +114,13 @@ final class DeckStage: ScreenSaverStage {
         static let reveal: TimeInterval = 0.60
     }
 
+    private enum PileDeal {
+        static let duration: TimeInterval = 0.95
+        static let reveal: TimeInterval = 0.59
+        static let advanceDelay: TimeInterval = 0.12
+        static let advanceDuration: TimeInterval = 0.70
+    }
+
     let layer = CALayer()
     private let style: DeckStyle
     private let details: Set<ScreenSaverManifest.Detail>
@@ -186,7 +193,7 @@ final class DeckStage: ScreenSaverStage {
         leave(leaving.layer, direction: direction)
 
         for (slot, card) in cards.enumerated() {
-            let delay = 0.09 + Double(slot) * (style == .pile ? 0.032 : 0.018)
+            let delay = style == .pile ? PileDeal.advanceDelay : 0.09 + Double(slot) * 0.018
             move(card.layer, to: pose(slot), delay: delay)
         }
 
@@ -203,8 +210,10 @@ final class DeckStage: ScreenSaverStage {
             newcomer.animate("transform", to: rearPose.transform, duration: 0.64, delay: 0.24)
             newcomer.animate("opacity", to: 1, duration: 0.32, delay: 0.24)
         } else {
-            apply(rearPose, to: newcomer)
-            newcomer.animate("opacity", to: 1, duration: 0.8, delay: 0.35)
+            // Enter from one slot deeper, keeping the same spacing as the moving pile.
+            apply(pose(cards.count + 1), to: newcomer)
+            move(newcomer, to: rearPose, delay: PileDeal.advanceDelay)
+            newcomer.animate("opacity", to: 1, duration: 0.42, delay: PileDeal.advanceDelay)
         }
         cards.append((incoming, newcomer))
 
@@ -267,9 +276,9 @@ final class DeckStage: ScreenSaverStage {
     }
 
     private func move(_ card: CALayer, to pose: Pose, delay: TimeInterval) {
-        let duration = style == .pile ? 1.15 : 0.70
+        let duration = style == .pile ? PileDeal.advanceDuration : 0.70
         card.animate("transform", to: pose.transform, duration: duration, delay: delay)
-        if style == .pile {
+        if card.shadowOpacity != pose.shadow {
             card.animate("shadowOpacity", to: pose.shadow, duration: duration, delay: delay)
         }
         card.sublayers?.last?.animate("opacity", to: pose.shade, duration: duration, delay: delay)
@@ -315,29 +324,22 @@ final class DeckStage: ScreenSaverStage {
             card.position = end
             card.transform = CATransform3DMakeRotation(angle, 0, 0, 1)
         case .pile:
-            // From PR #28: flung up and to the left, growing and turning as it fades.
+            // One toss: translate up-left, grow and turn continuously from the front pose.
             let start = card.transform
-            func toss(_ amount: CGFloat) -> CATransform3D {
-                var transform = CATransform3DMakeRotation(-0.16 * amount, 0, 0, 1)
-                let scale = 1 + 0.18 * amount
-                transform = CATransform3DScale(transform, scale, scale, 1)
-                return CATransform3DConcat(
-                    transform,
-                    CATransform3DConcat(
-                        start,
-                        CATransform3DMakeTranslation(-size.width * 0.22 * amount, size.height * 0.18 * amount, 0)))
-            }
-            let end = toss(1)
-            let motion = CAKeyframeAnimation(keyPath: "transform")
-            motion.values = [start, toss(0.5), end].map { NSValue(caTransform3D: $0) }
-            motion.keyTimes = [0, 0.5, 1]
-            let timing = CAMediaTimingFunction(name: .easeIn)
-            motion.timingFunction = timing
-            fade.timingFunction = timing
-            fade.keyTimes = motion.keyTimes
-            fade.values = [1, 0.6, 0]
+            var end = start
+            end.m41 -= cardSize.width * 1.36
+            end.m42 += cardSize.height * 0.42
+            end = CATransform3DRotate(end, -10 * .pi / 180, 0, 0, 1)
+            end = CATransform3DScale(end, 1.13, 1.13, 1)
+            let motion = CABasicAnimation(keyPath: "transform")
+            motion.fromValue = NSValue(caTransform3D: start)
+            motion.toValue = NSValue(caTransform3D: end)
+            motion.duration = PileDeal.duration
+            motion.timingFunction = CAMediaTimingFunction(controlPoints: 0.34, 0.06, 0.54, 1)
+            fade.keyTimes = [0, NSNumber(value: PileDeal.reveal / PileDeal.duration), 1]
+            fade.values = [1, 1, 0]
             group.animations = [motion, fade]
-            group.duration = 0.9
+            group.duration = PileDeal.duration
             card.transform = end
         }
 
@@ -459,13 +461,12 @@ final class DeckStage: ScreenSaverStage {
             old.removeFromSuperlayer()
             return
         }
+        let reveal = style == .fan ? FanDeal.reveal : PileDeal.reveal
         next.opacity = 0
-        next.animate(
-            "opacity", to: 1, duration: style == .fan ? 0.34 : 0.7, delay: style == .fan ? FanDeal.reveal : 0.25)
+        next.animate("opacity", to: 1, duration: 0.34, delay: reveal)
         CATransaction.begin()
         CATransaction.setCompletionBlock { old.removeFromSuperlayer() }
-        old.animate(
-            "opacity", to: 0, duration: style == .fan ? 0.22 : 0.6, delay: style == .fan ? FanDeal.reveal - 0.22 : 0)
+        old.animate("opacity", to: 0, duration: 0.22, delay: reveal - 0.22)
         CATransaction.commit()
     }
 }
