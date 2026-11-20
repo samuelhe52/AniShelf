@@ -87,18 +87,17 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
                 max(coverWallRows, Self.coverWallRowRange.lowerBound), Self.coverWallRowRange.upperBound)
         }
 
+        /// Every key is required: a snapshot from another build is refused by its build ID before
+        /// it is decoded. Values still pass through `init`, which clamps and orders them.
         public init(from decoder: Decoder) throws {
             let values = try decoder.container(keyedBy: CodingKeys.self)
             self.init(
                 layout: try values.decode(Layout.self, forKey: .layout),
-                // Unknown future details are dropped rather than failing the whole snapshot.
-                details: try values.decodeIfPresent([String].self, forKey: .details)?.compactMap(Detail.init),
+                details: try values.decode([Detail].self, forKey: .details),
                 interval: try values.decode(TimeInterval.self, forKey: .interval),
-                coverWallRows: try values.decodeIfPresent(Int.self, forKey: .coverWallRows)
-                    ?? Self.defaultCoverWallRows,
-                // Snapshots written before this option flow, as the saver always did.
-                washFlows: try values.decodeIfPresent(Bool.self, forKey: .washFlows) ?? true,
-                washSpeed: try values.decodeIfPresent(Double.self, forKey: .washSpeed) ?? 1
+                coverWallRows: try values.decode(Int.self, forKey: .coverWallRows),
+                washFlows: try values.decode(Bool.self, forKey: .washFlows),
+                washSpeed: try values.decode(Double.self, forKey: .washSpeed)
             )
         }
     }
