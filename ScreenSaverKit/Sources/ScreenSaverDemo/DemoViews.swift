@@ -137,7 +137,7 @@ struct DemoSidebar: View {
                 case .draft(.deckPile):
                     Stepper("Cards: \(model.pileDepth)", value: $model.pileDepth, in: 2...12)
                 case .draft(.flipWall):
-                    slider("Flip every", value: $model.flipDelay, in: 1...30, unit: "s")
+                    slider("Flips about every", value: $model.flipDelay, in: 1...30, unit: "s")
                 case .draft(.depthDrift):
                     slider("Posters per 10 s", value: $model.driftRate, in: 1...20, unit: "")
                 case .draft(.seasonTimeline):
