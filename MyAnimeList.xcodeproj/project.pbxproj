@@ -872,7 +872,7 @@
 			buildSettings = {
 				ARCHS = "arm64 x86_64";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 768QBKMWKW;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSPrincipalClass = AniShelfScreenSaverView;
@@ -895,7 +895,7 @@
 			buildSettings = {
 				ARCHS = "arm64 x86_64";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 768QBKMWKW;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSPrincipalClass = AniShelfScreenSaverView;

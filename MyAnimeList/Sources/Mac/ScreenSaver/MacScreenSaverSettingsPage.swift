@@ -159,15 +159,47 @@
                 }
                 .padding(.vertical, 4)
             }
+            if publisher.showsSlideOptions {
+                ScreenSaverDetailsSection(publisher: publisher)
+            }
+        }
+    }
+
+    fileprivate struct ScreenSaverDetailsSection: View {
+        @Bindable var publisher: ScreenSaverPublisher
+
+        var body: some View {
+            let layout = publisher.settings.layout
+            Section {
+                ForEach(ScreenSaverManifest.Detail.allCases, id: \.self) { detail in
+                    Toggle(detail.title, isOn: binding(for: detail, in: layout))
+                }
+            } header: {
+                Text("Details")
+            } footer: {
+                if layout == .backdrop {
+                    Text("Title shows the logo when there is one.")
+                }
+            }
+        }
+
+        private func binding(for detail: ScreenSaverManifest.Detail, in layout: ScreenSaverManifest.Layout)
+            -> Binding<Bool>
+        {
+            Binding(
+                get: { publisher.settings.details(for: layout).contains(detail) },
+                set: { publisher.settings.setDetail(detail, $0, for: layout) }
+            )
         }
     }
 
     fileprivate struct ScreenSaverPreviewSurface: View {
         let draft: ScreenSaverSnapshotDraft
-        @State private var aspectRatio = Self.mainScreenAspectRatio
+        @State private var screenSize = Self.mainScreenSize
 
         var body: some View {
-            ScreenSaverPreviewView(draft: draft)
+            let aspectRatio = screenSize.width / screenSize.height
+            ScreenSaverPreviewView(draft: draft, layoutSize: screenSize)
                 .accessibilityLabel("Screen saver preview")
                 .aspectRatio(aspectRatio, contentMode: .fit)
                 .frame(width: min(300, 205 * aspectRatio))
@@ -175,24 +207,21 @@
                 .onReceive(
                     NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
                 ) { _ in
-                    aspectRatio = Self.mainScreenAspectRatio
+                    screenSize = Self.mainScreenSize
                 }
         }
 
-        private static var mainScreenAspectRatio: CGFloat {
-            guard let size = NSScreen.screens.first?.frame.size, size.height > 0 else { return 16.0 / 9 }
-            return size.width / size.height
+        private static var mainScreenSize: CGSize {
+            guard let size = NSScreen.screens.first?.frame.size, size.width > 0, size.height > 0 else {
+                return CGSize(width: 1920, height: 1080)
+            }
+            return size
         }
     }
 
     fileprivate struct ScreenSaverOptions: View {
         @Bindable var publisher: ScreenSaverPublisher
         private static let intervals: [TimeInterval] = [5, 8, 12, 20, 30, 60]
-
-        private var showsSlideOptions: Bool {
-            publisher.settings.layout != .coverWall
-                || publisher.draft.entries.lazy.filter { $0.poster != nil }.prefix(4).count < 4
-        }
 
         var body: some View {
             VStack(spacing: 12) {
@@ -206,14 +235,10 @@
                         Text(layout.title).tag(layout)
                     }
                 }
-                if showsSlideOptions {
-                    LabeledContent("Show Titles") {
-                        Toggle("Show Titles", isOn: $publisher.settings.showsTitles)
-                            .labelsHidden()
-                            .toggleStyle(.switch)
-                            .controlSize(.small)
-                            .accessibilityIdentifier("screenSaverShowTitles")
-                    }
+                if publisher.settings.layout == .coverWall {
+                    coverWallRowsSlider
+                }
+                if publisher.showsSlideOptions {
                     Picker("Interval", selection: $publisher.settings.interval) {
                         let current = publisher.settings.interval
                         let intervals =
@@ -230,6 +255,27 @@
             }
             .frame(maxWidth: .infinity)
         }
+
+        private var coverWallRowsSlider: some View {
+            let range = ScreenSaverManifest.Settings.coverWallRowRange
+            let rows = Binding(
+                get: { Double(publisher.settings.coverWallRows) },
+                set: { publisher.settings.coverWallRows = Int($0.rounded()) }
+            )
+            return LabeledContent("Rows") {
+                HStack(spacing: 8) {
+                    Slider(value: rows, in: Double(range.lowerBound)...Double(range.upperBound), step: 1) {
+                        Text("Rows")
+                    } tick: { value in
+                        SliderTick(value)
+                    }
+                    .labelsHidden()
+                    Text(publisher.settings.coverWallRows, format: .number)
+                        .monospacedDigit()
+                }
+                .frame(width: 176)
+            }
+        }
     }
 
     extension ScreenSaverSettings.Scope {
@@ -242,12 +288,31 @@
         }
     }
 
+    extension ScreenSaverPublisher {
+        /// Slide options apply to Poster Focus, Backdrop, and Cover Wall's fallback for fewer than 4 posters.
+        fileprivate var showsSlideOptions: Bool {
+            settings.layout != .coverWall || draft.entries.lazy.filter { $0.poster != nil }.prefix(4).count < 4
+        }
+    }
+
+    extension ScreenSaverManifest.Detail {
+        fileprivate var title: LocalizedStringResource {
+            switch self {
+            case .title: "Title"
+            case .season: "Season"
+            case .year: "Year"
+            case .genres: "Genres"
+            case .status: "Status"
+            }
+        }
+    }
+
     extension ScreenSaverManifest.Layout {
         fileprivate var title: LocalizedStringResource {
             switch self {
             case .coverWall: "Cover Wall"
             case .posterFocus: "Poster Focus"
-            case .heroStill: "Hero Still"
+            case .backdrop: "Backdrop"
             }
         }
     }

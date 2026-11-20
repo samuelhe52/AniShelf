@@ -14,8 +14,10 @@
         struct Entry: Equatable {
             let id: String
             let title: String?
-            let subtitle: String?
-            let meta: String?
+            let season: String?
+            let year: String?
+            let genres: [String]?
+            let status: String?
             let poster: TMDbImage?
             let previewPoster: TMDbImage?
             let backdrop: URL?
@@ -41,49 +43,45 @@
             return .init(settings: settings.manifestSettings, entries: entries)
         }
 
+        /// TMDb's Animation genre is true of nearly every entry, so it adds nothing on screen.
+        private static let animationGenreID = 16
+
         private static func makeEntry(
             _ entry: AnimeEntry,
             settings: ScreenSaverSettings,
             language: Language
         ) -> ScreenSaverSnapshotDraft.Entry {
+            // Every text detail is always included, so turning a detail on or off needs no new artwork.
             let locale = Locale(identifier: language.rawValueWithRegion)
-            let subtitle: String?
-            if settings.showsTitles, case .season(let number, _) = entry.type {
-                subtitle = EntryDetailViewModel.seasonLabelText(number, locale: locale)
-            } else {
-                subtitle = nil
-            }
+            let season: String? =
+                if case .season(let number, _) = entry.type {
+                    EntryDetailViewModel.seasonLabelText(number, locale: locale)
+                } else {
+                    nil
+                }
+            let seriesDetail = entry.parentSeriesEntry?.detail ?? entry.detail
+            let genreIDs = (entry.detail?.genreIDs ?? seriesDetail?.genreIDs ?? []).filter { $0 != animationGenreID }
+            let genres = Array(EntryDetailViewModel.localizedGenreNames(genreIDs, language: language).prefix(3))
+            let status =
+                entry.type == .movie
+                ? nil : seriesDetail?.status.map { EntryDetailViewModel.localizedStatus($0, language: language) }
 
-            let isHero = settings.layout == .heroStill
+            let isBackdrop = settings.layout == .backdrop
             let backdrop =
-                isHero ? TMDbImageURLResolver.current.originalURL(for: entry.backdropPath, role: .backdrop) : nil
-            let detail = entry.detail
+                isBackdrop ? TMDbImageURLResolver.current.originalURL(for: entry.backdropPath, role: .backdrop) : nil
             return .init(
                 id: entry.libraryIdentity.rawID,
-                title: settings.showsTitles ? entry.displayName : nil,
-                subtitle: subtitle,
-                meta: isHero ? heroMetadata(for: entry, language: language, locale: locale) : nil,
+                title: entry.displayName,
+                season: season,
+                year: entry.onAirDate?.formatted(.dateTime.year().locale(locale)),
+                genres: genres.isEmpty ? nil : genres,
+                status: status,
                 poster: entry.posterImage(.screenSaverPoster),
                 previewPoster: entry.posterImage(.posterThumbnail),
                 backdrop: backdrop,
-                previewBackdrop: isHero ? entry.backdropImage : nil,
-                logo: isHero ? detail?.logoImage : nil
+                previewBackdrop: isBackdrop ? entry.backdropImage : nil,
+                logo: isBackdrop ? entry.detail?.logoImage : nil
             )
-        }
-
-        private static func heroMetadata(for entry: AnimeEntry, language: Language, locale: Locale) -> String? {
-            let year = entry.onAirDate?.formatted(.dateTime.year().locale(locale))
-            let seriesDetail = entry.parentSeriesEntry?.detail ?? entry.detail
-            let genreIDs = entry.detail?.genreIDs ?? seriesDetail?.genreIDs ?? []
-            let genres = EntryDetailViewModel.localizedGenreNames(genreIDs, language: language).prefix(3)
-            let status =
-                entry.type == .movie
-                ? nil
-                : seriesDetail?.status.map {
-                    EntryDetailViewModel.localizedStatus($0, language: language)
-                }
-            let parts = [year].compactMap(\.self) + genres + [status].compactMap(\.self)
-            return parts.isEmpty ? nil : parts.joined(separator: " · ")
         }
     }
 #endif

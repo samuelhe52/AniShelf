@@ -43,18 +43,18 @@
 
         private struct Artwork: Equatable {
             let posters: Set<Request>
-            let hero: Set<Request>
+            let backdropArt: Set<Request>
 
             init(_ draft: ScreenSaverSnapshotDraft) {
                 posters = Set(draft.entries.compactMap { $0.poster.map(Request.poster) })
-                hero = Set(
+                backdropArt = Set(
                     draft.entries.flatMap { entry -> [Request] in
                         guard entry.poster != nil, let backdrop = entry.backdrop else { return [] }
                         return [.backdrop(backdrop)] + (entry.logo.map { [.logo($0)] } ?? [])
                     })
             }
 
-            var requests: Set<Request> { posters.union(hero) }
+            var requests: Set<Request> { posters.union(backdropArt) }
         }
 
         private(set) var status = Status()
@@ -176,7 +176,7 @@
             }
 
             if artworkTask == nil,
-                !pending(nextArtwork.posters).isEmpty || !pending(heroRequests()).isEmpty
+                !pending(nextArtwork.posters).isEmpty || !pending(backdropArtRequests()).isEmpty
             {
                 startArtwork()
             }
@@ -218,7 +218,7 @@
             requests.filter { images[$0] == nil && !failed.contains($0) }
         }
 
-        private func heroRequests() -> Set<Request> {
+        private func backdropArtRequests() -> Set<Request> {
             Set(
                 draft.entries.flatMap { entry -> [Request] in
                     guard let poster = entry.poster, images[.poster(poster)] != nil, let backdrop = entry.backdrop
@@ -247,7 +247,7 @@
                     try Task.checkCancellation()
                     loadingPosters = false
                     while !Task.isCancelled {
-                        let requests = pending(heroRequests())
+                        let requests = pending(backdropArtRequests())
                         if requests.isEmpty { break }
                         try await load(requests)
                     }
@@ -364,16 +364,17 @@
                         return nil
                     }
                     return .init(
-                        id: entry.id, title: entry.title, subtitle: entry.subtitle,
-                        poster: prior.poster, posterPixelSize: prior.posterPixelSize
+                        id: entry.id, title: entry.title, season: entry.season, year: entry.year,
+                        genres: entry.genres, status: entry.status, poster: prior.poster,
+                        posterPixelSize: prior.posterPixelSize
                     )
                 }
                 let backdrop = entry.backdrop.flatMap { images[.backdrop($0)] }
                 return .init(
-                    id: entry.id, title: entry.title, subtitle: entry.subtitle, meta: entry.meta,
-                    poster: poster.path, posterPixelSize: poster.pixelSize, backdrop: backdrop?.path,
-                    logo: draft.settings.showsTitles && backdrop != nil
-                        ? entry.logo.flatMap { images[.logo($0)]?.path } : nil
+                    id: entry.id, title: entry.title, season: entry.season, year: entry.year,
+                    genres: entry.genres, status: entry.status, poster: poster.path,
+                    posterPixelSize: poster.pixelSize, backdrop: backdrop?.path,
+                    logo: backdrop != nil ? entry.logo.flatMap { images[.logo($0)]?.path } : nil
                 )
             }
         }

@@ -20,13 +20,15 @@ struct ScreenSaverKitTests {
         defer { fixture.remove() }
         let expected = ScreenSaverManifest(
             createdAt: Date(timeIntervalSince1970: 1_790_000_000.123),
-            settings: .init(layout: .heroStill, showsTitles: true, interval: 12),
+            settings: .init(layout: .backdrop, details: [.year, .title], interval: 12, coverWallRows: 8),
             entries: [
                 .init(
                     id: "fixture-1",
                     title: "銀河鉄道",
-                    subtitle: "Season 2",
-                    meta: "2026 · Adventure",
+                    season: "Season 2",
+                    year: "2026",
+                    genres: ["Adventure"],
+                    status: "Ended",
                     poster: "images/poster.heic",
                     posterPixelSize: .init(width: 600, height: 900),
                     backdrop: "images/backdrop.heic",
@@ -42,15 +44,32 @@ struct ScreenSaverKitTests {
         #expect(expected.rendererVersion == ScreenSaverManifest.currentRendererVersion)
 
         var legacy = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
-        legacy["rendererVersion"] = nil
-        legacy["schemaVersion"] = 1
+        var legacySettings = try #require(legacy["settings"] as? [String: Any])
+        legacySettings["coverWallRows"] = nil
+        legacySettings["details"] = nil
+        legacy["settings"] = legacySettings
+        legacy["rendererVersion"] = 2
+        legacy["schemaVersion"] = 2
         try JSONSerialization.data(withJSONObject: legacy).write(to: fixture.manifestURL)
         guard case .ready(let legacyManifest) = fixture.reader.read() else {
             Issue.record("The renderer should be able to read an existing snapshot")
             return
         }
         #expect(legacyManifest.entries == expected.entries)
-        #expect(legacyManifest.rendererVersion == nil)
+        #expect(legacyManifest.rendererVersion == 2)
+        #expect(legacyManifest.settings.coverWallRows == 4)
+        #expect(legacyManifest.settings.details == [.title, .year])
+        #expect(expected.settings.details == [.title, .year])
+
+        legacy["rendererVersion"] = nil
+        legacy["schemaVersion"] = 1
+        try JSONSerialization.data(withJSONObject: legacy).write(to: fixture.manifestURL)
+        guard case .ready(let versionOne) = fixture.reader.read() else {
+            Issue.record("The renderer should still accept schema version 1")
+            return
+        }
+        #expect(versionOne.rendererVersion == nil)
+        #expect(versionOne.settings.coverWallRows == 4)
     }
 
     @Test
@@ -68,7 +87,7 @@ struct ScreenSaverKitTests {
         try Data(#"{"schemaVersion":2,"rendererVersion":999}"#.utf8).write(to: fixture.manifestURL)
         #expect(fixture.reader.read() == .requiresUpdate)
         try fixture.write(
-            ScreenSaverManifest(settings: .init(layout: .coverWall, showsTitles: true, interval: 12), entries: []))
+            ScreenSaverManifest(settings: .init(layout: .coverWall, interval: 12), entries: []))
         #expect(fixture.reader.read() == .empty)
     }
 
@@ -96,15 +115,15 @@ struct ScreenSaverKitTests {
     @Test
     func wallRowsFillTheHeightAndColumnsCoverTheDrift() {
         let viewports: [(CGSize, Int)] = [
-            (CGSize(width: 1440, height: 900), 3),
+            (CGSize(width: 1920, height: 1080), 2),
             (CGSize(width: 1920, height: 1080), 4),
-            (CGSize(width: 3440, height: 1440), 6),
-            (CGSize(width: 1080, height: 1920), 7),
-            (CGSize(width: 220, height: 125), 2)
+            (CGSize(width: 1920, height: 1080), 8),
+            (CGSize(width: 3440, height: 1440), 8),
+            (CGSize(width: 1080, height: 1920), 4)
         ]
-        for (size, expectedRows) in viewports {
-            let grid = CoverWallGrid(viewport: size)
-            #expect(grid.rows == expectedRows)
+        for (size, rows) in viewports {
+            let grid = CoverWallGrid(viewport: size, rows: rows)
+            #expect(grid.rows == rows)
             #expect(grid.tileSize.height > 0)
             let fill = CGFloat(grid.rows) * grid.tileSize.height + CGFloat(grid.rows - 1) * grid.gap
             #expect(abs(fill - size.height) < 0.0001)
@@ -124,7 +143,7 @@ struct ScreenSaverKitTests {
         }
         let names = ["one"] + posters
         let manifest = ScreenSaverManifest(
-            settings: .init(layout: .coverWall, showsTitles: true, interval: 12),
+            settings: .init(layout: .coverWall, interval: 12),
             entries: names.enumerated().map { index, name in
                 fixture.entry(index, poster: "images/\(name).png")
             }
@@ -166,7 +185,7 @@ struct ScreenSaverKitTests {
         let fixture = try SnapshotFixture()
         defer { fixture.remove() }
         let manifest = ScreenSaverManifest(
-            settings: .init(layout: .posterFocus, showsTitles: true, interval: 12),
+            settings: .init(layout: .posterFocus, interval: 12),
             entries: (0..<20).map { fixture.entry($0) }
         )
         try fixture.write(manifest)
@@ -185,7 +204,7 @@ struct ScreenSaverKitTests {
         #expect(await otherSeed.read() != initial)
     }
 
-    @Test(arguments: [ScreenSaverManifest.Layout.coverWall, .heroStill])
+    @Test(arguments: [ScreenSaverManifest.Layout.coverWall, .backdrop])
     func layoutFallbackUsesOnlySuppliedEntries(_ layout: ScreenSaverManifest.Layout) async throws {
         let fixture = try SnapshotFixture()
         defer { fixture.remove() }
@@ -193,7 +212,7 @@ struct ScreenSaverKitTests {
         let entry = fixture.entry(0, backdrop: "images/missing.png")
         let loader = ScreenSaverSceneLoader(directory: fixture.directory)
         let manifest = ScreenSaverManifest(
-            settings: .init(layout: layout, showsTitles: true, interval: 7),
+            settings: .init(layout: layout, interval: 7),
             entries: [entry]
         )
         let scene = await loader.prepare(
@@ -232,13 +251,15 @@ struct ScreenSaverKitTests {
             )?.makeImage())
         let renderer = ScreenSaverRenderer { _ in "Empty" }
         defer { renderer.stop() }
-        renderer.resize(to: CGSize(width: 800, height: 500), scale: 1)
+        let viewport = CGSize(width: 200, height: 125)
+        let layoutSize = CGSize(width: 800, height: 500)
+        renderer.resize(to: viewport, scale: 2, layoutSize: layoutSize)
         let entries: [ScreenSaverManifest.Entry] = [
             .init(id: "first", title: "Poster title", poster: "memory", posterPixelSize: .init(width: 20, height: 30))
         ]
         renderer.updatePreview(
             .init(
-                settings: .init(layout: .posterFocus, showsTitles: true, interval: 60),
+                settings: .init(layout: .posterFocus, interval: 60),
                 entries: entries, images: ["memory": bitmap]
             ))
 
@@ -253,6 +274,8 @@ struct ScreenSaverKitTests {
         }
 
         let withTitle = try await waitForScene(after: nil)
+        #expect(withTitle.bounds.size == layoutSize)
+        #expect(withTitle.frame == CGRect(origin: .zero, size: viewport))
         #expect(withTitle.sublayers?.contains { $0 is CATextLayer } == true)
         let alternate = try #require(bitmap.cropping(to: CGRect(x: 0, y: 0, width: 10, height: 15)))
         let other = ScreenSaverManifest.Entry(
@@ -260,12 +283,13 @@ struct ScreenSaverKitTests {
         )
         renderer.updatePreview(
             .init(
-                settings: .init(layout: .posterFocus, showsTitles: false, interval: 60),
+                settings: .init(layout: .posterFocus, details: [], interval: 60),
                 entries: [other] + entries, images: ["memory": bitmap, "alternate": alternate]
             ))
         let withoutTitle = try await waitForScene(after: withTitle)
         #expect(withoutTitle.sublayers?.contains { $0 is CATextLayer } == false)
-        #expect(withoutTitle.sublayers?.contains { ($0.contents as AnyObject?) === bitmap } == true)
+        let layers = (withoutTitle.sublayers ?? []).flatMap { [$0] + ($0.sublayers ?? []) }
+        #expect(layers.contains { ($0.contents as AnyObject?) === bitmap })
     }
 
     @Test

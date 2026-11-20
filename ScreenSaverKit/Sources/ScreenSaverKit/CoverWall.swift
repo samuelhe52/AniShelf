@@ -14,9 +14,9 @@ struct CoverWallGrid: Equatable, Sendable {
     let tileSize: CGSize
     let gap: CGFloat
 
-    init(viewport: CGSize) {
+    init(viewport: CGSize, rows: Int) {
         self.viewport = viewport
-        rows = max(2, Int((viewport.height / 260).rounded()))
+        self.rows = rows
         let gapRatio: CGFloat = 0.045
         let tileHeight = viewport.height / (CGFloat(rows) + CGFloat(rows - 1) * gapRatio)
         tileSize = CGSize(width: tileHeight * 2 / 3, height: tileHeight)

@@ -71,33 +71,34 @@
             var settings = ScreenSaverSettings()
             settings.isEnabled = true
             settings.scope = .all
-            settings.layout = .heroStill
+            settings.layout = .backdrop
             fixture.defaults.set(false, forKey: .useCurrentLocaleForAnimeInfoLanguage)
             fixture.defaults.set(Language.japanese.rawValue, forKey: .preferredAnimeInfoLanguage)
             let japanese = try #require(fixture.draft(settings).entries.only)
             #expect(japanese.id == "season:11:2:12")
             #expect(japanese.title == "Library series")
-            #expect(japanese.subtitle == "シーズン2")
+            #expect(japanese.season == "シーズン2")
+            #expect(japanese.year?.contains("2023") == true)
             #expect(japanese.poster?.url.pathComponents.suffix(2) == ["w780", "chosen.jpg"])
             #expect(japanese.previewPoster?.variant == .posterThumbnail)
             #expect(japanese.poster?.url.lastPathComponent == "chosen.jpg")
             #expect(japanese.backdrop?.pathComponents.suffix(2) == ["original", "scene.jpg"])
             #expect(japanese.logo?.url.lastPathComponent == "logo.svg")
-            #expect(
-                japanese.meta?.components(separatedBy: " · ").dropFirst() == [
-                    "アニメーション", "ドラマ", "アクション", "継続中"
-                ])
+            // The Animation genre is dropped; the rest keep their order.
+            #expect(japanese.genres?.prefix(2) == ["ドラマ", "アクション"])
+            #expect(japanese.status == "継続中")
 
             fixture.defaults.set(Language.chinese.rawValue, forKey: .preferredAnimeInfoLanguage)
             let chinese = try #require(fixture.draft(settings).entries.only)
-            #expect(chinese.subtitle == "第2季")
-            #expect(chinese.meta?.hasSuffix("动画 · 剧情 · 动作 · 连载中") == true)
+            #expect(chinese.season == "第2季")
+            #expect(chinese.genres?.first == "剧情")
+            #expect(chinese.status == "连载中")
 
-            settings.showsTitles = false
-            let hiddenTitles = try #require(fixture.draft(settings).entries.only)
-            #expect(
-                hiddenTitles.title == nil && hiddenTitles.subtitle == nil
-                    && hiddenTitles.logo == japanese.logo)
+            // Text stays in the snapshot when a detail is off, so the toggle needs no new export.
+            settings.backdropDetails = []
+            let hiddenDetails = try #require(fixture.draft(settings).entries.only)
+            #expect(hiddenDetails.title == "Library series" && hiddenDetails.logo == japanese.logo)
+            #expect(fixture.draft(settings).settings.details.isEmpty)
         }
 
         @Test
@@ -380,7 +381,7 @@
             var settings = ScreenSaverSettings()
             settings.isEnabled = true
             settings.scope = .all
-            settings.layout = .heroStill
+            settings.layout = .backdrop
             settings.save(to: fixture.defaults)
             let publisher = ScreenSaverPublisher(
                 defaults: fixture.defaults, directory: fixture.snapshot,
@@ -450,13 +451,20 @@
             try await waitUntil { await writer.readManifest()?.entries.map(\.id) == ["movie:1"] }
             #expect(publisher.status.isPublishing)
 
+            #expect(await writer.readManifest()?.settings.coverWallRows == 4)
+            publisher.settings.coverWallRows = 8
+            try await waitUntil { await writer.readManifest()?.settings.coverWallRows == 8 }
+            #expect(ScreenSaverSettings(defaults: fixture.defaults).coverWallRows == 8)
+            #expect(publisher.status.isPublishing)
+            #expect(requests == ["fast.jpg": 1, "slow.jpg": 1])
+
             publisher.settings.layout = .posterFocus
-            publisher.settings.showsTitles = false
+            publisher.settings.setDetail(.title, false, for: .posterFocus)
             publisher.settings.interval = 20
             try await waitUntil {
                 guard let manifest = await writer.readManifest() else { return false }
                 return manifest.settings.layout == .posterFocus && manifest.settings.interval == 20
-                    && manifest.entries.first?.title == nil
+                    && !manifest.settings.details.contains(.title)
             }
             #expect(requests == ["fast.jpg": 1, "slow.jpg": 1])
 

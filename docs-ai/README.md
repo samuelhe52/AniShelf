@@ -54,7 +54,7 @@ historical runtime scenario was rerun. Entry 010 remains an unimplemented propos
 | 039 | 2026-10-31 | [Library membership changes drive save refreshes](039-library-save-invalidation/000-plan.md) | Implemented | [Action](039-library-save-invalidation/001-action.md) |
 | 040 | 2026-10-31 | [Per-entry library display updates](040-per-entry-display-updates/000-plan.md) | Implemented | [Action](040-per-entry-display-updates/001-action.md) |
 | 041 | 2026-11-10 | [Mac inspector selection latency](041-mac-inspector-selection-latency/000-plan.md) | Implemented | [Action](041-mac-inspector-selection-latency/001-action.md) |
-| 042 | 2026-11-20 | [Mac screen saver](042-mac-screen-saver/000-plan.md) | In progress | [Slice 1](042-mac-screen-saver/002-slice-1-saver-and-host-gate.md), [slice 2](042-mac-screen-saver/003-slice-2-snapshot-publisher.md), [slice 3](042-mac-screen-saver/004-slice-3-settings-pane.md), [revision](042-mac-screen-saver/005-export-speed-and-pane-revision.md), [idea backlog](042-mac-screen-saver/backlog.md) |
+| 042 | 2026-11-20 | [Mac screen saver](042-mac-screen-saver/000-plan.md) | In progress | [Slice 1](042-mac-screen-saver/002-slice-1-saver-and-host-gate.md), [slice 2](042-mac-screen-saver/003-slice-2-snapshot-publisher.md), [slice 3](042-mac-screen-saver/004-slice-3-settings-pane.md), [revision](042-mac-screen-saver/005-export-speed-and-pane-revision.md), [rows and details](042-mac-screen-saver/006-preview-rows-and-details.md), [idea backlog](042-mac-screen-saver/backlog.md) |
 
 ## Find a contract or source
 

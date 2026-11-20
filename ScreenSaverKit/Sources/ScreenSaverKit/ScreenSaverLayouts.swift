@@ -20,86 +20,110 @@ struct ScreenSaverLayouts {
     func posterFocus(
         _ entry: ScreenSaverManifest.Entry,
         poster: CGImage,
-        wash: CGColor?,
-        showsTitles: Bool
+        background backdrop: CGImage?,
+        details: Set<ScreenSaverManifest.Detail>
     ) -> CALayer {
         let scene = background()
+        if let backdrop {
+            let blur = imageLayer(backdrop, frame: bounds)
+            blur.contentsGravity = .resizeAspectFill
+            scene.addSublayer(blur)
+            scene.addSublayer(fill(CGColor(gray: 0, alpha: 0.45)))
+        }
+
+        let lines = posterFocusLines(entry, details: details)
         let portrait = size.height > size.width
-        let hasText = showsTitles && [entry.title, entry.subtitle].contains { $0?.isEmpty == false }
-        let padding = unit * 0.07
-        let colorWash = gradient(
-            colors: [wash ?? ink, ink],
-            start: portrait ? CGPoint(x: 0.5, y: 0.95) : CGPoint(x: 0.12, y: 0.55),
-            end: portrait ? CGPoint(x: 0.5, y: 0.04) : CGPoint(x: 0.90, y: 0.45)
-        )
-        scene.addSublayer(colorWash)
+        let ratio = CGFloat(poster.width) / CGFloat(max(poster.height, 1))
+        let posterHeight = min(
+            size.height * (portrait ? (lines.isEmpty ? 0.62 : 0.5) : 0.72),
+            size.width * (portrait ? 0.8 : 0.42) / ratio)
+        let posterSize = CGSize(width: posterHeight * ratio, height: posterHeight)
 
-        var posterArea = bounds.insetBy(dx: padding, dy: padding)
-        if hasText {
-            if portrait {
-                posterArea.origin.y = size.height * 0.28
-                posterArea.size.height = size.height - posterArea.minY - padding
-            } else {
-                posterArea.size.width = size.width * 0.47 - padding
-            }
+        let posterFrame: CGRect
+        if lines.isEmpty {
+            posterFrame = CGRect(
+                x: bounds.midX - posterSize.width / 2, y: bounds.midY - posterSize.height / 2,
+                width: posterSize.width, height: posterSize.height)
+        } else if portrait {
+            // Poster above, text centred below; the pair is centred vertically.
+            let textWidth = size.width * 0.8
+            let block = stack(lines, width: textWidth, center: true)
+            let gap = unit * 0.06
+            let top = bounds.midY + (posterSize.height + gap + block.height) / 2
+            posterFrame = CGRect(
+                x: bounds.midX - posterSize.width / 2, y: top - posterSize.height,
+                width: posterSize.width, height: posterSize.height)
+            place(block, x: bounds.midX - textWidth / 2, top: posterFrame.minY - gap, in: scene)
+        } else {
+            // Poster and text form one group centred on the screen, so a short title never floats alone.
+            let textWidth = min(size.width * 0.34, unit * 0.62)
+            let gap = unit * 0.075
+            let left = (size.width - posterSize.width - gap - textWidth) / 2
+            posterFrame = CGRect(
+                x: left, y: bounds.midY - posterSize.height / 2, width: posterSize.width,
+                height: posterSize.height)
+            let block = stack(lines, width: textWidth)
+            place(block, x: posterFrame.maxX + gap, top: bounds.midY + block.height / 2, in: scene)
         }
-        let art = imageLayer(poster, frame: aspectFit(poster, in: posterArea))
-        art.cornerRadius = min(12, unit * 0.009)
-        art.masksToBounds = true
-        scene.addSublayer(art)
-
-        if hasText {
-            let textArea: CGRect
-            if portrait {
-                textArea = CGRect(x: padding, y: padding, width: size.width - padding * 2, height: size.height * 0.18)
-            } else {
-                textArea = CGRect(
-                    x: size.width * 0.52, y: padding, width: size.width * 0.48 - padding,
-                    height: size.height - padding * 2)
-            }
-            addText(
-                title: entry.title, subtitle: entry.subtitle, area: textArea, to: scene, center: portrait)
-        }
+        scene.insertSublayer(posterCard(poster, frame: posterFrame), at: UInt32(backdrop == nil ? 0 : 2))
         return scene
     }
 
-    func heroStill(
+    func backdrop(
         _ entry: ScreenSaverManifest.Entry,
-        backdrop: CGImage,
+        image backdrop: CGImage,
         logo: CGImage?,
-        showsTitles: Bool
+        details: Set<ScreenSaverManifest.Detail>
     ) -> CALayer {
         let scene = background()
         let photo = imageLayer(backdrop, frame: bounds)
         photo.contentsGravity = .resizeAspectFill
         scene.addSublayer(photo)
 
-        let shade = gradient(
-            colors: [CGColor(gray: 0, alpha: 0.87), CGColor(gray: 0, alpha: 0)],
-            start: CGPoint(x: 0.25, y: 0),
-            end: CGPoint(x: 0.53, y: 0.72)
-        )
-        scene.addSublayer(shade)
+        let title = details.contains(.title) ? entry.title.nonEmpty : nil
+        let meta = [
+            details.contains(.season) ? entry.season.nonEmpty : nil,
+            details.contains(.year) ? entry.year.nonEmpty : nil,
+            details.contains(.genres) ? entry.genres?.prefix(2).joined(separator: ", ").nonEmpty : nil,
+            details.contains(.status) ? entry.status.nonEmpty : nil
+        ].compactMap(\.self).joined(separator: "  ·  ")
+        let showsLogo = details.contains(.title) && logo != nil
+        guard title != nil || showsLogo || !meta.isEmpty else { return scene }
+
+        // Shade only the corner that holds text; the rest of the still stays untouched.
+        scene.addSublayer(
+            gradient(
+                colors: [CGColor(gray: 0, alpha: 0.72), CGColor(gray: 0, alpha: 0)],
+                start: CGPoint(x: 0.5, y: 0), end: CGPoint(x: 0.5, y: 0.5)))
+        scene.addSublayer(
+            gradient(
+                colors: [CGColor(gray: 0, alpha: 0.4), CGColor(gray: 0, alpha: 0)],
+                start: CGPoint(x: 0, y: 0.5), end: CGPoint(x: 0.6, y: 0.5)))
 
         let padding = unit * 0.07
-        let textWidth = min(size.width * 0.8, unit * 1.2)
-        let meta = textLayer(entry.meta, width: textWidth, size: max(6, unit * 0.027), weight: .medium, lines: 1)
-        if let meta {
-            meta.frame.origin = CGPoint(x: padding, y: padding)
-            scene.addSublayer(meta)
+        let width = min(size.width * 0.6, unit * 1.1)
+        var y = padding
+        if !meta.isEmpty,
+            let label = textLayer(meta, width: width, size: unit * 0.024, weight: .medium, alpha: 0.88, lines: 1)
+        {
+            label.frame.origin = CGPoint(x: padding, y: y)
+            addShadow(to: label)
+            scene.addSublayer(label)
+            y = label.frame.maxY + unit * 0.018
         }
-
-        if showsTitles {
-            let y = (meta?.frame.maxY ?? padding) + unit * 0.018
-            if let logo {
-                let area = CGRect(x: padding, y: y, width: min(textWidth, unit * 0.60), height: size.height * 0.24)
-                let fitted = aspectFit(logo, in: area)
-                let frame = CGRect(origin: area.origin, size: fitted.size)
-                scene.addSublayer(imageLayer(logo, frame: frame))
-            } else {
-                let textArea = CGRect(x: padding, y: y, width: textWidth, height: size.height * 0.28)
-                addText(title: entry.title, subtitle: entry.subtitle, area: textArea, to: scene, bottom: true)
-            }
+        if let logo, showsLogo {
+            let area = CGRect(
+                x: padding, y: y, width: min(unit * 0.5, size.width * 0.42), height: size.height * 0.18)
+            let fitted = aspectFit(logo, in: area)
+            let mark = imageLayer(logo, frame: CGRect(origin: area.origin, size: fitted.size))
+            addShadow(to: mark)
+            scene.addSublayer(mark)
+        } else if let title,
+            let label = textLayer(title, width: width, size: unit * 0.062, weight: .bold, alpha: 0.97, lines: 2)
+        {
+            label.frame.origin = CGPoint(x: padding, y: y)
+            addShadow(to: label)
+            scene.addSublayer(label)
         }
         return scene
     }
@@ -147,28 +171,107 @@ struct ScreenSaverLayouts {
         return CGRect(x: frame.midX - width / 2, y: frame.midY - height / 2, width: width, height: height)
     }
 
-    private func addText(
-        title: String?,
-        subtitle: String?,
-        area: CGRect,
-        to scene: CALayer,
-        center: Bool = false,
-        bottom: Bool = false
-    ) {
-        let headlineSize = min(max(8, unit * 0.06), area.height * 0.21)
-        let layers = [
-            textLayer(title, width: area.width, size: headlineSize, weight: .semibold, lines: 2, center: center),
-            textLayer(
-                subtitle, width: area.width, size: headlineSize * 0.52, weight: .regular, lines: 1, center: center)
-        ].compactMap { $0 }
-        let gap = layers.count > 1 ? headlineSize * 0.17 : 0
-        let height = layers.reduce(0) { $0 + $1.bounds.height } + gap
-        var y = bottom ? area.minY : area.midY - height / 2
-        for label in layers.reversed() {
-            label.frame.origin = CGPoint(x: area.minX, y: y)
-            scene.addSublayer(label)
-            y += label.bounds.height + gap
+    private struct Line {
+        let text: String
+        let size: CGFloat
+        let weight: NSFont.Weight
+        let alpha: CGFloat
+        var lines = 1
+        var tracking: CGFloat = 0
+        var spaceBefore: CGFloat = 0
+    }
+
+    /// Poster Focus order: year and status as a small heading, then title, season, and genres.
+    private func posterFocusLines(
+        _ entry: ScreenSaverManifest.Entry, details: Set<ScreenSaverManifest.Detail>
+    ) -> [Line] {
+        var lines: [Line] = []
+        let heading = [
+            details.contains(.year) ? entry.year.nonEmpty : nil,
+            details.contains(.status) ? entry.status.nonEmpty : nil
+        ].compactMap(\.self).joined(separator: "  ·  ")
+        if !heading.isEmpty {
+            let size = unit * 0.021
+            lines.append(
+                Line(text: heading.uppercased(), size: size, weight: .semibold, alpha: 0.62, tracking: size * 0.08))
         }
+        if details.contains(.title), let title = entry.title.nonEmpty {
+            lines.append(
+                Line(text: title, size: unit * 0.056, weight: .bold, alpha: 0.97, lines: 3, spaceBefore: unit * 0.014))
+        }
+        if details.contains(.season), let season = entry.season.nonEmpty {
+            lines.append(
+                Line(text: season, size: unit * 0.029, weight: .medium, alpha: 0.8, spaceBefore: unit * 0.008))
+        }
+        if details.contains(.genres), let genres = entry.genres?.joined(separator: "  ·  ").nonEmpty {
+            lines.append(
+                Line(
+                    text: genres, size: unit * 0.021, weight: .regular, alpha: 0.62, lines: 2, spaceBefore: unit * 0.026
+                ))
+        }
+        return lines
+    }
+
+    private struct Stack {
+        var layers: [(layer: CATextLayer, spaceBefore: CGFloat)]
+        var height: CGFloat
+    }
+
+    private func stack(_ lines: [Line], width: CGFloat, center: Bool = false) -> Stack {
+        var result = Stack(layers: [], height: 0)
+        for line in lines {
+            guard
+                let layer = textLayer(
+                    line.text, width: width, size: line.size, weight: line.weight, alpha: line.alpha,
+                    lines: line.lines, tracking: line.tracking, center: center)
+            else { continue }
+            let space = result.layers.isEmpty ? 0 : line.spaceBefore
+            result.layers.append((layer, space))
+            result.height += space + layer.bounds.height
+        }
+        return result
+    }
+
+    /// Lays the stack out downward from `top`; layer coordinates grow upward.
+    private func place(_ stack: Stack, x: CGFloat, top: CGFloat, in scene: CALayer) {
+        var y = top
+        for (layer, space) in stack.layers {
+            y -= space + layer.bounds.height
+            layer.frame.origin = CGPoint(x: x, y: y)
+            scene.addSublayer(layer)
+        }
+    }
+
+    private func posterCard(_ poster: CGImage, frame: CGRect) -> CALayer {
+        let radius = unit * 0.01
+        let card = CALayer()
+        card.frame = frame
+        card.shadowColor = CGColor(gray: 0, alpha: 1)
+        card.shadowOpacity = 0.5
+        card.shadowRadius = unit * 0.03
+        card.shadowOffset = CGSize(width: 0, height: -unit * 0.01)
+        card.shadowPath = CGPath(
+            roundedRect: CGRect(origin: .zero, size: frame.size), cornerWidth: radius, cornerHeight: radius,
+            transform: nil)
+        let art = imageLayer(poster, frame: CGRect(origin: .zero, size: frame.size))
+        art.cornerRadius = radius
+        art.masksToBounds = true
+        card.addSublayer(art)
+        return card
+    }
+
+    private func fill(_ color: CGColor) -> CALayer {
+        let layer = CALayer()
+        layer.frame = bounds
+        layer.backgroundColor = color
+        return layer
+    }
+
+    private func addShadow(to layer: CALayer) {
+        layer.shadowColor = CGColor(gray: 0, alpha: 1)
+        layer.shadowOpacity = 0.45
+        layer.shadowRadius = unit * 0.012
+        layer.shadowOffset = .zero
     }
 
     private func textLayer(
@@ -176,7 +279,9 @@ struct ScreenSaverLayouts {
         width: CGFloat,
         size: CGFloat,
         weight: NSFont.Weight,
+        alpha: CGFloat = 0.96,
         lines: Int,
+        tracking: CGFloat = 0,
         center: Bool = false
     ) -> CATextLayer? {
         guard let text, !text.isEmpty, width > 0, size > 0 else { return nil }
@@ -188,8 +293,9 @@ struct ScreenSaverLayouts {
             string: text,
             attributes: [
                 .font: font,
-                .foregroundColor: NSColor(white: 0.96, alpha: 1),
-                .paragraphStyle: paragraph
+                .foregroundColor: NSColor(white: 1, alpha: alpha),
+                .paragraphStyle: paragraph,
+                .kern: tracking
             ])
         let measure = string.boundingRect(
             with: CGSize(width: width, height: .greatestFiniteMagnitude),
@@ -206,4 +312,15 @@ struct ScreenSaverLayouts {
         layer.frame.size = CGSize(width: width, height: measuredHeight + ceil(size * 0.25))
         return layer
     }
+}
+
+extension Optional where Wrapped == String {
+    fileprivate var nonEmpty: String? {
+        guard let self, !self.isEmpty else { return nil }
+        return self
+    }
+}
+
+extension String {
+    fileprivate var nonEmpty: String? { isEmpty ? nil : self }
 }

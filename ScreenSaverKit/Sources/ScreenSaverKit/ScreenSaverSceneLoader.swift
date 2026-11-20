@@ -6,6 +6,7 @@
 //
 
 import CoreGraphics
+import CoreImage
 import Foundation
 
 struct ScreenSaverScene: Sendable {
@@ -17,13 +18,13 @@ struct ScreenSaverScene: Sendable {
     enum Content: Sendable {
         case wall(CoverWallGrid, [CGImage])
         case wallColumn([CGImage])
-        case poster(ScreenSaverManifest.Entry, CGImage, CGColor?)
-        case hero(ScreenSaverManifest.Entry, backdrop: CGImage, logo: CGImage?)
+        case poster(ScreenSaverManifest.Entry, CGImage, background: CGImage?)
+        case backdrop(ScreenSaverManifest.Entry, image: CGImage, logo: CGImage?)
         case notice(ScreenSaverRenderer.Notice)
     }
 
     let content: Content
-    var showsTitles = false
+    var details: Set<ScreenSaverManifest.Detail> = []
     var duration: TimeInterval = 4
     var next = Cursor()
 }
@@ -83,7 +84,8 @@ actor ScreenSaverSceneLoader {
         image: (String, Int) -> CGImage?
     ) -> ScreenSaverScene {
         if settings.layout == .coverWall, entries.count >= 4,
-            let wall = loadWall(entries, cursor: cursor, size: size, scale: scale, image: image)
+            let wall = loadWall(
+                entries, cursor: cursor, size: size, scale: scale, rows: settings.coverWallRows, image: image)
         {
             return wall
         }
@@ -95,18 +97,18 @@ actor ScreenSaverSceneLoader {
             let entry = entries[index]
             let next = ScreenSaverScene.Cursor(index: (index + 1) % entries.count)
             let content: ScreenSaverScene.Content
-            if settings.layout == .heroStill, let path = entry.backdrop,
+            if settings.layout == .backdrop, let path = entry.backdrop,
                 let backdrop = image(path, pixelLimit(max(size.width, size.height) * scale, 2_560))
             {
-                let logo =
-                    settings.showsTitles ? entry.logo.flatMap { image($0, 1_024) } : nil
-                content = .hero(entry, backdrop: backdrop, logo: logo)
+                let logo = settings.details.contains(.title) ? entry.logo.flatMap { image($0, 1_024) } : nil
+                content = .backdrop(entry, image: backdrop, logo: logo)
             } else if let poster = image(entry.poster, pixelLimit(size.height * scale, 1_500)) {
-                content = .poster(entry, poster, averageColor(of: poster))
+                content = .poster(entry, poster, background: blurredBackground(of: poster))
             } else {
                 continue
             }
-            return ScreenSaverScene(content: content, showsTitles: settings.showsTitles, duration: interval, next: next)
+            return ScreenSaverScene(
+                content: content, details: Set(settings.details), duration: interval, next: next)
         }
         return ScreenSaverScene(content: .notice(.empty))
     }
@@ -116,9 +118,10 @@ actor ScreenSaverSceneLoader {
         cursor: ScreenSaverScene.Cursor,
         size: CGSize,
         scale: CGFloat,
+        rows: Int,
         image: (String, Int) -> CGImage?
     ) -> ScreenSaverScene? {
-        let grid = CoverWallGrid(viewport: size)
+        let grid = CoverWallGrid(viewport: size, rows: rows)
         let columnCount = cursor.wallColumn == nil ? grid.columns : 1
         let pixelSize = pixelLimit(grid.tileSize.height * scale * 1.25, 1_500)
         var imagesByPath: [String: CGImage] = [:]
@@ -179,28 +182,30 @@ actor ScreenSaverSceneLoader {
         Int(ceil(min(max(size, 1), CGFloat(limit))))
     }
 
-    private static func averageColor(of image: CGImage) -> CGColor? {
-        var pixel = [UInt8](repeating: 0, count: 4)
-        let drewPixel = pixel.withUnsafeMutableBytes { bytes in
-            guard
-                let context = CGContext(
-                    data: bytes.baseAddress, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
-                    space: CGColorSpace(name: CGColorSpace.sRGB)!,
-                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-                )
-            else { return false }
-            context.interpolationQuality = .high
-            context.draw(image, in: CGRect(x: 0, y: 0, width: 1, height: 1))
-            return true
-        }
-        guard drewPixel else { return nil }
-        // Keep the wash muted even when the original poster is very light.
-        return CGColor(
-            red: 0.04 + CGFloat(pixel[0]) / 255 * 0.29,
-            green: 0.04 + CGFloat(pixel[1]) / 255 * 0.29,
-            blue: 0.04 + CGFloat(pixel[2]) / 255 * 0.29,
-            alpha: 1
-        )
+    // CIContext is thread-safe; one shared context avoids rebuilding its caches for every slide.
+    private static let imageContext = CIContext(options: [.cacheIntermediates: false])
+
+    /// A small, heavily blurred copy of the poster that the layout stretches across the screen.
+    private static func blurredBackground(of poster: CGImage) -> CGImage? {
+        let width = 96
+        let height = max(1, Int((CGFloat(poster.height) / CGFloat(max(poster.width, 1)) * CGFloat(width)).rounded()))
+        guard
+            let context = CGContext(
+                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
+        else { return nil }
+        context.interpolationQuality = .medium
+        context.draw(poster, in: CGRect(x: 0, y: 0, width: width, height: height))
+        guard let small = context.makeImage() else { return nil }
+
+        let input = CIImage(cgImage: small)
+        let output = input.clampedToExtent()
+            .applyingGaussianBlur(sigma: 7)
+            .applyingFilter("CIColorControls", parameters: [kCIInputSaturationKey: 1.25])
+            .cropped(to: input.extent)
+        return imageContext.createCGImage(output, from: input.extent)
     }
 }
 

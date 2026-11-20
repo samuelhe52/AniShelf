@@ -13,12 +13,14 @@
 
     struct ScreenSaverPreviewView: NSViewRepresentable {
         let draft: ScreenSaverSnapshotDraft
+        let layoutSize: CGSize
 
         func makeNSView(context: Context) -> Surface {
-            Surface()
+            Surface(layoutSize: layoutSize)
         }
 
         func updateNSView(_ view: Surface, context: Context) {
+            view.setLayoutSize(layoutSize)
             view.setDraft(draft)
         }
 
@@ -40,8 +42,10 @@
             private var artwork = Artwork()
             private var images: [TMDbImage: CGImage] = [:]
             private var loading: Task<Void, Never>?
+            private var layoutSize: CGSize
 
-            init() {
+            init(layoutSize: CGSize) {
+                self.layoutSize = layoutSize
                 super.init(frame: .zero)
                 layer = renderer.layer
                 wantsLayer = true
@@ -50,6 +54,12 @@
             @available(*, unavailable)
             required init?(coder: NSCoder) {
                 fatalError("init(coder:) has not been implemented")
+            }
+
+            func setLayoutSize(_ size: CGSize) {
+                guard layoutSize != size else { return }
+                layoutSize = size
+                updateViewport()
             }
 
             func setDraft(_ draft: ScreenSaverSnapshotDraft) {
@@ -97,7 +107,7 @@
             }
 
             private func updateViewport() {
-                renderer.resize(to: bounds.size, scale: window?.backingScaleFactor ?? 1)
+                renderer.resize(to: bounds.size, scale: window?.backingScaleFactor ?? 1, layoutSize: layoutSize)
             }
 
             private func refresh() {
@@ -165,7 +175,8 @@
                 let ready: [ScreenSaverManifest.Entry] = entries.compactMap { entry in
                     guard let poster = add(entry.previewPoster), let bitmap = bitmaps[poster] else { return nil }
                     return .init(
-                        id: entry.id, title: entry.title, subtitle: entry.subtitle, meta: entry.meta, poster: poster,
+                        id: entry.id, title: entry.title, season: entry.season, year: entry.year,
+                        genres: entry.genres, status: entry.status, poster: poster,
                         posterPixelSize: .init(width: bitmap.width, height: bitmap.height),
                         backdrop: add(entry.previewBackdrop), logo: add(entry.logo)
                     )
