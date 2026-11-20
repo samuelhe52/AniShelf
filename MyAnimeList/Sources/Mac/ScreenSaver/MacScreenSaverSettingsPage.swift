@@ -343,7 +343,9 @@
     extension ScreenSaverPublisher {
         /// Slide options apply to Poster Focus, Backdrop, and Cover Wall's fallback for fewer than 4 posters.
         fileprivate var showsSlideOptions: Bool {
-            settings.layout != .coverWall || draft.entries.lazy.filter { $0.poster != nil }.prefix(4).count < 4
+            // Posters that failed to download leave the saver with fewer than the draft offers.
+            settings.layout != .coverWall
+                || draft.entries.count { $0.poster != nil } - status.failedPosterCount < 4
         }
     }
 
