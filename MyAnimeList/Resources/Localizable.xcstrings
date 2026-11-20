@@ -709,6 +709,22 @@
         }
       }
     },
+    "Your Score" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あなたのスコア"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的评分"
+          }
+        }
+      }
+    },
     "“%@”" : {
       "localizations" : {
         "ja" : {

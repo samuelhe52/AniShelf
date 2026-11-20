@@ -177,7 +177,8 @@
                     return .init(
                         id: entry.id, title: entry.title, season: entry.season, year: entry.year,
                         genres: entry.genres, status: entry.status, score: entry.score,
-                        watchStatus: entry.watchStatus, overview: entry.overview, poster: poster,
+                        watchStatus: entry.watchStatus, userScore: entry.userScore, overview: entry.overview,
+                        poster: poster,
                         posterPixelSize: .init(width: bitmap.width, height: bitmap.height),
                         backdrop: add(entry.previewBackdrop), logo: add(entry.logo)
                     )

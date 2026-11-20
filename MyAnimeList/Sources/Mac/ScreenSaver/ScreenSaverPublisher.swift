@@ -36,10 +36,12 @@
         private struct Preferences: Equatable {
             let settings: ScreenSaverSettings
             let language: Language
+            let scoringEnabled: Bool
 
             init(defaults: UserDefaults) {
                 settings = ScreenSaverSettings(defaults: defaults)
                 language = .resolvedAnimeInfoLanguage(defaults: defaults)
+                scoringEnabled = defaults.isLibraryScoringEnabled
             }
         }
 
@@ -376,7 +378,8 @@
                     return .init(
                         id: entry.id, title: entry.title, season: entry.season, year: entry.year,
                         genres: entry.genres, status: entry.status, score: entry.score,
-                        watchStatus: entry.watchStatus, overview: entry.overview, poster: prior.poster,
+                        watchStatus: entry.watchStatus, userScore: entry.userScore, overview: entry.overview,
+                        poster: prior.poster,
                         posterPixelSize: prior.posterPixelSize
                     )
                 }
@@ -384,7 +387,8 @@
                 return .init(
                     id: entry.id, title: entry.title, season: entry.season, year: entry.year,
                     genres: entry.genres, status: entry.status, score: entry.score,
-                    watchStatus: entry.watchStatus, overview: entry.overview, poster: poster.path,
+                    watchStatus: entry.watchStatus, userScore: entry.userScore, overview: entry.overview,
+                    poster: poster.path,
                     posterPixelSize: poster.pixelSize, backdrop: backdrop?.path,
                     logo: backdrop != nil ? entry.logo.flatMap { images[.logo($0)]?.path } : nil
                 )

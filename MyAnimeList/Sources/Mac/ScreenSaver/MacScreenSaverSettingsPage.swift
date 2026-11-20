@@ -191,11 +191,16 @@
 
     fileprivate struct ScreenSaverDetailsSection: View {
         @Bindable var publisher: ScreenSaverPublisher
+        @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
 
         var body: some View {
             let layout = publisher.settings.layout
+            // With scoring turned off in the app, the user's score is not offered or drawn.
+            let details = ScreenSaverManifest.Detail.available(for: layout).filter {
+                scoringEnabled || $0 != .userScore
+            }
             Section("Details") {
-                ForEach(ScreenSaverManifest.Detail.available(for: layout), id: \.self) { detail in
+                ForEach(details, id: \.self) { detail in
                     Toggle(detail.title, isOn: binding(for: detail, in: layout))
                 }
             }
@@ -347,6 +352,7 @@
             case .status: "Airing Status"
             case .score: "TMDb Score"
             case .watchStatus: "Watch Status"
+            case .userScore: "Your Score"
             case .overview: "Overview"
             }
         }

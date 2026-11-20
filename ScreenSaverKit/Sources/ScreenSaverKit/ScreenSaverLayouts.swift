@@ -170,7 +170,7 @@ struct ScreenSaverLayouts {
     private static let separator = " · "
     static let textLayerName = "text"
 
-    /// Year, genres, airing status, score, and watch status, in that order, on one line of facts.
+    /// Year, genres, airing status, TMDb score, watch status, and the user's score, in that order, on one line of facts.
     private func factsLine(_ entry: ScreenSaverManifest.Entry, details: Set<ScreenSaverManifest.Detail>) -> String {
         // Two genres at most: more turns the line into a list of tags.
         let genres = entry.genres.map { Array($0.prefix(2)) } ?? []
@@ -179,7 +179,8 @@ struct ScreenSaverLayouts {
             details.contains(.genres) && !genres.isEmpty ? Self.joinedGenres(genres) : nil,
             details.contains(.status) ? entry.status.nonEmpty : nil,
             details.contains(.score) ? entry.score.nonEmpty : nil,
-            details.contains(.watchStatus) ? entry.watchStatus.nonEmpty : nil
+            details.contains(.watchStatus) ? entry.watchStatus.nonEmpty : nil,
+            details.contains(.userScore) ? entry.userScore.nonEmpty : nil
         ]
         // Lines break only between items, never inside one such as "TMDb 8.6" or 視聴済み: CJK text
         // can break between any two characters, so a word joiner holds each item together.

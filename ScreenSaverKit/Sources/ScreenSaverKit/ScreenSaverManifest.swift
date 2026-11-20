@@ -10,7 +10,7 @@ import Foundation
 public struct ScreenSaverManifest: Codable, Equatable, Sendable {
     // The schema version also keeps version 1 readers, which did not check rendererVersion, on the update notice.
     public static let currentSchemaVersion = 2
-    public static let currentRendererVersion = 4
+    public static let currentRendererVersion = 5
     /// Info.plist key holding the saver's build ID: a hash of its source files, stamped by a build
     /// phase of the saver target. Any change to the saver's code gives a new ID.
     public static let buildInfoKey = "AniShelfScreenSaverBuild"
@@ -31,6 +31,8 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         case status
         case score
         case watchStatus
+        /// The user's own star score, such as "★ 4.5"; separate from TMDb's score.
+        case userScore
         case overview
 
         public static func defaults(for layout: Layout) -> [Detail] {
@@ -107,6 +109,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         public let status: String?
         public let score: String?
         public let watchStatus: String?
+        public let userScore: String?
         public let overview: String?
         public let poster: String
         public let posterPixelSize: PixelSize
@@ -122,6 +125,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             status: String? = nil,
             score: String? = nil,
             watchStatus: String? = nil,
+            userScore: String? = nil,
             overview: String? = nil,
             poster: String,
             posterPixelSize: PixelSize,
@@ -136,6 +140,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             self.status = status
             self.score = score
             self.watchStatus = watchStatus
+            self.userScore = userScore
             self.overview = overview
             self.poster = poster
             self.posterPixelSize = posterPixelSize

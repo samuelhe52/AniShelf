@@ -76,6 +76,7 @@
                     language: "en", title: "Library series", logoImagePath: "/logo.svg", genreIDs: [16, 18, 28, 35])
             )
             season.usingCustomPoster = true
+            season.setEntryScore(EntryScore(halves: 9))
             season.parentSeriesEntry = parent
             try fixture.insert(parent, season)
 
@@ -98,6 +99,11 @@
             // The Animation genre is dropped; the rest keep their order.
             #expect(japanese.genres?.prefix(2) == ["ドラマ", "アクション"])
             #expect(japanese.status == "継続中")
+            #expect(japanese.userScore == "★ 4.5")
+            #expect(
+                ScreenSaverSnapshotBuilder.build(
+                    from: fixture.store, settings: settings, language: .japanese, scoringEnabled: false
+                ).entries.only?.userScore == nil)
 
             fixture.defaults.set(Language.chinese.rawValue, forKey: .preferredAnimeInfoLanguage)
             let chinese = try #require(fixture.draft(settings).entries.only)

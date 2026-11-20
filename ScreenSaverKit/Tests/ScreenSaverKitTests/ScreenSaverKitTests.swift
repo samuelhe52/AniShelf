@@ -20,7 +20,7 @@ struct ScreenSaverKitTests {
         defer { fixture.remove() }
         let expected = ScreenSaverManifest(
             createdAt: Date(timeIntervalSince1970: 1_790_000_000.123),
-            settings: .init(layout: .backdrop, details: [.score, .year], interval: 12, coverWallRows: 8),
+            settings: .init(layout: .backdrop, details: [.score, .userScore, .year], interval: 12, coverWallRows: 8),
             entries: [
                 .init(
                     id: "fixture-1",
@@ -29,6 +29,7 @@ struct ScreenSaverKitTests {
                     year: "2026",
                     genres: ["Adventure"],
                     status: "Ended",
+                    userScore: "★ 4.5",
                     poster: "images/poster.heic",
                     posterPixelSize: .init(width: 600, height: 900),
                     backdrop: "images/backdrop.heic",
@@ -59,7 +60,7 @@ struct ScreenSaverKitTests {
         #expect(legacyManifest.rendererVersion == 2)
         #expect(legacyManifest.settings.coverWallRows == 4)
         #expect(legacyManifest.settings.details == [.year])
-        #expect(expected.settings.details == [.year, .score])
+        #expect(expected.settings.details == [.year, .score, .userScore])
 
         legacy["rendererVersion"] = nil
         legacy["schemaVersion"] = 1

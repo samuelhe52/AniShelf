@@ -20,6 +20,7 @@
             let status: String?
             let score: String?
             let watchStatus: String?
+            let userScore: String?
             let overview: String?
             let poster: TMDbImage?
             let previewPoster: TMDbImage?
@@ -37,7 +38,8 @@
         static func build(
             from store: LibraryStore,
             settings: ScreenSaverSettings,
-            language: Language
+            language: Language,
+            scoringEnabled: Bool = true
         ) -> ScreenSaverSnapshotDraft {
             // Deleting a category leaves its memberships on entries, so a deleted category shows nothing.
             if case .category(let id) = settings.scope, !store.categories.contains(where: { $0.id == id }) {
@@ -45,7 +47,7 @@
             }
             let entries = store.library.lazy
                 .filter(settings.scope.includes)
-                .map { makeEntry($0, settings: settings, language: language) }
+                .map { makeEntry($0, settings: settings, language: language, scoringEnabled: scoringEnabled) }
                 .sorted { $0.id < $1.id }
             return .init(settings: settings.manifestSettings, entries: entries)
         }
@@ -56,7 +58,8 @@
         private static func makeEntry(
             _ entry: AnimeEntry,
             settings: ScreenSaverSettings,
-            language: Language
+            language: Language,
+            scoringEnabled: Bool
         ) -> ScreenSaverSnapshotDraft.Entry {
             // Every text detail is always included, so turning a detail on or off needs no new artwork.
             let locale = Locale(identifier: language.rawValueWithRegion)
@@ -85,6 +88,9 @@
                 status: status,
                 score: (entry.detail?.voteAverage).flatMap { $0 > 0 ? "TMDb " + String(format: "%.1f", $0) : nil },
                 watchStatus: String(localized: entry.watchStatus.localizedStringResource),
+                // Hidden along with the app's own star scores when scoring is turned off.
+                userScore: scoringEnabled
+                    ? entry.entryScore.map { "★ " + $0.formatted } : nil,
                 overview: (entry.detail?.overview).flatMap { $0.isEmpty ? nil : $0 } ?? entry.displayOverview,
                 poster: entry.posterImage(.screenSaverPoster),
                 previewPoster: entry.posterImage(.posterThumbnail),

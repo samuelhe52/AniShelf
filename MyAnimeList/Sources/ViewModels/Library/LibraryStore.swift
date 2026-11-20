@@ -226,7 +226,9 @@ class LibraryStore {
             ) {
                 [weak self] settings, language in
                 guard let self else { return .init(settings: settings.manifestSettings, entries: []) }
-                return ScreenSaverSnapshotBuilder.build(from: self, settings: settings, language: language)
+                return ScreenSaverSnapshotBuilder.build(
+                    from: self, settings: settings, language: language, scoringEnabled: defaults.isLibraryScoringEnabled
+                )
             }
         }
     #endif
