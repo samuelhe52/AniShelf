@@ -302,7 +302,7 @@ static CGImageRef ASCreateParagraphImage(NSString *text, NSString *fontName, CGF
 
     NSDictionary *richAttrs = @{
         NSFontAttributeName : font,
-        NSForegroundColorAttributeName : [NSColor colorWithWhite:1 alpha:0.72],
+        NSForegroundColorAttributeName : [NSColor colorWithWhite:1 alpha:0.80],
         NSParagraphStyleAttributeName : ps,
     };
     NSAttributedString *rich = [[NSAttributedString alloc] initWithString:body attributes:richAttrs];
@@ -503,6 +503,38 @@ static CGImageRef ASFadeHorizontal(CGImageRef src, BOOL onLeft,
 
 static CGImageRef ASBlurredBackground(CGImageRef src, CGSize size, CIContext *ctx) {
     return ASBlurredBackgroundWithRadius(src, size, ctx, 0.05);
+}
+
+
+// 把背景按横向渐变压暗（像素级，不依赖 CALayer 渐变是否被合成器渲染）
+static CGImageRef ASDarkenHorizontal(CGImageRef src, BOOL darkOnRight,
+                                     CGFloat startFrac, CGFloat endFrac, CGFloat amount) {
+    if (!src || amount <= 0.001) return CGImageRetain(src);
+    size_t w = CGImageGetWidth(src), h = CGImageGetHeight(src);
+    CGColorSpaceRef cs = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+    CGContextRef ctx = CGBitmapContextCreate(NULL, w, h, 8, 0, cs,
+                                             kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
+    CGColorSpaceRelease(cs);
+    if (!ctx) return CGImageRetain(src);
+    CGContextDrawImage(ctx, CGRectMake(0, 0, w, h), src);
+
+    CGFloat v = 1.0 - amount;
+    CGFloat comps[8] = { 1, 1, 1, 1, v, v, v, 1 };
+    CGFloat stops[2] = { 0.0, 1.0 };
+    CGColorSpaceRef rgb = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+    CGGradientRef g = CGGradientCreateWithColorComponents(rgb, comps, stops, 2);
+    CGColorSpaceRelease(rgb);
+
+    CGContextSetBlendMode(ctx, kCGBlendModeMultiply);
+    CGFloat x0 = w * startFrac, x1 = w * endFrac;
+    CGContextDrawLinearGradient(ctx, g,
+                                 CGPointMake(darkOnRight ? x0 : x1, 0),
+                                 CGPointMake(darkOnRight ? x1 : x0, 0), 0);
+    CGGradientRelease(g);
+
+    CGImageRef out = CGBitmapContextCreateImage(ctx);
+    CGContextRelease(ctx);
+    return out;
 }
 
 static double ASLuminanceInRegion(CGImageRef img, CGRect unitRect) {
@@ -1589,6 +1621,10 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
             ov.contents = (__bridge id)ovImg;
             ov.contentsGravity = kCAGravityResize;
             ov.frame = CGRectMake(textX, cursor - ih, iw, ih);
+            ov.shadowColor = [NSColor blackColor].CGColor;
+            ov.shadowOpacity = 0.5;
+            ov.shadowRadius = 6;
+            ov.shadowOffset = CGSizeMake(0, -1);
             [scene addSublayer:ov];
             CGImageRelease(ovImg);
         }
@@ -1614,7 +1650,12 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     if (!posterRef) return scene;
 
     // 背景：同一张海报重模糊铺满，作为「延伸出去的颜色」
-    CGImageRef bgImg = ASBlurredBackground(posterRef, CGSizeMake(w * 0.45, h * 0.45), _ciContext);
+    CGImageRef bgRaw = ASBlurredBackground(posterRef, CGSizeMake(w * 0.45, h * 0.45), _ciContext);
+    // 文字那一侧压暗，浅色海报也不会把白字吃掉
+    // 文字整列都要压住：暗场从画面外缘一路铺到海报边缘
+    CGImageRef bgImg = bgRaw ? (onLeft ? ASDarkenHorizontal(bgRaw, YES, 0.38, 1.0, 0.58)
+                                         : ASDarkenHorizontal(bgRaw, NO, 0.0, 0.64, 0.58)) : NULL;
+    if (bgRaw) CGImageRelease(bgRaw);
     CALayer *wash = [CALayer layer];
     wash.frame = CGRectMake(0, 0, w, h);
     wash.contentsGravity = kCAGravityResizeAspectFill;
@@ -1665,7 +1706,7 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     CGFloat gapSide = w * 0.025;
     CGFloat textX = onLeft ? (cardX + imgW * 0.97 + gapSide) : (w * 0.045);
     CGFloat textW = onLeft ? (w - textX - w * 0.05)
-                           : (cardX + imgW * 0.12 - textX - w * 0.02);
+                           : (cardX - textX - w * 0.022);
 
     CGFloat titleSize = h * 0.046;
     CGFloat tagSize = MAX(16.0, h * 0.022);
@@ -1755,6 +1796,10 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
             gl.contents = (__bridge id)gImg;
             gl.contentsGravity = kCAGravityResize;
             gl.frame = CGRectMake(textX - genreSize * 0.3, gy, gw, gh);
+            gl.shadowColor = [NSColor blackColor].CGColor;
+            gl.shadowOpacity = 0.55;
+            gl.shadowRadius = 6;
+            gl.shadowOffset = CGSizeMake(0, -1);
             [scene addSublayer:gl];
             CGImageRelease(gImg);
         }
@@ -1770,6 +1815,10 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
             ov.contents = (__bridge id)ovImg;
             ov.contentsGravity = kCAGravityResize;
             ov.frame = CGRectMake(textX, cursor - ih, iw, ih);
+            ov.shadowColor = [NSColor blackColor].CGColor;
+            ov.shadowOpacity = 0.5;
+            ov.shadowRadius = 6;
+            ov.shadowOffset = CGSizeMake(0, -1);
             [scene addSublayer:ov];
             CGImageRelease(ovImg);
         }
