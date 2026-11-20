@@ -20,6 +20,12 @@ implementation, so only the ideas are recorded here.
 | **Depth Drift**: posters float slowly upward at different depths, soft and large up close, small and slow far away, a few sharp at the focus plane; no text | Brainstorm, 2026-11-21 | Picked for a later layout. | The most ambient option. Live blur on many layers is costly, so prepare a few blur levels per poster ahead of time and choose by depth. Cap the layer count. |
 | **Editorial Cover**: a magazine cover. The title set huge and ghosted in the poster's colour, the poster overlapping it at a slight angle, and the score, genres and status typeset beside it | Brainstorm, 2026-11-21 | Picked for a later layout. | Needs an accent colour per entry from the poster. Titles must be fitted for very long and CJK names. Do not let the poster hide the end of the title. Could use Hero Still's logo art in place of the ghost text. |
 
+In the Deck · Fan draft, the outgoing poster sweeps upward and outward along one continuous
+curve and tilts with the same easing. It stays opaque while crossing the next poster. The
+caption changes as the outgoing card clears the new front, and the new rear card slides out
+from behind the hand. Exit travel is sized in card widths so the reveal does not depend on
+the display aspect ratio.
+
 ## Considered and set aside
 
 Sketched in the 2026-11-21 brainstorm and not picked. Kept so they are not re-proposed from scratch.
