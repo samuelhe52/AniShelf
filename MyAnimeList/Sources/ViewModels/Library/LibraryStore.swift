@@ -40,6 +40,9 @@ class LibraryStore {
     @ObservationIgnored private var deferredSavesIncludeBackgroundWrite = false
     @ObservationIgnored private var membershipSnapshot = LibraryMembershipSnapshot()
     @ObservationIgnored private var airingReminderPruningEnabled: Bool
+    #if os(macOS)
+        private(set) var screenSaverPublisher: ScreenSaverPublisher?
+    #endif
     /// False for generated fixture libraries (docs-ai 026): no sync coordinator or scheduler
     /// exists, so every sync path, including Settings' enable and retry, does nothing.
     @ObservationIgnored let allowsCloudSync: Bool
@@ -207,6 +210,17 @@ class LibraryStore {
         }
     }
 
+    #if os(macOS)
+        func startScreenSaverPublisher(defaults: UserDefaults, directory: URL) {
+            guard screenSaverPublisher == nil else { return }
+            screenSaverPublisher = ScreenSaverPublisher(defaults: defaults, directory: directory) {
+                [weak self] settings, language in
+                guard let self else { return .init(settings: settings.manifestSettings, entries: []) }
+                return ScreenSaverSnapshotBuilder.build(from: self, settings: settings, language: language)
+            }
+        }
+    #endif
+
     func reloadPersistedPreferences() {
         let snapshot = preferences.load()
         language = snapshot.resolvedAnimeInfoLanguage
@@ -293,6 +307,9 @@ class LibraryStore {
             }
         }
         pruneAiringReminderSubscriptions()
+        #if os(macOS)
+            screenSaverPublisher?.libraryDidChange()
+        #endif
     }
 
     func enableAiringReminderPruning() {
@@ -344,8 +361,13 @@ class LibraryStore {
                 descriptor.fetchLimit = 1
                 return try reader?.fetch(descriptor).first
             }
-            guard needsRefresh else { return }
-            try refreshLibrary()
+            if needsRefresh {
+                try refreshLibrary()
+            } else {
+                #if os(macOS)
+                    screenSaverPublisher?.libraryDidChange()
+                #endif
+            }
         } catch {
             libraryStoreLogger.error("Error refreshing library: \(error)")
         }

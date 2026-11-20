@@ -12,6 +12,7 @@ import SwiftUI
 
 #if os(macOS)
     import AppKit
+    import ScreenSaverKit
 #else
     import UIKit
 #endif
@@ -108,6 +109,12 @@ struct MyAnimeListApp: App {
             }
         }
         #if os(macOS)
+            // Fixture launches opt into writing to Pictures through their own defaults.
+            if !isSimulatedStartup, startupRecovery == nil, newerLibraryStoreVersion == nil,
+                !startup.isLibraryFixture || ScreenSaverSettings(defaults: startup.defaults).isEnabled
+            {
+                Self.startScreenSaverPublisher(for: libraryStore, defaults: startup.defaults)
+            }
             Self.configureMacLifecycle(
                 libraryStore: libraryStore,
                 keyStorage: keyStorage,
@@ -120,6 +127,12 @@ struct MyAnimeListApp: App {
     }
 
     #if os(macOS)
+        private static func startScreenSaverPublisher(for store: LibraryStore, defaults: UserDefaults) {
+            guard let home = FileManager.default.homeDirectory(forUser: NSUserName()) else { return }
+            store.startScreenSaverPublisher(
+                defaults: defaults, directory: ScreenSaverSnapshotReader.snapshotDirectory(in: home))
+        }
+
         /// Wires app-lifetime events into the shared objects directly: the App value captured
         /// here would hold stale `@State` once startup recovery finishes.
         private static func configureMacLifecycle(
@@ -363,6 +376,9 @@ struct MyAnimeListApp: App {
         recoveryActivityGate.isBlocked = false
         startupRecovery = nil
         libraryStore.enableAiringReminderPruning()
+        #if os(macOS)
+            Self.startScreenSaverPublisher(for: libraryStore, defaults: .standard)
+        #endif
         requestSync(trigger: .appLaunch)
         updateWhatsNewPresentation()
     }

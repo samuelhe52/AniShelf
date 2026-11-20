@@ -182,3 +182,4 @@ and links `ScreenSaverKit` on macOS only, for the manifest type and the live pre
 
 ## Amendments
 - Updated 2026-11-20: slice 1 landed and the host-access gate passed — see [002-slice-1-saver-and-host-gate.md](002-slice-1-saver-and-host-gate.md)
+- Updated 2026-11-20: slice 2 landed (snapshot builder, image export, publisher) — see [003-slice-2-snapshot-publisher.md](003-slice-2-snapshot-publisher.md)
