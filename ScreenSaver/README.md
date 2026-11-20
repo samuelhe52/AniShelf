@@ -16,8 +16,7 @@ Five layouts, all driven by the same library:
 | **Cover wall** | A full-bleed grid of posters that drifts slowly. Rows always fill the screen height exactly, so no card is ever half-cut. |
 | **Deck** | Posters shuffle in a fanned stack, one at a time, with the title underneath. |
 | **Hero still** | A full-screen TMDb backdrop with the work's logo, tagline, country, year and TMDb score. Alignment can be left, centred, or randomised per item. |
-| **Poster focus** | Poster card on one side, blurred colour wash behind, text column on the other. |
-| **Cover fusion** | Poster at full screen height on one side, its inner edge feathered into a heavily blurred copy of itself. |
+| **Poster showcase** | Two variants: *fusion* puts the poster at full screen height on one side with its inner edge feathered into a blurred copy of itself; *classic* shows a poster card on one side with the blurred colour wash behind and the text column on the other. |
 
 Shared options: metadata language (follow AniShelf / 中文 / English / 日本語), transition interval,
 transition style (cross-fade or slide) and library scope (all / favourites / watched).

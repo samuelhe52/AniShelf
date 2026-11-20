@@ -19,6 +19,7 @@ static NSString *const kPrefCaption = @"caption";  // 1 = 显示片名
 static NSString *const kPrefCols = @"cols";        // 0 = 自动，否则每屏列数
 static NSString *const kPrefBigInterval = @"bigInterval";    // 秒
 static NSString *const kPrefBigTransition = @"bigTransition"; // 0 淡入淡出 / 1 平移
+static NSString *const kPrefCoverStyle = @"coverStyle"; // 0 融合 / 1 经典
 static NSString *const kPrefShowWatch = @"showWatch";   // 大剧照显示观看状态
 static NSString *const kPrefLang = @"lang";              // 0 跟随应用 / 1 中文 / 2 英文 / 3 日文
 static NSString *const kPrefBigAlign = @"bigAlign";        // 0 左对齐 / 1 居中 / 2 随机
@@ -635,6 +636,7 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 @property (nonatomic, assign) NSInteger bigAlign;
 @property (nonatomic, assign) NSInteger langPref;
 @property (nonatomic, assign) BOOL showsWatch;
+@property (nonatomic, assign) NSInteger coverStyle;
 
 @property (nonatomic, strong) CALayer *stage;
 @property (nonatomic, strong) CALayer *backdrop;
@@ -663,6 +665,7 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 @property (nonatomic, strong) NSPopUpButton *transPopup;
 @property (nonatomic, strong) NSPopUpButton *alignPopup;
 @property (nonatomic, strong) NSPopUpButton *langPopup;
+@property (nonatomic, strong) NSPopUpButton *coverPopup;
 @property (nonatomic, strong) NSTextField *gridLabel;
 @property (nonatomic, strong) NSButton *captionCheck;
 @property (nonatomic, strong) NSButton *watchCheck;
@@ -702,8 +705,8 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     ScreenSaverDefaults *d = [ScreenSaverDefaults defaultsForModuleWithName:kModuleID];
     [d registerDefaults:@{kPrefMode : @0, kPrefScope : @0, kPrefCaption : @1,
                           kPrefCols : @0, kPrefDrift : @0, kPrefIndex : @(-1),
-                          kPrefBigInterval : @9, kPrefBigTransition : @0, kPrefBigAlign : @0, kPrefLang : @0, kPrefShowWatch : @NO}];
-    self.mode = [d integerForKey:kPrefMode];
+                          kPrefBigInterval : @9, kPrefBigTransition : @0, kPrefBigAlign : @0, kPrefLang : @0, kPrefShowWatch : @NO, kPrefCoverStyle : @0}];
+    self.mode = MIN(3, MAX(0, [d integerForKey:kPrefMode]));   // 旧版本可能存了 4
     self.scope = [d integerForKey:kPrefScope];
     self.showsCaption = [d boolForKey:kPrefCaption];
     self.colsPref = [d integerForKey:kPrefCols];
@@ -714,6 +717,7 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     self.bigAlign = [d integerForKey:kPrefBigAlign];
     self.langPref = [d integerForKey:kPrefLang];
     self.showsWatch = [d boolForKey:kPrefShowWatch];
+    self.coverStyle = [d integerForKey:kPrefCoverStyle];
 }
 
 - (void)loadLibrary {
@@ -1298,8 +1302,10 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 
 - (CALayer *)bigSceneForItem:(NSDictionary *)item size:(CGSize)size {
     if (self.mode == 4) return [self fusionSceneForItem:item size:size];
-    if (self.mode == 4) return [self fusionSceneForItem:item size:size];
-    if (self.mode == 3) return [self leanSceneForItem:item size:size];
+    if (self.mode == 3) {
+        return (self.coverStyle == 0) ? [self fusionSceneForItem:item size:size]
+                                      : [self leanSceneForItem:item size:size];
+    }
     CGFloat w = size.width, h = size.height;
     NSColor *bg = [NSColor colorWithCalibratedRed:0.031 green:0.031 blue:0.037 alpha:1];
 
@@ -1598,7 +1604,19 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     CGFloat ovH = ovImg ? CGImageGetHeight(ovImg) / 2.0 : 0;
     CGFloat tagH = tagline.length ? (tagSize * 1.55 + tagSize * 0.9) : 0;
     CGFloat gap1 = h * 0.020, gap2 = h * 0.010, gap3 = h * 0.020;
+    id genreListL = item[@"genres"];
+    NSMutableArray *genreNamesL = [NSMutableArray array];
+    if ([genreListL isKindOfClass:[NSArray class]]) {
+        for (id g in (NSArray *)genreListL) {
+            if (genreNamesL.count >= 3) break;
+            NSString *n = ASGenreName(@([g integerValue]), ASLangCode(item, self.langPref));
+            if (n.length) [genreNamesL addObject:n];
+        }
+    }
+    CGFloat genreSizeL = MAX(13.0, h * 0.0172);
+    CGFloat genreHL = genreNamesL.count ? genreSizeL * 1.55 : 0;
     CGFloat total = titleSize * 1.35 + gap1 + tagH + gap2 + metaSize * 1.6
+                  + (genreHL > 0 ? h * 0.006 + genreHL : 0)
                   + (overview.length ? gap3 + ovH : 0);
 
     CGFloat cursor = h * 0.5 + total / 2.0;
@@ -1653,22 +1671,41 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     [scene addSublayer:meta];
     cursor -= metaSize * 1.6 + gap3;
 
-    if (overview.length) {
-        NSString *fontName = @"PingFangSC-Regular";
-        CGImageRef ovImg = ASCreateParagraphImage(overview, fontName, ovSize, textW, 6);
-        if (ovImg) {
-            CGFloat iw = CGImageGetWidth(ovImg) / 2.0, ih = CGImageGetHeight(ovImg) / 2.0;
-            CALayer *ov = [CALayer layer];
-            ov.contents = (__bridge id)ovImg;
-            ov.contentsGravity = kCAGravityResize;
-            ov.frame = CGRectMake(textX, cursor - ih, iw, ih);
-            ov.shadowColor = [NSColor blackColor].CGColor;
-            ov.shadowOpacity = 0.5;
-            ov.shadowRadius = 6;
-            ov.shadowOffset = CGSizeMake(0, -1);
-            [scene addSublayer:ov];
-            CGImageRelease(ovImg);
+    // 类型另起一行
+    if (genreNamesL.count) {
+        NSString *gText = [genreNamesL componentsJoinedByString:@"  /  "];
+        CGImageRef gImg = ASCreateTextImage(gText, @"PingFangSC-Regular", genreSizeL, 0.64, 0.7);
+        if (gImg) {
+            CGFloat gw = CGImageGetWidth(gImg) / 2.0, gh = CGImageGetHeight(gImg) / 2.0;
+            CGFloat fitW = MIN(1.0, textW / MAX(1.0, gw));
+            gw *= fitW;
+            gh *= fitW;
+            CALayer *gl = [CALayer layer];
+            gl.contents = (__bridge id)gImg;
+            gl.contentsGravity = kCAGravityResize;
+            gl.frame = CGRectMake(textX - genreSizeL * 0.3, cursor - h * 0.006 - gh * 0.55, gw, gh);
+            gl.shadowColor = [NSColor blackColor].CGColor;
+            gl.shadowOpacity = 0.55;
+            gl.shadowRadius = 6;
+            gl.shadowOffset = CGSizeMake(0, -1);
+            [scene addSublayer:gl];
+            CGImageRelease(gImg);
         }
+        cursor -= h * 0.006 + genreHL;
+    }
+
+    if (ovImg) {
+        CGFloat iw = CGImageGetWidth(ovImg) / 2.0, ih = CGImageGetHeight(ovImg) / 2.0;
+        CALayer *ov = [CALayer layer];
+        ov.contents = (__bridge id)ovImg;
+        ov.contentsGravity = kCAGravityResize;
+        ov.frame = CGRectMake(textX, cursor - ih, iw, ih);
+        ov.shadowColor = [NSColor blackColor].CGColor;
+        ov.shadowOpacity = 0.5;
+        ov.shadowRadius = 6;
+        ov.shadowOffset = CGSizeMake(0, -1);
+        [scene addSublayer:ov];
+        CGImageRelease(ovImg);
     }
 
     return scene;
@@ -1981,6 +2018,8 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     self.intervalPopup.enabled = isSlideshow;
     self.transPopup.enabled = isSlideshow;
     self.alignPopup.enabled = isStill;
+    self.coverPopup.enabled = (m == 3);
+    self.coverPopup.enabled = (m == 3);
     self.gridLabel.textColor = isWall ? [NSColor secondaryLabelColor] : [NSColor tertiaryLabelColor];
 }
 
@@ -1989,7 +2028,7 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     ASLog(@"[sheet] begin preview=%d cached=%d", self.isPreview, self.configSheet != nil);
     if (self.configSheet) return self.configSheet;
 
-    NSWindow *win = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 450, 502)
+    NSWindow *win = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 450, 534)
                                                styleMask:NSWindowStyleMaskTitled
                                                  backing:NSBackingStoreBuffered
                                                    defer:NO];
@@ -2007,11 +2046,17 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 
     addLabel(@"样式", y);
     NSPopUpButton *mode = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(fieldX, y - 4, fieldW, 26) pullsDown:NO];
-    [mode addItemsWithTitles:@[ @"漂移封面墙", @"堆叠牌堆", @"大剧照", @"海报聚焦", @"封面融合" ]];
+    [mode addItemsWithTitles:@[ @"漂移封面墙", @"堆叠牌堆", @"大剧照", @"封面展示" ]];
     mode.target = self;
     mode.action = @selector(modeChanged:);
     [cv addSubview:mode];
     self.modePopup = mode;
+
+    y -= 32; addLabel(@"封面样式", y);
+    NSPopUpButton *cover = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(fieldX, y - 4, 170, 26) pullsDown:NO];
+    [cover addItemsWithTitles:@[ @"融合", @"经典" ]];
+    [cv addSubview:cover];
+    self.coverPopup = cover;
 
     y -= 32; addLabel(@"语言", y);
     NSPopUpButton *lang = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(fieldX, y - 4, 170, 26) pullsDown:NO];
@@ -2094,7 +2139,7 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     [cv addSubview:cancel];
 
     ScreenSaverDefaults *d = [ScreenSaverDefaults defaultsForModuleWithName:kModuleID];
-    [mode selectItemAtIndex:[d integerForKey:kPrefMode]];
+    [mode selectItemAtIndex:MIN(3, MAX(0, [d integerForKey:kPrefMode]))];
     [drift selectItemAtIndex:[d integerForKey:kPrefDrift]];
 
     NSArray<NSNumber *> *colVals = ASColValues();
@@ -2107,6 +2152,8 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     [trans selectItemAtIndex:[d integerForKey:kPrefBigTransition]];
     [align selectItemAtIndex:MIN(2, MAX(0, [d integerForKey:kPrefBigAlign]))];
     [lang selectItemAtIndex:MIN(3, MAX(0, [d integerForKey:kPrefLang]))];
+    [cover selectItemAtIndex:MIN(1, MAX(0, [d integerForKey:kPrefCoverStyle]))];
+    [cover selectItemAtIndex:MIN(1, MAX(0, [d integerForKey:kPrefCoverStyle]))];
 
     [scope selectItemAtIndex:[d integerForKey:kPrefScope]];
     cap.state = [d boolForKey:kPrefCaption] ? NSControlStateValueOn : NSControlStateValueOff;
@@ -2133,6 +2180,8 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     [d setInteger:self.transPopup.indexOfSelectedItem forKey:kPrefBigTransition];
     [d setInteger:self.alignPopup.indexOfSelectedItem forKey:kPrefBigAlign];
     [d setInteger:self.langPopup.indexOfSelectedItem forKey:kPrefLang];
+    [d setInteger:self.coverPopup.indexOfSelectedItem forKey:kPrefCoverStyle];
+    [d setInteger:self.coverPopup.indexOfSelectedItem forKey:kPrefCoverStyle];
     [d setInteger:self.scopePopup.indexOfSelectedItem forKey:kPrefScope];
     [d setBool:self.captionCheck.state == NSControlStateValueOn forKey:kPrefCaption];
     [d setBool:self.watchCheck.state == NSControlStateValueOn forKey:kPrefShowWatch];
@@ -2146,6 +2195,8 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     self.bigTransition = self.transPopup.indexOfSelectedItem;
     self.bigAlign = self.alignPopup.indexOfSelectedItem;
     self.langPref = self.langPopup.indexOfSelectedItem;
+    self.coverStyle = self.coverPopup.indexOfSelectedItem;
+    self.coverStyle = self.coverPopup.indexOfSelectedItem;
     self.scope = self.scopePopup.indexOfSelectedItem;
     self.showsCaption = self.captionCheck.state == NSControlStateValueOn;
     self.showsWatch = self.watchCheck.state == NSControlStateValueOn;
