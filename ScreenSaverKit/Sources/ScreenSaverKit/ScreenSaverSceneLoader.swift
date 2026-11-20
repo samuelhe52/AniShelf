@@ -12,7 +12,7 @@ import Foundation
 struct ScreenSaverScene: Sendable {
     struct Cursor: Sendable {
         var index = 0
-        var wallColumn: [String]?
+        var wall: CoverWallShuffleBag?
     }
 
     enum Content: Sendable {
@@ -71,6 +71,7 @@ actor ScreenSaverSceneLoader {
 
         return Self.prepare(
             entries: manifest.entries, settings: manifest.settings, cursor: cursor, size: size, scale: scale,
+            seed: seed,
             image: reader.image(at:maximumPixelSize:)
         )
     }
@@ -81,11 +82,13 @@ actor ScreenSaverSceneLoader {
         cursor: ScreenSaverScene.Cursor,
         size: CGSize,
         scale: CGFloat,
+        seed: UInt64 = 0,
         image: (String, Int) -> CGImage?
     ) -> ScreenSaverScene {
         if settings.layout == .coverWall, entries.count >= 4,
             let wall = loadWall(
-                entries, cursor: cursor, size: size, scale: scale, rows: settings.coverWallRows, image: image)
+                entries, cursor: cursor, size: size, scale: scale, rows: settings.coverWallRows, seed: seed, image: image
+            )
         {
             return wall
         }
@@ -119,62 +122,31 @@ actor ScreenSaverSceneLoader {
         size: CGSize,
         scale: CGFloat,
         rows: Int,
+        seed: UInt64,
         image: (String, Int) -> CGImage?
     ) -> ScreenSaverScene? {
         let grid = CoverWallGrid(viewport: size, rows: rows)
-        let columnCount = cursor.wallColumn == nil ? grid.columns : 1
+        let initial = cursor.wall == nil
+        var bag = cursor.wall ?? CoverWallShuffleBag(entries: entries, grid: grid, seed: seed)
+        let tileCount = (initial ? grid.columns : 1) * grid.rows
         let pixelSize = pixelLimit(grid.tileSize.height * scale * 1.25, 1_500)
         var imagesByPath: [String: CGImage] = [:]
-        var unreadable: Set<String> = []
-        var readableEntries: Set<Int> = []
-
-        func readablePath(at index: Int) -> String? {
-            let path = entries[index].poster
-            if imagesByPath[path] == nil {
-                guard !unreadable.contains(path) else { return nil }
-                guard let image = image(path, pixelSize) else {
-                    unreadable.insert(path)
-                    return nil
-                }
-                imagesByPath[path] = image
-            }
-            readableEntries.insert(index)
-            return path
-        }
-
-        var index = cursor.index
-        var leftColumn = cursor.wallColumn ?? []
         var images: [CGImage] = []
-        for _ in 0..<columnCount {
-            var column: [String] = []
-            for row in 0..<grid.rows {
-                let horizontal = leftColumn.indices.contains(row) ? leftColumn[row] : nil
-                let vertical = column.last
-                var candidate: (index: Int, path: String)?
-                for offset in entries.indices {
-                    guard !Task.isCancelled else { return nil }
-                    let nextIndex = (index + offset) % entries.count
-                    guard let path = readablePath(at: nextIndex) else { continue }
-                    if path != horizontal, path != vertical {
-                        candidate = (nextIndex, path)
-                        break
-                    }
-                    if candidate == nil { candidate = (nextIndex, path) }
-                }
-                guard let candidate, let image = imagesByPath[candidate.path] else { return nil }
-                column.append(candidate.path)
-                images.append(image)
-                index = (candidate.index + 1) % entries.count
+        images.reserveCapacity(tileCount)
+        for _ in 0..<tileCount {
+            let poster = bag.draw { path in
+                if let cached = imagesByPath[path] { return cached }
+                guard let decoded = image(path, pixelSize) else { return nil }
+                imagesByPath[path] = decoded
+                return decoded
             }
-            leftColumn = column
+            guard let poster else { return nil }
+            images.append(poster)
         }
-
-        guard cursor.wallColumn != nil || readableEntries.count >= 4 else { return nil }
-        let next = ScreenSaverScene.Cursor(index: index, wallColumn: leftColumn)
         return ScreenSaverScene(
-            content: cursor.wallColumn == nil ? .wall(grid, images) : .wallColumn(images),
+            content: initial ? .wall(grid, images) : .wallColumn(images),
             duration: CoverWall.driftDuration,
-            next: next
+            next: .init(wall: bag)
         )
     }
 
@@ -211,7 +183,7 @@ actor ScreenSaverSceneLoader {
 
 
 /// SplitMix64 keeps a session's shuffle reproducible for any given seed.
-fileprivate struct ScreenSaverRandomGenerator: RandomNumberGenerator {
+struct ScreenSaverRandomGenerator: RandomNumberGenerator, Sendable {
     var state: UInt64
 
     mutating func next() -> UInt64 {

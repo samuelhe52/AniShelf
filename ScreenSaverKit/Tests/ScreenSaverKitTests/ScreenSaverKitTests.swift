@@ -132,16 +132,16 @@ struct ScreenSaverKitTests {
         }
     }
 
-    @Test
-    func repeatedWallArtworkAvoidsNeighboursIncludingRecycledColumns() async throws {
+    @Test(arguments: [4, 11])
+    func repeatedWallArtworkAvoidsNeighboursAndRepeatingPatterns(posterCount: Int) async throws {
         let fixture = try SnapshotFixture()
         defer { fixture.remove() }
-        let posters = ["one", "two", "three", "four"]
+        let posters = (0..<posterCount).map { "poster-\($0)" }
         // Each width identifies one exported path, including across separate decodes.
         for (index, name) in posters.enumerated() {
             try fixture.writeImage("\(name).png", width: 20 + index)
         }
-        let names = ["one"] + posters
+        let names = ["missing", posters[0]] + posters
         let manifest = ScreenSaverManifest(
             settings: .init(layout: .coverWall, interval: 12),
             entries: names.enumerated().map { index, name in
@@ -156,27 +156,43 @@ struct ScreenSaverKitTests {
             return
         }
         #expect(images.count == grid.rows * grid.columns)
-        var previous: [Int] = []
+        var columns: [[Int]] = []
         func verifyColumn(_ images: ArraySlice<CGImage>) {
             let identities = images.map(\.width)
             #expect(identities.count == grid.rows)
             for index in identities.indices {
                 if index > 0 { #expect(identities[index] != identities[index - 1]) }
-                if previous.indices.contains(index) { #expect(identities[index] != previous[index]) }
+                if let previous = columns.last { #expect(identities[index] != previous[index]) }
             }
-            previous = identities
+            columns.append(identities)
         }
         for column in 0..<grid.columns {
             let start = column * grid.rows
             verifyColumn(images[start..<(start + grid.rows)])
         }
-        for _ in 0..<8 {
+        for _ in 0..<24 {
             scene = await loader.prepare(.ready(manifest), cursor: scene.next, size: viewport, scale: 1)
             guard case .wallColumn(let images) = scene.content else {
                 Issue.record("Expected one recycled column")
                 return
             }
             verifyColumn(images[...])
+        }
+        #expect(Set(columns.joined().prefix(posterCount)).count == posterCount)
+        if posterCount == 11 {
+            // A fixed 11-poster cycle repeats down a diagonal in a four-row wall.
+            // Look in both diagonal directions and across the typical visible width.
+            for dx in 1..<grid.columns {
+                for dy in (1 - grid.rows)..<grid.rows {
+                    let matchingTiles = (dx..<columns.count).reduce(into: 0) { count, x in
+                        for y in 0..<grid.rows where (0..<grid.rows).contains(y - dy) {
+                            if columns[x][y] == columns[x - dx][y - dy] { count += 1 }
+                        }
+                    }
+                    let overlap = (columns.count - dx) * (grid.rows - abs(dy))
+                    #expect(matchingTiles * 2 < overlap)
+                }
+            }
         }
     }
 

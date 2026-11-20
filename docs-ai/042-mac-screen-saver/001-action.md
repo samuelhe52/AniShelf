@@ -26,7 +26,8 @@ built everything from the details model onward after Samuel asked it to take ove
 - **Saver.** `AniShelf.saver` (bundle ID `com.samuelhe.MyAnimeList.ScreenSaver`,
   arm64 + x86_64, macOS 26) is embedded in the Mac app at
   `Contents/Library/Screen Savers`. It reads `~/Pictures/AniShelf Screen Saver` offline,
-  plays Cover Wall (rows 2–8), Poster Focus, or Backdrop, ends sessions on
+  plays Cover Wall (rows 2–8, [distance-weighted poster draws](011-cover-wall-shuffle-bag.md)),
+  Poster Focus, or Backdrop, ends sessions on
   `stopAnimation`, `willstop`, and window detachment, and ships a thumbnail for the
   System Settings grid. A build-phase hash of its sources (`AniShelfScreenSaverBuild`)
   is compared with the snapshot's `saverBuild`; a mismatch shows "AniShelf has a newer
