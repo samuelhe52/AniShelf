@@ -73,12 +73,12 @@ struct ScreenSaverLayouts {
     ) -> [Line] {
         var lines: [Line] = []
         if let title = entry.title.nonEmpty {
-            let size = fittedTitle(title, width: width, largest: 0.064, smallest: 0.042)
+            let size = fittedTitle(title, width: width, largest: 0.06, smallest: 0.03)
             lines.append(Line(text: title, size: size, weight: .bold, alpha: 0.97, lines: 3))
         }
         if details.contains(.season), let season = entry.season.nonEmpty {
             lines.append(
-                Line(text: season, size: unit * 0.03, weight: .medium, alpha: 0.8, spaceBefore: unit * 0.006))
+                Line(text: season, size: unit * 0.024, weight: .medium, alpha: 0.8, spaceBefore: unit * 0.006))
         }
         let facts = factsLine(entry, details: details)
         if !facts.isEmpty {
