@@ -537,6 +537,45 @@ static CGImageRef ASDarkenHorizontal(CGImageRef src, BOOL darkOnRight,
     return out;
 }
 
+
+// 量一段文字在指定宽度下需要多高
+static CGFloat ASParagraphHeight(NSString *text, NSString *fontName, CGFloat fontSize, CGFloat maxWidth) {
+    if (text.length == 0 || maxWidth < 40) return 0;
+    NSFont *font = [NSFont fontWithName:fontName size:fontSize] ?: [NSFont systemFontOfSize:fontSize];
+    NSMutableParagraphStyle *ps = [NSMutableParagraphStyle new];
+    ps.lineSpacing = fontSize * 0.42;
+    ps.paragraphSpacing = 0;
+    ps.lineBreakMode = NSLineBreakByWordWrapping;
+    NSString *body = [text stringByReplacingOccurrencesOfString:@"\n\n" withString:@"\n"];
+    body = [body stringByReplacingOccurrencesOfString:@"\r" withString:@""];
+    NSAttributedString *rich = [[NSAttributedString alloc] initWithString:body attributes:@{
+        NSFontAttributeName : font,
+        NSForegroundColorAttributeName : [NSColor colorWithWhite:1 alpha:0.80],
+        NSParagraphStyleAttributeName : ps,
+    }];
+    CTFramesetterRef fs = CTFramesetterCreateWithAttributedString((__bridge CFAttributedStringRef)rich);
+    if (!fs) return 0;
+    CGSize fit = CTFramesetterSuggestFrameSizeWithConstraints(fs, CFRangeMake(0, 0), NULL,
+                                                              CGSizeMake(maxWidth, CGFLOAT_MAX), NULL);
+    CFRelease(fs);
+    return ceil(fit.height) + 2;
+}
+
+// 简介自适应：先按可用高度缩字号，仍放不下才截断，尽量完整显示
+static CGImageRef ASFitOverview(NSString *text, NSString *fontName, CGFloat baseSize,
+                                CGFloat maxWidth, CGFloat maxHeight) {
+    if (text.length == 0 || maxWidth < 40) return NULL;
+    CGFloat size = baseSize;
+    CGFloat fitH = ASParagraphHeight(text, fontName, size, maxWidth);
+    if (fitH > maxHeight) {
+        size = MAX(baseSize * (maxHeight / fitH), baseSize * 0.72);
+        fitH = ASParagraphHeight(text, fontName, size, maxWidth);
+    }
+    CGFloat lineH = size * 1.82;
+    NSInteger maxLines = (fitH > maxHeight) ? MAX(1, (NSInteger)floor(maxHeight / lineH)) : 40;
+    return ASCreateParagraphImage(text, fontName, size, maxWidth, maxLines);
+}
+
 static double ASLuminanceInRegion(CGImageRef img, CGRect unitRect) {
     if (!img) return 0.0;
     const size_t n = 40;
@@ -1550,11 +1589,13 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     CGFloat tagSize = MAX(16.0, h * 0.022);
     CGFloat metaSize = MAX(14.0, h * 0.0185);
     CGFloat ovSize = MAX(16.0, h * 0.0245);
-    CGFloat ovLine = ovSize * 1.80;
-    CGFloat ovH = ovLine * 6;
+    CGFloat maxOvH = h * 0.46;
 
     NSString *tagline = ASTagline(item, self.langPref);
     NSString *overview = ASLocalized(item, @"overview", self.langPref);
+    // 简介先按可用高度自适应（字号与行数），后面按实际高度排版
+    CGImageRef ovImg = ASFitOverview(overview, @"PingFangSC-Regular", ovSize, textW, maxOvH);
+    CGFloat ovH = ovImg ? CGImageGetHeight(ovImg) / 2.0 : 0;
     CGFloat tagH = tagline.length ? (tagSize * 1.55 + tagSize * 0.9) : 0;
     CGFloat gap1 = h * 0.020, gap2 = h * 0.010, gap3 = h * 0.020;
     CGFloat total = titleSize * 1.35 + gap1 + tagH + gap2 + metaSize * 1.6
@@ -1712,11 +1753,13 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     CGFloat tagSize = MAX(16.0, h * 0.022);
     CGFloat metaSize = MAX(14.0, h * 0.0185);
     CGFloat ovSize = MAX(16.0, h * 0.0245);
-    CGFloat ovLine = ovSize * 1.80;
-    CGFloat ovH = ovLine * 6;
+    CGFloat maxOvH = h * 0.46;
 
     NSString *tagline = ASTagline(item, self.langPref);
     NSString *overview = ASLocalized(item, @"overview", self.langPref);
+    // 简介先按可用高度自适应（字号与行数），后面按实际高度排版
+    CGImageRef ovImg = ASFitOverview(overview, @"PingFangSC-Regular", ovSize, textW, maxOvH);
+    CGFloat ovH = ovImg ? CGImageGetHeight(ovImg) / 2.0 : 0;
     CGFloat tagH = tagline.length ? (tagSize * 1.55 + tagSize * 0.9) : 0;
     CGFloat gap1 = h * 0.020, gap2 = h * 0.010, gap3 = h * 0.020;
     id genreListF = item[@"genres"];
@@ -1807,21 +1850,18 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     }
 
 
-    if (overview.length) {
-        CGImageRef ovImg = ASCreateParagraphImage(overview, @"PingFangSC-Regular", ovSize, textW, 6);
-        if (ovImg) {
-            CGFloat iw = CGImageGetWidth(ovImg) / 2.0, ih = CGImageGetHeight(ovImg) / 2.0;
-            CALayer *ov = [CALayer layer];
-            ov.contents = (__bridge id)ovImg;
-            ov.contentsGravity = kCAGravityResize;
-            ov.frame = CGRectMake(textX, cursor - ih, iw, ih);
-            ov.shadowColor = [NSColor blackColor].CGColor;
-            ov.shadowOpacity = 0.5;
-            ov.shadowRadius = 6;
-            ov.shadowOffset = CGSizeMake(0, -1);
-            [scene addSublayer:ov];
-            CGImageRelease(ovImg);
-        }
+    if (ovImg) {
+        CGFloat iw = CGImageGetWidth(ovImg) / 2.0, ih = CGImageGetHeight(ovImg) / 2.0;
+        CALayer *ov = [CALayer layer];
+        ov.contents = (__bridge id)ovImg;
+        ov.contentsGravity = kCAGravityResize;
+        ov.frame = CGRectMake(textX, cursor - ih, iw, ih);
+        ov.shadowColor = [NSColor blackColor].CGColor;
+        ov.shadowOpacity = 0.5;
+        ov.shadowRadius = 6;
+        ov.shadowOffset = CGSizeMake(0, -1);
+        [scene addSublayer:ov];
+        CGImageRelease(ovImg);
     }
 
     return scene;
