@@ -16408,6 +16408,22 @@
           }
         }
       }
+    },
+    "Deleted Category" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除されたカテゴリ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已删除的分类"
+          }
+        }
+      }
     }
   },
   "version" : "1.2"

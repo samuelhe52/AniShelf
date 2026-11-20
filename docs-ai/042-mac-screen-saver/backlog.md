@@ -36,7 +36,6 @@ picked up, and delete it here.
 
 | Idea | Source | Why deferred | To do it right |
 | --- | --- | --- | --- |
-| Category scope (show one library category) | Codex review | Favorites / Watched / All cover v1. | Add `category(id)` scope; a deleted category gives an empty scope. |
 | Episode stills | PR #28 (exported but unused) | No layout uses them. | Only with a layout designed for stills. |
 
 ## Distribution and setup

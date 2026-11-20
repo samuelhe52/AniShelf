@@ -244,13 +244,36 @@
 
     fileprivate struct ScreenSaverOptions: View {
         @Bindable var publisher: ScreenSaverPublisher
+        @Environment(LibraryStore.self) private var library
+
+        /// Custom categories, listed when categories are on. The selected category stays listed
+        /// when categories are later turned off or the category is deleted, so the picker keeps
+        /// a valid selection.
+        private var categoryScopes: [(scope: ScreenSaverSettings.Scope, name: String)] {
+            var items =
+                library.categoriesEnabled
+                ? library.categories.map { (scope: ScreenSaverSettings.Scope.category($0.id), name: $0.name) } : []
+            if case .category(let id) = publisher.settings.scope,
+                !items.contains(where: { $0.scope == publisher.settings.scope })
+            {
+                let name = library.categories.first { $0.id == id }?.name
+                items.append((publisher.settings.scope, name ?? String(localized: "Deleted Category")))
+            }
+            return items
+        }
         private static let intervals: [TimeInterval] = [5, 8, 12, 20, 30, 60]
 
         var body: some View {
             VStack(spacing: 12) {
                 Picker("Show", selection: $publisher.settings.scope) {
-                    ForEach(ScreenSaverSettings.Scope.allCases, id: \.self) { scope in
+                    ForEach(ScreenSaverSettings.Scope.builtIn, id: \.self) { scope in
                         Text(scope.title).tag(scope)
+                    }
+                    if !categoryScopes.isEmpty {
+                        Divider()
+                        ForEach(categoryScopes, id: \.scope) { item in
+                            Text(item.name).tag(item.scope)
+                        }
                     }
                 }
                 Picker("Layout", selection: $publisher.settings.layout) {
@@ -307,6 +330,8 @@
             case .favorites: "Favorites"
             case .watched: "Watched"
             case .all: "All Library Entries"
+            // Category scopes are listed by their names, not through this title.
+            case .category: "Category"
             }
         }
     }

@@ -11,16 +11,45 @@
     import ScreenSaverKit
 
     struct ScreenSaverSettings: Equatable {
-        enum Scope: String, CaseIterable {
+        enum Scope: Hashable {
             case favorites
             case watched
             case all
+            /// A custom library category. A deleted category matches nothing; its memberships stay
+            /// inert because category IDs are never reused.
+            case category(LibraryCategory.ID)
+
+            static let builtIn: [Scope] = [.favorites, .watched, .all]
+            private static let categoryPrefix = "category:"
+
+            init?(rawValue: String) {
+                switch rawValue {
+                case "favorites": self = .favorites
+                case "watched": self = .watched
+                case "all": self = .all
+                default:
+                    guard rawValue.hasPrefix(Self.categoryPrefix) else { return nil }
+                    let id = String(rawValue.dropFirst(Self.categoryPrefix.count))
+                    guard !id.isEmpty else { return nil }
+                    self = .category(id)
+                }
+            }
+
+            var rawValue: String {
+                switch self {
+                case .favorites: "favorites"
+                case .watched: "watched"
+                case .all: "all"
+                case .category(let id): Self.categoryPrefix + id
+                }
+            }
 
             func includes(_ entry: AnimeEntry) -> Bool {
                 switch self {
                 case .favorites: entry.favorite
                 case .watched: entry.watchStatus == .watched
                 case .all: true
+                case .category(let id): entry.categoryIDs.contains(id)
                 }
             }
         }

@@ -45,6 +45,17 @@
             try fixture.save()
             settings.scope = .favorites
             #expect(fixture.draft(settings).entries.map(\.id) == ["movie:1"])
+
+            // A category scope keeps its members; a deleted or unknown category shows nothing.
+            let shelf = LibraryCategory(name: "Shelf")
+            fixture.store.categories = [shelf]
+            untracked.categoryIDs = [shelf.id]
+            try fixture.save()
+            settings.scope = .category(shelf.id)
+            #expect(fixture.draft(settings).entries.map(\.id) == ["movie:3"])
+            #expect(ScreenSaverSettings.Scope(rawValue: settings.scope.rawValue) == settings.scope)
+            fixture.store.categories = []
+            #expect(fixture.draft(settings).entries.isEmpty)
         }
 
         @Test

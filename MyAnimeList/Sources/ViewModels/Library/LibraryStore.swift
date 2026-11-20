@@ -148,6 +148,12 @@ class LibraryStore {
     /// Write through the category operations.
     var categories: [LibraryCategory] = [] {
         willSet { preferences.saveCategories(newValue) }
+        didSet {
+            #if os(macOS)
+                // A screen saver showing a category must empty when that category is deleted.
+                screenSaverPublisher?.libraryDidChange()
+            #endif
+        }
     }
 
     /// Whether the library already holds an entry, regardless of the active category or filters.

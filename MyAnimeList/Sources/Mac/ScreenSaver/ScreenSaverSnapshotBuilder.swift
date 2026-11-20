@@ -39,6 +39,10 @@
             settings: ScreenSaverSettings,
             language: Language
         ) -> ScreenSaverSnapshotDraft {
+            // Deleting a category leaves its memberships on entries, so a deleted category shows nothing.
+            if case .category(let id) = settings.scope, !store.categories.contains(where: { $0.id == id }) {
+                return .init(settings: settings.manifestSettings, entries: [])
+            }
             let entries = store.library.lazy
                 .filter(settings.scope.includes)
                 .map { makeEntry($0, settings: settings, language: language) }
