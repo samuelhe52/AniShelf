@@ -90,3 +90,6 @@ temp/
 /fastlane/Preview.html
 /fastlane/screenshots/
 /fastlane/test_output/
+
+# Python bytecode from scripts/
+__pycache__/
