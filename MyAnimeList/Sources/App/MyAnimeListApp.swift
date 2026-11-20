@@ -46,7 +46,12 @@ struct MyAnimeListApp: App {
         Language.followsSystemPreference()
 
     init() {
-        let startup = Self.startupEnvironment()
+        #if ANISHELF_LAB
+            // Lab runs like a fixture launch: a local-only library, no sync, reminders, or prompts.
+            let startup = StartupEnvironment(bootstrap: LabStartup.bootstrap(), isLibraryFixture: true)
+        #else
+            let startup = Self.startupEnvironment()
+        #endif
         let startupBootstrap = startup.bootstrap
         let isSimulatedStartup = startup.isSimulated
         let startupRecovery = startupBootstrap.recovery
@@ -305,6 +310,9 @@ struct MyAnimeListApp: App {
                     .transition(.opacity.animation(.easeInOut(duration: 0.3)))
             }
         }
+        #if ANISHELF_LAB
+            .overlay { LabStartupFailureView() }
+        #endif
         #if (DEBUG || LIBRARY_FIXTURES) && os(iOS)
             .overlay(alignment: .topLeading) {
                 if isLibraryFixture {
