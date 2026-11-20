@@ -84,9 +84,9 @@ struct CoverWallShuffleBag: Sendable {
             let pending = 0..<remaining
             let used = remaining..<posters.count
             let eligible =
-                if hasEligiblePoster(in: pending) { pending }
-                else if hasEligiblePoster(in: used) { used }
-                else { nil as Range<Int>? }
+                if hasEligiblePoster(in: pending) { pending } else if hasEligiblePoster(in: used) { used } else {
+                    nil as Range<Int>?
+                }
 
             // Borrow from the used suffix if the bag is blocked. Only allow matching
             // neighbors when the entire scope shares too few distinct posters to avoid it.

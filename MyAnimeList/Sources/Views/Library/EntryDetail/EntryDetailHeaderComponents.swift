@@ -113,11 +113,11 @@ struct EntryDetailHeroSection: View {
             VStack(alignment: .center, spacing: 6) {
                 if let logoImage {
                     KFImageView(image: logoImage, diskCacheExpiration: .longTerm)
-                    .id(logoImage)
-                    .scaledToFit()
-                    .frame(maxWidth: 280)
-                    .frame(height: 78)
-                    .shadow(color: .black.opacity(0.28), radius: 10, y: 6)
+                        .id(logoImage)
+                        .scaledToFit()
+                        .frame(maxWidth: 280)
+                        .frame(height: 78)
+                        .shadow(color: .black.opacity(0.28), radius: 10, y: 6)
                 } else {
                     Text(displayTitle)
                         .font(.largeTitle.weight(.bold))
@@ -162,9 +162,9 @@ struct EntryDetailHeroSection: View {
         if let image {
             // The Mac inspector reuses this view across entries; a new image is a new view.
             KFImageView(image: image, diskCacheExpiration: .longTerm)
-            .id(image)
-            .scaledToFill()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .id(image)
+                .scaledToFill()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             LinearGradient(
                 colors: [accentColor.opacity(0.45), Color.blue.opacity(0.25)],

@@ -49,7 +49,7 @@ struct EntryDetailProductionCompaniesPopover: View {
     private func companyLogo(_ company: EntryDetailProductionCompanyCard) -> some View {
         if let logoImage = company.logoImage {
             KFImageView(image: logoImage, diskCacheExpiration: .shortTerm)
-            .scaledToFit()
+                .scaledToFit()
         } else {
             Image(systemName: "building.2")
                 .font(.title2)
