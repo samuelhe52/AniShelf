@@ -136,7 +136,8 @@ extension LibraryStore {
             applyNewEntryDefaults(to: entry)
         }
         if let categoryID = validCategoryID(categoryID) {
-            entry.updateCategoryMembership(categoryID, isMember: true)
+            // The restored entry may still carry IDs of categories deleted while it was hidden.
+            entry.updateCategoryMembership(categoryID, isMember: true, knownCategoryIDs: knownCategoryIDs)
         }
         entry.updateDisplayState(true)
         try repository.save()
