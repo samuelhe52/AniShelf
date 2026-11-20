@@ -17,6 +17,7 @@
             if let publisher = library.screenSaverPublisher {
                 ScreenSaverSetupSection(publisher: publisher)
                 ScreenSaverPreviewSection(publisher: publisher)
+                ScreenSaverUninstallSection(publisher: publisher)
             } else {
                 ContentUnavailableView {
                     Label("Screen Saver Unavailable", systemImage: "display")
@@ -32,7 +33,7 @@
         @State private var launchError: LocalizedStringResource?
 
         var body: some View {
-            Section("Setup") {
+            Section {
                 LabeledContent("1. Install AniShelf’s screen saver") {
                     Button("Install…", action: install)
                 }
@@ -43,18 +44,12 @@
                     Text("Click Screen Saver…, then choose AniShelf under Other at the bottom of the list.")
                 }
                 ScreenSaverArtworkStatus(publisher: publisher)
-                if publisher.settings.isEnabled {
-                    LabeledContent {
-                        Button("Turn Off Screen Saver") {
-                            publisher.settings.isEnabled = false
-                        }
-                    } label: {
-                        Text(
-                            "AniShelf stops updating the screen saver and deletes its saved posters. To use it again, click Install…."
-                        )
-                        .foregroundStyle(.secondary)
-                    }
-                }
+            } header: {
+                Text("Setup")
+            } footer: {
+                Text(
+                    "After installation, AniShelf updates the screen saver automatically when you change the options below."
+                )
             }
             .alert(
                 Text(launchError ?? "Couldn’t Open Screen Saver"),
@@ -86,6 +81,40 @@
             }
         }
 
+    }
+
+    fileprivate struct ScreenSaverUninstallSection: View {
+        let publisher: ScreenSaverPublisher
+        @State private var showsFinishInFinder = false
+
+        var body: some View {
+            Section {
+                LabeledContent {
+                    Button("Uninstall Screen Saver…", action: uninstall)
+                } label: {
+                    Text("Uninstalling makes the AniShelf option disappear in the screen saver settings.")
+                }
+            }
+            .alert("Finish in Finder", isPresented: $showsFinishInFinder) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Move AniShelf.saver to the Trash. Finder asks for your password if it’s installed for all users.")
+            }
+        }
+
+        /// The sandbox can't delete the installed bundle, so stop updates, then let Finder remove it.
+        private func uninstall() {
+            publisher.settings.isEnabled = false
+            let name = "Screen Savers/AniShelf.saver"
+            var candidates = [URL(filePath: "/Library").appending(path: name, directoryHint: .isDirectory)]
+            if let home = FileManager.default.homeDirectory(forUser: NSUserName()) {
+                candidates.insert(home.appending(path: "Library/" + name, directoryHint: .isDirectory), at: 0)
+            }
+            // The sandbox may hide these paths; reveal both when neither is visible.
+            let found = candidates.filter { FileManager.default.fileExists(atPath: $0.path(percentEncoded: false)) }
+            NSWorkspace.shared.activateFileViewerSelecting(found.isEmpty ? candidates : found)
+            showsFinishInFinder = true
+        }
     }
 
     fileprivate struct ScreenSaverArtworkStatus: View {
@@ -170,15 +199,9 @@
 
         var body: some View {
             let layout = publisher.settings.layout
-            Section {
-                ForEach(ScreenSaverManifest.Detail.allCases, id: \.self) { detail in
+            Section("Details") {
+                ForEach(ScreenSaverManifest.Detail.available(for: layout), id: \.self) { detail in
                     Toggle(detail.title, isOn: binding(for: detail, in: layout))
-                }
-            } header: {
-                Text("Details")
-            } footer: {
-                if layout == .backdrop {
-                    Text("Title shows the logo when there is one.")
                 }
             }
         }
@@ -298,11 +321,13 @@
     extension ScreenSaverManifest.Detail {
         fileprivate var title: LocalizedStringResource {
             switch self {
-            case .title: "Title"
             case .season: "Season"
             case .year: "Year"
             case .genres: "Genres"
-            case .status: "Status"
+            case .status: "Airing Status"
+            case .score: "TMDb Score"
+            case .watchStatus: "Watch Status"
+            case .overview: "Overview"
             }
         }
     }

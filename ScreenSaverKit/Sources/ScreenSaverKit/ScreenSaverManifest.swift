@@ -10,7 +10,7 @@ import Foundation
 public struct ScreenSaverManifest: Codable, Equatable, Sendable {
     // The schema version also keeps version 1 readers, which did not check rendererVersion, on the update notice.
     public static let currentSchemaVersion = 2
-    public static let currentRendererVersion = 3
+    public static let currentRendererVersion = 4
 
     public enum Layout: String, Codable, CaseIterable, Sendable {
         case coverWall
@@ -18,19 +18,31 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         case backdrop
     }
 
-    /// Text a slide layout can show. Each layout draws the ones it is given in its own fixed order.
+    /// Optional text a slide layout can show next to the title, which is always shown.
+    /// Each layout draws the ones it is given in its own fixed order.
     public enum Detail: String, Codable, CaseIterable, Sendable {
-        case title
         case season
         case year
         case genres
+        /// The series' airing status, such as Returning Series or Ended.
         case status
+        case score
+        case watchStatus
+        case overview
 
         public static func defaults(for layout: Layout) -> [Detail] {
             switch layout {
             // Cover Wall shows no text; with fewer than 4 posters it falls back to Poster Focus.
-            case .coverWall, .posterFocus: [.title, .season, .year, .genres]
-            case .backdrop: [.title, .year]
+            case .coverWall, .posterFocus: [.season, .year, .genres]
+            case .backdrop: [.year]
+            }
+        }
+
+        public static func available(for layout: Layout) -> [Detail] {
+            switch layout {
+            case .coverWall, .posterFocus: allCases
+            // A paragraph over a full-screen still is not readable from a distance.
+            case .backdrop: allCases.filter { $0 != .overview }
             }
         }
 
@@ -90,6 +102,9 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         public let year: String?
         public let genres: [String]?
         public let status: String?
+        public let score: String?
+        public let watchStatus: String?
+        public let overview: String?
         public let poster: String
         public let posterPixelSize: PixelSize
         public let backdrop: String?
@@ -102,6 +117,9 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             year: String? = nil,
             genres: [String]? = nil,
             status: String? = nil,
+            score: String? = nil,
+            watchStatus: String? = nil,
+            overview: String? = nil,
             poster: String,
             posterPixelSize: PixelSize,
             backdrop: String? = nil,
@@ -113,6 +131,9 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             self.year = year
             self.genres = genres
             self.status = status
+            self.score = score
+            self.watchStatus = watchStatus
+            self.overview = overview
             self.poster = poster
             self.posterPixelSize = posterPixelSize
             self.backdrop = backdrop

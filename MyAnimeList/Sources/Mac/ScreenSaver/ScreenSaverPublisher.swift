@@ -365,14 +365,16 @@
                     }
                     return .init(
                         id: entry.id, title: entry.title, season: entry.season, year: entry.year,
-                        genres: entry.genres, status: entry.status, poster: prior.poster,
+                        genres: entry.genres, status: entry.status, score: entry.score,
+                        watchStatus: entry.watchStatus, overview: entry.overview, poster: prior.poster,
                         posterPixelSize: prior.posterPixelSize
                     )
                 }
                 let backdrop = entry.backdrop.flatMap { images[.backdrop($0)] }
                 return .init(
                     id: entry.id, title: entry.title, season: entry.season, year: entry.year,
-                    genres: entry.genres, status: entry.status, poster: poster.path,
+                    genres: entry.genres, status: entry.status, score: entry.score,
+                    watchStatus: entry.watchStatus, overview: entry.overview, poster: poster.path,
                     posterPixelSize: poster.pixelSize, backdrop: backdrop?.path,
                     logo: backdrop != nil ? entry.logo.flatMap { images[.logo($0)]?.path } : nil
                 )

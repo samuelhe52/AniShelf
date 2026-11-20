@@ -20,7 +20,7 @@ struct ScreenSaverKitTests {
         defer { fixture.remove() }
         let expected = ScreenSaverManifest(
             createdAt: Date(timeIntervalSince1970: 1_790_000_000.123),
-            settings: .init(layout: .backdrop, details: [.year, .title], interval: 12, coverWallRows: 8),
+            settings: .init(layout: .backdrop, details: [.score, .year], interval: 12, coverWallRows: 8),
             entries: [
                 .init(
                     id: "fixture-1",
@@ -58,8 +58,8 @@ struct ScreenSaverKitTests {
         #expect(legacyManifest.entries == expected.entries)
         #expect(legacyManifest.rendererVersion == 2)
         #expect(legacyManifest.settings.coverWallRows == 4)
-        #expect(legacyManifest.settings.details == [.title, .year])
-        #expect(expected.settings.details == [.title, .year])
+        #expect(legacyManifest.settings.details == [.year])
+        #expect(expected.settings.details == [.year, .score])
 
         legacy["rendererVersion"] = nil
         legacy["schemaVersion"] = 1
@@ -255,7 +255,9 @@ struct ScreenSaverKitTests {
         let layoutSize = CGSize(width: 800, height: 500)
         renderer.resize(to: viewport, scale: 2, layoutSize: layoutSize)
         let entries: [ScreenSaverManifest.Entry] = [
-            .init(id: "first", title: "Poster title", poster: "memory", posterPixelSize: .init(width: 20, height: 30))
+            .init(
+                id: "first", title: "Poster title", overview: "Poster overview", poster: "memory",
+                posterPixelSize: .init(width: 20, height: 30))
         ]
         renderer.updatePreview(
             .init(
@@ -283,12 +285,13 @@ struct ScreenSaverKitTests {
         )
         renderer.updatePreview(
             .init(
-                settings: .init(layout: .posterFocus, details: [], interval: 60),
+                settings: .init(layout: .posterFocus, details: [.overview], interval: 60),
                 entries: [other] + entries, images: ["memory": bitmap, "alternate": alternate]
             ))
-        let withoutTitle = try await waitForScene(after: withTitle)
-        #expect(withoutTitle.sublayers?.contains { $0 is CATextLayer } == false)
-        let layers = (withoutTitle.sublayers ?? []).flatMap { [$0] + ($0.sublayers ?? []) }
+        // The title is always shown; the overview detail adds a second text layer.
+        let withOverview = try await waitForScene(after: withTitle)
+        #expect(withOverview.sublayers?.filter { $0 is CATextLayer }.count == 2)
+        let layers = (withOverview.sublayers ?? []).flatMap { [$0] + ($0.sublayers ?? []) }
         #expect(layers.contains { ($0.contents as AnyObject?) === bitmap })
     }
 

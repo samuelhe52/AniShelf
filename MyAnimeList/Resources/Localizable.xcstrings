@@ -12518,22 +12518,6 @@
         }
       }
     },
-    "Turn Off Screen Saver" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スクリーンセーバをオフにする"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "关闭屏幕保护程序"
-          }
-        }
-      }
-    },
     "Store large Gallery posters longer. Off by default and may use more disk space." : {
       "localizations" : {
         "ja" : {
@@ -16281,22 +16265,6 @@
         }
       }
     },
-    "AniShelf stops updating the screen saver and deletes its saved posters. To use it again, click Install…." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AniShelfはスクリーンセーバの更新を停止し、保存したポスターを削除します。再び使うには「インストール…」をクリックします。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AniShelf将停止更新屏幕保护程序并删除已保存的海报。要再次使用，请点按“安装…”。"
-          }
-        }
-      }
-    },
     "Details" : {
       "localizations" : {
         "ja" : {
@@ -16309,22 +16277,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "显示的信息"
-          }
-        }
-      }
-    },
-    "Title" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "タイトル"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "标题"
           }
         }
       }
@@ -16361,18 +16313,98 @@
         }
       }
     },
-    "Title shows the logo when there is one." : {
+    "Airing Status" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ロゴがある作品では、タイトルとしてロゴを表示します。"
+            "value" : "放送状況"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "有标志的作品会以标志显示标题。"
+            "value" : "播出状态"
+          }
+        }
+      }
+    },
+    "After installation, AniShelf updates the screen saver automatically when you change the options below." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インストール後は、下のオプションを変更するとAniShelfがスクリーンセーバを自動的に更新します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装后，更改下方选项时AniShelf会自动更新屏幕保护程序。"
+          }
+        }
+      }
+    },
+    "Uninstall Screen Saver…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンセーバをアンインストール…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "卸载屏幕保护程序…"
+          }
+        }
+      }
+    },
+    "Uninstalling makes the AniShelf option disappear in the screen saver settings." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アンインストールすると、スクリーンセーバ設定からAniShelfの項目がなくなります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "卸载后，屏幕保护程序设置中将不再显示AniShelf选项。"
+          }
+        }
+      }
+    },
+    "Finish in Finder" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finderで完了"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在访达中完成"
+          }
+        }
+      }
+    },
+    "Move AniShelf.saver to the Trash. Finder asks for your password if it’s installed for all users." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf.saverをゴミ箱に入れてください。すべてのユーザ用にインストールした場合は、Finderがパスワードを求めます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请将AniShelf.saver移到废纸篓。如果是为所有用户安装的，访达会要求输入密码。"
           }
         }
       }

@@ -459,12 +459,12 @@
             #expect(requests == ["fast.jpg": 1, "slow.jpg": 1])
 
             publisher.settings.layout = .posterFocus
-            publisher.settings.setDetail(.title, false, for: .posterFocus)
+            publisher.settings.setDetail(.genres, false, for: .posterFocus)
             publisher.settings.interval = 20
             try await waitUntil {
                 guard let manifest = await writer.readManifest() else { return false }
                 return manifest.settings.layout == .posterFocus && manifest.settings.interval == 20
-                    && !manifest.settings.details.contains(.title)
+                    && !manifest.settings.details.contains(.genres)
             }
             #expect(requests == ["fast.jpg": 1, "slow.jpg": 1])
 

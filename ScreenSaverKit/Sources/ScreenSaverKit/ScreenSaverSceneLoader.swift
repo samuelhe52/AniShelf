@@ -100,7 +100,7 @@ actor ScreenSaverSceneLoader {
             if settings.layout == .backdrop, let path = entry.backdrop,
                 let backdrop = image(path, pixelLimit(max(size.width, size.height) * scale, 2_560))
             {
-                let logo = settings.details.contains(.title) ? entry.logo.flatMap { image($0, 1_024) } : nil
+                let logo = entry.logo.flatMap { image($0, 1_024) }
                 content = .backdrop(entry, image: backdrop, logo: logo)
             } else if let poster = image(entry.poster, pixelLimit(size.height * scale, 1_500)) {
                 content = .poster(entry, poster, background: blurredBackground(of: poster))

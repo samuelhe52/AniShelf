@@ -80,15 +80,14 @@ struct ScreenSaverLayouts {
         photo.contentsGravity = .resizeAspectFill
         scene.addSublayer(photo)
 
-        let title = details.contains(.title) ? entry.title.nonEmpty : nil
         let meta = [
             details.contains(.season) ? entry.season.nonEmpty : nil,
             details.contains(.year) ? entry.year.nonEmpty : nil,
             details.contains(.genres) ? entry.genres?.prefix(2).joined(separator: ", ").nonEmpty : nil,
-            details.contains(.status) ? entry.status.nonEmpty : nil
+            details.contains(.status) ? entry.status.nonEmpty : nil,
+            details.contains(.score) ? entry.score.nonEmpty : nil,
+            details.contains(.watchStatus) ? entry.watchStatus.nonEmpty : nil
         ].compactMap(\.self).joined(separator: "  ·  ")
-        let showsLogo = details.contains(.title) && logo != nil
-        guard title != nil || showsLogo || !meta.isEmpty else { return scene }
 
         // Shade only the corner that holds text; the rest of the still stays untouched.
         scene.addSublayer(
@@ -111,15 +110,15 @@ struct ScreenSaverLayouts {
             scene.addSublayer(label)
             y = label.frame.maxY + unit * 0.018
         }
-        if let logo, showsLogo {
+        if let logo {
             let area = CGRect(
                 x: padding, y: y, width: min(unit * 0.5, size.width * 0.42), height: size.height * 0.18)
             let fitted = aspectFit(logo, in: area)
             let mark = imageLayer(logo, frame: CGRect(origin: area.origin, size: fitted.size))
             addShadow(to: mark)
             scene.addSublayer(mark)
-        } else if let title,
-            let label = textLayer(title, width: width, size: unit * 0.062, weight: .bold, alpha: 0.97, lines: 2)
+        } else if let label = textLayer(
+            entry.title, width: width, size: unit * 0.062, weight: .bold, alpha: 0.97, lines: 2)
         {
             label.frame.origin = CGPoint(x: padding, y: y)
             addShadow(to: label)
@@ -181,7 +180,8 @@ struct ScreenSaverLayouts {
         var spaceBefore: CGFloat = 0
     }
 
-    /// Poster Focus order: year and status as a small heading, then title, season, and genres.
+    /// Poster Focus order: year and airing status as a small heading, then title, season, genres,
+    /// score and watch status, and the overview.
     private func posterFocusLines(
         _ entry: ScreenSaverManifest.Entry, details: Set<ScreenSaverManifest.Detail>
     ) -> [Line] {
@@ -195,7 +195,7 @@ struct ScreenSaverLayouts {
             lines.append(
                 Line(text: heading.uppercased(), size: size, weight: .semibold, alpha: 0.62, tracking: size * 0.08))
         }
-        if details.contains(.title), let title = entry.title.nonEmpty {
+        if let title = entry.title.nonEmpty {
             lines.append(
                 Line(text: title, size: unit * 0.056, weight: .bold, alpha: 0.97, lines: 3, spaceBefore: unit * 0.014))
         }
@@ -208,6 +208,24 @@ struct ScreenSaverLayouts {
                 Line(
                     text: genres, size: unit * 0.021, weight: .regular, alpha: 0.62, lines: 2, spaceBefore: unit * 0.026
                 ))
+        }
+        let facts = [
+            details.contains(.score) ? entry.score.nonEmpty : nil,
+            details.contains(.watchStatus) ? entry.watchStatus.nonEmpty : nil
+        ].compactMap(\.self).joined(separator: "  ·  ")
+        if !facts.isEmpty {
+            let followsGenres = details.contains(.genres) && entry.genres?.isEmpty == false
+            lines.append(
+                Line(
+                    text: facts, size: unit * 0.021, weight: .medium, alpha: 0.8,
+                    spaceBefore: unit * (followsGenres ? 0.012 : 0.026)))
+        }
+        if details.contains(.overview), let overview = entry.overview.nonEmpty {
+            // A fixed, readable size capped at five lines; long overviews end with an ellipsis.
+            lines.append(
+                Line(
+                    text: overview, size: unit * 0.019, weight: .regular, alpha: 0.72, lines: 5,
+                    spaceBefore: unit * 0.032))
         }
         return lines
     }

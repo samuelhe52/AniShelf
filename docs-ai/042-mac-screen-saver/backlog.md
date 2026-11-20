@@ -30,9 +30,6 @@ picked up, and delete it here.
 | --- | --- | --- | --- |
 | Country | PR #28 | The PR derived it from original language (English → United States). The app stores no country today. | Store TMDb `origin_country` / `production_countries` (schema change), then localize with `Locale`. |
 | Tagline | PR #28 | `AnimeEntryDetail.subtitle` holds one language only, the one fetched. | Tag the stored tagline with its language, or fetch per language; show only on a language match. |
-| TMDb vote average on Hero Still | PR #28 | Keeps v1 metadata to year, genres, status. | Add to the meta line; one decimal. |
-| Watch status (watching / watched / planned / dropped) on Hero Still | PR #28 `d6293e96` (opt-in toggle) | A screen saver is visible to others; personal tracking stays off it. | Opt-in, off by default, in the AniShelf pane. |
-| Synopsis on Hero Still, shrunk to fit (down to 72% size) | PR #28 `c6c267f1` | Long text at small size is not readable from a distance. | If added, cap at 2–3 lines at a fixed size, never shrink. |
 | A saver-specific language menu | PR #28 | Duplicates and can contradict Anime Info Language. | Only if users want the saver in a different language from the app. |
 
 ## Content and scope

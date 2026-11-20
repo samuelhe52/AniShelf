@@ -18,6 +18,9 @@
             let year: String?
             let genres: [String]?
             let status: String?
+            let score: String?
+            let watchStatus: String?
+            let overview: String?
             let poster: TMDbImage?
             let previewPoster: TMDbImage?
             let backdrop: URL?
@@ -76,6 +79,9 @@
                 year: entry.onAirDate?.formatted(.dateTime.year().locale(locale)),
                 genres: genres.isEmpty ? nil : genres,
                 status: status,
+                score: (entry.detail?.voteAverage).flatMap { $0 > 0 ? "TMDb " + String(format: "%.1f", $0) : nil },
+                watchStatus: String(localized: entry.watchStatus.localizedStringResource),
+                overview: (entry.detail?.overview).flatMap { $0.isEmpty ? nil : $0 } ?? entry.displayOverview,
                 poster: entry.posterImage(.screenSaverPoster),
                 previewPoster: entry.posterImage(.posterThumbnail),
                 backdrop: backdrop,
