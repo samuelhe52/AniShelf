@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Planned |
+| Status | In progress |
 | Anchor date | 2026-11-20 |
 | Origin | Outside contributor proposal, [PR #28](https://github.com/samuelhe52/AniShelf/pull/28) (davidch81-tech, heads `e20c161` to `c6c267f`). Samuel decided to build the feature natively from scratch, taking ideas and designs only. Investigated by Claude Code and an independent Codex session; decisions answered on an HTML plan on 2026-11-20. |
 | Related | [020-native-macos](../020-native-macos/000-plan.md), [036-image-variant-catalog](../036-image-variant-catalog/000-plan.md), [039-library-save-invalidation](../039-library-save-invalidation/000-plan.md), [016-settings-hub](../016-settings-hub/000-plan.md), [backlog.md](backlog.md) |
@@ -181,4 +181,4 @@ and links `ScreenSaverKit` on macOS only, for the manifest type and the live pre
 - Visual pass by Samuel.
 
 ## Amendments
-None yet.
+- Updated 2026-11-20: slice 1 landed and the host-access gate passed — see [002-slice-1-saver-and-host-gate.md](002-slice-1-saver-and-host-gate.md)

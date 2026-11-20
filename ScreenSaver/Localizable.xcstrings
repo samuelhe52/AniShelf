@@ -1,0 +1,38 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Set up the screen saver in AniShelf." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfでスクリーンセーバーを設定してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请在AniShelf中设置屏幕保护程序。"
+          }
+        }
+      }
+    },
+    "Update the screen saver from AniShelf." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfからスクリーンセーバーをアップデートしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请从AniShelf更新屏幕保护程序。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
