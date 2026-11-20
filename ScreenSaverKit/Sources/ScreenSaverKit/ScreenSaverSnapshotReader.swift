@@ -47,7 +47,6 @@ public struct ScreenSaverSnapshotReader: Sendable {
     public func read() -> Snapshot {
         struct Header: Decodable {
             let schemaVersion: Int
-            let rendererVersion: Int?
             let saverBuild: String?
         }
 
@@ -57,17 +56,13 @@ public struct ScreenSaverSnapshotReader: Sendable {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         guard let header = try? decoder.decode(Header.self, from: data) else { return .empty }
-        if header.schemaVersion > ScreenSaverManifest.currentSchemaVersion
-            || (header.rendererVersion ?? 1) > ScreenSaverManifest.currentRendererVersion
-        {
-            return .requiresUpdate
-        }
+        if header.schemaVersion > ScreenSaverManifest.currentSchemaVersion { return .requiresUpdate }
         // AniShelf embeds a different saver than the one installed: ask for a reinstall rather than
         // keep drawing with old code.
         if let expected = header.saverBuild, let build, expected != build {
             return .requiresUpdate
         }
-        guard (1...ScreenSaverManifest.currentSchemaVersion).contains(header.schemaVersion),
+        guard header.schemaVersion == ScreenSaverManifest.currentSchemaVersion,
             let manifest = try? decoder.decode(ScreenSaverManifest.self, from: data),
             !manifest.entries.isEmpty
         else { return .empty }

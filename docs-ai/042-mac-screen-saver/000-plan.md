@@ -193,3 +193,5 @@ and links `ScreenSaverKit` on macOS only, for the manifest type and the live pre
 - Updated 2026-11-20: Uninstall now deletes the artwork and points to System Settings' Delete command; the Finder reveal did not work from the sandbox (007 corrected in place)
 - Updated 2026-11-20: Cover Wall uses a distance-weighted shuffle bag to break repeating patterns in small scopes — see [011-cover-wall-shuffle-bag.md](011-cover-wall-shuffle-bag.md)
 - Updated 2026-11-20: Poster Focus and Backdrop reshuffle between full passes without repeating the boundary entry — see [012-slideshow-reshuffle.md](012-slideshow-reshuffle.md)
+- Updated 2026-11-21: Your Score detail — see [013-user-score-detail.md](013-user-score-detail.md)
+- Updated 2026-11-21: `rendererVersion` removed, one schema version (3) plus the build ID, demo left out of the build ID (001 corrected in place) — see [014-single-snapshot-version.md](014-single-snapshot-version.md)

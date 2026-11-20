@@ -8,9 +8,9 @@
 import Foundation
 
 public struct ScreenSaverManifest: Codable, Equatable, Sendable {
-    // The schema version also keeps version 1 readers, which did not check rendererVersion, on the update notice.
-    public static let currentSchemaVersion = 2
-    public static let currentRendererVersion = 5
+    /// Readers accept only this version and ask for an update on a newer one. Changes to how the
+    /// saver draws need no bump: the build ID below already catches those.
+    public static let currentSchemaVersion = 3
     /// Info.plist key holding the saver's build ID: a hash of its source files, stamped by a build
     /// phase of the saver target. Any change to the saver's code gives a new ID.
     public static let buildInfoKey = "AniShelfScreenSaverBuild"
@@ -157,7 +157,6 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
     }
 
     public let schemaVersion: Int
-    public let rendererVersion: Int?
     public let generation: UUID
     public let createdAt: Date
     public let settings: Settings
@@ -172,7 +171,6 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
     ) {
         self.saverBuild = saverBuild
         self.schemaVersion = Self.currentSchemaVersion
-        self.rendererVersion = Self.currentRendererVersion
         self.generation = generation
         // The snapshot wire format uses UTC ISO 8601 dates with second precision.
         self.createdAt = Date(timeIntervalSince1970: floor(createdAt.timeIntervalSince1970))

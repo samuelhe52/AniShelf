@@ -70,8 +70,8 @@ Key files:
 - Hero Still is named Backdrop in the UI and in code.
 - Category scope, the build ID, uninstall, and the thumbnail were added beyond the
   plan.
-- The saver reads `rendererVersion` and the build ID instead of only the schema
-  version.
+- The saver checks the build ID as well as the schema version. (It also read a
+  `rendererVersion` until [014](014-single-snapshot-version.md) removed it.)
 
 ## Validation
 

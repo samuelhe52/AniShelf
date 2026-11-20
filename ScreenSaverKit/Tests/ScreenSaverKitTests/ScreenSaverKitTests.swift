@@ -44,35 +44,7 @@ struct ScreenSaverKitTests {
         #expect(fixture.reader.read() == .ready(expected))
         let encoded = try expected.encoded()
         #expect(String(decoding: encoded, as: UTF8.self).contains("2026-09-21T14:13:20Z"))
-        #expect(expected.rendererVersion == ScreenSaverManifest.currentRendererVersion)
-
-        var legacy = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
-        var legacySettings = try #require(legacy["settings"] as? [String: Any])
-        legacySettings["coverWallRows"] = nil
-        legacySettings["details"] = nil
-        legacy["settings"] = legacySettings
-        legacy["rendererVersion"] = 2
-        legacy["schemaVersion"] = 2
-        try JSONSerialization.data(withJSONObject: legacy).write(to: fixture.manifestURL)
-        guard case .ready(let legacyManifest) = fixture.reader.read() else {
-            Issue.record("The renderer should be able to read an existing snapshot")
-            return
-        }
-        #expect(legacyManifest.entries == expected.entries)
-        #expect(legacyManifest.rendererVersion == 2)
-        #expect(legacyManifest.settings.coverWallRows == 4)
-        #expect(legacyManifest.settings.details == [.year])
         #expect(expected.settings.details == [.year, .score, .userScore])
-
-        legacy["rendererVersion"] = nil
-        legacy["schemaVersion"] = 1
-        try JSONSerialization.data(withJSONObject: legacy).write(to: fixture.manifestURL)
-        guard case .ready(let versionOne) = fixture.reader.read() else {
-            Issue.record("The renderer should still accept schema version 1")
-            return
-        }
-        #expect(versionOne.rendererVersion == nil)
-        #expect(versionOne.settings.coverWallRows == 4)
     }
 
     @Test
@@ -83,11 +55,9 @@ struct ScreenSaverKitTests {
         #expect(fixture.reader.read() == .empty)
         try Data("not JSON".utf8).write(to: fixture.manifestURL)
         #expect(fixture.reader.read() == .empty)
-        try Data(#"{"schemaVersion":0}"#.utf8).write(to: fixture.manifestURL)
+        try Data(#"{"schemaVersion":2}"#.utf8).write(to: fixture.manifestURL)
         #expect(fixture.reader.read() == .empty)
         try Data(#"{"schemaVersion":999,"payload":"future format"}"#.utf8).write(to: fixture.manifestURL)
-        #expect(fixture.reader.read() == .requiresUpdate)
-        try Data(#"{"schemaVersion":2,"rendererVersion":999}"#.utf8).write(to: fixture.manifestURL)
         #expect(fixture.reader.read() == .requiresUpdate)
         try fixture.write(
             ScreenSaverManifest(settings: .init(layout: .coverWall, interval: 12), entries: []))
@@ -224,7 +194,8 @@ struct ScreenSaverKitTests {
     }
 
     @Test(arguments: [ScreenSaverManifest.Layout.posterFocus, .backdrop])
-    func slideshowReshufflesEachPassWithoutRepeatingAcrossTheBoundary(_ layout: ScreenSaverManifest.Layout) async throws {
+    func slideshowReshufflesEachPassWithoutRepeatingAcrossTheBoundary(_ layout: ScreenSaverManifest.Layout) async throws
+    {
         let fixture = try SnapshotFixture()
         defer { fixture.remove() }
         try fixture.writeImage("poster.png")

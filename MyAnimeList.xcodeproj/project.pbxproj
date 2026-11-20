@@ -535,7 +535,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -euo pipefail\n# The build ID is a hash of everything the saver is built from, so any code change gives a new ID.\ncd \"${SRCROOT}\"\nbuild=$(find ScreenSaver ScreenSaverKit/Sources ScreenSaverKit/Package.swift -type f ! -name .DS_Store -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256 | shasum -a 256 | cut -c1-16)\nplist=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"\n/usr/libexec/PlistBuddy -c \"Delete :AniShelfScreenSaverBuild\" \"${plist}\" 2>/dev/null || true\n/usr/libexec/PlistBuddy -c \"Add :AniShelfScreenSaverBuild string ${build}\" \"${plist}\"\n";
+			shellScript = "set -euo pipefail\n# The build ID is a hash of everything the saver is built from, so any code change gives a new ID.\n# Only the ScreenSaverKit target: the demo app beside it is not part of the saver.\ncd \"${SRCROOT}\"\nbuild=$(find ScreenSaver ScreenSaverKit/Sources/ScreenSaverKit ScreenSaverKit/Package.swift -type f ! -name .DS_Store -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256 | shasum -a 256 | cut -c1-16)\nplist=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"\n/usr/libexec/PlistBuddy -c \"Delete :AniShelfScreenSaverBuild\" \"${plist}\" 2>/dev/null || true\n/usr/libexec/PlistBuddy -c \"Add :AniShelfScreenSaverBuild string ${build}\" \"${plist}\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

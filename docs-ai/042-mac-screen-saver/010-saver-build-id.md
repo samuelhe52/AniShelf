@@ -30,7 +30,8 @@ gap. Samuel: "we definitely need a build number and an reinstall notice."
   skip the check. The notice now reads "AniShelf has a newer screen saver. Install it
   from AniShelf Settings › Screen Saver."
 - `rendererVersion` stays for snapshot-format changes; manual saver build-number bumps
-  are no longer needed for code changes.
+  are no longer needed for code changes. (Superseded: [014](014-single-snapshot-version.md)
+  removed `rendererVersion` and left the demo target out of the hash.)
 
 Limits: the sandboxed app cannot read the installed saver, so the notice appears only
 where the saver runs (System Settings preview and activation), not in the AniShelf

@@ -30,8 +30,7 @@
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             guard let manifest = try? decoder.decode(ScreenSaverManifest.self, from: data),
-                (1...ScreenSaverManifest.currentSchemaVersion).contains(manifest.schemaVersion),
-                manifest.rendererVersion ?? 1 <= ScreenSaverManifest.currentRendererVersion
+                manifest.schemaVersion == ScreenSaverManifest.currentSchemaVersion
             else { return nil }
             return manifest
         }
@@ -77,7 +76,6 @@
 
             let unchanged =
                 previous?.schemaVersion == manifest.schemaVersion
-                && previous?.rendererVersion == manifest.rendererVersion
                 && previous?.settings == manifest.settings && previous?.entries == manifest.entries
                 // A new AniShelf build must restamp the snapshot so an old installed saver notices.
                 && previous?.saverBuild == manifest.saverBuild
