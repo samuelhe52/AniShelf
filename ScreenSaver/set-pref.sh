@@ -2,7 +2,7 @@
 # 当「选项…」面板不灵时的备用改配置方式。
 # 用法： ./set-pref.sh mode 4        样式 0墙 1牌堆 2大剧照 3聚焦 4融合
 #         ./set-pref.sh interval 12  切换间隔（6/9/12/20/30 秒）
-#         ./set-pref.sh effect 1     切换特效 0 淡入淡出 1 平移
+#         ./set-pref.sh effect 2     切换特效 0 淡入淡出 1 无特效 2 水平平移 3 垂直平移
 #         ./set-pref.sh align 1      大剧照布局 0 左 1 居中 2 随机
 #         ./set-pref.sh cols 8       每屏列数 0 自动
 #         ./set-pref.sh drift 1      漂移 0 横 1 斜 2 呼吸 3 静止

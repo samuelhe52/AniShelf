@@ -263,6 +263,7 @@ def main() -> int:
                d.ZVOTEAVERAGE AS vote, d.ZAIRDATE AS airdate,
                d.ZLOGOIMAGEPATH AS logo, d.ZSUBTITLE AS tagline, d.ZOVERVIEW AS overview,
                d.ZGENREIDS AS genre_blob, d.ZSTATUS AS air_status, pd.ZGENREIDS AS parent_genre_blob,
+               e.ZMOVIE AS is_movie, e.ZSERIES AS is_series,
                e.ZWATCHING AS w_watching, e.ZWATCHED AS w_watched,
                e.ZPLANTOWATCH AS w_planned, e.ZDROPPED AS w_dropped, p.ZNAME AS parent_name,
                e.ZNAMETRANSLATIONS AS name_tr, e.ZOVERVIEWTRANSLATIONS AS ov_tr,
@@ -295,6 +296,7 @@ def main() -> int:
                 "genres": ([g for g in _decode_genres(r["genre_blob"]) if g != 16]
                         or [g for g in _decode_genres(r["parent_genre_blob"]) if g != 16]),
                 "airStatus": _air_status(r["air_status"]),
+                "kind": "movie" if (r["is_movie"] or "") == "movie" else "tv",
                 "watch": _watch_state(r),
                 "season": r["season"] if r["season"] is not None else 0,
                 "score": r["score"] or 0,

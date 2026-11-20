@@ -5,6 +5,22 @@
 #import <ScreenSaver/ScreenSaver.h>
 #import <ImageIO/ImageIO.h>
 
+
+// 离线渲染不会播放 CALayer 动画，这里把 presentationLayer 的当前值同步回模型，
+// 这样出图才能反映动画进行到哪一步。
+static void ASSyncAnimations(CALayer *l) {
+    if (!l) return;
+    CALayer *pres = l.presentationLayer;
+    NSArray *keys = [l animationKeys];
+    if (pres && [keys count] > 0) {
+        l.opacity = pres.opacity;
+        l.transform = pres.transform;
+    }
+    for (CALayer *sub in l.sublayers) ASSyncAnimations(sub);
+}
+
+
+
 int main(int argc, char **argv) {
     @autoreleasepool {
         [NSApplication sharedApplication];
@@ -40,16 +56,49 @@ int main(int argc, char **argv) {
                                                      backing:NSBackingStoreBuffered
                                                        defer:NO];
         [win setReleasedWhenClosed:NO];
-        ScreenSaverView *v = [[cls alloc] initWithFrame:NSMakeRect(0, 0, W, H) isPreview:NO];
+        // AS_START_SMALL=1 模拟屏保启动时窗口先小后大
+        BOOL startSmall = getenv("AS_START_SMALL") != NULL;
+        CGFloat startW = startSmall ? W * 0.45 : W, startH = startSmall ? H * 0.45 : H;
+        ScreenSaverView *v = [[cls alloc] initWithFrame:NSMakeRect(0, 0, startW, startH) isPreview:NO];
         win.contentView = v;
-        [v setFrame:NSMakeRect(0, 0, W, H)];
+        [v setFrame:NSMakeRect(0, 0, startW, startH)];
         [v startAnimation];
         [v displayIfNeeded];
 
-        [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:wait]];
+        // AS_DRIVE_FRAMES=1 时自己驱动逐帧回调，方便截取切换动画的中间状态
+        if (getenv("AS_DRIVE_FRAMES")) {
+            // 挪到屏幕外并置前，CoreAnimation 才会真正推进时间
+            [win setFrameOrigin:NSMakePoint(-W - 400, -400)];
+            [win orderFront:nil];
+            if (startSmall) {
+                [win setContentSize:NSMakeSize(W, H)];
+                [v setFrame:NSMakeRect(0, 0, W, H)];
+                [v layout];
+            }
+            CFTimeInterval until = CACurrentMediaTime() + wait;
+            int __n = 0;
+            const char *rz = getenv("AS_RESIZE_AT");
+            double resizeAt = rz ? atof(rz) : -1;
+            CFTimeInterval t0 = CACurrentMediaTime();
+            while (CACurrentMediaTime() < until) {
+                // 模拟屏保启动时窗口尺寸变化（会触发 layout 重建）
+                if (resizeAt > 0 && CACurrentMediaTime() - t0 > resizeAt && resizeAt < 1000) {
+                    [v setFrame:NSMakeRect(0, 0, W * 1.02, H * 1.02)];
+                    [v layout];
+                    resizeAt = -2;
+                }
+                [v animateOneFrame];
+                if (++__n % 20 == 0) fprintf(stderr, "[drive] frame %d\n", __n);
+                [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.033]];
+            }
+        } else {
+            [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:wait]];
+        }
 
         CALayer *layer = v.layer;
         if (!layer) { fprintf(stderr, "no layer\n"); return 4; }
+        ASSyncAnimations(layer);
+        ASSyncAnimations(layer);
         [layer displayIfNeeded];
 
         __block void (^dump)(CALayer *, int);

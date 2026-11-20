@@ -4,8 +4,6 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 NAME="AniShelfCovers"
-BUNDLE_ID="${BUNDLE_ID:-com.davidhua.anishelfCovers}"
-DISPLAY_NAME="${DISPLAY_NAME:-AniShelf Covers}"
 BUNDLE="dist/${NAME}.saver"
 SDK="$(xcrun --show-sdk-path)"
 
@@ -19,14 +17,14 @@ clang -fobjc-arc -bundle \
   -o "$BUNDLE/Contents/MacOS/${NAME}" \
   Sources/AniShelfCoversView.m
 
-cat > "$BUNDLE/Contents/Info.plist" <<PLIST
+cat > "$BUNDLE/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>            <string>AniShelf Covers</string>
-    <key>CFBundleDisplayName</key>     <string>${DISPLAY_NAME}</string>
-    <key>CFBundleIdentifier</key>      <string>${BUNDLE_ID}</string>
+    <key>CFBundleDisplayName</key>     <string>AniShelf 封面</string>
+    <key>CFBundleIdentifier</key>      <string>com.davidhua.anishelfCovers</string>
     <key>CFBundleExecutable</key>      <string>AniShelfCovers</string>
     <key>CFBundlePackageType</key>     <string>BNDL</string>
     <key>CFBundleVersion</key>         <string>0.1</string>
@@ -38,6 +36,10 @@ cat > "$BUNDLE/Contents/Info.plist" <<PLIST
 </dict>
 </plist>
 PLIST
+
+# 顺带编译离线出图工具
+clang -fobjc-arc -framework Cocoa -framework QuartzCore -framework ScreenSaver -framework ImageIO \
+  -isysroot "$SDK" -o dist/render_preview tools/render_preview.m
 
 codesign --force --sign - --timestamp=none "$BUNDLE" >/dev/null 2>&1 || true
 echo "已生成 $BUNDLE"

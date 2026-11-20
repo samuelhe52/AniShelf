@@ -15,10 +15,14 @@
 static NSString *const kModuleID = @"com.davidhua.anishelfCovers";
 static NSString *const kPrefMode = @"mode";        // 0 = 墙, 1 = 堆叠
 static NSString *const kPrefScope = @"scope";      // 0 = 全部, 1 = 收藏, 2 = 看过
+static NSString *const kPrefKind = @"kind";        // 0 = TV 动画, 1 = 电影, 2 = 全部
 static NSString *const kPrefCaption = @"caption";  // 1 = 显示片名
 static NSString *const kPrefCols = @"cols";        // 0 = 自动，否则每屏列数
 static NSString *const kPrefBigInterval = @"bigInterval";    // 秒
 static NSString *const kPrefBigTransition = @"bigTransition"; // 0 淡入淡出 / 1 平移
+static NSString *const kPrefShowsTitle = @"showTitle";       // 显示剧名/标志
+static NSString *const kPrefShowsTagline = @"showTagline";   // 显示标语
+static NSString *const kPrefShowsMeta = @"showMeta";         // 显示下方文字（信息/类型/简介）
 static NSString *const kPrefCoverStyle = @"coverStyle"; // 0 融合 / 1 经典
 static NSString *const kPrefShowWatch = @"showWatch";   // 大剧照显示观看状态
 static NSString *const kPrefLang = @"lang";              // 0 跟随应用 / 1 中文 / 2 英文 / 3 日文
@@ -36,7 +40,14 @@ static void ASLog(NSString *fmt, ...) {
     dispatch_once(&once, ^{
         logPath = [NSTemporaryDirectory() stringByAppendingPathComponent:@"anishelf-saver.log"];
     });
-    FILE *fp = fopen(logPath.UTF8String, "a");
+    FILE *fp = fopen(logPath.UTF8String, "a+");
+    if (fp) {
+        fseek(fp, 0, SEEK_END);
+        if (ftell(fp) > 256 * 1024) {   // 超过 256KB 就重开，别无限长
+            fclose(fp);
+            fp = fopen(logPath.UTF8String, "w");
+        }
+    }
     if (fp) {
         fprintf(fp, "%s\n", line.UTF8String);
         fclose(fp);
@@ -627,6 +638,7 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 @property (nonatomic, copy) NSString *dataDir;
 @property (nonatomic, assign) NSInteger mode;
 @property (nonatomic, assign) NSInteger scope;
+@property (nonatomic, assign) NSInteger kindPref;
 @property (nonatomic, assign) BOOL showsCaption;
 @property (nonatomic, assign) NSInteger colsPref;
 @property (nonatomic, assign) NSInteger drift;
@@ -636,7 +648,11 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 @property (nonatomic, assign) NSInteger bigAlign;
 @property (nonatomic, assign) NSInteger langPref;
 @property (nonatomic, assign) BOOL showsWatch;
+@property (nonatomic, assign) BOOL showsTitle;
+@property (nonatomic, assign) BOOL showsTagline;
+@property (nonatomic, assign) BOOL showsMeta;
 @property (nonatomic, assign) NSInteger coverStyle;
+@property (nonatomic, strong) CALayer *bigPhotoLayer;
 
 @property (nonatomic, strong) CALayer *stage;
 @property (nonatomic, strong) CALayer *backdrop;
@@ -651,6 +667,9 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 @property (nonatomic, assign) NSInteger bigIndex;
 @property (nonatomic, strong) CALayer *bigScene;
 @property (nonatomic, assign) CFTimeInterval nextBig;
+@property (nonatomic, assign) CFTimeInterval bigBuiltAt;
+@property (nonatomic, assign) CFTimeInterval transitionUntil;
+@property (nonatomic, assign) NSUInteger rebuildToken;
 @property (nonatomic, strong) CALayer *deckContainer;
 @property (nonatomic, assign) NSInteger deckHead;
 @property (nonatomic, assign) NSInteger slotCount;
@@ -659,14 +678,24 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 @property (nonatomic, strong) NSWindow *configSheet;
 @property (nonatomic, strong) NSPopUpButton *modePopup;
 @property (nonatomic, strong) NSPopUpButton *scopePopup;
+@property (nonatomic, strong) NSPopUpButton *kindPopup;
 @property (nonatomic, strong) NSPopUpButton *colsPopup;
 @property (nonatomic, strong) NSPopUpButton *driftPopup;
-@property (nonatomic, strong) NSPopUpButton *intervalPopup;
+@property (nonatomic, strong) NSTextField *intervalField;
+@property (nonatomic, strong) NSTextField *unitLabel;
+@property (nonatomic, strong) NSTextField *hintLabel;
+@property (nonatomic, strong) NSMutableDictionary<NSString *, NSTextField *> *rowLabels;
 @property (nonatomic, strong) NSPopUpButton *transPopup;
 @property (nonatomic, strong) NSPopUpButton *alignPopup;
 @property (nonatomic, strong) NSPopUpButton *langPopup;
+@property (nonatomic, assign) BOOL advancedOpen;
+@property (nonatomic, strong) NSView *basicBox;
+@property (nonatomic, strong) NSView *advBox;
+@property (nonatomic, strong) NSButton *moreButton;
+@property (nonatomic, strong) NSButton *titleCheck;
+@property (nonatomic, strong) NSButton *taglineCheck;
+@property (nonatomic, strong) NSButton *metaCheck;
 @property (nonatomic, strong) NSPopUpButton *coverPopup;
-@property (nonatomic, strong) NSTextField *gridLabel;
 @property (nonatomic, strong) NSButton *captionCheck;
 @property (nonatomic, strong) NSButton *watchCheck;
 
@@ -703,11 +732,12 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 
 - (void)loadPreferences {
     ScreenSaverDefaults *d = [ScreenSaverDefaults defaultsForModuleWithName:kModuleID];
-    [d registerDefaults:@{kPrefMode : @0, kPrefScope : @0, kPrefCaption : @1,
+    [d registerDefaults:@{kPrefMode : @0, kPrefScope : @0, kPrefKind : @2, kPrefCaption : @1,
                           kPrefCols : @0, kPrefDrift : @0, kPrefIndex : @(-1),
-                          kPrefBigInterval : @9, kPrefBigTransition : @0, kPrefBigAlign : @0, kPrefLang : @0, kPrefShowWatch : @NO, kPrefCoverStyle : @0}];
+                          kPrefBigInterval : @9, kPrefBigTransition : @0, kPrefBigAlign : @0, kPrefLang : @0, kPrefShowWatch : @NO, kPrefCoverStyle : @0, kPrefShowsTitle : @YES, kPrefShowsTagline : @YES, kPrefShowsMeta : @YES}];
     self.mode = MIN(3, MAX(0, [d integerForKey:kPrefMode]));   // 旧版本可能存了 4
     self.scope = [d integerForKey:kPrefScope];
+    self.kindPref = [d integerForKey:kPrefKind];
     self.showsCaption = [d boolForKey:kPrefCaption];
     self.colsPref = [d integerForKey:kPrefCols];
     self.drift = [d integerForKey:kPrefDrift];
@@ -718,6 +748,9 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     self.langPref = [d integerForKey:kPrefLang];
     self.showsWatch = [d boolForKey:kPrefShowWatch];
     self.coverStyle = [d integerForKey:kPrefCoverStyle];
+    self.showsTitle = [d boolForKey:kPrefShowsTitle];
+    self.showsTagline = [d boolForKey:kPrefShowsTagline];
+    self.showsMeta = [d boolForKey:kPrefShowsMeta];
 }
 
 - (void)loadLibrary {
@@ -784,9 +817,13 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
         NSString *status = it[@"status"];
         if (scope == 1 && ![it[@"favorite"] boolValue]) continue;
         if (scope == 2 && ![status isEqualToString:@"watched"]) continue;
+        if (self.kindPref == 0 && ![it[@"kind"] isEqualToString:@"tv"]) continue;
+        if (self.kindPref == 1 && ![it[@"kind"] isEqualToString:@"movie"]) continue;
+        if (self.kindPref == 0 && ![it[@"kind"] isEqualToString:@"tv"]) continue;
+        if (self.kindPref == 1 && ![it[@"kind"] isEqualToString:@"movie"]) continue;
         [out addObject:it];
     }
-    if (out.count < 6) out = [self.library mutableCopy];
+    if (out.count == 0) out = [self.library mutableCopy];   // 只有筛到空才回退，尊重用户的筛选
     // 洗牌，保证每次进入屏保的组合不同
     for (NSUInteger i = out.count; i > 1; i--) {
         [out exchangeObjectAtIndex:i - 1 withObjectAtIndex:arc4random_uniform((uint32_t)i)];
@@ -809,9 +846,26 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 
 - (void)layout {
     [super layout];
-    if (!CGSizeEqualToSize(self.layoutSize, self.bounds.size)) {
-        [self buildScene];
+    // 只有尺寸确实变了才重建；启动时窗口会从小到大变化，抖动不应把画面换掉
+    CGFloat dw = fabs(NSWidth(self.bounds) - self.layoutSize.width);
+    CGFloat dh = fabs(NSHeight(self.bounds) - self.layoutSize.height);
+    if (dw > 2 || dh > 2) {
+        [self scheduleRebuild];
     }
+}
+
+// 重建要防抖，并且不能打断正在进行的切换动画
+- (void)scheduleRebuild {
+    self.rebuildToken += 1;
+    NSUInteger token = self.rebuildToken;
+    CFTimeInterval wait = MAX(0.0, self.transitionUntil - CACurrentMediaTime()) + 0.28;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(wait * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if (token != self.rebuildToken) return;
+        CGFloat dw = fabs(NSWidth(self.bounds) - self.layoutSize.width);
+        CGFloat dh = fabs(NSHeight(self.bounds) - self.layoutSize.height);
+        if (dw <= 2 && dh <= 2) return;
+        [self buildScene];
+    });
 }
 
 // 后台解码，主线程贴图：首帧不再被 70 多张封面卡住
@@ -829,6 +883,10 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 - (void)buildScene {
     CFTimeInterval sceneT0 = CACurrentMediaTime();
     self.layoutSize = self.bounds.size;
+    self.transitionUntil = 0;
+    self.rebuildToken += 1;      // 作废挂起的防抖重建，避免连续重建两次
+    self.rebuildToken += 1;      // 作废挂起的防抖重建，避免连续重建两次
+    self.transitionUntil = 0;
     [self.stage removeFromSuperlayer];
     self.wallCards = [NSMutableArray array];
     self.deckLayers = [NSMutableArray array];
@@ -1256,57 +1314,131 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
             [items insertObject:pick atIndex:0];
         }
     }
+    NSInteger keepIndex = self.bigIndex;
     self.bigItems = items;
-    self.bigIndex = 0;
-    CALayer *scene = [self bigSceneForItem:items[0] size:self.bounds.size];
+    self.bigIndex = (keepIndex >= 0 && keepIndex < (NSInteger)items.count) ? keepIndex : 0;
+    // 统一走翻页式：首图直接整幅显示，不再用旧的连续平移（那会把首图摆在滚动一半的位置）
+    NSInteger idx = self.bigIndex;
+    if (idx < 0 || idx >= (NSInteger)items.count) idx = 0;
+    CALayer *scene = [self bigSceneForItem:items[idx] size:self.bounds.size contentSize:self.bounds.size];
     [self.stage addSublayer:scene];
     self.bigScene = scene;
-    self.nextBig = CACurrentMediaTime() + self.bigInterval;
+    self.bigBuiltAt = CACurrentMediaTime();
+    self.nextBig = 0;      // 交给第一次逐帧回调起算，保证首图停满一个间隔
 }
 
+// 大剧照的翻页式切换：无特效 / 淡入淡出 / 水平·垂直的切入与推动
+// 标语、标志、下方文字都在 scene 层内，跟着剧照一起移动，速度一致
+// 大剧照的翻页式切换：无特效 / 淡入淡出 / 水平·垂直的切入与推动
+// 标语、标志、下方文字都在 scene 层内，跟着剧照一起移动，速度一致
 - (void)advanceBigStill {
     if (self.bigItems.count < 2) return;
+    CFTimeInterval now0 = CACurrentMediaTime();
+    if (self.bigBuiltAt > 0 && now0 - self.bigBuiltAt < 1.2) {
+        // 场景刚建好，至少先停够一个间隔再切
+        self.nextBig = self.bigBuiltAt + self.bigInterval;
+        return;
+    }
     NSInteger next = (self.bigIndex + 1) % self.bigItems.count;
-    CALayer *scene = [self bigSceneForItem:self.bigItems[next] size:self.bounds.size];
-    CALayer *old = self.bigScene;
+    NSInteger tr = self.bigTransition;
+    CFTimeInterval now = CACurrentMediaTime();
     CGFloat w = NSWidth(self.bounds), h = NSHeight(self.bounds);
-    BOOL slide = (self.bigTransition == 1);
-    CFTimeInterval dur = slide ? 0.85 : 1.05;
 
-    if (slide) {
-        scene.position = CGPointMake(w * 1.5, h / 2);   // 从右侧进画
-        [self.stage addSublayer:scene];
-        [CATransaction begin];
-        [CATransaction setAnimationDuration:dur];
-        [CATransaction setAnimationTimingFunction:[CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut]];
-        scene.position = CGPointMake(w / 2, h / 2);
-        old.position = CGPointMake(-w / 2, h / 2);
-        [CATransaction commit];
-    } else {
-        scene.opacity = 0.0;
-        [self.stage addSublayer:scene];
-        [CATransaction begin];
-        [CATransaction setAnimationDuration:dur];
-        [CATransaction setAnimationTimingFunction:[CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut]];
-        scene.opacity = 1.0;
-        old.opacity = 0.0;
-        [CATransaction commit];
+    CALayer *old = self.bigScene;
+    CALayer *newScene = [self bigSceneForItem:self.bigItems[next]
+                                         size:self.bounds.size
+                                  contentSize:self.bounds.size];
+    CALayer *newPhoto = self.bigPhotoLayer;
+
+    if (tr == 0) {                       // 无特效：直接切
+        [self.stage addSublayer:newScene];
+        [old removeFromSuperlayer];
+        [self scheduleBigZoomForPhoto:newPhoto delay:0];
+        self.bigScene = newScene;
+        self.bigIndex = next;
+        self.nextBig = now + self.bigInterval;
+        return;
     }
 
-    self.bigScene = scene;
+    CFTimeInterval dur = 1.25;
+    self.transitionUntil = now + dur;
+    [self.stage addSublayer:newScene];
+    CAMediaTimingFunction *ease = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+
+    if (tr == 1) {                       // 淡入淡出
+        CABasicAnimation *fade = [CABasicAnimation animationWithKeyPath:@"opacity"];
+        fade.fromValue = @0.0;
+        fade.toValue = @1.0;
+        fade.duration = dur;
+        fade.timingFunction = ease;
+        fade.fillMode = kCAFillModeForwards;
+        fade.removedOnCompletion = NO;
+        newScene.opacity = 0.0;
+        [newScene addAnimation:fade forKey:@"bigFade"];
+        newScene.opacity = 1.0;
+    } else {
+        BOOL horizontal = (tr == 2 || tr == 3);
+        BOOL push = (tr == 3 || tr == 5);
+        NSString *key = horizontal ? @"transform.translation.x" : @"transform.translation.y";
+        // 水平：新图从右进、旧图往左出；垂直：新图从下进、旧图往上出（向上翻页更符合直觉）
+        CGFloat dist = horizontal ? w : -h;
+
+        // 新的从一侧滑入
+        CABasicAnimation *slideIn = [CABasicAnimation animationWithKeyPath:key];
+        slideIn.fromValue = @(dist);
+        slideIn.toValue = @(0);
+        slideIn.duration = dur;
+        slideIn.timingFunction = ease;
+        slideIn.fillMode = kCAFillModeForwards;
+        slideIn.removedOnCompletion = NO;
+        [newScene addAnimation:slideIn forKey:@"bigSlide"];
+
+        if (push) {                      // 推动：旧的同速推出
+            CABasicAnimation *slideOut = [CABasicAnimation animationWithKeyPath:key];
+            slideOut.fromValue = @(0);
+            slideOut.toValue = @(-dist);
+            slideOut.duration = dur;
+            slideOut.timingFunction = ease;
+            slideOut.fillMode = kCAFillModeForwards;
+            slideOut.removedOnCompletion = NO;
+            [old addAnimation:slideOut forKey:@"bigSlide"];
+        }
+    }
+
+    [self scheduleBigZoomForPhoto:newPhoto delay:dur];
+    self.bigScene = newScene;
     self.bigIndex = next;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)((dur + 0.2) * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    self.nextBig = now + dur + self.bigInterval;
+
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)((dur + 0.05) * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
         [old removeFromSuperlayer];
     });
 }
 
-- (CALayer *)bigSceneForItem:(NSDictionary *)item size:(CGSize)size {
+// 静止期间缓慢放大：切换结束后开始，放大完正好接下一次切换
+- (void)scheduleBigZoomForPhoto:(CALayer *)photo delay:(CFTimeInterval)delay {
+    if (!photo) return;
+    [photo removeAnimationForKey:@"bigZoom"];
+    CABasicAnimation *zoom = [CABasicAnimation animationWithKeyPath:@"transform.scale"];
+    zoom.fromValue = @1.0;
+    zoom.toValue = @1.045;
+    zoom.duration = MAX(1.0, (CFTimeInterval)self.bigInterval);
+    zoom.beginTime = CACurrentMediaTime() + delay;
+    zoom.fillMode = kCAFillModeBoth;
+    zoom.removedOnCompletion = NO;
+    zoom.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
+    [photo addAnimation:zoom forKey:@"bigZoom"];
+}
+
+- (CALayer *)bigSceneForItem:(NSDictionary *)item size:(CGSize)size contentSize:(CGSize)content {
     if (self.mode == 4) return [self fusionSceneForItem:item size:size];
     if (self.mode == 3) {
         return (self.coverStyle == 0) ? [self fusionSceneForItem:item size:size]
                                       : [self leanSceneForItem:item size:size];
     }
-    CGFloat w = size.width, h = size.height;
+    CGFloat w = size.width, h = size.height;          // 画布（平移时会比屏幕宽/高）
+    CGFloat cw = content.width, ch = content.height;   // 文字排版按屏幕尺寸
     NSColor *bg = [NSColor colorWithCalibratedRed:0.031 green:0.031 blue:0.037 alpha:1];
 
     CALayer *scene = [CALayer layer];
@@ -1328,14 +1460,7 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     // 画面越亮，底部阴影越重，保证文字与标志始终有对比
     CGFloat a0 = bottomLum > 0.58 ? 0.90 : (bottomLum > 0.34 ? 0.80 : 0.68);
     BOOL brightBg = (bottomLum > 0.55);
-    CABasicAnimation *zoom = [CABasicAnimation animationWithKeyPath:@"transform.scale"];
-    zoom.fromValue = @1.0;
-    zoom.toValue = @1.045;
-    zoom.duration = 16.0;
-    zoom.autoreverses = YES;
-    zoom.repeatCount = HUGE_VALF;
-    zoom.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
-    [photo addAnimation:zoom forKey:@"zoom"];
+    self.bigPhotoLayer = photo;      // 缓慢放大由 advanceBigStill 按时安排
     [scene addSublayer:photo];
 
     // 底部一层阴影，只为托住文字，不抢画面
@@ -1354,19 +1479,19 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     [scene addSublayer:fade];
 
     // 左下角信息块
-    CGFloat marginX = w * 0.070;
-    CGFloat maxW = w - marginX * 2;
-    CGFloat metaSize = MAX(15.0, h * 0.0205);
+    CGFloat marginX = cw * 0.070;
+    CGFloat maxW = cw - marginX * 2;
+    CGFloat metaSize = MAX(15.0, ch * 0.0205);
 
     // 0 左对齐 / 1 居中 / 2 随机（每次换片重新掷）
     BOOL centered = (self.bigAlign == 1) || (self.bigAlign == 2 && arc4random_uniform(2) == 0);
 
     // 标语：默认左上；居中模式放到正上方中间
-    NSString *tagline = ASTagline(item, self.langPref);
+    NSString *tagline = self.showsTagline ? ASTagline(item, self.langPref) : @"";
     if (tagline.length) {
         // 顶部一层淡阴影，给字压出一个安静的底
         CAGradientLayer *top = [CAGradientLayer layer];
-        top.frame = CGRectMake(0, h * 0.74, w, h * 0.26);
+        top.frame = CGRectMake(0, ch * 0.74, cw, ch * 0.26);
         top.type = kCAGradientLayerAxial;
         top.startPoint = CGPointMake(0.5, 0.0);
         top.endPoint = CGPointMake(0.5, 1.0);
@@ -1378,23 +1503,23 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
         top.locations = @[@0.0, @0.62, @1.0];
         [scene addSublayer:top];
 
-        CGFloat tagSize = MAX(24.0, h * 0.042);
+        CGFloat tagSize = MAX(24.0, ch * 0.042);
         CGImageRef tagImg = ASCreateTaglineImage(tagline, tagSize, maxW * 0.86);
         if (tagImg) {
             CGFloat iw = CGImageGetWidth(tagImg) / 2.0, ih = CGImageGetHeight(tagImg) / 2.0;
             CALayer *tag = [CALayer layer];
             tag.contents = (__bridge id)tagImg;
             tag.contentsGravity = kCAGravityResize;
-            tag.frame = CGRectMake(centered ? (w - iw) / 2.0 : marginX - tagSize * 0.45,
-                                   h - h * 0.135 - ih, iw, ih);
+            tag.frame = CGRectMake(centered ? (cw - iw) / 2.0 : marginX - tagSize * 0.45,
+                                   ch - ch * 0.135 - ih, iw, ih);
             [scene addSublayer:tag];
             CGImageRelease(tagImg);
         }
     }
 
-    CGFloat metaY = h * 0.106;
-    CGFloat genreY = h * 0.062;
-    CGFloat logoH = h * 0.125;
+    CGFloat metaY = ch * 0.106;
+    CGFloat genreY = ch * 0.062;
+    CGFloat logoH = ch * 0.125;
     CGFloat logoBottom = metaY + metaSize * 2.2;
 
     CALayer *mark = nil;
@@ -1432,15 +1557,18 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
                 l.shadowRadius = 16;
                 l.shadowOffset = CGSizeZero;
             }
-            l.frame = CGRectMake(centered ? (w - lw) / 2.0 : marginX, logoBottom, lw, logoH);
+            l.frame = CGRectMake(centered ? (cw - lw) / 2.0 : marginX, logoBottom, lw, logoH);
             CGImageRelease(lg);
             mark = l;
         }
     }
     if (!mark) {
-        CATextLayer *t = ASMakeLabel(MAX(30.0, h * 0.050), 0.7, [NSColor colorWithWhite:1 alpha:0.95].CGColor);
+        CGFloat tSize = MAX(30.0, ch * 0.050);
+        CATextLayer *t = ASMakeLabel(tSize, 0.7, [NSColor colorWithWhite:1 alpha:0.95].CGColor);
         t.string = ASLocalized(item, @"title", self.langPref);
-        t.frame = CGRectMake(marginX, logoBottom + logoH * 0.18, maxW, logoH);
+        // 没有标志时用剧名顶替：只占文字本身的高度，并贴着信息行，
+        // 间距对齐有标志时「标志底边 → 信息行」的距离（标志版的位置不受影响）
+        t.frame = CGRectMake(marginX, logoBottom + metaSize * 0.9, maxW, tSize * 1.35);
         t.alignmentMode = centered ? kCAAlignmentCenter : kCAAlignmentLeft;
         t.alignmentMode = centered ? kCAAlignmentCenter : kCAAlignmentLeft;
         t.shadowColor = (brightBg ? [NSColor blackColor] : [NSColor whiteColor]).CGColor;
@@ -1449,7 +1577,7 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
         t.shadowOffset = CGSizeMake(0, -2);
         mark = t;
     }
-    [scene addSublayer:mark];
+    if (mark && self.showsTitle) [scene addSublayer:mark];
 
     // 国家 · 年份 · 评分
     NSMutableArray *parts = [NSMutableArray array];
@@ -1490,7 +1618,7 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
         metaText = head.length ? [NSString stringWithFormat:@"%@  ·  %@", head, scoreText] : scoreText;
     }
 
-    CGImageRef metaImg = ASCreateTextImage(metaText, @"PingFangSC-Regular", metaSize, 0.74, 1.0);
+    CGImageRef metaImg = self.showsMeta ? ASCreateTextImage(metaText, @"PingFangSC-Regular", metaSize, 0.74, 1.0) : NULL;
     if (metaImg) {
         CGFloat mw = CGImageGetWidth(metaImg) / 2.0, mh = CGImageGetHeight(metaImg) / 2.0;
         CGFloat fit = MIN(1.0, maxW / MAX(1.0, mw));   // 太长就整体缩一点，别被屏幕裁掉
@@ -1499,15 +1627,15 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
         CALayer *meta = [CALayer layer];
         meta.contents = (__bridge id)metaImg;
         meta.contentsGravity = kCAGravityResize;
-        meta.frame = CGRectMake(centered ? (w - mw) / 2.0 : marginX - metaSize * 0.3,
+        meta.frame = CGRectMake(centered ? (cw - mw) / 2.0 : marginX - metaSize * 0.3,
                                 metaY - mh * 0.12, mw, mh);
         [scene addSublayer:meta];
         CGImageRelease(metaImg);
     }
 
     // 类型另起一行
-    if (genreNames.count) {
-        CGFloat genreSize = MAX(13.0, h * 0.0178);
+    if (genreNames.count && self.showsMeta) {
+        CGFloat genreSize = MAX(13.0, ch * 0.0178);
         NSString *genreText = [genreNames componentsJoinedByString:@"  /  "];
         CGImageRef gImg = ASCreateTextImage(genreText, @"PingFangSC-Regular", genreSize, 0.64, 0.8);
         if (gImg) {
@@ -1518,7 +1646,7 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
             CALayer *gl = [CALayer layer];
             gl.contents = (__bridge id)gImg;
             gl.contentsGravity = kCAGravityResize;
-            gl.frame = CGRectMake(centered ? (w - gw) / 2.0 : marginX - genreSize * 0.3,
+            gl.frame = CGRectMake(centered ? (cw - gw) / 2.0 : marginX - genreSize * 0.3,
                                   genreY - gh * 0.12, gw, gh);
             [scene addSublayer:gl];
             CGImageRelease(gImg);
@@ -1976,9 +2104,13 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
         [self advanceDeck];
         self.nextDeck = now + 5.5;
     }
-    if (self.mode >= 2 && now >= self.nextBig) {
-        [self advanceBigStill];
-        self.nextBig = now + self.bigInterval;
+    if (self.mode >= 2) {
+        if (self.nextBig <= 0) {
+            // 首帧才开始计时：背景加载、窗口放大都不占用第一张的停留时间
+            self.nextBig = now + self.bigInterval;
+        } else if (now >= self.nextBig) {
+            [self advanceBigStill];   // nextBig 由 advanceBigStill 自行安排（含切换耗时）
+        }
     }
 }
 
@@ -2004,140 +2136,106 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     return [NSString stringWithFormat:@"当前屏幕约 %ld 列 × %ld 行 · 共 %ld 张", (long)cols, (long)rows, (long)(cols * rows)];
 }
 
-- (void)colsChanged:(id)sender {
-    NSArray<NSNumber *> *colVals = ASColValues();
-    NSInteger pc = colVals[self.colsPopup.indexOfSelectedItem].integerValue;
-    self.gridLabel.stringValue = [self gridSummaryForCols:pc];
-}
-
-- (void)modeChanged:(id)sender {
-    NSInteger m = self.modePopup.indexOfSelectedItem;
-    BOOL isWall = (m == 0), isStill = (m == 2), isSlideshow = (m >= 2);
-    self.driftPopup.enabled = isWall;
-    self.colsPopup.enabled = isWall;
-    self.intervalPopup.enabled = isSlideshow;
-    self.transPopup.enabled = isSlideshow;
-    self.alignPopup.enabled = isStill;
-    self.coverPopup.enabled = (m == 3);
-    self.coverPopup.enabled = (m == 3);
-    self.gridLabel.textColor = isWall ? [NSColor secondaryLabelColor] : [NSColor tertiaryLabelColor];
-}
-
 - (NSWindow *)configureSheet {
-    CFTimeInterval t0 = CACurrentMediaTime();
-    ASLog(@"[sheet] begin preview=%d cached=%d", self.isPreview, self.configSheet != nil);
     if (self.configSheet) return self.configSheet;
 
-    NSWindow *win = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 450, 534)
+    NSWindow *win = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 450, 320)
                                                styleMask:NSWindowStyleMaskTitled
                                                  backing:NSBackingStoreBuffered
                                                    defer:NO];
     win.title = @"AniShelf 封面屏保";
     NSView *cv = win.contentView;
 
-    CGFloat labelX = 28, fieldX = 118, fieldW = 300;
-    CGFloat y = 396;
-
-    void (^addLabel)(NSString *, CGFloat) = ^(NSString *text, CGFloat top) {
-        NSTextField *l = [NSTextField labelWithString:text];
-        l.frame = NSMakeRect(labelX, top, 92, 20);
-        [cv addSubview:l];
-    };
-
-    addLabel(@"样式", y);
-    NSPopUpButton *mode = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(fieldX, y - 4, fieldW, 26) pullsDown:NO];
-    [mode addItemsWithTitles:@[ @"漂移封面墙", @"堆叠牌堆", @"大剧照", @"封面展示" ]];
+    // ---- 控件（位置在 relayoutSheet 里统一排） ----
+    NSPopUpButton *mode = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [mode addItemsWithTitles:@[ @"封面墙", @"牌堆", @"大剧照", @"封面展示" ]];
     mode.target = self;
     mode.action = @selector(modeChanged:);
-    [cv addSubview:mode];
     self.modePopup = mode;
 
-    y -= 32; addLabel(@"封面样式", y);
-    NSPopUpButton *cover = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(fieldX, y - 4, 170, 26) pullsDown:NO];
+    NSPopUpButton *cover = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
     [cover addItemsWithTitles:@[ @"融合", @"经典" ]];
-    [cv addSubview:cover];
     self.coverPopup = cover;
 
-    y -= 32; addLabel(@"语言", y);
-    NSPopUpButton *lang = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(fieldX, y - 4, 170, 26) pullsDown:NO];
-    [lang addItemsWithTitles:@[ @"跟随 AniShelf", @"中文", @"English", @"日本語" ]];
-    [cv addSubview:lang];
-    self.langPopup = lang;
+    NSTextField *interval = [[NSTextField alloc] initWithFrame:NSZeroRect];
+    interval.formatter = [self intervalFormatter];
+    interval.alignment = NSTextAlignmentRight;
+    interval.font = [NSFont systemFontOfSize:13];
+    self.intervalField = interval;
 
-    y -= 32; addLabel(@"漂移方式", y);
-    NSPopUpButton *drift = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(fieldX, y - 4, 170, 26) pullsDown:NO];
-    [drift addItemsWithTitles:@[ @"横向平移", @"斜向漂移", @"呼吸推拉", @"静止不动" ]];
-    [cv addSubview:drift];
+    NSPopUpButton *trans = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [trans addItemsWithTitles:@[ @"无特效", @"淡入淡出", @"水平切入", @"水平推动", @"垂直切入", @"垂直推动" ]];
+    self.transPopup = trans;
+
+    NSPopUpButton *align = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [align addItemsWithTitles:@[ @"左对齐", @"居中", @"随机" ]];
+    self.alignPopup = align;
+
+    NSPopUpButton *drift = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [drift addItemsWithTitles:@[ @"横向平移", @"斜向漂移", @"呼吸推拉", @"静止" ]];
     self.driftPopup = drift;
 
-    y -= 32; addLabel(@"每屏列数", y);
-    NSPopUpButton *cols = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(fieldX, y - 4, 170, 26) pullsDown:NO];
+    NSPopUpButton *cols = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
     [cols addItemsWithTitles:ASColTitles()];
     cols.target = self;
     cols.action = @selector(colsChanged:);
-    [cv addSubview:cols];
     self.colsPopup = cols;
 
-    y -= 26;
-    NSTextField *grid = [NSTextField labelWithString:@""];
-    grid.font = [NSFont systemFontOfSize:11];
-    grid.textColor = [NSColor secondaryLabelColor];
-    grid.frame = NSMakeRect(fieldX, y, 310, 18);
-    [cv addSubview:grid];
-    self.gridLabel = grid;
-
-    y -= 24;
-    NSTextField *hint = [NSTextField labelWithString:@"卡片按 2:3 排布，行数由屏幕比例自动补足，不会出现半张卡。"];
-    hint.font = [NSFont systemFontOfSize:11];
-    hint.textColor = [NSColor secondaryLabelColor];
-    hint.frame = NSMakeRect(fieldX, y, 320, 18);
-    [cv addSubview:hint];
-
-    y -= 34; addLabel(@"切换间隔", y);
-    NSPopUpButton *interval = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(fieldX, y - 4, 170, 26) pullsDown:NO];
-    [interval addItemsWithTitles:@[ @"6 秒", @"9 秒", @"12 秒", @"20 秒", @"30 秒" ]];
-    [cv addSubview:interval];
-    self.intervalPopup = interval;
-
-    y -= 32; addLabel(@"切换特效", y);
-    NSPopUpButton *trans = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(fieldX, y - 4, 170, 26) pullsDown:NO];
-    [trans addItemsWithTitles:@[ @"淡入淡出", @"平移" ]];
-    [cv addSubview:trans];
-    self.transPopup = trans;
-
-    y -= 32; addLabel(@"大剧照布局", y);
-    NSPopUpButton *align = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(fieldX, y - 4, 170, 26) pullsDown:NO];
-    [align addItemsWithTitles:@[ @"左对齐", @"居中", @"随机（每张换）" ]];
-    [cv addSubview:align];
-    self.alignPopup = align;
-
-    y -= 34; addLabel(@"范围", y);
-    NSPopUpButton *scope = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(fieldX, y - 4, 170, 26) pullsDown:NO];
-    [scope addItemsWithTitles:@[ @"全部作品", @"仅收藏", @"仅看完" ]];
-    [cv addSubview:scope];
-    self.scopePopup = scope;
-
-    y -= 42;
-    NSButton *cap = [NSButton checkboxWithTitle:@"堆叠模式显示片名与评分" target:nil action:nil];
-    cap.frame = NSMakeRect(fieldX, y, 300, 20);
-    [cv addSubview:cap];
+    NSButton *cap = [NSButton checkboxWithTitle:@"显示片名与评分" target:nil action:nil];
     self.captionCheck = cap;
 
-    y -= 26;
-    NSButton *watch = [NSButton checkboxWithTitle:@"大剧照显示观看状态（在看 / 看完 / 想看 / 搁置）" target:nil action:nil];
-    watch.frame = NSMakeRect(fieldX, y, 330, 20);
-    [cv addSubview:watch];
+    NSPopUpButton *lang = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [lang addItemsWithTitles:@[ @"跟随 AniShelf", @"中文", @"English", @"日本語" ]];
+    self.langPopup = lang;
+
+    NSPopUpButton *scope = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [scope addItemsWithTitles:@[ @"全部作品", @"仅收藏", @"仅看完" ]];
+    self.scopePopup = scope;
+
+    NSPopUpButton *kind = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [kind addItemsWithTitles:@[ @"TV 动画", @"电影", @"全部" ]];
+    self.kindPopup = kind;
+
+
+    NSButton *cbTitle = [NSButton checkboxWithTitle:@"剧名 / 标志" target:nil action:nil];
+    self.titleCheck = cbTitle;
+    NSButton *cbTag = [NSButton checkboxWithTitle:@"标语" target:nil action:nil];
+    self.taglineCheck = cbTag;
+    NSButton *cbMeta = [NSButton checkboxWithTitle:@"下方文字（信息 / 类型 / 简介）" target:nil action:nil];
+    self.metaCheck = cbMeta;
+    NSButton *watch = [NSButton checkboxWithTitle:@"观看状态" target:nil action:nil];
     self.watchCheck = watch;
 
+    NSTextField *unit = [NSTextField labelWithString:@"秒"];
+    unit.font = [NSFont systemFontOfSize:12];
+    unit.textColor = [NSColor secondaryLabelColor];
+    self.unitLabel = unit;
+
+    NSTextField *hint = [NSTextField labelWithString:@""];
+    hint.font = [NSFont systemFontOfSize:11];
+    hint.textColor = [NSColor secondaryLabelColor];
+    self.hintLabel = hint;
+
+    NSButton *more = [NSButton buttonWithTitle:@"显示更多设置 ▸" target:self action:@selector(toggleAdvanced:)];
+    more.bezelStyle = NSBezelStyleRounded;
+    more.frame = NSZeroRect;
+    self.moreButton = more;
+
+    for (NSView *v in @[ mode, cover, interval, unit, trans, align, drift, cols, cap,
+                         lang, scope, kind, cbTitle, cbTag, cbMeta, watch, hint, more ]) {
+        [cv addSubview:v];
+    }
+
     NSButton *ok = [NSButton buttonWithTitle:@"完成" target:self action:@selector(confirmConfig:)];
-    ok.frame = NSMakeRect(330, 18, 92, 30);
+    ok.frame = NSMakeRect(330, 16, 92, 30);
     ok.keyEquivalent = @"\r";
     [cv addSubview:ok];
 
     NSButton *cancel = [NSButton buttonWithTitle:@"取消" target:self action:@selector(cancelConfig:)];
-    cancel.frame = NSMakeRect(238, 18, 84, 30);
+    cancel.frame = NSMakeRect(238, 16, 84, 30);
     [cv addSubview:cancel];
 
+    // ---- 回填 ----
     ScreenSaverDefaults *d = [ScreenSaverDefaults defaultsForModuleWithName:kModuleID];
     [mode selectItemAtIndex:MIN(3, MAX(0, [d integerForKey:kPrefMode]))];
     [drift selectItemAtIndex:[d integerForKey:kPrefDrift]];
@@ -2146,61 +2244,199 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     NSInteger ci = [colVals indexOfObject:@([d integerForKey:kPrefCols])];
     [cols selectItemAtIndex:(ci == NSNotFound ? 0 : ci)];
 
-    NSArray<NSNumber *> *intVals = @[@6, @9, @12, @20, @30];
-    NSInteger ii = [intVals indexOfObject:@([d integerForKey:kPrefBigInterval])];
-    [interval selectItemAtIndex:(ii == NSNotFound ? 1 : ii)];
-    [trans selectItemAtIndex:[d integerForKey:kPrefBigTransition]];
+    NSInteger sec = [d integerForKey:kPrefBigInterval];
+    interval.integerValue = (sec >= 3 ? sec : 9);
+    [trans selectItemAtIndex:MIN(5, MAX(0, [d integerForKey:kPrefBigTransition]))];
     [align selectItemAtIndex:MIN(2, MAX(0, [d integerForKey:kPrefBigAlign]))];
     [lang selectItemAtIndex:MIN(3, MAX(0, [d integerForKey:kPrefLang]))];
     [cover selectItemAtIndex:MIN(1, MAX(0, [d integerForKey:kPrefCoverStyle]))];
-    [cover selectItemAtIndex:MIN(1, MAX(0, [d integerForKey:kPrefCoverStyle]))];
-
     [scope selectItemAtIndex:[d integerForKey:kPrefScope]];
+    [kind selectItemAtIndex:MIN(2, MAX(0, [d integerForKey:kPrefKind]))];
+    [kind selectItemAtIndex:MIN(2, MAX(0, [d integerForKey:kPrefKind]))];
+    cbTitle.state = [d boolForKey:kPrefShowsTitle] ? NSControlStateValueOn : NSControlStateValueOff;
+    cbTag.state = [d boolForKey:kPrefShowsTagline] ? NSControlStateValueOn : NSControlStateValueOff;
+    cbMeta.state = [d boolForKey:kPrefShowsMeta] ? NSControlStateValueOn : NSControlStateValueOff;
     cap.state = [d boolForKey:kPrefCaption] ? NSControlStateValueOn : NSControlStateValueOff;
     watch.state = [d boolForKey:kPrefShowWatch] ? NSControlStateValueOn : NSControlStateValueOff;
-    watch.state = [d boolForKey:kPrefShowWatch] ? NSControlStateValueOn : NSControlStateValueOff;
-    grid.stringValue = [self gridSummaryForCols:colVals[cols.indexOfSelectedItem].integerValue];
 
     self.configSheet = win;
     win.releasedWhenClosed = NO;
-    [self modeChanged:nil];
-    ASLog(@"[sheet] end in %.0f ms", (CACurrentMediaTime() - t0) * 1000);
+    self.advancedOpen = NO;
+    [self relayoutSheet];
     return win;
+}
+
+- (NSNumberFormatter *)intervalFormatter {
+    NSNumberFormatter *f = [NSNumberFormatter new];
+    f.numberStyle = NSNumberFormatterNoStyle;
+    f.minimum = @3;
+    f.maximum = @600;
+    f.allowsFloats = NO;
+    return f;
+}
+
+// 只显示与当前模式相关的项；基础项在上，更多设置在按钮之下
+- (void)relayoutSheet {
+    if (!self.configSheet) return;
+    NSInteger m = self.modePopup.indexOfSelectedItem;
+    CGFloat x0 = 28, x1 = 118, rowH = 30;
+
+    NSMutableArray<NSDictionary *> *basic = [NSMutableArray array];
+    [basic addObject:@{ @"t": @"模式", @"v": @[ self.modePopup ] }];
+    if (m == 3) [basic addObject:@{ @"t": @"封面样式", @"v": @[ self.coverPopup ] }];
+    if (m >= 2) [basic addObject:@{ @"t": @"停留时间", @"v": @[ self.intervalField ] }];
+    if (m >= 2) [basic addObject:@{ @"t": @"切换特效", @"v": @[ self.transPopup ] }];
+    if (m == 2) [basic addObject:@{ @"t": @"文字对齐", @"v": @[ self.alignPopup ] }];
+    if (m == 0) {
+        [basic addObject:@{ @"t": @"漂移方式", @"v": @[ self.driftPopup ] }];
+        [basic addObject:@{ @"t": @"每屏列数", @"v": @[ self.colsPopup ] }];
+    }
+    if (m == 1) [basic addObject:@{ @"t": @"片名", @"v": @[ self.captionCheck ] }];
+
+    NSMutableArray<NSDictionary *> *adv = [NSMutableArray array];
+    [adv addObject:@{ @"t": @"语言", @"v": @[ self.langPopup ] }];
+    [adv addObject:@{ @"t": @"显示范围", @"v": @[ self.scopePopup ] }];
+    [adv addObject:@{ @"t": @"显示类型", @"v": @[ self.kindPopup ] }];
+    [adv addObject:@{ @"t": @"显示内容", @"v": @[ self.titleCheck, self.taglineCheck ] }];
+    [adv addObject:@{ @"t": @"", @"v": @[ self.metaCheck ] }];
+    [adv addObject:@{ @"t": @"", @"v": @[ self.watchCheck ] }];
+
+    CGFloat topPad = 18, bottom = 60, buttonH = 28, buttonGap = 12, hintH = 24;
+    CGFloat contentH = topPad + basic.count * rowH + buttonH + buttonGap + hintH
+                     + (self.advancedOpen ? adv.count * rowH + 6 : 0);
+    [self.configSheet setContentSize:NSMakeSize(450, bottom + contentH)];
+
+    // 全部先藏起来（含上一轮留下的标签），再按需摆放
+    NSArray *all = @[ self.modePopup, self.coverPopup, self.intervalField, self.transPopup,
+                      self.alignPopup, self.driftPopup, self.colsPopup, self.captionCheck,
+                      self.langPopup, self.scopePopup, self.kindPopup, self.titleCheck,
+                      self.taglineCheck, self.metaCheck, self.watchCheck ];
+    for (NSView *v in all) v.hidden = YES;
+    self.unitLabel.hidden = YES;
+    for (NSTextField *l in self.rowLabels.allValues) l.hidden = YES;
+
+    // 自上而下按「行上边缘」排，避免按钮与下一行撞在一起
+    CGFloat top = bottom + contentH - topPad;
+    top = [self placeRows:basic top:top x0:x0 x1:x1 rowH:rowH];
+
+    self.moreButton.hidden = NO;
+    self.moreButton.frame = NSMakeRect(x1, top - buttonH - 6, 200, buttonH);
+    self.moreButton.title = self.advancedOpen ? @"收起更多设置 ▾" : @"显示更多设置 ▸";
+    top -= (buttonH + 6 + buttonGap);
+
+    if (self.advancedOpen) {
+        top = [self placeRows:adv top:top x0:x0 x1:x1 rowH:rowH];
+    }
+
+    self.hintLabel.hidden = NO;
+    self.hintLabel.frame = NSMakeRect(x1, top - 16, 320, 18);
+    self.hintLabel.stringValue = [self hintForMode:m];
+}
+
+- (CGFloat)placeRows:(NSArray<NSDictionary *> *)rows top:(CGFloat)rowTop
+                  x0:(CGFloat)x0 x1:(CGFloat)x1 rowH:(CGFloat)rowH {
+    for (NSDictionary *row in rows) {
+        NSString *title = row[@"t"];
+        NSArray *controls = row[@"v"];
+        if (title.length) {
+            if (!self.rowLabels) self.rowLabels = [NSMutableDictionary dictionary];
+            NSTextField *l = self.rowLabels[title];
+            if (!l) {
+                l = [NSTextField labelWithString:title];
+                self.rowLabels[title] = l;
+                [self.configSheet.contentView addSubview:l];
+            }
+            l.hidden = NO;
+            l.frame = NSMakeRect(x0, rowTop - 22, 100, 20);
+        }
+        CGFloat cx = x1;
+        for (NSView *c in controls) {
+            c.hidden = NO;
+            if ([c isKindOfClass:[NSPopUpButton class]]) {
+                c.frame = NSMakeRect(x1, rowTop - 26, 170, 26);
+            } else if (c == self.intervalField) {
+                c.frame = NSMakeRect(x1, rowTop - 26, 62, 24);
+                self.unitLabel.hidden = NO;
+                self.unitLabel.frame = NSMakeRect(x1 + 68, rowTop - 22, 28, 20);
+            } else if ([c isKindOfClass:[NSButton class]]) {
+                CGFloat w = (controls.count > 1) ? 150 : 280;
+                c.frame = NSMakeRect(cx, rowTop - 24, w, 20);
+                cx += (controls.count > 1) ? 160 : 0;
+            }
+        }
+        rowTop -= rowH;
+    }
+    return rowTop;
+}
+
+- (NSString *)hintForMode:(NSInteger)m {
+    if (m == 0) {
+        NSArray<NSNumber *> *colVals = ASColValues();
+        NSInteger c = colVals[self.colsPopup.indexOfSelectedItem].integerValue;
+        return [self gridSummaryForCols:c];
+    }
+    if (m == 1) return @"每 5.5 秒翻一张，卡片从底部堆叠进入";
+    if (m == 2) return @"文字与剧照同步移动；停留时间单位：秒";
+    return @"融合：海报满高、边缘融进背景；经典：海报卡片 + 文字列";
+}
+
+- (void)toggleAdvanced:(id)sender {
+    self.advancedOpen = !self.advancedOpen;
+    [self relayoutSheet];
+}
+
+- (void)modeChanged:(id)sender {
+    [self relayoutSheet];
+}
+
+- (void)colsChanged:(id)sender {
+    if (!self.advancedOpen && self.modePopup.indexOfSelectedItem == 0) {
+        self.hintLabel.stringValue = [self hintForMode:0];
+    }
 }
 
 - (void)confirmConfig:(id)sender {
     NSArray<NSNumber *> *colVals = ASColValues();
-    NSArray<NSNumber *> *intVals = @[@6, @9, @12, @20, @30];
-
     ScreenSaverDefaults *d = [ScreenSaverDefaults defaultsForModuleWithName:kModuleID];
+
+    NSInteger sec = self.intervalField.integerValue;
+    if (sec < 3) sec = 9;
+    if (sec > 600) sec = 600;
+
     [d setInteger:self.modePopup.indexOfSelectedItem forKey:kPrefMode];
     [d setInteger:self.driftPopup.indexOfSelectedItem forKey:kPrefDrift];
     [d setInteger:colVals[self.colsPopup.indexOfSelectedItem].integerValue forKey:kPrefCols];
-    [d setInteger:intVals[self.intervalPopup.indexOfSelectedItem].integerValue forKey:kPrefBigInterval];
+    [d setInteger:sec forKey:kPrefBigInterval];
     [d setInteger:self.transPopup.indexOfSelectedItem forKey:kPrefBigTransition];
     [d setInteger:self.alignPopup.indexOfSelectedItem forKey:kPrefBigAlign];
     [d setInteger:self.langPopup.indexOfSelectedItem forKey:kPrefLang];
     [d setInteger:self.coverPopup.indexOfSelectedItem forKey:kPrefCoverStyle];
-    [d setInteger:self.coverPopup.indexOfSelectedItem forKey:kPrefCoverStyle];
     [d setInteger:self.scopePopup.indexOfSelectedItem forKey:kPrefScope];
+    [d setInteger:self.kindPopup.indexOfSelectedItem forKey:kPrefKind];
+    [d setInteger:self.kindPopup.indexOfSelectedItem forKey:kPrefKind];
     [d setBool:self.captionCheck.state == NSControlStateValueOn forKey:kPrefCaption];
     [d setBool:self.watchCheck.state == NSControlStateValueOn forKey:kPrefShowWatch];
-    [d setBool:self.watchCheck.state == NSControlStateValueOn forKey:kPrefShowWatch];
+    [d setBool:self.titleCheck.state == NSControlStateValueOn forKey:kPrefShowsTitle];
+    [d setBool:self.taglineCheck.state == NSControlStateValueOn forKey:kPrefShowsTagline];
+    [d setBool:self.metaCheck.state == NSControlStateValueOn forKey:kPrefShowsMeta];
     [d synchronize];
 
     self.mode = self.modePopup.indexOfSelectedItem;
     self.drift = self.driftPopup.indexOfSelectedItem;
     self.colsPref = colVals[self.colsPopup.indexOfSelectedItem].integerValue;
-    self.bigInterval = intVals[self.intervalPopup.indexOfSelectedItem].integerValue;
+    self.bigInterval = sec;
     self.bigTransition = self.transPopup.indexOfSelectedItem;
     self.bigAlign = self.alignPopup.indexOfSelectedItem;
     self.langPref = self.langPopup.indexOfSelectedItem;
     self.coverStyle = self.coverPopup.indexOfSelectedItem;
-    self.coverStyle = self.coverPopup.indexOfSelectedItem;
     self.scope = self.scopePopup.indexOfSelectedItem;
+    self.kindPref = self.kindPopup.indexOfSelectedItem;
+    self.kindPref = self.kindPopup.indexOfSelectedItem;
     self.showsCaption = self.captionCheck.state == NSControlStateValueOn;
     self.showsWatch = self.watchCheck.state == NSControlStateValueOn;
-    self.showsWatch = self.watchCheck.state == NSControlStateValueOn;
+    self.showsTitle = self.titleCheck.state == NSControlStateValueOn;
+    self.showsTagline = self.taglineCheck.state == NSControlStateValueOn;
+    self.showsMeta = self.metaCheck.state == NSControlStateValueOn;
     [self buildScene];
 
     [NSApp endSheet:self.configSheet];
