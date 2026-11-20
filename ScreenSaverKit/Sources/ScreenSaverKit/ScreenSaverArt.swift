@@ -209,52 +209,13 @@ enum ScreenSaverArt {
         return context.createCGImage(output, from: bounds, format: .RGBA8, colorSpace: sRGB)
     }
 
-    /// The average colour of each cell of a grid laid over `region` of the poster (unit
-    /// coordinates, top-left origin), row by row from the top.
+    /// A representative colour for each cell of a grid laid over `region` of the poster (unit
+    /// coordinates, top-left origin), row by row from the top. See `ScreenSaverPalette`.
     static func samples(
         of poster: CGImage, columns: Int, rows: Int, region: CGRect = CGRect(x: 0, y: 0, width: 1, height: 1)
     ) -> [ScreenSaverColor] {
-        let cell = 8
-        let width = columns * cell
-        let height = rows * cell
-        let fallback = Array(repeating: ScreenSaverColor(red: 0.1, green: 0.1, blue: 0.1), count: columns * rows)
-        let crop = CGRect(
-            x: region.minX * CGFloat(poster.width), y: region.minY * CGFloat(poster.height),
-            width: region.width * CGFloat(poster.width), height: region.height * CGFloat(poster.height)
-        ).integral
-        guard let source = poster.cropping(to: crop) else { return fallback }
-        var pixels = [UInt8](repeating: 0, count: width * height * 4)
-        let drawn = pixels.withUnsafeMutableBytes { buffer -> Bool in
-            guard
-                let context = CGContext(
-                    data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
-                    space: sRGB, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
-            else { return false }
-            context.interpolationQuality = .medium
-            context.draw(source, in: CGRect(x: 0, y: 0, width: width, height: height))
-            return true
-        }
-        guard drawn else { return fallback }
-        // Bitmap rows run from the top of the image.
-        var colors: [ScreenSaverColor] = []
-        for row in 0..<rows {
-            for column in 0..<columns {
-                var sum = (0, 0, 0)
-                for y in row * cell..<(row + 1) * cell {
-                    for x in column * cell..<(column + 1) * cell {
-                        let offset = (y * width + x) * 4
-                        sum.0 += Int(pixels[offset])
-                        sum.1 += Int(pixels[offset + 1])
-                        sum.2 += Int(pixels[offset + 2])
-                    }
-                }
-                let count = CGFloat(cell * cell * 255)
-                colors.append(
-                    ScreenSaverColor(
-                        red: CGFloat(sum.0) / count, green: CGFloat(sum.1) / count, blue: CGFloat(sum.2) / count))
-            }
-        }
-        return colors
+        ScreenSaverPalette.regionalColors(of: poster, columns: columns, rows: rows, region: region)
+            ?? Array(repeating: ScreenSaverColor(red: 0.1, green: 0.1, blue: 0.1), count: columns * rows)
     }
 
     static func resized(_ image: CGImage, width: Int, height: Int) -> CGImage? {
