@@ -14,8 +14,8 @@ is used, and the choices available to you.
 - AniShelf does not require an AniShelf account. iCloud Sync uses your Apple
   Account, and TMDb features use a TMDb API key you provide.
 - Search, metadata, artwork, and broadcast features contact external services.
-- Optional Smart Features use Apple Intelligence on your device, or an OpenAI or
-  OpenRouter account whose API key you provide.
+- Optional Smart Features use Apple Intelligence on your device, or your own API
+  key for OpenAI, OpenRouter, Bailian (Alibaba Cloud Model Studio), or DeepSeek.
 - AniShelf does not sell your personal information.
 - AniShelf does not use third-party advertising SDKs.
 - AniShelf does not use cross-app tracking.
@@ -143,15 +143,14 @@ Smart Features, such as creating a category from a description, are off until
 you set them up. With Apple Intelligence, the requests run through Apple's
 Foundation Models framework under Apple's terms.
 
-If you instead add an OpenAI or OpenRouter API key, AniShelf sends each request
-directly from your device to that provider with your key. A request contains
-the description you type and, for the anime AniShelf checks, their titles,
-release years, kinds, production companies, genres, and the start of their
-overviews. It does not
-contain your notes, ratings, watch dates, or library identifiers. The provider
-receives your IP address and standard network metadata, and handles the request
-under its own terms and privacy policy, including any retention or model
-training settings of your account.
+If you instead add an API key for OpenAI, OpenRouter, Bailian, or DeepSeek,
+AniShelf sends each request directly from your device to that provider with your
+key. A request contains the description you type and, for the anime AniShelf
+checks, their titles, release years, kinds, production companies, genres, and
+the start of their overviews. It does not contain your notes, ratings, watch
+dates, or library identifiers. The provider receives your IP address and standard
+network metadata, and handles the request under its own terms and privacy policy,
+including any retention or model training settings of your account.
 
 AniShelf stores provider keys in the system Keychain on your device. They are
 not included in backups or CloudKit sync. Removing a key in Smart Features
@@ -228,14 +227,17 @@ episode information.
 
 [TVMaze Privacy Policy](https://www.tvmaze.com/site/privacy)
 
-### OpenAI and OpenRouter
+### Smart Features cloud providers
 
-If you add an OpenAI or OpenRouter API key for Smart Features, AniShelf sends
-Smart Features requests to that provider. OpenRouter forwards each request to
-the company that runs the model you choose.
+If you add an API key for OpenAI, OpenRouter, Bailian (Alibaba Cloud Model
+Studio), or DeepSeek, AniShelf sends Smart Features requests to that provider.
+OpenRouter forwards each request to the company that runs the model you choose.
+AniShelf sends Bailian requests to Alibaba Cloud's China (Beijing) region.
 
 [OpenAI Privacy Policy](https://openai.com/policies/privacy-policy/)
 [OpenRouter Privacy Policy](https://openrouter.ai/privacy)
+[Bailian Privacy Notice](https://help.aliyun.com/en/model-studio/privacy-notice)
+[DeepSeek Open Platform Privacy Policy](https://cdn.deepseek.com/policies/zh-CN/deepseek-open-platform-privacy-policy.html)
 
 ### Apple iCloud and System Services
 

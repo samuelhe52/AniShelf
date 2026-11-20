@@ -250,5 +250,9 @@ and the prompt stays as it was.
 - GPT-6 Luna scores 96% precision and 96% recall on the labeled set. Its remaining
   errors are stable: the Violet Evergarden films as fantasy, and 【推しの子】 missed
   for music. 君の名は。 is excluded by the model's own genre judgment (see above).
-- The labels and saved runs live outside the repository, because they contain the
-  maintainer's library.
+- The labels and saved runs stay outside the repository because they record the
+  maintainer's library. The original inputs were lost; the
+  [evaluation runbook](category-eval.md) covers the reconstructed dataset and the
+  runner for new comparisons.
+- On the reconstructed dataset with corrected labels (2026-11-20), GPT-6 Luna scores
+  95% precision and 89% recall; see [006](006-bailian-and-deepseek.md).
