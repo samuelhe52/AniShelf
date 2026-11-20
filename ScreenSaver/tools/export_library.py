@@ -114,6 +114,54 @@ def _i18n_block(row) -> dict:
     return out
 
 
+def _decode_genres(blob) -> list:
+    """ZGENREIDS 是 NSKeyedArchiver 归档的 NSArray<NSNumber>。"""
+    if not blob:
+        return []
+    try:
+        pl = plistlib.loads(blob)
+        objs = pl.get("$objects", [])
+        top = pl.get("$top", {}).get("root")
+
+        def dec(o):
+            if isinstance(o, plistlib.UID):
+                return dec(objs[o.data]) if o.data < len(objs) else None
+            if isinstance(o, dict):
+                if "NS.objects" in o:
+                    return [dec(x) for x in o["NS.objects"]]
+                if "NS.string" in o:
+                    return o["NS.string"]
+                return None
+            return o
+
+        vals = dec(top)
+        return [int(v) for v in vals if isinstance(v, (int, float))] if isinstance(vals, list) else []
+    except Exception:
+        return []
+
+
+def _air_status(raw: str) -> str:
+    v = (raw or "").strip().lower()
+    if v in ("ended", "released", "canceled", "cancelled"):
+        return "ended"
+    if v == "returning series":
+        return "returning"
+    if v in ("in production", "post production", "planned", "pilot"):
+        return "production"
+    return ""
+
+
+def _watch_state(row) -> str:
+    for key, val in (("w_watching", "watching"), ("w_watched", "watched"),
+                     ("w_planned", "planned"), ("w_dropped", "dropped")):
+        try:
+            if (row[key] or "").strip():
+                return val
+        except (IndexError, KeyError):
+            continue
+    return ""
+
+
 def _clean_tagline(text: str, name: str) -> str:
     t = (text or "").strip()
     if not t or len(t) < 2:
@@ -213,12 +261,16 @@ def main() -> int:
                e.ZPLANTOWATCH AS planned, e.ZDROPPED AS dropped,
                e.ZPARENTSERIESID AS parent, e.ZORIGINALLANGUAGECODE AS lang, e.ZONAIRDATE AS onair,
                d.ZVOTEAVERAGE AS vote, d.ZAIRDATE AS airdate,
-               d.ZLOGOIMAGEPATH AS logo, d.ZSUBTITLE AS tagline, d.ZOVERVIEW AS overview, p.ZNAME AS parent_name,
+               d.ZLOGOIMAGEPATH AS logo, d.ZSUBTITLE AS tagline, d.ZOVERVIEW AS overview,
+               d.ZGENREIDS AS genre_blob, d.ZSTATUS AS air_status, pd.ZGENREIDS AS parent_genre_blob,
+               e.ZWATCHING AS w_watching, e.ZWATCHED AS w_watched,
+               e.ZPLANTOWATCH AS w_planned, e.ZDROPPED AS w_dropped, p.ZNAME AS parent_name,
                e.ZNAMETRANSLATIONS AS name_tr, e.ZOVERVIEWTRANSLATIONS AS ov_tr,
                p.ZNAMETRANSLATIONS AS parent_tr, p.ZOVERVIEWTRANSLATIONS AS parent_ov_tr
         FROM ZANIMEENTRY e
         LEFT JOIN ZANIMEENTRYDETAIL d ON d.ZENTRY = e.Z_PK
         LEFT JOIN ZANIMEENTRY p ON p.Z_PK = e.ZPARENTSERIESENTRY
+        LEFT JOIN ZANIMEENTRYDETAIL pd ON pd.ZENTRY = p.Z_PK
         WHERE e.ZPOSTERPATH IS NOT NULL AND e.ZPOSTERPATH <> ''
         ORDER BY e.ZFAVORITE DESC, e.ZSCORE DESC
         """
@@ -240,6 +292,10 @@ def main() -> int:
                 "display": _display_name(r),
                 "i18n": _i18n_block(r),
                 "taglineLang": APP_LANG,
+                "genres": ([g for g in _decode_genres(r["genre_blob"]) if g != 16]
+                        or [g for g in _decode_genres(r["parent_genre_blob"]) if g != 16]),
+                "airStatus": _air_status(r["air_status"]),
+                "watch": _watch_state(r),
                 "season": r["season"] if r["season"] is not None else 0,
                 "score": r["score"] or 0,
                 "favorite": bool(r["fav"]),

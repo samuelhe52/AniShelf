@@ -1,12 +1,7 @@
 //
 //  AniShelfCoversView.m
-//  AniShelfCovers — a macOS screensaver for an AniShelf library.
-//
-//  Five layouts: drifting cover wall, fanned deck, hero still, poster focus, cover fusion.
-//  Reads <bundle>/Contents/Resources/library.json (produced by tools/export_library.py),
-//  which in turn is generated read-only from the AniShelf Core Data store.
-//
-//  Licensed under the Apache License, Version 2.0.
+//  用 AniShelf 资料库的封面做一块屏保：漂移封面墙 / 堆叠牌堆两种样式。
+//  数据来源: ~/Library/Application Support/AniShelfCovers/library.json
 //
 
 #import <ScreenSaver/ScreenSaver.h>
@@ -24,6 +19,7 @@ static NSString *const kPrefCaption = @"caption";  // 1 = 显示片名
 static NSString *const kPrefCols = @"cols";        // 0 = 自动，否则每屏列数
 static NSString *const kPrefBigInterval = @"bigInterval";    // 秒
 static NSString *const kPrefBigTransition = @"bigTransition"; // 0 淡入淡出 / 1 平移
+static NSString *const kPrefShowWatch = @"showWatch";   // 大剧照显示观看状态
 static NSString *const kPrefLang = @"lang";              // 0 跟随应用 / 1 中文 / 2 英文 / 3 日文
 static NSString *const kPrefBigAlign = @"bigAlign";        // 0 左对齐 / 1 居中 / 2 随机
 static NSString *const kPrefIndex = @"index";      // 仅调试：固定显示第 N 条
@@ -269,7 +265,7 @@ static CGImageRef ASCreateTaglineImage(NSString *text, CGFloat fontSize, CGFloat
 }
 
 // 把海报放大铺满、重度模糊，当作整屏背景
-static CGImageRef ASBlurredBackground(CGImageRef src, CGSize size, CIContext *ctx) {
+static CGImageRef ASBlurredBackgroundWithRadius(CGImageRef src, CGSize size, CIContext *ctx, CGFloat radiusFactor) {
     if (!src || size.width < 20 || !ctx) return NULL;
     CIImage *ci = [CIImage imageWithCGImage:src];
     CGFloat sw = ci.extent.size.width, sh = ci.extent.size.height;
@@ -285,7 +281,7 @@ static CGImageRef ASBlurredBackground(CGImageRef src, CGSize size, CIContext *ct
 
     CIFilter *blur = [CIFilter filterWithName:@"CIGaussianBlur"];
     [blur setValue:filled forKey:kCIInputImageKey];
-    [blur setValue:@(MAX(20.0, size.width * 0.05)) forKey:kCIInputRadiusKey];
+    [blur setValue:@(MAX(18.0, size.width * radiusFactor)) forKey:kCIInputRadiusKey];
     CIImage *out = [[blur.outputImage imageByClampingToExtent] imageByCroppingToRect:rect];
     return [ctx createCGImage:out fromRect:rect];
 }
@@ -409,6 +405,106 @@ static NSString *ASTagline(NSDictionary *item, NSInteger pref) {
 }
 
 
+
+// TMDb 类型 ID → 名称（16 动画已排除，动画库没必要标"动画"）
+static NSString *ASGenreName(NSNumber *gid, NSString *lang) {
+    static NSDictionary<NSNumber *, NSArray<NSString *> *> *table;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        table = @{
+            @10759 : @[ @"动作冒险", @"Action & Adventure", @"アクション&アドベンチャー" ],
+            @35    : @[ @"喜剧", @"Comedy", @"コメディ" ],
+            @18    : @[ @"剧情", @"Drama", @"ドラマ" ],
+            @10751 : @[ @"家庭", @"Family", @"ファミリー" ],
+            @10765 : @[ @"奇幻科幻", @"Sci-Fi & Fantasy", @"SF&ファンタジー" ],
+            @9648  : @[ @"悬疑", @"Mystery", @"ミステリー" ],
+            @10749 : @[ @"爱情", @"Romance", @"ロマンス" ],
+            @14    : @[ @"奇幻", @"Fantasy", @"ファンタジー" ],
+            @878   : @[ @"科幻", @"Science Fiction", @"SF" ],
+            @28    : @[ @"动作", @"Action", @"アクション" ],
+            @12    : @[ @"冒险", @"Adventure", @"アドベンチャー" ],
+            @80    : @[ @"犯罪", @"Crime", @"クライム" ],
+            @27    : @[ @"恐怖", @"Horror", @"ホラー" ],
+            @99    : @[ @"纪录", @"Documentary", @"ドキュメンタリー" ],
+            @10762 : @[ @"儿童", @"Kids", @"キッズ" ],
+            @10764 : @[ @"真人秀", @"Reality", @"リアリティ" ],
+            @36    : @[ @"历史", @"History", @"歴史" ],
+            @10752 : @[ @"战争", @"War", @"戦争" ],
+            @10768 : @[ @"战争政治", @"War & Politics", @"戦争&政治" ],
+            @37    : @[ @"西部", @"Western", @"西部劇" ],
+            @10402 : @[ @"音乐", @"Music", @"音楽" ],
+            @10770 : @[ @"电视电影", @"TV Movie", @"TVムービー" ],
+            @53    : @[ @"惊悚", @"Thriller", @"スリラー" ],
+        };
+    });
+    NSArray<NSString *> *names = table[gid];
+    if (!names) return nil;
+    if ([lang isEqualToString:@"en"]) return names[1];
+    if ([lang isEqualToString:@"ja"]) return names[2];
+    return names[0];
+}
+
+static NSString *ASAirStatusName(NSString *code, NSString *lang) {
+    BOOL en = [lang isEqualToString:@"en"], ja = [lang isEqualToString:@"ja"];
+    if ([code isEqualToString:@"returning"]) return en ? @"Airing" : (ja ? @"放送中" : @"连载中");
+    if ([code isEqualToString:@"production"]) return en ? @"In production" : (ja ? @"制作中" : @"制作中");
+    if ([code isEqualToString:@"ended"]) return en ? @"Completed" : (ja ? @"完結" : @"完结");
+    return nil;
+}
+
+static NSString *ASWatchName(NSString *code, NSString *lang) {
+    BOOL en = [lang isEqualToString:@"en"], ja = [lang isEqualToString:@"ja"];
+    if ([code isEqualToString:@"watching"]) return en ? @"Watching" : (ja ? @"視聴中" : @"在看");
+    if ([code isEqualToString:@"watched"]) return en ? @"Watched" : (ja ? @"視聴済" : @"看完");
+    if ([code isEqualToString:@"planned"]) return en ? @"Planned" : (ja ? @"視聴予定" : @"想看");
+    if ([code isEqualToString:@"dropped"]) return en ? @"Dropped" : (ja ? @"中断" : @"搁置");
+    return nil;
+}
+
+
+// 把「横向羽化」直接烘进像素：CALayer.mask 在离屏渲染里不可靠，
+// 烘进图里既能所见即所得，也不依赖合成器。
+static CGImageRef ASFadeHorizontal(CGImageRef src, BOOL onLeft,
+                                   const CGFloat *alphas, const CGFloat *locs, int count) {
+    if (!src || count < 2) return CGImageRetain(src);
+    size_t w = CGImageGetWidth(src), h = CGImageGetHeight(src);
+    if (w == 0 || h == 0) return CGImageRetain(src);
+    CGColorSpaceRef cs = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+    CGContextRef ctx = CGBitmapContextCreate(NULL, w, h, 8, 0, cs,
+                                             kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
+    CGColorSpaceRelease(cs);
+    if (!ctx) return CGImageRetain(src);
+    CGContextDrawImage(ctx, CGRectMake(0, 0, w, h), src);
+
+    CGFloat comps[4 * 8];
+    CGFloat stops[8];
+    for (int i = 0; i < count && i < 8; i++) {
+        comps[i * 4 + 0] = 1.0;
+        comps[i * 4 + 1] = 1.0;
+        comps[i * 4 + 2] = 1.0;
+        comps[i * 4 + 3] = alphas[i];
+        stops[i] = locs[i];
+    }
+    CGColorSpaceRef rgb = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+    CGGradientRef g = CGGradientCreateWithColorComponents(rgb, comps, stops, count);
+    CGColorSpaceRelease(rgb);
+
+    CGContextSetBlendMode(ctx, kCGBlendModeDestinationIn);
+    CGPoint from = CGPointMake(onLeft ? 0 : w, 0);
+    CGPoint to = CGPointMake(onLeft ? w : 0, 0);
+    CGContextDrawLinearGradient(ctx, g, from, to, 0);
+    CGGradientRelease(g);
+
+    CGImageRef out = CGBitmapContextCreateImage(ctx);
+    CGContextRelease(ctx);
+    return out;
+}
+
+
+static CGImageRef ASBlurredBackground(CGImageRef src, CGSize size, CIContext *ctx) {
+    return ASBlurredBackgroundWithRadius(src, size, ctx, 0.05);
+}
+
 static double ASLuminanceInRegion(CGImageRef img, CGRect unitRect) {
     if (!img) return 0.0;
     const size_t n = 40;
@@ -467,6 +563,7 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 @property (nonatomic, assign) NSInteger bigTransition;
 @property (nonatomic, assign) NSInteger bigAlign;
 @property (nonatomic, assign) NSInteger langPref;
+@property (nonatomic, assign) BOOL showsWatch;
 
 @property (nonatomic, strong) CALayer *stage;
 @property (nonatomic, strong) CALayer *backdrop;
@@ -497,6 +594,7 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 @property (nonatomic, strong) NSPopUpButton *langPopup;
 @property (nonatomic, strong) NSTextField *gridLabel;
 @property (nonatomic, strong) NSButton *captionCheck;
+@property (nonatomic, strong) NSButton *watchCheck;
 
 @property (nonatomic, assign) CFTimeInterval nextCaption;
 @property (nonatomic, assign) CFTimeInterval nextDeck;
@@ -533,7 +631,7 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     ScreenSaverDefaults *d = [ScreenSaverDefaults defaultsForModuleWithName:kModuleID];
     [d registerDefaults:@{kPrefMode : @0, kPrefScope : @0, kPrefCaption : @1,
                           kPrefCols : @0, kPrefDrift : @0, kPrefIndex : @(-1),
-                          kPrefBigInterval : @9, kPrefBigTransition : @0, kPrefBigAlign : @0, kPrefLang : @0}];
+                          kPrefBigInterval : @9, kPrefBigTransition : @0, kPrefBigAlign : @0, kPrefLang : @0, kPrefShowWatch : @NO}];
     self.mode = [d integerForKey:kPrefMode];
     self.scope = [d integerForKey:kPrefScope];
     self.showsCaption = [d boolForKey:kPrefCaption];
@@ -544,6 +642,7 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     self.bigTransition = [d integerForKey:kPrefBigTransition];
     self.bigAlign = [d integerForKey:kPrefBigAlign];
     self.langPref = [d integerForKey:kPrefLang];
+    self.showsWatch = [d boolForKey:kPrefShowWatch];
 }
 
 - (void)loadLibrary {
@@ -1216,9 +1315,10 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
         }
     }
 
-    CGFloat metaY = h * 0.072;
+    CGFloat metaY = h * 0.106;
+    CGFloat genreY = h * 0.062;
     CGFloat logoH = h * 0.125;
-    CGFloat logoBottom = metaY + metaSize * 2.9;
+    CGFloat logoBottom = metaY + metaSize * 2.2;
 
     CALayer *mark = nil;
     if (item[@"logoPath"]) {
@@ -1280,6 +1380,25 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     if (country.length) [parts addObject:country];
     NSInteger year = ASInt(item[@"year"]);
     if (year > 0) [parts addObject:[NSString stringWithFormat:@"%ld", (long)year]];
+
+    // 类型单独成行；连载状态 → 观看状态 留在主行
+    NSString *langCode = ASLangCode(item, self.langPref);
+    id genreList = item[@"genres"];
+    NSMutableArray *genreNames = [NSMutableArray array];
+    if ([genreList isKindOfClass:[NSArray class]]) {
+        for (id g in (NSArray *)genreList) {
+            if (genreNames.count >= 3) break;
+            NSString *n = ASGenreName(@([g integerValue]), langCode);
+            if (n.length) [genreNames addObject:n];
+        }
+    }
+    NSString *air = ASAirStatusName(ASStr(item[@"airStatus"]), langCode);
+    if (air.length) [parts addObject:air];
+    if (self.showsWatch) {
+        NSString *watch = ASWatchName(ASStr(item[@"watch"]), langCode);
+        if (watch.length) [parts addObject:watch];
+    }
+
     NSString *head = [parts componentsJoinedByString:@"  ·  "];
     double vote = [item[@"vote"] doubleValue];
 
@@ -1294,9 +1413,12 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
         metaText = head.length ? [NSString stringWithFormat:@"%@  ·  %@", head, scoreText] : scoreText;
     }
 
-    CGImageRef metaImg = ASCreateTextImage(metaText, @"PingFangSC-Regular", metaSize, 0.66, 1.1);
+    CGImageRef metaImg = ASCreateTextImage(metaText, @"PingFangSC-Regular", metaSize, 0.74, 1.0);
     if (metaImg) {
         CGFloat mw = CGImageGetWidth(metaImg) / 2.0, mh = CGImageGetHeight(metaImg) / 2.0;
+        CGFloat fit = MIN(1.0, maxW / MAX(1.0, mw));   // 太长就整体缩一点，别被屏幕裁掉
+        mw *= fit;
+        mh *= fit;
         CALayer *meta = [CALayer layer];
         meta.contents = (__bridge id)metaImg;
         meta.contentsGravity = kCAGravityResize;
@@ -1304,6 +1426,26 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
                                 metaY - mh * 0.12, mw, mh);
         [scene addSublayer:meta];
         CGImageRelease(metaImg);
+    }
+
+    // 类型另起一行
+    if (genreNames.count) {
+        CGFloat genreSize = MAX(13.0, h * 0.0178);
+        NSString *genreText = [genreNames componentsJoinedByString:@"  /  "];
+        CGImageRef gImg = ASCreateTextImage(genreText, @"PingFangSC-Regular", genreSize, 0.64, 0.8);
+        if (gImg) {
+            CGFloat gw = CGImageGetWidth(gImg) / 2.0, gh = CGImageGetHeight(gImg) / 2.0;
+            CGFloat fit = MIN(1.0, maxW / MAX(1.0, gw));
+            gw *= fit;
+            gh *= fit;
+            CALayer *gl = [CALayer layer];
+            gl.contents = (__bridge id)gImg;
+            gl.contentsGravity = kCAGravityResize;
+            gl.frame = CGRectMake(centered ? (w - gw) / 2.0 : marginX - genreSize * 0.3,
+                                  genreY - gh * 0.12, gw, gh);
+            [scene addSublayer:gl];
+            CGImageRelease(gImg);
+        }
     }
 
     return scene;
@@ -1421,6 +1563,12 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     if (country.length) [parts addObject:country];
     NSInteger year = ASInt(item[@"year"]);
     if (year > 0) [parts addObject:[NSString stringWithFormat:@"%ld", (long)year]];
+    NSString *airF = ASAirStatusName(ASStr(item[@"airStatus"]), ASLangCode(item, self.langPref));
+    if (airF.length) [parts addObject:airF];
+    if (self.showsWatch) {
+        NSString *watchF = ASWatchName(ASStr(item[@"watch"]), ASLangCode(item, self.langPref));
+        if (watchF.length) [parts addObject:watchF];
+    }
     double vote = [item[@"vote"] doubleValue];
     if (vote > 0) [parts addObject:[NSString stringWithFormat:@"TMDB %.1f", vote]];
     NSString *metaText = [parts componentsJoinedByString:@"  ·  "];
@@ -1462,11 +1610,11 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     scene.frame = CGRectMake(0, 0, w, h);
     scene.backgroundColor = bg.CGColor;
 
-    CGImageRef poster = ASCreateThumbnail([NSURL fileURLWithPath:item[@"path"]], h * 1.1);
-    if (!poster) return scene;
+    CGImageRef posterRef = ASCreateThumbnail([NSURL fileURLWithPath:item[@"path"]], h * 1.1);
+    if (!posterRef) return scene;
 
     // 背景：同一张海报重模糊铺满，作为「延伸出去的颜色」
-    CGImageRef bgImg = ASBlurredBackground(poster, CGSizeMake(w * 0.45, h * 0.45), _ciContext);
+    CGImageRef bgImg = ASBlurredBackground(posterRef, CGSizeMake(w * 0.45, h * 0.45), _ciContext);
     CALayer *wash = [CALayer layer];
     wash.frame = CGRectMake(0, 0, w, h);
     wash.contentsGravity = kCAGravityResizeAspectFill;
@@ -1480,31 +1628,42 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     CGFloat imgH = h;
     CGFloat imgW = imgH * 2.0 / 3.0;
     CGFloat cardX = onLeft ? -imgW * 0.05 : w - imgW * 0.95;
+    // 三层：重模糊背景 → 边缘浮现的中等模糊 → 主体清晰（羽化烘进像素）
+    CGFloat imgH2 = imgH, imgW2 = imgW;
+    CGImageRef softBlur = ASBlurredBackgroundWithRadius(posterRef, CGSizeMake(imgW2 * 0.45, imgH2 * 0.45), _ciContext, 0.10);
+
+    static const CGFloat sharpA[5] = { 1.0, 1.0, 0.88, 0.45, 0.0 };
+    static const CGFloat sharpL[5] = { 0.0, 0.72, 0.86, 0.95, 1.0 };
+    static const CGFloat softA[5]  = { 0.0, 0.0, 0.75, 0.40, 0.0 };
+    static const CGFloat softL[5]  = { 0.0, 0.62, 0.86, 0.95, 1.0 };
+
+    CGImageRef sharpImg = ASFadeHorizontal(posterRef, onLeft, sharpA, sharpL, 5);
+    CGImageRelease(posterRef);
+    CGImageRef softImgF = softBlur ? ASFadeHorizontal(softBlur, onLeft, softA, softL, 5) : NULL;
+    if (softBlur) CGImageRelease(softBlur);
+
     CALayer *card = [CALayer layer];
     card.frame = CGRectMake(cardX, 0, imgW, imgH);
     card.contentsGravity = kCAGravityResizeAspectFill;
-    card.contents = (__bridge id)poster;
-    CGImageRelease(poster);
 
-    CAGradientLayer *mask = [CAGradientLayer layer];
-    mask.frame = card.bounds;
-    mask.type = kCAGradientLayerAxial;
-    mask.startPoint = onLeft ? CGPointMake(0.0, 0.5) : CGPointMake(1.0, 0.5);
-    mask.endPoint = onLeft ? CGPointMake(1.0, 0.5) : CGPointMake(0.0, 0.5);
-    mask.colors = @[
-        (id)[NSColor colorWithWhite:1 alpha:1].CGColor,
-        (id)[NSColor colorWithWhite:1 alpha:0.99].CGColor,
-        (id)[NSColor colorWithWhite:1 alpha:0.62].CGColor,
-        (id)[NSColor colorWithWhite:1 alpha:0.18].CGColor,
-        (id)[NSColor colorWithWhite:1 alpha:0.0].CGColor,
-    ];
-    mask.locations = @[@0.0, @0.32, @0.58, @0.78, @0.88];
-    card.mask = mask;
+    if (softImgF) {
+        CALayer *soft = [CALayer layer];
+        soft.frame = card.frame;
+        soft.contentsGravity = kCAGravityResizeAspectFill;
+        soft.contents = (__bridge id)softImgF;
+        [scene addSublayer:soft];
+        CGImageRelease(softImgF);
+    }
+
+    if (sharpImg) {
+        card.contents = (__bridge id)sharpImg;
+        CGImageRelease(sharpImg);
+    }
     [scene addSublayer:card];
 
     // 文字列放在另一侧
     CGFloat gapSide = w * 0.025;
-    CGFloat textX = onLeft ? (cardX + imgW * 0.92 + gapSide) : (w * 0.045);
+    CGFloat textX = onLeft ? (cardX + imgW * 0.97 + gapSide) : (w * 0.045);
     CGFloat textW = onLeft ? (w - textX - w * 0.05)
                            : (cardX + imgW * 0.12 - textX - w * 0.02);
 
@@ -1519,7 +1678,19 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     NSString *overview = ASLocalized(item, @"overview", self.langPref);
     CGFloat tagH = tagline.length ? (tagSize * 1.55 + tagSize * 0.9) : 0;
     CGFloat gap1 = h * 0.020, gap2 = h * 0.010, gap3 = h * 0.020;
+    id genreListF = item[@"genres"];
+    NSMutableArray *genreNamesF = [NSMutableArray array];
+    if ([genreListF isKindOfClass:[NSArray class]]) {
+        for (id g in (NSArray *)genreListF) {
+            if (genreNamesF.count >= 3) break;
+            NSString *n = ASGenreName(@([g integerValue]), ASLangCode(item, self.langPref));
+            if (n.length) [genreNamesF addObject:n];
+        }
+    }
+    CGFloat genreSize = MAX(13.0, h * 0.0172);
+    CGFloat genreH = genreNamesF.count ? genreSize * 1.55 : 0;
     CGFloat total = titleSize * 1.35 + gap1 + tagH + gap2 + metaSize * 1.6
+                  + (genreH > 0 ? h * 0.006 + genreH : 0)
                   + (overview.length ? gap3 + ovH : 0);
     CGFloat cursor = h * 0.5 + total / 2.0;
     CGFloat titleH = titleSize * 1.35;
@@ -1555,6 +1726,12 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     if (country.length) [parts addObject:country];
     NSInteger year = ASInt(item[@"year"]);
     if (year > 0) [parts addObject:[NSString stringWithFormat:@"%ld", (long)year]];
+    NSString *airF = ASAirStatusName(ASStr(item[@"airStatus"]), ASLangCode(item, self.langPref));
+    if (airF.length) [parts addObject:airF];
+    if (self.showsWatch) {
+        NSString *watchF = ASWatchName(ASStr(item[@"watch"]), ASLangCode(item, self.langPref));
+        if (watchF.length) [parts addObject:watchF];
+    }
     double vote = [item[@"vote"] doubleValue];
     if (vote > 0) [parts addObject:[NSString stringWithFormat:@"TMDB %.1f", vote]];
 
@@ -1564,6 +1741,26 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     meta.frame = CGRectMake(textX, cursor - metaSize * 1.6, textW, metaSize * 1.6);
     [scene addSublayer:meta];
     cursor -= metaSize * 1.6 + gap3;
+
+    if (genreNamesF.count) {
+        NSString *gText = [genreNamesF componentsJoinedByString:@"  /  "];
+        CGImageRef gImg = ASCreateTextImage(gText, @"PingFangSC-Regular", genreSize, 0.62, 0.7);
+        if (gImg) {
+            CGFloat gw = CGImageGetWidth(gImg) / 2.0, gh = CGImageGetHeight(gImg) / 2.0;
+            CGFloat fitW = MIN(1.0, textW / MAX(1.0, gw));
+            gw *= fitW;
+            gh *= fitW;
+            CGFloat gy = cursor - h * 0.006 - gh * 0.55;
+            CALayer *gl = [CALayer layer];
+            gl.contents = (__bridge id)gImg;
+            gl.contentsGravity = kCAGravityResize;
+            gl.frame = CGRectMake(textX - genreSize * 0.3, gy, gw, gh);
+            [scene addSublayer:gl];
+            CGImageRelease(gImg);
+        }
+        cursor -= h * 0.006 + genreH + h * 0.012;
+    }
+
 
     if (overview.length) {
         CGImageRef ovImg = ASCreateParagraphImage(overview, @"PingFangSC-Regular", ovSize, textW, 6);
@@ -1703,7 +1900,7 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     ASLog(@"[sheet] begin preview=%d cached=%d", self.isPreview, self.configSheet != nil);
     if (self.configSheet) return self.configSheet;
 
-    NSWindow *win = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 450, 476)
+    NSWindow *win = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 450, 502)
                                                styleMask:NSWindowStyleMaskTitled
                                                  backing:NSBackingStoreBuffered
                                                    defer:NO];
@@ -1792,6 +1989,12 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     [cv addSubview:cap];
     self.captionCheck = cap;
 
+    y -= 26;
+    NSButton *watch = [NSButton checkboxWithTitle:@"大剧照显示观看状态（在看 / 看完 / 想看 / 搁置）" target:nil action:nil];
+    watch.frame = NSMakeRect(fieldX, y, 330, 20);
+    [cv addSubview:watch];
+    self.watchCheck = watch;
+
     NSButton *ok = [NSButton buttonWithTitle:@"完成" target:self action:@selector(confirmConfig:)];
     ok.frame = NSMakeRect(330, 18, 92, 30);
     ok.keyEquivalent = @"\r";
@@ -1818,6 +2021,8 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 
     [scope selectItemAtIndex:[d integerForKey:kPrefScope]];
     cap.state = [d boolForKey:kPrefCaption] ? NSControlStateValueOn : NSControlStateValueOff;
+    watch.state = [d boolForKey:kPrefShowWatch] ? NSControlStateValueOn : NSControlStateValueOff;
+    watch.state = [d boolForKey:kPrefShowWatch] ? NSControlStateValueOn : NSControlStateValueOff;
     grid.stringValue = [self gridSummaryForCols:colVals[cols.indexOfSelectedItem].integerValue];
 
     self.configSheet = win;
@@ -1841,6 +2046,8 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     [d setInteger:self.langPopup.indexOfSelectedItem forKey:kPrefLang];
     [d setInteger:self.scopePopup.indexOfSelectedItem forKey:kPrefScope];
     [d setBool:self.captionCheck.state == NSControlStateValueOn forKey:kPrefCaption];
+    [d setBool:self.watchCheck.state == NSControlStateValueOn forKey:kPrefShowWatch];
+    [d setBool:self.watchCheck.state == NSControlStateValueOn forKey:kPrefShowWatch];
     [d synchronize];
 
     self.mode = self.modePopup.indexOfSelectedItem;
@@ -1852,6 +2059,8 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     self.langPref = self.langPopup.indexOfSelectedItem;
     self.scope = self.scopePopup.indexOfSelectedItem;
     self.showsCaption = self.captionCheck.state == NSControlStateValueOn;
+    self.showsWatch = self.watchCheck.state == NSControlStateValueOn;
+    self.showsWatch = self.watchCheck.state == NSControlStateValueOn;
     [self buildScene];
 
     [NSApp endSheet:self.configSheet];
