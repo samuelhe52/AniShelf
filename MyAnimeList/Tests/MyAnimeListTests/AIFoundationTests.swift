@@ -301,19 +301,11 @@ struct AIFoundationTests {
             configuration: AIConfiguration(defaults: .standard), keys: AIProviderKeyStorage())
         #expect(factory.reasoning == .off)
         // The mock answers [0, 1] only if the provider receives its structured-output
-        // format, reasoning-off flags, and no tool fields.
-        let jsonObjectProvider: ChatCompletionsLanguageModel.JSONObjectProvider? =
-            switch backend {
-            case .bailian: .bailian
-            case .deepSeek: .deepSeek
-            case .apple, .openAI, .openRouter: nil
-            }
-        let model = mockProvider(
-            "reasoningOff-\(backend.rawValue)",
-            reasoning: AISessionFactory.wireReasoning(factory.reasoning, for: backend),
-            jsonObjectProvider: jsonObjectProvider
-        )
-        let instructions = jsonObjectProvider.map { _ in "Return JSON like \(AIBatchSelection.jsonObjectExample)." }
+        // format, reasoning-off flags, and no tool fields. The app's own routing configures it.
+        var model = mockProvider("reasoningOff-\(backend.rawValue)")
+        let instructions = try AISessionFactory.configure(
+            &model, for: backend, reasoning: factory.reasoning, instructions: "Select matching entries.",
+            generating: AIBatchSelection.self)
         let response = try await LanguageModelSession(model: model, instructions: instructions).respond(
             to: "Select.", generating: AIBatchSelection.self, options: GenerationOptions(maximumResponseTokens: 64)
         )
@@ -321,18 +313,13 @@ struct AIFoundationTests {
     }
 
     @available(iOS 27.0, macOS 27.0, *)
-    private func mockProvider(
-        _ scenario: String, reasoning: ChatCompletionsLanguageModel.Reasoning? = nil,
-        jsonObjectProvider: ChatCompletionsLanguageModel.JSONObjectProvider? = nil
-    ) -> ChatCompletionsLanguageModel {
+    private func mockProvider(_ scenario: String) -> ChatCompletionsLanguageModel {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [AIStreamURLProtocol.self]
-        var model = ChatCompletionsLanguageModel(
+        return ChatCompletionsLanguageModel(
             name: "mock", url: URL(string: "https://ai-foundation.invalid/\(scenario)/v1")!,
-            reasoning: reasoning, urlSessionConfiguration: configuration
+            urlSessionConfiguration: configuration
         )
-        model.jsonObjectProvider = jsonObjectProvider
-        return model
     }
 
     @Test func providerErrorsAreReducedToSafeRetryCategories() async throws {

@@ -89,27 +89,45 @@ struct AISessionFactory {
                 url: url,
                 additionalHeaders: ["Authorization": "Bearer \(key)"],
                 supportsGuidedGeneration: true,
-                reasoning: Self.wireReasoning(reasoning, for: backend),
                 urlSessionConfiguration: sessionConfiguration
             )
-            var instructions = instructions
-            switch backend {
-            case .bailian, .deepSeek:
-                guard let type = type as? any AIJSONExample.Type else { throw AIError.requestFailed }
-                model.jsonObjectProvider = backend == .bailian ? .bailian : .deepSeek
-                instructions +=
-                    "\n\nReturn only a JSON object with these fields and types. Treat this as an example shape, not the answer:\n"
-                    + type.jsonObjectExample
-            case .apple, .openAI, .openRouter: break
-            }
+            let instructions = try Self.configure(
+                &model, for: backend, reasoning: reasoning, instructions: instructions, generating: type)
             return LanguageModelSession(model: model, instructions: instructions)
         }
         throw AIError.unavailable
     }
 
+    /// Applies `backend`'s request options to `model` and returns the instructions to send.
+    ///
+    /// Bailian and DeepSeek take JSON-object mode instead of a guided schema, so the
+    /// instructions carry an example of the shape.
+    @available(iOS 27.0, macOS 27.0, *)
+    static func configure<Value: Generable>(
+        _ model: inout ChatCompletionsLanguageModel, for backend: AIBackend, reasoning: AIReasoning,
+        instructions: String, generating type: Value.Type
+    ) throws -> String {
+        model.reasoning = wireReasoning(reasoning, for: backend)
+        model.jsonObjectProvider = jsonObjectProvider(for: backend)
+        guard model.jsonObjectProvider != nil else { return instructions }
+        guard let type = type as? any AIJSONExample.Type else { throw AIError.requestFailed }
+        return instructions
+            + "\n\nReturn only a JSON object with these fields and types. Treat this as an example shape, not the answer:\n"
+            + type.jsonObjectExample
+    }
+
+    @available(iOS 27.0, macOS 27.0, *)
+    private static func jsonObjectProvider(for backend: AIBackend) -> ChatCompletionsLanguageModel.JSONObjectProvider? {
+        switch backend {
+        case .bailian: .bailian
+        case .deepSeek: .deepSeek
+        case .apple, .openAI, .openRouter: nil
+        }
+    }
+
     /// OpenAI takes `reasoning_effort` (`none` turns it off); OpenRouter takes a `reasoning` object.
     @available(iOS 27.0, macOS 27.0, *)
-    static func wireReasoning(_ reasoning: AIReasoning, for backend: AIBackend) -> ChatCompletionsLanguageModel
+    private static func wireReasoning(_ reasoning: AIReasoning, for backend: AIBackend) -> ChatCompletionsLanguageModel
         .Reasoning?
     {
         switch backend {
