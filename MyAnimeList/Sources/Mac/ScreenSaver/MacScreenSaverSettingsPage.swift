@@ -36,15 +36,24 @@
                 LabeledContent("1. Install AniShelf’s screen saver") {
                     Button("Install…", action: install)
                 }
-                LabeledContent("2. Choose AniShelf") {
+                LabeledContent {
                     Button("Open Wallpaper Settings", action: openSettings)
+                } label: {
+                    Text("2. Choose AniShelf")
+                    Text("Click Screen Saver…, then choose AniShelf under Other at the bottom of the list.")
                 }
                 ScreenSaverArtworkStatus(publisher: publisher)
                 if publisher.settings.isEnabled {
-                    Button("Stop Updating and Remove Artwork") {
-                        publisher.settings.isEnabled = false
+                    LabeledContent {
+                        Button("Turn Off Screen Saver") {
+                            publisher.settings.isEnabled = false
+                        }
+                    } label: {
+                        Text(
+                            "AniShelf stops updating the screen saver and deletes its saved posters. To use it again, click Install…."
+                        )
+                        .foregroundStyle(.secondary)
                     }
-                    .controlSize(.small)
                 }
             }
             .alert(

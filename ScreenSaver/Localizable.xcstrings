@@ -6,7 +6,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AniShelfでスクリーンセーバーを設定してください。"
+            "value" : "AniShelfでスクリーンセーバを設定してください。"
           }
         },
         "zh-Hans" : {
@@ -22,7 +22,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AniShelfからスクリーンセーバーをアップデートしてください。"
+            "value" : "AniShelfからスクリーンセーバをアップデートしてください。"
           }
         },
         "zh-Hans" : {

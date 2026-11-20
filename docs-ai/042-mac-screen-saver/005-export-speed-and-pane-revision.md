@@ -22,7 +22,7 @@ slice 2–3 code.
 ## Decisions
 | Choice | Reason and alternative |
 | --- | --- |
-| Setup steps instead of an on/off toggle | "Enable Screen Saver" only controlled the artwork folder. The pane shows: 1. Install AniShelf’s screen saver with **Install…** (also starts keeping artwork), 2. Choose AniShelf with **Open Wallpaper Settings**. A small **Stop Updating and Remove Artwork** action undoes it. Rejected: a renamed toggle; always on. |
+| Setup steps instead of an on/off toggle | "Enable Screen Saver" only controlled the artwork folder. The pane shows: 1. Install AniShelf’s screen saver with **Install…** (also starts keeping artwork), 2. Choose AniShelf with **Open Wallpaper Settings** and the path inside it. **Turn Off Screen Saver** undoes it. Rejected: a renamed toggle; always on. |
 | Drop Refresh Now and Show in Finder | Updates are automatic; both exposed the mechanism. **Try Again** appears only after a failed update. |
 | No "publish" wording | One status line in plain words, for example "Up to date · 48 posters" or "Preparing artwork… 12 of 48". |
 
@@ -62,7 +62,18 @@ slice 2–3 code.
   Screen Saver pane exists on this system). The buttons first read "Install Screen
   Saver…" and "Open Screen Saver Settings", with an "In System Settings, under
   Wallpaper." caption; Samuel's review of the Japanese pane found the repetition and the
-  inaccurate button name, so the buttons were renamed and the caption removed.
+  inaccurate button name. The Wallpaper page holds only a **Screen Saver…** button; the
+  list of screen savers is in the sheet it opens, with third-party savers under
+  **Other** at the bottom. No settings URL opens that sheet (the Wallpaper extension
+  exposes no anchor for it), so step 2 now spells out the path: "Click Screen Saver…,
+  then choose AniShelf under Other at the bottom of the list."
+- Turning off: the action first read "Stop Updating and Remove Artwork", which named
+  the mechanism, not the result. It is now **Turn Off Screen Saver**, with the text
+  "AniShelf stops updating the screen saver and deletes its saved posters. To use it
+  again, click Install…." The saver stays installed and selected and shows its setup
+  message; only Install… turns updates back on.
+- Japanese spelling follows macOS: スクリーンセーバ (no final long-vowel mark), in both
+  the app and saver catalogs.
 - Note: the catalog key "Show" is generic and its `ja` value (表示する作品) fits only this
   picker; reuse of `Text("Show")` elsewhere would inherit it.
 
@@ -76,6 +87,7 @@ slice 2–3 code.
   measured.
 - Validation by Codex: focused publisher and ScreenSaverKit tests, `make build-mac`,
   `make build`, `codesign --verify --strict` on the embedded saver, `make run-mac` with a
-  48-entry fixture including Stop Updating and Remove Artwork.
+  48-entry fixture including Stop Updating and Remove Artwork (since renamed Turn Off
+  Screen Saver).
 - Re-run by Claude Code: `swift test --package-path ScreenSaverKit` (10 passed);
   `make test-app-mac APP_TEST_ONLY='MyAnimeListTests/ScreenSaverPublisherTests MyAnimeListTests/LibraryProfileSettingsLayoutPolicyTests'` (passed); `make build` (passed).

@@ -602,7 +602,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "スクリーンセーバーをインストールすると、画像の更新が始まります。"
+            "value" : "スクリーンセーバをインストールすると、画像の更新が始まります。"
           }
         },
         "zh-Hans" : {
@@ -1399,7 +1399,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1. AniShelfのスクリーンセーバーをインストール"
+            "value" : "1. AniShelfのスクリーンセーバをインストール"
           }
         },
         "zh-Hans" : {
@@ -4304,7 +4304,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "スクリーンセーバーを開けませんでした"
+            "value" : "スクリーンセーバを開けませんでした"
           }
         },
         "zh-Hans" : {
@@ -4368,7 +4368,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "スクリーンセーバーの画像を更新できませんでした。"
+            "value" : "スクリーンセーバの画像を更新できませんでした。"
           }
         },
         "zh-Hans" : {
@@ -11480,7 +11480,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "スクリーンセーバー"
+            "value" : "スクリーンセーバ"
           }
         },
         "zh-Hans" : {
@@ -11496,7 +11496,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ライブラリの準備ができると、スクリーンセーバーを設定できます。"
+            "value" : "ライブラリの準備ができると、スクリーンセーバを設定できます。"
           }
         },
         "zh-Hans" : {
@@ -11512,7 +11512,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "スクリーンセーバーのプレビュー"
+            "value" : "スクリーンセーバのプレビュー"
           }
         },
         "zh-Hans" : {
@@ -11528,7 +11528,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "スクリーンセーバーを利用できません"
+            "value" : "スクリーンセーバを利用できません"
           }
         },
         "zh-Hans" : {
@@ -12518,18 +12518,18 @@
         }
       }
     },
-    "Stop Updating and Remove Artwork" : {
+    "Turn Off Screen Saver" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "更新を停止して画像を削除"
+            "value" : "スクリーンセーバをオフにする"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "停止更新并移除图片"
+            "value" : "关闭屏幕保护程序"
           }
         }
       }
@@ -13139,7 +13139,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "スクリーンセーバーの画像を保存する空き容量がありません。"
+            "value" : "スクリーンセーバの画像を保存する空き容量がありません。"
           }
         },
         "zh-Hans" : {
@@ -16261,6 +16261,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "添加到分组"
+          }
+        }
+      }
+    },
+    "Click Screen Saver…, then choose AniShelf under Other at the bottom of the list." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「スクリーンセーバ…」をクリックし、リストの一番下にある「その他」でAniShelfを選択します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点按“屏幕保护程序…”，然后在列表底部的“其他”中选择AniShelf。"
+          }
+        }
+      }
+    },
+    "AniShelf stops updating the screen saver and deletes its saved posters. To use it again, click Install…." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfはスクリーンセーバの更新を停止し、保存したポスターを削除します。再び使うには「インストール…」をクリックします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf将停止更新屏幕保护程序并删除已保存的海报。要再次使用，请点按“安装…”。"
           }
         }
       }
