@@ -40,6 +40,11 @@ public final class ScreenSaverWash {
     private var origin = Date.now
     private var timeScale: Double = 1
     private var flows = true
+    private var speed: Double = 1
+    /// The flow clock, which runs at `speed` times the wash's own clock, read at `flowRebase`.
+    /// Rebasing on a speed change keeps every point where it is instead of jumping along its orbit.
+    private var flowBase: TimeInterval = 0
+    private var flowRebase: TimeInterval = 0
 
     nonisolated init() {}
 
@@ -49,10 +54,21 @@ public final class ScreenSaverWash {
         guard !isStarted else { return }
         isStarted = true
         origin = .now
+        flowBase = 0
+        flowRebase = 0
     }
 
-    func setFlows(_ flows: Bool) {
+    func setFlow(_ flows: Bool, speed: Double) {
+        guard flows != self.flows || speed != self.speed else { return }
+        let now = time(at: .now)
+        flowBase = flowTime(at: now)
+        flowRebase = now
         self.flows = flows
+        self.speed = speed
+    }
+
+    private func flowTime(at time: TimeInterval) -> TimeInterval {
+        flowBase + (time - flowRebase) * speed
     }
 
     /// Scenes with a ground of their own cover the wash; it pauses under them.
@@ -107,6 +123,7 @@ public final class ScreenSaverWash {
     /// so the field always covers the whole screen.
     func points(at time: TimeInterval) -> [SIMD2<Float>] {
         let mesh = target
+        let flow = flowTime(at: time)
         func stops(_ given: [Float]?, _ count: Int) -> [Float] {
             given ?? (0..<count).map { Float($0) / Float(max(count - 1, 1)) }
         }
@@ -120,7 +137,7 @@ public final class ScreenSaverWash {
                 let period = 22 + (seed.truncatingRemainder(dividingBy: 9))
                 let phase = seed * 1.7
                 // A still wash rests every point at its stop.
-                let angle = flows ? time / period * 2 * .pi + phase : 0
+                let angle = flows ? flow / period * 2 * .pi + phase : 0
                 let reach: Float = flows ? 0.28 : 0
                 let spanX = Self.span(xs, column)
                 let spanY = Self.span(ys, row)

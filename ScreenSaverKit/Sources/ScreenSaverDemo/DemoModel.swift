@@ -113,6 +113,7 @@ final class DemoModel {
     var pileDepth = 7
     var timelineHold: Double = 7
     var washFlows = true
+    var washSpeed: Double = 1
     /// Speeds playback up; only `--capture` sets it.
     var speed: Double = 1
     var details: Set<ScreenSaverManifest.Detail> = [.season, .year, .genres, .watchStatus, .userScore, .overview]
@@ -130,7 +131,7 @@ final class DemoModel {
         var draft = ScreenSaverDraft(
             settings: .init(
                 layout: layout.settingsLayout, details: Array(details), interval: interval, coverWallRows: rows,
-                washFlows: washFlows),
+                washFlows: washFlows, washSpeed: washSpeed),
             entryLimit: entryLimit, seed: seed)
         if case .draft(let layout) = layout { draft.layout = layout }
         draft.timeScale = speed
@@ -142,8 +143,10 @@ final class DemoModel {
         return DemoConfiguration(directory: directory, draft: draft)
     }
 
+    /// Also picks up a snapshot AniShelf wrote since the folder was chosen.
     func reshuffle() {
         seed = UInt64.random(in: .min ... .max)
+        readEntryCount()
     }
 
     private func readEntryCount() {

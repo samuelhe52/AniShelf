@@ -63,7 +63,7 @@ struct DemoWindow: View {
         .toolbar {
             ToolbarItemGroup {
                 Button("Reshuffle", systemImage: "shuffle") { model.reshuffle() }
-                    .help("Play other entries, in another order")
+                    .help("Reload the snapshot and play other entries, in another order")
                 Button("Open Stage", systemImage: "rectangle.on.rectangle") { openWindow(id: "stage") }
                     .help("Play at real size in a window that can go full screen")
             }
@@ -122,6 +122,22 @@ struct DemoSidebar: View {
             Section("Options") {
                 if model.layout.usesWash {
                     Toggle("Flowing Wash", isOn: $model.washFlows)
+                    if model.washFlows {
+                        LabeledContent("Flow Speed") {
+                            HStack {
+                                let speeds = ScreenSaverManifest.Settings.washSpeeds
+                                Slider(
+                                    value: Binding(
+                                        get: { Double(speeds.firstIndex(of: model.washSpeed) ?? 0) },
+                                        set: { model.washSpeed = speeds[Int($0.rounded())] }),
+                                    in: 0...Double(speeds.count - 1), step: 1
+                                )
+                                .labelsHidden()
+                                Text("\(model.washSpeed, format: .number)×")
+                                    .monospacedDigit().frame(width: 44, alignment: .trailing)
+                            }
+                        }
+                    }
                 }
                 if model.layout.usesInterval {
                     slider("Interval", value: $model.interval, in: 2...30, unit: "s")

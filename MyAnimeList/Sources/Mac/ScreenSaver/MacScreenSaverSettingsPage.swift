@@ -301,9 +301,36 @@
                 // Poster Focus, and Cover Wall's fallback to it, draws over the colour background.
                 if publisher.showsSlideOptions, publisher.settings.layout != .backdrop {
                     Toggle("Flowing Background", isOn: $publisher.settings.washFlows)
+                    if publisher.settings.washFlows {
+                        washSpeedSlider
+                    }
                 }
             }
             .frame(maxWidth: .infinity)
+        }
+
+        /// Snaps to the offered speeds, one tick each.
+        private var washSpeedSlider: some View {
+            let speeds = ScreenSaverManifest.Settings.washSpeeds
+            let step = Binding(
+                get: { Double(speeds.firstIndex(of: publisher.settings.washSpeed) ?? speeds.firstIndex(of: 1) ?? 0) },
+                set: { publisher.settings.washSpeed = speeds[min(max(Int($0.rounded()), 0), speeds.count - 1)] }
+            )
+            return LabeledContent("Flow Speed") {
+                Slider(value: step, in: 0...Double(speeds.count - 1), step: 1) {
+                    Text("Flow Speed")
+                } minimumValueLabel: {
+                    Image(systemName: "tortoise")
+                        .accessibilityLabel("Slower")
+                } maximumValueLabel: {
+                    Image(systemName: "hare")
+                        .accessibilityLabel("Faster")
+                } tick: { value in
+                    SliderTick(value)
+                }
+                .labelsHidden()
+                .frame(width: 176)
+            }
         }
 
         private var coverWallRowsSlider: some View {

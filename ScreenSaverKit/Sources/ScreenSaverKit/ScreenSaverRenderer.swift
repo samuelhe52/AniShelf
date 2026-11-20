@@ -201,7 +201,7 @@ public final class ScreenSaverRenderer {
 
     private func present(_ scene: ScreenSaverScene, token: UUID, animated: Bool) -> Bool {
         guard session.contains(token) else { return false }
-        wash.setFlows(scene.washFlows)
+        wash.setFlow(scene.washFlows, speed: scene.washSpeed)
 
         withoutImplicitAnimations {
             let layouts = ScreenSaverLayouts(size: size, scale: scale)

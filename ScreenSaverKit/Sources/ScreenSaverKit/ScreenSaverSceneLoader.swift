@@ -33,6 +33,7 @@ struct ScreenSaverScene: Sendable {
     var duration: TimeInterval = 4
     var next = Cursor()
     var washFlows = true
+    var washSpeed: Double = 1
 }
 
 struct ScreenSaverSlideOrder: Sendable {
@@ -138,6 +139,7 @@ actor ScreenSaverSceneLoader {
             entries: entries, settings: settings, cursor: cursor, size: size, scale: scale, seed: seed, draft: draft,
             image: image)
         scene.washFlows = settings.washFlows
+        scene.washSpeed = settings.washSpeed
         return scene
     }
 

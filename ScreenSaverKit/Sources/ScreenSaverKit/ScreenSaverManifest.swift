@@ -61,6 +61,8 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
     public struct Settings: Codable, Equatable, Sendable {
         public static let defaultCoverWallRows = 4
         public static let coverWallRowRange = 2...8
+        /// The flow speeds the settings offer, as multiples of the normal speed.
+        public static let washSpeeds: [Double] = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4]
 
         public let layout: Layout
         public let details: [Detail]
@@ -69,12 +71,15 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         /// Whether the colour wash behind Poster Focus drifts. Off, it holds still and only blends
         /// from one poster's colours to the next.
         public let washFlows: Bool
+        /// How fast a flowing wash drifts, as a multiple of its normal speed.
+        public let washSpeed: Double
 
         public init(
             layout: Layout, details: [Detail]? = nil, interval: TimeInterval,
-            coverWallRows: Int = Self.defaultCoverWallRows, washFlows: Bool = true
+            coverWallRows: Int = Self.defaultCoverWallRows, washFlows: Bool = true, washSpeed: Double = 1
         ) {
             self.washFlows = washFlows
+            self.washSpeed = Self.washSpeeds.min { abs($0 - washSpeed) < abs($1 - washSpeed) } ?? 1
             self.layout = layout
             self.details = Detail.normalized(details ?? Detail.defaults(for: layout))
             self.interval = interval
@@ -92,7 +97,8 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
                 coverWallRows: try values.decodeIfPresent(Int.self, forKey: .coverWallRows)
                     ?? Self.defaultCoverWallRows,
                 // Snapshots written before this option flow, as the saver always did.
-                washFlows: try values.decodeIfPresent(Bool.self, forKey: .washFlows) ?? true
+                washFlows: try values.decodeIfPresent(Bool.self, forKey: .washFlows) ?? true,
+                washSpeed: try values.decodeIfPresent(Double.self, forKey: .washSpeed) ?? 1
             )
         }
     }

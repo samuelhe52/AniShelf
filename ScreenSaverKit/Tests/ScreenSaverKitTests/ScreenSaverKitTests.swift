@@ -22,7 +22,7 @@ struct ScreenSaverKitTests {
             createdAt: Date(timeIntervalSince1970: 1_790_000_000.123),
             settings: .init(
                 layout: .backdrop, details: [.score, .userScore, .year], interval: 12, coverWallRows: 8,
-                washFlows: false),
+                washFlows: false, washSpeed: 2),
             entries: [
                 .init(
                     id: "fixture-1",
