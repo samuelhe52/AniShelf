@@ -140,15 +140,19 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         public static let coverWallRowRange = 2...8
         /// The flow speeds the settings offer, as multiples of the normal speed.
         public static let washSpeeds: [Double] = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4]
+        public static let defaultInterval: TimeInterval = 12
+        public static let intervalPresets: [TimeInterval] = [5, 8, defaultInterval, 20, 30, 60]
         public static let defaultFlipDelay: TimeInterval = 3
         public static let flipDelayRange: ClosedRange<TimeInterval> = 1...120
+        public static let flipDelayPresets: [TimeInterval] = [defaultFlipDelay, 5, 10, 20, 30, 60, 120]
         public static let defaultDriftRate: Double = 4
         public static let driftRateRange: ClosedRange<Double> = 1...30
         public static let defaultDeckDepth = 5
         public static let defaultPileDepth = 7
         public static let deckDepthRange = 2...12
-        public static let defaultTimelineHold: TimeInterval = 7
+        public static let defaultTimelineHold: TimeInterval = 8
         public static let timelineHoldRange: ClosedRange<TimeInterval> = 2...120
+        public static let timelineHoldPresets: [TimeInterval] = [4, 6, defaultTimelineHold, 10, 20, 30, 60, 120]
 
         public let layout: Layout
         public let details: [Detail]
@@ -181,8 +185,8 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             self.washSpeed = Self.washSpeeds.min { abs($0 - washSpeed) < abs($1 - washSpeed) } ?? 1
             self.layout = layout
             self.details = Detail.normalized(details ?? Detail.defaults(for: layout))
-            // Between a second and an hour; 12 s if the value is not a number.
-            self.interval = interval.isFinite ? min(max(interval, 1), 3_600) : 12
+            // Between a second and an hour.
+            self.interval = interval.isFinite ? min(max(interval, 1), 3_600) : Self.defaultInterval
             self.coverWallRows = Self.coverWallRowRange.clamp(coverWallRows)
             self.flipDelay = Self.flipDelayRange.clamp(flipDelay.isFinite ? flipDelay : Self.defaultFlipDelay)
             self.driftRate = Self.driftRateRange.clamp(driftRate.isFinite ? driftRate : Self.defaultDriftRate)

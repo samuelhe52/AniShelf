@@ -83,7 +83,7 @@
         var scope = Scope.favorites
         var layout = Layout.coverWall
         private var detailSelections: [Layout: [Detail]] = [:]
-        var interval: TimeInterval = 12
+        var interval = ManifestSettings.defaultInterval
         var coverWallRows = ManifestSettings.defaultCoverWallRows
         /// Whether the colour background drifts.
         var washFlows = true
@@ -108,8 +108,6 @@
                     detailSelections[layout] = Detail.normalized(stored.compactMap(Detail.init(rawValue:)))
                 }
             }
-            let seconds = defaults.double(forKey: Self.intervalKey)
-            if seconds.isFinite, (1...3_600).contains(seconds) { interval = seconds }
             let rows = defaults.integer(forKey: Self.coverWallRowsKey)
             if ManifestSettings.coverWallRowRange.contains(rows) { coverWallRows = rows }
             washFlows = defaults.object(forKey: Self.washFlowsKey) as? Bool ?? true
@@ -120,11 +118,17 @@
                 guard let value = defaults.object(forKey: key) as? Value, range.contains(value) else { return nil }
                 return value
             }
-            flipDelay = stored(Self.flipDelayKey, in: ManifestSettings.flipDelayRange) ?? flipDelay
+            func duration(_ key: String, presets: [TimeInterval], defaultValue: TimeInterval) -> TimeInterval {
+                let value = defaults.double(forKey: key)
+                return presets.contains(value) ? value : defaultValue
+            }
+            interval = duration(Self.intervalKey, presets: ManifestSettings.intervalPresets, defaultValue: interval)
+            flipDelay = duration(Self.flipDelayKey, presets: ManifestSettings.flipDelayPresets, defaultValue: flipDelay)
+            timelineHold = duration(
+                Self.timelineHoldKey, presets: ManifestSettings.timelineHoldPresets, defaultValue: timelineHold)
             driftRate = stored(Self.driftRateKey, in: ManifestSettings.driftRateRange) ?? driftRate
             deckDepth = stored(Self.deckDepthKey, in: ManifestSettings.deckDepthRange) ?? deckDepth
             pileDepth = stored(Self.pileDepthKey, in: ManifestSettings.deckDepthRange) ?? pileDepth
-            timelineHold = stored(Self.timelineHoldKey, in: ManifestSettings.timelineHoldRange) ?? timelineHold
             timelineDateSource =
                 defaults.string(forKey: Self.timelineDateSourceKey)
                 .flatMap(ScreenSaverManifest.TimelineDateSource.init(rawValue:)) ?? .airDate

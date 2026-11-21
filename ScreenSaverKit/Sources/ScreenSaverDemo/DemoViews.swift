@@ -164,7 +164,7 @@ struct DemoLayoutControl: View {
                 washSpeedSlider
             }
         case .interval:
-            slider("Interval", value: $model.interval, in: 2...30, unit: "s")
+            ScreenSaverDurationSlider("Interval", value: $model.interval, timing: .interval)
         case .rows:
             Stepper("Rows: \(model.rows)", value: $model.rows, in: Settings.coverWallRowRange)
         case .deckDepth:
@@ -172,9 +172,17 @@ struct DemoLayoutControl: View {
         case .pileDepth:
             Stepper("Cards: \(model.pileDepth)", value: $model.pileDepth, in: Settings.deckDepthRange)
         case .flipDelay:
-            slider("Flips about every", value: $model.flipDelay, in: Settings.flipDelayRange, unit: "s")
+            ScreenSaverDurationSlider("Flip Delay", value: $model.flipDelay, timing: .flipDelay)
         case .driftRate:
-            slider("Posters per 10 s", value: $model.driftRate, in: Settings.driftRateRange)
+            LabeledContent("Posters per 10 s") {
+                HStack {
+                    Slider(value: $model.driftRate, in: Settings.driftRateRange, step: 1) {
+                        Text("Posters per 10 s")
+                    }
+                    .labelsHidden()
+                    Text("\(Int(model.driftRate))").monospacedDigit().frame(width: 36, alignment: .trailing)
+                }
+            }
         case .timelineDateSource:
             Picker("Date Source", selection: $model.timelineDateSource) {
                 Text("Date On Air").tag(ScreenSaverManifest.TimelineDateSource.airDate)
@@ -190,7 +198,7 @@ struct DemoLayoutControl: View {
                 Text("Full Date").tag(ScreenSaverManifest.TimelineDatePrecision.fullDate)
             }
         case .timelineHold:
-            slider("Hold", value: $model.timelineHold, in: Settings.timelineHoldRange, unit: "s")
+            ScreenSaverDurationSlider("Hold Duration", value: $model.timelineHold, timing: .timelineHold)
         }
     }
 
@@ -207,19 +215,6 @@ struct DemoLayoutControl: View {
                 .labelsHidden()
                 Text("\(model.washSpeed, format: .number)×")
                     .monospacedDigit().frame(width: 44, alignment: .trailing)
-            }
-        }
-    }
-
-    private func slider(
-        _ title: LocalizedStringKey, value: Binding<Double>, in range: ClosedRange<Double>, unit: String = ""
-    )
-        -> some View
-    {
-        LabeledContent(title) {
-            HStack {
-                Slider(value: value, in: range, step: 1) { Text(title) }.labelsHidden()
-                Text("\(Int(value.wrappedValue))\(unit)").monospacedDigit().frame(width: 36, alignment: .trailing)
             }
         }
     }

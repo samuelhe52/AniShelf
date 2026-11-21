@@ -294,12 +294,11 @@
         let control: ScreenSaverManifest.Layout.Control
         @Bindable var publisher: ScreenSaverPublisher
 
-        private static let intervals: [TimeInterval] = [5, 8, 12, 20, 30, 60]
-
         var body: some View {
             switch control {
             case .interval:
-                intervalPicker
+                ScreenSaverDurationSlider(
+                    "Interval", value: $publisher.settings.interval, timing: .interval, controlWidth: 176)
             case .rows:
                 integerSlider("Rows", value: $publisher.settings.coverWallRows, in: Settings.coverWallRowRange)
             case .flowingBackground:
@@ -312,15 +311,23 @@
             case .pileDepth:
                 integerSlider("Cards", value: $publisher.settings.pileDepth, in: Settings.deckDepthRange)
             case .flipDelay:
-                numberSlider(
-                    "Flip Delay", value: $publisher.settings.flipDelay, in: Settings.flipDelayRange, inSeconds: true)
+                ScreenSaverDurationSlider(
+                    "Flip Delay", value: $publisher.settings.flipDelay, timing: .flipDelay, controlWidth: 176)
             case .driftRate:
-                numberSlider(
-                    "Posters per 10 Seconds", value: $publisher.settings.driftRate, in: Settings.driftRateRange)
+                LabeledContent("Posters per 10 Seconds") {
+                    HStack(spacing: 8) {
+                        Slider(value: $publisher.settings.driftRate, in: Settings.driftRateRange, step: 1) {
+                            Text("Posters per 10 Seconds")
+                        }
+                        .labelsHidden()
+                        Text(publisher.settings.driftRate, format: .number)
+                            .monospacedDigit()
+                    }
+                    .frame(width: 176)
+                }
             case .timelineHold:
-                numberSlider(
-                    "Hold Duration", value: $publisher.settings.timelineHold, in: Settings.timelineHoldRange,
-                    inSeconds: true)
+                ScreenSaverDurationSlider(
+                    "Hold Duration", value: $publisher.settings.timelineHold, timing: .timelineHold, controlWidth: 176)
             case .timelineDateSource:
                 Picker("Date Source", selection: $publisher.settings.timelineDateSource) {
                     Text("Date On Air").tag(ScreenSaverManifest.TimelineDateSource.airDate)
@@ -331,20 +338,6 @@
                     Text("Year").tag(ScreenSaverManifest.TimelineDatePrecision.year)
                     Text("Year and Month").tag(ScreenSaverManifest.TimelineDatePrecision.yearAndMonth)
                     Text("Full Date").tag(ScreenSaverManifest.TimelineDatePrecision.fullDate)
-                }
-            }
-        }
-
-        private var intervalPicker: some View {
-            let current = publisher.settings.interval
-            let intervals = Self.intervals.contains(current) ? Self.intervals : (Self.intervals + [current]).sorted()
-            return Picker("Interval", selection: $publisher.settings.interval) {
-                ForEach(intervals, id: \.self) { seconds in
-                    Text(
-                        Measurement(value: seconds, unit: UnitDuration.seconds),
-                        format: .measurement(width: .wide, usage: .asProvided)
-                    )
-                    .tag(seconds)
                 }
             }
         }
@@ -390,28 +383,6 @@
                     .labelsHidden()
                     Text(value.wrappedValue, format: .number)
                         .monospacedDigit()
-                }
-                .frame(width: 176)
-            }
-        }
-
-        private func numberSlider(
-            _ title: LocalizedStringKey, value: Binding<Double>, in range: ClosedRange<Double>, inSeconds: Bool = false
-        ) -> some View {
-            LabeledContent(title) {
-                HStack(spacing: 8) {
-                    Slider(value: value, in: range, step: 1) { Text(title) }
-                        .labelsHidden()
-                    if inSeconds {
-                        Text(
-                            Measurement(value: value.wrappedValue, unit: UnitDuration.seconds),
-                            format: .measurement(width: .abbreviated, usage: .asProvided)
-                        )
-                        .monospacedDigit()
-                    } else {
-                        Text(value.wrappedValue, format: .number)
-                            .monospacedDigit()
-                    }
                 }
                 .frame(width: 176)
             }

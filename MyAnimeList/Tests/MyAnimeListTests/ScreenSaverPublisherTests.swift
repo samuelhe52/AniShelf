@@ -72,11 +72,11 @@
             settings.setDetail(.genres, false, for: .deckFan)
             settings.setDetail(.overview, true, for: .timeline)
             settings.layout = .timeline
-            settings.flipDelay = 17
+            settings.flipDelay = 20
             settings.driftRate = 8
             settings.deckDepth = 9
             settings.pileDepth = 8
-            settings.timelineHold = 21
+            settings.timelineHold = 4
             settings.timelineDateSource = .watchDates
             settings.timelineDatePrecision = .year
             settings.save(to: fixture.defaults)
@@ -89,6 +89,20 @@
             #expect(restored.details(for: .deckFan) == [.season, .year])
             #expect(restored.details(for: .deckPile) == [.season, .year, .genres])
             #expect(restored.manifestSettings.details == [.season, .genres])
+        }
+
+        @Test
+        func settingsDiscardSavedDurationsOutsideThePresets() throws {
+            let fixture = try Fixture()
+            defer { fixture.cleanup() }
+            fixture.defaults.set(9, forKey: ScreenSaverSettings.intervalKey)
+            fixture.defaults.set(17, forKey: ScreenSaverSettings.flipDelayKey)
+            fixture.defaults.set(7, forKey: ScreenSaverSettings.timelineHoldKey)
+
+            let settings = ScreenSaverSettings(defaults: fixture.defaults)
+            #expect(settings.interval == 12)
+            #expect(settings.flipDelay == 3)
+            #expect(settings.timelineHold == 8)
         }
 
         @Test

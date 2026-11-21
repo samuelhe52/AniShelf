@@ -29,3 +29,12 @@ incoming card joining from one slot deeper. The caption follows the reveal.
 
 In Depth Drift, the nearest plane uses a blur radius of 3% of poster width.
 At 6%, the foreground lost its artwork and spread a veil over the sharp posters behind it.
+
+## Duration controls
+
+AniShelf settings and the Demo use the same stepped sliders for Interval, Flip Delay,
+and Timeline Hold Duration. Use one tick per preset, not one per second: the stops
+are spaced evenly on screen even when the gaps between durations are not. AniShelf
+loads only saved presets; other values use the control's default. Flip Delay starts
+at 3 seconds, its default. Timeline Hold Duration offers 4, 6, 8, 10, 20, 30, 60,
+and 120 seconds, defaulting to 8.

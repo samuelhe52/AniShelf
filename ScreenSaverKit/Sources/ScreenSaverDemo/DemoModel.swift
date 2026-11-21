@@ -65,7 +65,7 @@ final class DemoModel {
     var preset = ScreenPreset.all[0]
     /// Nil plays every entry in the snapshot.
     var entryLimit: Int?
-    var interval: Double = 6
+    var interval = Settings.defaultInterval
     var rows = Settings.defaultCoverWallRows
     var flipDelay = Settings.defaultFlipDelay
     var driftRate = Settings.defaultDriftRate
