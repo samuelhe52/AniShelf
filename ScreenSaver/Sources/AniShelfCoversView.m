@@ -689,6 +689,8 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 @property (nonatomic, strong) NSPopUpButton *alignPopup;
 @property (nonatomic, strong) NSPopUpButton *langPopup;
 @property (nonatomic, assign) BOOL stopped;
+@property (nonatomic, assign) BOOL introPlayed;
+@property (nonatomic, assign) CFTimeInterval introEnd;
 @property (nonatomic, assign) BOOL advancedOpen;
 @property (nonatomic, strong) NSView *basicBox;
 @property (nonatomic, strong) NSView *advBox;
@@ -883,6 +885,45 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     });
 }
 
+// 开场动画：黑屏 1 秒 → 淡入 0.9 秒。
+// 每次建场景都调用：若重建发生在开场区间内，就按剩余进度续播，不会闪一下跳到全亮。
+- (void)applyIntroToStage:(CALayer *)stage {
+    CFTimeInterval now = CACurrentMediaTime();
+    if (!self.introPlayed) {
+        self.introPlayed = YES;
+        self.introEnd = now + 1.9;
+    }
+    if (now >= self.introEnd) {
+        [CATransaction begin];
+        [CATransaction setDisableActions:YES];
+        stage.opacity = 1.0;
+        [CATransaction commit];
+        return;
+    }
+
+    CFTimeInterval fadeBegin = self.introEnd - 0.9;   // 黑屏 1 秒后才开始淡入
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    stage.opacity = 0.0;
+    [CATransaction commit];
+
+    CABasicAnimation *fade = [CABasicAnimation animationWithKeyPath:@"opacity"];
+    fade.fromValue = @0.0;
+    fade.toValue = @1.0;
+    fade.duration = 0.9;
+    // 已经进入淡入阶段时 beginTime 落在过去，CoreAnimation 会直接从中间状态继续
+    fade.beginTime = [stage convertTime:fadeBegin fromLayer:nil];
+    fade.fillMode = kCAFillModeBoth;
+    fade.removedOnCompletion = NO;
+    fade.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+    [stage addAnimation:fade forKey:@"introFade"];
+
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    stage.opacity = 1.0;
+    [CATransaction commit];
+}
+
 - (void)buildScene {
     CFTimeInterval sceneT0 = CACurrentMediaTime();
     CGFloat w = NSWidth(self.bounds), h = NSHeight(self.bounds);
@@ -901,6 +942,14 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     stage.backgroundColor = [NSColor colorWithCalibratedRed:0.035 green:0.035 blue:0.045 alpha:1].CGColor;
     [self.layer addSublayer:stage];
     self.stage = stage;
+
+    // 开场统一：保持黑屏 1 秒，再花 0.9 秒淡入。第一张剧照不展示，
+    // 由后面淡入的第二张接替（各模式一致）
+    [self applyIntroToStage:stage];
+
+    // 开场统一：保持黑屏 1 秒，再花 0.9 秒淡入。第一张剧照不展示，
+    // 由后面淡入的第二张接替（各模式一致）
+    [self applyIntroToStage:stage];
 
     CALayer *backdrop = [CALayer layer];
     backdrop.frame = self.bounds;
@@ -1317,8 +1366,12 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
         }
     }
     NSInteger keepIndex = self.bigIndex;
+    BOOL firstBuild = (self.bigItems.count == 0);
     self.bigItems = items;
-    self.bigIndex = (keepIndex >= 0 && keepIndex < (NSInteger)items.count) ? keepIndex : 0;
+    // 开场那张不展示：首次构建直接从第二条开始
+    NSInteger startIndex = (keepIndex >= 0 && keepIndex < (NSInteger)items.count) ? keepIndex : 0;
+    if (firstBuild && items.count > 1) startIndex = 1;
+    self.bigIndex = startIndex;
     // 统一走翻页式：首图直接整幅显示，不再用旧的连续平移（那会把首图摆在滚动一半的位置）
     NSInteger idx = self.bigIndex;
     if (idx < 0 || idx >= (NSInteger)items.count) idx = 0;
@@ -2142,8 +2195,9 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     }
     if (self.mode >= 2) {
         if (self.nextBig <= 0) {
-            // 首帧才开始计时：背景加载、窗口放大都不占用第一张的停留时间
-            self.nextBig = now + self.bigInterval;
+            // 首帧才开始计时：背景加载、窗口放大都不占用停留时间；
+            // 开场淡入期间也不算，从淡入结束起算一个完整间隔
+            self.nextBig = MAX(now, self.introEnd) + self.bigInterval;
         } else if (now >= self.nextBig) {
             [self advanceBigStill];   // nextBig 由 advanceBigStill 自行安排（含切换耗时）
         }
