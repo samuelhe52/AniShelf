@@ -87,9 +87,18 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         case overview
 
         public static func defaults(for layout: Layout) -> [Detail] {
-            if layout == .backdrop { return [.year] }
-            let available = available(for: layout.detailSelectionLayout)
-            return [Self.season, .year, .genres].filter(available.contains)
+            switch layout.detailSelectionLayout {
+            case .posterFocus, .coverFusion, .editorialCover:
+                [.season, .year, .genres, .userScore, .overview]
+            case .backdrop:
+                [.season, .year, .genres, .userScore]
+            case .deckFan, .deckPile:
+                [.season, .year, .genres]
+            case .timeline:
+                [.season, .genres, .userScore]
+            case .coverWall, .flipWall, .depthDrift:
+                []
+            }
         }
 
         public static func available(for layout: Layout) -> [Detail] {
