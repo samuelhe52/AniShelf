@@ -82,7 +82,8 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             self.washSpeed = Self.washSpeeds.min { abs($0 - washSpeed) < abs($1 - washSpeed) } ?? 1
             self.layout = layout
             self.details = Detail.normalized(details ?? Detail.defaults(for: layout))
-            self.interval = interval
+            // Between a second and an hour; 12 s if the value is not a number.
+            self.interval = interval.isFinite ? min(max(interval, 1), 3_600) : 12
             self.coverWallRows = min(
                 max(coverWallRows, Self.coverWallRowRange.lowerBound), Self.coverWallRowRange.upperBound)
         }

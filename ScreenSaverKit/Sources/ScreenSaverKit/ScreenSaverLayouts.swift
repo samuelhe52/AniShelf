@@ -295,10 +295,22 @@ struct ScreenSaverLayouts {
         return Metrics(lines: lines.count, height: fitted.height, lastLineWidth: last, lineEnds: ends)
     }
 
+    /// Text laid out and truncated, ready to draw.
+    struct FittedText {
+        let setter: CTFramesetter
+        let width: CGFloat
+        let height: CGFloat
+
+        /// The frame `textLayer(_:)` draws, in its bottom-left coordinates.
+        var frame: CTFrame {
+            let path = CGPath(rect: CGRect(x: 0, y: 0, width: width, height: height), transform: nil)
+            return CTFramesetterCreateFrame(setter, CFRange(), path, nil)
+        }
+    }
+
     /// Text is laid out, truncated, and drawn by CoreText into an image, so what is measured is
     /// exactly what is drawn. (CATextLayer ignores line spacing and cannot truncate wrapped text.)
     /// Text exceeding the line or height limit ends with an ellipsis.
-    /// When requested, each drawn line's bounds are reported in top-left text layer coordinates.
     func textLayer(
         _ text: String?,
         width: CGFloat,
@@ -310,10 +322,28 @@ struct ScreenSaverLayouts {
         lineSpacing: CGFloat = 1,
         center: Bool = false,
         color: CGColor? = nil,
-        tracking: CGFloat = 0,
-        recordLineBounds: ((CGRect) -> Void)? = nil
+        tracking: CGFloat = 0
     ) -> CALayer? {
-        let padding = size * 0.2 // Room below the last line for descenders.
+        fittedText(
+            text, width: width, size: size, weight: weight, alpha: alpha, lines: lines, maxHeight: maxHeight,
+            lineSpacing: lineSpacing, center: center, color: color, tracking: tracking
+        ).flatMap(textLayer)
+    }
+
+    func fittedText(
+        _ text: String?,
+        width: CGFloat,
+        size: CGFloat,
+        weight: NSFont.Weight,
+        alpha: CGFloat = 0.96,
+        lines: Int = .max,
+        maxHeight: CGFloat = .greatestFiniteMagnitude,
+        lineSpacing: CGFloat = 1,
+        center: Bool = false,
+        color: CGColor? = nil,
+        tracking: CGFloat = 0
+    ) -> FittedText? {
+        let padding = size * 0.2  // Room below the last line for descenders.
         guard let text = text.nonEmpty, width > 0, size > 0, lines > 0, maxHeight > padding else { return nil }
         func make(_ text: String) -> NSAttributedString {
             attributed(
@@ -345,40 +375,24 @@ struct ScreenSaverLayouts {
             } while end > 0
             guard fits(metrics) else { return nil }
         }
-        let height = ceil(metrics.height + padding)
+        return FittedText(setter: setter, width: width, height: ceil(metrics.height + padding))
+    }
+
+    func textLayer(_ text: FittedText) -> CALayer? {
         guard
             let context = CGContext(
-                data: nil, width: Int(ceil(width * scale)), height: Int(ceil(height * scale)), bitsPerComponent: 8,
-                bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                data: nil, width: Int(ceil(text.width * scale)), height: Int(ceil(text.height * scale)),
+                bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         else { return nil }
         context.scaleBy(x: scale, y: scale)
-        let path = CGPath(rect: CGRect(x: 0, y: 0, width: width, height: height), transform: nil)
-        let frame = CTFramesetterCreateFrame(setter, CFRange(), path, nil)
-        if let recordLineBounds, let lines = CTFrameGetLines(frame) as? [CTLine] {
-            withUnsafeTemporaryAllocation(of: CGPoint.self, capacity: lines.count) { origins in
-                guard let baseAddress = origins.baseAddress else { return }
-                CTFrameGetLineOrigins(frame, CFRange(), baseAddress)
-                for (index, line) in lines.enumerated() {
-                    var ascent: CGFloat = 0
-                    var descent: CGFloat = 0
-                    let width = CTLineGetTypographicBounds(line, &ascent, &descent, nil)
-                    let typographic = CGRect(x: 0, y: -descent, width: width, height: ascent + descent)
-                    let ink = typographic.union(CTLineGetBoundsWithOptions(line, .useGlyphPathBounds))
-                    recordLineBounds(
-                        CGRect(
-                            x: ink.minX + origins[index].x, y: height - origins[index].y - ink.maxY,
-                            width: ink.width, height: ink.height))
-                }
-            }
-        }
-        CTFrameDraw(frame, context)
+        CTFrameDraw(text.frame, context)
 
         let layer = CALayer()
         layer.name = Self.textLayerName
         layer.contents = context.makeImage()
         layer.contentsScale = scale
-        layer.frame.size = CGSize(width: width, height: height)
+        layer.frame.size = CGSize(width: text.width, height: text.height)
         return layer
     }
 

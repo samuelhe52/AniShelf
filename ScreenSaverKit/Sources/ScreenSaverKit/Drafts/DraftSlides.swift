@@ -78,15 +78,18 @@ extension ScreenSaverLayouts {
             // On tight portrait screens the art can shrink, but gets most of the shared space.
             let excerpt = unit * 0.10
             let artReserve = min(preferredArt, excerpt * artShare / (1 - artShare))
-            headlineDepth = min(headlineDepth, max(headlineDepth / 2, headlineTop - overviewBase - excerpt - artReserve))
+            headlineDepth = min(
+                headlineDepth, max(headlineDepth / 2, headlineTop - overviewBase - excerpt - artReserve))
         }
         var headlineBottom = headlineTop
         var headlineLines: [CGRect] = []
         if let title = entry.title, !title.isEmpty,
-            let headline = editorialHeadline(
+            let fitted = editorialHeadline(
                 title, width: size.width - margin * 2, maxHeight: headlineDepth, maxLines: portrait ? 5 : 4,
-                accent: accent, recordLineBounds: { headlineLines.append($0) })
+                accent: accent),
+            let headline = textLayer(fitted)
         {
+            headlineLines = inkBounds(of: fitted)
             headlineBottom -= headline.bounds.height
             headline.frame.origin = CGPoint(x: margin, y: headlineBottom)
             scene.addSublayer(headline)
@@ -104,7 +107,7 @@ extension ScreenSaverLayouts {
             }
         }
 
-        let hasDetails = column.layers.count > 1 // A rule alone isn't a details column.
+        let hasDetails = column.layers.count > 1  // A rule alone isn't a details column.
         if hasDetails {
             place(column, x: margin, top: margin + column.height, in: scene)
         }
@@ -115,7 +118,8 @@ extension ScreenSaverLayouts {
             // The card can sit below a line or grow beside it. It expands from the centre in
             // portrait and from the right edge otherwise.
             let below = (headlineTop - line.maxY - clearance - bottom) / footprint.height
-            let beside = portrait
+            let beside =
+                portrait
                 ? 2 * max(bounds.midX - margin - line.maxX, margin + line.minX - bounds.midX)
                 : right - margin - line.maxX
             height = min(height, max(below, (beside - clearance) / footprint.width))
@@ -124,7 +128,8 @@ extension ScreenSaverLayouts {
 
         let centerX = portrait ? bounds.midX : right - height * footprint.width / 2
         let card = posterCard(
-            poster, frame: CGRect(
+            poster,
+            frame: CGRect(
                 x: centerX - height * ratio / 2, y: bottom + height * (footprint.height - 1) / 2,
                 width: height * ratio, height: height))
         card.setAffineTransform(tilt)
@@ -136,9 +141,8 @@ extension ScreenSaverLayouts {
 
     /// Prefer a single line if it can stay close to the size of the largest full, wrapped title.
     private func editorialHeadline(
-        _ title: String, width: CGFloat, maxHeight: CGFloat, maxLines: Int, accent: ScreenSaverColor,
-        recordLineBounds: @escaping (CGRect) -> Void
-    ) -> CALayer? {
+        _ title: String, width: CGFloat, maxHeight: CGFloat, maxLines: Int, accent: ScreenSaverColor
+    ) -> FittedText? {
         let smallest = 4
         var words: [Range<String.Index>]?
         var forcedWrap: CGFloat?
@@ -173,10 +177,26 @@ extension ScreenSaverLayouts {
         let color = CGColor(
             srgbRed: accent.red * 0.75 + 0.25, green: accent.green * 0.75 + 0.25,
             blue: accent.blue * 0.75 + 0.25, alpha: 1)
-        return textLayer(
+        return fittedText(
             title, width: width, size: single ?? wrapped ?? forcedWrap ?? unit * CGFloat(smallest) / 100,
-            weight: .black, alpha: 0.95, lines: maxLines, lineSpacing: 0.96, color: color, tracking: -0.02,
-            recordLineBounds: recordLineBounds)
+            weight: .black, alpha: 0.95, lines: maxLines, lineSpacing: 0.96, color: color, tracking: -0.02)
+    }
+
+    /// Each drawn line's ink, in top-left coordinates of the text's layer, so the poster can tuck under it.
+    private func inkBounds(of text: FittedText) -> [CGRect] {
+        let frame = text.frame
+        guard let lines = CTFrameGetLines(frame) as? [CTLine] else { return [] }
+        var origins = [CGPoint](repeating: .zero, count: lines.count)
+        CTFrameGetLineOrigins(frame, CFRange(), &origins)
+        return zip(lines, origins).map { line, origin in
+            var ascent: CGFloat = 0
+            var descent: CGFloat = 0
+            let width = CTLineGetTypographicBounds(line, &ascent, &descent, nil)
+            let typographic = CGRect(x: 0, y: -descent, width: width, height: ascent + descent)
+            let ink = typographic.union(CTLineGetBoundsWithOptions(line, .useGlyphPathBounds))
+            return CGRect(
+                x: ink.minX + origin.x, y: text.height - origin.y - ink.maxY, width: ink.width, height: ink.height)
+        }
     }
 
     /// An accent rule and the facts set like a cover's lines, with the TMDb score large.

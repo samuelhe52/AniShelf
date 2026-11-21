@@ -171,12 +171,7 @@ actor ScreenSaverSceneLoader {
             return wall
         }
 
-        var slides =
-            cursor.slides
-            ?? ScreenSaverSlideOrder(
-                count: entries.count, startingAt: cursor.startIndex, seed: seed)
-        let content = slides.next { index in
-            let entry = entries[index]
+        return slideScene(entries: entries, settings: settings, cursor: cursor, seed: seed) { entry in
             if settings.layout == .backdrop, let path = entry.backdrop,
                 let backdrop = image(path, pixelLimit(max(size.width, size.height) * scale, 2_560))
             {
@@ -192,10 +187,23 @@ actor ScreenSaverSceneLoader {
             }
             return nil
         }
-        guard let content else { return ScreenSaverScene(content: .notice(.empty)) }
-        let interval = settings.interval.isFinite ? min(max(settings.interval, 1), 3_600) : 12
+    }
+
+    /// The next readable slide, in shuffled passes, held for the settings' interval.
+    private static func slideScene(
+        entries: [ScreenSaverManifest.Entry],
+        settings: ScreenSaverManifest.Settings,
+        cursor: ScreenSaverScene.Cursor,
+        seed: UInt64,
+        load: (ScreenSaverManifest.Entry) -> ScreenSaverScene.Content?
+    ) -> ScreenSaverScene {
+        var slides =
+            cursor.slides ?? ScreenSaverSlideOrder(count: entries.count, startingAt: cursor.startIndex, seed: seed)
+        guard let content = slides.next(load: { load(entries[$0]) }) else {
+            return ScreenSaverScene(content: .notice(.empty))
+        }
         return ScreenSaverScene(
-            content: content, details: Set(settings.details), duration: interval, next: .init(slides: slides))
+            content: content, details: Set(settings.details), duration: settings.interval, next: .init(slides: slides))
     }
 
     private static func loadWall(
@@ -252,12 +260,7 @@ actor ScreenSaverSceneLoader {
             return ScreenSaverScene(content: .stage(next.step), duration: next.duration, next: .init(stage: director))
         }
 
-        var slides =
-            cursor.slides
-            ?? ScreenSaverSlideOrder(
-                count: entries.count, startingAt: cursor.startIndex, seed: seed)
-        let content = slides.next { index in
-            let entry = entries[index]
+        return slideScene(entries: entries, settings: settings, cursor: cursor, seed: seed) { entry in
             switch layout {
             case .coverFusion:
                 let canvasScale = min(scale, 3_000 / max(size.width, size.height, 1))
@@ -280,10 +283,6 @@ actor ScreenSaverSceneLoader {
                         brightness: 0.2))
             }
         }
-        guard let content else { return ScreenSaverScene(content: .notice(.empty)) }
-        let interval = settings.interval.isFinite ? min(max(settings.interval, 1), 3_600) : 12
-        return ScreenSaverScene(
-            content: content, details: Set(settings.details), duration: interval, next: .init(slides: slides))
     }
 
     static func pixelLimit(_ size: CGFloat, _ limit: Int) -> Int {

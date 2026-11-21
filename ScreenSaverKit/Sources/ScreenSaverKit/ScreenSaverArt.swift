@@ -37,20 +37,6 @@ enum ScreenSaverArt {
     static let context = CIContext(options: [.cacheIntermediates: false])
     private static let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
 
-    /// A small, heavily blurred copy of the poster that a layout stretches across the screen.
-    static func wash(of poster: CGImage) -> CGImage? {
-        let width = 96
-        let height = max(1, Int((CGFloat(poster.height) / CGFloat(max(poster.width, 1)) * CGFloat(width)).rounded()))
-        guard let small = resized(poster, width: width, height: height) else { return nil }
-
-        let input = CIImage(cgImage: small)
-        let output = input.clampedToExtent()
-            .applyingGaussianBlur(sigma: 7)
-            .applyingFilter("CIColorControls", parameters: [kCIInputSaturationKey: 1.25])
-            .cropped(to: input.extent)
-        return context.createCGImage(output, from: input.extent)
-    }
-
     /// The poster blurred with soft, transparent edges, for out-of-focus layers.
     /// - Parameter blur: the blur radius as a fraction of the image width.
     /// - Returns: the image and its margin on each side, as a fraction of the poster width.
@@ -216,17 +202,6 @@ enum ScreenSaverArt {
     ) -> [ScreenSaverColor] {
         ScreenSaverPalette.regionalColors(of: poster, columns: columns, rows: rows, region: region)
             ?? Array(repeating: ScreenSaverColor(red: 0.1, green: 0.1, blue: 0.1), count: columns * rows)
-    }
-
-    static func resized(_ image: CGImage, width: Int, height: Int) -> CGImage? {
-        guard
-            let context = CGContext(
-                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: sRGB,
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
-        else { return nil }
-        context.interpolationQuality = .medium
-        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
-        return context.makeImage()
     }
 
     static func hsv(_ red: CGFloat, _ green: CGFloat, _ blue: CGFloat) -> (CGFloat, CGFloat, CGFloat) {

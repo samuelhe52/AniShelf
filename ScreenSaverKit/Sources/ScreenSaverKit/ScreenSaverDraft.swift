@@ -121,3 +121,29 @@ public struct ScreenSaverDraft: Equatable, Sendable {
 extension ClosedRange {
     func clamp(_ value: Bound) -> Bound { Swift.min(Swift.max(value, lowerBound), upperBound) }
 }
+
+/// Settings every draft director starts from.
+struct ScreenSaverDraftContext: Sendable {
+    let entries: [ScreenSaverManifest.Entry]
+    let settings: ScreenSaverManifest.Settings
+    let draft: ScreenSaverDraft
+    let size: CGSize
+    let scale: CGFloat
+    let seed: UInt64
+
+    var details: Set<ScreenSaverManifest.Detail> { Set(settings.details) }
+    var interval: TimeInterval { settings.interval }
+    var unit: CGFloat { min(size.width, size.height) }
+
+    func makeDirector(_ layout: ScreenSaverDraftLayout) -> (any ScreenSaverStageDirector)? {
+        guard !entries.isEmpty else { return nil }
+        return switch layout {
+        case .deckFan: DeckDirector(self, style: .fan)
+        case .deckPile: DeckDirector(self, style: .pile)
+        case .flipWall: FlipWallDirector(self)
+        case .timeline: TimelineDirector(self)
+        case .depthDrift: DepthDriftDirector(self)
+        case .coverFusion, .editorialCover: nil
+        }
+    }
+}
