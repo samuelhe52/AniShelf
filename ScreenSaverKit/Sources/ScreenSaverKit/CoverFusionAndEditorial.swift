@@ -1,5 +1,5 @@
 //
-//  DraftSlides.swift
+//  CoverFusionAndEditorial.swift
 //  AniShelf
 //
 //  Created by Claude Code on behalf of Samuel He on 2026/11/21.

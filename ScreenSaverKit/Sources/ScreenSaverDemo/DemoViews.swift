@@ -103,12 +103,7 @@ struct DemoSidebar: View {
 
             Section("Layout") {
                 Picker("Layout", selection: $model.layout) {
-                    Section("Drafts") {
-                        ForEach(DemoLayout.draftCases) { Text($0.title).tag($0) }
-                    }
-                    Section("Shipping") {
-                        ForEach(DemoLayout.shippedCases) { Text($0.title).tag($0) }
-                    }
+                    ForEach(ScreenSaverManifest.Layout.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 Picker("Screen", selection: $model.preset) {
                     ForEach(ScreenPreset.all) { Text($0.name).tag($0) }
@@ -120,83 +115,21 @@ struct DemoSidebar: View {
             }
 
             Section("Options") {
-                if model.layout.usesWash {
-                    Toggle("Flowing Wash", isOn: $model.washFlows)
-                    if model.washFlows {
-                        LabeledContent("Flow Speed") {
-                            HStack {
-                                let speeds = ScreenSaverManifest.Settings.washSpeeds
-                                Slider(
-                                    value: Binding(
-                                        get: { Double(speeds.firstIndex(of: model.washSpeed) ?? 0) },
-                                        set: { model.washSpeed = speeds[Int($0.rounded())] }),
-                                    in: 0...Double(speeds.count - 1), step: 1
-                                )
-                                .labelsHidden()
-                                Text("\(model.washSpeed, format: .number)×")
-                                    .monospacedDigit().frame(width: 44, alignment: .trailing)
-                            }
-                        }
-                    }
-                }
-                if model.layout.usesInterval {
-                    slider("Interval", value: $model.interval, in: 2...30, unit: "s")
-                }
-                if model.layout.usesRows {
-                    Stepper(
-                        "Rows: \(model.rows)", value: $model.rows,
-                        in: ScreenSaverManifest.Settings.coverWallRowRange)
-                }
-                switch model.layout {
-                case .draft(.deckFan):
-                    Stepper("Cards: \(model.deckDepth)", value: $model.deckDepth, in: 2...9)
-                case .draft(.deckPile):
-                    Stepper("Cards: \(model.pileDepth)", value: $model.pileDepth, in: 2...12)
-                case .draft(.flipWall):
-                    slider("Flips about every", value: $model.flipDelay, in: 1...30, unit: "s")
-                case .draft(.depthDrift):
-                    slider("Posters per 10 s", value: $model.driftRate, in: 1...20, unit: "")
-                case .draft(.timeline):
-                    Picker("Date Source", selection: $model.timelineDateSource) {
-                        Text("Date On Air").tag(ScreenSaverDraft.TimelineDateSource.airDate)
-                        Text("Watch Dates").tag(ScreenSaverDraft.TimelineDateSource.watchDates)
-                    }
-                    Picker("Date Format", selection: $model.timelineDatePrecision) {
-                        Text("Year").tag(ScreenSaverDraft.TimelineDatePrecision.year)
-                        Text("Year and Month").tag(ScreenSaverDraft.TimelineDatePrecision.yearAndMonth)
-                        Text("Full Date").tag(ScreenSaverDraft.TimelineDatePrecision.fullDate)
-                    }
-                    if let count = model.timelineDateCounts[model.timelineDateSource] {
-                        LabeledContent("Entries with Dates") { Text(count, format: .number) }
-                    }
-                    slider("Hold", value: $model.timelineHold, in: 2...30, unit: "s")
-                default:
-                    EmptyView()
+                ForEach(model.optionsLayout.controls, id: \.self) { control in
+                    DemoLayoutControl(control: control, model: model)
                 }
             }
 
-            if model.layout.usesDetails {
+            let details = ScreenSaverManifest.Detail.available(for: model.optionsLayout)
+            if !details.isEmpty {
                 Section("Details") {
-                    ForEach(ScreenSaverManifest.Detail.allCases, id: \.self) { detail in
-                        if model.layout != .draft(.timeline) || detail != .year {
-                            Toggle(detail.rawValue, isOn: binding(for: detail))
-                        }
+                    ForEach(details, id: \.self) { detail in
+                        Toggle(detail.rawValue, isOn: binding(for: detail))
                     }
                 }
             }
         }
         .formStyle(.grouped)
-    }
-
-    private func slider(_ title: String, value: Binding<Double>, in range: ClosedRange<Double>, unit: String)
-        -> some View
-    {
-        LabeledContent(title) {
-            HStack {
-                Slider(value: value, in: range, step: 1).labelsHidden()
-                Text("\(Int(value.wrappedValue))\(unit)").monospacedDigit().frame(width: 36, alignment: .trailing)
-            }
-        }
     }
 
     private func binding(for detail: ScreenSaverManifest.Detail) -> Binding<Bool> {
@@ -214,6 +147,81 @@ struct DemoSidebar: View {
         panel.directoryURL = model.directory
         panel.message = "Choose a folder with a screen saver manifest.json and images."
         if panel.runModal() == .OK, let url = panel.url { model.directory = url }
+    }
+}
+
+struct DemoLayoutControl: View {
+    typealias Settings = ScreenSaverManifest.Settings
+
+    let control: ScreenSaverManifest.Layout.Control
+    @Bindable var model: DemoModel
+
+    var body: some View {
+        switch control {
+        case .flowingBackground:
+            Toggle("Flowing Wash", isOn: $model.washFlows)
+            if model.washFlows {
+                washSpeedSlider
+            }
+        case .interval:
+            slider("Interval", value: $model.interval, in: 2...30, unit: "s")
+        case .rows:
+            Stepper("Rows: \(model.rows)", value: $model.rows, in: Settings.coverWallRowRange)
+        case .deckDepth:
+            Stepper("Cards: \(model.deckDepth)", value: $model.deckDepth, in: Settings.deckDepthRange)
+        case .pileDepth:
+            Stepper("Cards: \(model.pileDepth)", value: $model.pileDepth, in: Settings.deckDepthRange)
+        case .flipDelay:
+            slider("Flips about every", value: $model.flipDelay, in: Settings.flipDelayRange, unit: "s")
+        case .driftRate:
+            slider("Posters per 10 s", value: $model.driftRate, in: Settings.driftRateRange)
+        case .timelineDateSource:
+            Picker("Date Source", selection: $model.timelineDateSource) {
+                Text("Date On Air").tag(ScreenSaverManifest.TimelineDateSource.airDate)
+                Text("Watch Dates").tag(ScreenSaverManifest.TimelineDateSource.watchDates)
+            }
+            if let count = model.timelineDateCounts[model.timelineDateSource] {
+                LabeledContent("Entries with Dates") { Text(count, format: .number) }
+            }
+        case .timelineDatePrecision:
+            Picker("Date Format", selection: $model.timelineDatePrecision) {
+                Text("Year").tag(ScreenSaverManifest.TimelineDatePrecision.year)
+                Text("Year and Month").tag(ScreenSaverManifest.TimelineDatePrecision.yearAndMonth)
+                Text("Full Date").tag(ScreenSaverManifest.TimelineDatePrecision.fullDate)
+            }
+        case .timelineHold:
+            slider("Hold", value: $model.timelineHold, in: Settings.timelineHoldRange, unit: "s")
+        }
+    }
+
+    private var washSpeedSlider: some View {
+        let speeds = Settings.washSpeeds
+        return LabeledContent("Flow Speed") {
+            HStack {
+                Slider(
+                    value: Binding(
+                        get: { Double(speeds.firstIndex(of: model.washSpeed) ?? 0) },
+                        set: { model.washSpeed = speeds[Int($0.rounded())] }),
+                    in: 0...Double(speeds.count - 1), step: 1
+                )
+                .labelsHidden()
+                Text("\(model.washSpeed, format: .number)×")
+                    .monospacedDigit().frame(width: 44, alignment: .trailing)
+            }
+        }
+    }
+
+    private func slider(
+        _ title: LocalizedStringKey, value: Binding<Double>, in range: ClosedRange<Double>, unit: String = ""
+    )
+        -> some View
+    {
+        LabeledContent(title) {
+            HStack {
+                Slider(value: value, in: range, step: 1) { Text(title) }.labelsHidden()
+                Text("\(Int(value.wrappedValue))\(unit)").monospacedDigit().frame(width: 36, alignment: .trailing)
+            }
+        }
     }
 }
 
@@ -235,7 +243,7 @@ struct RendererView: NSViewRepresentable {
         lazy var renderer = ScreenSaverRenderer { [weak self] notice in
             switch notice {
             case .empty:
-                if self?.configuration?.draft.layout == .timeline {
+                if self?.configuration?.settings.layout == .timeline {
                     return
                         "No playable entries with the selected date. Older snapshots need to be republished in AniShelf."
                 }
@@ -260,7 +268,9 @@ struct RendererView: NSViewRepresentable {
             if resized { updateViewport() }
             guard self.configuration != configuration else { return }
             self.configuration = configuration
-            renderer.start(in: configuration.directory, draft: configuration.draft)
+            renderer.start(
+                in: configuration.directory, settings: configuration.settings,
+                playbackOptions: configuration.playbackOptions)
         }
 
         override func layout() {

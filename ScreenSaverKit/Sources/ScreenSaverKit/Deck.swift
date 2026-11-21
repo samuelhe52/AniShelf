@@ -40,14 +40,14 @@ struct DeckDirector: ScreenSaverStageDirector {
     private var cycle: ScreenSaverEntryCycle
     private var opened = false
 
-    init(_ context: ScreenSaverDraftContext, style: DeckStyle) {
+    init(_ context: ScreenSaverStageContext, style: DeckStyle) {
         self.style = style
         entries = context.entries
         details = context.details
         // A small library shows fewer cards rather than the same poster twice in one deck.
-        let requested = style == .pile ? context.draft.pileDepth : context.draft.deckDepth
-        depth = min(ScreenSaverDraft.deckDepthRange.clamp(requested), context.entries.count)
-        interval = context.interval
+        let requested = style == .pile ? context.settings.pileDepth : context.settings.deckDepth
+        depth = min(requested, context.entries.count)
+        interval = context.settings.interval
         pixelSize = ScreenSaverSceneLoader.pixelLimit(context.size.height * 0.62 * context.scale, 1_500)
         cycle = ScreenSaverEntryCycle(count: context.entries.count, spacing: depth, seed: context.seed)
     }

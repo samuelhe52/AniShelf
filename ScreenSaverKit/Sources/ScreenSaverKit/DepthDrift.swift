@@ -76,11 +76,11 @@ struct DepthDriftDirector: ScreenSaverStageDirector {
     private var recentLanes: [Int] = []
     private var opened = false
 
-    init(_ context: ScreenSaverDraftContext) {
+    init(_ context: ScreenSaverStageContext) {
         entries = context.entries
         base = min(context.size.height, context.size.width * 1.25)
         scale = context.scale
-        let interval = 10 / ScreenSaverDraft.driftRateRange.clamp(context.draft.driftRate)
+        let interval = 10 / context.settings.driftRate
         cadences = DepthDriftLevel.all.enumerated().map { level, style in
             // A slot is not offered again until the previous poster has crossed the screen.
             let period = max(interval / style.weight, style.crossing / Double(style.capacity))
@@ -98,7 +98,9 @@ struct DepthDriftDirector: ScreenSaverStageDirector {
             let level = nextLevel
             let start = cadences[level].nextStart
             let slot = cadences[level].nextSlot
-            guard let poster = spawn(level: level, slot: slot, progress: 0, tint: true, image: image) else { return nil }
+            guard let poster = spawn(level: level, slot: slot, progress: 0, tint: true, image: image) else {
+                return nil
+            }
             cadences[level].nextStart += cadences[level].period
             cadences[level].nextSlot = (slot + 1) % levels[level].capacity
             return (DepthDriftStep.spawn(poster), cadences[nextLevel].nextStart - start)
@@ -112,9 +114,10 @@ struct DepthDriftDirector: ScreenSaverStageDirector {
             for offset in stride(from: style.capacity, through: 1, by: -1) {
                 let age = Double(offset) * cadence.period - cadence.nextStart
                 guard age < style.crossing else { continue }
-                guard let poster = spawn(
-                    level: level, slot: style.capacity - offset, progress: age / style.crossing,
-                    tint: offset == 1, image: image)
+                guard
+                    let poster = spawn(
+                        level: level, slot: style.capacity - offset, progress: age / style.crossing,
+                        tint: offset == 1, image: image)
                 else { break }
                 spawns.append(poster)
             }
@@ -158,7 +161,8 @@ struct DepthDriftDirector: ScreenSaverStageDirector {
         let samples =
             tint && level == DepthDriftLevel.focus ? ScreenSaverArt.samples(of: drawn.image, columns: 3, rows: 3) : nil
         return DepthDriftSpawn(
-            image: soft.image, margin: soft.margin, level: level, slot: slot, x: x, progress: progress, samples: samples)
+            image: soft.image, margin: soft.margin, level: level, slot: slot, x: x, progress: progress, samples: samples
+        )
     }
 }
 
@@ -265,8 +269,8 @@ final class DepthDriftStage: ScreenSaverStage {
     }
 }
 
-private extension CGSize {
-    func fitting(width limit: CGFloat) -> CGSize {
+extension CGSize {
+    fileprivate func fitting(width limit: CGFloat) -> CGSize {
         guard width > limit else { return self }
         return CGSize(width: limit, height: height * limit / width)
     }

@@ -22,7 +22,8 @@ struct ScreenSaverKitTests {
             createdAt: Date(timeIntervalSince1970: 1_790_000_000.123),
             settings: .init(
                 layout: .backdrop, details: [.score, .userScore, .year], interval: 12, coverWallRows: 8,
-                washFlows: false, washSpeed: 2),
+                washFlows: false, washSpeed: 2, flipDelay: 25, driftRate: 12, deckDepth: 8, pileDepth: 11,
+                timelineHold: 23, timelineDateSource: .watchDates, timelineDatePrecision: .yearAndMonth),
             entries: [
                 .init(
                     id: "fixture-1",
@@ -51,17 +52,49 @@ struct ScreenSaverKitTests {
         #expect(expected.settings.details == [.year, .score, .userScore])
     }
 
+    @Test
+    func layoutSettingsDecodeWithClampingAndRequireEveryNewKey() throws {
+        typealias Settings = ScreenSaverManifest.Settings
+        let keys = [
+            "flipDelay", "driftRate", "deckDepth", "pileDepth", "timelineHold",
+            "timelineDateSource", "timelineDatePrecision"
+        ]
+        let input = Settings(layout: .timeline, interval: 12)
+        var encoded = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(input)) as? [String: Any])
+        encoded["flipDelay"] = 0
+        encoded["driftRate"] = 99
+        encoded["deckDepth"] = 1
+        encoded["pileDepth"] = 13
+        encoded["timelineHold"] = 121
+        let decoder = JSONDecoder()
+        let settings = try decoder.decode(Settings.self, from: JSONSerialization.data(withJSONObject: encoded))
+        #expect(settings.flipDelay == 1)
+        #expect(settings.driftRate == 30)
+        #expect(settings.deckDepth == 2)
+        #expect(settings.pileDepth == 12)
+        #expect(settings.timelineHold == 120)
+        #expect(settings.timelineDateSource == .airDate)
+        #expect(settings.timelineDatePrecision == .fullDate)
+
+        for key in keys {
+            var incomplete = encoded
+            incomplete.removeValue(forKey: key)
+            let data = try JSONSerialization.data(withJSONObject: incomplete)
+            #expect(throws: DecodingError.self) {
+                try decoder.decode(Settings.self, from: data)
+            }
+        }
+    }
+
     @Test(arguments: [4.0, 30.0])
     func depthDriftPreparesOnlyActiveSlots(rate: Double) throws {
         let fixture = try SnapshotFixture()
         defer { fixture.remove() }
         try fixture.writeImage("poster.png")
         let image = try #require(fixture.reader.image(at: "images/poster.png", maximumPixelSize: 30))
-        var draft = ScreenSaverDraft(layout: .depthDrift)
-        draft.driftRate = rate
         var director = DepthDriftDirector(
             .init(
-                entries: [fixture.entry(1)], settings: .init(layout: .coverWall, interval: 12), draft: draft,
+                entries: [fixture.entry(1)], settings: .init(layout: .depthDrift, interval: 12, driftRate: rate),
                 size: CGSize(width: 1920, height: 1080), scale: 1, seed: 7))
         var decodes = 0
         let load: ScreenSaverImageLoader = { _, _ in
@@ -125,7 +158,7 @@ struct ScreenSaverKitTests {
         ]
         var director = TimelineDirector(
             .init(
-                entries: entries, settings: .init(layout: .coverWall, interval: 12), draft: .init(layout: .timeline),
+                entries: entries, settings: .init(layout: .timeline, interval: 12),
                 size: CGSize(width: 1280, height: 800), scale: 1, seed: 7))
         let image: ScreenSaverImageLoader = { path, _ in path == "images/poster.png" ? poster : nil }
         let opening = try #require(director.next(image: image)?.step as? TimelineStep)
@@ -178,17 +211,16 @@ struct ScreenSaverKitTests {
             entry("endOnly", end: try day(3)),
             entry("undated", airDate: try day(4))
         ]
-        try fixture.write(.init(settings: .init(layout: .coverWall, interval: 12), entries: entries))
-
-        let cases: [(ScreenSaverDraft.TimelineDatePrecision, [String])] = [
+        let cases: [(ScreenSaverManifest.TimelineDatePrecision, [String])] = [
             (.fullDate, ["2024年6月2日～10日", "～2024年6月3日", "2024年6月5日～"]),
             (.yearAndMonth, ["2024年6月", "～2024年6月", "2024年6月～"])
         ]
         for (precision, captions) in cases {
-            var draft = ScreenSaverDraft(layout: .timeline, entryLimit: 3)
-            draft.timelineDateSource = .watchDates
-            draft.timelineDatePrecision = precision
-            let loader = ScreenSaverSceneLoader(directory: fixture.directory, seed: 7, draft: draft)
+            let settings = ScreenSaverManifest.Settings(
+                layout: .timeline, interval: 12, timelineHold: 15, timelineDateSource: .watchDates,
+                timelineDatePrecision: precision)
+            try fixture.write(.init(settings: settings, entries: entries))
+            let loader = ScreenSaverSceneLoader(directory: fixture.directory, seed: 7, entryLimit: 3)
             let snapshot = await loader.read()
             let scene = await loader.prepare(
                 snapshot, cursor: .init(), size: CGSize(width: 1_280, height: 800), scale: 1)
@@ -196,6 +228,7 @@ struct ScreenSaverKitTests {
                 Issue.record("Expected a Timeline at \(precision)")
                 continue
             }
+            #expect(scene.duration == 15)
             let first = try #require(slots.firstIndex { $0.entry.id == "closed" })
             let shown = slots[first...].prefix(3)
             #expect(shown.map(\.entry.id) == ["closed", "endOnly", "open"])

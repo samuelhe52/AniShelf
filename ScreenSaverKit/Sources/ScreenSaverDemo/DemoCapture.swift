@@ -13,9 +13,9 @@ import UniformTypeIdentifiers
 /// Writes still frames of each layout, for reviewing layouts without watching them. Frames are
 /// drawn by Core Animation at the given times, so they catch motion mid-flight.
 ///
-/// Options: `--layouts deckFan,flipWall` (draft or shipped raw values), `--screens 0,3,5` (preset
-/// indices), `--times 1.5,4` (seconds after start), `--speed 4`, `--entries 3`, `--seed 7`, and
-/// `--dates watch` for Timeline's watch dates.
+/// Options: `--layouts deckFan,flipWall`, `--screens 0,3,5` (preset indices), `--times 1.5,4`
+/// (seconds after start), `--speed 4`, `--entries 3`, `--seed 7`, `--dates watch` for Timeline's
+/// watch dates, and `--snapshot <folder>` to use a particular snapshot.
 @MainActor
 enum DemoCapture {
     static func run(output: URL) {
@@ -28,23 +28,23 @@ enum DemoCapture {
         app.run()
     }
 
-    private static func option(_ name: String) -> [String]? {
+    private static func argument(_ name: String) -> String? {
         let arguments = CommandLine.arguments
         guard let index = arguments.firstIndex(of: "--" + name), arguments.indices.contains(index + 1) else {
             return nil
         }
-        return arguments[index + 1].split(separator: ",").map(String.init)
+        return arguments[index + 1]
+    }
+
+    private static func option(_ name: String) -> [String]? {
+        argument(name)?.split(separator: ",").map(String.init)
     }
 
     private static func capture(into output: URL) async {
         try? FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
-        let layouts = (DemoLayout.draftCases + DemoLayout.shippedCases).filter { layout in
-            guard let names = option("layouts") else { return true }
-            return switch layout {
-            case .draft(let draft): names.contains(draft.rawValue)
-            case .shipped(let shipped): names.contains(shipped.rawValue)
-            }
-        }
+        let names = option("layouts")
+        let layouts = ScreenSaverManifest.Layout.allCases.filter { names?.contains($0.rawValue) ?? true }
+        let snapshotDirectory = argument("snapshot").map { URL(filePath: $0, directoryHint: .isDirectory) }
         let screens = (option("screens")?.compactMap(Int.init) ?? [0, 3, 5]).compactMap {
             ScreenPreset.all.indices.contains($0) ? ScreenPreset.all[$0] : nil
         }
@@ -54,7 +54,7 @@ enum DemoCapture {
         for layout in layouts {
             for screen in screens {
                 guard let size = screen.size else { continue }
-                let model = DemoModel()
+                let model = DemoModel(directory: snapshotDirectory)
                 model.layout = layout
                 model.speed = speed
                 model.seed = option("seed")?.first.flatMap(UInt64.init) ?? 7
@@ -80,7 +80,7 @@ enum DemoCapture {
                 for time in times {
                     try? await Task.sleep(for: .seconds(time - elapsed))
                     elapsed = time
-                    let name = "\(layout.id)-\(Int(size.width))x\(Int(size.height))-\(time.formatted()).png"
+                    let name = "\(layout.rawValue)-\(Int(size.width))x\(Int(size.height))-\(time.formatted()).png"
                     snapshot(panel, to: output.appending(component: name))
                 }
                 view.renderer.stop()

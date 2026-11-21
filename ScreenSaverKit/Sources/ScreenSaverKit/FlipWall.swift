@@ -92,11 +92,11 @@ struct FlipWallDirector: ScreenSaverStageDirector {
     private var busyUntil: [TimeInterval] = []
     private var recentTiles: [Int] = []
 
-    init(_ context: ScreenSaverDraftContext) {
+    init(_ context: ScreenSaverStageContext) {
         entries = context.entries
         grid = FlipWallGrid(viewport: context.size, rows: context.settings.coverWallRows)
         pixelSize = ScreenSaverSceneLoader.pixelLimit(grid.tileSize.height * context.scale * 1.1, 1_500)
-        delay = ScreenSaverDraft.flipDelayRange.clamp(context.draft.flipDelay)
+        delay = context.settings.flipDelay
         cycle = ScreenSaverEntryCycle(
             count: context.entries.count, spacing: min(grid.count, context.entries.count - 1), seed: context.seed)
         random = ScreenSaverRandomGenerator(state: context.seed ^ 0x5F1D)

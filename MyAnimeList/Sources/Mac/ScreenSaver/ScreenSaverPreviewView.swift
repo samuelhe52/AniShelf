@@ -63,16 +63,26 @@
 
             func setDraft(_ draft: ScreenSaverSnapshotDraft) {
                 guard self.draft != draft else { return }
-                let entriesChanged = self.draft?.entries != draft.entries
+                let dateSource = draft.settings.activeTimelineDateSource
+                let sampleChanged =
+                    self.draft?.entries != draft.entries
+                    || self.draft?.settings.activeTimelineDateSource != dateSource
                 self.draft = draft
-                if entriesChanged {
+                if sampleChanged {
                     // Rank by identity so scope changes retain the relative order of surviving entries.
+                    // For Timeline, select from dated entries before capping the sample.
                     entries = Array(
-                        draft.entries.filter { $0.previewPoster != nil }
-                            .map { (entry: $0, rank: rank($0.id)) }
-                            .sorted { ($0.rank, $0.entry.id) < ($1.rank, $1.entry.id) }
-                            .prefix(24)
-                            .map { $0.entry }
+                        draft.entries.lazy.filter { entry in
+                            guard entry.previewPoster != nil else { return false }
+                            guard let dateSource else { return true }
+                            return dateSource.date(
+                                airDate: entry.airDate, watchStartDate: entry.watchStartDate,
+                                watchEndDate: entry.watchEndDate) != nil
+                        }
+                            .map { (entry: $0, rank: self.rank($0.id)) }
+                        .sorted { ($0.rank, $0.entry.id) < ($1.rank, $1.entry.id) }
+                        .prefix(24)
+                        .map { $0.entry }
                     )
                 }
                 refresh()
@@ -191,6 +201,12 @@
                 hasher.combine(id)
                 return UInt64(bitPattern: Int64(hasher.finalize()))
             }
+        }
+    }
+
+    extension ScreenSaverManifest.Settings {
+        fileprivate var activeTimelineDateSource: ScreenSaverManifest.TimelineDateSource? {
+            layout == .timeline ? timelineDateSource : nil
         }
     }
 #endif

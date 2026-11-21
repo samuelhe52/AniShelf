@@ -11,6 +11,10 @@
     import ScreenSaverKit
 
     struct ScreenSaverSettings: Equatable {
+        typealias Layout = ScreenSaverManifest.Layout
+        typealias Detail = ScreenSaverManifest.Detail
+        typealias ManifestSettings = ScreenSaverManifest.Settings
+
         enum Scope: Hashable {
             case favorites
             case watched
@@ -57,86 +61,117 @@
         static let enabledKey = "screenSaverEnabled"
         static let scopeKey = "screenSaverScope"
         static let layoutKey = "screenSaverLayout"
-        static let posterFocusDetailsKey = "screenSaverPosterFocusDetails"
-        static let backdropDetailsKey = "screenSaverBackdropDetails"
         static let intervalKey = "screenSaverInterval"
         static let coverWallRowsKey = "screenSaverCoverWallRows"
         static let washFlowsKey = "screenSaverWashFlows"
         static let washSpeedKey = "screenSaverWashSpeed"
+        static let flipDelayKey = "screenSaverFlipDelay"
+        static let driftRateKey = "screenSaverDriftRate"
+        static let deckDepthKey = "screenSaverDeckDepth"
+        static let pileDepthKey = "screenSaverPileDepth"
+        static let timelineHoldKey = "screenSaverTimelineHold"
+        static let timelineDateSourceKey = "screenSaverTimelineDateSource"
+        static let timelineDatePrecisionKey = "screenSaverTimelineDatePrecision"
+
+        private static func detailsKey(for layout: Layout) -> String {
+            // Preserves screenSaverPosterFocusDetails and screenSaverBackdropDetails.
+            let name = layout.rawValue
+            return "screenSaver" + name.prefix(1).uppercased() + name.dropFirst() + "Details"
+        }
 
         var isEnabled = false
         var scope = Scope.favorites
-        var layout = ScreenSaverManifest.Layout.coverWall
-        var posterFocusDetails = ScreenSaverManifest.Detail.defaults(for: .posterFocus)
-        var backdropDetails = ScreenSaverManifest.Detail.defaults(for: .backdrop)
+        var layout = Layout.coverWall
+        private var detailSelections: [Layout: [Detail]] = [:]
         var interval: TimeInterval = 12
-        var coverWallRows = ScreenSaverManifest.Settings.defaultCoverWallRows
-        /// Whether Poster Focus's colour background drifts.
+        var coverWallRows = ManifestSettings.defaultCoverWallRows
+        /// Whether the colour background drifts.
         var washFlows = true
         /// How fast it drifts, as a multiple of the normal speed.
         var washSpeed: Double = 1
+        var flipDelay = ManifestSettings.defaultFlipDelay
+        var driftRate = ManifestSettings.defaultDriftRate
+        var deckDepth = ManifestSettings.defaultDeckDepth
+        var pileDepth = ManifestSettings.defaultPileDepth
+        var timelineHold = ManifestSettings.defaultTimelineHold
+        var timelineDateSource: ScreenSaverManifest.TimelineDateSource = .airDate
+        var timelineDatePrecision: ScreenSaverManifest.TimelineDatePrecision = .fullDate
 
         init() {}
 
         init(defaults: UserDefaults) {
             isEnabled = defaults.bool(forKey: Self.enabledKey)
             scope = defaults.string(forKey: Self.scopeKey).flatMap(Scope.init(rawValue:)) ?? .favorites
-            layout =
-                defaults.string(forKey: Self.layoutKey).flatMap(ScreenSaverManifest.Layout.init(rawValue:))
-                ?? .coverWall
-            if let stored = defaults.stringArray(forKey: Self.posterFocusDetailsKey) {
-                posterFocusDetails = ScreenSaverManifest.Detail.normalized(
-                    stored.compactMap(ScreenSaverManifest.Detail.init))
-            }
-            if let stored = defaults.stringArray(forKey: Self.backdropDetailsKey) {
-                backdropDetails = ScreenSaverManifest.Detail.normalized(
-                    stored.compactMap(ScreenSaverManifest.Detail.init))
+            layout = defaults.string(forKey: Self.layoutKey).flatMap(Layout.init(rawValue:)) ?? .coverWall
+            for layout in Layout.allCases where !Detail.available(for: layout).isEmpty {
+                if let stored = defaults.stringArray(forKey: Self.detailsKey(for: layout)) {
+                    detailSelections[layout] = Detail.normalized(stored.compactMap(Detail.init(rawValue:)))
+                }
             }
             let seconds = defaults.double(forKey: Self.intervalKey)
             if seconds.isFinite, (1...3_600).contains(seconds) { interval = seconds }
             let rows = defaults.integer(forKey: Self.coverWallRowsKey)
-            if ScreenSaverManifest.Settings.coverWallRowRange.contains(rows) { coverWallRows = rows }
+            if ManifestSettings.coverWallRowRange.contains(rows) { coverWallRows = rows }
             washFlows = defaults.object(forKey: Self.washFlowsKey) as? Bool ?? true
             let speed = defaults.double(forKey: Self.washSpeedKey)
-            if ScreenSaverManifest.Settings.washSpeeds.contains(speed) { washSpeed = speed }
+            if ManifestSettings.washSpeeds.contains(speed) { washSpeed = speed }
+
+            func stored<Value: Comparable>(_ key: String, in range: ClosedRange<Value>) -> Value? {
+                guard let value = defaults.object(forKey: key) as? Value, range.contains(value) else { return nil }
+                return value
+            }
+            flipDelay = stored(Self.flipDelayKey, in: ManifestSettings.flipDelayRange) ?? flipDelay
+            driftRate = stored(Self.driftRateKey, in: ManifestSettings.driftRateRange) ?? driftRate
+            deckDepth = stored(Self.deckDepthKey, in: ManifestSettings.deckDepthRange) ?? deckDepth
+            pileDepth = stored(Self.pileDepthKey, in: ManifestSettings.deckDepthRange) ?? pileDepth
+            timelineHold = stored(Self.timelineHoldKey, in: ManifestSettings.timelineHoldRange) ?? timelineHold
+            timelineDateSource =
+                defaults.string(forKey: Self.timelineDateSourceKey)
+                .flatMap(ScreenSaverManifest.TimelineDateSource.init(rawValue:)) ?? .airDate
+            timelineDatePrecision =
+                defaults.string(forKey: Self.timelineDatePrecisionKey)
+                .flatMap(ScreenSaverManifest.TimelineDatePrecision.init(rawValue:)) ?? .fullDate
         }
 
         func save(to defaults: UserDefaults) {
             defaults.set(isEnabled, forKey: Self.enabledKey)
             defaults.set(scope.rawValue, forKey: Self.scopeKey)
             defaults.set(layout.rawValue, forKey: Self.layoutKey)
-            defaults.set(posterFocusDetails.map(\.rawValue), forKey: Self.posterFocusDetailsKey)
-            defaults.set(backdropDetails.map(\.rawValue), forKey: Self.backdropDetailsKey)
+            for (layout, details) in detailSelections {
+                defaults.set(details.map(\.rawValue), forKey: Self.detailsKey(for: layout))
+            }
             defaults.set(interval, forKey: Self.intervalKey)
             defaults.set(coverWallRows, forKey: Self.coverWallRowsKey)
             defaults.set(washFlows, forKey: Self.washFlowsKey)
             defaults.set(washSpeed, forKey: Self.washSpeedKey)
+            defaults.set(flipDelay, forKey: Self.flipDelayKey)
+            defaults.set(driftRate, forKey: Self.driftRateKey)
+            defaults.set(deckDepth, forKey: Self.deckDepthKey)
+            defaults.set(pileDepth, forKey: Self.pileDepthKey)
+            defaults.set(timelineHold, forKey: Self.timelineHoldKey)
+            defaults.set(timelineDateSource.rawValue, forKey: Self.timelineDateSourceKey)
+            defaults.set(timelineDatePrecision.rawValue, forKey: Self.timelineDatePrecisionKey)
         }
 
-        var manifestSettings: ScreenSaverManifest.Settings {
+        var manifestSettings: ManifestSettings {
             .init(
                 layout: layout, details: details(for: layout), interval: interval, coverWallRows: coverWallRows,
-                washFlows: washFlows, washSpeed: washSpeed)
+                washFlows: washFlows, washSpeed: washSpeed, flipDelay: flipDelay, driftRate: driftRate,
+                deckDepth: deckDepth, pileDepth: pileDepth, timelineHold: timelineHold,
+                timelineDateSource: timelineDateSource, timelineDatePrecision: timelineDatePrecision)
         }
 
-        func details(for layout: ScreenSaverManifest.Layout) -> [ScreenSaverManifest.Detail] {
-            switch layout {
-            // Cover Wall's fallback for small libraries is Poster Focus.
-            case .coverWall, .posterFocus: posterFocusDetails
-            case .backdrop: backdropDetails
-            }
+        func details(for layout: Layout) -> [Detail] {
+            let layout = layout.detailSelectionLayout
+            return detailSelections[layout] ?? Detail.defaults(for: layout)
         }
 
-        mutating func setDetail(
-            _ detail: ScreenSaverManifest.Detail, _ isOn: Bool, for layout: ScreenSaverManifest.Layout
-        ) {
+        mutating func setDetail(_ detail: Detail, _ isOn: Bool, for layout: Layout) {
+            let layout = layout.detailSelectionLayout
+            guard Detail.available(for: layout).contains(detail) else { return }
             var selected = Set(details(for: layout))
             if isOn { selected.insert(detail) } else { selected.remove(detail) }
-            let normalized = ScreenSaverManifest.Detail.normalized(selected)
-            switch layout {
-            case .coverWall, .posterFocus: posterFocusDetails = normalized
-            case .backdrop: backdropDetails = normalized
-            }
+            detailSelections[layout] = Detail.normalized(selected)
         }
     }
 #endif

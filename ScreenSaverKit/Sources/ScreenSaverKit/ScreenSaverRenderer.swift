@@ -30,7 +30,7 @@ public final class ScreenSaverRenderer {
     }
 
     public let layer = CALayer()
-    /// The flowing colour field some draft layouts draw over; see `makeWashView()`.
+    /// The flowing colour field some layouts draw over; see `makeWashView()`.
     public let wash = ScreenSaverWash()
     private let message: (Notice) -> String
     private var directory: URL?
@@ -48,8 +48,8 @@ public final class ScreenSaverRenderer {
     private var currentNotice: Notice?
     private var wall: CoverWall?
     private var stage: (any ScreenSaverStage)?
-    private var draft: ScreenSaverDraft?
-    private var timeScale: Double { max(draft?.timeScale ?? 1, 0.05) }
+    private var settingsOverride: ScreenSaverManifest.Settings?
+    private var playbackOptions = ScreenSaverPlaybackOptions()
 
     /// The layer is clear: hosts put `makeWashView()` under it, and scenes with a ground of their
     /// own cover the wash.
@@ -92,11 +92,16 @@ public final class ScreenSaverRenderer {
 
     /// - Parameters:
     ///   - build: the saver's own build ID, checked against the snapshot's.
-    ///   - draft: playback overrides from the Screen Saver Demo; the saver passes none.
-    public func start(in directory: URL, build: String? = nil, draft: ScreenSaverDraft? = nil) {
+    ///   - settings: the layout settings to preview, or nil to use the snapshot's settings.
+    ///   - playbackOptions: sampling and speed controls for the Screen Saver Demo.
+    public func start(
+        in directory: URL, build: String? = nil, settings: ScreenSaverManifest.Settings? = nil,
+        playbackOptions: ScreenSaverPlaybackOptions = .init()
+    ) {
         self.build = build
-        self.draft = draft
-        shuffleSeed = draft?.seed ?? UInt64.random(in: .min ... .max)
+        settingsOverride = settings
+        self.playbackOptions = playbackOptions
+        shuffleSeed = playbackOptions.seed ?? UInt64.random(in: .min ... .max)
         play(in: directory)
     }
 
@@ -105,7 +110,10 @@ public final class ScreenSaverRenderer {
         self.directory = directory
         guard size.width >= 1, size.height >= 1 else { return }
         let token = session.start()
-        let loader = ScreenSaverSceneLoader(directory: directory, build: build, seed: shuffleSeed, draft: draft)
+        let loader = ScreenSaverSceneLoader(
+            directory: directory, build: build, seed: shuffleSeed, settings: settingsOverride,
+            entryLimit: playbackOptions.entryLimit)
+        let timeScale = playbackOptions.timeScale
         layer.speed = Float(timeScale)
         wash.start(timeScale: timeScale)
         playback = Task { [weak self, size, scale, timeScale] in

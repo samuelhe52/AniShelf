@@ -9,63 +9,20 @@ import Foundation
 import Observation
 import ScreenSaverKit
 
-enum DemoLayout: Hashable, Identifiable {
-    case shipped(ScreenSaverManifest.Layout)
-    case draft(ScreenSaverDraftLayout)
-
-    static let shippedCases = ScreenSaverManifest.Layout.allCases.map(DemoLayout.shipped)
-    static let draftCases = ScreenSaverDraftLayout.allCases.map(DemoLayout.draft)
-
-    var id: String {
-        switch self {
-        case .shipped(let layout): "shipped." + layout.rawValue
-        case .draft(let layout): "draft." + layout.rawValue
-        }
-    }
-
+extension ScreenSaverManifest.Layout {
     var title: String {
         switch self {
-        case .shipped(.coverWall): "Cover Wall"
-        case .shipped(.posterFocus): "Poster Focus"
-        case .shipped(.backdrop): "Backdrop"
-        case .draft(.deckFan): "Deck · Fan"
-        case .draft(.deckPile): "Deck · Pile"
-        case .draft(.flipWall): "Flip Wall"
-        case .draft(.coverFusion): "Cover Fusion"
-        case .draft(.timeline): "Timeline"
-        case .draft(.depthDrift): "Depth Drift"
-        case .draft(.editorialCover): "Editorial Cover"
+        case .coverWall: "Cover Wall"
+        case .posterFocus: "Poster Focus"
+        case .backdrop: "Backdrop"
+        case .deckFan: "Deck · Fan"
+        case .deckPile: "Deck · Pile"
+        case .flipWall: "Flip Wall"
+        case .coverFusion: "Cover Fusion"
+        case .timeline: "Timeline"
+        case .depthDrift: "Depth Drift"
+        case .editorialCover: "Editorial Cover"
         }
-    }
-
-    var usesInterval: Bool {
-        switch self {
-        case .shipped(.coverWall), .draft(.flipWall), .draft(.depthDrift), .draft(.timeline): false
-        default: true
-        }
-    }
-
-    var usesRows: Bool { self == .shipped(.coverWall) || self == .draft(.flipWall) }
-
-    /// Layouts drawn over the flowing mesh wash.
-    var usesWash: Bool {
-        switch self {
-        case .shipped(.coverWall), .shipped(.backdrop), .draft(.flipWall): false
-        default: true
-        }
-    }
-
-    var usesDetails: Bool {
-        switch self {
-        case .shipped(.coverWall), .draft(.flipWall), .draft(.depthDrift): false
-        default: true
-        }
-    }
-
-    /// The shipped layout whose details a draft borrows.
-    var settingsLayout: ScreenSaverManifest.Layout {
-        if case .shipped(let layout) = self { return layout }
-        return .posterFocus
     }
 }
 
@@ -90,30 +47,33 @@ struct ScreenPreset: Hashable, Identifiable {
 /// Everything that restarts playback when it changes.
 struct DemoConfiguration: Equatable {
     var directory: URL
-    var draft: ScreenSaverDraft
+    var settings: ScreenSaverManifest.Settings
+    var playbackOptions: ScreenSaverPlaybackOptions
 }
 
 @MainActor
 @Observable
 final class DemoModel {
+    typealias Settings = ScreenSaverManifest.Settings
+
     static let entryLimits = [1, 2, 3, 4, 6, 8, 12, 20]
 
     var directory: URL {
         didSet { readEntryCount() }
     }
-    var layout = DemoLayout.draft(.deckFan)
+    var layout = ScreenSaverManifest.Layout.deckFan
     var preset = ScreenPreset.all[0]
     /// Nil plays every entry in the snapshot.
     var entryLimit: Int?
     var interval: Double = 6
-    var rows = ScreenSaverManifest.Settings.defaultCoverWallRows
-    var flipDelay = ScreenSaverDraft().flipDelay
-    var driftRate: Double = 4
-    var deckDepth = 5
-    var pileDepth = 7
-    var timelineHold: Double = 7
-    var timelineDateSource: ScreenSaverDraft.TimelineDateSource = .airDate
-    var timelineDatePrecision: ScreenSaverDraft.TimelineDatePrecision = .fullDate
+    var rows = Settings.defaultCoverWallRows
+    var flipDelay = Settings.defaultFlipDelay
+    var driftRate = Settings.defaultDriftRate
+    var deckDepth = Settings.defaultDeckDepth
+    var pileDepth = Settings.defaultPileDepth
+    var timelineHold = Settings.defaultTimelineHold
+    var timelineDateSource: ScreenSaverManifest.TimelineDateSource = .airDate
+    var timelineDatePrecision: ScreenSaverManifest.TimelineDatePrecision = .fullDate
     var washFlows = true
     var washSpeed: Double = 1
     /// Speeds playback up; only `--capture` sets it.
@@ -121,7 +81,7 @@ final class DemoModel {
     var details: Set<ScreenSaverManifest.Detail> = [.season, .year, .genres, .watchStatus, .userScore, .overview]
     var seed = UInt64.random(in: .min ... .max)
     private(set) var entryCount: Int?
-    private(set) var timelineDateCounts: [ScreenSaverDraft.TimelineDateSource: Int] = [:]
+    private(set) var timelineDateCounts: [ScreenSaverManifest.TimelineDateSource: Int] = [:]
 
     init(directory: URL? = nil) {
         self.directory =
@@ -130,24 +90,21 @@ final class DemoModel {
         readEntryCount()
     }
 
+    var optionsLayout: ScreenSaverManifest.Layout {
+        guard let entryCount else { return layout }
+        return layout.layout(forPosterCount: min(entryCount, entryLimit ?? entryCount))
+    }
+
     var configuration: DemoConfiguration {
-        var draft = ScreenSaverDraft(
+        let available = ScreenSaverManifest.Detail.available(for: layout.detailSelectionLayout)
+        return DemoConfiguration(
+            directory: directory,
             settings: .init(
-                layout: layout.settingsLayout, details: Array(details), interval: interval, coverWallRows: rows,
-                washFlows: washFlows, washSpeed: washSpeed),
-            entryLimit: entryLimit, seed: seed)
-        if case .draft(let layout) = layout { draft.layout = layout }
-        draft.timeScale = speed
-        draft.flipDelay = flipDelay
-        draft.driftRate = driftRate
-        draft.deckDepth = deckDepth
-        draft.pileDepth = pileDepth
-        if layout == .draft(.timeline) {
-            draft.timelineHold = timelineHold
-            draft.timelineDateSource = timelineDateSource
-            draft.timelineDatePrecision = timelineDatePrecision
-        }
-        return DemoConfiguration(directory: directory, draft: draft)
+                layout: layout, details: available.filter(details.contains), interval: interval, coverWallRows: rows,
+                washFlows: washFlows, washSpeed: washSpeed, flipDelay: flipDelay, driftRate: driftRate,
+                deckDepth: deckDepth, pileDepth: pileDepth, timelineHold: timelineHold,
+                timelineDateSource: timelineDateSource, timelineDatePrecision: timelineDatePrecision),
+            playbackOptions: .init(entryLimit: entryLimit, seed: seed, timeScale: speed))
     }
 
     /// Also picks up a snapshot AniShelf wrote since the folder was chosen.
@@ -161,7 +118,7 @@ final class DemoModel {
         case .ready(let manifest):
             entryCount = manifest.entries.count
             timelineDateCounts = Dictionary(
-                uniqueKeysWithValues: ScreenSaverDraft.TimelineDateSource.allCases.map { source in
+                uniqueKeysWithValues: ScreenSaverManifest.TimelineDateSource.allCases.map { source in
                     (source, manifest.entries.count { source.date(for: $0) != nil })
                 })
         case .empty, .requiresUpdate:

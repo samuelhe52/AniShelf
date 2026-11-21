@@ -6,10 +6,22 @@
 //
 
 import CoreGraphics
+import Foundation
 import QuartzCore
 
 /// Loads a snapshot image no larger than the given pixel size.
 typealias ScreenSaverImageLoader = (String, Int) -> CGImage?
+
+/// The shared inputs to a stage director.
+struct ScreenSaverStageContext: Sendable {
+    let entries: [ScreenSaverManifest.Entry]
+    let settings: ScreenSaverManifest.Settings
+    let size: CGSize
+    let scale: CGFloat
+    let seed: UInt64
+
+    var details: Set<ScreenSaverManifest.Detail> { Set(settings.details) }
+}
 
 /// What a stage layout does next, decided and decoded off the main actor.
 ///

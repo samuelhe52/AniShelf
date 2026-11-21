@@ -66,14 +66,38 @@ struct TimelineSlot: Sendable {
     let samples: [ScreenSaverColor]
 }
 
+extension ScreenSaverManifest.TimelineDateSource {
+    var timeZone: TimeZone { self == .airDate ? .gmt : .current }
+}
+
+extension ScreenSaverManifest.TimelineDatePrecision {
+    func formatStyle(calendar: Calendar) -> Date.FormatStyle {
+        let style = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone)
+        switch self {
+        case .year: return style.year()
+        case .yearAndMonth: return style.year().month(.abbreviated)
+        case .fullDate: return style.year().month(.abbreviated).day()
+        }
+    }
+
+    func intervalStyle(calendar: Calendar) -> Date.IntervalFormatStyle {
+        let style = Date.IntervalFormatStyle(calendar: calendar, timeZone: calendar.timeZone)
+        switch self {
+        case .year: return style.year()
+        case .yearAndMonth: return style.year().month(.abbreviated)
+        case .fullDate: return style.year().month(.abbreviated).day()
+        }
+    }
+}
+
 /// The caption's date: one air date, or the watch dates as a range. A range with one missing end
 /// stays open on that side, such as "Jun 2, 2024 –".
 struct TimelineDateText: Sendable {
-    let source: ScreenSaverDraft.TimelineDateSource
+    let source: ScreenSaverManifest.TimelineDateSource
     let date: Date.FormatStyle
     let interval: Date.IntervalFormatStyle
 
-    init(source: ScreenSaverDraft.TimelineDateSource, precision: ScreenSaverDraft.TimelineDatePrecision) {
+    init(source: ScreenSaverManifest.TimelineDateSource, precision: ScreenSaverManifest.TimelineDatePrecision) {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = source.timeZone
         self.source = source
@@ -148,12 +172,12 @@ struct TimelineDirector: ScreenSaverStageDirector {
     private var unreadablePosters: Set<String> = []
     private var opened = false
 
-    init(_ context: ScreenSaverDraftContext) {
+    init(_ context: ScreenSaverStageContext) {
         entries = context.entries
-        let source = context.draft.timelineDateSource
+        let source = context.settings.timelineDateSource
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = source.timeZone
-        dates = TimelineDateText(source: source, precision: context.draft.timelineDatePrecision)
+        dates = TimelineDateText(source: source, precision: context.settings.timelineDatePrecision)
         order = context.entries.enumerated().compactMap { index, entry in
             source.date(for: entry).map {
                 DatedEntry(index: index, date: $0, year: calendar.component(.year, from: $0))
@@ -161,7 +185,7 @@ struct TimelineDirector: ScreenSaverStageDirector {
         }.sorted { ($0.date, context.entries[$0.index].id) < ($1.date, context.entries[$1.index].id) }
         geometry = TimelineGeometry(size: context.size)
         details = context.details
-        hold = ScreenSaverDraft.timelineHoldRange.clamp(context.draft.timelineHold)
+        hold = context.settings.timelineHold
         pixelSize = ScreenSaverSceneLoader.pixelLimit(
             geometry.posterSize.height * TimelineGeometry.emphasis * context.scale, 1_500)
         var random = ScreenSaverRandomGenerator(state: context.seed)

@@ -77,13 +77,21 @@ struct ScreenSaverSlideOrder: Sendable {
 actor ScreenSaverSceneLoader {
     private let reader: ScreenSaverSnapshotReader
     private let seed: UInt64
-    private let draft: ScreenSaverDraft?
+    private let settingsOverride: ScreenSaverManifest.Settings?
+    private let entryLimit: Int?
     private var orderedSnapshot: ScreenSaverSnapshotReader.Snapshot = .empty
 
-    init(directory: URL, build: String? = nil, seed: UInt64 = 0, draft: ScreenSaverDraft? = nil) {
+    init(
+        directory: URL,
+        build: String? = nil,
+        seed: UInt64 = 0,
+        settings: ScreenSaverManifest.Settings? = nil,
+        entryLimit: Int? = nil
+    ) {
         reader = ScreenSaverSnapshotReader(directory: directory, build: build)
         self.seed = seed
-        self.draft = draft
+        settingsOverride = settings
+        self.entryLimit = entryLimit
     }
 
     func read() -> ScreenSaverSnapshotReader.Snapshot {
@@ -92,16 +100,17 @@ actor ScreenSaverSceneLoader {
 
         if case .ready(let manifest) = current {
             var random = ScreenSaverRandomGenerator(state: seed)
+            let settings = settingsOverride ?? manifest.settings
             var entries = manifest.entries
-            if let draft, draft.layout == .timeline, draft.entryLimit != nil {
-                entries = entries.filter { draft.timelineDateSource.date(for: $0) != nil }
+            if settings.layout == .timeline, entryLimit != nil {
+                entries = entries.filter { settings.timelineDateSource.date(for: $0) != nil }
             }
             entries.shuffle(using: &random)
-            if let limit = draft?.entryLimit { entries = Array(entries.prefix(max(limit, 1))) }
+            if let entryLimit { entries = Array(entries.prefix(max(entryLimit, 1))) }
             orderedSnapshot = .ready(
                 ScreenSaverManifest(
                     generation: manifest.generation, createdAt: manifest.createdAt,
-                    settings: draft?.settings ?? manifest.settings, entries: entries
+                    settings: settings, entries: entries, saverBuild: manifest.saverBuild
                 ))
         } else {
             orderedSnapshot = current
@@ -124,8 +133,7 @@ actor ScreenSaverSceneLoader {
 
         return Self.prepare(
             entries: manifest.entries, settings: manifest.settings, cursor: cursor, size: size, scale: scale,
-            seed: seed, draft: draft,
-            image: reader.image(at:maximumPixelSize:)
+            seed: seed, image: reader.image(at:maximumPixelSize:)
         )
     }
 
@@ -136,11 +144,10 @@ actor ScreenSaverSceneLoader {
         size: CGSize,
         scale: CGFloat,
         seed: UInt64 = 0,
-        draft: ScreenSaverDraft? = nil,
         image: (String, Int) -> CGImage?
     ) -> ScreenSaverScene {
         var scene = prepareContent(
-            entries: entries, settings: settings, cursor: cursor, size: size, scale: scale, seed: seed, draft: draft,
+            entries: entries, settings: settings, cursor: cursor, size: size, scale: scale, seed: seed,
             image: image)
         scene.washFlows = settings.washFlows
         scene.washSpeed = settings.washSpeed
@@ -154,38 +161,75 @@ actor ScreenSaverSceneLoader {
         size: CGSize,
         scale: CGFloat,
         seed: UInt64,
-        draft: ScreenSaverDraft?,
-        image: (String, Int) -> CGImage?
+        image: ScreenSaverImageLoader
     ) -> ScreenSaverScene {
-        if let layout = draft?.layout {
-            return prepareDraft(
-                layout, draft: draft!, entries: entries, settings: settings, cursor: cursor, size: size, scale: scale,
-                seed: seed, image: image)
-        }
-        if settings.layout == .coverWall, entries.count >= 4,
-            let wall = loadWall(
-                entries, cursor: cursor, size: size, scale: scale, rows: settings.coverWallRows, seed: seed,
-                image: image
-            )
-        {
-            return wall
+        guard !entries.isEmpty else { return ScreenSaverScene(content: .notice(.empty)) }
+
+        let context = ScreenSaverStageContext(
+            entries: entries, settings: settings, size: size, scale: scale, seed: seed)
+        var director: any ScreenSaverStageDirector
+        switch settings.layout {
+        case .deckFan: director = cursor.stage ?? DeckDirector(context, style: .fan)
+        case .deckPile: director = cursor.stage ?? DeckDirector(context, style: .pile)
+        case .flipWall: director = cursor.stage ?? FlipWallDirector(context)
+        case .timeline: director = cursor.stage ?? TimelineDirector(context)
+        case .depthDrift: director = cursor.stage ?? DepthDriftDirector(context)
+        case .coverWall:
+            if settings.layout.layout(forPosterCount: entries.count) == .coverWall,
+                let wall = loadWall(
+                    entries, cursor: cursor, size: size, scale: scale, rows: settings.coverWallRows, seed: seed,
+                    image: image)
+            {
+                return wall
+            }
+            fallthrough
+        case .posterFocus, .backdrop, .coverFusion, .editorialCover:
+            return slideScene(entries: entries, settings: settings, cursor: cursor, seed: seed) { entry in
+                loadSlide(entry, layout: settings.layout, size: size, scale: scale, image: image)
+            }
         }
 
-        return slideScene(entries: entries, settings: settings, cursor: cursor, seed: seed) { entry in
-            if settings.layout == .backdrop, let path = entry.backdrop,
-                let backdrop = image(path, pixelLimit(max(size.width, size.height) * scale, 2_560))
-            {
-                let logo = entry.logo.flatMap { image($0, 1_024) }
-                return .backdrop(entry, image: backdrop, logo: logo)
-            }
-            if let poster = image(entry.poster, pixelLimit(size.height * scale, 1_500)) {
-                return .poster(
-                    entry, poster,
-                    wash: .shaded(
-                        ScreenSaverArt.samples(of: poster, columns: 3, rows: 3), columns: 3, rows: 3,
-                        brightness: 0.5))
-            }
-            return nil
+        guard let next = director.next(image: image) else { return ScreenSaverScene(content: .notice(.empty)) }
+        return ScreenSaverScene(content: .stage(next.step), duration: next.duration, next: .init(stage: director))
+    }
+
+    private static func loadSlide(
+        _ entry: ScreenSaverManifest.Entry,
+        layout: ScreenSaverManifest.Layout,
+        size: CGSize,
+        scale: CGFloat,
+        image: ScreenSaverImageLoader
+    ) -> ScreenSaverScene.Content? {
+        if layout == .backdrop, let path = entry.backdrop,
+            let backdrop = image(path, pixelLimit(max(size.width, size.height) * scale, 2_560))
+        {
+            return .backdrop(entry, image: backdrop, logo: entry.logo.flatMap { image($0, 1_024) })
+        }
+        guard let poster = image(entry.poster, pixelLimit(size.height * scale, 1_500)) else { return nil }
+
+        switch layout {
+        case .coverFusion:
+            let canvasScale = min(scale, 3_000 / max(size.width, size.height, 1))
+            let canvas = CGSize(
+                width: (size.width * canvasScale).rounded(), height: (size.height * canvasScale).rounded())
+            guard let feathered = ScreenSaverArt.fusion(poster: poster, canvas: canvas) else { return nil }
+            let ratio = CGFloat(poster.width) / CGFloat(poster.height)
+            let wash = ScreenSaverMesh.fusion(
+                poster: poster, frame: ScreenSaverArt.fusionPosterFrame(in: size, ratio: ratio), canvas: size)
+            return .fusion(entry, poster: feathered, posterRatio: ratio, wash: wash)
+        case .editorialCover:
+            // A dark ground in the poster's own shades, so the accent type stands out.
+            return .editorial(
+                entry, poster: poster, accent: ScreenSaverArt.accent(of: poster),
+                wash: .shaded(
+                    ScreenSaverArt.samples(of: poster, columns: 3, rows: 3), columns: 3, rows: 3,
+                    brightness: 0.2))
+        default:
+            return .poster(
+                entry, poster,
+                wash: .shaded(
+                    ScreenSaverArt.samples(of: poster, columns: 3, rows: 3), columns: 3, rows: 3,
+                    brightness: 0.5))
         }
     }
 
@@ -238,51 +282,6 @@ actor ScreenSaverSceneLoader {
             duration: CoverWall.driftDuration,
             next: .init(wall: bag)
         )
-    }
-
-    private static func prepareDraft(
-        _ layout: ScreenSaverDraftLayout,
-        draft: ScreenSaverDraft,
-        entries: [ScreenSaverManifest.Entry],
-        settings: ScreenSaverManifest.Settings,
-        cursor: ScreenSaverScene.Cursor,
-        size: CGSize,
-        scale: CGFloat,
-        seed: UInt64,
-        image: (String, Int) -> CGImage?
-    ) -> ScreenSaverScene {
-        if layout.isStage {
-            let context = ScreenSaverDraftContext(
-                entries: entries, settings: settings, draft: draft, size: size, scale: scale, seed: seed)
-            guard var director = cursor.stage ?? context.makeDirector(layout),
-                let next = director.next(image: image)
-            else { return ScreenSaverScene(content: .notice(.empty)) }
-            return ScreenSaverScene(content: .stage(next.step), duration: next.duration, next: .init(stage: director))
-        }
-
-        return slideScene(entries: entries, settings: settings, cursor: cursor, seed: seed) { entry in
-            switch layout {
-            case .coverFusion:
-                let canvasScale = min(scale, 3_000 / max(size.width, size.height, 1))
-                let canvas = CGSize(
-                    width: (size.width * canvasScale).rounded(), height: (size.height * canvasScale).rounded())
-                guard let poster = image(entry.poster, pixelLimit(size.height * scale, 1_500)),
-                    let feathered = ScreenSaverArt.fusion(poster: poster, canvas: canvas)
-                else { return nil }
-                let ratio = CGFloat(poster.width) / CGFloat(poster.height)
-                let wash = ScreenSaverMesh.fusion(
-                    poster: poster, frame: ScreenSaverArt.fusionPosterFrame(in: size, ratio: ratio), canvas: size)
-                return .fusion(entry, poster: feathered, posterRatio: ratio, wash: wash)
-            default:
-                guard let poster = image(entry.poster, pixelLimit(size.height * scale, 1_500)) else { return nil }
-                // A dark ground in the poster's own shades, so the accent type stands out.
-                return .editorial(
-                    entry, poster: poster, accent: ScreenSaverArt.accent(of: poster),
-                    wash: .shaded(
-                        ScreenSaverArt.samples(of: poster, columns: 3, rows: 3), columns: 3, rows: 3,
-                        brightness: 0.2))
-            }
-        }
     }
 
     static func pixelLimit(_ size: CGFloat, _ limit: Int) -> Int {

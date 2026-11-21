@@ -19,6 +19,57 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         case coverWall
         case posterFocus
         case backdrop
+        case deckFan
+        case deckPile
+        case flipWall
+        case coverFusion
+        case timeline
+        case depthDrift
+        case editorialCover
+
+        public enum Control: Hashable, Sendable {
+            case interval
+            case rows
+            case flowingBackground
+            case deckDepth
+            case pileDepth
+            case flipDelay
+            case timelineHold
+            case timelineDateSource
+            case timelineDatePrecision
+            case driftRate
+        }
+
+        public var controls: [Control] { configuration.controls }
+
+        fileprivate var configuration: (controls: [Control], details: [Detail]) {
+            let allDetails = Detail.allCases
+            let detailsWithoutOverview = allDetails.filter { $0 != .overview }
+            return switch self {
+            case .coverWall: ([.rows], [])
+            case .posterFocus, .coverFusion, .editorialCover: ([.interval, .flowingBackground], allDetails)
+            case .backdrop: ([.interval], detailsWithoutOverview)
+            case .deckFan: ([.interval, .flowingBackground, .deckDepth], detailsWithoutOverview)
+            case .deckPile: ([.interval, .flowingBackground, .pileDepth], detailsWithoutOverview)
+            case .flipWall: ([.rows, .flipDelay], [])
+            case .timeline:
+                (
+                    [.flowingBackground, .timelineDateSource, .timelineDatePrecision, .timelineHold],
+                    detailsWithoutOverview.filter { $0 != .year }
+                )
+            case .depthDrift: ([.flowingBackground, .driftRate], [])
+            }
+        }
+
+        /// The layout rendered when the source has this many posters.
+        public func layout(forPosterCount count: Int) -> Self {
+            self == .coverWall && count < 4 ? .posterFocus : self
+        }
+
+        /// Cover Wall stores Poster Focus's details for its small-library fallback.
+        public var detailSelectionLayout: Self {
+            self == .coverWall ? .posterFocus : self
+        }
     }
 
     /// Optional text a slide layout can show next to the title, which is always shown.
@@ -36,19 +87,13 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         case overview
 
         public static func defaults(for layout: Layout) -> [Detail] {
-            switch layout {
-            // Cover Wall shows no text; with fewer than 4 posters it falls back to Poster Focus.
-            case .coverWall, .posterFocus: [.season, .year, .genres]
-            case .backdrop: [.year]
-            }
+            if layout == .backdrop { return [.year] }
+            let available = available(for: layout.detailSelectionLayout)
+            return [Self.season, .year, .genres].filter(available.contains)
         }
 
         public static func available(for layout: Layout) -> [Detail] {
-            switch layout {
-            case .coverWall, .posterFocus: allCases
-            // A paragraph over a full-screen still is not readable from a distance.
-            case .backdrop: allCases.filter { $0 != .overview }
-            }
+            layout.configuration.details
         }
 
         /// One stable order, so equal selections encode to equal manifests.
@@ -58,25 +103,70 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         }
     }
 
+    public enum TimelineDateSource: String, Codable, CaseIterable, Sendable {
+        case airDate
+        /// The watch start, or the end for an entry with only an end date.
+        case watchDates
+
+        public func date(for entry: Entry) -> Date? {
+            date(airDate: entry.airDate, watchStartDate: entry.watchStartDate, watchEndDate: entry.watchEndDate)
+        }
+
+        public func date(airDate: Date?, watchStartDate: Date?, watchEndDate: Date?) -> Date? {
+            switch self {
+            case .airDate: airDate
+            case .watchDates: watchStartDate ?? watchEndDate
+            }
+        }
+    }
+
+    public enum TimelineDatePrecision: String, Codable, CaseIterable, Sendable {
+        case year
+        case yearAndMonth
+        case fullDate
+    }
+
     public struct Settings: Codable, Equatable, Sendable {
         public static let defaultCoverWallRows = 4
         public static let coverWallRowRange = 2...8
         /// The flow speeds the settings offer, as multiples of the normal speed.
         public static let washSpeeds: [Double] = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4]
+        public static let defaultFlipDelay: TimeInterval = 3
+        public static let flipDelayRange: ClosedRange<TimeInterval> = 1...120
+        public static let defaultDriftRate: Double = 4
+        public static let driftRateRange: ClosedRange<Double> = 1...30
+        public static let defaultDeckDepth = 5
+        public static let defaultPileDepth = 7
+        public static let deckDepthRange = 2...12
+        public static let defaultTimelineHold: TimeInterval = 7
+        public static let timelineHoldRange: ClosedRange<TimeInterval> = 2...120
 
         public let layout: Layout
         public let details: [Detail]
         public let interval: TimeInterval
         public let coverWallRows: Int
-        /// Whether the colour wash behind Poster Focus drifts. Off, it holds still and only blends
-        /// from one poster's colours to the next.
+        /// Whether the colour wash drifts. Off, it holds still and only blends between colours.
         public let washFlows: Bool
         /// How fast a flowing wash drifts, as a multiple of its normal speed.
         public let washSpeed: Double
+        /// Seconds between flips in Flip Wall.
+        public let flipDelay: TimeInterval
+        /// Posters started per ten seconds in Depth Drift.
+        public let driftRate: Double
+        public let deckDepth: Int
+        public let pileDepth: Int
+        /// Seconds each poster rests at the centre after the pan in Timeline.
+        public let timelineHold: TimeInterval
+        public let timelineDateSource: TimelineDateSource
+        public let timelineDatePrecision: TimelineDatePrecision
 
         public init(
             layout: Layout, details: [Detail]? = nil, interval: TimeInterval,
-            coverWallRows: Int = Self.defaultCoverWallRows, washFlows: Bool = true, washSpeed: Double = 1
+            coverWallRows: Int = Self.defaultCoverWallRows, washFlows: Bool = true, washSpeed: Double = 1,
+            flipDelay: TimeInterval = Self.defaultFlipDelay, driftRate: Double = Self.defaultDriftRate,
+            deckDepth: Int = Self.defaultDeckDepth, pileDepth: Int = Self.defaultPileDepth,
+            timelineHold: TimeInterval = Self.defaultTimelineHold, timelineDateSource: TimelineDateSource = .airDate,
+            timelineDatePrecision: TimelineDatePrecision = .fullDate
         ) {
             self.washFlows = washFlows
             self.washSpeed = Self.washSpeeds.min { abs($0 - washSpeed) < abs($1 - washSpeed) } ?? 1
@@ -84,8 +174,15 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             self.details = Detail.normalized(details ?? Detail.defaults(for: layout))
             // Between a second and an hour; 12 s if the value is not a number.
             self.interval = interval.isFinite ? min(max(interval, 1), 3_600) : 12
-            self.coverWallRows = min(
-                max(coverWallRows, Self.coverWallRowRange.lowerBound), Self.coverWallRowRange.upperBound)
+            self.coverWallRows = Self.coverWallRowRange.clamp(coverWallRows)
+            self.flipDelay = Self.flipDelayRange.clamp(flipDelay.isFinite ? flipDelay : Self.defaultFlipDelay)
+            self.driftRate = Self.driftRateRange.clamp(driftRate.isFinite ? driftRate : Self.defaultDriftRate)
+            self.deckDepth = Self.deckDepthRange.clamp(deckDepth)
+            self.pileDepth = Self.deckDepthRange.clamp(pileDepth)
+            self.timelineHold =
+                Self.timelineHoldRange.clamp(timelineHold.isFinite ? timelineHold : Self.defaultTimelineHold)
+            self.timelineDateSource = timelineDateSource
+            self.timelineDatePrecision = timelineDatePrecision
         }
 
         /// Every key is required: a snapshot from another build is refused by its build ID before
@@ -98,7 +195,14 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
                 interval: try values.decode(TimeInterval.self, forKey: .interval),
                 coverWallRows: try values.decode(Int.self, forKey: .coverWallRows),
                 washFlows: try values.decode(Bool.self, forKey: .washFlows),
-                washSpeed: try values.decode(Double.self, forKey: .washSpeed)
+                washSpeed: try values.decode(Double.self, forKey: .washSpeed),
+                flipDelay: try values.decode(TimeInterval.self, forKey: .flipDelay),
+                driftRate: try values.decode(Double.self, forKey: .driftRate),
+                deckDepth: try values.decode(Int.self, forKey: .deckDepth),
+                pileDepth: try values.decode(Int.self, forKey: .pileDepth),
+                timelineHold: try values.decode(TimeInterval.self, forKey: .timelineHold),
+                timelineDateSource: try values.decode(TimelineDateSource.self, forKey: .timelineDateSource),
+                timelineDatePrecision: try values.decode(TimelineDatePrecision.self, forKey: .timelineDatePrecision)
             )
         }
     }
@@ -207,4 +311,8 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         encoder.dateEncodingStrategy = .iso8601
         return try encoder.encode(self)
     }
+}
+
+extension ClosedRange {
+    fileprivate func clamp(_ value: Bound) -> Bound { Swift.min(Swift.max(value, lowerBound), upperBound) }
 }

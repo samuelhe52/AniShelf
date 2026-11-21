@@ -183,9 +183,7 @@
                 }
                 .padding(.vertical, 4)
             }
-            if publisher.showsSlideOptions {
-                ScreenSaverDetailsSection(publisher: publisher)
-            }
+            ScreenSaverDetailsSection(publisher: publisher)
         }
     }
 
@@ -194,14 +192,16 @@
         @AppStorage(.libraryScoringEnabled) private var scoringEnabled = true
 
         var body: some View {
-            let layout = publisher.settings.layout
+            let layout = publisher.optionsLayout
             // With scoring turned off in the app, the user's score is not offered or drawn.
             let details = ScreenSaverManifest.Detail.available(for: layout).filter {
                 scoringEnabled || $0 != .userScore
             }
-            Section("Details") {
-                ForEach(details, id: \.self) { detail in
-                    Toggle(detail.title, isOn: binding(for: detail, in: layout))
+            if !details.isEmpty {
+                Section("Details") {
+                    ForEach(details, id: \.self) { detail in
+                        Toggle(detail.title, isOn: binding(for: detail, in: layout))
+                    }
                 }
             }
         }
@@ -261,7 +261,6 @@
             }
             return items
         }
-        private static let intervals: [TimeInterval] = [5, 8, 12, 20, 30, 60]
 
         var body: some View {
             VStack(spacing: 12) {
@@ -281,32 +280,73 @@
                         Text(layout.title).tag(layout)
                     }
                 }
-                if publisher.settings.layout == .coverWall {
-                    coverWallRowsSlider
-                }
-                if publisher.showsSlideOptions {
-                    Picker("Interval", selection: $publisher.settings.interval) {
-                        let current = publisher.settings.interval
-                        let intervals =
-                            Self.intervals.contains(current) ? Self.intervals : (Self.intervals + [current]).sorted()
-                        ForEach(intervals, id: \.self) { seconds in
-                            Text(
-                                Measurement(value: seconds, unit: UnitDuration.seconds),
-                                format: .measurement(width: .wide, usage: .asProvided)
-                            )
-                            .tag(seconds)
-                        }
-                    }
-                }
-                // Poster Focus, and Cover Wall's fallback to it, draws over the colour background.
-                if publisher.showsSlideOptions, publisher.settings.layout != .backdrop {
-                    Toggle("Flowing Background", isOn: $publisher.settings.washFlows)
-                    if publisher.settings.washFlows {
-                        washSpeedSlider
-                    }
+                ForEach(publisher.optionsLayout.controls, id: \.self) { control in
+                    ScreenSaverLayoutControl(control: control, publisher: publisher)
                 }
             }
             .frame(maxWidth: .infinity)
+        }
+    }
+
+    fileprivate struct ScreenSaverLayoutControl: View {
+        typealias Settings = ScreenSaverManifest.Settings
+
+        let control: ScreenSaverManifest.Layout.Control
+        @Bindable var publisher: ScreenSaverPublisher
+
+        private static let intervals: [TimeInterval] = [5, 8, 12, 20, 30, 60]
+
+        var body: some View {
+            switch control {
+            case .interval:
+                intervalPicker
+            case .rows:
+                integerSlider("Rows", value: $publisher.settings.coverWallRows, in: Settings.coverWallRowRange)
+            case .flowingBackground:
+                Toggle("Flowing Background", isOn: $publisher.settings.washFlows)
+                if publisher.settings.washFlows {
+                    washSpeedSlider
+                }
+            case .deckDepth:
+                integerSlider("Cards", value: $publisher.settings.deckDepth, in: Settings.deckDepthRange)
+            case .pileDepth:
+                integerSlider("Cards", value: $publisher.settings.pileDepth, in: Settings.deckDepthRange)
+            case .flipDelay:
+                numberSlider(
+                    "Flip Delay", value: $publisher.settings.flipDelay, in: Settings.flipDelayRange, inSeconds: true)
+            case .driftRate:
+                numberSlider(
+                    "Posters per 10 Seconds", value: $publisher.settings.driftRate, in: Settings.driftRateRange)
+            case .timelineHold:
+                numberSlider(
+                    "Hold Duration", value: $publisher.settings.timelineHold, in: Settings.timelineHoldRange,
+                    inSeconds: true)
+            case .timelineDateSource:
+                Picker("Date Source", selection: $publisher.settings.timelineDateSource) {
+                    Text("Date On Air").tag(ScreenSaverManifest.TimelineDateSource.airDate)
+                    Text("Watch Dates").tag(ScreenSaverManifest.TimelineDateSource.watchDates)
+                }
+            case .timelineDatePrecision:
+                Picker("Date Format", selection: $publisher.settings.timelineDatePrecision) {
+                    Text("Year").tag(ScreenSaverManifest.TimelineDatePrecision.year)
+                    Text("Year and Month").tag(ScreenSaverManifest.TimelineDatePrecision.yearAndMonth)
+                    Text("Full Date").tag(ScreenSaverManifest.TimelineDatePrecision.fullDate)
+                }
+            }
+        }
+
+        private var intervalPicker: some View {
+            let current = publisher.settings.interval
+            let intervals = Self.intervals.contains(current) ? Self.intervals : (Self.intervals + [current]).sorted()
+            return Picker("Interval", selection: $publisher.settings.interval) {
+                ForEach(intervals, id: \.self) { seconds in
+                    Text(
+                        Measurement(value: seconds, unit: UnitDuration.seconds),
+                        format: .measurement(width: .wide, usage: .asProvided)
+                    )
+                    .tag(seconds)
+                }
+            }
         }
 
         /// Snaps to the offered speeds, one tick each.
@@ -333,22 +373,45 @@
             }
         }
 
-        private var coverWallRowsSlider: some View {
-            let range = ScreenSaverManifest.Settings.coverWallRowRange
-            let rows = Binding(
-                get: { Double(publisher.settings.coverWallRows) },
-                set: { publisher.settings.coverWallRows = Int($0.rounded()) }
+        private func integerSlider(_ title: LocalizedStringKey, value: Binding<Int>, in range: ClosedRange<Int>)
+            -> some View
+        {
+            let step = Binding(
+                get: { Double(value.wrappedValue) },
+                set: { value.wrappedValue = Int($0.rounded()) }
             )
-            return LabeledContent("Rows") {
+            return LabeledContent(title) {
                 HStack(spacing: 8) {
-                    Slider(value: rows, in: Double(range.lowerBound)...Double(range.upperBound), step: 1) {
-                        Text("Rows")
+                    Slider(value: step, in: Double(range.lowerBound)...Double(range.upperBound), step: 1) {
+                        Text(title)
                     } tick: { value in
                         SliderTick(value)
                     }
                     .labelsHidden()
-                    Text(publisher.settings.coverWallRows, format: .number)
+                    Text(value.wrappedValue, format: .number)
                         .monospacedDigit()
+                }
+                .frame(width: 176)
+            }
+        }
+
+        private func numberSlider(
+            _ title: LocalizedStringKey, value: Binding<Double>, in range: ClosedRange<Double>, inSeconds: Bool = false
+        ) -> some View {
+            LabeledContent(title) {
+                HStack(spacing: 8) {
+                    Slider(value: value, in: range, step: 1) { Text(title) }
+                        .labelsHidden()
+                    if inSeconds {
+                        Text(
+                            Measurement(value: value.wrappedValue, unit: UnitDuration.seconds),
+                            format: .measurement(width: .abbreviated, usage: .asProvided)
+                        )
+                        .monospacedDigit()
+                    } else {
+                        Text(value.wrappedValue, format: .number)
+                            .monospacedDigit()
+                    }
                 }
                 .frame(width: 176)
             }
@@ -368,11 +431,12 @@
     }
 
     extension ScreenSaverPublisher {
-        /// Slide options apply to Poster Focus, Backdrop, and Cover Wall's fallback for fewer than 4 posters.
-        fileprivate var showsSlideOptions: Bool {
+        fileprivate var optionsLayout: ScreenSaverManifest.Layout {
+            let layout = settings.layout
+            guard layout == .coverWall else { return layout }
             // Posters that failed to download leave the saver with fewer than the draft offers.
-            settings.layout != .coverWall
-                || draft.entries.count { $0.poster != nil } - status.failedPosterCount < 4
+            let posters = draft.entries.count { $0.poster != nil } - status.failedPosterCount
+            return layout.layout(forPosterCount: posters)
         }
     }
 
@@ -397,6 +461,13 @@
             case .coverWall: "Cover Wall"
             case .posterFocus: "Poster Focus"
             case .backdrop: "Backdrop"
+            case .deckFan: "Deck · Fan"
+            case .deckPile: "Deck · Pile"
+            case .flipWall: "Flip Wall"
+            case .coverFusion: "Cover Fusion"
+            case .timeline: "Timeline"
+            case .depthDrift: "Depth Drift"
+            case .editorialCover: "Editorial Cover"
             }
         }
     }

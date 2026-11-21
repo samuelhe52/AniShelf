@@ -59,6 +59,39 @@
         }
 
         @Test
+        func settingsKeepLegacyDetailsAndSaveSelectionsIndependently() throws {
+            let fixture = try Fixture()
+            defer { fixture.cleanup() }
+            fixture.defaults.set(["userScore", "year"], forKey: "screenSaverPosterFocusDetails")
+            fixture.defaults.set([String](), forKey: "screenSaverBackdropDetails")
+
+            var settings = ScreenSaverSettings(defaults: fixture.defaults)
+            #expect(settings.details(for: .coverWall) == [.year, .userScore])
+            #expect(settings.details(for: .backdrop).isEmpty)
+            settings.setDetail(.year, false, for: .coverWall)
+            settings.setDetail(.genres, false, for: .deckFan)
+            settings.setDetail(.overview, true, for: .timeline)
+            settings.layout = .timeline
+            settings.flipDelay = 17
+            settings.driftRate = 8
+            settings.deckDepth = 9
+            settings.pileDepth = 8
+            settings.timelineHold = 21
+            settings.timelineDateSource = .watchDates
+            settings.timelineDatePrecision = .year
+            settings.save(to: fixture.defaults)
+
+            let restored = ScreenSaverSettings(defaults: fixture.defaults)
+            #expect(restored == settings)
+            #expect(restored.details(for: .coverWall) == [.userScore])
+            #expect(restored.details(for: .posterFocus) == [.userScore])
+            #expect(restored.details(for: .backdrop).isEmpty)
+            #expect(restored.details(for: .deckFan) == [.season, .year])
+            #expect(restored.details(for: .deckPile) == [.season, .year, .genres])
+            #expect(restored.manifestSettings.details == [.season, .genres])
+        }
+
+        @Test
         func seasonUsesParentTitleSelectedPosterAndInfoLanguage() throws {
             let fixture = try Fixture()
             defer { fixture.cleanup() }
@@ -121,7 +154,7 @@
             #expect(chinese.status == "连载中")
 
             // Text stays in the snapshot when a detail is off, so the toggle needs no new export.
-            settings.backdropDetails = []
+            settings.setDetail(.year, false, for: .backdrop)
             let hiddenDetails = try #require(fixture.draft(settings).entries.only)
             #expect(hiddenDetails.title == "Library series" && hiddenDetails.logo == japanese.logo)
             #expect(fixture.draft(settings).settings.details.isEmpty)
@@ -498,12 +531,14 @@
             #expect(publisher.status.isPublishing)
             #expect(requests == ["fast.jpg": 1, "slow.jpg": 1])
 
-            publisher.settings.layout = .posterFocus
-            publisher.settings.setDetail(.genres, false, for: .posterFocus)
-            publisher.settings.interval = 20
+            publisher.settings.layout = .timeline
+            publisher.settings.setDetail(.genres, false, for: .timeline)
+            publisher.settings.timelineHold = 20
+            publisher.settings.timelineDateSource = .watchDates
             try await waitUntil {
                 guard let manifest = await writer.readManifest() else { return false }
-                return manifest.settings.layout == .posterFocus && manifest.settings.interval == 20
+                return manifest.settings.layout == .timeline && manifest.settings.timelineHold == 20
+                    && manifest.settings.timelineDateSource == .watchDates
                     && !manifest.settings.details.contains(.genres)
             }
             #expect(requests == ["fast.jpg": 1, "slow.jpg": 1])
