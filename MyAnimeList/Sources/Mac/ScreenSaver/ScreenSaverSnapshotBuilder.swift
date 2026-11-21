@@ -16,6 +16,8 @@
             let title: String?
             let season: String?
             let year: String?
+            let airDate: Date?
+            let airDateLabel: String?
             let genres: [String]?
             let status: String?
             let score: String?
@@ -34,9 +36,9 @@
                 logo: String? = nil
             ) -> ScreenSaverManifest.Entry {
                 .init(
-                    id: id, title: title, season: season, year: year, genres: genres, status: status, score: score,
-                    watchStatus: watchStatus, userScore: userScore, overview: overview, poster: poster,
-                    posterPixelSize: posterPixelSize, backdrop: backdrop, logo: logo)
+                    id: id, title: title, season: season, year: year, airDate: airDate, airDateLabel: airDateLabel,
+                    genres: genres, status: status, score: score, watchStatus: watchStatus, userScore: userScore,
+                    overview: overview, poster: poster, posterPixelSize: posterPixelSize, backdrop: backdrop, logo: logo)
             }
         }
 
@@ -74,6 +76,10 @@
         ) -> ScreenSaverSnapshotDraft.Entry {
             // Every text detail is always included, so turning a detail on or off needs no new artwork.
             let locale = Locale(identifier: language.rawValueWithRegion)
+            let airDate = entry.onAirDate
+            let airDateStyle = Date.FormatStyle(
+                date: .abbreviated, time: .omitted, locale: locale, calendar: Calendar(identifier: .gregorian),
+                timeZone: .gmt)
             let season: String? =
                 if case .season(let number, _) = entry.type {
                     EntryDetailViewModel.seasonLabelText(number, locale: locale)
@@ -94,7 +100,9 @@
                 id: entry.libraryIdentity.rawID,
                 title: entry.displayName,
                 season: season,
-                year: entry.onAirDate?.formatted(.dateTime.year().locale(locale)),
+                year: airDate?.formatted(.dateTime.year().locale(locale)),
+                airDate: airDate,
+                airDateLabel: airDate?.formatted(airDateStyle),
                 genres: genres.isEmpty ? nil : genres,
                 status: status,
                 score: (entry.detail?.voteAverage).flatMap { $0 > 0 ? "TMDb " + String(format: "%.1f", $0) : nil },

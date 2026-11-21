@@ -26,7 +26,7 @@ struct ScreenSaverDraftContext: Sendable {
         case .deckFan: DeckDirector(self, style: .fan)
         case .deckPile: DeckDirector(self, style: .pile)
         case .flipWall: FlipWallDirector(self)
-        case .seasonTimeline: TimelineDirector(self)
+        case .timeline: TimelineDirector(self)
         case .depthDrift: DepthDriftDirector(self)
         case .coverFusion, .editorialCover: nil
         }

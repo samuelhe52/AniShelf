@@ -32,7 +32,7 @@ enum DemoLayout: Hashable, Identifiable {
         case .draft(.deckPile): "Deck · Pile"
         case .draft(.flipWall): "Flip Wall"
         case .draft(.coverFusion): "Cover Fusion"
-        case .draft(.seasonTimeline): "Season Timeline"
+        case .draft(.timeline): "Timeline"
         case .draft(.depthDrift): "Depth Drift"
         case .draft(.editorialCover): "Editorial Cover"
         }
@@ -40,7 +40,7 @@ enum DemoLayout: Hashable, Identifiable {
 
     var usesInterval: Bool {
         switch self {
-        case .shipped(.coverWall), .draft(.flipWall), .draft(.depthDrift), .draft(.seasonTimeline): false
+        case .shipped(.coverWall), .draft(.flipWall), .draft(.depthDrift), .draft(.timeline): false
         default: true
         }
     }

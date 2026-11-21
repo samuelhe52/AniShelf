@@ -195,3 +195,4 @@ and links `ScreenSaverKit` on macOS only, for the manifest type and the live pre
 - Updated 2026-11-20: Poster Focus and Backdrop reshuffle between full passes without repeating the boundary entry — see [012-slideshow-reshuffle.md](012-slideshow-reshuffle.md)
 - Updated 2026-11-21: Your Score detail — see [013-user-score-detail.md](013-user-score-detail.md)
 - Updated 2026-11-21: `rendererVersion` removed, one schema version (3) plus the build ID, demo left out of the build ID (001 corrected in place) — see [014-single-snapshot-version.md](014-single-snapshot-version.md)
+- Updated 2026-11-21: the Timeline draft uses full air dates, year and wrap markers, and a separate pan and hold — see [015-timeline-chronology-and-pacing.md](015-timeline-chronology-and-pacing.md)

@@ -156,7 +156,7 @@ struct DemoSidebar: View {
                     slider("Flips about every", value: $model.flipDelay, in: 1...30, unit: "s")
                 case .draft(.depthDrift):
                     slider("Posters per 10 s", value: $model.driftRate, in: 1...20, unit: "")
-                case .draft(.seasonTimeline):
+                case .draft(.timeline):
                     slider("Hold", value: $model.timelineHold, in: 2...30, unit: "s")
                 default:
                     EmptyView()

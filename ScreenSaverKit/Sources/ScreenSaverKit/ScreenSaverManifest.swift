@@ -117,6 +117,9 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         public let title: String?
         public let season: String?
         public let year: String?
+        /// Calendar date for Timeline ordering; the label follows the library's information language.
+        public let airDate: Date?
+        public let airDateLabel: String?
         public let genres: [String]?
         public let status: String?
         public let score: String?
@@ -133,6 +136,8 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             title: String? = nil,
             season: String? = nil,
             year: String? = nil,
+            airDate: Date? = nil,
+            airDateLabel: String? = nil,
             genres: [String]? = nil,
             status: String? = nil,
             score: String? = nil,
@@ -148,6 +153,9 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             self.title = title
             self.season = season
             self.year = year
+            // Keep equality stable after the snapshot's whole-second ISO 8601 round trip.
+            self.airDate = airDate.map { Date(timeIntervalSince1970: floor($0.timeIntervalSince1970)) }
+            self.airDateLabel = airDateLabel
             self.genres = genres
             self.status = status
             self.score = score

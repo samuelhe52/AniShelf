@@ -91,6 +91,10 @@
             #expect(japanese.title == "Library series")
             #expect(japanese.season == "シーズン2")
             #expect(japanese.year?.contains("2023") == true)
+            let manifestEntry = japanese.manifestEntry(
+                poster: "images/poster.jpg", posterPixelSize: .init(width: 20, height: 30))
+            #expect(manifestEntry.airDate == Date(timeIntervalSince1970: 1_685_577_600))
+            #expect(manifestEntry.airDateLabel == "2023年6月1日")
             #expect(japanese.poster?.url.pathComponents.suffix(2) == ["w780", "chosen.jpg"])
             #expect(japanese.previewPoster?.variant == .posterThumbnail)
             #expect(japanese.poster?.url.lastPathComponent == "chosen.jpg")

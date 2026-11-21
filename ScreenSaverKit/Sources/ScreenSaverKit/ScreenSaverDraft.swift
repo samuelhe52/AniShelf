@@ -20,7 +20,7 @@ public enum ScreenSaverDraftLayout: String, CaseIterable, Sendable {
     /// Poster Focus style: a full-height poster whose inner edge melts into a blur of itself.
     case coverFusion
     /// Posters along a line in airing order, the one at the centre named.
-    case seasonTimeline
+    case timeline
     /// Posters floating upward at different depths; no text.
     case depthDrift
     /// A magazine cover: the title huge and ghosted, the poster over it, facts typeset beside.
@@ -28,7 +28,7 @@ public enum ScreenSaverDraftLayout: String, CaseIterable, Sendable {
 
     var isStage: Bool {
         switch self {
-        case .deckFan, .deckPile, .flipWall, .seasonTimeline, .depthDrift: true
+        case .deckFan, .deckPile, .flipWall, .timeline, .depthDrift: true
         case .coverFusion, .editorialCover: false
         }
     }
@@ -56,7 +56,7 @@ public struct ScreenSaverDraft: Equatable, Sendable {
     public var deckDepth: Int = 5
     /// Deck · Pile: cards visible in the pile, the front one included.
     public var pileDepth: Int = 7
-    /// Season Timeline: seconds each poster holds the centre.
+    /// Timeline: seconds each poster rests at the centre after the pan.
     public var timelineHold: TimeInterval = 7
 
     public init(

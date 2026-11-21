@@ -29,6 +29,8 @@ struct ScreenSaverKitTests {
                     title: "銀河鉄道",
                     season: "Season 2",
                     year: "2026",
+                    airDate: Date(timeIntervalSince1970: 1_685_577_600.75),
+                    airDateLabel: "2023年6月1日",
                     genres: ["Adventure"],
                     status: "Ended",
                     userScore: "★ 4.5",
@@ -45,6 +47,58 @@ struct ScreenSaverKitTests {
         let encoded = try expected.encoded()
         #expect(String(decoding: encoded, as: UTF8.self).contains("2026-09-21T14:13:20Z"))
         #expect(expected.settings.details == [.year, .score, .userScore])
+    }
+
+    @Test
+    func timelineOrdersFullAirDatesAndMarksReadableYearBoundaries() throws {
+        let fixture = try SnapshotFixture()
+        defer { fixture.remove() }
+        try fixture.writeImage("poster.png")
+        let poster = try #require(fixture.reader.image(at: "images/poster.png", maximumPixelSize: 30))
+        let dateParser = ISO8601DateFormatter()
+        func entry(_ id: String, _ date: String?, poster: String = "images/poster.png") -> ScreenSaverManifest.Entry {
+            .init(
+                id: id, year: "1999年", airDate: date.flatMap { dateParser.date(from: $0) }, poster: poster,
+                posterPixelSize: .init(width: 20, height: 30))
+        }
+        let entries: [ScreenSaverManifest.Entry] = [
+            entry("b-june", "2020-06-01T00:00:00Z"),
+            entry("z-january", "2020-01-01T00:00:00Z"),
+            entry("undated", nil),
+            entry("c-next-year", "2021-02-01T00:00:00Z"),
+            entry("broken", "2021-01-01T00:00:00Z", poster: "images/broken.png"),
+            entry("a-june", "2020-06-01T00:00:00Z"),
+        ]
+        var director = TimelineDirector(
+            .init(
+                entries: entries, settings: .init(layout: .coverWall, interval: 12), draft: .init(layout: .timeline),
+                size: CGSize(width: 1280, height: 800), scale: 1, seed: 7))
+        let image: ScreenSaverImageLoader = { path, _ in path == "images/poster.png" ? poster : nil }
+        let opening = try #require(director.next(image: image)?.step as? TimelineStep)
+        guard case .open(_, var slots, _) = opening else {
+            Issue.record("Expected the Timeline to open")
+            return
+        }
+        for _ in entries.indices {
+            let step = try #require(director.next(image: image)?.step as? TimelineStep)
+            guard case .advance(let incoming) = step else {
+                Issue.record("Expected the Timeline to continue past missing artwork")
+                return
+            }
+            slots.append(incoming)
+        }
+        let expected: [String: (nextID: String, marker: TimelineMarker?)] = [
+            "z-january": ("a-june", nil),
+            "a-june": ("b-june", nil),
+            "b-june": ("c-next-year", .year(2021)),
+            "c-next-year": ("z-january", .wrap(2020)),
+        ]
+        for (left, right) in zip(slots, slots.dropFirst()) {
+            let next = try #require(expected[left.entry.id])
+            #expect(right.entry.id == next.nextID)
+            #expect(right.marker == next.marker)
+            #expect(right.position == left.position + 1)
+        }
     }
 
     @Test
