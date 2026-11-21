@@ -69,7 +69,7 @@ public struct ScreenSaverSnapshotReader: Sendable {
         return .ready(manifest)
     }
 
-    func image(at relativePath: String, maximumPixelSize: Int) -> CGImage? {
+    package func image(at relativePath: String, maximumPixelSize: Int) -> CGImage? {
         let path = relativePath.split(separator: "/", omittingEmptySubsequences: false)
         guard path.count == 2, path[0] == Self.imagesDirectoryName,
             !path[1].isEmpty, path[1] != ".", path[1] != ".."

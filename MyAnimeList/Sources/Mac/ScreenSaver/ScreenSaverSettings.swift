@@ -86,6 +86,7 @@
         static let timelineDateSourceKey = "screenSaverTimelineDateSource"
         static let timelineDatePrecisionKey = "screenSaverTimelineDatePrecision"
         static let posterOverviewLinesKey = "screenSaverPosterOverviewLines"
+        static let backdropSubjectAwareTextKey = "screenSaverBackdropSubjectAwareText"
 
         private static func detailsKey(for layout: Layout) -> String {
             // Preserves screenSaverPosterFocusDetails and screenSaverBackdropDetails.
@@ -112,6 +113,7 @@
         var timelineDateSource: ScreenSaverManifest.TimelineDateSource = .airDate
         var timelineDatePrecision: ScreenSaverManifest.TimelineDatePrecision = .fullDate
         var posterOverviewLines = ManifestSettings.defaultPosterOverviewLines
+        var backdropSubjectAwareText = ManifestSettings.defaultBackdropSubjectAwareText
 
         init() {}
 
@@ -152,6 +154,9 @@
             {
                 posterOverviewLines = value
             }
+            backdropSubjectAwareText =
+                defaults.object(forKey: Self.backdropSubjectAwareTextKey) as? Bool
+                ?? ManifestSettings.defaultBackdropSubjectAwareText
             timelineDateSource =
                 defaults.string(forKey: Self.timelineDateSourceKey)
                 .flatMap(ScreenSaverManifest.TimelineDateSource.init(rawValue:)) ?? .airDate
@@ -180,6 +185,7 @@
             defaults.set(timelineDateSource.rawValue, forKey: Self.timelineDateSourceKey)
             defaults.set(timelineDatePrecision.rawValue, forKey: Self.timelineDatePrecisionKey)
             defaults.set(posterOverviewLines, forKey: Self.posterOverviewLinesKey)
+            defaults.set(backdropSubjectAwareText, forKey: Self.backdropSubjectAwareTextKey)
         }
 
         var manifestSettings: ManifestSettings {
@@ -188,7 +194,7 @@
                 washFlows: washFlows, washSpeed: washSpeed, flipDelay: flipDelay, driftRate: driftRate,
                 deckDepth: deckDepth, pileDepth: pileDepth, timelineHold: timelineHold,
                 timelineDateSource: timelineDateSource, timelineDatePrecision: timelineDatePrecision,
-                posterOverviewLines: posterOverviewLines)
+                posterOverviewLines: posterOverviewLines, backdropSubjectAwareText: backdropSubjectAwareText)
         }
 
         func details(for layout: Layout) -> [Detail] {

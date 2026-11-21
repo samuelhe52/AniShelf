@@ -165,6 +165,8 @@ struct DemoLayoutControl: View {
             }
         case .interval:
             ScreenSaverDurationSlider("Interval", value: $model.interval, timing: .interval)
+        case .backdropSubjectAwareText:
+            Toggle("Smart Text Placement", isOn: $model.backdropSubjectAwareText)
         case .rows:
             Stepper("Rows: \(model.rows)", value: $model.rows, in: Settings.coverWallRowRange)
         case .posterOverviewLines:

@@ -39,6 +39,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             case timelineDatePrecision
             case driftRate
             case posterOverviewLines
+            case backdropSubjectAwareText
         }
 
         public var controls: [Control] { configuration.controls }
@@ -50,7 +51,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             case .coverWall: ([.rows], [])
             case .posterFocus, .coverFusion: ([.interval, .flowingBackground, .posterOverviewLines], allDetails)
             case .editorialCover: ([.interval, .flowingBackground], allDetails)
-            case .backdrop: ([.interval], detailsWithoutOverview)
+            case .backdrop: ([.interval, .backdropSubjectAwareText], detailsWithoutOverview)
             case .deckFan: ([.interval, .flowingBackground, .deckDepth], detailsWithoutOverview)
             case .deckPile: ([.interval, .flowingBackground, .pileDepth], detailsWithoutOverview)
             case .flipWall: ([.rows, .flipDelay], [])
@@ -144,6 +145,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         /// Zero means no line limit.
         public static let unlimitedPosterOverviewLines = 0
         public static let defaultPosterOverviewLines = 4
+        public static let defaultBackdropSubjectAwareText = true
         /// The flow speeds the settings offer, as multiples of the normal speed.
         public static let washSpeeds: [Double] = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4]
         public static let defaultInterval: TimeInterval = 12
@@ -165,6 +167,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         public let interval: TimeInterval
         public let coverWallRows: Int
         public let posterOverviewLines: Int
+        public let backdropSubjectAwareText: Bool
         /// Whether the colour wash drifts. Off, it holds still and only blends between colours.
         public let washFlows: Bool
         /// How fast a flowing wash drifts, as a multiple of its normal speed.
@@ -187,7 +190,8 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             deckDepth: Int = Self.defaultDeckDepth, pileDepth: Int = Self.defaultPileDepth,
             timelineHold: TimeInterval = Self.defaultTimelineHold, timelineDateSource: TimelineDateSource = .airDate,
             timelineDatePrecision: TimelineDatePrecision = .fullDate,
-            posterOverviewLines: Int = Self.defaultPosterOverviewLines
+            posterOverviewLines: Int = Self.defaultPosterOverviewLines,
+            backdropSubjectAwareText: Bool = Self.defaultBackdropSubjectAwareText
         ) {
             self.washFlows = washFlows
             self.washSpeed = Self.washSpeeds.min { abs($0 - washSpeed) < abs($1 - washSpeed) } ?? 1
@@ -198,6 +202,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             self.coverWallRows = Self.coverWallRowRange.clamp(coverWallRows)
             self.posterOverviewLines = posterOverviewLines == Self.unlimitedPosterOverviewLines
                 ? Self.unlimitedPosterOverviewLines : Self.posterOverviewLineRange.clamp(posterOverviewLines)
+            self.backdropSubjectAwareText = backdropSubjectAwareText
             self.flipDelay = Self.flipDelayRange.clamp(flipDelay.isFinite ? flipDelay : Self.defaultFlipDelay)
             self.driftRate = Self.driftRateRange.clamp(driftRate.isFinite ? driftRate : Self.defaultDriftRate)
             self.deckDepth = Self.deckDepthRange.clamp(deckDepth)
@@ -227,12 +232,25 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
                 timelineDateSource: try values.decode(TimelineDateSource.self, forKey: .timelineDateSource),
                 timelineDatePrecision: try values.decode(TimelineDatePrecision.self, forKey: .timelineDatePrecision),
                 posterOverviewLines: try values.decodeIfPresent(Int.self, forKey: .posterOverviewLines)
-                    ?? Self.defaultPosterOverviewLines
+                    ?? Self.defaultPosterOverviewLines,
+                backdropSubjectAwareText: try values.decodeIfPresent(Bool.self, forKey: .backdropSubjectAwareText)
+                    ?? Self.defaultBackdropSubjectAwareText
             )
         }
     }
 
     public struct Entry: Codable, Equatable, Sendable {
+        public struct SalientRegion: Codable, Equatable, Sendable {
+            /// Vision coordinates, normalized to the uncropped image with a lower-left origin.
+            public let bounds: CGRect
+            public let confidence: Float
+
+            public init(bounds: CGRect, confidence: Float) {
+                self.bounds = bounds
+                self.confidence = confidence
+            }
+        }
+
         public struct PixelSize: Codable, Equatable, Sendable {
             public let width: Int
             public let height: Int
@@ -262,6 +280,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         public let posterPixelSize: PixelSize
         public let backdrop: String?
         public let logo: String?
+        public let backdropRegions: [SalientRegion]?
 
         public init(
             id: String,
@@ -281,7 +300,8 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             poster: String,
             posterPixelSize: PixelSize,
             backdrop: String? = nil,
-            logo: String? = nil
+            logo: String? = nil,
+            backdropRegions: [SalientRegion]? = nil
         ) {
             self.id = id
             self.title = title
@@ -302,6 +322,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             self.posterPixelSize = posterPixelSize
             self.backdrop = backdrop
             self.logo = logo
+            self.backdropRegions = backdropRegions
         }
 
         private static func wholeSeconds(_ date: Date) -> Date {

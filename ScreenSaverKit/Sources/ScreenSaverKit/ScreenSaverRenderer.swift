@@ -259,7 +259,9 @@ public final class ScreenSaverRenderer {
                 next = layouts.posterFocus(entry, poster: image, details: scene.details)
                 currentNotice = nil
             case .backdrop(let entry, let image, let logo):
-                let backdrop = layouts.backdrop(entry, image: image, logo: logo, details: scene.details)
+                let backdrop = layouts.backdrop(
+                    entry, image: image, logo: logo, details: scene.details,
+                    subjectAwareText: scene.backdropSubjectAwareText)
                 next = backdrop.scene
                 photoToZoom = backdrop.photo
                 currentNotice = nil

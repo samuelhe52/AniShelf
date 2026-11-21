@@ -10,6 +10,7 @@
     import Foundation
     import ImageIO
     import Kingfisher
+    import ScreenSaverArtworkAnalysis
     import ScreenSaverKit
     import UniformTypeIdentifiers
 
@@ -39,6 +40,7 @@
         struct Image: Sendable {
             let filename: String
             let pixelSize: ScreenSaverManifest.Entry.PixelSize
+            var backdropRegions: [ScreenSaverManifest.Entry.SalientRegion]?
 
             var path: String { "\(ScreenSaverSnapshotReader.imagesDirectoryName)/\(filename)" }
 
@@ -67,6 +69,7 @@
         static func export(_ request: Request) async throws -> EncodedImage {
             let (url, processor, type) = request.recipe
             let filename = request.filename
+            let isBackdrop: Bool = if case .backdrop = request { true } else { false }
             let result = try await KingfisherManager.shared.retrieveImage(
                 with: url,
                 options: [.processor(processor), .scaleFactor(1), .cacheMemoryOnly]
@@ -75,7 +78,7 @@
             guard let image = result.image.exportCGImage else { throw ExportError.invalidImage }
 
             let encoding = Task.detached(priority: .utility) {
-                try encode(image, type: type, filename: filename)
+                try encode(image, type: type, filename: filename, isBackdrop: isBackdrop)
             }
             return try await withTaskCancellationHandler {
                 try await encoding.value
@@ -84,8 +87,24 @@
             }
         }
 
+        nonisolated static func analyzeBackdrop(_ image: Image, in directory: URL) async throws
+            -> [ScreenSaverManifest.Entry.SalientRegion]?
+        {
+            let analysis = Task.detached(priority: .utility) { () -> [ScreenSaverManifest.Entry.SalientRegion]? in
+                guard !Task.isCancelled else { return nil }
+                return BackdropSaliency.regions(in: directory, backdrop: image.path)
+            }
+            let regions = await withTaskCancellationHandler {
+                await analysis.value
+            } onCancel: {
+                analysis.cancel()
+            }
+            try Task.checkCancellation()
+            return regions
+        }
+
         nonisolated private static func encode(
-            _ image: CGImage, type: UTType, filename: String
+            _ image: CGImage, type: UTType, filename: String, isBackdrop: Bool
         ) throws -> EncodedImage {
             try Task.checkCancellation()
             let buffer = NSMutableData()
@@ -98,8 +117,12 @@
                 throw ExportError.encodingFailed
             }
             try Task.checkCancellation()
+            let regions = isBackdrop ? BackdropSaliency.regions(in: image) : nil
+            try Task.checkCancellation()
             return EncodedImage(
-                image: Image(filename: filename, pixelSize: .init(width: image.width, height: image.height)),
+                image: Image(
+                    filename: filename, pixelSize: .init(width: image.width, height: image.height),
+                    backdropRegions: regions),
                 data: buffer as Data
             )
         }

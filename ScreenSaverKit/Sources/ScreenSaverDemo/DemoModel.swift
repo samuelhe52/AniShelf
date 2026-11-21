@@ -77,6 +77,7 @@ final class DemoModel {
     var washFlows = true
     var washSpeed: Double = 1
     var posterOverviewLines = Settings.defaultPosterOverviewLines
+    var backdropSubjectAwareText = Settings.defaultBackdropSubjectAwareText
     /// Speeds playback up; only `--capture` sets it.
     var speed: Double = 1
     var details: Set<ScreenSaverManifest.Detail> = [.season, .year, .genres, .watchStatus, .userScore, .overview]
@@ -105,7 +106,7 @@ final class DemoModel {
                 washFlows: washFlows, washSpeed: washSpeed, flipDelay: flipDelay, driftRate: driftRate,
                 deckDepth: deckDepth, pileDepth: pileDepth, timelineHold: timelineHold,
                 timelineDateSource: timelineDateSource, timelineDatePrecision: timelineDatePrecision,
-                posterOverviewLines: posterOverviewLines),
+                posterOverviewLines: posterOverviewLines, backdropSubjectAwareText: backdropSubjectAwareText),
             playbackOptions: .init(entryLimit: entryLimit, seed: seed, timeScale: speed))
     }
 

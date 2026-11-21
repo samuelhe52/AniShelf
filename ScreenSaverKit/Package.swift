@@ -11,11 +11,15 @@ import PackageDescription
 let package = Package(
     name: "ScreenSaverKit",
     platforms: [.macOS(.v26)],
-    products: [.library(name: "ScreenSaverKit", targets: ["ScreenSaverKit"])],
+    products: [
+        .library(name: "ScreenSaverKit", targets: ["ScreenSaverKit"]),
+        .library(name: "ScreenSaverArtworkAnalysis", targets: ["ScreenSaverArtworkAnalysis"])
+    ],
     targets: [
         .target(name: "ScreenSaverKit"),
+        .target(name: "ScreenSaverArtworkAnalysis", dependencies: ["ScreenSaverKit"]),
         // Plays layouts over the local snapshot for design review: `make run-saver-demo`.
-        .executableTarget(name: "ScreenSaverDemo", dependencies: ["ScreenSaverKit"]),
+        .executableTarget(name: "ScreenSaverDemo", dependencies: ["ScreenSaverKit", "ScreenSaverArtworkAnalysis"]),
         .testTarget(name: "ScreenSaverKitTests", dependencies: ["ScreenSaverKit"])
     ]
 )

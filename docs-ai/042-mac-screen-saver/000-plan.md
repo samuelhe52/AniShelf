@@ -200,3 +200,4 @@ and links `ScreenSaverKit` on macOS only, for the manifest type and the live pre
 - Updated 2026-11-21: the Depth Drift draft schedules within its layer budget and keeps foreground artwork clear of the focus band — see [017-depth-drift-density.md](017-depth-drift-density.md)
 - Updated 2026-11-21: the Demo draft layouts ship as layouts, and the draft mechanism is removed — see [044-screen-saver-layout-unification](../044-screen-saver-layout-unification/000-plan.md)
 - Updated 2026-11-22: black opening fade and Backdrop dwell zoom — see [018-opening-and-backdrop-zoom.md](018-opening-and-backdrop-zoom.md)
+- Updated 2026-11-22: Backdrop text moves right when the subject overlaps the left text and the right corner is clear — see [019-backdrop-subject-aware-side.md](019-backdrop-subject-aware-side.md)

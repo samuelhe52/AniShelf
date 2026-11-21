@@ -367,6 +367,8 @@
             case .interval:
                 ScreenSaverDurationSlider(
                     "Interval", value: $publisher.settings.interval, timing: .interval, controlWidth: 176)
+            case .backdropSubjectAwareText:
+                Toggle("Smart Text Placement", isOn: $publisher.settings.backdropSubjectAwareText)
             case .rows:
                 integerSlider("Rows", value: $publisher.settings.coverWallRows, in: Settings.coverWallRowRange)
             case .flowingBackground:

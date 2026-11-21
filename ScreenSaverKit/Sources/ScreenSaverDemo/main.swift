@@ -10,8 +10,8 @@ import Foundation
 // `ScreenSaverDemo --capture <folder>` writes still frames of every layout instead of opening the app.
 let arguments = CommandLine.arguments
 if let flag = arguments.firstIndex(of: "--capture"), arguments.indices.contains(flag + 1) {
-    MainActor.assumeIsolated {
-        DemoCapture.run(output: URL(filePath: arguments[flag + 1], directoryHint: .isDirectory))
+    try MainActor.assumeIsolated {
+        try DemoCapture.run(output: URL(filePath: arguments[flag + 1], directoryHint: .isDirectory))
     }
 } else {
     DemoApp.main()

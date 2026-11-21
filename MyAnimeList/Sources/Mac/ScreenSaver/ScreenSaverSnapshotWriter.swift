@@ -7,9 +7,17 @@
 
 #if os(macOS)
     import Foundation
+    import ScreenSaverArtworkAnalysis
     import ScreenSaverKit
 
     actor ScreenSaverSnapshotWriter {
+        private struct SaliencyCache: Codable {
+            let revision: Int
+            let modifiedAt: Date
+            let regions: [ScreenSaverManifest.Entry.SalientRegion]
+        }
+
+        private static let saliencyExtension = "saliency.json"
         private let directory: URL
         private var lastCompletedFiles: Set<String>?
 
@@ -58,6 +66,46 @@
             }
             try FileManager.default.createDirectory(at: imagesURL, withIntermediateDirectories: true)
             try encoded.data.write(to: destination, options: .atomic)
+            if let regions = encoded.image.backdropRegions, let modifiedAt = Self.modificationDate(destination) {
+                Self.cacheSaliency(regions, for: destination, modifiedAt: modifiedAt)
+            }
+        }
+
+        func analyzedBackdrop(_ image: ScreenSaverImageExporter.Image) async throws -> ScreenSaverImageExporter.Image {
+            try Task.checkCancellation()
+            try validateDirectories()
+            let file = try imageURL(named: image.filename)
+            let sidecar = file.appendingPathExtension(Self.saliencyExtension)
+            let modifiedAt = Self.modificationDate(file)
+            var result = image
+            if Self.isRegularFile(sidecar), let data = try? Data(contentsOf: sidecar),
+                let cached = try? JSONDecoder().decode(SaliencyCache.self, from: data),
+                cached.revision == BackdropSaliency.cacheRevision, cached.modifiedAt == modifiedAt
+            {
+                result.backdropRegions = cached.regions
+            } else if let regions = try await ScreenSaverImageExporter.analyzeBackdrop(image, in: directory) {
+                try validateDirectories()
+                guard let modifiedAt, Self.modificationDate(try imageURL(named: image.filename)) == modifiedAt else {
+                    return image
+                }
+                result.backdropRegions = regions
+                Self.cacheSaliency(regions, for: file, modifiedAt: modifiedAt)
+            }
+            return result
+        }
+
+        private static func cacheSaliency(
+            _ regions: [ScreenSaverManifest.Entry.SalientRegion], for image: URL, modifiedAt: Date
+        ) {
+            let sidecar = image.appendingPathExtension(saliencyExtension)
+            let properties = try? sidecar.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+            guard properties?.isSymbolicLink != true,
+                properties?.isRegularFile == true || !FileManager.default.fileExists(atPath: sidecar.path())
+            else { return }
+            let cached = SaliencyCache(
+                revision: BackdropSaliency.cacheRevision, modifiedAt: modifiedAt, regions: regions)
+            guard let data = try? JSONEncoder().encode(cached) else { return }
+            try? data.write(to: sidecar, options: .atomic)
         }
 
         /// Partial manifests leave the image cache alone. A completed update retains the previous
@@ -121,9 +169,11 @@
             guard fileManager.fileExists(atPath: imagesURL.path()) else { return }
             let contents = try fileManager.contentsOfDirectory(
                 at: imagesURL, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles])
+            let saliencySuffix = "." + Self.saliencyExtension
             for file in contents {
                 let name = file.lastPathComponent
-                guard Self.isImageFilename(name), !filenames.contains(name), Self.isRegularFile(file)
+                let imageName = name.hasSuffix(saliencySuffix) ? String(name.dropLast(saliencySuffix.count)) : name
+                guard Self.isImageFilename(imageName), !filenames.contains(imageName), Self.isRegularFile(file)
                 else { continue }
                 try fileManager.removeItem(at: file)
             }
@@ -147,6 +197,11 @@
                 return false
             }
             return values.isRegularFile == true && values.isSymbolicLink != true
+        }
+
+        private static func modificationDate(_ url: URL) -> Date? {
+            guard isRegularFile(url) else { return nil }
+            return try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
         }
 
         private static func isImageFilename(_ name: String) -> Bool {

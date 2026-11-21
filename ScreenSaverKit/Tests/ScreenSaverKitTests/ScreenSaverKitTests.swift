@@ -23,7 +23,8 @@ struct ScreenSaverKitTests {
             settings: .init(
                 layout: .backdrop, details: [.score, .userScore, .year], interval: 12, coverWallRows: 8,
                 washFlows: false, washSpeed: 2, flipDelay: 25, driftRate: 12, deckDepth: 8, pileDepth: 11,
-                timelineHold: 23, timelineDateSource: .watchDates, timelineDatePrecision: .yearAndMonth),
+                timelineHold: 23, timelineDateSource: .watchDates, timelineDatePrecision: .yearAndMonth,
+                backdropSubjectAwareText: false),
             entries: [
                 .init(
                     id: "fixture-1",
@@ -40,7 +41,8 @@ struct ScreenSaverKitTests {
                     poster: "images/poster.heic",
                     posterPixelSize: .init(width: 600, height: 900),
                     backdrop: "images/backdrop.heic",
-                    logo: "images/logo.png"
+                    logo: "images/logo.png",
+                    backdropRegions: [.init(bounds: CGRect(x: 0.1, y: 0.2, width: 0.3, height: 0.4), confidence: 0.7)]
                 )
             ]
         )
@@ -50,6 +52,75 @@ struct ScreenSaverKitTests {
         let encoded = try expected.encoded()
         #expect(String(decoding: encoded, as: UTF8.self).contains("2026-09-21T14:13:20Z"))
         #expect(expected.settings.details == [.year, .score, .userScore])
+
+        var oldManifest = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        var oldEntries = try #require(oldManifest["entries"] as? [[String: Any]])
+        oldEntries[0].removeValue(forKey: "backdropRegions")
+        oldManifest["entries"] = oldEntries
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decoded = try decoder.decode(
+            ScreenSaverManifest.self, from: JSONSerialization.data(withJSONObject: oldManifest))
+        #expect(decoded.entries.first?.backdropRegions == nil)
+    }
+
+    @Test
+    func backdropPlacementRequiresAConfidentLeftSubjectAndAClearRightSide() {
+        typealias Region = ScreenSaverManifest.Entry.SalientRegion
+        let screen = CGRect(x: 0, y: 0, width: 1_600, height: 900)
+        let text = CGRect(x: 60, y: 60, width: 400, height: 100)
+        let left = CGRect(x: 0.02, y: 0.02, width: 0.28, height: 0.45)
+        let right = CGRect(x: 0.70, y: 0.02, width: 0.28, height: 0.45)
+        let centered = CGRect(x: 0.40, y: 0.05, width: 0.2, height: 0.5)
+        let slightOverlap = CGRect(x: 0.25, y: 0.02, width: 0.1, height: 0.45)
+        let partialLeft = CGRect(x: 0.20, y: 0.02, width: 0.1, height: 0.45)
+        let partialRight = CGRect(x: 0.70, y: 0.02, width: 0.05, height: 0.45)
+        func placement(_ regions: [Region]?) -> BackdropPlacement {
+            BackdropPlacement(regions: regions, imageSize: screen.size, screen: screen, leftFrame: text)
+        }
+
+        #expect(placement(nil).side == .left)
+        #expect(placement([.init(bounds: left, confidence: 0.64)]).side == .left)
+        #expect(placement([.init(bounds: centered, confidence: 0.90)]).side == .left)
+        #expect(placement([.init(bounds: slightOverlap, confidence: 0.90)]).side == .left)
+        #expect(placement([.init(bounds: left, confidence: 0.65)]).side == .right)
+        #expect(
+            placement([.init(bounds: left, confidence: 0.95), .init(bounds: right, confidence: 0.95)]).side == .left)
+        #expect(
+            placement([.init(bounds: left, confidence: 0.95), .init(bounds: right, confidence: 0.50)]).side == .left)
+        #expect(placement([.init(bounds: partialLeft, confidence: 0.95)]).side == .right)
+        #expect(
+            placement([.init(bounds: partialLeft, confidence: 0.95), .init(bounds: partialRight, confidence: 0.95)])
+                .side == .left)
+    }
+
+    @Test
+    func backdropPlacementMapsTheVisiblePortraitCrop() throws {
+        let screen = CGRect(x: 0, y: 0, width: 900, height: 1_600)
+        let text = CGRect(x: 60, y: 60, width: 300, height: 120)
+        let imageSize = CGSize(width: 1_600, height: 900)
+        let croppedOut = ScreenSaverManifest.Entry.SalientRegion(
+            bounds: CGRect(x: 0, y: 0, width: 0.30, height: 0.5), confidence: 0.9)
+        let partiallyVisible = ScreenSaverManifest.Entry.SalientRegion(
+            bounds: CGRect(x: 0.30, y: 0, width: 0.15, height: 0.5), confidence: 0.9)
+
+        let placement = BackdropPlacement(
+            regions: [croppedOut, partiallyVisible], imageSize: imageSize, screen: screen, leftFrame: text)
+        let mapped = try #require(placement.regions.first)
+        #expect(placement.regions.count == 1)
+        #expect(abs(mapped.frame.width - 307.78) < 0.01)
+        #expect(mapped.frame.minX == 0)
+        #expect(mapped.frame.maxY == 800)
+        #expect(placement.rightFrame == CGRect(x: 540, y: 60, width: 300, height: 120))
+        #expect(placement.side == .right)
+
+        let landscape = CGRect(origin: .zero, size: imageSize)
+        let uncropped = BackdropPlacement(
+            regions: [croppedOut], imageSize: imageSize, screen: landscape, leftFrame: text)
+        let portrait = BackdropPlacement(
+            regions: [croppedOut], imageSize: imageSize, screen: screen, leftFrame: text)
+        #expect(uncropped.side == .right)
+        #expect(portrait.side == .left)
     }
 
     @Test
@@ -81,6 +152,12 @@ struct ScreenSaverKitTests {
         let olderSettings = try decoder.decode(
             Settings.self, from: JSONSerialization.data(withJSONObject: beforePosterOverviewLines))
         #expect(olderSettings.posterOverviewLines == Settings.defaultPosterOverviewLines)
+
+        var beforeBackdropSetting = encoded
+        beforeBackdropSetting.removeValue(forKey: "backdropSubjectAwareText")
+        let olderBackdropSettings = try decoder.decode(
+            Settings.self, from: JSONSerialization.data(withJSONObject: beforeBackdropSetting))
+        #expect(olderBackdropSettings.backdropSubjectAwareText)
 
         for key in keys {
             var incomplete = encoded
@@ -588,6 +665,51 @@ struct ScreenSaverKitTests {
         #expect(withOverview.sublayers?.filter { $0.name == ScreenSaverLayouts.textLayerName }.count == 2)
         let layers = (withOverview.sublayers ?? []).flatMap { [$0] + ($0.sublayers ?? []) }
         #expect(layers.contains { ($0.contents as AnyObject?) === bitmap })
+    }
+
+    @Test
+    @MainActor
+    func backdropTextSettingRepositionsTheSamePreviewArtwork() async throws {
+        let bitmap = try #require(
+            CGContext(
+                data: nil, width: 32, height: 18, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+            )?.makeImage())
+        let renderer = ScreenSaverRenderer { _ in "Empty" }
+        defer { renderer.stop() }
+        let size = CGSize(width: 800, height: 450)
+        renderer.resize(to: size, scale: 1)
+        let entry = ScreenSaverManifest.Entry(
+            id: "first", title: "Backdrop title", poster: "memory", posterPixelSize: .init(width: 32, height: 18),
+            backdrop: "memory",
+            backdropRegions: [.init(bounds: CGRect(x: 0, y: 0, width: 0.4, height: 0.4), confidence: 0.9)]
+        )
+
+        func render(subjectAwareText: Bool) async throws -> CGRect {
+            let previous = renderer.layer.sublayers?.last
+            renderer.updatePreview(
+                .init(
+                    settings: .init(layout: .backdrop, interval: 60, backdropSubjectAwareText: subjectAwareText),
+                    entries: [entry], images: ["memory": bitmap]
+                ))
+            let deadline = ContinuousClock.now + .seconds(2)
+            while ContinuousClock.now < deadline {
+                if let scene = renderer.layer.sublayers?.last, scene !== previous,
+                    let text = scene.sublayers?.first(where: { $0.name == ScreenSaverLayouts.textLayerName })
+                {
+                    return text.frame
+                }
+                try await Task.sleep(for: .milliseconds(5))
+            }
+            throw CocoaError(.coderInvalidValue)
+        }
+
+        let on = try await render(subjectAwareText: true)
+        let off = try await render(subjectAwareText: false)
+        #expect(abs(off.minX - size.height * 0.07) < 0.001)
+        #expect(abs(on.maxX - (size.width - off.minX)) < 0.001)
+        #expect(on.minX > off.minX)
+        #expect(try await render(subjectAwareText: true) == on)
     }
 
     @Test

@@ -283,8 +283,10 @@
             try await withThrowingTaskGroup(of: (Request, Image?).self) { group in
                 func enqueue(_ request: Request) {
                     group.addTask {
-                        let filename = request.filename
-                        if let existing = try await writer.existingImage(named: filename) { return (request, existing) }
+                        if let existing = try await writer.existingImage(named: request.filename) {
+                            guard case .backdrop = request else { return (request, existing) }
+                            return (request, try await writer.analyzedBackdrop(existing))
+                        }
                         let encoded: ScreenSaverImageExporter.EncodedImage
                         do {
                             encoded = try await exportImage(request)
@@ -376,9 +378,11 @@
                     return entry.manifestEntry(poster: prior.poster, posterPixelSize: prior.posterPixelSize)
                 }
                 let backdrop = entry.backdrop.flatMap { images[.backdrop($0)] }
+                let regions = backdrop?.backdropRegions
                 return entry.manifestEntry(
                     poster: poster.path, posterPixelSize: poster.pixelSize, backdrop: backdrop?.path,
-                    logo: backdrop != nil ? entry.logo.flatMap { images[.logo($0)]?.path } : nil)
+                    logo: backdrop != nil ? entry.logo.flatMap { images[.logo($0)]?.path } : nil,
+                    backdropRegions: regions?.isEmpty == false ? regions : nil)
             }
         }
 

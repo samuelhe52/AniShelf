@@ -20,6 +20,7 @@
 		9FFCB76E2EC896520088FF36 /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = 9FFCB76D2EC896520088FF36 /* Collections */; };
 		9FC4E0422F00000000000001 /* ScreenSaverKit in Frameworks */ = {isa = PBXBuildFile; platformFilters = (macos, ); productRef = 9FC4E0422F00000000000002 /* ScreenSaverKit */; };
 		9FC4E0422F00000000000003 /* ScreenSaverKit in Frameworks */ = {isa = PBXBuildFile; productRef = 9FC4E0422F00000000000004 /* ScreenSaverKit */; };
+		9F6A869F30BEB30B00DA5FFC /* ScreenSaverArtworkAnalysis in Frameworks */ = {isa = PBXBuildFile; platformFilters = (macos, ); productRef = 9F6A86A030BEB30B00DA5FFC /* ScreenSaverArtworkAnalysis */; };
 		9FC4E0422F00000000000005 /* AniShelf.saver in Embed Screen Saver */ = {isa = PBXBuildFile; fileRef = 9FC4E0422F00000000000006 /* AniShelf.saver */; platformFilters = (macos, ); settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -258,6 +259,7 @@
 			files = (
 				9F11BF702FF91280009372EF /* SwiftDraw in Frameworks */,
 				9FC4E0422F00000000000001 /* ScreenSaverKit in Frameworks */,
+				9F6A869F30BEB30B00DA5FFC /* ScreenSaverArtworkAnalysis in Frameworks */,
 				9F93FC222DE202E10071FB56 /* DataProvider in Frameworks */,
 				9F1BC6CD2E7F028100221B77 /* AlertToast in Frameworks */,
 				9FB6FEF12D8FCE5A00B423D0 /* Kingfisher in Frameworks */,
@@ -359,6 +361,7 @@
 				9FFCB76D2EC896520088FF36 /* Collections */,
 				9F11BF6F2FF91280009372EF /* SwiftDraw */,
 				9FC4E0422F00000000000002 /* ScreenSaverKit */,
+				9F6A86A030BEB30B00DA5FFC /* ScreenSaverArtworkAnalysis */,
 			);
 			productName = MyAnimeList;
 			productReference = 9F8D66302D055FEF00CF355D /* AniShelf.app */;
@@ -1099,6 +1102,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 9FC4E0422F00000000000011 /* XCLocalSwiftPackageReference "ScreenSaverKit" */;
 			productName = ScreenSaverKit;
+		};
+		9F6A86A030BEB30B00DA5FFC /* ScreenSaverArtworkAnalysis */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9FC4E0422F00000000000011 /* XCLocalSwiftPackageReference "ScreenSaverKit" */;
+			productName = ScreenSaverArtworkAnalysis;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

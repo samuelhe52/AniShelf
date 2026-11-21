@@ -10,7 +10,7 @@ import CoreText
 import QuartzCore
 
 @MainActor
-struct ScreenSaverLayouts {
+package struct ScreenSaverLayouts {
     let size: CGSize
     let scale: CGFloat
     var posterOverviewLines = ScreenSaverManifest.Settings.defaultPosterOverviewLines
@@ -18,6 +18,15 @@ struct ScreenSaverLayouts {
     var bounds: CGRect { CGRect(origin: .zero, size: size) }
     var unit: CGFloat { min(size.width, size.height) }
     var ink: CGColor { CGColor(gray: 0.025, alpha: 1) }
+
+    package init(
+        size: CGSize, scale: CGFloat,
+        posterOverviewLines: Int = ScreenSaverManifest.Settings.defaultPosterOverviewLines
+    ) {
+        self.size = size
+        self.scale = scale
+        self.posterOverviewLines = posterOverviewLines
+    }
 
     // MARK: - Poster Focus
 
@@ -98,12 +107,43 @@ struct ScreenSaverLayouts {
 
     // MARK: - Backdrop
 
-    func backdrop(
+    package func backdrop(
         _ entry: ScreenSaverManifest.Entry,
         image backdrop: CGImage,
         logo: CGImage?,
-        details: Set<ScreenSaverManifest.Detail>
-    ) -> (scene: CALayer, photo: CALayer) {
+        details: Set<ScreenSaverManifest.Detail>,
+        subjectAwareText: Bool = ScreenSaverManifest.Settings.defaultBackdropSubjectAwareText,
+        regionsOverride: [ScreenSaverManifest.Entry.SalientRegion]? = nil,
+        forceLeft: Bool = false
+    ) -> (scene: CALayer, photo: CALayer, placement: BackdropPlacement) {
+        let padding = unit * 0.07
+        let width = min(size.width * 0.6, unit * 1.1)
+        var facts = factsLine(entry, details: details)
+        if details.contains(.season), let season = entry.season.nonEmpty {
+            facts = facts.isEmpty ? season : season + Self.separator + facts
+        }
+        let factsText = fittedText(facts, width: width, size: unit * 0.019, weight: .regular, alpha: 0.55, lines: 1)
+        let titleY = factsText.map { padding + $0.height + unit * 0.014 } ?? padding
+        var titleText: FittedText?
+        var titleFrame = CGRect.null
+        var markFrame = CGRect.null
+        if let logo {
+            let area = CGRect(
+                x: padding, y: titleY, width: min(unit * 0.5, size.width * 0.42), height: size.height * 0.18)
+            markFrame = CGRect(origin: area.origin, size: aspectFit(logo, in: area).size)
+        } else if let title = entry.title.nonEmpty {
+            let titleSize = fittedTitle(title, width: width, largest: 0.068, smallest: 0.046)
+            titleText = fittedText(title, width: width, size: titleSize, weight: .bold, alpha: 0.97, lines: 2)
+            // Let the text box's descender room overlap the gap above the facts.
+            titleFrame = titleText?.occupiedFrame(x: padding, y: titleY - titleSize * 0.2) ?? .null
+        }
+        let factsFrame = factsText?.occupiedFrame(x: padding, y: padding) ?? .null
+        let placement = BackdropPlacement(
+            regions: regionsOverride ?? entry.backdropRegions,
+            imageSize: CGSize(width: backdrop.width, height: backdrop.height),
+            screen: bounds, leftFrame: factsFrame.union(titleFrame).union(markFrame), subjectAwareText: subjectAwareText)
+        let right = !forceLeft && placement.side == .right
+
         let scene = background()
         let photo = imageLayer(backdrop, frame: bounds)
         photo.contentsGravity = .resizeAspectFill
@@ -117,39 +157,24 @@ struct ScreenSaverLayouts {
         scene.addSublayer(
             gradient(
                 colors: [CGColor(gray: 0, alpha: 0.4), CGColor(gray: 0, alpha: 0)],
-                start: CGPoint(x: 0, y: 0.5), end: CGPoint(x: 0.6, y: 0.5)))
+                start: CGPoint(x: right ? 1 : 0, y: 0.5), end: CGPoint(x: right ? 0.4 : 0.6, y: 0.5)))
 
-        let padding = unit * 0.07
-        let width = min(size.width * 0.6, unit * 1.1)
-        var y = padding
-        var facts = factsLine(entry, details: details)
-        if details.contains(.season), let season = entry.season.nonEmpty {
-            facts = facts.isEmpty ? season : season + Self.separator + facts
+        func place(_ layer: CALayer, at leftOrigin: CGPoint, shadowOpacity: Float = 0.45) {
+            layer.frame.origin = CGPoint(
+                x: right ? size.width - leftOrigin.x - layer.frame.width : leftOrigin.x, y: leftOrigin.y)
+            addShadow(to: layer, opacity: shadowOpacity)
+            scene.addSublayer(layer)
         }
         // The facts sit back as a quiet secondary line; the logo or title leads.
-        if let label = textLayer(facts, width: width, size: unit * 0.019, weight: .regular, alpha: 0.55, lines: 1) {
-            label.frame.origin = CGPoint(x: padding, y: y)
-            addShadow(to: label, opacity: 0.3)
-            scene.addSublayer(label)
-            y = label.frame.maxY + unit * 0.014
+        if let factsText, let label = textLayer(factsText, flush: right ? 1 : 0) {
+            place(label, at: factsFrame.origin, shadowOpacity: 0.3)
         }
         if let logo {
-            let area = CGRect(
-                x: padding, y: y, width: min(unit * 0.5, size.width * 0.42), height: size.height * 0.18)
-            let fitted = aspectFit(logo, in: area)
-            let mark = imageLayer(logo, frame: CGRect(origin: area.origin, size: fitted.size))
-            addShadow(to: mark)
-            scene.addSublayer(mark)
-        } else if let title = entry.title.nonEmpty,
-            case let titleSize = fittedTitle(title, width: width, largest: 0.068, smallest: 0.046),
-            let label = textLayer(title, width: width, size: titleSize, weight: .bold, alpha: 0.97, lines: 2)
-        {
-            // The text box keeps descender room below the last line; let it overlap the gap above the facts.
-            label.frame.origin = CGPoint(x: padding, y: y - titleSize * 0.2)
-            addShadow(to: label)
-            scene.addSublayer(label)
+            place(imageLayer(logo, frame: markFrame), at: markFrame.origin)
+        } else if let titleText, let label = textLayer(titleText, flush: right ? 1 : 0) {
+            place(label, at: titleFrame.origin)
         }
-        return (scene, photo)
+        return (scene, photo, placement)
     }
 
     func notice(_ message: String) -> CALayer {
@@ -303,6 +328,12 @@ struct ScreenSaverLayouts {
         let frame: CTFrame
         let width: CGFloat
         let height: CGFloat
+
+        func occupiedFrame(x: CGFloat, y: CGFloat) -> CGRect {
+            let lines = CTFrameGetLines(frame) as? [CTLine] ?? []
+            let occupied = lines.map { width - CTLineGetPenOffsetForFlush($0, 1, width) }.max() ?? 0
+            return CGRect(x: x, y: y, width: max(0, min(width, occupied)), height: height)
+        }
     }
 
     /// Text is laid out, truncated, and drawn by CoreText into an image, so what is measured is
@@ -378,6 +409,10 @@ struct ScreenSaverLayouts {
     }
 
     func textLayer(_ text: FittedText) -> CALayer? {
+        textLayer(text, flush: nil)
+    }
+
+    private func textLayer(_ text: FittedText, flush: CGFloat?) -> CALayer? {
         guard
             let context = CGContext(
                 data: nil, width: Int(ceil(text.width * scale)), height: Int(ceil(text.height * scale)),
@@ -385,7 +420,16 @@ struct ScreenSaverLayouts {
                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         else { return nil }
         context.scaleBy(x: scale, y: scale)
-        CTFrameDraw(text.frame, context)
+        if let flush, let lines = CTFrameGetLines(text.frame) as? [CTLine] {
+            var origins = [CGPoint](repeating: .zero, count: lines.count)
+            CTFrameGetLineOrigins(text.frame, CFRange(), &origins)
+            for (line, origin) in zip(lines, origins) {
+                context.textPosition = CGPoint(x: CTLineGetPenOffsetForFlush(line, flush, text.width), y: origin.y)
+                CTLineDraw(line, context)
+            }
+        } else {
+            CTFrameDraw(text.frame, context)
+        }
 
         let layer = CALayer()
         layer.name = Self.textLayerName

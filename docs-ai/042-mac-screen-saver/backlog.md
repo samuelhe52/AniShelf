@@ -29,7 +29,7 @@ Sketched in the 2026-11-21 brainstorm and not picked. Kept so they are not re-pr
 | --- | --- | --- | --- |
 | Slide transition as an alternative to cross-fade | PR #28 | One more setting every layout must support. | A per-layout transition enum in the manifest settings. |
 | Drift styles: horizontal, diagonal, "breathing", static | PR #28 | Diagonal drift cuts rows at the top and bottom. | Keep full rows: diagonal only with vertical wrap; "breathing" as a slow scale on Poster Focus. |
-| Hero Still text alignment: left, centred, random | PR #28 | One designed alignment; random looks unstable. | A fixed choice per screen orientation if users ask. |
+| Backdrop text alignment as a setting: left, centred, random | PR #28 | Random flips the text every slide and looks unstable; a centred logo lands on the subject. The side now follows the subject instead ([019](019-backdrop-subject-aware-side.md)). | Centred needs only a conditional side gradient and centred x positions; add it only if users ask. |
 | Different content per display on multi-monitor setups | Review | v1 renders each display independently from the same snapshot. | Offset the shuffle seed per screen. |
 
 ## Metadata

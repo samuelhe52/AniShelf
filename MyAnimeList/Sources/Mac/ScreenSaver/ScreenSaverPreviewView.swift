@@ -8,6 +8,7 @@
 #if os(macOS)
     import AppKit
     import Kingfisher
+    import ScreenSaverArtworkAnalysis
     import ScreenSaverKit
     import SwiftUI
 
@@ -29,6 +30,8 @@
         }
 
         final class Surface: NSView {
+            private typealias SalientRegion = ScreenSaverManifest.Entry.SalientRegion
+
             private struct Artwork: Equatable {
                 var posters: [TMDbImage] = []
                 var backdrops: [TMDbImage] = []
@@ -41,6 +44,7 @@
             private var entries: [ScreenSaverSnapshotDraft.Entry] = []
             private var artwork = Artwork()
             private var images: [TMDbImage: CGImage] = [:]
+            private var backdropRegions: [TMDbImage: [SalientRegion]] = [:]
             private var loading: Task<Void, Never>?
             private var layoutSize: CGSize
 
@@ -131,35 +135,45 @@
                 artwork = next
                 loading?.cancel()
                 let wanted = Set(next.posters + next.backdrops + next.logos)
+                let backdrops = Set(next.backdrops)
                 images = images.filter { wanted.contains($0.key) }
+                backdropRegions = backdropRegions.filter { backdrops.contains($0.key) }
                 loading = Task { [weak self] in
                     await self?.load(next.posters)
-                    await self?.load(next.backdrops + next.logos)
+                    await self?.load(next.backdrops + next.logos, backdrops: backdrops)
                 }
             }
 
-            private func load(_ artwork: [TMDbImage]) async {
+            private func load(_ artwork: [TMDbImage], backdrops: Set<TMDbImage> = []) async {
                 let clock = ContinuousClock()
                 var renderedAt: ContinuousClock.Instant?
                 var remaining = artwork.filter { images[$0] == nil }.makeIterator()
-                await withTaskGroup(of: (TMDbImage, CGImage?).self) { group in
+                await withTaskGroup(of: (TMDbImage, CGImage?, [SalientRegion]?).self) { group in
                     func enqueue(_ image: TMDbImage) {
                         group.addTask {
                             // Match the library's display cache. Only the small preview sample may fetch uncached art.
                             let result = try? await KingfisherManager.shared.retrieveImage(
                                 with: image.url, options: [.processor(image.processor), .scaleFactor(1)]
                             )
-                            return (image, result?.image.exportCGImage)
+                            let bitmap = result?.image.exportCGImage
+                            // Cache the preview's saliency with its thumbnail, independent of the toggle.
+                            let regions: [SalientRegion]? = if let bitmap, backdrops.contains(image), !Task.isCancelled {
+                                BackdropSaliency.regions(in: bitmap)
+                            } else {
+                                nil
+                            }
+                            return (image, bitmap, regions)
                         }
                     }
                     for _ in 0..<4 {
                         guard !Task.isCancelled, let image = remaining.next() else { break }
                         enqueue(image)
                     }
-                    while let (image, bitmap) = await group.next() {
+                    while let (image, bitmap, regions) = await group.next() {
                         guard !Task.isCancelled else { break }
                         if let bitmap {
                             images[image] = bitmap
+                            backdropRegions[image] = regions
                             let now = clock.now
                             if renderedAt.map({ $0.duration(to: now) >= .milliseconds(120) }) ?? true {
                                 renderedAt = now
@@ -185,7 +199,8 @@
                     guard let poster = add(entry.previewPoster), let bitmap = bitmaps[poster] else { return nil }
                     return entry.manifestEntry(
                         poster: poster, posterPixelSize: .init(width: bitmap.width, height: bitmap.height),
-                        backdrop: add(entry.previewBackdrop), logo: add(entry.logo))
+                        backdrop: add(entry.previewBackdrop), logo: add(entry.logo),
+                        backdropRegions: entry.previewBackdrop.flatMap { backdropRegions[$0] })
                 }
                 renderer.updatePreview(.init(settings: draft.settings, entries: ready, images: bitmaps))
             }

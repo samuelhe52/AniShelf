@@ -2960,6 +2960,22 @@
         }
       }
     },
+    "Smart Text Placement" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "文字のスマート配置"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "智能文字布局"
+          }
+        }
+      }
+    },
     "Back" : {
       "localizations" : {
         "ja" : {
