@@ -76,6 +76,8 @@
                     language: "en", title: "Library series", logoImagePath: "/logo.svg", genreIDs: [16, 18, 28, 35])
             )
             season.usingCustomPoster = true
+            season.dateStarted = Date(timeIntervalSince1970: 1_685_836_800)
+            season.dateFinished = Date(timeIntervalSince1970: 1_686_700_800)
             season.setEntryScore(EntryScore(halves: 9))
             season.parentSeriesEntry = parent
             try fixture.insert(parent, season)
@@ -94,7 +96,9 @@
             let manifestEntry = japanese.manifestEntry(
                 poster: "images/poster.jpg", posterPixelSize: .init(width: 20, height: 30))
             #expect(manifestEntry.airDate == Date(timeIntervalSince1970: 1_685_577_600))
-            #expect(manifestEntry.airDateLabel == "2023年6月1日")
+            #expect(manifestEntry.watchStartDate == season.dateStarted)
+            #expect(manifestEntry.watchEndDate == season.dateFinished)
+            #expect(manifestEntry.dateLocaleIdentifier == Language.japanese.rawValueWithRegion)
             #expect(japanese.poster?.url.pathComponents.suffix(2) == ["w780", "chosen.jpg"])
             #expect(japanese.previewPoster?.variant == .posterThumbnail)
             #expect(japanese.poster?.url.lastPathComponent == "chosen.jpg")
@@ -103,6 +107,7 @@
             // The Animation genre is dropped; the rest keep their order.
             #expect(japanese.genres?.prefix(2) == ["ドラマ", "アクション"])
             #expect(japanese.status == "継続中")
+            #expect(japanese.watchStatus == "見たい")
             #expect(japanese.userScore == "★ 4.5")
             #expect(
                 ScreenSaverSnapshotBuilder.build(

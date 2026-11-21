@@ -30,7 +30,9 @@ struct ScreenSaverKitTests {
                     season: "Season 2",
                     year: "2026",
                     airDate: Date(timeIntervalSince1970: 1_685_577_600.75),
-                    airDateLabel: "2023年6月1日",
+                    watchStartDate: Date(timeIntervalSince1970: 1_790_000_001.25),
+                    watchEndDate: Date(timeIntervalSince1970: 1_790_000_300.75),
+                    dateLocaleIdentifier: "ja_JP",
                     genres: ["Adventure"],
                     status: "Ended",
                     userScore: "★ 4.5",
@@ -67,7 +69,7 @@ struct ScreenSaverKitTests {
             entry("undated", nil),
             entry("c-next-year", "2021-02-01T00:00:00Z"),
             entry("broken", "2021-01-01T00:00:00Z", poster: "images/broken.png"),
-            entry("a-june", "2020-06-01T00:00:00Z"),
+            entry("a-june", "2020-06-01T00:00:00Z")
         ]
         var director = TimelineDirector(
             .init(
@@ -91,7 +93,7 @@ struct ScreenSaverKitTests {
             "z-january": ("a-june", nil),
             "a-june": ("b-june", nil),
             "b-june": ("c-next-year", .year(2021)),
-            "c-next-year": ("z-january", .wrap(2020)),
+            "c-next-year": ("z-january", .wrap(2020))
         ]
         for (left, right) in zip(slots, slots.dropFirst()) {
             let next = try #require(expected[left.entry.id])
@@ -99,6 +101,58 @@ struct ScreenSaverKitTests {
             #expect(right.marker == next.marker)
             #expect(right.position == left.position + 1)
         }
+    }
+
+    @Test
+    func timelineWatchDatesShowRangesOpenOnTheMissingSide() async throws {
+        let fixture = try SnapshotFixture()
+        defer { fixture.remove() }
+        try fixture.writeImage("poster.png")
+        let calendar = Calendar(identifier: .gregorian)
+        func day(_ day: Int) throws -> Date {
+            try #require(calendar.date(from: DateComponents(year: 2024, month: 6, day: day)))
+        }
+        func entry(_ id: String, airDate: Date? = nil, start: Date? = nil, end: Date? = nil, locale: String = "ja-JP")
+            -> ScreenSaverManifest.Entry
+        {
+            .init(
+                id: id, airDate: airDate, watchStartDate: start, watchEndDate: end, dateLocaleIdentifier: locale,
+                poster: "images/poster.png", posterPixelSize: .init(width: 20, height: 30))
+        }
+        // An entry with only an end date sorts by it.
+        let entries: [ScreenSaverManifest.Entry] = [
+            entry("open", start: try day(5)),
+            entry("closed", start: try day(2), end: try day(10)),
+            entry("endOnly", end: try day(3)),
+            entry("undated", airDate: try day(4))
+        ]
+        try fixture.write(.init(settings: .init(layout: .coverWall, interval: 12), entries: entries))
+
+        let cases: [(ScreenSaverDraft.TimelineDatePrecision, [String])] = [
+            (.fullDate, ["2024年6月2日～10日", "～2024年6月3日", "2024年6月5日～"]),
+            (.yearAndMonth, ["2024年6月", "～2024年6月", "2024年6月～"])
+        ]
+        for (precision, captions) in cases {
+            var draft = ScreenSaverDraft(layout: .timeline, entryLimit: 3)
+            draft.timelineDateSource = .watchDates
+            draft.timelineDatePrecision = precision
+            let loader = ScreenSaverSceneLoader(directory: fixture.directory, seed: 7, draft: draft)
+            let snapshot = await loader.read()
+            let scene = await loader.prepare(
+                snapshot, cursor: .init(), size: CGSize(width: 1_280, height: 800), scale: 1)
+            guard case .stage(let step) = scene.content, case .open(_, let slots, _) = step as? TimelineStep else {
+                Issue.record("Expected a Timeline at \(precision)")
+                continue
+            }
+            let first = try #require(slots.firstIndex { $0.entry.id == "closed" })
+            let shown = slots[first...].prefix(3)
+            #expect(shown.map(\.entry.id) == ["closed", "endOnly", "open"])
+            #expect(shown.map(\.dateText) == captions)
+        }
+
+        let english = TimelineDateText(source: .watchDates, precision: .fullDate)
+        let started = entry("en", start: try day(5), locale: "en_US")
+        #expect(english.text(for: started) == "Jun 5, 2024\u{2009}–")
     }
 
     @Test

@@ -19,7 +19,7 @@ public enum ScreenSaverDraftLayout: String, CaseIterable, Sendable {
     case flipWall
     /// Poster Focus style: a full-height poster whose inner edge melts into a blur of itself.
     case coverFusion
-    /// Posters along a line in airing order, the one at the centre named.
+    /// Posters along a line in chronological order, the one at the centre named.
     case timeline
     /// Posters floating upward at different depths; no text.
     case depthDrift
@@ -37,6 +37,47 @@ public enum ScreenSaverDraftLayout: String, CaseIterable, Sendable {
 /// Playback overrides for the Screen Saver Demo. Every field is optional; an empty draft plays the
 /// snapshot exactly as the saver would.
 public struct ScreenSaverDraft: Equatable, Sendable {
+    public enum TimelineDateSource: CaseIterable, Sendable {
+        case airDate
+        /// The watch start, or the end for an entry with only an end date. The caption shows the
+        /// range, so its shape tells the two sources apart without a label.
+        case watchDates
+
+        /// The date the line sorts by.
+        public func date(for entry: ScreenSaverManifest.Entry) -> Date? {
+            switch self {
+            case .airDate: entry.airDate
+            case .watchDates: entry.watchStartDate ?? entry.watchEndDate
+            }
+        }
+
+        var timeZone: TimeZone { self == .airDate ? .gmt : .current }
+    }
+
+    public enum TimelineDatePrecision: CaseIterable, Sendable {
+        case year
+        case yearAndMonth
+        case fullDate
+
+        func formatStyle(calendar: Calendar) -> Date.FormatStyle {
+            let style = Date.FormatStyle(calendar: calendar, timeZone: calendar.timeZone)
+            switch self {
+            case .year: return style.year()
+            case .yearAndMonth: return style.year().month(.abbreviated)
+            case .fullDate: return style.year().month(.abbreviated).day()
+            }
+        }
+
+        func intervalStyle(calendar: Calendar) -> Date.IntervalFormatStyle {
+            let style = Date.IntervalFormatStyle(calendar: calendar, timeZone: calendar.timeZone)
+            switch self {
+            case .year: return style.year()
+            case .yearAndMonth: return style.year().month(.abbreviated)
+            case .fullDate: return style.year().month(.abbreviated).day()
+            }
+        }
+    }
+
     /// Plays a draft layout instead of `settings.layout`.
     public var layout: ScreenSaverDraftLayout?
     /// Replaces the snapshot's settings: details, interval, and rows apply to draft layouts too.
@@ -58,6 +99,8 @@ public struct ScreenSaverDraft: Equatable, Sendable {
     public var pileDepth: Int = 7
     /// Timeline: seconds each poster rests at the centre after the pan.
     public var timelineHold: TimeInterval = 7
+    public var timelineDateSource: TimelineDateSource = .airDate
+    public var timelineDatePrecision: TimelineDatePrecision = .fullDate
 
     public init(
         layout: ScreenSaverDraftLayout? = nil, settings: ScreenSaverManifest.Settings? = nil, entryLimit: Int? = nil,

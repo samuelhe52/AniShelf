@@ -17,7 +17,9 @@
             let season: String?
             let year: String?
             let airDate: Date?
-            let airDateLabel: String?
+            let watchStartDate: Date?
+            let watchEndDate: Date?
+            let dateLocaleIdentifier: String
             let genres: [String]?
             let status: String?
             let score: String?
@@ -36,9 +38,12 @@
                 logo: String? = nil
             ) -> ScreenSaverManifest.Entry {
                 .init(
-                    id: id, title: title, season: season, year: year, airDate: airDate, airDateLabel: airDateLabel,
+                    id: id, title: title, season: season, year: year, airDate: airDate,
+                    watchStartDate: watchStartDate, watchEndDate: watchEndDate,
+                    dateLocaleIdentifier: dateLocaleIdentifier,
                     genres: genres, status: status, score: score, watchStatus: watchStatus, userScore: userScore,
-                    overview: overview, poster: poster, posterPixelSize: posterPixelSize, backdrop: backdrop, logo: logo)
+                    overview: overview, poster: poster, posterPixelSize: posterPixelSize, backdrop: backdrop, logo: logo
+                )
             }
         }
 
@@ -77,9 +82,6 @@
             // Every text detail is always included, so turning a detail on or off needs no new artwork.
             let locale = Locale(identifier: language.rawValueWithRegion)
             let airDate = entry.onAirDate
-            let airDateStyle = Date.FormatStyle(
-                date: .abbreviated, time: .omitted, locale: locale, calendar: Calendar(identifier: .gregorian),
-                timeZone: .gmt)
             let season: String? =
                 if case .season(let number, _) = entry.type {
                     EntryDetailViewModel.seasonLabelText(number, locale: locale)
@@ -93,6 +95,9 @@
                 entry.type == .movie
                 ? nil : seriesDetail?.status.map { EntryDetailViewModel.localizedStatus($0, language: language) }
 
+            var watchStatus = entry.watchStatus.localizedStringResource
+            watchStatus.locale = locale
+
             let isBackdrop = settings.layout == .backdrop
             let backdrop =
                 isBackdrop ? TMDbImageURLResolver.current.originalURL(for: entry.backdropPath, role: .backdrop) : nil
@@ -102,11 +107,13 @@
                 season: season,
                 year: airDate?.formatted(.dateTime.year().locale(locale)),
                 airDate: airDate,
-                airDateLabel: airDate?.formatted(airDateStyle),
+                watchStartDate: entry.dateStarted,
+                watchEndDate: entry.dateFinished,
+                dateLocaleIdentifier: locale.identifier,
                 genres: genres.isEmpty ? nil : genres,
                 status: status,
                 score: (entry.detail?.voteAverage).flatMap { $0 > 0 ? "TMDb " + String(format: "%.1f", $0) : nil },
-                watchStatus: String(localized: entry.watchStatus.localizedStringResource),
+                watchStatus: String(localized: watchStatus),
                 // Hidden along with the app's own star scores when scoring is turned off.
                 userScore: scoringEnabled
                     ? entry.entryScore.map { "★ " + $0.formatted } : nil,

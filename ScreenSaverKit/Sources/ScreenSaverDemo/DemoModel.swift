@@ -112,6 +112,8 @@ final class DemoModel {
     var deckDepth = 5
     var pileDepth = 7
     var timelineHold: Double = 7
+    var timelineDateSource: ScreenSaverDraft.TimelineDateSource = .airDate
+    var timelineDatePrecision: ScreenSaverDraft.TimelineDatePrecision = .fullDate
     var washFlows = true
     var washSpeed: Double = 1
     /// Speeds playback up; only `--capture` sets it.
@@ -119,6 +121,7 @@ final class DemoModel {
     var details: Set<ScreenSaverManifest.Detail> = [.season, .year, .genres, .watchStatus, .userScore, .overview]
     var seed = UInt64.random(in: .min ... .max)
     private(set) var entryCount: Int?
+    private(set) var timelineDateCounts: [ScreenSaverDraft.TimelineDateSource: Int] = [:]
 
     init(directory: URL? = nil) {
         self.directory =
@@ -139,7 +142,11 @@ final class DemoModel {
         draft.driftRate = driftRate
         draft.deckDepth = deckDepth
         draft.pileDepth = pileDepth
-        draft.timelineHold = timelineHold
+        if layout == .draft(.timeline) {
+            draft.timelineHold = timelineHold
+            draft.timelineDateSource = timelineDateSource
+            draft.timelineDatePrecision = timelineDatePrecision
+        }
         return DemoConfiguration(directory: directory, draft: draft)
     }
 
@@ -151,8 +158,15 @@ final class DemoModel {
 
     private func readEntryCount() {
         switch ScreenSaverSnapshotReader(directory: directory).read() {
-        case .ready(let manifest): entryCount = manifest.entries.count
-        case .empty, .requiresUpdate: entryCount = nil
+        case .ready(let manifest):
+            entryCount = manifest.entries.count
+            timelineDateCounts = Dictionary(
+                uniqueKeysWithValues: ScreenSaverDraft.TimelineDateSource.allCases.map { source in
+                    (source, manifest.entries.count { source.date(for: $0) != nil })
+                })
+        case .empty, .requiresUpdate:
+            entryCount = nil
+            timelineDateCounts = [:]
         }
     }
 }

@@ -58,10 +58,60 @@ enum TimelineMarker: Equatable, Sendable {
 struct TimelineSlot: Sendable {
     let position: Int
     let entry: ScreenSaverManifest.Entry
+    /// The caption's date line; see `TimelineDateText`.
+    let dateText: String
     let poster: CGImage
     let marker: TimelineMarker?
     /// The poster's colour in each cell of a 3 × 3 grid, for the wash.
     let samples: [ScreenSaverColor]
+}
+
+/// The caption's date: one air date, or the watch dates as a range. A range with one missing end
+/// stays open on that side, such as "Jun 2, 2024 –".
+struct TimelineDateText: Sendable {
+    let source: ScreenSaverDraft.TimelineDateSource
+    let date: Date.FormatStyle
+    let interval: Date.IntervalFormatStyle
+
+    init(source: ScreenSaverDraft.TimelineDateSource, precision: ScreenSaverDraft.TimelineDatePrecision) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = source.timeZone
+        self.source = source
+        date = precision.formatStyle(calendar: calendar)
+        interval = precision.intervalStyle(calendar: calendar)
+    }
+
+    /// In the snapshot's information language.
+    func text(for entry: ScreenSaverManifest.Entry) -> String? {
+        let locale = entry.dateLocaleIdentifier.map(Locale.init(identifier:)) ?? .current
+        let date = date.locale(locale)
+        switch (source, entry.watchStartDate, entry.watchEndDate) {
+        case (.airDate, _, _):
+            return entry.airDate?.formatted(date)
+        case (.watchDates, let start?, let end?):
+            return (min(start, end)..<max(start, end)).formatted(interval.locale(locale))
+        case (.watchDates, let start?, nil):
+            return start.formatted(date) + String(separator(locale).reversed().drop(while: \.isWhitespace).reversed())
+        case (.watchDates, nil, let end?):
+            return String(separator(locale).drop(while: \.isWhitespace)) + end.formatted(date)
+        case (.watchDates, nil, nil):
+            return nil
+        }
+    }
+
+    /// The language's own range separator, such as " – " or "～", read from a formatted range so
+    /// open ranges match closed ones.
+    private func separator(_ locale: Locale) -> String {
+        // A year apart, so the formatter cannot merge the two ends.
+        let range = Date(timeIntervalSince1970: 0)..<Date(timeIntervalSince1970: 400 * 86_400)
+        let whole = range.formatted(interval.locale(locale))
+        let start = range.lowerBound.formatted(date.locale(locale))
+        let end = range.upperBound.formatted(date.locale(locale))
+        guard whole.hasPrefix(start), whole.hasSuffix(end), whole.count > start.count + end.count else {
+            return " – "
+        }
+        return String(whole.dropFirst(start.count).dropLast(end.count))
+    }
 }
 
 enum TimelineStep: ScreenSaverStageStep {
@@ -85,16 +135,11 @@ struct TimelineDirector: ScreenSaverStageDirector {
         let year: Int
     }
 
-    static let calendar: Calendar = {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .gmt
-        return calendar
-    }()
-
-    /// Indices into `entries`, in airing order; undated entries are left out.
+    /// Indices into `entries`, in chronological order; entries without the chosen date are left out.
     private let order: [DatedEntry]
     private let geometry: TimelineGeometry
     private let details: Set<ScreenSaverManifest.Detail>
+    private let dates: TimelineDateText
     private let hold: TimeInterval
     private let pixelSize: Int
     private var nextIndex: Int
@@ -105,8 +150,14 @@ struct TimelineDirector: ScreenSaverStageDirector {
 
     init(_ context: ScreenSaverDraftContext) {
         entries = context.entries
+        let source = context.draft.timelineDateSource
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = source.timeZone
+        dates = TimelineDateText(source: source, precision: context.draft.timelineDatePrecision)
         order = context.entries.enumerated().compactMap { index, entry in
-            entry.airDate.map { DatedEntry(index: index, date: $0, year: Self.calendar.component(.year, from: $0)) }
+            source.date(for: entry).map {
+                DatedEntry(index: index, date: $0, year: calendar.component(.year, from: $0))
+            }
         }.sorted { ($0.date, context.entries[$0.index].id) < ($1.date, context.entries[$1.index].id) }
         geometry = TimelineGeometry(size: context.size)
         details = context.details
@@ -142,7 +193,9 @@ struct TimelineDirector: ScreenSaverStageDirector {
             nextPosition += 1
             lastIndex = index
             return TimelineSlot(
-                position: position, entry: entry, poster: poster, marker: marker,
+                position: position, entry: entry,
+                dateText: dates.text(for: entry) ?? "",
+                poster: poster, marker: marker,
                 samples: ScreenSaverArt.samples(of: poster, columns: 3, rows: 3))
         }
         return nil
@@ -183,14 +236,12 @@ final class TimelineStage: ScreenSaverStage {
     private var placed: [Int: Placed] = [:]
     private let wash: ScreenSaverWash
     private var caption: CALayer?
-    private static let airDateStyle = Date.FormatStyle(
-        date: .abbreviated, time: .omitted, calendar: TimelineDirector.calendar, timeZone: .gmt)
 
     private var unit: CGFloat { min(geometry.size.width, geometry.size.height) }
 
     init(
-        geometry: TimelineGeometry, slots: [TimelineSlot], details: Set<ScreenSaverManifest.Detail>, scale: CGFloat,
-        wash: ScreenSaverWash
+        geometry: TimelineGeometry, slots: [TimelineSlot], details: Set<ScreenSaverManifest.Detail>,
+        scale: CGFloat, wash: ScreenSaverWash
     ) {
         self.geometry = geometry
         self.wash = wash
@@ -343,20 +394,21 @@ final class TimelineStage: ScreenSaverStage {
                     text: title, size: layouts.fittedTitle(title, width: width, largest: 0.042, smallest: 0.028),
                     weight: .bold, alpha: 0.97, lines: 2))
         }
-        if let date = entry.airDateLabel ?? entry.airDate?.formatted(Self.airDateStyle) {
-            let subtitle =
-                if details.contains(.season), let season = entry.season, !season.isEmpty {
-                    date + ScreenSaverLayouts.separator + season
-                } else {
-                    date
-                }
-            lines.append(
-                .init(text: subtitle, size: unit * 0.023, weight: .medium, alpha: 0.84, spaceBefore: unit * 0.006))
-        }
+        let date = slot.dateText
+        let subtitle =
+            if details.contains(.season), let season = entry.season, !season.isEmpty {
+                date + ScreenSaverLayouts.separator + season
+            } else {
+                date
+            }
+        lines.append(
+            .init(text: subtitle, size: unit * 0.023, weight: .medium, alpha: 0.84, spaceBefore: unit * 0.006))
         let facts = layouts.factsLine(entry, details: details)
         if !facts.isEmpty {
             lines.append(
-                .init(text: facts, size: unit * 0.018, weight: .regular, alpha: 0.65, lines: 2, spaceBefore: unit * 0.012))
+                .init(
+                    text: facts, size: unit * 0.018, weight: .regular, alpha: 0.65, lines: 2, spaceBefore: unit * 0.012)
+            )
         }
 
         let block = layouts.stack(lines, width: width, center: true)

@@ -157,6 +157,18 @@ struct DemoSidebar: View {
                 case .draft(.depthDrift):
                     slider("Posters per 10 s", value: $model.driftRate, in: 1...20, unit: "")
                 case .draft(.timeline):
+                    Picker("Date Source", selection: $model.timelineDateSource) {
+                        Text("Date On Air").tag(ScreenSaverDraft.TimelineDateSource.airDate)
+                        Text("Watch Dates").tag(ScreenSaverDraft.TimelineDateSource.watchDates)
+                    }
+                    Picker("Date Format", selection: $model.timelineDatePrecision) {
+                        Text("Year").tag(ScreenSaverDraft.TimelineDatePrecision.year)
+                        Text("Year and Month").tag(ScreenSaverDraft.TimelineDatePrecision.yearAndMonth)
+                        Text("Full Date").tag(ScreenSaverDraft.TimelineDatePrecision.fullDate)
+                    }
+                    if let count = model.timelineDateCounts[model.timelineDateSource] {
+                        LabeledContent("Entries with Dates") { Text(count, format: .number) }
+                    }
                     slider("Hold", value: $model.timelineHold, in: 2...30, unit: "s")
                 default:
                     EmptyView()
@@ -166,7 +178,9 @@ struct DemoSidebar: View {
             if model.layout.usesDetails {
                 Section("Details") {
                     ForEach(ScreenSaverManifest.Detail.allCases, id: \.self) { detail in
-                        Toggle(detail.rawValue, isOn: binding(for: detail))
+                        if model.layout != .draft(.timeline) || detail != .year {
+                            Toggle(detail.rawValue, isOn: binding(for: detail))
+                        }
                     }
                 }
             }
@@ -218,11 +232,15 @@ struct RendererView: NSViewRepresentable {
     }
 
     final class Surface: NSView {
-        let renderer = ScreenSaverRenderer { notice in
+        lazy var renderer = ScreenSaverRenderer { [weak self] notice in
             switch notice {
             case .empty:
-                "No snapshot in this folder. Turn on the screen saver in AniShelf Settings, or choose a folder."
-            case .requiresUpdate: "This snapshot is from a newer AniShelf."
+                if self?.configuration?.draft.layout == .timeline {
+                    return
+                        "No playable entries with the selected date. Older snapshots need to be republished in AniShelf."
+                }
+                return "No snapshot in this folder. Turn on the screen saver in AniShelf Settings, or choose a folder."
+            case .requiresUpdate: return "This snapshot is from a newer AniShelf."
             }
         }
         private var configuration: DemoConfiguration?

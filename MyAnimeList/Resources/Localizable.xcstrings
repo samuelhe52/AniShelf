@@ -791,7 +791,7 @@
     },
     "%@" : {
 
-    },
+},
     "%@ %@" : {
       "localizations" : {
         "en" : {
@@ -1079,7 +1079,7 @@
     },
     "%lld entries. Two entries deliberately fail every metadata restoration attempt. Use Retry three times to expose their discard actions." : {
 
-    },
+},
     "%lld episodes" : {
       "localizations" : {
         "ja" : {
@@ -3190,7 +3190,7 @@
     },
     "Broadcast Policy" : {
 
-    },
+},
     "Built-in release notes" : {
       "localizations" : {
         "ja" : {
@@ -3960,7 +3960,7 @@
     },
     "Completed Sync" : {
 
-    },
+},
     "Confirm" : {
       "localizations" : {
         "ja" : {
@@ -4851,7 +4851,7 @@
     },
     "Deleted" : {
 
-    },
+},
     "Deletion pending. Retry to finish." : {
       "localizations" : {
         "ja" : {
@@ -6520,7 +6520,7 @@
     },
     "Following menu action" : {
 
-    },
+},
     "Format" : {
       "localizations" : {
         "ja" : {
@@ -6876,7 +6876,7 @@
     },
     "Hold deletions until Retry" : {
 
-    },
+},
     "Homepage" : {
       "localizations" : {
         "ja" : {
@@ -6927,7 +6927,7 @@
     },
     "iCloud data was deleted in iCloud settings. Upload stays blocked while failures are injected." : {
 
-    },
+},
     "iCloud didn't accept these changes. They stay saved on this device, and AniShelf tries uploading them again on later syncs." : {
       "localizations" : {
         "ja" : {
@@ -7059,7 +7059,7 @@
     },
     "iCloud Sync Preview" : {
 
-    },
+},
     "If you use a VPN or another network proxy, turning off Use TMDb Proxy in Settings may help." : {
       "localizations" : {
         "ja" : {
@@ -7273,16 +7273,16 @@
     },
     "Inject failures" : {
 
-    },
+},
     "Injected failures are off. The next Retry will load the pending entries and clear the other notices." : {
 
-    },
+},
     "Injected failures are off. The next Retry will restore the two pending entries and complete bootstrap." : {
 
-    },
+},
     "Injected failures are off. Upload This Library re-creates the iCloud data and completes sync." : {
 
-    },
+},
     "Install…" : {
       "localizations" : {
         "ja" : {
@@ -9265,7 +9265,7 @@
     },
     "Open airtime menu" : {
 
-    },
+},
     "Open API Page" : {
       "localizations" : {
         "ja" : {
@@ -11103,7 +11103,7 @@
     },
     "Restoration" : {
 
-    },
+},
     "Restore" : {
       "localizations" : {
         "ja" : {
@@ -11506,7 +11506,7 @@
     },
     "Scenario" : {
 
-    },
+},
     "Schedule" : {
       "localizations" : {
         "ja" : {
@@ -12889,7 +12889,7 @@
     },
     "Sync succeeded, but two entries couldn't be loaded, two changes weren't uploaded, and one record is unreadable. The entry TMDb no longer lists can be discarded right away." : {
 
-    },
+},
     "Synced" : {
       "localizations" : {
         "ja" : {
@@ -12941,7 +12941,7 @@
     },
     "Synthetic iCloud Library" : {
 
-    },
+},
     "System (%@)" : {
       "localizations" : {
         "ja" : {
@@ -16373,6 +16373,118 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "年份"
+          }
+        }
+      }
+    },
+    "Watch Dates" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "視聴期間"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "观看时间"
+          }
+        }
+      }
+    },
+    "Date Format" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日付の形式"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日期格式"
+          }
+        }
+      }
+    },
+    "Date Source" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "基準にする日付"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日期依据"
+          }
+        }
+      }
+    },
+    "Entries with Dates" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日付のある作品"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有日期的条目"
+          }
+        }
+      }
+    },
+    "Full Date" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "年月日"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "年月日"
+          }
+        }
+      }
+    },
+    "No playable entries with the selected date. Older snapshots need to be republished in AniShelf." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択した日付を持つ表示可能な作品がありません。古いスナップショットはAniShelfで再公開してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有包含所选日期且可播放的条目。请在AniShelf中重新发布旧版快照。"
+          }
+        }
+      }
+    },
+    "Year and Month" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "年月"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "年月"
           }
         }
       }

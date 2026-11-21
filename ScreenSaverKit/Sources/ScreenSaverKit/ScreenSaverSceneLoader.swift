@@ -92,7 +92,11 @@ actor ScreenSaverSceneLoader {
 
         if case .ready(let manifest) = current {
             var random = ScreenSaverRandomGenerator(state: seed)
-            var entries = manifest.entries.shuffled(using: &random)
+            var entries = manifest.entries
+            if let draft, draft.layout == .timeline, draft.entryLimit != nil {
+                entries = entries.filter { draft.timelineDateSource.date(for: $0) != nil }
+            }
+            entries.shuffle(using: &random)
             if let limit = draft?.entryLimit { entries = Array(entries.prefix(max(limit, 1))) }
             orderedSnapshot = .ready(
                 ScreenSaverManifest(

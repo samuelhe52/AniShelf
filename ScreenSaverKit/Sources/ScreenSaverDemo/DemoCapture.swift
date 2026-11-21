@@ -14,7 +14,8 @@ import UniformTypeIdentifiers
 /// drawn by Core Animation at the given times, so they catch motion mid-flight.
 ///
 /// Options: `--layouts deckFan,flipWall` (draft or shipped raw values), `--screens 0,3,5` (preset
-/// indices), `--times 1.5,4` (seconds after start), `--speed 4`, `--entries 3`, `--seed 7`.
+/// indices), `--times 1.5,4` (seconds after start), `--speed 4`, `--entries 3`, `--seed 7`, and
+/// `--dates watch` for Timeline's watch dates.
 @MainActor
 enum DemoCapture {
     static func run(output: URL) {
@@ -58,6 +59,7 @@ enum DemoCapture {
                 model.speed = speed
                 model.seed = option("seed")?.first.flatMap(UInt64.init) ?? 7
                 model.entryLimit = option("entries")?.first.flatMap(Int.init)
+                if option("dates")?.first == "watch" { model.timelineDateSource = .watchDates }
 
                 // A panel at half the layout size and the display's scale, at desktop level behind every
                 // other window: the window server only draws windows on screen, Stage Manager leaves

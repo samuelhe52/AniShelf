@@ -117,9 +117,11 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         public let title: String?
         public let season: String?
         public let year: String?
-        /// Calendar date for Timeline ordering; the label follows the library's information language.
+        /// Dates used for Timeline ordering. Air dates are TMDb calendar dates in UTC.
         public let airDate: Date?
-        public let airDateLabel: String?
+        public let watchStartDate: Date?
+        public let watchEndDate: Date?
+        public let dateLocaleIdentifier: String?
         public let genres: [String]?
         public let status: String?
         public let score: String?
@@ -137,7 +139,9 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             season: String? = nil,
             year: String? = nil,
             airDate: Date? = nil,
-            airDateLabel: String? = nil,
+            watchStartDate: Date? = nil,
+            watchEndDate: Date? = nil,
+            dateLocaleIdentifier: String? = nil,
             genres: [String]? = nil,
             status: String? = nil,
             score: String? = nil,
@@ -154,8 +158,10 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             self.season = season
             self.year = year
             // Keep equality stable after the snapshot's whole-second ISO 8601 round trip.
-            self.airDate = airDate.map { Date(timeIntervalSince1970: floor($0.timeIntervalSince1970)) }
-            self.airDateLabel = airDateLabel
+            self.airDate = airDate.map(Self.wholeSeconds)
+            self.watchStartDate = watchStartDate.map(Self.wholeSeconds)
+            self.watchEndDate = watchEndDate.map(Self.wholeSeconds)
+            self.dateLocaleIdentifier = dateLocaleIdentifier
             self.genres = genres
             self.status = status
             self.score = score
@@ -166,6 +172,10 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             self.posterPixelSize = posterPixelSize
             self.backdrop = backdrop
             self.logo = logo
+        }
+
+        private static func wholeSeconds(_ date: Date) -> Date {
+            Date(timeIntervalSince1970: floor(date.timeIntervalSince1970))
         }
     }
 
