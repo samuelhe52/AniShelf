@@ -1325,6 +1325,11 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     CALayer *scene = [self bigSceneForItem:items[idx] size:self.bounds.size contentSize:self.bounds.size];
     [self.stage addSublayer:scene];
     self.bigScene = scene;
+    // 首图这一帧还没提交到渲染树，立刻加动画会被吞掉；等一个 runloop 再加
+    CALayer *firstPhoto = self.bigPhotoLayer;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self scheduleBigZoomForPhoto:firstPhoto delay:0];
+    });
     self.bigBuiltAt = CACurrentMediaTime();
     self.nextBig = 0;      // 交给第一次逐帧回调起算，保证首图停满一个间隔
 }
@@ -1388,9 +1393,15 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
         fade.timingFunction = ease;
         fade.fillMode = kCAFillModeForwards;
         fade.removedOnCompletion = NO;
+        [CATransaction begin];
+        [CATransaction setDisableActions:YES];
         newScene.opacity = 0.0;
+        [CATransaction commit];
         [newScene addAnimation:fade forKey:@"bigFade"];
+        [CATransaction begin];
+        [CATransaction setDisableActions:YES];
         newScene.opacity = 1.0;
+        [CATransaction commit];
     } else {
         BOOL horizontal = (tr == 2 || tr == 3);
         BOOL push = (tr == 3 || tr == 5);
@@ -1439,7 +1450,10 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     zoom.fromValue = @1.0;
     zoom.toValue = @1.045;
     zoom.duration = MAX(1.0, (CFTimeInterval)self.bigInterval);
-    zoom.beginTime = CACurrentMediaTime() + delay;
+    // beginTime 要换算成图层自己的时间轴：刚加入层树的首图还没对齐全局时间，
+    // 直接塞 CACurrentMediaTime() 会被当成"很久以后"，动画永远不开始。
+    CFTimeInterval localNow = [photo convertTime:CACurrentMediaTime() fromLayer:nil];
+    zoom.beginTime = localNow + delay + 0.03;
     zoom.fillMode = kCAFillModeBoth;
     zoom.removedOnCompletion = NO;
     zoom.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
@@ -2116,7 +2130,9 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     if (self.isPreview) return;
     CFTimeInterval now = CACurrentMediaTime();
     // 舞台被意外拆掉（尺寸抖动、重建中断）时自愈，避免停在黑屏
-    if (!self.stopped && self.stage.superlayer == nil) {
+    BOOL stageGone = (!self.stage || self.stage.superlayer == nil || self.stage.sublayers.count == 0);
+    if (!self.stopped && stageGone) {
+        ASLog(@"[watchdog] stage gone, rebuilding");
         [self buildScene];
         return;
     }
@@ -2157,7 +2173,31 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 }
 
 - (NSWindow *)configureSheet {
-    if (self.configSheet) return self.configSheet;
+    ASLog(@"[sheet] enter");
+    @try {
+        return [self buildConfigureSheet];
+    } @catch (NSException *e) {
+        // 面板构建出错时至少给个可见的说明，而不是让"选项…"点了没反应
+        ASLog(@"[sheet] EXCEPTION %@: %@", e.name, e.reason);
+        NSWindow *w = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 460, 140)
+                                                  styleMask:NSWindowStyleMaskTitled
+                                                    backing:NSBackingStoreBuffered
+                                                      defer:NO];
+        NSTextField *l = [NSTextField labelWithString:
+                          [NSString stringWithFormat:@"选项面板加载失败：%@", e.reason ?: @"未知错误"]];
+        l.frame = NSMakeRect(20, 40, 420, 60);
+        l.lineBreakMode = NSLineBreakByWordWrapping;
+        l.maximumNumberOfLines = 3;
+        [w.contentView addSubview:l];
+        w.releasedWhenClosed = NO;
+        return w;
+    }
+}
+
+- (NSWindow *)buildConfigureSheet {
+    // 不复用旧窗口：宿主释放过再复现时，旧窗口可能已经无法再次作为 sheet 呈现
+    self.configSheet = nil;
+    self.rowLabels = nil;
 
     NSWindow *win = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 450, 320)
                                                styleMask:NSWindowStyleMaskTitled
