@@ -70,3 +70,43 @@ public struct ScreenSaverDurationSlider: View {
         )
     }
 }
+
+public struct ScreenSaverOverviewLinesSlider: View {
+    @Binding private var value: Int
+    private let controlWidth: CGFloat?
+
+    public init(value: Binding<Int>, controlWidth: CGFloat? = nil) {
+        _value = value
+        self.controlWidth = controlWidth
+    }
+
+    public var body: some View {
+        let range = ScreenSaverManifest.Settings.posterOverviewLineRange
+        let unlimited = ScreenSaverManifest.Settings.unlimitedPosterOverviewLines
+        let last = range.upperBound + 1
+        let selection = Binding(
+            get: { Double(value == unlimited ? last : value) },
+            set: { value = Int($0.rounded()) == last ? unlimited : Int($0.rounded()) }
+        )
+        let label = value == unlimited ? Text("No Limit") : Text(value, format: .number)
+        return LabeledContent("Overview Lines") {
+            HStack(spacing: 8) {
+                Slider(value: selection, in: Double(range.lowerBound)...Double(last), step: 1) {
+                    Text("Overview Lines")
+                } tick: { value in
+                    SliderTick(value)
+                }
+                .labelsHidden()
+                .accessibilityValue(label)
+                ZStack(alignment: .trailing) {
+                    Text("No Limit").hidden()
+                    label
+                }
+                .fixedSize()
+                .monospacedDigit()
+                .accessibilityHidden(true)
+            }
+            .frame(width: controlWidth)
+        }
+    }
+}

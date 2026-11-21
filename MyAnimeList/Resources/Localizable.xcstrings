@@ -1,6 +1,18 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "No Limit" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "制限なし" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无限制" } }
+      }
+    },
+    "Overview Lines" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "あらすじの行数" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "简介行数" } }
+      }
+    },
     "Choose a category when adding anime, and set a default category." : {
       "localizations" : {
         "ja" : {

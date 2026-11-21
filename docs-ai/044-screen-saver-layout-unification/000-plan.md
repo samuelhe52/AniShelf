@@ -87,4 +87,4 @@ From the current code; the implementer must verify each row while wiring it:
 
 ## Amendments
 
-None yet.
+- Updated 2026-11-22: shared Poster overview cap — see [002-poster-line-limits.md](002-poster-line-limits.md).

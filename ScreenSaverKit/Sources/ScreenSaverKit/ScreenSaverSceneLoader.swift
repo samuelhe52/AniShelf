@@ -34,6 +34,7 @@ struct ScreenSaverScene: Sendable {
     var next = Cursor()
     var washFlows = true
     var washSpeed: Double = 1
+    var posterOverviewLines = ScreenSaverManifest.Settings.defaultPosterOverviewLines
 }
 
 struct ScreenSaverSlideOrder: Sendable {
@@ -151,6 +152,7 @@ actor ScreenSaverSceneLoader {
             image: image)
         scene.washFlows = settings.washFlows
         scene.washSpeed = settings.washSpeed
+        scene.posterOverviewLines = settings.posterOverviewLines
         return scene
     }
 

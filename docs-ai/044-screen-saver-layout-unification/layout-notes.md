@@ -4,6 +4,10 @@ Living document. Design rules for the layouts that started as Demo drafts and sh
 [044](../042-mac-screen-saver/000-plan.md). They moved here from the [042 idea backlog](../042-mac-screen-saver/backlog.md)
 when the layouts shipped; update them in place when a layout's design changes.
 
+Poster Focus and Cover Fusion share an overview line cap: a stepped slider from 3–8
+lines, followed by no limit. The default is 4. Cover Wall's small-library Poster Focus
+fallback uses the same cap.
+
 | Layout | Source | Design rules |
 | --- | --- | --- |
 | **Deck**: cards as a stack, one poster at a time, title underneath. Two sub-styles: **Fan** (the front card is dealt off, the rest fan behind it) and **Pile** (a tall pile seen head-on, each card peeking above the one in front, the whole pile leaning slightly and a little more with depth; the top card is tossed toward the viewer and the pile moves up; a soft colour wash from the top posters behind; title and library count in a corner) | PR #28; Pile from Samuel's reference image, 2026-11-21 | Drive the cards and the caption from one model; let the leaving card animate on its own so no step waits on another; tie every delayed step to the session token. Pile must stay orderly: one shared lean, not random twists per card. |

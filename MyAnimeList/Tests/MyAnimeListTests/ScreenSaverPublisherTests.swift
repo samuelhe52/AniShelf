@@ -105,6 +105,7 @@
             settings.timelineHold = 4
             settings.timelineDateSource = .watchDates
             settings.timelineDatePrecision = .year
+            settings.posterOverviewLines = ScreenSaverManifest.Settings.unlimitedPosterOverviewLines
             settings.save(to: fixture.defaults)
 
             let restored = ScreenSaverSettings(defaults: fixture.defaults)
@@ -115,6 +116,7 @@
             #expect(restored.details(for: .deckFan) == [.season, .year])
             #expect(restored.details(for: .deckPile) == [.season, .year, .genres])
             #expect(restored.manifestSettings.details == [.season, .genres])
+            #expect(restored.manifestSettings.posterOverviewLines == ScreenSaverManifest.Settings.unlimitedPosterOverviewLines)
         }
 
         @Test

@@ -38,6 +38,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             case timelineDateSource
             case timelineDatePrecision
             case driftRate
+            case posterOverviewLines
         }
 
         public var controls: [Control] { configuration.controls }
@@ -47,7 +48,8 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             let detailsWithoutOverview = allDetails.filter { $0 != .overview }
             return switch self {
             case .coverWall: ([.rows], [])
-            case .posterFocus, .coverFusion, .editorialCover: ([.interval, .flowingBackground], allDetails)
+            case .posterFocus, .coverFusion: ([.interval, .flowingBackground, .posterOverviewLines], allDetails)
+            case .editorialCover: ([.interval, .flowingBackground], allDetails)
             case .backdrop: ([.interval], detailsWithoutOverview)
             case .deckFan: ([.interval, .flowingBackground, .deckDepth], detailsWithoutOverview)
             case .deckPile: ([.interval, .flowingBackground, .pileDepth], detailsWithoutOverview)
@@ -138,6 +140,10 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
     public struct Settings: Codable, Equatable, Sendable {
         public static let defaultCoverWallRows = 4
         public static let coverWallRowRange = 2...8
+        public static let posterOverviewLineRange = 3...8
+        /// Zero means no line limit.
+        public static let unlimitedPosterOverviewLines = 0
+        public static let defaultPosterOverviewLines = 4
         /// The flow speeds the settings offer, as multiples of the normal speed.
         public static let washSpeeds: [Double] = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4]
         public static let defaultInterval: TimeInterval = 12
@@ -158,6 +164,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         public let details: [Detail]
         public let interval: TimeInterval
         public let coverWallRows: Int
+        public let posterOverviewLines: Int
         /// Whether the colour wash drifts. Off, it holds still and only blends between colours.
         public let washFlows: Bool
         /// How fast a flowing wash drifts, as a multiple of its normal speed.
@@ -179,7 +186,8 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             flipDelay: TimeInterval = Self.defaultFlipDelay, driftRate: Double = Self.defaultDriftRate,
             deckDepth: Int = Self.defaultDeckDepth, pileDepth: Int = Self.defaultPileDepth,
             timelineHold: TimeInterval = Self.defaultTimelineHold, timelineDateSource: TimelineDateSource = .airDate,
-            timelineDatePrecision: TimelineDatePrecision = .fullDate
+            timelineDatePrecision: TimelineDatePrecision = .fullDate,
+            posterOverviewLines: Int = Self.defaultPosterOverviewLines
         ) {
             self.washFlows = washFlows
             self.washSpeed = Self.washSpeeds.min { abs($0 - washSpeed) < abs($1 - washSpeed) } ?? 1
@@ -188,6 +196,8 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             // Between a second and an hour.
             self.interval = interval.isFinite ? min(max(interval, 1), 3_600) : Self.defaultInterval
             self.coverWallRows = Self.coverWallRowRange.clamp(coverWallRows)
+            self.posterOverviewLines = posterOverviewLines == Self.unlimitedPosterOverviewLines
+                ? Self.unlimitedPosterOverviewLines : Self.posterOverviewLineRange.clamp(posterOverviewLines)
             self.flipDelay = Self.flipDelayRange.clamp(flipDelay.isFinite ? flipDelay : Self.defaultFlipDelay)
             self.driftRate = Self.driftRateRange.clamp(driftRate.isFinite ? driftRate : Self.defaultDriftRate)
             self.deckDepth = Self.deckDepthRange.clamp(deckDepth)
@@ -198,8 +208,8 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             self.timelineDatePrecision = timelineDatePrecision
         }
 
-        /// Every key is required: a snapshot from another build is refused by its build ID before
-        /// it is decoded. Values still pass through `init`, which clamps and orders them.
+        /// Values pass through `init`, which clamps and orders them. Additive settings use
+        /// defaults so the demo can read snapshots published before those settings existed.
         public init(from decoder: Decoder) throws {
             let values = try decoder.container(keyedBy: CodingKeys.self)
             self.init(
@@ -215,7 +225,9 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
                 pileDepth: try values.decode(Int.self, forKey: .pileDepth),
                 timelineHold: try values.decode(TimeInterval.self, forKey: .timelineHold),
                 timelineDateSource: try values.decode(TimelineDateSource.self, forKey: .timelineDateSource),
-                timelineDatePrecision: try values.decode(TimelineDatePrecision.self, forKey: .timelineDatePrecision)
+                timelineDatePrecision: try values.decode(TimelineDatePrecision.self, forKey: .timelineDatePrecision),
+                posterOverviewLines: try values.decodeIfPresent(Int.self, forKey: .posterOverviewLines)
+                    ?? Self.defaultPosterOverviewLines
             )
         }
     }

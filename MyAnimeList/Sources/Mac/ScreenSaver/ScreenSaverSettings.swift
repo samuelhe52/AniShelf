@@ -85,6 +85,7 @@
         static let timelineHoldKey = "screenSaverTimelineHold"
         static let timelineDateSourceKey = "screenSaverTimelineDateSource"
         static let timelineDatePrecisionKey = "screenSaverTimelineDatePrecision"
+        static let posterOverviewLinesKey = "screenSaverPosterOverviewLines"
 
         private static func detailsKey(for layout: Layout) -> String {
             // Preserves screenSaverPosterFocusDetails and screenSaverBackdropDetails.
@@ -110,6 +111,7 @@
         var timelineHold = ManifestSettings.defaultTimelineHold
         var timelineDateSource: ScreenSaverManifest.TimelineDateSource = .airDate
         var timelineDatePrecision: ScreenSaverManifest.TimelineDatePrecision = .fullDate
+        var posterOverviewLines = ManifestSettings.defaultPosterOverviewLines
 
         init() {}
 
@@ -144,6 +146,12 @@
             driftRate = stored(Self.driftRateKey, in: ManifestSettings.driftRateRange) ?? driftRate
             deckDepth = stored(Self.deckDepthKey, in: ManifestSettings.deckDepthRange) ?? deckDepth
             pileDepth = stored(Self.pileDepthKey, in: ManifestSettings.deckDepthRange) ?? pileDepth
+            if let value = defaults.object(forKey: Self.posterOverviewLinesKey) as? Int,
+                value == ManifestSettings.unlimitedPosterOverviewLines
+                    || ManifestSettings.posterOverviewLineRange.contains(value)
+            {
+                posterOverviewLines = value
+            }
             timelineDateSource =
                 defaults.string(forKey: Self.timelineDateSourceKey)
                 .flatMap(ScreenSaverManifest.TimelineDateSource.init(rawValue:)) ?? .airDate
@@ -171,6 +179,7 @@
             defaults.set(timelineHold, forKey: Self.timelineHoldKey)
             defaults.set(timelineDateSource.rawValue, forKey: Self.timelineDateSourceKey)
             defaults.set(timelineDatePrecision.rawValue, forKey: Self.timelineDatePrecisionKey)
+            defaults.set(posterOverviewLines, forKey: Self.posterOverviewLinesKey)
         }
 
         var manifestSettings: ManifestSettings {
@@ -178,7 +187,8 @@
                 layout: layout, details: details(for: layout), interval: interval, coverWallRows: coverWallRows,
                 washFlows: washFlows, washSpeed: washSpeed, flipDelay: flipDelay, driftRate: driftRate,
                 deckDepth: deckDepth, pileDepth: pileDepth, timelineHold: timelineHold,
-                timelineDateSource: timelineDateSource, timelineDatePrecision: timelineDatePrecision)
+                timelineDateSource: timelineDateSource, timelineDatePrecision: timelineDatePrecision,
+                posterOverviewLines: posterOverviewLines)
         }
 
         func details(for layout: Layout) -> [Detail] {

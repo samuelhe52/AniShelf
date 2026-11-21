@@ -374,6 +374,8 @@
                 if publisher.settings.washFlows {
                     washSpeedSlider
                 }
+            case .posterOverviewLines:
+                ScreenSaverOverviewLinesSlider(value: $publisher.settings.posterOverviewLines, controlWidth: 176)
             case .deckDepth:
                 integerSlider("Cards", value: $publisher.settings.deckDepth, in: Settings.deckDepthRange)
             case .pileDepth:

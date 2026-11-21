@@ -241,7 +241,7 @@ public final class ScreenSaverRenderer {
         var photoToZoom: CALayer?
 
         withoutImplicitAnimations {
-            let layouts = ScreenSaverLayouts(size: size, scale: scale)
+            let layouts = ScreenSaverLayouts(size: size, scale: scale, posterOverviewLines: scene.posterOverviewLines)
             let next: CALayer
             switch scene.content {
             case .wallColumn(let images):

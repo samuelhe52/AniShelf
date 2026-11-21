@@ -13,6 +13,7 @@ import QuartzCore
 struct ScreenSaverLayouts {
     let size: CGSize
     let scale: CGFloat
+    var posterOverviewLines = ScreenSaverManifest.Settings.defaultPosterOverviewLines
 
     var bounds: CGRect { CGRect(origin: .zero, size: size) }
     var unit: CGFloat { min(size.width, size.height) }
@@ -84,10 +85,12 @@ struct ScreenSaverLayouts {
                     spaceBefore: unit * 0.024))
         }
         if details.contains(.overview), let overview = entry.overview.nonEmpty {
-            // A fixed, readable size capped at four lines; a longer overview ends with an ellipsis.
+            // A fixed, readable size; a longer overview ends with an ellipsis.
             lines.append(
                 Line(
-                    text: overview, size: unit * 0.022, weight: .regular, alpha: 0.84, lines: 4,
+                    text: overview, size: unit * 0.022, weight: .regular, alpha: 0.84,
+                    lines: posterOverviewLines == ScreenSaverManifest.Settings.unlimitedPosterOverviewLines
+                        ? .max : posterOverviewLines,
                     lineSpacing: 1.32, spaceBefore: unit * 0.036))
         }
         return lines

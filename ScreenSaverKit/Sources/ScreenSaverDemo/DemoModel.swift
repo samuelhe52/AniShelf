@@ -76,6 +76,7 @@ final class DemoModel {
     var timelineDatePrecision: ScreenSaverManifest.TimelineDatePrecision = .fullDate
     var washFlows = true
     var washSpeed: Double = 1
+    var posterOverviewLines = Settings.defaultPosterOverviewLines
     /// Speeds playback up; only `--capture` sets it.
     var speed: Double = 1
     var details: Set<ScreenSaverManifest.Detail> = [.season, .year, .genres, .watchStatus, .userScore, .overview]
@@ -103,7 +104,8 @@ final class DemoModel {
                 layout: layout, details: available.filter(details.contains), interval: interval, coverWallRows: rows,
                 washFlows: washFlows, washSpeed: washSpeed, flipDelay: flipDelay, driftRate: driftRate,
                 deckDepth: deckDepth, pileDepth: pileDepth, timelineHold: timelineHold,
-                timelineDateSource: timelineDateSource, timelineDatePrecision: timelineDatePrecision),
+                timelineDateSource: timelineDateSource, timelineDatePrecision: timelineDatePrecision,
+                posterOverviewLines: posterOverviewLines),
             playbackOptions: .init(entryLimit: entryLimit, seed: seed, timeScale: speed))
     }
 

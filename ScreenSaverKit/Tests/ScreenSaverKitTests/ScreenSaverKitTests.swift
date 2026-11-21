@@ -76,6 +76,12 @@ struct ScreenSaverKitTests {
         #expect(settings.timelineDateSource == .airDate)
         #expect(settings.timelineDatePrecision == .fullDate)
 
+        var beforePosterOverviewLines = encoded
+        beforePosterOverviewLines.removeValue(forKey: "posterOverviewLines")
+        let olderSettings = try decoder.decode(
+            Settings.self, from: JSONSerialization.data(withJSONObject: beforePosterOverviewLines))
+        #expect(olderSettings.posterOverviewLines == Settings.defaultPosterOverviewLines)
+
         for key in keys {
             var incomplete = encoded
             incomplete.removeValue(forKey: key)
@@ -466,6 +472,42 @@ struct ScreenSaverKitTests {
         #expect(!session.contains(first))
         #expect(!session.contains(second))
         #expect(session.contains(third))
+    }
+
+    @Test
+    @MainActor
+    func posterOverviewLimitSurvivesSnapshotAndReachesBothPosterLayouts() throws {
+        let overview = String(repeating: "A long overview with many words. ", count: 100)
+        let entry = ScreenSaverManifest.Entry(
+            id: "poster", title: "Title", year: "2026", overview: overview,
+            poster: "memory", posterPixelSize: .init(width: 20, height: 30))
+        let image = try #require(
+            CGContext(data: nil, width: 20, height: 30, bitsPerComponent: 8, bytesPerRow: 0,
+                      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)?.makeImage())
+        for layout in [ScreenSaverManifest.Layout.posterFocus, .coverFusion] {
+            for limit in [3, 8, ScreenSaverManifest.Settings.unlimitedPosterOverviewLines] {
+                let settings = ScreenSaverManifest.Settings(
+                    layout: layout, details: [.year, .overview], interval: 12, posterOverviewLines: limit)
+                let manifest = ScreenSaverManifest(settings: settings, entries: [])
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                let decoded = try decoder.decode(ScreenSaverManifest.self, from: manifest.encoded())
+                #expect(decoded.settings == settings)
+                let scene = ScreenSaverSceneLoader.prepare(
+                    entries: [entry], settings: decoded.settings, cursor: .init(),
+                    size: CGSize(width: 800, height: 500), scale: 1, image: { _, _ in image })
+                let layouts = ScreenSaverLayouts(
+                    size: CGSize(width: 800, height: 500), scale: 1, posterOverviewLines: scene.posterOverviewLines)
+                let lines = layouts.posterFocusLines(entry, details: scene.details, width: 300)
+                #expect(lines.map(\.lines) == [3, 2, limit == 0 ? .max : limit])
+                let rendered = try #require(layouts.fittedText(
+                    overview, width: 300, size: 11, weight: .regular, lines: lines[2].lines))
+                let measured = layouts.measure(
+                    layouts.attributed(overview, size: 11, weight: .regular, alpha: 1), width: 300)
+                if limit == 0 { #expect(rendered.height >= measured.height) }
+                else { #expect(rendered.height < measured.height) }
+            }
+        }
     }
 
     @Test

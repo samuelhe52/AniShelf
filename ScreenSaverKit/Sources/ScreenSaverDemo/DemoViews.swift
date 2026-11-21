@@ -167,6 +167,8 @@ struct DemoLayoutControl: View {
             ScreenSaverDurationSlider("Interval", value: $model.interval, timing: .interval)
         case .rows:
             Stepper("Rows: \(model.rows)", value: $model.rows, in: Settings.coverWallRowRange)
+        case .posterOverviewLines:
+            ScreenSaverOverviewLinesSlider(value: $model.posterOverviewLines)
         case .deckDepth:
             Stepper("Cards: \(model.deckDepth)", value: $model.deckDepth, in: Settings.deckDepthRange)
         case .pileDepth:
