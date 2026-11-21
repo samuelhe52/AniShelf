@@ -100,7 +100,7 @@ struct ScreenSaverLayouts {
         image backdrop: CGImage,
         logo: CGImage?,
         details: Set<ScreenSaverManifest.Detail>
-    ) -> CALayer {
+    ) -> (scene: CALayer, photo: CALayer) {
         let scene = background()
         let photo = imageLayer(backdrop, frame: bounds)
         photo.contentsGravity = .resizeAspectFill
@@ -146,7 +146,7 @@ struct ScreenSaverLayouts {
             addShadow(to: label)
             scene.addSublayer(label)
         }
-        return scene
+        return (scene, photo)
     }
 
     func notice(_ message: String) -> CALayer {

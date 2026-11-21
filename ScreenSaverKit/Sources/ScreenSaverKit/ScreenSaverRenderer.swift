@@ -29,6 +29,16 @@ public final class ScreenSaverRenderer {
         }
     }
 
+    private struct Opening {
+        let curtain: CALayer
+        let earliestFade: CFTimeInterval
+        var fadeEnd: CFTimeInterval?
+    }
+
+    private static let openingHold: TimeInterval = 1
+    private static let openingFade: TimeInterval = 0.9
+    private static let crossfadeDuration: TimeInterval = 0.85
+
     public let layer = CALayer()
     /// The flowing colour field some layouts draw over; see `makeWashView()`.
     public let wash = ScreenSaverWash()
@@ -50,6 +60,7 @@ public final class ScreenSaverRenderer {
     private var stage: (any ScreenSaverStage)?
     private var settingsOverride: ScreenSaverManifest.Settings?
     private var playbackOptions = ScreenSaverPlaybackOptions()
+    private var opening: Opening?
 
     /// The layer is clear: hosts put `makeWashView()` under it, and scenes with a ground of their
     /// own cover the wash.
@@ -85,8 +96,12 @@ public final class ScreenSaverRenderer {
         withoutImplicitAnimations {
             layer.frame = CGRect(origin: .zero, size: viewport)
             layer.contentsScale = backingScale
+            opening?.curtain.frame = layer.bounds
         }
-        if let directory { play(in: directory) }
+        if let directory {
+            resetPlayback()
+            play(in: directory)
+        }
         if let preview { play(preview) }
     }
 
@@ -98,15 +113,17 @@ public final class ScreenSaverRenderer {
         in directory: URL, build: String? = nil, settings: ScreenSaverManifest.Settings? = nil,
         playbackOptions: ScreenSaverPlaybackOptions = .init()
     ) {
+        stop()
         self.build = build
         settingsOverride = settings
         self.playbackOptions = playbackOptions
         shuffleSeed = playbackOptions.seed ?? UInt64.random(in: .min ... .max)
+        layer.speed = Float(playbackOptions.timeScale)
+        coverOpening()
         play(in: directory)
     }
 
     private func play(in directory: URL) {
-        stop()
         self.directory = directory
         guard size.width >= 1, size.height >= 1 else { return }
         let token = session.start()
@@ -114,22 +131,24 @@ public final class ScreenSaverRenderer {
             directory: directory, build: build, seed: shuffleSeed, settings: settingsOverride,
             entryLimit: playbackOptions.entryLimit)
         let timeScale = playbackOptions.timeScale
-        layer.speed = Float(timeScale)
         wash.start(timeScale: timeScale)
         playback = Task { [weak self, size, scale, timeScale] in
             var snapshot = await loader.read()
             var scene = await loader.prepare(snapshot, cursor: .init(), size: size, scale: scale)
             var animated = false
 
-            while !Task.isCancelled, self?.present(scene, token: token, animated: animated) == true {
+            while !Task.isCancelled {
+                guard let leadIn = self?.present(scene, token: token, animated: animated) else { return }
                 let publication = snapshot
                 let cursor = scene.next
                 async let buffered = loader.prepare(publication, cursor: cursor, size: size, scale: scale)
                 do {
-                    try await Task.sleep(for: .seconds(scene.duration / timeScale))
+                    try await Task.sleep(for: .seconds((leadIn + scene.duration) / timeScale))
                 } catch {
                     return
                 }
+                guard !Task.isCancelled else { return }
+                self?.finishOpening()
                 let latest = await loader.read()
                 guard !Task.isCancelled else { return }
 
@@ -155,6 +174,7 @@ public final class ScreenSaverRenderer {
         playback?.cancel()
         guard viewport.width >= 1, viewport.height >= 1, size.width >= 1, size.height >= 1 else { return }
         let token = session.start()
+        layer.speed = 1
         wash.start(timeScale: 1)
         let index = preview.entries.firstIndex { $0.id == previewEntryID } ?? 0
         playback = Task.detached { [weak self, size, scale] in
@@ -165,12 +185,12 @@ public final class ScreenSaverRenderer {
                     entries: preview.entries, settings: preview.settings, cursor: cursor, size: size, scale: scale
                 ) { path, _ in preview.images[path] }
                 guard !Task.isCancelled,
-                    await self?.presentPreview(scene, token: token, animated: animated) == true
+                    let leadIn = await self?.presentPreview(scene, token: token, animated: animated)
                 else { return }
                 cursor = scene.next
                 animated = true
                 do {
-                    try await Task.sleep(for: .seconds(scene.duration))
+                    try await Task.sleep(for: .seconds(leadIn + scene.duration))
                 } catch {
                     return
                 }
@@ -178,8 +198,8 @@ public final class ScreenSaverRenderer {
         }
     }
 
-    private func presentPreview(_ scene: ScreenSaverScene, token: UUID, animated: Bool) -> Bool {
-        guard present(scene, token: token, animated: animated) else { return false }
+    private func presentPreview(_ scene: ScreenSaverScene, token: UUID, animated: Bool) -> TimeInterval? {
+        guard let leadIn = present(scene, token: token, animated: animated) else { return nil }
         switch scene.content {
         case .poster(let entry, _, _), .backdrop(let entry, _, _), .fusion(let entry, _, _, _),
             .editorial(let entry, _, _, _):
@@ -187,13 +207,18 @@ public final class ScreenSaverRenderer {
         default:
             break
         }
-        return true
+        return leadIn
     }
 
     public func stop() {
         directory = nil
         preview = nil
         previewEntryID = nil
+        finishOpening()
+        resetPlayback()
+    }
+
+    private func resetPlayback() {
         session.stop()
         wash.stop()
         playback?.cancel()
@@ -203,13 +228,17 @@ public final class ScreenSaverRenderer {
         currentLayer = nil
         currentNotice = nil
         withoutImplicitAnimations {
-            layer.sublayers?.forEach { $0.removeFromSuperlayer() }
+            let curtain = opening?.curtain
+            for sublayer in layer.sublayers ?? [] where sublayer !== curtain {
+                sublayer.removeFromSuperlayer()
+            }
         }
     }
 
-    private func present(_ scene: ScreenSaverScene, token: UUID, animated: Bool) -> Bool {
-        guard session.contains(token) else { return false }
+    private func present(_ scene: ScreenSaverScene, token: UUID, animated: Bool) -> TimeInterval? {
+        guard session.contains(token) else { return nil }
         wash.setFlow(scene.washFlows, speed: scene.washSpeed)
+        var photoToZoom: CALayer?
 
         withoutImplicitAnimations {
             let layouts = ScreenSaverLayouts(size: size, scale: scale)
@@ -230,7 +259,9 @@ public final class ScreenSaverRenderer {
                 next = layouts.posterFocus(entry, poster: image, details: scene.details)
                 currentNotice = nil
             case .backdrop(let entry, let image, let logo):
-                next = layouts.backdrop(entry, image: image, logo: logo, details: scene.details)
+                let backdrop = layouts.backdrop(entry, image: image, logo: logo, details: scene.details)
+                next = backdrop.scene
+                photoToZoom = backdrop.photo
                 currentNotice = nil
             case .stage(let step):
                 if let opened = step.makeStage(size: size, scale: scale, wash: wash) {
@@ -264,7 +295,23 @@ public final class ScreenSaverRenderer {
                 }
             replaceScene(with: next, animated: animated, overWash: overWash)
         }
-        return true
+
+        // Keep the zoom out of the crossfade transaction, which removes the outgoing layer.
+        var leadIn: TimeInterval = 0
+        if opening != nil || photoToZoom != nil {
+            withoutImplicitAnimations {
+                if case .notice = scene.content {
+                    finishOpening()
+                } else {
+                    leadIn = revealOpening()
+                }
+                if let photoToZoom {
+                    if animated { leadIn = max(leadIn, Self.crossfadeDuration) }
+                    zoom(photoToZoom, after: leadIn, duration: scene.duration)
+                }
+            }
+        }
+        return leadIn
     }
 
     /// - Parameter overWash: the new scene is clear where the wash shows.
@@ -274,7 +321,11 @@ public final class ScreenSaverRenderer {
         currentLayer = next
         next.position = CGPoint(x: layer.bounds.midX, y: layer.bounds.midY)
         next.setAffineTransform(CGAffineTransform(scaleX: sceneFit, y: sceneFit))
-        layer.addSublayer(next)
+        if let curtain = opening?.curtain {
+            layer.insertSublayer(next, below: curtain)
+        } else {
+            layer.addSublayer(next)
+        }
         guard let outgoing else { return }
         guard animated else {
             outgoing.removeFromSuperlayer()
@@ -284,7 +335,7 @@ public final class ScreenSaverRenderer {
         let fade = CABasicAnimation(keyPath: "opacity")
         fade.fromValue = 0
         fade.toValue = 1
-        fade.duration = 0.85
+        fade.duration = Self.crossfadeDuration
         fade.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
         if overWash {
             // A clear scene cannot cover the old one, which would vanish only when removed; fade it out too.
@@ -301,6 +352,52 @@ public final class ScreenSaverRenderer {
             outgoing.removeFromSuperlayer()
         }
         next.add(fade, forKey: "crossfade")
+    }
+
+    private func coverOpening() {
+        let curtain = CALayer()
+        curtain.frame = layer.bounds
+        curtain.backgroundColor = CGColor(gray: 0, alpha: 1)
+        layer.addSublayer(curtain)
+        let now = layer.convertTime(CACurrentMediaTime(), from: nil)
+        opening = Opening(curtain: curtain, earliestFade: now + Self.openingHold)
+    }
+
+    /// Keep decoding time under the black hold. If decoding takes longer, fade only once ready.
+    private func revealOpening() -> TimeInterval {
+        guard let opening else { return 0 }
+        let now = opening.curtain.convertTime(CACurrentMediaTime(), from: nil)
+        if let fadeEnd = opening.fadeEnd { return max(0, fadeEnd - now) }
+        let fade = CABasicAnimation(keyPath: "opacity")
+        fade.fromValue = 1
+        fade.toValue = 0
+        fade.beginTime = max(now, opening.earliestFade)
+        fade.duration = Self.openingFade
+        fade.fillMode = .backwards
+        fade.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        opening.curtain.opacity = 0
+        opening.curtain.add(fade, forKey: "opening")
+        let fadeEnd = fade.beginTime + fade.duration
+        self.opening?.fadeEnd = fadeEnd
+        return fadeEnd - now
+    }
+
+    private func finishOpening() {
+        opening?.curtain.removeFromSuperlayer()
+        opening = nil
+    }
+
+    private func zoom(_ photo: CALayer, after delay: TimeInterval, duration: TimeInterval) {
+        let zoom = CABasicAnimation(keyPath: "transform.scale")
+        zoom.fromValue = 1
+        zoom.toValue = 1.045
+        zoom.beginTime = photo.convertTime(CACurrentMediaTime(), from: nil) + delay
+        zoom.duration = duration
+        zoom.fillMode = .backwards
+        zoom.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        // Keep the final scale when the animation is removed, including under the next crossfade.
+        photo.setAffineTransform(CGAffineTransform(scaleX: 1.045, y: 1.045))
+        photo.add(zoom, forKey: "dwellZoom")
     }
 
     private func withoutImplicitAnimations(_ updates: () -> Void) {
