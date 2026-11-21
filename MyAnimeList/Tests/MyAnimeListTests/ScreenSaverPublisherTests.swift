@@ -59,6 +59,32 @@
         }
 
         @Test
+        func entryTypeFiltersWithinScopeAndPersists() throws {
+            let fixture = try Fixture()
+            defer { fixture.cleanup() }
+            let movie = AnimeEntry(name: "Movie", type: .movie, tmdbID: 1)
+            let season = AnimeEntry(name: "Season", type: .season(seasonNumber: 1, parentSeriesID: 2), tmdbID: 3)
+            let otherMovie = AnimeEntry(name: "Other", type: .movie, tmdbID: 4)
+            movie.favorite = true
+            season.favorite = true
+            try fixture.insert(movie, season, otherMovie)
+
+            var settings = ScreenSaverSettings(defaults: fixture.defaults)
+            settings.isEnabled = true
+            #expect(settings.entryType == .all)
+            #expect(Set(fixture.draft(settings).entries.map(\.id)) == ["movie:1", "season:2:1:3"])
+            settings.entryType = .movies
+            #expect(fixture.draft(settings).entries.map(\.id) == ["movie:1"])
+            settings.entryType = .series
+            #expect(fixture.draft(settings).entries.map(\.id) == ["season:2:1:3"])
+            settings.save(to: fixture.defaults)
+            #expect(ScreenSaverSettings(defaults: fixture.defaults).entryType == .series)
+            settings.scope = .all
+            settings.entryType = .movies
+            #expect(Set(fixture.draft(settings).entries.map(\.id)) == ["movie:1", "movie:4"])
+        }
+
+        @Test
         func settingsKeepLegacyDetailsAndSaveSelectionsIndependently() throws {
             let fixture = try Fixture()
             defer { fixture.cleanup() }

@@ -275,6 +275,11 @@
                         }
                     }
                 }
+                Picker("Entry Type", selection: $publisher.settings.entryType) {
+                    ForEach(ScreenSaverSettings.EntryType.allCases, id: \.self) { type in
+                        Text(type.title).tag(type)
+                    }
+                }
                 Picker("Layout", selection: $publisher.settings.layout) {
                     ForEach(ScreenSaverManifest.Layout.allCases, id: \.self) { layout in
                         Text(layout.title).tag(layout)
@@ -397,6 +402,16 @@
             case .all: "All Library Entries"
             // Category scopes are listed by their names, not through this title.
             case .category: "Category"
+            }
+        }
+    }
+
+    extension ScreenSaverSettings.EntryType {
+        fileprivate var title: LocalizedStringResource {
+            switch self {
+            case .all: "All"
+            case .movies: "Movies"
+            case .series: "Series"
             }
         }
     }

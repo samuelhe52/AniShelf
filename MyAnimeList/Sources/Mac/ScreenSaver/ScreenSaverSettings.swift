@@ -58,8 +58,21 @@
             }
         }
 
+        enum EntryType: String, CaseIterable {
+            case all, movies, series
+
+            func includes(_ entry: AnimeEntry) -> Bool {
+                switch self {
+                case .all: true
+                case .movies: entry.type == .movie
+                case .series: entry.type != .movie
+                }
+            }
+        }
+
         static let enabledKey = "screenSaverEnabled"
         static let scopeKey = "screenSaverScope"
+        static let entryTypeKey = "screenSaverEntryType"
         static let layoutKey = "screenSaverLayout"
         static let intervalKey = "screenSaverInterval"
         static let coverWallRowsKey = "screenSaverCoverWallRows"
@@ -81,6 +94,7 @@
 
         var isEnabled = false
         var scope = Scope.favorites
+        var entryType = EntryType.all
         var layout = Layout.coverWall
         private var detailSelections: [Layout: [Detail]] = [:]
         var interval = ManifestSettings.defaultInterval
@@ -102,6 +116,7 @@
         init(defaults: UserDefaults) {
             isEnabled = defaults.bool(forKey: Self.enabledKey)
             scope = defaults.string(forKey: Self.scopeKey).flatMap(Scope.init(rawValue:)) ?? .favorites
+            entryType = defaults.string(forKey: Self.entryTypeKey).flatMap(EntryType.init(rawValue:)) ?? .all
             layout = defaults.string(forKey: Self.layoutKey).flatMap(Layout.init(rawValue:)) ?? .coverWall
             for layout in Layout.allCases where !Detail.available(for: layout).isEmpty {
                 if let stored = defaults.stringArray(forKey: Self.detailsKey(for: layout)) {
@@ -140,6 +155,7 @@
         func save(to defaults: UserDefaults) {
             defaults.set(isEnabled, forKey: Self.enabledKey)
             defaults.set(scope.rawValue, forKey: Self.scopeKey)
+            defaults.set(entryType.rawValue, forKey: Self.entryTypeKey)
             defaults.set(layout.rawValue, forKey: Self.layoutKey)
             for (layout, details) in detailSelections {
                 defaults.set(details.map(\.rawValue), forKey: Self.detailsKey(for: layout))

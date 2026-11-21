@@ -65,6 +65,7 @@
             }
             let entries = store.library.lazy
                 .filter(settings.scope.includes)
+                .filter(settings.entryType.includes)
                 .map { makeEntry($0, settings: settings, language: language, scoringEnabled: scoringEnabled) }
                 .sorted { $0.id < $1.id }
             return .init(settings: settings.manifestSettings, entries: entries)
