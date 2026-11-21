@@ -37,6 +37,9 @@ cat > "$BUNDLE/Contents/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
+# SVG 标志转 PNG 的小工具
+clang -fobjc-arc -framework Cocoa -isysroot "$SDK" -o dist/svg2png tools/svg2png.m
+
 # 顺带编译离线出图工具
 clang -fobjc-arc -framework Cocoa -framework QuartzCore -framework ScreenSaver -framework ImageIO \
   -isysroot "$SDK" -o dist/render_preview tools/render_preview.m

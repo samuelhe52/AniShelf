@@ -52,6 +52,10 @@ zooms very slowly (1.0 → 1.045), and the zoom is scheduled to start once the t
 Because AniShelf does not keep an on-disk image cache of its own, the images have to be fetched
 once; the export is incremental and skips files that already exist.
 
+TMDb stores a good number of anime logos as SVG, which CoreGraphics cannot decode. `build.sh` also
+compiles `tools/svg2png`, a ~50-line helper that rasterises those logos through `NSImage` during the
+export, so the screensaver itself only ever deals with bitmaps.
+
 ## Requirements
 
 - macOS 12 or later
@@ -138,6 +142,16 @@ is hidden when the selected language differs, rather than showing a mismatched l
 
 Season entries inherit the genres of their parent series when they carry none of their own.
 
+## Credits
+
+Posters, backdrops, stills and logos come from TMDb and belong to the respective rights holders.
+The repository ships code only — `refresh.sh` fetches the artwork on your own machine into the
+installed bundle, the same way a media player pulls posters for its library. Use it locally however
+you like; just don't hand the built `.saver` to someone else, since the artwork inside is not ours
+to redistribute.
+
+This product uses the TMDB API but is not endorsed or certified by TMDB.
+
 ## Notes
 
 - The saver only ever opens the store read-only; no schema is modified and no files in the app
@@ -146,8 +160,7 @@ Season entries inherit the genres of their parent series when they carry none of
   entries (backdrops dominate). Delete the bundle to reclaim all of it.
 - TMDb's Japanese title coverage is patchy (43 of 158 entries in our sample); missing translations
   fall back to Chinese.
-- Poster, backdrop and logo artwork belongs to TMDb and the respective rights holders; it is
-  downloaded locally and never redistributed.
+- Artwork is downloaded locally and never redistributed from this repository.
 
 ## License
 

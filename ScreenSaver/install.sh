@@ -30,6 +30,7 @@ fi
 
 # 同步用的两个脚本随包安装，之后即使挪走源码目录也能自己维护
 cp tools/export_library.py tools/sync.sh "dist/AniShelfCovers.saver/Contents/Resources/"
+[ -x dist/svg2png ] && cp dist/svg2png "dist/AniShelfCovers.saver/Contents/Resources/"
 chmod +x "dist/AniShelfCovers.saver/Contents/Resources/sync.sh"
 
 mkdir -p "$HOME/Library/Screen Savers"

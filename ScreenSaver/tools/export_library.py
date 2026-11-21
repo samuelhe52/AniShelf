@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import shutil
+import subprocess
 import sqlite3
 import sys
 import plistlib
@@ -192,6 +193,37 @@ def status_of(row) -> str:
     return "unknown"
 
 
+def _svg_tool() -> Path | None:
+    for cand in (Path(__file__).parent / "svg2png",
+                 Path(__file__).parent.parent / "dist" / "svg2png"):
+        if cand.exists() and os.access(cand, os.X_OK):
+            return cand
+    return None
+
+
+def _logo_png_for(remote: str | None) -> str | None:
+    """返回可用的位图标志相对路径；SVG 会就地转换一次。"""
+    if not remote:
+        return None
+    src = target_for("logo", remote)
+    if not remote.lower().endswith(".svg"):
+        return str(src.relative_to(OUT)) if src.exists() else None
+    png = src.with_suffix(".png")
+    if png.exists() and png.stat().st_size > 2048:
+        return str(png.relative_to(OUT))
+    if not src.exists():
+        return None
+    tool = _svg_tool()
+    if not tool:
+        return None
+    try:
+        subprocess.run([str(tool), str(src), str(png), "1200"],
+                       check=True, capture_output=True, timeout=30)
+    except Exception:  # noqa: BLE001
+        return None
+    return str(png.relative_to(OUT)) if png.exists() else None
+
+
 def target_for(kind: str, remote: str) -> Path:
     ext = os.path.splitext(remote)[1] or ".jpg"
     digest = hashlib.sha1(remote.encode()).hexdigest()[:16]
@@ -307,8 +339,8 @@ def main() -> int:
                 "cover_remote": r["poster"],
                 "backdrop": str(target_for("backdrop", r["backdrop"]).relative_to(OUT)) if r["backdrop"] else None,
                 "backdrop_remote": r["backdrop"],
-                "logo": str(target_for("logo", r["logo"]).relative_to(OUT)) if r["logo"] and r["logo"].endswith(".png") else None,
-                "logo_remote": r["logo"] if r["logo"] and r["logo"].endswith(".png") else None,
+                "logo": None,
+                "logo_remote": r["logo"],
                 "overview": (r["overview"] or "").strip(),
                 "tagline": _clean_tagline(r["tagline"], (r["name"] or "").strip()),
                 "vote": round(float(r["vote"]), 1) if r["vote"] else 0.0,
@@ -350,6 +382,20 @@ def main() -> int:
                 ok += 1 if success else 0
                 if n % 20 == 0 or n == len(jobs):
                     print(f"  图片 {n}/{len(jobs)}  (成功 {ok})", flush=True)
+
+    # TMDb 的动画标志有相当一部分是 SVG，屏保只吃位图，这里统一转成 PNG
+    if not args.skip_images:
+        converted = 0
+        for it in items:
+            png = _logo_png_for(it.get("logo_remote"))
+            it["logo"] = png
+            if png and png.lower().endswith(".png"):
+                converted += 1
+        if converted:
+            print(f"  标志可用: {converted}/{len(items)}", flush=True)
+    else:
+        for it in items:
+            it["logo"] = _logo_png_for(it.get("logo_remote"))
 
     manifest = {
         "generatedAt": time.strftime("%Y-%m-%dT%H:%M:%S"),

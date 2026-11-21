@@ -688,6 +688,7 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 @property (nonatomic, strong) NSPopUpButton *transPopup;
 @property (nonatomic, strong) NSPopUpButton *alignPopup;
 @property (nonatomic, strong) NSPopUpButton *langPopup;
+@property (nonatomic, assign) BOOL stopped;
 @property (nonatomic, assign) BOOL advancedOpen;
 @property (nonatomic, strong) NSView *basicBox;
 @property (nonatomic, strong) NSView *advBox;
@@ -835,11 +836,13 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 
 - (void)startAnimation {
     [super startAnimation];
+    self.stopped = NO;
     [self buildScene];
 }
 
 - (void)stopAnimation {
     [super stopAnimation];
+    self.stopped = YES;
     [self.stage removeFromSuperlayer];
     self.stage = nil;
 }
@@ -882,17 +885,16 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 
 - (void)buildScene {
     CFTimeInterval sceneT0 = CACurrentMediaTime();
+    CGFloat w = NSWidth(self.bounds), h = NSHeight(self.bounds);
+    // 尺寸没准备好（启动瞬间、切换显示器时）先什么都不动，别把现有画面拆掉
+    if (w < 40 || h < 40) return;
+
     self.layoutSize = self.bounds.size;
     self.transitionUntil = 0;
     self.rebuildToken += 1;      // 作废挂起的防抖重建，避免连续重建两次
-    self.rebuildToken += 1;      // 作废挂起的防抖重建，避免连续重建两次
-    self.transitionUntil = 0;
     [self.stage removeFromSuperlayer];
     self.wallCards = [NSMutableArray array];
     self.deckLayers = [NSMutableArray array];
-
-    CGFloat w = NSWidth(self.bounds), h = NSHeight(self.bounds);
-    if (w < 40 || h < 40) return;
 
     CALayer *stage = [CALayer layer];
     stage.frame = self.bounds;
@@ -1331,6 +1333,19 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 // 标语、标志、下方文字都在 scene 层内，跟着剧照一起移动，速度一致
 // 大剧照的翻页式切换：无特效 / 淡入淡出 / 水平·垂直的切入与推动
 // 标语、标志、下方文字都在 scene 层内，跟着剧照一起移动，速度一致
+// 跳过背景图缺失的条目，避免切到一张纯灰底
+- (NSInteger)nextUsableBigIndexFrom:(NSInteger)cur {
+    NSUInteger n = self.bigItems.count;
+    if (n == 0) return 0;
+    NSFileManager *fm = [NSFileManager defaultManager];
+    for (NSUInteger k = 1; k <= n; k++) {
+        NSInteger idx = ((cur + (NSInteger)k) % (NSInteger)n + (NSInteger)n) % (NSInteger)n;
+        NSString *path = self.bigItems[idx][@"backdropPath"];
+        if (path.length && [fm fileExistsAtPath:path]) return idx;
+    }
+    return (cur + 1) % (NSInteger)n;
+}
+
 - (void)advanceBigStill {
     if (self.bigItems.count < 2) return;
     CFTimeInterval now0 = CACurrentMediaTime();
@@ -1339,7 +1354,7 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
         self.nextBig = self.bigBuiltAt + self.bigInterval;
         return;
     }
-    NSInteger next = (self.bigIndex + 1) % self.bigItems.count;
+    NSInteger next = [self nextUsableBigIndexFrom:self.bigIndex];
     NSInteger tr = self.bigTransition;
     CFTimeInterval now = CACurrentMediaTime();
     CGFloat w = NSWidth(self.bounds), h = NSHeight(self.bounds);
@@ -2100,6 +2115,11 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
 - (void)animateOneFrame {
     if (self.isPreview) return;
     CFTimeInterval now = CACurrentMediaTime();
+    // 舞台被意外拆掉（尺寸抖动、重建中断）时自愈，避免停在黑屏
+    if (!self.stopped && self.stage.superlayer == nil) {
+        [self buildScene];
+        return;
+    }
     if (self.mode == 1 && now >= self.nextDeck) {
         [self advanceDeck];
         self.nextDeck = now + 5.5;
@@ -2230,6 +2250,12 @@ static CATextLayer *ASMakeLabel(CGFloat size, CGFloat weight, CGColorRef color) 
     ok.frame = NSMakeRect(330, 16, 92, 30);
     ok.keyEquivalent = @"\r";
     [cv addSubview:ok];
+
+    NSTextField *credit = [NSTextField labelWithString:@"美术资源来自 TMDb，版权归各权利人所有"];
+    credit.font = [NSFont systemFontOfSize:10];
+    credit.textColor = [NSColor tertiaryLabelColor];
+    credit.frame = NSMakeRect(22, 2, 300, 14);
+    [cv addSubview:credit];
 
     NSButton *cancel = [NSButton buttonWithTitle:@"取消" target:self action:@selector(cancelConfig:)];
     cancel.frame = NSMakeRect(238, 16, 84, 30);
