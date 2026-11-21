@@ -245,6 +245,9 @@
     fileprivate struct ScreenSaverOptions: View {
         @Bindable var publisher: ScreenSaverPublisher
         @Environment(LibraryStore.self) private var library
+        @State private var lastDeckLayout: ScreenSaverManifest.Layout = .deckFan
+        @State private var lastPosterLayout: ScreenSaverManifest.Layout = .posterFocus
+        @State private var lastWallLayout: ScreenSaverManifest.Layout = .coverWall
 
         /// Custom categories, listed when categories are on. The selected category stays listed
         /// when categories are later turned off or the category is deleted, so the picker keeps
@@ -280,16 +283,76 @@
                         Text(type.title).tag(type)
                     }
                 }
-                Picker("Layout", selection: $publisher.settings.layout) {
-                    ForEach(ScreenSaverManifest.Layout.allCases, id: \.self) { layout in
+                Picker("Layout", selection: layoutSelection) {
+                    ForEach(
+                        ScreenSaverManifest.Layout.allCases.filter {
+                            $0 != .deckPile && $0 != .coverFusion && $0 != .flipWall
+                        },
+                        id: \.self
+                    ) { layout in
                         Text(layout.title).tag(layout)
                     }
+                }
+                if publisher.settings.layout == .deckFan || publisher.settings.layout == .deckPile {
+                    Picker("Mode", selection: $publisher.settings.layout) {
+                        Text("Fan").tag(ScreenSaverManifest.Layout.deckFan)
+                        Text("Pile").tag(ScreenSaverManifest.Layout.deckPile)
+                    }
+                    .pickerStyle(.segmented)
+                }
+                if publisher.settings.layout == .posterFocus || publisher.settings.layout == .coverFusion {
+                    Picker("Mode", selection: $publisher.settings.layout) {
+                        Text("Focus").tag(ScreenSaverManifest.Layout.posterFocus)
+                        Text("Fusion").tag(ScreenSaverManifest.Layout.coverFusion)
+                    }
+                    .pickerStyle(.segmented)
+                }
+                if publisher.settings.layout == .coverWall || publisher.settings.layout == .flipWall {
+                    Picker("Mode", selection: $publisher.settings.layout) {
+                        Text("Cover").tag(ScreenSaverManifest.Layout.coverWall)
+                        Text("Flip").tag(ScreenSaverManifest.Layout.flipWall)
+                    }
+                    .pickerStyle(.segmented)
                 }
                 ForEach(publisher.optionsLayout.controls, id: \.self) { control in
                     ScreenSaverLayoutControl(control: control, publisher: publisher)
                 }
             }
+            .onAppear { rememberLayout(publisher.settings.layout) }
+            .onChange(of: publisher.settings.layout) { _, layout in
+                rememberLayout(layout)
+            }
             .frame(maxWidth: .infinity)
+        }
+
+        private var layoutSelection: Binding<ScreenSaverManifest.Layout> {
+            Binding(
+                get: {
+                    switch publisher.settings.layout {
+                    case .deckPile: .deckFan
+                    case .coverFusion: .posterFocus
+                    case .flipWall: .coverWall
+                    default: publisher.settings.layout
+                    }
+                },
+                set: { layout in
+                    switch layout {
+                    case .deckFan: publisher.settings.layout = lastDeckLayout
+                    case .posterFocus: publisher.settings.layout = lastPosterLayout
+                    case .coverWall: publisher.settings.layout = lastWallLayout
+                    default: publisher.settings.layout = layout
+                    }
+                }
+            )
+        }
+
+        private func rememberLayout(_ layout: ScreenSaverManifest.Layout) {
+            switch layout {
+            case .deckFan, .deckPile: lastDeckLayout = layout
+            case .posterFocus, .coverFusion: lastPosterLayout = layout
+            case .coverWall, .flipWall: lastWallLayout = layout
+            default: break
+            }
         }
     }
 
@@ -444,13 +507,10 @@
     extension ScreenSaverManifest.Layout {
         fileprivate var title: LocalizedStringResource {
             switch self {
-            case .coverWall: "Cover Wall"
-            case .posterFocus: "Poster Focus"
+            case .coverWall, .flipWall: "Wall"
+            case .posterFocus, .coverFusion: "Poster"
             case .backdrop: "Backdrop"
-            case .deckFan: "Deck · Fan"
-            case .deckPile: "Deck · Pile"
-            case .flipWall: "Flip Wall"
-            case .coverFusion: "Cover Fusion"
+            case .deckFan, .deckPile: "Deck"
             case .timeline: "Timeline"
             case .depthDrift: "Depth Drift"
             case .editorialCover: "Editorial Cover"
