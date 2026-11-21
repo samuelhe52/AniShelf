@@ -51,6 +51,58 @@ struct ScreenSaverKitTests {
         #expect(expected.settings.details == [.year, .score, .userScore])
     }
 
+    @Test(arguments: [4.0, 30.0])
+    func depthDriftPreparesOnlyActiveSlots(rate: Double) throws {
+        let fixture = try SnapshotFixture()
+        defer { fixture.remove() }
+        try fixture.writeImage("poster.png")
+        let image = try #require(fixture.reader.image(at: "images/poster.png", maximumPixelSize: 30))
+        var draft = ScreenSaverDraft(layout: .depthDrift)
+        draft.driftRate = rate
+        var director = DepthDriftDirector(
+            .init(
+                entries: [fixture.entry(1)], settings: .init(layout: .coverWall, interval: 12), draft: draft,
+                size: CGSize(width: 1920, height: 1080), scale: 1, seed: 7))
+        var decodes = 0
+        let load: ScreenSaverImageLoader = { _, _ in
+            decodes += 1
+            return image
+        }
+
+        let firstStep = director.next(image: load)
+        let opening = try #require(firstStep)
+        guard case .open(let posters) = opening.step as? DepthDriftStep else {
+            Issue.record("Expected a populated opening")
+            return
+        }
+        #expect(decodes == posters.count)
+        #expect(rate == 30 ? posters.count == 48 : (20...25).contains(posters.count))
+
+        let focus = DepthDriftLevel.focus
+        let foreground = DepthDriftLevel.foreground
+        var expires = posters.map {
+            (level: $0.level, time: DepthDriftLevel.all[$0.level].crossing * (1 - $0.progress))
+        }
+        #expect((3...4).contains(expires.count { $0.level == focus }))
+        var time = opening.duration
+        while time <= 85 {
+            expires.removeAll { $0.time <= time + 0.000_001 }
+            let before = decodes
+            let step = director.next(image: load)
+            let next = try #require(step)
+            guard case .spawn(let poster) = next.step as? DepthDriftStep else {
+                Issue.record("Expected an admitted poster")
+                return
+            }
+            #expect(decodes == before + 1)
+            expires.append((poster.level, time + DepthDriftLevel.all[poster.level].crossing))
+            #expect(expires.count <= 48)
+            #expect((3...4).contains(expires.count { $0.level == focus }))
+            #expect(expires.count { $0.level == foreground } <= 2)
+            time += next.duration
+        }
+    }
+
     @Test
     func timelineOrdersFullAirDatesAndMarksReadableYearBoundaries() throws {
         let fixture = try SnapshotFixture()

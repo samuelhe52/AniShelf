@@ -17,7 +17,7 @@ implementation, so only the ideas are recorded here.
 | **Flip Wall**: a still grid where single tiles flip over to show another poster, like Apple's Album Artwork saver (rows and flip delay as options) | Samuel, 2026-11-20 | Picked for a later layout. v1 Cover Wall drifts instead of flipping. | A separate layout, not a Cover Wall option. Reuse the Cover Wall rows setting. Flips should be rare and calm: a sketch that flipped every second or two felt frantic, so default to several seconds and keep it configurable. One timer tied to the session token; never flip the same tile twice in a row or show a poster already on screen. |
 | **Cover Fusion**: full-height poster on one side, inner edge feathered into a heavy blur of itself, text in the rest | PR #28 (edge rebuilt in `d6293e96`: sharp to ~72% width, then a medium blur, gradient baked into pixels) | Picked, as a Poster Focus style rather than a layout. It overlaps Poster Focus and crops the art. Text width goes negative on portrait displays (1080×1920). | Size the poster from the shorter screen edge; stack on portrait. Make the blurred wash smooth, not a bright blob at the poster edge. The baked-gradient technique is worth reusing. |
 | **Timeline**: a slow pan along a line of posters, alternating above and below, with the poster at the centre emphasised and named. The line can mean when it **aired**, when the user **started watching**, or when they **finished** | Brainstorm, 2026-11-21 | Demo draft only, following air dates or watch dates. | See [015](015-timeline-chronology-and-pacing.md) for chronology, markers, and pacing, and [016](016-timeline-date-options.md) for the date options. |
-| **Depth Drift**: posters float slowly upward at different depths, soft and large up close, small and slow far away, a few sharp at the focus plane; no text | Brainstorm, 2026-11-21 | Picked for a later layout. | The most ambient option. Live blur on many layers is costly, so prepare a few blur levels per poster ahead of time and choose by depth. Cap the layer count. |
+| **Depth Drift**: posters float slowly upward at different depths, soft and large up close, small and slow far away, a few sharp at the focus plane; no text | Brainstorm, 2026-11-21 | Demo draft only. | Blur is baked per spawn. See [017](017-depth-drift-density.md) for the layer budget, staggered opening, and protected focus band. |
 | **Editorial Cover**: a magazine cover with one large headline tinted by the poster, a tilted poster, and a separate metadata column | Brainstorm, 2026-11-21 | Demo draft only. | Give the full title first claim on space. Fit the poster below or beside the rendered lines so the tilt reaches into empty space without covering the headline. Hero Still's logo art is an alternative to the headline, not a second title. |
 
 When the overview is enabled and present, Editorial Cover reserves space for a short excerpt
@@ -33,6 +33,9 @@ the display aspect ratio.
 In the Deck · Pile draft, the front card grows and turns as it is tossed up and left, then
 fades once the next poster is readable. The rest of the pile advances together, with the
 incoming card joining from one slot deeper. The caption follows the reveal.
+
+In the Depth Drift draft, the nearest plane uses a blur radius of 3% of poster width.
+At 6%, the foreground lost its artwork and spread a veil over the sharp posters behind it.
 
 ## Considered and set aside
 
