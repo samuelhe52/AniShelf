@@ -281,7 +281,10 @@ struct ScreenSaverLayouts {
     }
 
     func measure(_ string: NSAttributedString, width: CGFloat) -> Metrics {
-        let setter = CTFramesetterCreateWithAttributedString(string)
+        measure(CTFramesetterCreateWithAttributedString(string), width: width)
+    }
+
+    private func measure(_ setter: CTFramesetter, width: CGFloat) -> Metrics {
         let path = CGPath(rect: CGRect(x: 0, y: 0, width: width, height: 100_000), transform: nil)
         let frame = CTFramesetterCreateFrame(setter, CFRange(), path, nil)
         let lines = CTFrameGetLines(frame) as? [CTLine] ?? []
@@ -294,40 +297,55 @@ struct ScreenSaverLayouts {
 
     /// Text is laid out, truncated, and drawn by CoreText into an image, so what is measured is
     /// exactly what is drawn. (CATextLayer ignores line spacing and cannot truncate wrapped text.)
-    /// A longer text is cut to `lines` lines and ends with an ellipsis.
+    /// Text exceeding the line or height limit ends with an ellipsis.
+    /// When requested, each drawn line's bounds are reported in top-left text layer coordinates.
     func textLayer(
         _ text: String?,
         width: CGFloat,
         size: CGFloat,
         weight: NSFont.Weight,
         alpha: CGFloat = 0.96,
-        lines: Int,
+        lines: Int = .max,
+        maxHeight: CGFloat = .greatestFiniteMagnitude,
         lineSpacing: CGFloat = 1,
         center: Bool = false,
         color: CGColor? = nil,
-        tracking: CGFloat = 0
+        tracking: CGFloat = 0,
+        recordLineBounds: ((CGRect) -> Void)? = nil
     ) -> CALayer? {
-        guard let text = text.nonEmpty, width > 0, size > 0 else { return nil }
+        let padding = size * 0.2 // Room below the last line for descenders.
+        guard let text = text.nonEmpty, width > 0, size > 0, lines > 0, maxHeight > padding else { return nil }
         func make(_ text: String) -> NSAttributedString {
             attributed(
                 text, size: size, weight: weight, alpha: alpha, lineSpacing: lineSpacing, center: center,
                 color: color, tracking: tracking)
         }
-        var string = make(text)
-        var metrics = measure(string, width: width)
-        if metrics.lines > lines {
+        func fits(_ metrics: Metrics) -> Bool {
+            metrics.lines <= lines && ceil(metrics.height + padding) <= maxHeight
+        }
+        var setter = CTFramesetterCreateWithAttributedString(make(text))
+        var metrics = measure(setter, width: width)
+        if !fits(metrics) {
             let source = text as NSString
-            var end = metrics.lineEnds[lines - 1]
+            var end = metrics.lines > lines ? metrics.lineEnds[lines - 1] : source.length
+            if ceil(metrics.height + padding) > maxHeight {
+                let path = CGPath(
+                    rect: CGRect(x: 0, y: 0, width: width, height: floor(maxHeight) - padding), transform: nil)
+                let frame = CTFramesetterCreateFrame(setter, CFRange(), path, nil)
+                end = min(end, CTFrameGetVisibleStringRange(frame).length)
+            }
+            guard end > 0 else { return nil }
             repeat {
                 let kept = source.substring(to: end).trimmingCharacters(in: .whitespacesAndNewlines)
-                string = make(kept + "…")
-                metrics = measure(string, width: width)
+                setter = CTFramesetterCreateWithAttributedString(make(kept + "…"))
+                metrics = measure(setter, width: width)
+                if fits(metrics) { break }
                 // Step back a whole character, so an emoji or accented letter is never split.
                 end = source.rangeOfComposedCharacterSequence(at: end - 1).location
-            } while metrics.lines > lines && end > 0
+            } while end > 0
+            guard fits(metrics) else { return nil }
         }
-        // Room below the last line for descenders.
-        let height = ceil(metrics.height + size * 0.2)
+        let height = ceil(metrics.height + padding)
         guard
             let context = CGContext(
                 data: nil, width: Int(ceil(width * scale)), height: Int(ceil(height * scale)), bitsPerComponent: 8,
@@ -335,9 +353,26 @@ struct ScreenSaverLayouts {
                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         else { return nil }
         context.scaleBy(x: scale, y: scale)
-        let setter = CTFramesetterCreateWithAttributedString(string)
         let path = CGPath(rect: CGRect(x: 0, y: 0, width: width, height: height), transform: nil)
-        CTFrameDraw(CTFramesetterCreateFrame(setter, CFRange(), path, nil), context)
+        let frame = CTFramesetterCreateFrame(setter, CFRange(), path, nil)
+        if let recordLineBounds, let lines = CTFrameGetLines(frame) as? [CTLine] {
+            withUnsafeTemporaryAllocation(of: CGPoint.self, capacity: lines.count) { origins in
+                guard let baseAddress = origins.baseAddress else { return }
+                CTFrameGetLineOrigins(frame, CFRange(), baseAddress)
+                for (index, line) in lines.enumerated() {
+                    var ascent: CGFloat = 0
+                    var descent: CGFloat = 0
+                    let width = CTLineGetTypographicBounds(line, &ascent, &descent, nil)
+                    let typographic = CGRect(x: 0, y: -descent, width: width, height: ascent + descent)
+                    let ink = typographic.union(CTLineGetBoundsWithOptions(line, .useGlyphPathBounds))
+                    recordLineBounds(
+                        CGRect(
+                            x: ink.minX + origins[index].x, y: height - origins[index].y - ink.maxY,
+                            width: ink.width, height: ink.height))
+                }
+            }
+        }
+        CTFrameDraw(frame, context)
 
         let layer = CALayer()
         layer.name = Self.textLayerName

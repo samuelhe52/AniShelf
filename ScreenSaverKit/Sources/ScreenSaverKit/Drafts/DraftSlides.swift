@@ -57,87 +57,129 @@ extension ScreenSaverLayouts {
         let margin = unit * 0.07
         let ratio = CGFloat(poster.width) / CGFloat(max(poster.height, 1))
 
-        // The info column, laid out first so the poster can be sized around it.
+        let tilt = CGAffineTransform(rotationAngle: 2.2 * .pi / 180)
+        // Work in the rotated footprint, with dimensions expressed per point of poster height.
+        let footprint = CGRect(x: -ratio / 2, y: -0.5, width: ratio, height: 1).applying(tilt)
+        let right = size.width - margin
+        let preferredHeight = size.height * (portrait ? 0.55 : 0.76)
         let columnWidth = portrait ? size.width - margin * 2 : min(size.width * 0.34, unit * 0.62)
-        let column = editorialColumn(entry, accent: accent, details: details, width: columnWidth)
-
-        // The ghost title runs across the top, as large as it fits.
-        let ghostWidth = size.width - margin * 2
-        var ghostFrame = CGRect(x: margin, y: size.height - margin, width: ghostWidth, height: 0)
-        var ghostSize: CGFloat = 0
+        var column = editorialColumn(entry, accent: accent, details: details, width: columnWidth)
+        let overview = details.contains(.overview) ? entry.overview.nonEmpty : nil
+        let overviewGap = unit * 0.03
+        let overviewBase = margin + column.height + overviewGap + unit * 0.05 + (portrait ? margin : 0)
+        let preferredArt = portrait ? min(preferredHeight, columnWidth / footprint.width) * footprint.height : 0
+        let artShare: CGFloat = 0.8
+        let headlineTop = size.height - margin
+        let clearance = unit * 0.018
+        var headlineDepth = min(
+            size.height * (portrait ? 0.42 : 0.58), headlineTop - margin - column.height - clearance)
+        if overview != nil {
+            // Reserve room for roughly three overview lines before fitting the headline.
+            // On tight portrait screens the art can shrink, but gets most of the shared space.
+            let excerpt = unit * 0.10
+            let artReserve = min(preferredArt, excerpt * artShare / (1 - artShare))
+            headlineDepth = min(headlineDepth, max(headlineDepth / 2, headlineTop - overviewBase - excerpt - artReserve))
+        }
+        var headlineBottom = headlineTop
+        var headlineLines: [CGRect] = []
         if let title = entry.title, !title.isEmpty,
-            let ghost = ghostTitle(
-                title, width: ghostWidth, maxHeight: size.height * (portrait ? 0.28 : 0.46),
-                maxLines: portrait ? 3 : 2, color: accent)
+            let headline = editorialHeadline(
+                title, width: size.width - margin * 2, maxHeight: headlineDepth, maxLines: portrait ? 5 : 4,
+                accent: accent, recordLineBounds: { headlineLines.append($0) })
         {
-            ghost.layer.frame.origin = CGPoint(
-                x: margin * 0.8, y: size.height - margin * 0.6 - ghost.layer.bounds.height)
-            scene.addSublayer(ghost.layer)
-            ghostFrame = ghost.layer.frame
-            ghostSize = ghost.size
+            headlineBottom -= headline.bounds.height
+            headline.frame.origin = CGPoint(x: margin, y: headlineBottom)
+            scene.addSublayer(headline)
         }
 
-        // The poster reaches up into the bottom of the ghost title's last line, so the two overlap but
-        // the title stays readable to its end.
-        let posterTop = ghostFrame.minY + ghostSize * 0.4
-        let posterFrame: CGRect
-        if portrait {
-            let columnTop = margin + column.height
-            let bottom = columnTop + unit * 0.09
-            let height = min(max(posterTop - bottom, size.height * 0.22), size.height * 0.5)
-            posterFrame = CGRect(
-                x: (size.width - height * ratio) / 2, y: bottom, width: height * ratio, height: height)
-            place(column, x: margin, top: columnTop, in: scene)
-        } else {
-            let height = min(max(posterTop - margin, size.height * 0.5), size.height * 0.74)
-            posterFrame = CGRect(
-                x: margin + size.width * 0.03, y: margin, width: height * ratio, height: height)
-            let x = max(posterFrame.maxX + unit * 0.1, size.width - margin - columnWidth)
-            place(column, x: x, top: margin + column.height, in: scene)
+        if let overview {
+            let available = headlineBottom - overviewBase
+            let artReserve = min(preferredArt, max(0, available * artShare))
+            if let layer = textLayer(
+                overview, width: columnWidth, size: unit * 0.018, weight: .regular, alpha: 0.7,
+                lines: 6, maxHeight: available - artReserve, lineSpacing: 1.3)
+            {
+                column.layers.append((layer, overviewGap))
+                column.height += overviewGap + layer.bounds.height
+            }
         }
-        let card = posterCard(poster, frame: posterFrame)
+
+        let hasDetails = column.layers.count > 1 // A rule alone isn't a details column.
+        if hasDetails {
+            place(column, x: margin, top: margin + column.height, in: scene)
+        }
+        let left = !portrait && hasDetails ? margin + columnWidth + margin : margin
+        let bottom = portrait && hasDetails ? margin + column.height + margin : margin
+        var height = min((right - left) / footprint.width, (headlineTop - bottom) / footprint.height, preferredHeight)
+        for line in headlineLines {
+            // The card can sit below a line or grow beside it. It expands from the centre in
+            // portrait and from the right edge otherwise.
+            let below = (headlineTop - line.maxY - clearance - bottom) / footprint.height
+            let beside = portrait
+                ? 2 * max(bounds.midX - margin - line.maxX, margin + line.minX - bounds.midX)
+                : right - margin - line.maxX
+            height = min(height, max(below, (beside - clearance) / footprint.width))
+        }
+        guard height > 0 else { return scene }
+
+        let centerX = portrait ? bounds.midX : right - height * footprint.width / 2
+        let card = posterCard(
+            poster, frame: CGRect(
+                x: centerX - height * ratio / 2, y: bottom + height * (footprint.height - 1) / 2,
+                width: height * ratio, height: height))
+        card.setAffineTransform(tilt)
         card.shadowOpacity = 0.6
         card.shadowRadius = unit * 0.04
-        card.setAffineTransform(CGAffineTransform(rotationAngle: 2.2 * .pi / 180))
         scene.addSublayer(card)
         return scene
     }
 
-    /// Huge, tight, translucent type in the poster's colour. One line is preferred while it stays
-    /// large; otherwise the title wraps at the largest size that fits, without a stub last line.
-    private func ghostTitle(
-        _ title: String, width: CGFloat, maxHeight: CGFloat, maxLines: Int, color: ScreenSaverColor
-    ) -> (layer: CALayer, size: CGFloat)? {
-        let sizes = stride(from: 0.36, through: 0.08, by: -0.01).map { unit * $0 }
-        func metrics(_ size: CGFloat) -> Metrics {
-            measure(
-                attributed(title, size: size, weight: .black, alpha: 1, lineSpacing: 0.88, tracking: -0.02),
+    /// Prefer a single line if it can stay close to the size of the largest full, wrapped title.
+    private func editorialHeadline(
+        _ title: String, width: CGFloat, maxHeight: CGFloat, maxLines: Int, accent: ScreenSaverColor,
+        recordLineBounds: @escaping (CGRect) -> Void
+    ) -> CALayer? {
+        let smallest = 4
+        var words: [Range<String.Index>]?
+        var forcedWrap: CGFloat?
+        var wrapped: CGFloat?
+        var single: CGFloat?
+        for percent in stride(from: 36, through: smallest, by: -1) {
+            let size = unit * CGFloat(percent) / 100
+            if let wrapped, size < wrapped * 0.7 { break }
+            let metrics = measure(
+                attributed(title, size: size, weight: .black, alpha: 1, lineSpacing: 0.96, tracking: -0.02),
                 width: width)
-        }
-        let single = sizes.first { size in
-            let value = metrics(size)
-            return value.lines == 1 && value.height <= maxHeight
-        }
-        let wrapped = sizes.first { size in
-            let value = metrics(size)
-            return value.lines <= maxLines && value.height <= maxHeight
-                && (value.lines == 1 || value.lastLineWidth >= width * 0.3)
-        }
-        let size: CGFloat =
-            switch (single, wrapped) {
-            case (let one?, let many?): one >= many * 0.7 ? one : many
-            case (let one?, nil): one
-            case (nil, let many?): many
-            case (nil, nil): unit * 0.08
+            guard metrics.height + size * 0.2 + 1 <= maxHeight else { continue }
+            if metrics.lines == 1 {
+                single = size
+                break
             }
+            if wrapped == nil, metrics.lines <= maxLines {
+                // Keep Latin words intact when possible; CJK can wrap between characters.
+                if words == nil { words = title.ranges(of: /[\p{Latin}\p{M}\p{Nd}]+/) }
+                let splitsWord = metrics.lineEnds.dropLast().contains { end in
+                    let index = String.Index(utf16Offset: end, in: title)
+                    return words?.contains { $0.lowerBound < index && index < $0.upperBound } == true
+                }
+                if splitsWord {
+                    forcedWrap = forcedWrap ?? size
+                } else {
+                    wrapped = size
+                }
+            }
+        }
+        // Lift dark accent channels toward white while preserving the poster hue.
+        let color = CGColor(
+            srgbRed: accent.red * 0.75 + 0.25, green: accent.green * 0.75 + 0.25,
+            blue: accent.blue * 0.75 + 0.25, alpha: 1)
         return textLayer(
-            title, width: width, size: size, weight: .black, alpha: 0.5, lines: maxLines, lineSpacing: 0.88,
-            color: color.cgColor, tracking: -0.02
-        ).map { ($0, size) }
+            title, width: width, size: single ?? wrapped ?? forcedWrap ?? unit * CGFloat(smallest) / 100,
+            weight: .black, alpha: 0.95, lines: maxLines, lineSpacing: 0.96, color: color, tracking: -0.02,
+            recordLineBounds: recordLineBounds)
     }
 
-    /// Title, season, an accent rule, then the facts set one per line like a cover's lines, the
-    /// TMDb score large.
+    /// An accent rule and the facts set like a cover's lines, with the TMDb score large.
     private func editorialColumn(
         _ entry: ScreenSaverManifest.Entry, accent: ScreenSaverColor, details: Set<ScreenSaverManifest.Detail>,
         width: CGFloat
@@ -151,21 +193,16 @@ extension ScreenSaverLayouts {
         }
         let ink = accent.cgColor
 
-        if let title = entry.title, !title.isEmpty {
-            let size = fittedTitle(title, width: width, largest: 0.046, smallest: 0.03)
-            add(textLayer(title, width: width, size: size, weight: .bold, alpha: 0.97, lines: 3), space: 0)
-        }
+        let rule = CALayer()
+        rule.bounds = CGRect(x: 0, y: 0, width: unit * 0.07, height: max(unit * 0.004, 1))
+        rule.backgroundColor = ink
+        add(rule, space: 0)
         if details.contains(.season), let season = entry.season, !season.isEmpty {
             add(
                 textLayer(
                     season, width: width, size: unit * 0.022, weight: .semibold, alpha: 0.95, lines: 1, color: ink),
-                space: unit * 0.008)
+                space: unit * 0.018)
         }
-
-        let rule = CALayer()
-        rule.bounds = CGRect(x: 0, y: 0, width: unit * 0.07, height: max(unit * 0.004, 1))
-        rule.backgroundColor = ink
-        add(rule, space: unit * 0.03)
 
         if details.contains(.score), let score = entry.score, !score.isEmpty {
             let split = score.lastIndex(of: " ")
@@ -191,13 +228,6 @@ extension ScreenSaverLayouts {
             add(
                 textLayer(fact, width: width, size: unit * 0.021, weight: .medium, alpha: 0.78, lines: 1),
                 space: index == 0 ? unit * 0.026 : unit * 0.006)
-        }
-        if details.contains(.overview), let overview = entry.overview, !overview.isEmpty {
-            add(
-                textLayer(
-                    overview, width: width, size: unit * 0.018, weight: .regular, alpha: 0.7, lines: 3,
-                    lineSpacing: 1.3),
-                space: unit * 0.03)
         }
         return result
     }

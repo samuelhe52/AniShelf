@@ -277,6 +277,32 @@ struct ScreenSaverKitTests {
 
     @Test
     @MainActor
+    func editorialCoverFitsAnOverviewBelowALargeHeadline() throws {
+        let poster = try #require(
+            CGContext(
+                data: nil, width: 20, height: 30, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+            )?.makeImage())
+        let entry = ScreenSaverManifest.Entry(
+            id: "editorial", title: "日々は過ぎれど飯うまし", season: "シーズン1", year: "2025", genres: ["コメディ"],
+            watchStatus: "視聴済", userScore: "★ 4.5",
+            overview: "大学に入ったばかりの五人は、授業が終わるといつも一緒に帰る。おいしいものを探したり、初めての町を散歩したりしながら、少しずつ大学生活にも慣れていく。",
+            poster: "memory", posterPixelSize: .init(width: 20, height: 30))
+        let layouts = ScreenSaverLayouts(size: CGSize(width: 1512, height: 982), scale: 1)
+        let facts: Set<ScreenSaverManifest.Detail> = [.season, .year, .genres, .watchStatus, .userScore]
+        let without = layouts.editorialCover(entry, poster: poster, accent: .paper, details: facts)
+        let with = layouts.editorialCover(entry, poster: poster, accent: .paper, details: facts.union([.overview]))
+        let text = (with.sublayers ?? []).filter { $0.name == ScreenSaverLayouts.textLayerName }
+        let withoutText = (without.sublayers ?? []).filter { $0.name == ScreenSaverLayouts.textLayerName }
+        try #require(text.count == withoutText.count + 1)
+        let headline = try #require(text.first)
+        let overview = try #require(text.last)
+        #expect(overview.frame.maxY < headline.frame.minY)
+        #expect(overview.frame.minY > 0)
+    }
+
+    @Test
+    @MainActor
     func inMemoryPreviewRespondsToPresentationChangesWithTheSameArtwork() async throws {
         let bitmap = try #require(
             CGContext(
