@@ -297,15 +297,9 @@ struct ScreenSaverLayouts {
 
     /// Text laid out and truncated, ready to draw.
     struct FittedText {
-        let setter: CTFramesetter
+        let frame: CTFrame
         let width: CGFloat
         let height: CGFloat
-
-        /// The frame `textLayer(_:)` draws, in its bottom-left coordinates.
-        var frame: CTFrame {
-            let path = CGPath(rect: CGRect(x: 0, y: 0, width: width, height: height), transform: nil)
-            return CTFramesetterCreateFrame(setter, CFRange(), path, nil)
-        }
     }
 
     /// Text is laid out, truncated, and drawn by CoreText into an image, so what is measured is
@@ -375,7 +369,9 @@ struct ScreenSaverLayouts {
             } while end > 0
             guard fits(metrics) else { return nil }
         }
-        return FittedText(setter: setter, width: width, height: ceil(metrics.height + padding))
+        let height = ceil(metrics.height + padding)
+        let path = CGPath(rect: CGRect(x: 0, y: 0, width: width, height: height), transform: nil)
+        return FittedText(frame: CTFramesetterCreateFrame(setter, CFRange(), path, nil), width: width, height: height)
     }
 
     func textLayer(_ text: FittedText) -> CALayer? {

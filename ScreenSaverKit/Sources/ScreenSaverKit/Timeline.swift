@@ -5,6 +5,7 @@
 //  Created by Claude Code on behalf of Samuel He on 2026/11/21.
 //
 
+import CoreText
 import Foundation
 import QuartzCore
 
@@ -362,9 +363,10 @@ final class TimelineStage: ScreenSaverStage {
         let position = CGPoint(x: x, y: geometry.lineY)
         let width = geometry.pitch * 0.85
         if let marker,
-            let label = layouts.textLayer(
+            let text = layouts.fittedText(
                 marker.text, width: width, size: min(unit * 0.017, width * 0.19),
-                weight: .semibold, lines: 1, center: true)
+                weight: .semibold, lines: 1, center: true),
+            let label = layouts.textLayer(text)
         {
             let height = label.bounds.height + unit * 0.006
             mark.bounds = CGRect(x: 0, y: 0, width: width, height: height)
@@ -376,7 +378,7 @@ final class TimelineStage: ScreenSaverStage {
             } else {
                 mark.borderColor = CGColor(gray: 1, alpha: 0.25)
             }
-            label.position = CGPoint(x: width / 2, y: height / 2)
+            label.position = CGPoint(x: width / 2, y: height / 2 + badgeInkOffsetY(text))
             mark.addSublayer(label)
         } else {
             let dotSize = unit * 0.009
@@ -386,6 +388,18 @@ final class TimelineStage: ScreenSaverStage {
         }
         mark.position = position
         return mark
+    }
+
+    private func badgeInkOffsetY(_ text: ScreenSaverLayouts.FittedText) -> CGFloat {
+        guard let lines = CTFrameGetLines(text.frame) as? [CTLine], lines.count == 1, let line = lines.first
+        else { return 0 }
+        let ink = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+        guard !ink.isEmpty else { return 0 }
+
+        // Center the glyphs, not the line box with its descender padding.
+        var origin = CGPoint.zero
+        CTFrameGetLineOrigins(text.frame, CFRange(location: 0, length: 1), &origin)
+        return text.height / 2 - (origin.y + ink.midY)
     }
 
     private func emphasize(_ item: Placed, focused: Bool, animated: Bool) {

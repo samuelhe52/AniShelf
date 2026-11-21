@@ -27,6 +27,9 @@ In Deck · Pile, the front card grows and turns as it is tossed up and left, the
 fades once the next poster is readable. The rest of the pile advances together, with the
 incoming card joining from one slot deeper. The caption follows the reveal.
 
+Timeline centers the visible glyphs vertically inside each year badge, including the wrap
+arrow. Centering the font's line box leaves too much space below the digits.
+
 In Depth Drift, the nearest plane uses a blur radius of 3% of poster width.
 At 6%, the foreground lost its artwork and spread a veil over the sharp posters behind it.
 
