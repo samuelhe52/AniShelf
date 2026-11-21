@@ -107,7 +107,7 @@ final class DemoModel {
     var entryLimit: Int?
     var interval: Double = 6
     var rows = ScreenSaverManifest.Settings.defaultCoverWallRows
-    var flipDelay: Double = 6
+    var flipDelay = ScreenSaverDraft().flipDelay
     var driftRate: Double = 4
     var deckDepth = 5
     var pileDepth = 7

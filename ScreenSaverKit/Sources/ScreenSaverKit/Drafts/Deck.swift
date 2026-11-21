@@ -230,11 +230,10 @@ final class DeckStage: ScreenSaverStage {
             // The deck and its caption form one block centred on the screen.
             let block = cardSize.height + unit * 0.05 + unit * 0.17
             return CGPoint(x: size.width / 2, y: size.height / 2 + block / 2 - cardSize.height / 2)
-        // The pile's middle card sits at the centre of the screen.
-        case (.pile, false):
-            return CGPoint(x: size.width / 2, y: size.height / 2)
-        case (.pile, true):
-            return CGPoint(x: size.width / 2, y: size.height * 0.55)
+        case (.pile, _):
+            // Lift the pile slightly above its previous centre in both orientations.
+            let centerY = portrait ? size.height * 0.55 : size.height / 2
+            return CGPoint(x: size.width / 2, y: centerY + unit * 0.05)
         }
     }
 
@@ -423,7 +422,7 @@ final class DeckStage: ScreenSaverStage {
                     weight: .bold, alpha: title.alpha, lines: 2)
             }
             let block = layouts.stack(lines, width: width, center: true)
-            let top = anchor.y - cardSize.height / 2 - unit * 0.05
+            let top = anchor.y - cardSize.height / 2 - unit * 0.07
             layouts.place(block, x: (size.width - width) / 2, top: top, in: next)
         case .pile:
             let width =

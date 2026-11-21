@@ -49,7 +49,7 @@ public struct ScreenSaverDraft: Equatable, Sendable {
     public var timeScale: Double = 1
 
     /// Flip Wall: seconds between two flips.
-    public var flipDelay: TimeInterval = 6
+    public var flipDelay: TimeInterval = 3
     /// Depth Drift: posters started per 10 seconds.
     public var driftRate: Double = 4
     /// Deck: cards visible in the stack, the front one included.
