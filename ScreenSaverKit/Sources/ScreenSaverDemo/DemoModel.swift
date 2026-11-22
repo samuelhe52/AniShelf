@@ -80,7 +80,8 @@ final class DemoModel {
     var backdropSubjectAwareText = Settings.defaultBackdropSubjectAwareText
     /// Speeds playback up; only `--capture` sets it.
     var speed: Double = 1
-    var details: Set<ScreenSaverManifest.Detail> = [.year, .genres, .watchStatus, .userScore, .tagline, .overview]
+    private var details: Set<ScreenSaverManifest.Detail> = [.year, .genres, .watchStatus, .userScore, .overview]
+    private var taglineSelections: [ScreenSaverManifest.Layout: Bool] = [:]
     var seed = UInt64.random(in: .min ... .max)
     private(set) var entryCount: Int?
     private(set) var timelineDateCounts: [ScreenSaverManifest.TimelineDateSource: Int] = [:]
@@ -97,12 +98,29 @@ final class DemoModel {
         return layout.layout(forPosterCount: min(entryCount, entryLimit ?? entryCount))
     }
 
+    func isDetailEnabled(_ detail: ScreenSaverManifest.Detail) -> Bool {
+        guard detail == .tagline else { return details.contains(detail) }
+        let selectionLayout = layout.detailSelectionLayout
+        return taglineSelections[selectionLayout]
+            ?? ScreenSaverManifest.Detail.defaults(for: selectionLayout).contains(.tagline)
+    }
+
+    func setDetail(_ detail: ScreenSaverManifest.Detail, enabled: Bool) {
+        if detail == .tagline {
+            taglineSelections[layout.detailSelectionLayout] = enabled
+        } else if enabled {
+            details.insert(detail)
+        } else {
+            details.remove(detail)
+        }
+    }
+
     var configuration: DemoConfiguration {
         let available = ScreenSaverManifest.Detail.available(for: layout.detailSelectionLayout)
         return DemoConfiguration(
             directory: directory,
             settings: .init(
-                layout: layout, details: available.filter(details.contains), interval: interval, coverWallRows: rows,
+                layout: layout, details: available.filter(isDetailEnabled), interval: interval, coverWallRows: rows,
                 washFlows: washFlows, washSpeed: washSpeed, flipDelay: flipDelay, driftRate: driftRate,
                 deckDepth: deckDepth, pileDepth: pileDepth, timelineHold: timelineHold,
                 timelineDateSource: timelineDateSource, timelineDatePrecision: timelineDatePrecision,

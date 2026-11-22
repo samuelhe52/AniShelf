@@ -21,6 +21,15 @@ When the overview is enabled and present, Editorial Cover reserves space for a s
 before fitting the headline. The overview uses up to six lines and shares the remaining
 height with the poster in portrait. Text that exceeds either limit ends with an ellipsis.
 
+[Taglines](../042-mac-screen-saver/020-tagline-detail.md) sit below the title or
+logo in Backdrop, Editorial Cover, Poster Focus, Cover Fusion, Deck · Fan,
+Deck · Pile, and Timeline. They are drawn at 65% opacity, use up to two lines
+with an ellipsis, and take no space when missing or disabled. The title gets
+first claim on space; the overview yields to the tagline. Cover Wall’s
+small-library fallback inherits Poster Focus.
+Poster Focus, Cover Fusion, and Deck · Fan use 28 pt at a 1080 pt short edge,
+scaled proportionally for other displays.
+
 In Deck · Fan, the outgoing poster sweeps upward and outward along one continuous
 curve and tilts with the same easing. It stays opaque while crossing the next poster. The
 caption changes as the outgoing card clears the new front, and the new rear card slides out
@@ -33,6 +42,9 @@ incoming card joining from one slot deeper. The caption follows the reveal.
 
 Timeline centers the visible glyphs vertically inside each year badge, including the wrap
 arrow. Centering the font's line box leaves too much space below the digits.
+When a tagline is present, Timeline groups it with the title and separates
+that block from the smaller date and facts with a gap of 2.8% of the short
+screen edge. Without a tagline, the date keeps its original emphasis and spacing.
 
 In Depth Drift, the nearest plane uses a blur radius of 3% of poster width.
 At 6%, the foreground lost its artwork and spread a veil over the sharp posters behind it.

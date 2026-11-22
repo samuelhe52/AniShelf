@@ -432,6 +432,10 @@ final class TimelineStage: ScreenSaverStage {
                     text: title, size: layouts.fittedTitle(title, width: width, largest: 0.042, smallest: 0.028),
                     weight: .bold, alpha: 0.97, lines: 2))
         }
+        let tagline = layouts.captionTagline(entry, details: details, size: unit * 0.024)
+        if let tagline {
+            lines.append(tagline)
+        }
         let date = slot.dateText
         let subtitle =
             if details.contains(.season), let season = entry.season, !season.isEmpty {
@@ -439,13 +443,20 @@ final class TimelineStage: ScreenSaverStage {
             } else {
                 date
             }
-        lines.append(
-            .init(text: subtitle, size: unit * 0.023, weight: .medium, alpha: 0.84, spaceBefore: unit * 0.006))
+        if tagline != nil {
+            // Group the date and facts as metadata instead of giving the date a second headline weight.
+            lines.append(
+                .init(text: subtitle, size: unit * 0.018, weight: .regular, alpha: 0.65, spaceBefore: unit * 0.028))
+        } else {
+            lines.append(
+                .init(text: subtitle, size: unit * 0.023, weight: .medium, alpha: 0.84, spaceBefore: unit * 0.006))
+        }
         let facts = layouts.factsLine(entry, details: details)
         if !facts.isEmpty {
             lines.append(
                 .init(
-                    text: facts, size: unit * 0.018, weight: .regular, alpha: 0.65, lines: 2, spaceBefore: unit * 0.012)
+                    text: facts, size: unit * 0.018, weight: .regular, alpha: 0.65, lines: 2,
+                    spaceBefore: unit * (tagline == nil ? 0.012 : 0.004))
             )
         }
 

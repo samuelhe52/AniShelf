@@ -15,6 +15,8 @@ package struct ScreenSaverLayouts {
     let scale: CGFloat
     var posterOverviewLines = ScreenSaverManifest.Settings.defaultPosterOverviewLines
 
+    static let taglineAlpha: CGFloat = 0.65
+
     var bounds: CGRect { CGRect(origin: .zero, size: size) }
     var unit: CGFloat { min(size.width, size.height) }
     var ink: CGColor { CGColor(gray: 0.025, alpha: 1) }
@@ -49,9 +51,10 @@ package struct ScreenSaverLayouts {
         if portrait {
             // Poster above, text centred below; the pair is centred vertically.
             let textWidth = size.width * 0.78
-            let block = stack(
-                posterFocusLines(entry, details: details, width: textWidth), width: textWidth, center: true)
             let gap = unit * 0.07
+            let block = posterFocusBlock(
+                entry, details: details, width: textWidth,
+                maxHeight: size.height - posterHeight - gap * 3, center: true)
             let top = bounds.midY + (posterSize.height + gap + block.height) / 2
             posterFrame = CGRect(
                 x: bounds.midX - posterSize.width / 2, y: top - posterSize.height,
@@ -66,14 +69,22 @@ package struct ScreenSaverLayouts {
             posterFrame = CGRect(
                 x: left, y: bounds.midY - posterSize.height / 2, width: posterSize.width,
                 height: posterSize.height)
-            let block = stack(posterFocusLines(entry, details: details, width: textWidth), width: textWidth)
+            let block = posterFocusBlock(entry, details: details, width: textWidth, maxHeight: size.height - unit * 0.14)
             place(block, x: posterFrame.maxX + gap, top: bounds.midY + block.height / 2, in: scene)
         }
         scene.insertSublayer(posterCard(poster, frame: posterFrame), at: 0)
         return scene
     }
 
-    /// Three blocks: the title with its season, one line of facts, and the overview.
+    func posterFocusBlock(
+        _ entry: ScreenSaverManifest.Entry, details: Set<ScreenSaverManifest.Detail>,
+        width: CGFloat, maxHeight: CGFloat, center: Bool = false
+    ) -> Stack {
+        let lines = posterFocusLines(entry, details: details, width: width)
+        let hasTagline = details.contains(.tagline) && entry.tagline.nonEmpty != nil
+        return stack(lines, width: width, center: center, maxHeight: hasTagline ? maxHeight : .greatestFiniteMagnitude)
+    }
+
     func posterFocusLines(
         _ entry: ScreenSaverManifest.Entry, details: Set<ScreenSaverManifest.Detail>, width: CGFloat
     ) -> [Line] {
@@ -85,6 +96,12 @@ package struct ScreenSaverLayouts {
         if details.contains(.season), let season = entry.season.nonEmpty {
             lines.append(
                 Line(text: season, size: unit * 0.024, weight: .medium, alpha: 0.8, spaceBefore: unit * 0.006))
+        }
+        if details.contains(.tagline), let tagline = entry.tagline.nonEmpty {
+            lines.append(
+                Line(
+                    text: tagline, size: unit * (28.0 / 1080), weight: .medium, alpha: Self.taglineAlpha,
+                    lines: 2, spaceBefore: unit * 0.016))
         }
         let facts = factsLine(entry, details: details)
         if !facts.isEmpty {
@@ -123,7 +140,16 @@ package struct ScreenSaverLayouts {
             facts = facts.isEmpty ? season : season + Self.separator + facts
         }
         let factsText = fittedText(facts, width: width, size: unit * 0.019, weight: .regular, alpha: 0.55, lines: 1)
-        let titleY = factsText.map { padding + $0.height + unit * 0.014 } ?? padding
+        let taglineY = factsText.map { padding + $0.height + unit * 0.014 } ?? padding
+        let taglineText: FittedText? =
+            if details.contains(.tagline) {
+                fittedText(
+                    entry.tagline, width: width, size: unit * 0.024, weight: .regular,
+                    alpha: Self.taglineAlpha, lines: 2)
+            } else {
+                nil
+            }
+        let titleY = taglineText.map { taglineY + $0.height + unit * 0.014 } ?? taglineY
         var titleText: FittedText?
         var titleFrame = CGRect.null
         var markFrame = CGRect.null
@@ -138,10 +164,12 @@ package struct ScreenSaverLayouts {
             titleFrame = titleText?.occupiedFrame(x: padding, y: titleY - titleSize * 0.2) ?? .null
         }
         let factsFrame = factsText?.occupiedFrame(x: padding, y: padding) ?? .null
+        let taglineFrame = taglineText?.occupiedFrame(x: padding, y: taglineY) ?? .null
+        let leftFrame = factsFrame.union(taglineFrame).union(titleFrame).union(markFrame)
         let placement = BackdropPlacement(
             regions: regionsOverride ?? entry.backdropRegions,
             imageSize: CGSize(width: backdrop.width, height: backdrop.height),
-            screen: bounds, leftFrame: factsFrame.union(titleFrame).union(markFrame), subjectAwareText: subjectAwareText)
+            screen: bounds, leftFrame: leftFrame, subjectAwareText: subjectAwareText)
         let right = !forceLeft && placement.side == .right
 
         let scene = background()
@@ -153,7 +181,8 @@ package struct ScreenSaverLayouts {
         scene.addSublayer(
             gradient(
                 colors: [CGColor(gray: 0, alpha: 0.72), CGColor(gray: 0, alpha: 0)],
-                start: CGPoint(x: 0.5, y: 0), end: CGPoint(x: 0.5, y: 0.5)))
+                start: CGPoint(x: 0.5, y: 0),
+                end: CGPoint(x: 0.5, y: min(1, 0.5 + (titleY - taglineY) / size.height))))
         scene.addSublayer(
             gradient(
                 colors: [CGColor(gray: 0, alpha: 0.4), CGColor(gray: 0, alpha: 0)],
@@ -168,6 +197,9 @@ package struct ScreenSaverLayouts {
         // The facts sit back as a quiet secondary line; the logo or title leads.
         if let factsText, let label = textLayer(factsText, flush: right ? 1 : 0) {
             place(label, at: factsFrame.origin, shadowOpacity: 0.3)
+        }
+        if let taglineText, let label = textLayer(taglineText, flush: right ? 1 : 0) {
+            place(label, at: taglineFrame.origin)
         }
         if let logo {
             place(imageLayer(logo, frame: markFrame), at: markFrame.origin)
@@ -241,6 +273,15 @@ package struct ScreenSaverLayouts {
         return wrapped ?? unit * smallest
     }
 
+    func captionTagline(
+        _ entry: ScreenSaverManifest.Entry, details: Set<ScreenSaverManifest.Detail>, size: CGFloat
+    ) -> Line? {
+        guard details.contains(.tagline), let tagline = entry.tagline.nonEmpty else { return nil }
+        return Line(
+            text: tagline, size: size, weight: .regular, alpha: Self.taglineAlpha, lines: 2,
+            spaceBefore: unit * 0.008)
+    }
+
     struct Line {
         let text: String
         let size: CGFloat
@@ -256,15 +297,18 @@ package struct ScreenSaverLayouts {
         var height: CGFloat
     }
 
-    func stack(_ lines: [Line], width: CGFloat, center: Bool = false) -> Stack {
+    func stack(
+        _ lines: [Line], width: CGFloat, center: Bool = false, maxHeight: CGFloat = .greatestFiniteMagnitude
+    ) -> Stack {
         var result = Stack(layers: [], height: 0)
         for line in lines {
+            let space = result.layers.isEmpty ? 0 : line.spaceBefore
             guard
                 let layer = textLayer(
                     line.text, width: width, size: line.size, weight: line.weight, alpha: line.alpha,
-                    lines: line.lines, lineSpacing: line.lineSpacing, center: center)
+                    lines: line.lines, maxHeight: maxHeight - result.height - space,
+                    lineSpacing: line.lineSpacing, center: center)
             else { continue }
-            let space = result.layers.isEmpty ? 0 : line.spaceBefore
             result.layers.append((layer, space))
             result.height += space + layer.bounds.height
         }

@@ -37,7 +37,6 @@ Sketched in the 2026-11-21 brainstorm and not picked. Kept so they are not re-pr
 | Idea | Source | Why deferred | To do it right |
 | --- | --- | --- | --- |
 | Country | PR #28 | The PR derived it from original language (English → United States). The app stores no country today. | Store TMDb `origin_country` / `production_countries` (schema change), then localize with `Locale`. |
-| Tagline | PR #28 | `AnimeEntryDetail.subtitle` holds one language only, the one fetched. | Tag the stored tagline with its language, or fetch per language; show only on a language match. |
 | A saver-specific language menu | PR #28 | Duplicates and can contradict Anime Info Language. | Only if users want the saver in a different language from the app. |
 
 ## Content and scope

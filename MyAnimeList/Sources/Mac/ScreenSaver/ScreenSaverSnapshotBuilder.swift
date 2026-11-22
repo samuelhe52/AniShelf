@@ -25,6 +25,7 @@
             let score: String?
             let watchStatus: String?
             let userScore: String?
+            let tagline: String?
             let overview: String?
             let poster: TMDbImage?
             let previewPoster: TMDbImage?
@@ -42,6 +43,7 @@
                     watchStartDate: watchStartDate, watchEndDate: watchEndDate,
                     dateLocaleIdentifier: dateLocaleIdentifier,
                     genres: genres, status: status, score: score, watchStatus: watchStatus, userScore: userScore,
+                    tagline: tagline,
                     overview: overview, poster: poster, posterPixelSize: posterPixelSize, backdrop: backdrop,
                     logo: logo,
                     backdropRegions: backdropRegions
@@ -91,8 +93,17 @@
                 } else {
                     nil
                 }
-            let seriesDetail = entry.parentSeriesEntry?.detail ?? entry.detail
-            let genreIDs = (entry.detail?.genreIDs ?? seriesDetail?.genreIDs ?? []).filter { $0 != animationGenreID }
+            let detail = entry.detail
+            let parentDetail = entry.parentSeriesEntry?.detail
+            let seriesDetail = parentDetail ?? detail
+            let taglineDetail = if case .season = entry.type { parentDetail } else { detail }
+            let tagline = taglineDetail.flatMap {
+                $0.language == language.rawValue ? $0.subtitle?.trimmingCharacters(in: .whitespacesAndNewlines) : nil
+            }
+            let overview = detail.flatMap {
+                $0.language == language.rawValue ? $0.overview : nil
+            }
+            let genreIDs = (detail?.genreIDs ?? seriesDetail?.genreIDs ?? []).filter { $0 != animationGenreID }
             let genres = Array(EntryDetailViewModel.localizedGenreNames(genreIDs, language: language).prefix(3))
             let status =
                 entry.type == .movie
@@ -115,17 +126,18 @@
                 dateLocaleIdentifier: locale.identifier,
                 genres: genres.isEmpty ? nil : genres,
                 status: status,
-                score: (entry.detail?.voteAverage).flatMap { $0 > 0 ? "TMDb " + String(format: "%.1f", $0) : nil },
+                score: (detail?.voteAverage).flatMap { $0 > 0 ? "TMDb " + String(format: "%.1f", $0) : nil },
                 watchStatus: String(localized: watchStatus),
                 // Hidden along with the app's own star scores when scoring is turned off.
                 userScore: scoringEnabled
                     ? entry.entryScore.map { "★ " + $0.formatted } : nil,
-                overview: (entry.detail?.overview).flatMap { $0.isEmpty ? nil : $0 } ?? entry.displayOverview,
+                tagline: tagline.flatMap { $0.isEmpty ? nil : $0 },
+                overview: overview.flatMap { $0.isEmpty ? nil : $0 } ?? entry.displayOverview,
                 poster: entry.posterImage(.screenSaverPoster),
                 previewPoster: entry.posterImage(.posterThumbnail),
                 backdrop: backdrop,
                 previewBackdrop: isBackdrop ? entry.backdropImage : nil,
-                logo: isBackdrop ? entry.detail?.logoImage : nil
+                logo: isBackdrop ? detail?.logoImage : nil
             )
         }
     }

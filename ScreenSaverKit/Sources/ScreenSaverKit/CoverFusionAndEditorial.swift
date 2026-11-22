@@ -29,12 +29,13 @@ extension ScreenSaverLayouts {
         if size.height > size.width {
             // Text below the poster, starting where its feathered edge has faded.
             let width = size.width * 0.84
-            let block = stack(posterFocusLines(entry, details: details, width: width), width: width)
-            place(block, x: (size.width - width) / 2, top: frame.minY - unit * 0.01, in: scene)
+            let top = frame.minY - unit * 0.01
+            let block = posterFocusBlock(entry, details: details, width: width, maxHeight: top - unit * 0.03)
+            place(block, x: (size.width - width) / 2, top: top, in: scene)
         } else {
             let x = frame.maxX + unit * 0.05
             let width = min(size.width - x - unit * 0.09, unit * 0.95)
-            let block = stack(posterFocusLines(entry, details: details, width: width), width: width)
+            let block = posterFocusBlock(entry, details: details, width: width, maxHeight: size.height - unit * 0.14)
             place(block, x: x, top: bounds.midY + block.height / 2, in: scene)
         }
         return scene
@@ -71,8 +72,17 @@ extension ScreenSaverLayouts {
         let artShare: CGFloat = 0.8
         let headlineTop = size.height - margin
         let clearance = unit * 0.018
+        let tagline: FittedText? =
+            if details.contains(.tagline) {
+                fittedText(
+                    entry.tagline, width: columnWidth, size: unit * 0.03, weight: .medium,
+                    alpha: Self.taglineAlpha, lines: 2)
+            } else {
+                nil
+            }
+        let taglineDepth = tagline.map { $0.height + unit * 0.014 } ?? 0
         var headlineDepth = min(
-            size.height * (portrait ? 0.42 : 0.58), headlineTop - margin - column.height - clearance)
+            size.height * (portrait ? 0.42 : 0.58), headlineTop - margin - column.height - clearance - taglineDepth)
         if overview != nil {
             // Reserve room for roughly three overview lines before fitting the headline.
             // On tight portrait screens the art can shrink, but gets most of the shared space.
@@ -93,6 +103,13 @@ extension ScreenSaverLayouts {
             headlineBottom -= headline.bounds.height
             headline.frame.origin = CGPoint(x: margin, y: headlineBottom)
             scene.addSublayer(headline)
+        }
+        if let tagline, let layer = textLayer(tagline) {
+            headlineBottom -= taglineDepth
+            layer.frame.origin = CGPoint(x: margin, y: headlineBottom)
+            scene.addSublayer(layer)
+            let offset = headlineTop - headlineBottom - tagline.height
+            headlineLines.append(contentsOf: inkBounds(of: tagline).map { $0.offsetBy(dx: 0, dy: offset) })
         }
 
         if let overview {

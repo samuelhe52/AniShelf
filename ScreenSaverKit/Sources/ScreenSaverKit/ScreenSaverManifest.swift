@@ -92,14 +92,12 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
 
         public static func defaults(for layout: Layout) -> [Detail] {
             switch layout.detailSelectionLayout {
-            case .posterFocus, .coverFusion:
-                [.year, .genres, .userScore, .overview]
-            case .editorialCover:
+            case .posterFocus, .coverFusion, .editorialCover:
                 [.year, .genres, .userScore, .tagline, .overview]
             case .backdrop:
                 [.year, .genres, .userScore, .tagline]
             case .deckFan, .deckPile:
-                [.year, .genres]
+                [.year, .genres, .tagline]
             case .timeline:
                 [.genres, .userScore]
             case .coverWall, .flipWall, .depthDrift:
@@ -278,6 +276,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         public let score: String?
         public let watchStatus: String?
         public let userScore: String?
+        public let tagline: String?
         public let overview: String?
         public let poster: String
         public let posterPixelSize: PixelSize
@@ -299,6 +298,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             score: String? = nil,
             watchStatus: String? = nil,
             userScore: String? = nil,
+            tagline: String? = nil,
             overview: String? = nil,
             poster: String,
             posterPixelSize: PixelSize,
@@ -320,6 +320,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             self.score = score
             self.watchStatus = watchStatus
             self.userScore = userScore
+            self.tagline = tagline
             self.overview = overview
             self.poster = poster
             self.posterPixelSize = posterPixelSize

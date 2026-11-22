@@ -88,6 +88,14 @@
         func settingsKeepLegacyDetailsAndSaveSelectionsIndependently() throws {
             let fixture = try Fixture()
             defer { fixture.cleanup() }
+            let fresh = ScreenSaverSettings(defaults: fixture.defaults)
+            for layout in [ScreenSaverManifest.Layout.backdrop, .editorialCover, .posterFocus, .coverFusion,
+                           .coverWall, .deckFan, .deckPile]
+            {
+                #expect(fresh.details(for: layout).contains(.tagline))
+            }
+            #expect(!fresh.details(for: .timeline).contains(.tagline))
+
             fixture.defaults.set(["userScore", "year"], forKey: "screenSaverPosterFocusDetails")
             fixture.defaults.set([String](), forKey: "screenSaverBackdropDetails")
 
@@ -98,7 +106,10 @@
                 #expect(!settings.details(for: layout).contains(.season))
             }
             settings.setDetail(.season, true, for: .deckFan)
+            settings.setDetail(.tagline, false, for: .deckFan)
+            settings.setDetail(.tagline, true, for: .timeline)
             settings.setDetail(.year, false, for: .coverWall)
+            settings.setDetail(.tagline, true, for: .coverWall)
             settings.setDetail(.genres, false, for: .deckFan)
             settings.setDetail(.overview, true, for: .timeline)
             settings.layout = .timeline
@@ -114,12 +125,14 @@
 
             let restored = ScreenSaverSettings(defaults: fixture.defaults)
             #expect(restored == settings)
-            #expect(restored.details(for: .coverWall) == [.userScore])
-            #expect(restored.details(for: .posterFocus) == [.userScore])
+            #expect(restored.details(for: .coverWall) == [.userScore, .tagline])
+            #expect(restored.details(for: .posterFocus) == [.userScore, .tagline])
             #expect(restored.details(for: .backdrop).isEmpty)
-            #expect(restored.details(for: .deckFan) == [.season, .year])
-            #expect(restored.details(for: .deckPile) == [.year, .genres])
-            #expect(restored.manifestSettings.details == [.genres, .userScore])
+            let fanDetails = restored.details(for: .deckFan)
+            #expect(fanDetails.contains(.year))
+            #expect(!fanDetails.contains(.genres) && !fanDetails.contains(.tagline))
+            #expect(restored.details(for: .deckPile) == [.year, .genres, .tagline])
+            #expect(restored.manifestSettings.details == [.genres, .userScore, .tagline])
             #expect(restored.manifestSettings.posterOverviewLines == ScreenSaverManifest.Settings.unlimitedPosterOverviewLines)
         }
 
@@ -142,9 +155,10 @@
             let fixture = try Fixture()
             defer { fixture.cleanup() }
             let parent = AnimeEntry(
-                name: "Library series", type: .series, tmdbID: 11,
+                name: "Library series", overview: "Library overview", type: .series, tmdbID: 11,
                 detail: .init(
-                    language: "en", title: "Library series", status: "Returning Series", genreIDs: [16, 18, 28, 35])
+                    language: Language.japanese.rawValue, title: "Library series", subtitle: " \n旅の始まり。 ",
+                    status: "Returning Series", genreIDs: [16, 18, 28, 35])
             )
             parent.setDisplayState(false)
             let season = AnimeEntry(
@@ -152,7 +166,8 @@
                 type: .season(seasonNumber: 2, parentSeriesID: 11), posterPath: "/original.jpg",
                 backdropPath: "/scene.jpg", customPosterPath: "/chosen.jpg", tmdbID: 12,
                 detail: .init(
-                    language: "en", title: "Library series", logoImagePath: "/logo.svg", genreIDs: [16, 18, 28, 35])
+                    language: Language.japanese.rawValue, title: "Library series", subtitle: "第2期",
+                    overview: "第2期のあらすじ。", logoImagePath: "/logo.svg", genreIDs: [16, 18, 28, 35])
             )
             season.usingCustomPoster = true
             season.dateStarted = Date(timeIntervalSince1970: 1_685_836_800)
@@ -178,6 +193,8 @@
             #expect(manifestEntry.watchStartDate == season.dateStarted)
             #expect(manifestEntry.watchEndDate == season.dateFinished)
             #expect(manifestEntry.dateLocaleIdentifier == Language.japanese.rawValueWithRegion)
+            #expect(manifestEntry.tagline == "旅の始まり。")
+            #expect(manifestEntry.overview == "第2期のあらすじ。")
             #expect(japanese.poster?.url.pathComponents.suffix(2) == ["w780", "chosen.jpg"])
             #expect(japanese.previewPoster?.variant == .posterThumbnail)
             #expect(japanese.poster?.url.lastPathComponent == "chosen.jpg")
@@ -198,12 +215,15 @@
             #expect(chinese.season == "第2季")
             #expect(chinese.genres?.first == "剧情")
             #expect(chinese.status == "连载中")
+            #expect(chinese.tagline == nil)
+            #expect(chinese.overview == "Library overview")
 
             // Text stays in the snapshot when a detail is off, so the toggle needs no new export.
-            settings.setDetail(.year, false, for: .backdrop)
-            let hiddenDetails = try #require(fixture.draft(settings).entries.only)
-            #expect(hiddenDetails.title == "Library series" && hiddenDetails.logo == japanese.logo)
-            #expect(fixture.draft(settings).settings.details.isEmpty)
+            fixture.defaults.set(Language.japanese.rawValue, forKey: .preferredAnimeInfoLanguage)
+            settings.setDetail(.tagline, false, for: .backdrop)
+            let hidden = fixture.draft(settings)
+            #expect(!hidden.settings.details.contains(.tagline))
+            #expect(hidden.entries.only?.tagline == "旅の始まり。")
         }
 
         @Test

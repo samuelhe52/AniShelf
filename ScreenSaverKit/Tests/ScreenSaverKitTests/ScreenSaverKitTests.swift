@@ -21,7 +21,7 @@ struct ScreenSaverKitTests {
         let expected = ScreenSaverManifest(
             createdAt: Date(timeIntervalSince1970: 1_790_000_000.123),
             settings: .init(
-                layout: .backdrop, details: [.score, .userScore, .year], interval: 12, coverWallRows: 8,
+                layout: .backdrop, details: [.tagline, .score, .userScore, .year], interval: 12, coverWallRows: 8,
                 washFlows: false, washSpeed: 2, flipDelay: 25, driftRate: 12, deckDepth: 8, pileDepth: 11,
                 timelineHold: 23, timelineDateSource: .watchDates, timelineDatePrecision: .yearAndMonth,
                 backdropSubjectAwareText: false),
@@ -38,6 +38,7 @@ struct ScreenSaverKitTests {
                     genres: ["Adventure"],
                     status: "Ended",
                     userScore: "★ 4.5",
+                    tagline: "銀河を旅する。",
                     poster: "images/poster.heic",
                     posterPixelSize: .init(width: 600, height: 900),
                     backdrop: "images/backdrop.heic",
@@ -51,17 +52,19 @@ struct ScreenSaverKitTests {
         #expect(fixture.reader.read() == .ready(expected))
         let encoded = try expected.encoded()
         #expect(String(decoding: encoded, as: UTF8.self).contains("2026-09-21T14:13:20Z"))
-        #expect(expected.settings.details == [.year, .score, .userScore])
+        #expect(expected.settings.details == [.year, .score, .userScore, .tagline])
 
         var oldManifest = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
         var oldEntries = try #require(oldManifest["entries"] as? [[String: Any]])
         oldEntries[0].removeValue(forKey: "backdropRegions")
+        oldEntries[0].removeValue(forKey: "tagline")
         oldManifest["entries"] = oldEntries
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let decoded = try decoder.decode(
             ScreenSaverManifest.self, from: JSONSerialization.data(withJSONObject: oldManifest))
         #expect(decoded.entries.first?.backdropRegions == nil)
+        #expect(decoded.entries.first?.tagline == nil)
     }
 
     @Test
@@ -730,7 +733,7 @@ struct ScreenSaverKitTests {
     func aSaverBuiltFromOtherCodeAsksToBeReinstalled() throws {
         let fixture = try SnapshotFixture()
         defer { fixture.remove() }
-        let settings = ScreenSaverManifest.Settings(layout: .coverWall, interval: 12)
+        let settings = ScreenSaverManifest.Settings(layout: .backdrop, details: [.tagline], interval: 12)
         try fixture.write(.init(settings: settings, entries: [fixture.entry(1)], saverBuild: "new"))
         #expect(ScreenSaverSnapshotReader(directory: fixture.directory, build: "old").read() == .requiresUpdate)
         guard case .ready = ScreenSaverSnapshotReader(directory: fixture.directory, build: "new").read() else {

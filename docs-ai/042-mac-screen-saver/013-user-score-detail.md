@@ -13,7 +13,7 @@ Samuel asked for the user-given star score to be an option in the screen saver. 
 | Text | `★ 4.5` or `★ 5`, from `EntryScore.formatted` (current locale). Entries without a score show nothing. Both slide layouts draw it; Cover Wall's small-library fallback inherits Poster Focus. |
 | Scoring off | With "scoring" turned off in the app, the builder leaves the score out and the toggle is hidden in the Details list. The publisher watches the preference, so flipping it republishes. |
 | Defaults | Off in both layouts, as with the other opt-in details. |
-| Versions | `rendererVersion` 5. An installed older saver ignores the unknown detail and the new build ID asks for a reinstall. |
+| Versions | Originally `rendererVersion` 5. Under the [current version policy](014-single-snapshot-version.md), the build-ID check requests a reinstall before decoding settings. An older settings decoder does not ignore unknown detail values. |
 
 ## Refs
 

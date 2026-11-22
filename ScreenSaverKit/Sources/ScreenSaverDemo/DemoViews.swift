@@ -134,10 +134,8 @@ struct DemoSidebar: View {
 
     private func binding(for detail: ScreenSaverManifest.Detail) -> Binding<Bool> {
         Binding(
-            get: { model.details.contains(detail) },
-            set: { isOn in
-                if isOn { model.details.insert(detail) } else { model.details.remove(detail) }
-            })
+            get: { model.isDetailEnabled(detail) },
+            set: { model.setDetail(detail, enabled: $0) })
     }
 
     private func chooseFolder() {

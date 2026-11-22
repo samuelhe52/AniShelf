@@ -201,3 +201,5 @@ and links `ScreenSaverKit` on macOS only, for the manifest type and the live pre
 - Updated 2026-11-21: the Demo draft layouts ship as layouts, and the draft mechanism is removed — see [044-screen-saver-layout-unification](../044-screen-saver-layout-unification/000-plan.md)
 - Updated 2026-11-22: black opening fade and Backdrop dwell zoom — see [018-opening-and-backdrop-zoom.md](018-opening-and-backdrop-zoom.md)
 - Updated 2026-11-22: Backdrop text moves right when the subject overlaps the left text and the right corner is clear — see [019-backdrop-subject-aware-side.md](019-backdrop-subject-aware-side.md)
+- Updated 2026-11-22: language-matched tagline detail for Backdrop, Editorial Cover, Poster Focus, and Cover Fusion; seasons use the parent's — see [020-tagline-detail.md](020-tagline-detail.md)
+- Updated 2026-11-22: 65% tagline opacity across layouts, Deck captions on by default, and opt-in Timeline captions — see [021-tagline-caption-layouts.md](021-tagline-caption-layouts.md)

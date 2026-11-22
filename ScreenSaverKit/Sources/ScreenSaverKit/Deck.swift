@@ -402,7 +402,7 @@ final class DeckStage: ScreenSaverStage {
             let width =
                 portrait
                 ? size.width - margin * 2 : min(unit * 0.62, size.width / 2 - cardSize.width / 2 - margin * 2)
-            // Quiet: the title, then one small line with the place in the library and the facts.
+            // Keep the title, optional tagline, and library count in the same corner.
             let ordinal = dealt % max(total, 1) + 1
             var lines: [ScreenSaverLayouts.Line] = []
             if let title = entry.title, !title.isEmpty {
@@ -410,6 +410,9 @@ final class DeckStage: ScreenSaverStage {
                     .init(
                         text: title, size: layouts.fittedTitle(title, width: width, largest: 0.03, smallest: 0.022),
                         weight: .semibold, alpha: 0.95, lines: 2))
+            }
+            if let tagline = layouts.captionTagline(entry, details: details, size: unit * 0.02) {
+                lines.append(tagline)
             }
             var facts = layouts.factsLine(entry, details: details)
             if details.contains(.season), let season = entry.season, !season.isEmpty {
