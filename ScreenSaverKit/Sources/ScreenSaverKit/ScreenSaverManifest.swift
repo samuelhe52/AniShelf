@@ -87,18 +87,21 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         case watchStatus
         /// The user's own star score, such as "★ 4.5"; separate from TMDb's score.
         case userScore
+        case tagline
         case overview
 
         public static func defaults(for layout: Layout) -> [Detail] {
             switch layout.detailSelectionLayout {
-            case .posterFocus, .coverFusion, .editorialCover:
-                [.season, .year, .genres, .userScore, .overview]
+            case .posterFocus, .coverFusion:
+                [.year, .genres, .userScore, .overview]
+            case .editorialCover:
+                [.year, .genres, .userScore, .tagline, .overview]
             case .backdrop:
-                [.season, .year, .genres, .userScore]
+                [.year, .genres, .userScore, .tagline]
             case .deckFan, .deckPile:
-                [.season, .year, .genres]
+                [.year, .genres]
             case .timeline:
-                [.season, .genres, .userScore]
+                [.genres, .userScore]
             case .coverWall, .flipWall, .depthDrift:
                 []
             }

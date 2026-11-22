@@ -94,6 +94,10 @@
             var settings = ScreenSaverSettings(defaults: fixture.defaults)
             #expect(settings.details(for: .coverWall) == [.year, .userScore])
             #expect(settings.details(for: .backdrop).isEmpty)
+            for layout in ScreenSaverManifest.Layout.allCases {
+                #expect(!settings.details(for: layout).contains(.season))
+            }
+            settings.setDetail(.season, true, for: .deckFan)
             settings.setDetail(.year, false, for: .coverWall)
             settings.setDetail(.genres, false, for: .deckFan)
             settings.setDetail(.overview, true, for: .timeline)
@@ -114,8 +118,8 @@
             #expect(restored.details(for: .posterFocus) == [.userScore])
             #expect(restored.details(for: .backdrop).isEmpty)
             #expect(restored.details(for: .deckFan) == [.season, .year])
-            #expect(restored.details(for: .deckPile) == [.season, .year, .genres])
-            #expect(restored.manifestSettings.details == [.season, .genres])
+            #expect(restored.details(for: .deckPile) == [.year, .genres])
+            #expect(restored.manifestSettings.details == [.genres, .userScore])
             #expect(restored.manifestSettings.posterOverviewLines == ScreenSaverManifest.Settings.unlimitedPosterOverviewLines)
         }
 

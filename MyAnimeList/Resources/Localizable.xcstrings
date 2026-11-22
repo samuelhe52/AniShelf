@@ -13002,6 +13002,22 @@
         }
       }
     },
+    "Tagline" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キャッチコピー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "宣传语"
+          }
+        }
+      }
+    },
     "Tap again for %@" : {
       "localizations" : {
         "ja" : {

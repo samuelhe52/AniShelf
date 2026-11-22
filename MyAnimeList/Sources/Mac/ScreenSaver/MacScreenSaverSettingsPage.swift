@@ -503,6 +503,7 @@
             case .score: "TMDb Score"
             case .watchStatus: "Watch Status"
             case .userScore: "Your Score"
+            case .tagline: "Tagline"
             case .overview: "Overview"
             }
         }

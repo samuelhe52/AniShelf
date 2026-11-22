@@ -80,7 +80,7 @@ final class DemoModel {
     var backdropSubjectAwareText = Settings.defaultBackdropSubjectAwareText
     /// Speeds playback up; only `--capture` sets it.
     var speed: Double = 1
-    var details: Set<ScreenSaverManifest.Detail> = [.season, .year, .genres, .watchStatus, .userScore, .overview]
+    var details: Set<ScreenSaverManifest.Detail> = [.year, .genres, .watchStatus, .userScore, .tagline, .overview]
     var seed = UInt64.random(in: .min ... .max)
     private(set) var entryCount: Int?
     private(set) var timelineDateCounts: [ScreenSaverManifest.TimelineDateSource: Int] = [:]
