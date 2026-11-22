@@ -145,7 +145,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         public static let posterOverviewLineRange = 3...8
         /// Zero means no line limit.
         public static let unlimitedPosterOverviewLines = 0
-        public static let defaultPosterOverviewLines = 4
+        public static let defaultPosterOverviewLines = 6
         public static let defaultBackdropSubjectAwareText = true
         /// The flow speeds the settings offer, as multiples of the normal speed.
         public static let washSpeeds: [Double] = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4]
