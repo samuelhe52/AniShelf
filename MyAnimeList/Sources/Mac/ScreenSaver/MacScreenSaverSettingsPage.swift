@@ -174,14 +174,46 @@
 
     fileprivate struct ScreenSaverPreviewSection: View {
         let publisher: ScreenSaverPublisher
+        @Environment(\.layoutDirection) private var layoutDirection
+        @State private var isCustomizeExpanded = false
 
         var body: some View {
+            let controls = publisher.optionsLayout.controls
             Section("Preview") {
                 HStack(spacing: 24) {
                     ScreenSaverPreviewSurface(draft: publisher.draft)
                     ScreenSaverOptions(publisher: publisher)
                 }
                 .padding(.vertical, 4)
+                if !controls.isEmpty {
+                    Button {
+                        withAnimation(.smooth(duration: 0.25)) {
+                            isCustomizeExpanded.toggle()
+                        }
+                    } label: {
+                        HStack {
+                            Text("Customize")
+                            Spacer()
+                            Image(systemName: "chevron.down")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .rotationEffect(
+                                    .degrees(isCustomizeExpanded ? 0 : (layoutDirection == .rightToLeft ? 90 : -90))
+                                )
+                                .accessibilityHidden(true)
+                        }
+                        .frame(minHeight: 36)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityValue(isCustomizeExpanded ? Text("Expanded") : Text("Collapsed"))
+
+                    if isCustomizeExpanded {
+                        ForEach(controls, id: \.self) { control in
+                            ScreenSaverLayoutControl(control: control, publisher: publisher)
+                        }
+                    }
+                }
             }
             ScreenSaverDetailsSection(publisher: publisher)
         }
@@ -313,9 +345,6 @@
                         Text("Flip").tag(ScreenSaverManifest.Layout.flipWall)
                     }
                     .pickerStyle(.segmented)
-                }
-                ForEach(publisher.optionsLayout.controls, id: \.self) { control in
-                    ScreenSaverLayoutControl(control: control, publisher: publisher)
                 }
             }
             .onAppear { rememberLayout(publisher.settings.layout) }
