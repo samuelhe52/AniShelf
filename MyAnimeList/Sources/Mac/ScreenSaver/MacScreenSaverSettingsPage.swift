@@ -47,7 +47,19 @@
         var body: some View {
             Section {
                 LabeledContent("1. Install AniShelf’s screen saver") {
-                    Button("Install…", action: install)
+                    HStack {
+                        Button("Install…", action: install)
+                        let title: LocalizedStringResource = "Still seeing the update message?"
+                        InfoTip(
+                            title: title,
+                            message:
+                                "If you’ve already reinstalled, quit System Settings. In Activity Monitor, search for legacyScreenSaver and use Stop → Quit on exact matches only. Reopen System Settings and preview AniShelf again.",
+                            width: 260,
+                            systemImage: "questionmark.circle"
+                        )
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel(Text(title))
+                    }
                 }
                 LabeledContent {
                     Button("Open Wallpaper Settings", action: openSettings)

@@ -7327,6 +7327,38 @@
         }
       }
     },
+    "Still seeing the update message?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだアップデートの案内が表示されますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仍然看到更新提示？"
+          }
+        }
+      }
+    },
+    "If you’ve already reinstalled, quit System Settings. In Activity Monitor, search for legacyScreenSaver and use Stop → Quit on exact matches only. Reopen System Settings and preview AniShelf again." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再インストール済みの場合は、システム設定を終了してください。アクティビティモニタで「legacyScreenSaver」を検索し、名前が完全に一致するプロセスだけを選んで「停止」ボタンをクリックし、「終了」を選択します。システム設定を開き直し、AniShelfをもう一度プレビューしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果已重新安装，请退出「系统设置」。在「活动监视器」中搜索legacyScreenSaver，只对名称完全匹配的进程点按「停止」并选取「退出」。然后重新打开「系统设置」，再次预览AniShelf。"
+          }
+        }
+      }
+    },
     "Interface" : {
       "extractionState" : "stale",
       "localizations" : {

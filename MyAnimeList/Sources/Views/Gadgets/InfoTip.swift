@@ -22,12 +22,13 @@ struct InfoTip: View {
     var width: CGFloat?
     var height: CGFloat?
     var iconFont: Font?
+    var systemImage: String = "info.circle"
 
     var body: some View {
         Button(action: {
             showTip.toggle()
         }) {
-            Image(systemName: "info.circle")
+            Image(systemName: systemImage)
                 .font(iconFont)
         }
         .popover(isPresented: $showTip) {

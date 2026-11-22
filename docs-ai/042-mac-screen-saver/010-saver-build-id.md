@@ -37,6 +37,11 @@ Limits: the sandboxed app cannot read the installed saver, so the notice appears
 where the saver runs (System Settings preview and activation), not in the AniShelf
 pane. Any source change, including comments, asks for a reinstall.
 
+Reinstalling replaces the bundle on disk, but macOS can keep its old binary
+loaded in `legacyScreenSaver`. The question-mark button next to **Install…** in AniShelf’s
+Screen Saver settings explains how to quit the matching host in Activity Monitor
+if the notice persists after reinstalling. AniShelf does not restart the host.
+
 ## Refs
 
 - `MyAnimeList.xcodeproj/project.pbxproj` (`Stamp Screen Saver Build` phase)
