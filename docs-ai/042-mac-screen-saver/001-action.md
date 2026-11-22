@@ -39,13 +39,10 @@ built everything from the details model onward after Samuel asked it to take ove
   Content-addressed images; atomic manifest replacement; pruning. Exports run six at a
   time and commit partial manifests; look-only option changes apply without
   re-export.
-- **Pane** (Settings › Screen Saver, Mac only). Setup steps (Install…, Open Wallpaper
-  Settings with the path to AniShelf under Other), a one-line status, the Setup footer
-  "After installation, AniShelf updates the screen saver automatically when you change
-  the options below.", a true-scale live preview with Show, Layout, Rows, and Interval,
-  a Details section per slide layout (Season, Year, Genres, Airing Status, TMDb Score,
-  Watch Status, and Overview for Poster Focus), and **Uninstall Screen Saver…**, which
-  deletes the artwork and explains System Settings' Delete command.
+- **Pane** (Settings › Screen Saver, Mac only). The live preview stays fixed with
+  Show, Entry Type, Layout, and Mode. Below it, the form scrolls through Customize,
+  layout-specific Details, Setup (install, open Wallpaper Settings, artwork status),
+  and Uninstall (delete exported artwork and explain the System Settings removal step).
 - **Typography.** Text is laid out, truncated, and drawn by CoreText. Poster Focus
   title 6.0%–3.0% of the shorter edge (fits one line first), season 2.4%, info line 2%,
   overview 2.2% capped at four lines; Backdrop info line 1.9% at 55% white.

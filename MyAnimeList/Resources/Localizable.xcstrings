@@ -3922,22 +3922,6 @@
         }
       }
     },
-    "Collapsed" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "折りたたみ済み"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已折叠"
-          }
-        }
-      }
-    },
     "Collections" : {
       "localizations" : {
         "ja" : {
@@ -5756,22 +5740,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "默认展开制作人员"
-          }
-        }
-      }
-    },
-    "Expanded" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "展開済み"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已展开"
           }
         }
       }
@@ -16597,18 +16565,18 @@
         }
       }
     },
-    "After installation, AniShelf updates the screen saver automatically when you change the options below." : {
+    "After installation, AniShelf updates the screen saver automatically when you change these settings." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "インストール後は、下のオプションを変更するとAniShelfがスクリーンセーバを自動的に更新します。"
+            "value" : "インストール後は、この設定を変更するとAniShelfがスクリーンセーバを自動的に更新します。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "安装后，更改下方选项时AniShelf会自动更新屏幕保护程序。"
+            "value" : "安装后，更改这些设置时AniShelf会自动更新屏幕保护程序。"
           }
         }
       }

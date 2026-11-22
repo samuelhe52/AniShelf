@@ -15,9 +15,21 @@
 
         var body: some View {
             if let publisher = library.screenSaverPublisher {
-                ScreenSaverSetupSection(publisher: publisher)
-                ScreenSaverPreviewSection(publisher: publisher)
-                ScreenSaverUninstallSection(publisher: publisher)
+                GeometryReader { geometry in
+                    VStack(spacing: 0) {
+                        ScreenSaverPreviewHeader(publisher: publisher, maxPreviewHeight: geometry.size.height * 0.35)
+                        Form {
+                            ScreenSaverCustomizeSection(publisher: publisher)
+                            ScreenSaverDetailsSection(publisher: publisher)
+                            ScreenSaverSetupSection(publisher: publisher)
+                            ScreenSaverUninstallSection(publisher: publisher)
+                        }
+                        .formStyle(.grouped)
+                        .scrollContentBackground(.hidden)
+                        .preferredNavigationBarScrollEdgeEffect()
+                    }
+                    .background(Color(nsColor: .windowBackgroundColor))
+                }
             } else {
                 ContentUnavailableView {
                     Label("Screen Saver Unavailable", systemImage: "display")
@@ -48,7 +60,7 @@
                 Text("Setup")
             } footer: {
                 Text(
-                    "After installation, AniShelf updates the screen saver automatically when you change the options below."
+                    "After installation, AniShelf updates the screen saver automatically when you change these settings."
                 )
             }
             .alert(
@@ -172,50 +184,43 @@
         }
     }
 
-    fileprivate struct ScreenSaverPreviewSection: View {
+    fileprivate struct ScreenSaverPreviewHeader: View {
         let publisher: ScreenSaverPublisher
-        @Environment(\.layoutDirection) private var layoutDirection
-        @State private var isCustomizeExpanded = false
+        let maxPreviewHeight: CGFloat
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Preview")
+                    .fontWeight(.semibold)
+                    .accessibilityAddTraits(.isHeader)
+                    .padding(.horizontal, 10)
+
+                HStack(spacing: 24) {
+                    ScreenSaverPreviewSurface(draft: publisher.draft, maxHeight: maxPreviewHeight)
+                    ScreenSaverOptions(publisher: publisher)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 12)
+                .background(Color.primary.opacity(0.05), in: .rect(cornerRadius: 12))
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 8)
+        }
+    }
+
+    fileprivate struct ScreenSaverCustomizeSection: View {
+        let publisher: ScreenSaverPublisher
 
         var body: some View {
             let controls = publisher.optionsLayout.controls
-            Section("Preview") {
-                HStack(spacing: 24) {
-                    ScreenSaverPreviewSurface(draft: publisher.draft)
-                    ScreenSaverOptions(publisher: publisher)
-                }
-                .padding(.vertical, 4)
-                if !controls.isEmpty {
-                    Button {
-                        withAnimation(.smooth(duration: 0.25)) {
-                            isCustomizeExpanded.toggle()
-                        }
-                    } label: {
-                        HStack {
-                            Text("Customize")
-                            Spacer()
-                            Image(systemName: "chevron.down")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                                .rotationEffect(
-                                    .degrees(isCustomizeExpanded ? 0 : (layoutDirection == .rightToLeft ? 90 : -90))
-                                )
-                                .accessibilityHidden(true)
-                        }
-                        .frame(minHeight: 36)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityValue(isCustomizeExpanded ? Text("Expanded") : Text("Collapsed"))
-
-                    if isCustomizeExpanded {
-                        ForEach(controls, id: \.self) { control in
-                            ScreenSaverLayoutControl(control: control, publisher: publisher)
-                        }
+            if !controls.isEmpty {
+                Section("Customize") {
+                    ForEach(controls, id: \.self) { control in
+                        ScreenSaverLayoutControl(control: control, publisher: publisher)
                     }
                 }
             }
-            ScreenSaverDetailsSection(publisher: publisher)
         }
     }
 
@@ -250,6 +255,7 @@
 
     fileprivate struct ScreenSaverPreviewSurface: View {
         let draft: ScreenSaverSnapshotDraft
+        let maxHeight: CGFloat
         @State private var screenSize = Self.mainScreenSize
 
         var body: some View {
@@ -257,7 +263,7 @@
             ScreenSaverPreviewView(draft: draft, layoutSize: screenSize)
                 .accessibilityLabel("Screen saver preview")
                 .aspectRatio(aspectRatio, contentMode: .fit)
-                .frame(width: min(300, 205 * aspectRatio))
+                .frame(width: min(300, min(205, maxHeight) * aspectRatio))
                 .clipShape(.rect(cornerRadius: 8))
                 .onReceive(
                     NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)

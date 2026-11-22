@@ -203,3 +203,4 @@ and links `ScreenSaverKit` on macOS only, for the manifest type and the live pre
 - Updated 2026-11-22: Backdrop text moves right when the subject overlaps the left text and the right corner is clear — see [019-backdrop-subject-aware-side.md](019-backdrop-subject-aware-side.md)
 - Updated 2026-11-22: language-matched tagline detail for Backdrop, Editorial Cover, Poster Focus, and Cover Fusion; seasons use the parent's — see [020-tagline-detail.md](020-tagline-detail.md)
 - Updated 2026-11-22: 65% tagline opacity across layouts, Deck captions on by default, and opt-in Timeline captions — see [021-tagline-caption-layouts.md](021-tagline-caption-layouts.md)
+- Updated 2026-11-22: the live preview and primary pickers stay visible while Customize and Details scroll — see [022-pinned-settings-preview.md](022-pinned-settings-preview.md)
