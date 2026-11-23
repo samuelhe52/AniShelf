@@ -37,6 +37,8 @@ struct MyAnimeListApp: App {
     /// A DEBUG or `LIBRARY_FIXTURES` launch argument replaced the store with a generated library;
     /// sync, reminders, and prompts stay off for this launch (docs-ai 026).
     private let isLibraryFixture: Bool
+    /// The preferences this launch reads: the fixture's own suite for a fixture launch.
+    private let startupDefaults: UserDefaults
     @State private var backgroundSyncExecution: LibrarySyncBackgroundExecutionController
     private let recoveryActivityGate: StartupRecoveryActivityGate
     private let lifecycleEventGate = AppLifecycleEventGate()
@@ -86,6 +88,7 @@ struct MyAnimeListApp: App {
         let supportStore = SupportStore()
         let appReview = AppReviewPromptController(defaults: startup.defaults)
         self.isLibraryFixture = startup.isLibraryFixture
+        self.startupDefaults = startup.defaults
 
         _libraryStore = State(initialValue: libraryStore)
         _keyStorage = State(initialValue: keyStorage)
@@ -131,7 +134,7 @@ struct MyAnimeListApp: App {
 
     #if os(macOS)
         private static func startScreenSaverPublisher(
-            for store: LibraryStore, defaults: UserDefaults, isLibraryFixture: Bool = false
+            for store: LibraryStore, defaults: UserDefaults, isLibraryFixture: Bool
         ) {
             guard let home = FileManager.default.homeDirectory(forUser: NSUserName()) else { return }
             store.startScreenSaverPublisher(
@@ -387,7 +390,8 @@ struct MyAnimeListApp: App {
         startupRecovery = nil
         libraryStore.enableAiringReminderPruning()
         #if os(macOS)
-            Self.startScreenSaverPublisher(for: libraryStore, defaults: .standard)
+            Self.startScreenSaverPublisher(
+                for: libraryStore, defaults: startupDefaults, isLibraryFixture: isLibraryFixture)
         #endif
         requestSync(trigger: .appLaunch)
         updateWhatsNewPresentation()
