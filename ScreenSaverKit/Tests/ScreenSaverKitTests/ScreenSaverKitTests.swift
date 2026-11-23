@@ -562,8 +562,9 @@ struct ScreenSaverKitTests {
             id: "poster", title: "Title", year: "2026", overview: overview,
             poster: "memory", posterPixelSize: .init(width: 20, height: 30))
         let image = try #require(
-            CGContext(data: nil, width: 20, height: 30, bitsPerComponent: 8, bytesPerRow: 0,
-                      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)?.makeImage())
+            CGContext(
+                data: nil, width: 20, height: 30, bitsPerComponent: 8, bytesPerRow: 0,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)?.makeImage())
         for layout in [ScreenSaverManifest.Layout.posterFocus, .coverFusion] {
             for limit in [3, 8, ScreenSaverManifest.Settings.unlimitedPosterOverviewLines] {
                 let settings = ScreenSaverManifest.Settings(
@@ -580,12 +581,16 @@ struct ScreenSaverKitTests {
                     size: CGSize(width: 800, height: 500), scale: 1, posterOverviewLines: scene.posterOverviewLines)
                 let lines = layouts.posterFocusLines(entry, details: scene.details, width: 300)
                 #expect(lines.map(\.lines) == [3, 2, limit == 0 ? .max : limit])
-                let rendered = try #require(layouts.fittedText(
-                    overview, width: 300, size: 11, weight: .regular, lines: lines[2].lines))
+                let rendered = try #require(
+                    layouts.fittedText(
+                        overview, width: 300, size: 11, weight: .regular, lines: lines[2].lines))
                 let measured = layouts.measure(
                     layouts.attributed(overview, size: 11, weight: .regular, alpha: 1), width: 300)
-                if limit == 0 { #expect(rendered.height >= measured.height) }
-                else { #expect(rendered.height < measured.height) }
+                if limit == 0 {
+                    #expect(rendered.height >= measured.height)
+                } else {
+                    #expect(rendered.height < measured.height)
+                }
             }
         }
     }

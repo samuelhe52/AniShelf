@@ -175,7 +175,9 @@ final class EntryDetailViewModel {
     /// refreshes without animating a switch to another entry.
     private(set) var fetchedDetailRevision = 0
     private var loadedRequestKey: String?
-    /// The detail metadata the display last applied. The shared stored detail is not a
+    /// The detail metadata the display last applied.
+    ///
+    /// The shared stored detail is not a
     /// proxy for it: another model can save a newer response for the same entry.
     private var appliedDetailContent: LibraryMetadataRefreshDetailComparator.Content?
     /// The request whose stored values are showing; `loadedRequestKey` is set once they are

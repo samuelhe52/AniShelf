@@ -137,7 +137,9 @@ struct CategoryDraftPosterCell: View, @MainActor Equatable {
         var scale: CGFloat
     }
 
-    /// The check dims and desaturates waiting posters and fades rejected ones back. Once a
+    /// The check dims and desaturates waiting posters and fades rejected ones back.
+    ///
+    /// Once a
     /// poster is settled, selection alone decides, as in the library's multi-selection.
     private var look: Look {
         if isAccepted { return Look(opacity: 1, saturation: 1, scale: 1) }

@@ -69,7 +69,8 @@ package struct ScreenSaverLayouts {
             posterFrame = CGRect(
                 x: left, y: bounds.midY - posterSize.height / 2, width: posterSize.width,
                 height: posterSize.height)
-            let block = posterFocusBlock(entry, details: details, width: textWidth, maxHeight: size.height - unit * 0.14)
+            let block = posterFocusBlock(
+                entry, details: details, width: textWidth, maxHeight: size.height - unit * 0.14)
             place(block, x: posterFrame.maxX + gap, top: bounds.midY + block.height / 2, in: scene)
         }
         scene.insertSublayer(posterCard(poster, frame: posterFrame), at: 0)
@@ -248,7 +249,9 @@ package struct ScreenSaverLayouts {
         item.replacingOccurrences(of: " ", with: "\u{00A0}").map(String.init).joined(separator: "\u{2060}")
     }
 
-    /// Genres are one item in the facts line, so they use their script's list separator. Japanese
+    /// Genres are one item in the facts line, so they use their script's list separator.
+    ///
+    /// Japanese
     /// genre names such as アクション・アドベンチャー already contain a middle dot.
     static func joinedGenres(_ genres: [String]) -> String {
         let isCJK = genres.joined().unicodeScalars.contains {
@@ -257,7 +260,9 @@ package struct ScreenSaverLayouts {
         return genres.joined(separator: isCJK ? "、" : ", ")
     }
 
-    /// Shrinks the title to fit one line, down to `smallest`. A longer title wraps at `smallest`
+    /// Shrinks the title to fit one line, down to `smallest`.
+    ///
+    /// A longer title wraps at `smallest`
     /// size, or a little larger when that still avoids a short last line.
     func fittedTitle(_ title: String, width: CGFloat, largest: CGFloat, smallest: CGFloat) -> CGFloat {
         let step = (largest - smallest) / 6
@@ -381,7 +386,9 @@ package struct ScreenSaverLayouts {
     }
 
     /// Text is laid out, truncated, and drawn by CoreText into an image, so what is measured is
-    /// exactly what is drawn. (CATextLayer ignores line spacing and cannot truncate wrapped text.)
+    /// exactly what is drawn.
+    ///
+    /// (CATextLayer ignores line spacing and cannot truncate wrapped text.)
     /// Text exceeding the line or height limit ends with an ellipsis.
     func textLayer(
         _ text: String?,

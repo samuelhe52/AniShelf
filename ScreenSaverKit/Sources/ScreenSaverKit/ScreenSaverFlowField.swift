@@ -23,7 +23,9 @@ struct ScreenSaverFlowField: Sendable {
         permutation = shuffled + shuffled
     }
 
-    /// The displacement at a point in unit coordinates, with `time` in seconds of flow. Each
+    /// The displacement at a point in unit coordinates, with `time` in seconds of flow.
+    ///
+    /// Each
     /// component stays within about -1...1.
     func displacement(x: Double, y: Double, time: Double) -> SIMD2<Double> {
         // Two octaves: broad currents that turn over every eight seconds or so, plus a quieter,

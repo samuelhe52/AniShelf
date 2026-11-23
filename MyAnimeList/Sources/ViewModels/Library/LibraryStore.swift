@@ -48,7 +48,9 @@ class LibraryStore {
     @ObservationIgnored let allowsCloudSync: Bool
     private(set) var libraryRevision = 0
     /// Changes after a save from a context other than the main one, such as Refresh All's
-    /// writer. Merging those values into the UI's models bypasses their observation, so
+    /// writer.
+    ///
+    /// Merging those values into the UI's models bypasses their observation, so
     /// display caches read this to rebuild their row snapshots.
     private(set) var backgroundWriteRevision = 0
 

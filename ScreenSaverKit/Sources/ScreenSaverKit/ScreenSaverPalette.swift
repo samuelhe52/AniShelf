@@ -146,7 +146,9 @@ enum ScreenSaverPalette {
         }
     }
 
-    /// K-means in Oklab. The first centre is the darkest-to-lightest median pixel; each further one
+    /// K-means in Oklab.
+    ///
+    /// The first centre is the darkest-to-lightest median pixel; each further one
     /// is the pixel farthest from every centre so far, which gives a small but distinct area, such
     /// as a red title, a centre of its own. Deterministic, so a poster always gets the same palette.
     private static func cluster(

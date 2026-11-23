@@ -48,13 +48,17 @@ extension ScreenSaverStage {
     var usesWash: Bool { false }
 }
 
-/// Produces a stage layout's steps. A copy travels in the scene cursor, so it must be a value type.
+/// Produces a stage layout's steps.
+///
+/// A copy travels in the scene cursor, so it must be a value type.
 protocol ScreenSaverStageDirector: Sendable {
     /// The next step and how long it plays before the one after; nil when no artwork loads.
     mutating func next(image: ScreenSaverImageLoader) -> (step: any ScreenSaverStageStep, duration: TimeInterval)?
 }
 
-/// Hands out entries in shuffled passes. A new pass never starts with an entry that is still
+/// Hands out entries in shuffled passes.
+///
+/// A new pass never starts with an entry that is still
 /// among the most recent `spacing` handed out, so a reshuffle does not put a poster next to itself.
 struct ScreenSaverEntryCycle: Sendable {
     private var order: [Int]

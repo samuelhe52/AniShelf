@@ -83,7 +83,7 @@
                                 airDate: entry.airDate, watchStartDate: entry.watchStartDate,
                                 watchEndDate: entry.watchEndDate) != nil
                         }
-                            .map { (entry: $0, rank: self.rank($0.id)) }
+                        .map { (entry: $0, rank: self.rank($0.id)) }
                         .sorted { ($0.rank, $0.entry.id) < ($1.rank, $1.entry.id) }
                         .prefix(24)
                         .map { $0.entry }
@@ -157,11 +157,12 @@
                             )
                             let bitmap = result?.image.exportCGImage
                             // Cache the preview's saliency with its thumbnail, independent of the toggle.
-                            let regions: [SalientRegion]? = if let bitmap, backdrops.contains(image), !Task.isCancelled {
-                                BackdropSaliency.regions(in: bitmap)
-                            } else {
-                                nil
-                            }
+                            let regions: [SalientRegion]? =
+                                if let bitmap, backdrops.contains(image), !Task.isCancelled {
+                                    BackdropSaliency.regions(in: bitmap)
+                                } else {
+                                    nil
+                                }
                             return (image, bitmap, regions)
                         }
                     }

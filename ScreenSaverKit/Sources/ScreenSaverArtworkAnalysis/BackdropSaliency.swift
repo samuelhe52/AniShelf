@@ -14,7 +14,9 @@ public enum BackdropSaliency {
     public static let cacheRevision = 1
     private static let maximumPixelSize = 512
 
-    /// Nil is a read or Vision failure. An empty array is a successful analysis with no regions.
+    /// Nil is a read or Vision failure.
+    ///
+    /// An empty array is a successful analysis with no regions.
     public static func regions(in directory: URL, backdrop path: String) -> [ScreenSaverManifest.Entry.SalientRegion]? {
         let reader = ScreenSaverSnapshotReader(directory: directory)
         guard let image = reader.image(at: path, maximumPixelSize: maximumPixelSize) else { return nil }

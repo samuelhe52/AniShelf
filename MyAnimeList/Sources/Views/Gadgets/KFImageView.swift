@@ -49,10 +49,10 @@ struct KFImageView: View {
     }
 
     /// Shows an image outside the variant catalog, such as a search result or a poster picker
-    /// page. These are not prefetched or removed with library entries.
+    /// page.
     ///
-    /// - Parameter maxPixelDimension: The longest edge of the decoded bitmap; `nil` decodes at
-    ///   full size.
+    /// These are not prefetched or removed with library entries. The decoded bitmap's longest edge
+    /// is capped at `maxPixelDimension`; `nil` decodes at full size.
     init(
         url: URL?,
         maxPixelDimension: CGFloat? = nil,

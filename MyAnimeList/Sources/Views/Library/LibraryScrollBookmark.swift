@@ -18,7 +18,9 @@ final class LibraryScrollBookmark {
     private(set) var entryID: LibraryEntryIdentity?
     /// The display order when `entryID` was set, for finding a neighbor once it is gone.
     private var order: [LibraryEntryIdentity] = []
-    /// Set while a restore, a style switch, or a scroll command settles. Observations then keep
+    /// Set while a restore, a style switch, or a scroll command settles.
+    ///
+    /// Observations then keep
     /// the bookmark, so layout alone, such as a restore that cannot top-align its entry, never
     /// moves it; the user's next scroll clears it.
     private(set) var isSettling = false

@@ -108,7 +108,9 @@
             try? data.write(to: sidecar, options: .atomic)
         }
 
-        /// Partial manifests leave the image cache alone. A completed update retains the previous
+        /// Partial manifests leave the image cache alone.
+        ///
+        /// A completed update retains the previous
         /// completed snapshot for a renderer that is still displaying it.
         func publish(
             _ manifest: ScreenSaverManifest, complete: Bool = false, keeping extraFiles: Set<String> = []

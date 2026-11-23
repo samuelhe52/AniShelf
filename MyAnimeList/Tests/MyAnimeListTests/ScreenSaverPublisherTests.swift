@@ -89,9 +89,10 @@
             let fixture = try Fixture()
             defer { fixture.cleanup() }
             let fresh = ScreenSaverSettings(defaults: fixture.defaults)
-            for layout in [ScreenSaverManifest.Layout.backdrop, .editorialCover, .posterFocus, .coverFusion,
-                           .coverWall, .deckFan, .deckPile]
-            {
+            for layout in [
+                ScreenSaverManifest.Layout.backdrop, .editorialCover, .posterFocus, .coverFusion,
+                .coverWall, .deckFan, .deckPile
+            ] {
                 #expect(fresh.details(for: layout).contains(.tagline))
             }
             #expect(!fresh.details(for: .timeline).contains(.tagline))
@@ -133,7 +134,9 @@
             #expect(!fanDetails.contains(.genres) && !fanDetails.contains(.tagline))
             #expect(restored.details(for: .deckPile) == [.year, .genres, .tagline])
             #expect(restored.manifestSettings.details == [.genres, .userScore, .tagline])
-            #expect(restored.manifestSettings.posterOverviewLines == ScreenSaverManifest.Settings.unlimitedPosterOverviewLines)
+            #expect(
+                restored.manifestSettings.posterOverviewLines
+                    == ScreenSaverManifest.Settings.unlimitedPosterOverviewLines)
         }
 
         @Test

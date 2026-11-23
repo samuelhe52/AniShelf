@@ -299,7 +299,9 @@
         @State private var lastPosterLayout: ScreenSaverManifest.Layout = .posterFocus
         @State private var lastWallLayout: ScreenSaverManifest.Layout = .coverWall
 
-        /// Custom categories, listed when categories are on. The selected category stays listed
+        /// Custom categories, listed when categories are on.
+        ///
+        /// The selected category stays listed
         /// when categories are later turned off or the category is deleted, so the picker keeps
         /// a valid selection.
         private var categoryScopes: [(scope: ScreenSaverSettings.Scope, name: String)] {

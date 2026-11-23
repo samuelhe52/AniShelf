@@ -7,7 +7,9 @@
 
 import QuartzCore
 
-/// One depth plane. Far posters are small, slow, dim, and slightly soft; near ones large, fast,
+/// One depth plane.
+///
+/// Far posters are small, slow, dim, and slightly soft; near ones large, fast,
 /// and soft but still recognizable; the focus plane in between is sharp.
 struct DepthDriftLevel: Sendable {
     /// Poster height as a fraction of the screen's base size.

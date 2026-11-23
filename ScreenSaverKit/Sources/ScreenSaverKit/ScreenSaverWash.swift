@@ -25,7 +25,9 @@ struct ScreenSaverMesh: Equatable, Sendable {
     )
 }
 
-/// Drives the flowing colour field behind the layouts that use one. The points drift on a
+/// Drives the flowing colour field behind the layouts that use one.
+///
+/// The points drift on a
 /// shared current; a new palette blends in over a couple of seconds.
 @MainActor
 @Observable
@@ -42,6 +44,7 @@ public final class ScreenSaverWash {
     private var flows = true
     private var speed: Double = 1
     /// The flow clock, which runs at `speed` times the wash's own clock, read at `flowRebase`.
+    ///
     /// Rebasing on a speed change keeps every point where it is instead of jumping along its path.
     private var flowBase: TimeInterval = 0
     private var flowRebase: TimeInterval = 0
@@ -120,14 +123,19 @@ public final class ScreenSaverWash {
     }
 
     private static let field = ScreenSaverFlowField()
-    /// How far a point may travel, as a fraction of the gap to its nearest neighbour. Past 0.5 two
+    /// How far a point may travel, as a fraction of the gap to its nearest neighbour.
+    ///
+    /// Past 0.5 two
     /// neighbours could meet; `keepApart` stops them in the rare moments the current pushes them
     /// together that hard.
     private static let reach: Float = 0.65
     /// The closest two neighbours may come, as a fraction of their resting gap.
+    ///
     private static let minimumGap: Float = 0.15
 
-    /// Every point drifts with one shared current (see `ScreenSaverFlowField`). Corners stay put and
+    /// Every point drifts with one shared current (see `ScreenSaverFlowField`).
+    ///
+    /// Corners stay put and
     /// border points slide along their border, so the field always covers the whole screen.
     func points(at time: TimeInterval) -> [SIMD2<Float>] {
         let mesh = target
@@ -161,7 +169,9 @@ public final class ScreenSaverWash {
     }
 
     /// Keeps every row's points in order along x and every column's along y, at least
-    /// `minimumGap` of their resting gap apart, so the mesh never folds over itself. Edge points
+    /// `minimumGap` of their resting gap apart, so the mesh never folds over itself.
+    ///
+    /// Edge points
     /// are left where they are; only inner points give way.
     private static func keepApart(_ points: inout [SIMD2<Float>], xs: [Float], ys: [Float]) {
         let (columns, rows) = (xs.count, ys.count)
@@ -207,7 +217,9 @@ struct ScreenSaverWashView: View {
 }
 
 extension ScreenSaverRenderer {
-    /// Fills `host` with the renderer: the wash view, and over it a view showing `layer`. Both
+    /// Fills `host` with the renderer: the wash view, and over it a view showing `layer`.
+    ///
+    /// Both
     /// follow the host's size.
     public func install(in host: NSView) {
         host.wantsLayer = true

@@ -31,14 +31,20 @@ struct ScreenSaverColor: Equatable, Sendable {
     }
 }
 
-/// Image processing shared by the layouts. Everything here runs off the main actor.
+/// Image processing shared by the layouts.
+///
+/// Everything here runs off the main actor.
 enum ScreenSaverArt {
     // CIContext is thread-safe; one shared context avoids rebuilding its caches for every slide.
     static let context = CIContext(options: [.cacheIntermediates: false])
     private static let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
 
     /// The poster blurred with soft, transparent edges, for out-of-focus layers.
-    /// - Parameter blur: the blur radius as a fraction of the image width.
+    ///
+    /// - Parameters:
+    ///   - poster: the poster to soften.
+    ///   - blur: the blur radius as a fraction of the image width.
+    ///   - brightness: the multiplier applied to each colour channel.
     /// - Returns: the image and its margin on each side, as a fraction of the poster width.
     static func softened(_ poster: CGImage, blur: CGFloat, brightness: CGFloat) -> (image: CGImage, margin: CGFloat)? {
         let input = CIImage(cgImage: poster)
@@ -59,7 +65,9 @@ enum ScreenSaverArt {
         return context.createCGImage(output, from: extent).map { ($0, margin / input.extent.width) }
     }
 
-    /// The poster's most prominent saturated colour, lifted to read on a dark ground. A greyscale
+    /// The poster's most prominent saturated colour, lifted to read on a dark ground.
+    ///
+    /// A greyscale
     /// poster gets a warm paper white.
     static func accent(of poster: CGImage) -> ScreenSaverColor {
         let width = 24
@@ -104,7 +112,9 @@ enum ScreenSaverArt {
     }
 
     /// Where Cover Fusion puts the poster: full height on the left of a landscape screen, the top of
-    /// a portrait one. Works in any unit.
+    /// a portrait one.
+    ///
+    /// Works in any unit.
     static func fusionPosterFrame(in canvas: CGSize, ratio: CGFloat) -> CGRect {
         if canvas.height > canvas.width {
             let height = min(canvas.width / ratio, canvas.height * 0.6)
@@ -115,7 +125,9 @@ enum ScreenSaverArt {
         return CGRect(x: 0, y: 0, width: width, height: canvas.height)
     }
 
-    /// Cover Fusion's poster: sharp at first, then through a medium blur into transparency. Baked
+    /// Cover Fusion's poster: sharp at first, then through a medium blur into transparency.
+    ///
+    /// Baked
     /// into one screen-sized image so the feather costs nothing to animate.
     static func fusion(poster: CGImage, canvas: CGSize) -> CGImage? {
         guard canvas.width >= 1, canvas.height >= 1 else { return nil }
@@ -196,7 +208,9 @@ enum ScreenSaverArt {
     }
 
     /// A representative colour for each cell of a grid laid over `region` of the poster (unit
-    /// coordinates, top-left origin), row by row from the top. See `ScreenSaverPalette`.
+    /// coordinates, top-left origin), row by row from the top.
+    ///
+    /// See `ScreenSaverPalette`.
     static func samples(
         of poster: CGImage, columns: Int, rows: Int, region: CGRect = CGRect(x: 0, y: 0, width: 1, height: 1)
     ) -> [ScreenSaverColor] {

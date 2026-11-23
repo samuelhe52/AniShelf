@@ -106,6 +106,7 @@ public final class ScreenSaverRenderer {
     }
 
     /// - Parameters:
+    ///   - directory: the snapshot folder to show.
     ///   - build: the saver's own build ID, checked against the snapshot's.
     ///   - settings: the layout settings to preview, or nil to use the snapshot's settings.
     ///   - playbackOptions: sampling and speed controls for the Screen Saver Demo.
@@ -316,7 +317,10 @@ public final class ScreenSaverRenderer {
         return leadIn
     }
 
-    /// - Parameter overWash: the new scene is clear where the wash shows.
+    /// - Parameters:
+    ///   - next: the layer to show.
+    ///   - animated: whether the change animates.
+    ///   - overWash: the new scene is clear where the wash shows.
     private func replaceScene(with next: CALayer, animated: Bool, overWash: Bool) {
         wash.setActive(overWash)
         let outgoing = currentLayer
@@ -365,7 +369,9 @@ public final class ScreenSaverRenderer {
         opening = Opening(curtain: curtain, earliestFade: now + Self.openingHold)
     }
 
-    /// Keep decoding time under the black hold. If decoding takes longer, fade only once ready.
+    /// Keep decoding time under the black hold.
+    ///
+    /// If decoding takes longer, fade only once ready.
     private func revealOpening() -> TimeInterval {
         guard let opening else { return 0 }
         let now = opening.curtain.convertTime(CACurrentMediaTime(), from: nil)

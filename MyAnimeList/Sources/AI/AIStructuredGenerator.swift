@@ -98,7 +98,7 @@ struct AISessionFactory {
         throw AIError.unavailable
     }
 
-    /// Applies `backend`'s request options to `model` and returns the instructions to send.
+    /// Applies the backend's request options to the model and returns the instructions to send.
     ///
     /// Bailian and DeepSeek take JSON-object mode instead of a guided schema, so the
     /// instructions carry an example of the shape.

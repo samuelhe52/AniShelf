@@ -112,7 +112,9 @@ final class LibraryBrowseScope {
     }
 
     /// What this window shows and in which order; changing it scrolls back to the top
-    /// (docs-ai 038). View style is not part of it: a style switch keeps the position.
+    /// (docs-ai 038).
+    ///
+    /// View style is not part of it: a style switch keeps the position.
     struct DisplayDefinition: Equatable {
         var filters: Set<LibraryStore.AnimeFilter>
         var activeCategoryID: LibraryCategory.ID?

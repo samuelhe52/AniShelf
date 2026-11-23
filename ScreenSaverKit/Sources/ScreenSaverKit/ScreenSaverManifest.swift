@@ -8,11 +8,15 @@
 import Foundation
 
 public struct ScreenSaverManifest: Codable, Equatable, Sendable {
-    /// Readers accept only this version and ask for an update on a newer one. Changes to how the
+    /// Readers accept only this version and ask for an update on a newer one.
+    ///
+    /// Changes to how the
     /// saver draws need no bump: the build ID below already catches those.
     public static let currentSchemaVersion = 3
     /// Info.plist key holding the saver's build ID: a hash of its source files, stamped by a build
-    /// phase of the saver target. Any change to the saver's code gives a new ID.
+    /// phase of the saver target.
+    ///
+    /// Any change to the saver's code gives a new ID.
     public static let buildInfoKey = "AniShelfScreenSaverBuild"
 
     public enum Layout: String, Codable, CaseIterable, Sendable {
@@ -76,6 +80,7 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
     }
 
     /// Optional text a slide layout can show next to the title, which is always shown.
+    ///
     /// Each layout draws the ones it is given in its own fixed order.
     public enum Detail: String, Codable, CaseIterable, Sendable {
         case season
@@ -169,7 +174,9 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         public let coverWallRows: Int
         public let posterOverviewLines: Int
         public let backdropSubjectAwareText: Bool
-        /// Whether the colour wash drifts. Off, it holds still and only blends between colours.
+        /// Whether the colour wash drifts.
+        ///
+        /// Off, it holds still and only blends between colours.
         public let washFlows: Bool
         /// How fast a flowing wash drifts, as a multiple of its normal speed.
         public let washSpeed: Double
@@ -201,7 +208,8 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             // Between a second and an hour.
             self.interval = interval.isFinite ? min(max(interval, 1), 3_600) : Self.defaultInterval
             self.coverWallRows = Self.coverWallRowRange.clamp(coverWallRows)
-            self.posterOverviewLines = posterOverviewLines == Self.unlimitedPosterOverviewLines
+            self.posterOverviewLines =
+                posterOverviewLines == Self.unlimitedPosterOverviewLines
                 ? Self.unlimitedPosterOverviewLines : Self.posterOverviewLineRange.clamp(posterOverviewLines)
             self.backdropSubjectAwareText = backdropSubjectAwareText
             self.flipDelay = Self.flipDelayRange.clamp(flipDelay.isFinite ? flipDelay : Self.defaultFlipDelay)
@@ -214,7 +222,9 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
             self.timelineDatePrecision = timelineDatePrecision
         }
 
-        /// Values pass through `init`, which clamps and orders them. Additive settings use
+        /// Values pass through `init`, which clamps and orders them.
+        ///
+        /// Additive settings use
         /// defaults so the demo can read snapshots published before those settings existed.
         public init(from decoder: Decoder) throws {
             let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -266,7 +276,9 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
         public let title: String?
         public let season: String?
         public let year: String?
-        /// Dates used for Timeline ordering. Air dates are TMDb calendar dates in UTC.
+        /// Dates used for Timeline ordering.
+        ///
+        /// Air dates are TMDb calendar dates in UTC.
         public let airDate: Date?
         public let watchStartDate: Date?
         public let watchEndDate: Date?
@@ -339,7 +351,9 @@ public struct ScreenSaverManifest: Codable, Equatable, Sendable {
     public let createdAt: Date
     public let settings: Settings
     public let entries: [Entry]
-    /// Build ID of the saver embedded in the AniShelf that wrote this snapshot. An installed saver
+    /// Build ID of the saver embedded in the AniShelf that wrote this snapshot.
+    ///
+    /// An installed saver
     /// with another ID is out of date and asks to be reinstalled.
     public let saverBuild: String?
 

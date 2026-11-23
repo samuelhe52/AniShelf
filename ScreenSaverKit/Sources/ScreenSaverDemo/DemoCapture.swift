@@ -12,7 +12,9 @@ import ScreenSaverArtworkAnalysis
 import ScreenSaverKit
 import UniformTypeIdentifiers
 
-/// Writes still frames of each layout, for reviewing layouts without watching them. Frames are
+/// Writes still frames of each layout, for reviewing layouts without watching them.
+///
+/// Frames are
 /// drawn by Core Animation at the given times, so they catch motion mid-flight.
 ///
 /// Options: `--layouts deckFan,flipWall`, `--screens 0,3,5` (preset indices), `--times 1.5,4`
