@@ -31,11 +31,10 @@ extension EntryDetailViewModel {
         }
     }
 
-    static func seasonLabelText(_ seasonNumber: Int) -> String {
-        if seasonNumber == 0 {
-            return String(localized: "Specials")
-        }
-        return String(localized: "Season \(seasonNumber)")
+    static func seasonLabelText(_ seasonNumber: Int, locale: Locale? = nil) -> String {
+        var resource: LocalizedStringResource = seasonNumber == 0 ? "Specials" : "Season \(seasonNumber)"
+        if let locale { resource.locale = locale }
+        return String(localized: resource)
     }
 
     static func minutesText(_ minutes: Int) -> String {

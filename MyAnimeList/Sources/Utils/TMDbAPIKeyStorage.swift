@@ -43,7 +43,12 @@ struct TMDbAPIKeyStorageKeychainClient: @unchecked Sendable {
 
 @Observable
 class TMDbAPIKeyStorage {
-    private let account = "TMDbAPIKey"
+    #if ANISHELF_LAB
+        // Queries match by account alone, so Lab needs its own to stay clear of the live key.
+        private let account = "lab.TMDbAPIKey"
+    #else
+        private let account = "TMDbAPIKey"
+    #endif
     private static let resetArgument = "-reset-tmdb-api-key"
     private let keychain: TMDbAPIKeyStorageKeychainClient
     var key: String?

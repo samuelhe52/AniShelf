@@ -55,6 +55,11 @@ protocol AIStructuredGenerator {
     ) async throws -> Value
 }
 
+/// JSON-object providers need a concrete shape in the prompt; Foundation Models still decodes the typed result.
+protocol AIJSONExample {
+    static var jsonObjectExample: String { get }
+}
+
 @MainActor
 struct AISessionFactory {
     let configuration: AIConfiguration
@@ -64,13 +69,14 @@ struct AISessionFactory {
     /// Callers that change it should size the budget to match.
     var reasoning: AIReasoning = .off
 
-    func makeSession(backend: AIBackend, instructions: String) throws -> LanguageModelSession {
+    func makeSession<Value: Generable>(
+        backend: AIBackend, instructions: String, generating type: Value.Type
+    ) throws -> LanguageModelSession {
         guard AIAvailability(keys: keys).isUsable(backend) else { throw AIError.unavailable }
         if backend == .apple {
             return LanguageModelSession(model: SystemLanguageModel.default, instructions: instructions)
         }
-        if #available(iOS 27.0, macOS 27.0, *), let key = keys.key(for: backend) {
-            var url = URL(string: backend == .openAI ? "https://api.openai.com/v1" : "https://openrouter.ai/api/v1")!
+        if #available(iOS 27.0, macOS 27.0, *), var url = backend.providerURL, let key = keys.key(for: backend) {
             var sessionConfiguration: URLSessionConfiguration?
             #if DEBUG || LIBRARY_FIXTURES
                 if LibraryFixture.active != nil {
@@ -78,26 +84,54 @@ struct AISessionFactory {
                     sessionConfiguration = AIFixtureProvider.sessionConfiguration
                 }
             #endif
-            let model = ChatCompletionsLanguageModel(
+            var model = ChatCompletionsLanguageModel(
                 name: configuration.model(for: backend),
                 url: url,
                 additionalHeaders: ["Authorization": "Bearer \(key)"],
                 supportsGuidedGeneration: true,
-                reasoning: Self.wireReasoning(reasoning, for: backend),
                 urlSessionConfiguration: sessionConfiguration
             )
+            let instructions = try Self.configure(
+                &model, for: backend, reasoning: reasoning, instructions: instructions, generating: type)
             return LanguageModelSession(model: model, instructions: instructions)
         }
         throw AIError.unavailable
     }
 
+    /// Applies the backend's request options to the model and returns the instructions to send.
+    ///
+    /// Bailian and DeepSeek take JSON-object mode instead of a guided schema, so the
+    /// instructions carry an example of the shape.
+    @available(iOS 27.0, macOS 27.0, *)
+    static func configure<Value: Generable>(
+        _ model: inout ChatCompletionsLanguageModel, for backend: AIBackend, reasoning: AIReasoning,
+        instructions: String, generating type: Value.Type
+    ) throws -> String {
+        model.reasoning = wireReasoning(reasoning, for: backend)
+        model.jsonObjectProvider = jsonObjectProvider(for: backend)
+        guard model.jsonObjectProvider != nil else { return instructions }
+        guard let type = type as? any AIJSONExample.Type else { throw AIError.requestFailed }
+        return instructions
+            + "\n\nReturn only a JSON object with these fields and types. Treat this as an example shape, not the answer:\n"
+            + type.jsonObjectExample
+    }
+
+    @available(iOS 27.0, macOS 27.0, *)
+    private static func jsonObjectProvider(for backend: AIBackend) -> ChatCompletionsLanguageModel.JSONObjectProvider? {
+        switch backend {
+        case .bailian: .bailian
+        case .deepSeek: .deepSeek
+        case .apple, .openAI, .openRouter: nil
+        }
+    }
+
     /// OpenAI takes `reasoning_effort` (`none` turns it off); OpenRouter takes a `reasoning` object.
     @available(iOS 27.0, macOS 27.0, *)
-    static func wireReasoning(_ reasoning: AIReasoning, for backend: AIBackend) -> ChatCompletionsLanguageModel
+    private static func wireReasoning(_ reasoning: AIReasoning, for backend: AIBackend) -> ChatCompletionsLanguageModel
         .Reasoning?
     {
         switch backend {
-        case .apple: nil
+        case .apple, .bailian, .deepSeek: nil
         case .openAI: .effort(reasoning == .off ? "none" : reasoning.rawValue)
         case .openRouter: .openRouter(enabled: reasoning != .off, effort: reasoning == .off ? nil : reasoning.rawValue)
         }
@@ -113,7 +147,7 @@ struct AILanguageModelGenerator: AIStructuredGenerator {
         _ type: Value.Type, instructions: String, prompt: String, maximumResponseTokens: Int
     ) async throws -> Value {
         try Task.checkCancellation()
-        let session = try factory.makeSession(backend: backend, instructions: instructions)
+        let session = try factory.makeSession(backend: backend, instructions: instructions, generating: type)
         do {
             let result = try await session.respond(
                 to: prompt, generating: type,

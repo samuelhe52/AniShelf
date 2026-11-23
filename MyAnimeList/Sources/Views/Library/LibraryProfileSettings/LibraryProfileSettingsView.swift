@@ -444,6 +444,10 @@ struct LibraryProfileSettingsView: View {
             LibraryProfileTrackingSettingsSection()
         case .appearance:
             LibraryProfileInterfaceSettingsSection()
+        #if os(macOS)
+            case .screenSaver:
+                MacScreenSaverSettingsPage()
+        #endif
         case .reminders:
             LibraryProfileBroadcastSettingsSection()
             #if os(macOS)

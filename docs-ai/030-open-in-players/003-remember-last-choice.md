@@ -8,7 +8,7 @@ The maintainer requested an optional remembered choice that takes precedence ove
 
 The setting and remembered choices are device-local. Each entry's stable library identity maps to its last successfully opened app. Successful explicit selections from menus or the swipe alert update that entry's choice; homepage and unsuccessful opens do not. Swipe uses the entry's remembered app when present, otherwise the configured default, retaining the existing unavailable-app alert. Disabling the setting ignores remembered choices without deleting them.
 
-The initial global value cannot be associated with a specific entry and is ignored. Menus and the swipe alert carry the same entry identity.
+The initial global value cannot be associated with a specific entry and is ignored. (That version was never committed, so nothing stored one; a 2026-11-21 cleanup dropped the test case for it.) Menus and the swipe alert carry the same entry identity.
 
 ## Refs
 

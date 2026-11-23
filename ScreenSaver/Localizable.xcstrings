@@ -1,0 +1,38 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Set up the screen saver in AniShelf." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfでスクリーンセーバを設定してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请在AniShelf中设置屏幕保护程序。"
+          }
+        }
+      }
+    },
+    "AniShelf has a newer screen saver. Install it from AniShelf Settings › Screen Saver." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfに新しいスクリーンセーバがあります。AniShelfの設定 › スクリーンセーバからインストールしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf有更新的屏幕保护程序。请在AniShelf设置 › 屏幕保护程序中安装。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

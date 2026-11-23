@@ -294,34 +294,31 @@ struct AIFoundationTests {
         #expect(response.content.matchingIndices == [0, 1])
     }
 
-    @Test(arguments: [AIBackend.openAI, .openRouter])
+    @Test(arguments: [AIBackend.openAI, .openRouter, .bailian, .deepSeek])
     func reasoningIsOffByDefaultOnTheWire(_ backend: AIBackend) async throws {
         guard #available(iOS 27.0, macOS 27.0, *) else { return }
         let factory = AISessionFactory(
             configuration: AIConfiguration(defaults: .standard), keys: AIProviderKeyStorage())
         #expect(factory.reasoning == .off)
-        // The mock answers [0, 1] only when the body carries exactly this backend's "off" form,
-        // a response schema without `x-order`, which Anthropic models reject, and no tool
-        // fields, since Google rejects `tool_choice` without tools.
-        let model = mockProvider(
-            backend == .openAI ? "reasoningOffOpenAI" : "reasoningOffOpenRouter",
-            reasoning: AISessionFactory.wireReasoning(factory.reasoning, for: backend)
-        )
-        let response = try await LanguageModelSession(model: model).respond(
-            to: "Select.", generating: AIBatchSelection.self
+        // The mock answers [0, 1] only if the provider receives its structured-output
+        // format, reasoning-off flags, and no tool fields. The app's own routing configures it.
+        var model = mockProvider("reasoningOff-\(backend.rawValue)")
+        let instructions = try AISessionFactory.configure(
+            &model, for: backend, reasoning: factory.reasoning, instructions: "Select matching entries.",
+            generating: AIBatchSelection.self)
+        let response = try await LanguageModelSession(model: model, instructions: instructions).respond(
+            to: "Select.", generating: AIBatchSelection.self, options: GenerationOptions(maximumResponseTokens: 64)
         )
         #expect(response.content.matchingIndices == [0, 1])
     }
 
     @available(iOS 27.0, macOS 27.0, *)
-    private func mockProvider(
-        _ scenario: String, reasoning: ChatCompletionsLanguageModel.Reasoning? = nil
-    ) -> ChatCompletionsLanguageModel {
+    private func mockProvider(_ scenario: String) -> ChatCompletionsLanguageModel {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [AIStreamURLProtocol.self]
         return ChatCompletionsLanguageModel(
             name: "mock", url: URL(string: "https://ai-foundation.invalid/\(scenario)/v1")!,
-            reasoning: reasoning, urlSessionConfiguration: configuration
+            urlSessionConfiguration: configuration
         )
     }
 
@@ -441,10 +438,26 @@ fileprivate final class AIStreamURLProtocol: URLProtocol {
             data.append(buffer, count: count)
         }
         guard let body = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let format = body["response_format"], !String(describing: format).contains("x-order"),
+            let format = body["response_format"] as? [String: Any],
             body["tools"] == nil, body["tool_choice"] == nil
         else { return false }
-        if scenario == "reasoningOffOpenAI" {
+        if scenario == "reasoningOff-bailian" || scenario == "reasoningOff-deepSeek" {
+            let messages = body["messages"] as? [[String: Any]] ?? []
+            let system = messages.first?["content"] as? String
+            guard format["type"] as? String == "json_object", format["json_schema"] == nil,
+                system?.contains("JSON") == true, system?.contains("matchingIndices") == true,
+                body["max_tokens"] as? Int == 64, body["max_completion_tokens"] == nil,
+                body["reasoning"] == nil, body["reasoning_effort"] == nil
+            else { return false }
+            if scenario == "reasoningOff-bailian" {
+                return body["enable_thinking"] as? Bool == false && body["thinking"] == nil
+            }
+            return (body["thinking"] as? [String: String])?["type"] == "disabled" && body["enable_thinking"] == nil
+        }
+        guard format["type"] as? String == "json_schema", !String(describing: format).contains("x-order") else {
+            return false
+        }
+        if scenario == "reasoningOff-openAI" {
             return body["reasoning_effort"] as? String == "none" && body["reasoning"] == nil
         }
         let reasoning = body["reasoning"] as? [String: Any]

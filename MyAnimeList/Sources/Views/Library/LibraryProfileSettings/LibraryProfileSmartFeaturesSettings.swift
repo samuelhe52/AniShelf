@@ -41,7 +41,7 @@ struct LibraryProfileSmartFeaturesSettings: View {
 
     private var backendSection: some View {
         LibraryProfileSettingsGroup(
-            "Backend", subtitle: formFooter(backendFooter), systemImage: "sparkles", tint: tint
+            "Backend", subtitle: nil, systemImage: "sparkles", tint: tint
         ) {
             ForEach(model.listedBackends, id: \.self) { backend in
                 if backend != model.listedBackends.first {
@@ -49,7 +49,16 @@ struct LibraryProfileSmartFeaturesSettings: View {
                 }
                 backendRow(backend)
             }
-            cardFootnote(backendFooter)
+            Text(reviewNotice)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if model.supportsProviders {
+                Text(providerDisclosure)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .onAppear { model.refresh() }
         .onReceive(NotificationCenter.default.publisher(for: .aiConfigurationDidChange)) {
@@ -63,7 +72,14 @@ struct LibraryProfileSmartFeaturesSettings: View {
                 keyDraft = ""
             }
         } message: { backend in
-            Text("AniShelf keeps your \(backend.displayName) key in the Keychain on this device. It does not sync.")
+            if backend == .bailian {
+                // The Bailian endpoint is fixed to Beijing, and Model Studio keys work only in their own region.
+                Text(
+                    "Use an API key from the China (Beijing) region. AniShelf keeps your Bailian key in the Keychain on this device. It does not sync."
+                )
+            } else {
+                Text("AniShelf keeps your \(backend.displayName) key in the Keychain on this device. It does not sync.")
+            }
         }
         .alert("Could Not Save the Key", isPresented: $showsKeySaveFailure) {
             Button("OK", role: .cancel) {}
@@ -131,34 +147,29 @@ struct LibraryProfileSmartFeaturesSettings: View {
         }
     }
 
-    private var backendFooter: LocalizedStringResource {
-        if model.activeBackend != nil {
-            "Smart Features use the checked backend. Describe a category from the Categories manager."
-        } else if model.supportsProviders {
-            "Smart Features need Apple Intelligence, or an OpenAI or OpenRouter key."
+    private var reviewNotice: LocalizedStringResource {
+        if model.supportsProviders {
+            "GPT‑6 Luna is recommended. Always review results before creating a category."
         } else {
-            Self.needsAppleIntelligenceOrNewerSystem
+            "Always review the results before creating a category."
         }
     }
 
     #if os(macOS)
         private static let requiresNewerSystem: LocalizedStringResource = "Needs macOS 27 or later"
-        private static let needsAppleIntelligenceOrNewerSystem: LocalizedStringResource =
-            "Smart Features need Apple Intelligence on this Mac. macOS 27 also accepts an OpenAI or OpenRouter key."
     #else
         private static let requiresNewerSystem: LocalizedStringResource = "Needs iOS 27 or later"
-        private static let needsAppleIntelligenceOrNewerSystem: LocalizedStringResource =
-            "Smart Features need Apple Intelligence on this device. iOS 27 also accepts an OpenAI or OpenRouter key."
     #endif
 
     // MARK: - Providers
 
     private func providerSection(_ backend: AIBackend) -> some View {
-        let disclosure = disclosure(for: backend)
-        return LibraryProfileSettingsGroup(
-            "\(backend.displayName)", subtitle: formFooter(disclosure), systemImage: "cloud", tint: tint
+        LibraryProfileSettingsGroup(
+            "\(backend.displayName)", subtitle: nil, systemImage: "cloud", tint: tint
         ) {
-            labeledRow("Model") { modelMenu(backend) }
+            labeledRow("Model") {
+                modelMenu(backend)
+            }
             if model.usesCustomModel(for: backend) {
                 warning(customModelRisk)
             }
@@ -177,7 +188,6 @@ struct LibraryProfileSmartFeaturesSettings: View {
                     )
                 }
             connectionRow(backend)
-            cardFootnote(disclosure)
         }
     }
 
@@ -313,8 +323,9 @@ struct LibraryProfileSmartFeaturesSettings: View {
         }
     }
 
-    private func disclosure(for backend: AIBackend) -> LocalizedStringResource {
-        "\(backend.displayName) receives the titles, studios, genres, and overviews of the anime it checks, with your description. Requests go from this device to \(backend.displayName) with your key."
+    /// Shown once, in the Backend card, rather than repeated under each provider.
+    private var providerDisclosure: LocalizedStringResource {
+        "Cloud providers receive the titles, studios, genres, and overviews being checked, plus your description."
     }
 
     private var customModelRisk: LocalizedStringResource {
@@ -350,28 +361,6 @@ struct LibraryProfileSmartFeaturesSettings: View {
         Label(message, systemImage: "exclamationmark.triangle.fill")
             .font(.caption)
             .foregroundStyle(.orange)
-    }
-
-    /// A card's explanation is the Mac section footer.
-    ///
-    /// On iOS a header subtitle sits beside the icon, so a paragraph there would strand it;
-    /// ``cardFootnote(_:)`` puts it below the rows.
-    private func formFooter(_ text: LocalizedStringResource) -> LocalizedStringResource? {
-        #if os(macOS)
-            text
-        #else
-            nil
-        #endif
-    }
-
-    @ViewBuilder
-    private func cardFootnote(_ text: LocalizedStringResource) -> some View {
-        #if !os(macOS)
-            Text(text)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        #endif
     }
 
     private func modelSelection(for backend: AIBackend) -> Binding<String> {

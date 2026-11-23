@@ -140,10 +140,11 @@ struct SearchAddCategoryTests {
         let store = context.store
         let oldCategory = try #require(store.createCategory(named: "Existing membership"))
         let destination = try #require(store.createCategory(named: "Destination"))
+        // Each hidden entry also keeps the ID of a deleted category, which the restore drops.
         if !insertedDuringFetch {
             let hidden = AnimeEntry(name: "Hidden parent", type: .series, tmdbID: 44)
             hidden.setDisplayState(false)
-            hidden.updateCategoryMembership(oldCategory.id, isMember: true)
+            hidden.updateCategoryIDs([oldCategory.id, "deleted-category"])
             try store.repository.newEntry(hidden)
         }
         let restored = try #require(
@@ -154,7 +155,7 @@ struct SearchAddCategoryTests {
                         try await MainActor.run {
                             let hidden = AnimeEntry(name: "Concurrent hidden parent", type: .series, tmdbID: id)
                             hidden.setDisplayState(false)
-                            hidden.updateCategoryMembership(oldCategory.id, isMember: true)
+                            hidden.updateCategoryIDs([oldCategory.id, "deleted-category"])
                             try store.repository.newEntry(hidden)
                         }
                     }

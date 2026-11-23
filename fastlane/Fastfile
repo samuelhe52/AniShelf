@@ -1,0 +1,186 @@
+# App Store Connect automation for AniShelf.
+#
+# Xcode Cloud's "Release – TestFlight and App Store" workflow archives the iOS
+# and macOS apps and uploads both when the `release` branch is pushed. These
+# lanes take over from there: they wait for both builds, distribute them to
+# every TestFlight tester and submit both App Store versions for review. None
+# of them builds or uploads a binary, and none changes the App Store listing
+# beyond What's New.
+#
+# Credentials come from the App Store Connect API key JSON at
+# $ASC_API_KEY_PATH (default ~/.appstoreconnect/api_key.json), which lives
+# outside the repository.
+
+require "tmpdir"
+
+default_platform(:ios)
+
+ROOT = File.expand_path("..", FastlaneCore::FastlaneFolder.path)
+PROJECT = File.join(ROOT, "MyAnimeList.xcodeproj/project.pbxproj")
+API_KEY_PATH = File.expand_path(ENV.fetch("ASC_API_KEY_PATH", "~/.appstoreconnect/api_key.json"))
+APP_IDENTIFIER = CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier)
+EXTERNAL_GROUP = "AniShelf External Testing"
+# What to Test for every TestFlight build: the approved Chinese release notes,
+# one "- " line each, between a fixed opening and closing.
+def testflight_notes(version, highlights)
+  lines = highlights.lines.map(&:strip).reject(&:empty?)
+  bad = lines.reject { |l| l.start_with?("- ") }
+  UI.user_error!("Every release note line must start with \"- \": #{bad}") unless bad.empty?
+  "TestFlight 已发布 #{version} 版，App Store 将在几天内更新。\n#{lines.join("\n")}\n\n感谢大家的支持。"
+end
+
+# App Store Connect platform => fastlane platform name.
+PLATFORMS = { "IOS" => "ios", "MAC_OS" => "osx" }.freeze
+
+# The app target's MARKETING_VERSION (test targets keep their own 1.0).
+def project_version
+  versions = File.read(PROJECT).scan(/MARKETING_VERSION = ([^;]+);/).flatten.uniq - ["1.0"]
+  UI.user_error!("Expected one app MARKETING_VERSION, found #{versions}") unless versions.size == 1
+  versions.first
+end
+
+def app
+  @app ||= Spaceship::ConnectAPI::App.find(APP_IDENTIFIER) || UI.user_error!("No App Store Connect app for #{APP_IDENTIFIER}")
+end
+
+# Xcode Cloud assigns the build number (its run number), so CURRENT_PROJECT_VERSION
+# doesn't match it. Default to the newest uploaded build of the version.
+def find_build(version, build, platform)
+  Spaceship::ConnectAPI::Build.all(app_id: app.id, version: version, build_number: build, platform: platform).first
+end
+
+# The processed iOS and macOS builds with the number `wait_builds` reported. Lanes that publish
+# take it explicitly: the newest upload could change between lanes if Xcode Cloud runs again.
+def release_builds(version, build)
+  UI.user_error!("Pass build:<number>, the number wait_builds reported") if build.to_s.empty?
+  PLATFORMS.keys.to_h do |platform|
+    b = find_build(version, build.to_s, platform)
+    UI.user_error!("#{platform} build #{version} (#{build}) is not processed (#{b&.processing_state || 'missing'})") unless b&.processing_state == "VALID"
+    [platform, b]
+  end
+end
+
+def read_notes(path)
+  UI.user_error!("Missing notes file") unless path
+  text = File.read(File.expand_path(path, ROOT)).strip
+  UI.user_error!("Notes file #{path} is empty") if text.empty?
+  text
+end
+
+platform :ios do
+  before_all do
+    UI.user_error!("Missing App Store Connect API key JSON at #{API_KEY_PATH}") unless File.exist?(API_KEY_PATH)
+    Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.from(filepath: API_KEY_PATH)
+  end
+
+  desc "Print the project version and the App Store Connect state of both platforms (read-only)"
+  desc "Options: version (default: the project's), build (default: the newest uploaded)"
+  lane :status do |options|
+    version = (options[:version] || project_version).to_s
+    UI.message("Project: #{version}")
+    app.get_beta_groups.each do |g|
+      UI.message("Beta group #{g.name}: internal=#{g.is_internal_group}, all builds=#{g.has_access_to_all_builds.inspect}, public link=#{g.public_link_enabled.inspect}")
+    end
+    PLATFORMS.each_key do |platform|
+      b = find_build(version, options[:build], platform)
+      if b
+        UI.message("#{platform} build #{version} (#{b.version}): #{b.processing_state}, uploaded #{b.uploaded_date}, " \
+                   "usesNonExemptEncryption=#{b.uses_non_exempt_encryption.inspect}, external=#{b.build_beta_detail&.external_build_state.inspect}")
+      else
+        UI.message("#{platform} build #{version}: not on App Store Connect yet")
+      end
+      live = app.get_live_app_store_version(platform: platform)
+      edit = app.get_edit_app_store_version(platform: platform)
+      UI.message("#{platform} App Store: live #{live&.version_string || 'none'}, editable " \
+                 "#{edit ? "#{edit.version_string} #{edit.app_store_state}, release=#{edit.release_type}, build=#{edit.build&.version.inspect}" : 'none'}")
+    end
+  end
+
+  desc "Wait until App Store Connect has processed the iOS and macOS builds Xcode Cloud uploads"
+  desc "Options: version, build, after (ISO 8601 time: ignore builds uploaded before it), timeout (minutes, default 120)"
+  lane :wait_builds do |options|
+    version = (options[:version] || project_version).to_s
+    after = options[:after] && Time.parse(options[:after])
+    deadline = Time.now + (options[:timeout] || 120).to_i * 60
+    loop do
+      states = PLATFORMS.keys.to_h do |platform|
+        b = find_build(version, options[:build], platform)
+        b = nil if b && after && Time.parse(b.uploaded_date) < after
+        UI.user_error!("#{platform} build #{version} (#{b.version}) ended in #{b.processing_state}") if b && %w[FAILED INVALID].include?(b.processing_state)
+        [platform, b]
+      end
+      UI.message(states.map { |p, b| "#{p} #{b ? "(#{b.version}) #{b.processing_state}" : 'not uploaded yet'}" }.join(", "))
+      if states.values.all? { |b| b&.processing_state == "VALID" }
+        numbers = states.values.map(&:version).uniq
+        UI.user_error!("iOS and macOS builds have different numbers: #{numbers}") unless numbers.size == 1
+        UI.success("Builds #{version} (#{numbers.first}) are processed on both platforms")
+        break
+      end
+      UI.user_error!("Timed out waiting for builds of #{version}") if Time.now > deadline
+      sleep(60)
+    end
+  end
+
+  desc "Set What to Test on both builds, add them to the external group, notify testers and submit Beta App Review"
+  desc "The internal group gets every build automatically"
+  desc "Options: notes (path to the approved Chinese release notes, one \"- \" line each, required), build (required), version, preview (true: print What to Test and stop)"
+  lane :beta do |options|
+    version = (options[:version] || project_version).to_s
+    notes = testflight_notes(version, read_notes(options[:notes]))
+    if options[:preview].to_s == "true"
+      UI.message("What to Test:\n#{notes}")
+      next
+    end
+    builds = release_builds(version, options[:build])
+    PLATFORMS.each do |platform, fastlane_platform|
+      b = builds[platform]
+      upload_to_testflight(
+        api_key_path: API_KEY_PATH,
+        app_identifier: APP_IDENTIFIER,
+        app_platform: fastlane_platform,
+        distribute_only: true,
+        app_version: version,
+        build_number: b.version,
+        changelog: notes,
+        groups: [EXTERNAL_GROUP],
+        distribute_external: true,
+        notify_external_testers: true,
+        submit_beta_review: true
+      )
+    end
+  end
+
+  desc "Create both App Store versions if needed, set What's New, attach the builds and submit both for App Review"
+  desc "Releases stay manual after approval. Options: notes (path to the en-US What's New, required), build (required), version"
+  lane :submit do |options|
+    version = (options[:version] || project_version).to_s
+    notes = read_notes(options[:notes])
+    builds = release_builds(version, options[:build])
+    builds.each do |platform, b|
+      UI.user_error!("#{platform} build #{version} (#{b.version}) declares non-exempt encryption") unless b.uses_non_exempt_encryption == false
+    end
+    PLATFORMS.each do |platform, fastlane_platform|
+      # An empty metadata folder, so only What's New is uploaded and the rest of the listing stays as it is.
+      Dir.mktmpdir("anishelf-metadata") do |metadata|
+        deliver(
+          api_key_path: API_KEY_PATH,
+          app_identifier: APP_IDENTIFIER,
+          platform: fastlane_platform,
+          app_version: version,
+          build_number: builds[platform].version,
+          metadata_path: metadata,
+          release_notes: { "en-US" => notes },
+          skip_binary_upload: true,
+          skip_screenshots: true,
+          skip_metadata: false,
+          submit_for_review: true,
+          automatic_release: false,
+          run_precheck_before_submit: true,
+          precheck_include_in_app_purchases: false,
+          submission_information: { add_id_info_uses_idfa: false },
+          force: true
+        )
+      end
+    end
+  end
+end

@@ -25,6 +25,7 @@ struct PlaceholderTextEditor: View {
     /// Focuses the editor when it appears.
     var autofocus = false
     /// Optional touch navigation on iOS; leading is a left swipe, trailing a right swipe.
+    ///
     /// The flag reports whether the editor had the keyboard when swiped.
     var onHorizontalSwipe: ((HorizontalEdge, _ wasEditing: Bool) -> Void)? = nil
 
@@ -75,7 +76,9 @@ struct PlaceholderTextEditor: View {
     }
 #else
     extension PlaceholderTextEditor {
-        /// Ends editing so the keyboard animates away at once. SwiftUI focus does not reach the
+        /// Ends editing so the keyboard animates away at once.
+        ///
+        /// SwiftUI focus does not reach the
         /// bridged text view, which otherwise holds the keyboard until it leaves the window.
         static func dismissKeyboard() {
             UIApplication.shared.sendAction(

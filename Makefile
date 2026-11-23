@@ -24,6 +24,10 @@ DEVICE_APP_PATH = $(shell xcodebuild -quiet -project $(PROJECT) -scheme $(DEVICE
 SIMULATOR_APP_PATH = $(shell if [ -n "$(BOOTED_SIMULATOR_ID)" ]; then xcodebuild -quiet -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "id=$(BOOTED_SIMULATOR_ID)" -showBuildSettings -json | /usr/bin/python3 -c 'import json, sys; data = json.load(sys.stdin); item = next(entry for entry in data if entry.get("target") == "$(APP_NAME)"); settings = item["buildSettings"]; print(settings["TARGET_BUILD_DIR"] + "/" + settings["FULL_PRODUCT_NAME"])'; fi)
 MAC_DESTINATION ?= platform=macOS
 MAC_APP_PATH = $(shell xcodebuild -quiet -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "$(MAC_DESTINATION)" -showBuildSettings -json | /usr/bin/python3 -c 'import json, sys; data = json.load(sys.stdin); item = next(entry for entry in data if entry.get("target") == "$(APP_NAME)"); settings = item["buildSettings"]; print(settings["TARGET_BUILD_DIR"] + "/" + settings["FULL_PRODUCT_NAME"])')
+# AniShelf Lab is the Debug Mac app with its own identity and no iCloud or push entitlements (docs-ai 043).
+LAB_DERIVED_DATA = $(CURDIR)/.build/lab
+LAB_APP = $(LAB_DERIVED_DATA)/Build/Products/Debug/AniShelf.app
+LAB_BUILD_SETTINGS = PRODUCT_BUNDLE_IDENTIFIER=com.samuelhe.MyAnimeList.lab EXCLUDED_SOURCE_FILE_NAMES=AniShelf.saver INFOPLIST_KEY_CFBundleDisplayName="AniShelf Lab" CODE_SIGN_ENTITLEMENTS=MyAnimeList/AniShelfLab-macOS.entitlements 'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$$(inherited) ANISHELF_LAB'
 DEVICE_PROCESS_LAUNCH_ARGS ?=
 # Debug Mac launches boot a generated 800-entry library by default; pass MAC_LAUNCH_ARGS= for the real library.
 MAC_LAUNCH_ARGS ?= -library-fixture 800
@@ -182,6 +186,17 @@ build-mac: ## Build the app for native macOS
 	@set -o pipefail; NSUnbufferedIO=YES xcodebuild -quiet -project $(PROJECT) -scheme $(SCHEME) -configuration $(CONFIGURATION) -destination "$(MAC_DESTINATION)" -allowProvisioningUpdates build 2>&1 | xcbeautify --disable-logging
 	@echo "Build completed."
 
+.PHONY: build-lab run-lab export-mac-defaults
+build-lab: ## Build AniShelf Lab, the Mac app that runs on a throwaway copy of your library
+	@set -o pipefail; NSUnbufferedIO=YES xcodebuild -quiet -project $(PROJECT) -scheme $(SCHEME) -configuration Debug -destination "$(MAC_DESTINATION)" -derivedDataPath "$(LAB_DERIVED_DATA)" $(LAB_BUILD_SETTINGS) build 2>&1 | xcbeautify --disable-logging
+
+run-lab: build-lab ## Build and open Lab on a fresh copy of the live library and preferences (LAB_LANG=ja overrides the UI language)
+	@/usr/bin/python3 scripts/lab.py run "$(LAB_APP)" "$(LAB_LANG)"
+
+export-mac-defaults: ## Export the live Mac app's preferences, with the app quit (OUT=path)
+	@[ -n "$(OUT)" ] || { echo "Usage: make export-mac-defaults OUT=path/to/preferences.plist" >&2; exit 1; }
+	@/usr/bin/python3 scripts/lab.py export-defaults "$(OUT)"
+
 .PHONY: run-device
 run-device: ## Build, install, and launch on a connected iPhone
 	@[ -n "$(CONNECTED_IOS_DEVICE_ID)" ] || { echo "No connected iPhone found."; exit 1; }
@@ -219,6 +234,10 @@ launch-mac: ## Relaunch the last built native macOS app, without building
 	[ -z "$$newer" ] || echo "Warning: sources are newer than the built app, e.g. $$newer"; \
 	pkill -f "$$app_path/Contents/MacOS/" && sleep 1; \
 	open -n "$$app_path" $(if $(strip $(MAC_LAUNCH_ARGS)),--args $(MAC_LAUNCH_ARGS),)
+
+.PHONY: run-saver-demo
+run-saver-demo: ## Open the Screen Saver Demo, which plays layouts over ~/Pictures/AniShelf Screen Saver
+	@swift run --package-path ScreenSaverKit ScreenSaverDemo
 
 # Maintenance
 .PHONY: clean

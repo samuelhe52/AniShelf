@@ -12,6 +12,7 @@ import SwiftUI
 
 #if os(macOS)
     import AppKit
+    import ScreenSaverKit
 #else
     import UIKit
 #endif
@@ -36,6 +37,8 @@ struct MyAnimeListApp: App {
     /// A DEBUG or `LIBRARY_FIXTURES` launch argument replaced the store with a generated library;
     /// sync, reminders, and prompts stay off for this launch (docs-ai 026).
     private let isLibraryFixture: Bool
+    /// The preferences this launch reads: the fixture's own suite for a fixture launch.
+    private let startupDefaults: UserDefaults
     @State private var backgroundSyncExecution: LibrarySyncBackgroundExecutionController
     private let recoveryActivityGate: StartupRecoveryActivityGate
     private let lifecycleEventGate = AppLifecycleEventGate()
@@ -45,7 +48,12 @@ struct MyAnimeListApp: App {
         Language.followsSystemPreference()
 
     init() {
-        let startup = Self.startupEnvironment()
+        #if ANISHELF_LAB
+            // Lab runs like a fixture launch: a local-only library, no sync, reminders, or prompts.
+            let startup = StartupEnvironment(bootstrap: LabStartup.bootstrap(), isLibraryFixture: true)
+        #else
+            let startup = Self.startupEnvironment()
+        #endif
         let startupBootstrap = startup.bootstrap
         let isSimulatedStartup = startup.isSimulated
         let startupRecovery = startupBootstrap.recovery
@@ -80,6 +88,7 @@ struct MyAnimeListApp: App {
         let supportStore = SupportStore()
         let appReview = AppReviewPromptController(defaults: startup.defaults)
         self.isLibraryFixture = startup.isLibraryFixture
+        self.startupDefaults = startup.defaults
 
         _libraryStore = State(initialValue: libraryStore)
         _keyStorage = State(initialValue: keyStorage)
@@ -108,6 +117,10 @@ struct MyAnimeListApp: App {
             }
         }
         #if os(macOS)
+            if !isSimulatedStartup, startupRecovery == nil, newerLibraryStoreVersion == nil {
+                Self.startScreenSaverPublisher(
+                    for: libraryStore, defaults: startup.defaults, isLibraryFixture: startup.isLibraryFixture)
+            }
             Self.configureMacLifecycle(
                 libraryStore: libraryStore,
                 keyStorage: keyStorage,
@@ -120,6 +133,16 @@ struct MyAnimeListApp: App {
     }
 
     #if os(macOS)
+        private static func startScreenSaverPublisher(
+            for store: LibraryStore, defaults: UserDefaults, isLibraryFixture: Bool
+        ) {
+            guard let home = FileManager.default.homeDirectory(forUser: NSUserName()) else { return }
+            store.startScreenSaverPublisher(
+                defaults: defaults, directory: ScreenSaverSnapshotReader.snapshotDirectory(in: home),
+                preserveSnapshotUntilEnabled: isLibraryFixture
+            )
+        }
+
         /// Wires app-lifetime events into the shared objects directly: the App value captured
         /// here would hold stale `@State` once startup recovery finishes.
         private static func configureMacLifecycle(
@@ -290,6 +313,9 @@ struct MyAnimeListApp: App {
                     .transition(.opacity.animation(.easeInOut(duration: 0.3)))
             }
         }
+        #if ANISHELF_LAB
+            .overlay { LabStartupFailureView() }
+        #endif
         #if (DEBUG || LIBRARY_FIXTURES) && os(iOS)
             .overlay(alignment: .topLeading) {
                 if isLibraryFixture {
@@ -363,6 +389,10 @@ struct MyAnimeListApp: App {
         recoveryActivityGate.isBlocked = false
         startupRecovery = nil
         libraryStore.enableAiringReminderPruning()
+        #if os(macOS)
+            Self.startScreenSaverPublisher(
+                for: libraryStore, defaults: startupDefaults, isLibraryFixture: isLibraryFixture)
+        #endif
         requestSync(trigger: .appLaunch)
         updateWhatsNewPresentation()
     }

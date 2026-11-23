@@ -75,23 +75,23 @@
         private var poster: some View {
             // A new image is a new view, so a reused header never shows the last entry's poster.
             KFImageView(image: posterImage, diskCacheExpiration: .longTerm)
-            .id(posterImage)
-            .scaledToFill()
-            .frame(width: posterSize.width, height: posterSize.height)
-            .background(.fill.tertiary)
-            .clipShape(.rect(cornerRadius: 8, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(.separator, lineWidth: 0.5)
-            }
-            .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
-            // Where the poster flies from if this selection grows into a batch.
-            .onGeometryChange(for: CGRect.self) {
-                $0.frame(in: .global)
-            } action: { frame in
-                posterFlight?.sourceFrame = frame
-            }
-            .accessibilityHidden(true)
+                .id(posterImage)
+                .scaledToFill()
+                .frame(width: posterSize.width, height: posterSize.height)
+                .background(.fill.tertiary)
+                .clipShape(.rect(cornerRadius: 8, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(.separator, lineWidth: 0.5)
+                }
+                .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+                // Where the poster flies from if this selection grows into a batch.
+                .onGeometryChange(for: CGRect.self) {
+                    $0.frame(in: .global)
+                } action: { frame in
+                    posterFlight?.sourceFrame = frame
+                }
+                .accessibilityHidden(true)
         }
     }
 #endif

@@ -13,7 +13,9 @@ import Observation
 @MainActor
 enum AIConnectionCheck {
     @Generable
-    struct Response {
+    struct Response: AIJSONExample {
+        static let jsonObjectExample = #"{"value":0}"#
+
         var value: Int
     }
 
@@ -127,7 +129,7 @@ final class AISettingsModel {
         backend.isProvider && !backend.suggestedModels.contains { $0.id == model(for: backend) }
     }
 
-    /// Returns `false` for an empty ID.
+    /// Returns `false` for a fixed-model backend or an empty ID.
     @discardableResult
     func setModel(_ id: String, for backend: AIBackend) -> Bool {
         let id = id.trimmingCharacters(in: .whitespacesAndNewlines)

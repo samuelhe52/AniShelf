@@ -82,8 +82,6 @@ struct EntryOpenInLinksTests {
         let fallback = EntryOpenInSwipeDestination.app(.infuse)
 
         defaults.set(true, forKey: .libraryOpenInRememberLastChoice)
-        // A legacy global value must not become an arbitrary entry's choice.
-        defaults.set("kazumi", forKey: .libraryOpenInLastChoice)
         #expect(EntryOpenInChoice.swipeDestination(default: fallback, entryID: first, defaults: defaults) == fallback)
         EntryOpenInChoice.recordSuccessfulOpen(.kazumi, entryID: first, defaults: defaults)
         #expect(

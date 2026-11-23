@@ -28,11 +28,12 @@ extension LibraryMetadataRefreshTests {
 
         #expect(
             targets
-                == Set([
-                    TMDbImage(path: "/poster.jpg", variant: .posterThumbnail),
-                    TMDbImage(path: "/backdrop.jpg", variant: .backdrop),
-                    TMDbImage(path: "/logo.png", variant: .logo)
-                ].compactMap(\.self))
+                == Set(
+                    [
+                        TMDbImage(path: "/poster.jpg", variant: .posterThumbnail),
+                        TMDbImage(path: "/backdrop.jpg", variant: .backdrop),
+                        TMDbImage(path: "/logo.png", variant: .logo)
+                    ].compactMap(\.self))
         )
         #expect(targets.count == 3)
     }

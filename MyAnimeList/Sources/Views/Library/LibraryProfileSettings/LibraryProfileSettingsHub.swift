@@ -63,6 +63,11 @@ struct LibraryProfileSettingsHub: View {
             LibraryProfileHubRow(
                 title: destination.title, subtitle: "Tap behavior, detail display, sharing",
                 systemImage: "rectangle.3.group.fill", tint: destination.tint)
+        #if os(macOS)
+            case .screenSaver:
+                LibraryProfileHubRow(
+                    title: destination.title, systemImage: destination.systemImage, tint: destination.tint)
+        #endif
         case .reminders:
             LibraryProfileHubRow(
                 title: destination.title, systemImage: "bell.badge.fill", tint: destination.tint,

@@ -244,7 +244,7 @@ struct SmartFeaturesTests {
             availability: AIAvailability(
                 apple: .unavailable(.deviceNotEligible), supportsProviders: true, keyedProviders: [])
         )
-        #expect(model.listedBackends == [.apple, .openAI, .openRouter])
+        #expect(model.listedBackends == [.apple, .openAI, .openRouter, .bailian, .deepSeek])
         #expect(model.activeBackend == nil)
 
         #expect(model.saveKey("sk-test-abcd1234", for: .openRouter))
@@ -281,6 +281,26 @@ struct SmartFeaturesTests {
         #expect(model.removeKey(for: .openRouter))
         #expect(model.keySuffixes[.openRouter] == nil)
         #expect(model.activeBackend == nil)
+
+        // New providers use separate keys, default to their suggested model, and accept custom IDs.
+        #expect(AIBackend.bailian.suggestedModels.map(\.id) == ["qwen3.8-flash", "deepseek-v4.1-flash"])
+        for (backend, id, key) in [
+            (AIBackend.bailian, "qwen3.8-flash", "bailian-5678"),
+            (AIBackend.deepSeek, "deepseek-flash", "deepseek-9012")
+        ] {
+            model.select(backend)
+            #expect(model.activeBackend != backend)
+            #expect(model.saveKey(key, for: backend))
+            model.select(backend)
+            #expect(model.activeBackend == backend)
+            #expect(model.model(for: backend) == id)
+            #expect(!model.usesCustomModel(for: backend))
+            #expect(model.setModel("custom-\(backend.rawValue)", for: backend))
+            #expect(model.model(for: backend) == "custom-\(backend.rawValue)")
+            #expect(model.usesCustomModel(for: backend))
+        }
+        #expect(model.keySuffixes[.bailian] == "5678")
+        #expect(model.keySuffixes[.deepSeek] == "9012")
     }
 
     // MARK: - Helpers

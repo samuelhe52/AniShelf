@@ -44,8 +44,8 @@ generation, and tool calling was not tested.
 - **Feature 2 (next, designed here and built after feature 1): sort an entry's
   overall-note lines into episode notes.**
 - On iOS/macOS 26, AI features appear only where Apple Intelligence is available.
-  On 27, OpenAI and OpenRouter are offered as well. The deployment target stays
-  26.0.
+  On 27, OpenAI, OpenRouter, Bailian, and DeepSeek are offered as well. The
+  deployment target stays 26.0.
 - Every backend gets the same context budget, the Apple on-device limit. The tasks
   are simple, and small models retrieve poorly even when the entries are already in
   context, so AniShelf does the retrieval, filtering and batching itself.
@@ -57,8 +57,8 @@ generation, and tool calling was not tested.
   that is the point to revisit the context cap.
 - Recommendations, review drafting, summaries, theme grouping.
 - Exposing AI actions through App Intents, Siri or Spotlight.
-- Supporting providers beyond OpenAI and OpenRouter (DeepSeek and Moonshot
-  explicitly excluded), or a developer-owned backend key.
+- Supporting more cloud providers than OpenAI, OpenRouter, Bailian, and DeepSeek,
+  or a developer-owned backend key.
 - Note sorting across the whole library in one pass (see feature 2).
 
 ## Design / approach
@@ -67,11 +67,11 @@ New code lives under a proposed `MyAnimeList/Sources/AI/` folder unless noted.
 
 ### Backends and availability
 
-- Proposed `AIBackend`: `.apple`, `.openAI`, `.openRouter`.
+- `AIBackend`: `.apple`, `.openAI`, `.openRouter`, `.bailian`, `.deepSeek`.
 - Proposed `AIAvailability` decides which backends are usable:
   - `.apple` requires `SystemLanguageModel.default.availability == .available`.
     The unavailable reason, for example `deviceNotEligible`, is shown in Settings.
-  - `.openAI` and `.openRouter` require iOS/macOS 27 and a stored key.
+  - Cloud providers require iOS/macOS 27 and a stored key for that provider.
   - When no backend is usable, AI entry points are hidden rather than disabled.
 - Proposed `AISessionFactory` is the only place that knows about the OS split.
   - On 26 it always builds `LanguageModelSession(model: SystemLanguageModel.default, …)`.
@@ -90,9 +90,11 @@ New code lives under a proposed `MyAnimeList/Sources/AI/` folder unless noted.
     the source revision in the file.
 - **Default models:** `gpt-6-luna` for OpenAI and `openai/gpt-6-luna` for OpenRouter,
   both checked with reasoning off (see [003-reasoning-off.md](003-reasoning-off.md)).
-  Each can be edited in Settings.
-- **Reasoning** is off by default for providers. Low, medium and high stay available in
-  code for tasks that need them.
+  Users can change either in Settings. Bailian (`qwen3.8-flash`) and DeepSeek
+  (`deepseek-flash`) have one fixed model each (see
+  [006-bailian-and-deepseek.md](006-bailian-and-deepseek.md)).
+- **Reasoning** is off by default. Low, medium, and high stay available in code for
+  OpenAI and OpenRouter; Bailian and DeepSeek always run with thinking disabled.
 
 ### Provider keys and Settings
 
@@ -105,8 +107,8 @@ New code lives under a proposed `MyAnimeList/Sources/AI/` folder unless noted.
   Settings window (`MyAnimeList/Sources/Mac/MacSettingsRoot.swift`) shows the same
   view, so it gets the page too. The page contains:
   - a backend picker that marks unavailable backends with their reason;
-  - key and model fields for OpenAI and OpenRouter, only on 27. The model list
-    holds the checked models plus "Custom Model…", with a warning about the risks;
+  - key and model rows for cloud providers, only on 27. OpenAI and OpenRouter
+    allow a custom model ID, with a warning about the risks;
   - a connection test that runs one tiny typed request;
   - a short disclosure that third-party backends receive library titles,
     overviews and, for note sorting, note text.
@@ -243,7 +245,7 @@ need. If a later feature needs keyword retrieval, copy over `de239c2`
 | --- | --- |
 | Foundation Models as the only interface | Maintainer decision: one API for Apple Intelligence and third-party providers. Rejected: a separate HTTP client per provider with hand-written JSON decoding, which duplicates schema handling and adds a second code path. |
 | OS split: 26 = Apple only, 27 = Apple + providers | Custom providers need the 27-only `LanguageModel` protocol. Rejected: raising the deployment target to 27 (drops 26 users for no gain), and skipping Foundation Models on 26. |
-| Providers: OpenAI and OpenRouter | Maintainer decision. Both passed typed and streaming generation. DeepSeek (rejects `json_schema`) and Moonshot (fenced output) are out of scope. |
+| Providers: OpenAI, OpenRouter, Bailian, and DeepSeek | Maintainer decision. OpenAI and OpenRouter passed typed and streaming generation with JSON schemas. Bailian and DeepSeek were added after the 2026-11-20 benchmark ([006](006-bailian-and-deepseek.md)); they use JSON-object mode, since DeepSeek rejects `json_schema`. Moonshot (fenced output) stays out of scope. |
 | One context budget (Apple's limit) for every backend | Maintainer decision: the tasks are simple, and small models retrieve unreliably even when entries are in context. Same batching behavior on every backend. |
 | Plan step, then local filter, then classify | Lets structured requests skip the model's per-entry judgment, and keeps genre and status logic in tested code. Rejected: sending the whole library to the model, which can't fit and retrieves poorly anyway. |
 | Batch-local integer indices | Fewer tokens than UUIDs, and invented references are easy to reject. |
@@ -286,3 +288,4 @@ need. If a later feature needs keyword retrieval, copy over `de239c2`
 - Updated 2026-10-28: Provider reasoning is off by default (low/medium/high kept in code), the response reservation follows it, and the default models moved to `gpt-6-luna`; corrected the default-model text here and the budget row in 002 — see [003-reasoning-off.md](003-reasoning-off.md)
 - Updated 2026-10-29: Built the Smart Features settings page and "Describe a Category" (feature 1); the UI name is Smart Features. Corrected the Settings, entry-point, and plan-step text here, and resolved the naming question — see [004-settings-and-described-categories.md](004-settings-and-described-categories.md)
 - Updated 2026-10-30: "Describe a Category" replaces its progress and review steps with a live sieve: plan chips, a poster grid that resolves per batch, and a Not included section that can add rejections back. The runner reports per-batch events instead of counts. Corrected the Review bullet above — see [005-category-sieve.md](005-category-sieve.md)
+- Updated 2026-11-20: Added Bailian (`qwen3.8-flash`) and DeepSeek (`deepseek-flash`) as fixed-model providers after a benchmark against GPT-6 Luna, which Smart Features now recommends. Corrected the scope, non-goal, backend, model, reasoning, Settings, and provider-decision text here — see [006-bailian-and-deepseek.md](006-bailian-and-deepseek.md)

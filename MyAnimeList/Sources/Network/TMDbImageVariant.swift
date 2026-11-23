@@ -21,6 +21,8 @@ enum TMDbImageVariant: CaseIterable, Hashable, Sendable {
     case posterThumbnail
     /// The gallery card and entry previews.
     case posterFull
+    /// Artwork exported for the macOS screen saver.
+    case screenSaverPoster
     case backdrop
     case logo
     case profile
@@ -28,7 +30,7 @@ enum TMDbImageVariant: CaseIterable, Hashable, Sendable {
 
     var role: TMDbImageRole {
         switch self {
-        case .posterThumbnail, .posterFull: .poster
+        case .posterThumbnail, .posterFull, .screenSaverPoster: .poster
         case .backdrop: .backdrop
         case .logo: .logo
         case .profile: .profile
@@ -42,6 +44,7 @@ enum TMDbImageVariant: CaseIterable, Hashable, Sendable {
         switch self {
         case .posterThumbnail: .width(500)
         case .posterFull: .original
+        case .screenSaverPoster: .width(780)
         case .backdrop: .width(1_280)
         case .logo: .width(500)
         case .profile: .width(185)
@@ -53,7 +56,7 @@ enum TMDbImageVariant: CaseIterable, Hashable, Sendable {
     var maxPixelDimension: CGFloat {
         switch self {
         case .posterThumbnail: 540
-        case .posterFull: 1_500
+        case .posterFull, .screenSaverPoster: 1_500
         case .backdrop: 1_200
         case .logo: 500
         case .profile: 278

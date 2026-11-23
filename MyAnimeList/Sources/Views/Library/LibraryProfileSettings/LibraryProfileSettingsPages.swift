@@ -43,10 +43,14 @@ extension LibraryProfileSettingsPage {
     @ViewBuilder
     fileprivate var pageBody: some View {
         #if os(macOS)
-            // A grouped form, as in System Settings: each settings section becomes a form
-            // section and each row a standard form row.
-            Form(content: content)
-                .formStyle(.grouped)
+            if destination == .screenSaver {
+                // This destination keeps its live preview outside its scrolling form.
+                content()
+            } else {
+                Form(content: content)
+                    .formStyle(.grouped)
+                    .preferredNavigationBarScrollEdgeEffect()
+            }
         #else
             ZStack {
                 LibraryProfileBackdrop()

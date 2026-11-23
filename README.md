@@ -43,18 +43,19 @@ New features will be released on TestFlight before being pushed to the App Store
 
 ## ✨ Features
 
-- **📚 Library Management** - Keep track of all your anime in one place
-- **🗂️ Categories** - Group anime into your own categories, or describe one in your own words and let Smart Features find the matches, using Apple Intelligence or your own OpenAI or OpenRouter key
-- **🔍 Search** - Find anime using The Movie Database (TMDb) with multi-language support
-- **🎨 Beautiful UI** - Native SwiftUI interface, polished and consistent design language
-- **📊 Track Progress** - Track watch status, scores, episode-level progress, and rewatches
-- **📝 Episode Notes** - Write a note for each episode, alongside an overall note for the series or season
-- **▶️ Open In** - Jump from an entry to Infuse, Kazumi, or bilibili
-- **⏰ Broadcast & Reminders** - View broadcast airtimes for eligible anime and set reminders for each new episode, before or after airtime
-- **💾 Backup & Restore** - Back up and restore your library and settings, or export your library to common file formats
-- **☁️ iCloud Sync** - Keep your library and preferences in sync across your devices
-- **🌍 Multi-language** - Support for anime metadata in English, Chinese, and Japanese.
-- **🖥️ Native Mac App** - A desktop interface with a sidebar, an inspector, and windows that each keep their own view
+- **📚 Library Management** — Keep track of all your anime in one place
+- **🗂️ Categories** — Organize anime into custom categories, describe them in natural language, and find matches automatically
+- **🔍 Search** — Find anime using The Movie Database (TMDb) with multi-language support
+- **🎨 Beautiful UI** — Native SwiftUI interface, polished and consistent design language
+- **📊 Track Progress** — Track watch status, scores, episode-level progress, and rewatches
+- **📝 Episode Notes** — Write a note for each episode, alongside an overall note for the series or season
+- **▶️ Open In** — Jump from an entry to Infuse, Kazumi, or bilibili
+- **⏰ Broadcast & Reminders** — View broadcast airtimes for eligible anime and set reminders for each new episode, before or after airtime
+- **💾 Backup & Restore** — Back up and restore your library and settings, or export your library to common file formats
+- **☁️ iCloud Sync** — Keep your library and preferences in sync across your devices
+- **🌍 Multi-language** — Support for anime metadata in English, Chinese, and Japanese
+- **🖥️ Native Mac App** — A desktop interface with a sidebar and an inspector
+- **🌌 Mac Screen Saver** — Show your library's posters and artwork as a macOS screen saver, with several layouts to choose from
 
 ## CLI & Agentic Access
 
@@ -130,7 +131,7 @@ refactor: Simplify library views
 
 ## 📝 License
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 — see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 

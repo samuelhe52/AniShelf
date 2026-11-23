@@ -9,13 +9,15 @@ import Foundation
 import FoundationModels
 
 enum AIBackend: String, CaseIterable, Sendable {
-    case apple, openAI, openRouter
+    case apple, openAI, openRouter, bailian, deepSeek
 
     var defaultModel: String {
         switch self {
         case .apple: ""
         case .openAI: "gpt-6-luna"
         case .openRouter: "openai/gpt-6-luna"
+        case .bailian: "qwen3.8-flash"
+        case .deepSeek: "deepseek-flash"
         }
     }
 
@@ -25,26 +27,39 @@ enum AIBackend: String, CaseIterable, Sendable {
         case .apple: "Apple Intelligence"
         case .openAI: "OpenAI"
         case .openRouter: "OpenRouter"
+        case .bailian: "Bailian"
+        case .deepSeek: "DeepSeek"
         }
     }
 
     var isProvider: Bool { self != .apple }
+
+    var providerURL: URL? {
+        switch self {
+        case .apple: nil
+        case .openAI: URL(string: "https://api.openai.com/v1")!
+        case .openRouter: URL(string: "https://openrouter.ai/api/v1")!
+        case .bailian: URL(string: "https://dashscope.aliyuncs.com/compatible-mode/v1")!
+        case .deepSeek: URL(string: "https://api.deepseek.com/v1")!
+        }
+    }
 
     /// Check batches in flight at once: parallel requests save time, not tokens.
     ///
     /// The on-device model runs one response at a time, so Apple stays sequential.
     var maximumConcurrentBatches: Int { isProvider ? 8 : 1 }
 
-    /// Models checked with reasoning off and strict structured output (docs-ai 034.003), and
-    /// scored against a labeled library (docs-ai 034.004).
-    ///
-    /// Any other model ID is a custom choice the user makes at their own risk.
+    /// Models scored with reasoning off against the Describe a Category benchmark.
     var suggestedModels: [AISuggestedModel] {
         switch self {
         case .apple: []
-        case .openAI: [AISuggestedModel(id: "gpt-6-luna", name: "GPT-6 Luna")]
-        case .openRouter:
-            [AISuggestedModel(id: "openai/gpt-6-luna", name: "GPT-6 Luna")]
+        case .openAI, .openRouter: [AISuggestedModel(id: defaultModel, name: "GPT-6 Luna")]
+        case .bailian:
+            [
+                AISuggestedModel(id: defaultModel, name: "Qwen 3.8 Flash"),
+                AISuggestedModel(id: "deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash")
+            ]
+        case .deepSeek: [AISuggestedModel(id: defaultModel, name: "DeepSeek Flash")]
         }
     }
 }
@@ -89,12 +104,14 @@ struct AIConfiguration {
     }
 
     func model(for backend: AIBackend) -> String {
+        guard backend.isProvider else { return backend.defaultModel }
         let value = defaults.string(forKey: "ai.model.\(backend.rawValue)")?
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return value.flatMap { $0.isEmpty ? nil : $0 } ?? backend.defaultModel
     }
 
     func setModel(_ model: String, for backend: AIBackend) {
+        guard backend.isProvider else { return }
         defaults.set(model.trimmingCharacters(in: .whitespacesAndNewlines), forKey: "ai.model.\(backend.rawValue)")
     }
 
@@ -130,7 +147,7 @@ struct AIAvailability {
     init(keys: AIProviderKeyStorage) {
         apple = SystemLanguageModel.default.availability
         if #available(iOS 27.0, macOS 27.0, *) { supportsProviders = true } else { supportsProviders = false }
-        keyedProviders = Set([AIBackend.openAI, .openRouter].filter { keys.key(for: $0) != nil })
+        keyedProviders = Set(AIBackend.allCases.filter { $0.isProvider && keys.key(for: $0) != nil })
     }
 
     init(apple: SystemLanguageModel.Availability, supportsProviders: Bool, keyedProviders: Set<AIBackend>) {

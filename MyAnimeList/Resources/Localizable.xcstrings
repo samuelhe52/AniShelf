@@ -1,6 +1,18 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "No Limit" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "制限なし" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无限制" } }
+      }
+    },
+    "Overview Lines" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "あらすじの行数" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "简介行数" } }
+      }
+    },
     "Choose a category when adding anime, and set a default category." : {
       "localizations" : {
         "ja" : {
@@ -225,18 +237,18 @@
         }
       }
     },
-    "%@ receives the titles, studios, genres, and overviews of the anime it checks, with your description. Requests go from this device to %@ with your key." : {
+    "Cloud providers receive the titles, studios, genres, and overviews being checked, plus your description." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@は、確認するアニメのタイトル、制作会社、ジャンル、あらすじと、入力した説明を受け取ります。リクエストはあなたのキーを使い、このデバイスから%2$@へ送られます。"
+            "value" : "クラウドのサービスは、確認するアニメのタイトル、制作会社、ジャンル、あらすじと、入力した説明を受け取ります。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@会收到所检查动画的标题、制作公司、类型和简介，以及你输入的描述。请求会使用你的密钥，从此设备发送到%2$@。"
+            "value" : "云端服务商会收到所检查动画的标题、制作公司、类型和简介，以及你输入的描述。"
           }
         }
       }
@@ -301,6 +313,74 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已检查%1$lld/%2$lld部"
+          }
+        }
+      }
+    },
+    "%lld posters" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld poster"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld posters"
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ポスター%lld枚"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld张海报"
+          }
+        }
+      }
+    },
+    "%lld posters couldn’t be loaded" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld poster couldn’t be loaded"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld posters couldn’t be loaded"
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ポスター%lld枚を読み込めませんでした"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有%lld张海报无法载入"
           }
         }
       }
@@ -529,6 +609,54 @@
         }
       }
     },
+    "Artwork updates start when you install the screen saver." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンセーバをインストールすると、画像の更新が始まります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装屏幕保护程序后，AniShelf会自动更新图片。"
+          }
+        }
+      }
+    },
+    "Preparing artwork…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像を準備中…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在准备图片…"
+          }
+        }
+      }
+    },
+    "Show" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "表示する作品"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示"
+          }
+        }
+      }
+    },
     "Stop and Review" : {
       "localizations" : {
         "ja" : {
@@ -589,6 +717,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "名称已被使用，或所选动画已不在资料库中。"
+          }
+        }
+      }
+    },
+    "Your Score" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あなたのスコア"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的评分"
           }
         }
       }
@@ -659,7 +803,7 @@
     },
     "%@" : {
 
-    },
+},
     "%@ %@" : {
       "localizations" : {
         "en" : {
@@ -947,7 +1091,7 @@
     },
     "%lld entries. Two entries deliberately fail every metadata restoration attempt. Use Retry three times to expose their discard actions." : {
 
-    },
+},
     "%lld episodes" : {
       "localizations" : {
         "ja" : {
@@ -1278,6 +1422,22 @@
         }
       }
     },
+    "1. Install AniShelf’s screen saver" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. AniShelfのスクリーンセーバをインストール"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. 安装AniShelf的屏幕保护程序"
+          }
+        }
+      }
+    },
     "15 minutes after" : {
       "localizations" : {
         "ja" : {
@@ -1306,6 +1466,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "提前15分钟"
+          }
+        }
+      }
+    },
+    "2. Choose AniShelf" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. AniShelfを選択"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. 选择AniShelf"
           }
         }
       }
@@ -2063,6 +2239,22 @@
         }
       }
     },
+    "All Library Entries" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリの全作品"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "资料库中的全部作品"
+          }
+        }
+      }
+    },
     "All Notes" : {
       "localizations" : {
         "ja" : {
@@ -2107,6 +2299,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已加入资料库。"
+          }
+        }
+      }
+    },
+    "Always review the results before creating a category." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カテゴリを作成する前に、必ず結果を確認してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "创建分类前，请务必检查结果。"
           }
         }
       }
@@ -2752,6 +2960,22 @@
         }
       }
     },
+    "Smart Text Placement" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "文字のスマート配置"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "智能文字布局"
+          }
+        }
+      }
+    },
     "Back" : {
       "localizations" : {
         "ja" : {
@@ -2994,7 +3218,7 @@
     },
     "Broadcast Policy" : {
 
-    },
+},
     "Built-in release notes" : {
       "localizations" : {
         "ja" : {
@@ -3764,7 +3988,7 @@
     },
     "Completed Sync" : {
 
-    },
+},
     "Confirm" : {
       "localizations" : {
         "ja" : {
@@ -4119,6 +4343,38 @@
         }
       }
     },
+    "Couldn’t Open Screen Saver" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンセーバを開けませんでした"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法打开屏幕保护程序"
+          }
+        }
+      }
+    },
+    "Couldn’t Open System Settings" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "システム設定を開けませんでした"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法打开系统设置"
+          }
+        }
+      }
+    },
     "Couldn’t Save Selection" : {
       "localizations" : {
         "ja" : {
@@ -4147,6 +4403,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法保存API密钥，请重试。"
+          }
+        }
+      }
+    },
+    "Couldn’t update screen saver artwork." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンセーバの画像を更新できませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法更新屏幕保护程序的图片。"
+          }
+        }
+      }
+    },
+    "Cover Wall" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ポスターウォール"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "海报墙"
           }
         }
       }
@@ -4591,7 +4879,7 @@
     },
     "Deleted" : {
 
-    },
+},
     "Deletion pending. Retry to finish." : {
       "localizations" : {
         "ja" : {
@@ -6162,6 +6450,70 @@
         }
       }
     },
+    "Flowing Background" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流れる背景"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流动背景"
+          }
+        }
+      }
+    },
+    "Flow Speed" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流れる速さ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流动速度"
+          }
+        }
+      }
+    },
+    "Slower" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "遅く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更慢"
+          }
+        }
+      }
+    },
+    "Faster" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "速く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更快"
+          }
+        }
+      }
+    },
     "Follow Anime Info Language" : {
       "localizations" : {
         "ja" : {
@@ -6196,7 +6548,7 @@
     },
     "Following menu action" : {
 
-    },
+},
     "Format" : {
       "localizations" : {
         "ja" : {
@@ -6310,6 +6662,22 @@
         }
       }
     },
+    "Give AniShelf access to your Pictures folder to update the artwork." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像を更新するには、AniShelfに「ピクチャ」フォルダへのアクセスを許可してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请允许AniShelf访问“图片”文件夹，以便更新图片。"
+          }
+        }
+      }
+    },
     "Go to the API page after you are signed in." : {
       "localizations" : {
         "ja" : {
@@ -6322,6 +6690,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "登录后前往API页面。"
+          }
+        }
+      }
+    },
+    "GPT‑6 Luna is recommended. Always review results before creating a category." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GPT‑6 Lunaをおすすめします。カテゴリを作成する前に、必ず結果を確認してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "推荐使用GPT‑6 Luna。创建分类前请务必检查结果。"
           }
         }
       }
@@ -6422,6 +6806,22 @@
         }
       }
     },
+    "Backdrop" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "背景画像"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "背景图"
+          }
+        }
+      }
+    },
     "Hide Dates" : {
       "localizations" : {
         "ja" : {
@@ -6504,7 +6904,7 @@
     },
     "Hold deletions until Retry" : {
 
-    },
+},
     "Homepage" : {
       "localizations" : {
         "ja" : {
@@ -6555,7 +6955,7 @@
     },
     "iCloud data was deleted in iCloud settings. Upload stays blocked while failures are injected." : {
 
-    },
+},
     "iCloud didn't accept these changes. They stay saved on this device, and AniShelf tries uploading them again on later syncs." : {
       "localizations" : {
         "ja" : {
@@ -6687,7 +7087,7 @@
     },
     "iCloud Sync Preview" : {
 
-    },
+},
     "If you use a VPN or another network proxy, turning off Use TMDb Proxy in Settings may help." : {
       "localizations" : {
         "ja" : {
@@ -6901,15 +7301,63 @@
     },
     "Inject failures" : {
 
-    },
+},
     "Injected failures are off. The next Retry will load the pending entries and clear the other notices." : {
 
-    },
+},
     "Injected failures are off. The next Retry will restore the two pending entries and complete bootstrap." : {
 
-    },
+},
     "Injected failures are off. Upload This Library re-creates the iCloud data and completes sync." : {
 
+},
+    "Install…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インストール…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装…"
+          }
+        }
+      }
+    },
+    "Still seeing the update message?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだアップデートの案内が表示されますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仍然看到更新提示？"
+          }
+        }
+      }
+    },
+    "If you’ve already reinstalled, quit System Settings. In Activity Monitor, search for legacyScreenSaver and use Stop → Quit on exact matches only. Reopen System Settings and preview AniShelf again." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再インストール済みの場合は、システム設定を終了してください。アクティビティモニタで「legacyScreenSaver」を検索し、名前が完全に一致するプロセスだけを選んで「停止」ボタンをクリックし、「終了」を選択します。システム設定を開き直し、AniShelfをもう一度プレビューしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果已重新安装，请退出「系统设置」。在「活动监视器」中搜索legacyScreenSaver，只对名称完全匹配的进程点按「停止」并选取「退出」。然后重新打开「系统设置」，再次预览AniShelf。"
+          }
+        }
+      }
     },
     "Interface" : {
       "extractionState" : "stale",
@@ -6924,6 +7372,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "界面"
+          }
+        }
+      }
+    },
+    "Interval" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切り替え間隔"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换间隔"
           }
         }
       }
@@ -7267,6 +7731,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "稍后"
+          }
+        }
+      }
+    },
+    "Layout" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レイアウト"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "布局"
           }
         }
       }
@@ -8106,6 +8586,22 @@
         }
       }
     },
+    "Never" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未公開"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未发布"
+          }
+        }
+      }
+    },
     "New Category" : {
       "localizations" : {
         "ja" : {
@@ -8278,6 +8774,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "下次提醒"
+          }
+        }
+      }
+    },
+    "No artwork to preview." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プレビューできる画像がありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有可预览的图片。"
           }
         }
       }
@@ -8813,7 +9325,7 @@
     },
     "Open airtime menu" : {
 
-    },
+},
     "Open API Page" : {
       "localizations" : {
         "ja" : {
@@ -8954,6 +9466,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打开通知设置"
+          }
+        }
+      }
+    },
+    "Open Wallpaper Settings" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "壁紙設定を開く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开墙纸设置"
           }
         }
       }
@@ -9376,6 +9904,22 @@
         }
       }
     },
+    "Poster Focus" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ポスター表示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "单张海报"
+          }
+        }
+      }
+    },
     "Prefer Original Language" : {
       "localizations" : {
         "ja" : {
@@ -9453,6 +9997,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "首播"
+          }
+        }
+      }
+    },
+    "Preparing artwork… %lld of %lld" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像を準備中… %2$lld件中%1$lld件"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在准备图片… %1$lld/%2$lld"
           }
         }
       }
@@ -9912,6 +10472,22 @@
         }
       }
     },
+    "Refresh Now" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今すぐ更新"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即刷新"
+          }
+        }
+      }
+    },
     "Refreshed %lld entries and fetched %lld images." : {
       "localizations" : {
         "en" : {
@@ -10328,6 +10904,22 @@
         }
       }
     },
+    "Removing artwork…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像を削除中…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在移除图片…"
+          }
+        }
+      }
+    },
     "Rename" : {
       "localizations" : {
         "ja" : {
@@ -10571,7 +11163,7 @@
     },
     "Restoration" : {
 
-    },
+},
     "Restore" : {
       "localizations" : {
         "ja" : {
@@ -10796,6 +11388,22 @@
         }
       }
     },
+    "Rows" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "段数"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "行数"
+          }
+        }
+      }
+    },
     "Runtime" : {
       "localizations" : {
         "ja" : {
@@ -10958,7 +11566,7 @@
     },
     "Scenario" : {
 
-    },
+},
     "Schedule" : {
       "localizations" : {
         "ja" : {
@@ -11019,6 +11627,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "评分: %@"
+          }
+        }
+      }
+    },
+    "Screen Saver" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンセーバ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "屏幕保护程序"
+          }
+        }
+      }
+    },
+    "Screen saver options are available when your library is ready." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブラリの準備ができると、スクリーンセーバを設定できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "资料库准备就绪后，即可设置屏幕保护程序。"
+          }
+        }
+      }
+    },
+    "Screen saver preview" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンセーバのプレビュー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "屏幕保护程序预览"
+          }
+        }
+      }
+    },
+    "Screen Saver Unavailable" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンセーバを利用できません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "屏幕保护程序不可用"
           }
         }
       }
@@ -11439,6 +12111,22 @@
         }
       }
     },
+    "Setup" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定手順"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置步骤"
+          }
+        }
+      }
+    },
     "Setup Failed" : {
       "localizations" : {
         "ja" : {
@@ -11547,6 +12235,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在资料库中以海报覆盖层显示分集进度。"
+          }
+        }
+      }
+    },
+    "Show in Finder" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finderに表示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在访达中显示"
           }
         }
       }
@@ -12245,7 +12949,7 @@
     },
     "Sync succeeded, but two entries couldn't be loaded, two changes weren't uploaded, and one record is unreadable. The entry TMDb no longer lists can be discarded right away." : {
 
-    },
+},
     "Synced" : {
       "localizations" : {
         "ja" : {
@@ -12297,7 +13001,7 @@
     },
     "Synthetic iCloud Library" : {
 
-    },
+},
     "System (%@)" : {
       "localizations" : {
         "ja" : {
@@ -12326,6 +13030,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "制表符分隔值 (.tsv)"
+          }
+        }
+      }
+    },
+    "Tagline" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キャッチコピー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "宣传语"
           }
         }
       }
@@ -12550,6 +13270,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "所选动画副本已不可用。请选择另一个副本。"
+          }
+        }
+      }
+    },
+    "There isn’t enough space to save screen saver artwork." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンセーバの画像を保存する空き容量がありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "存储空间不足，无法保存屏幕保护程序的图片。"
           }
         }
       }
@@ -13634,6 +14370,70 @@
         }
       }
     },
+    "Up to date" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已更新"
+          }
+        }
+      }
+    },
+    "Up to date · %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新済み · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已更新 · %@"
+          }
+        }
+      }
+    },
+    "Up to date · %@ · %lld without artwork" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新済み · %1$@ · 画像なし%2$lld件"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已更新 · %1$@ · %2$lld部作品缺少图片"
+          }
+        }
+      }
+    },
+    "Up to date · %lld without artwork" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新済み · 画像なし%lld件"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已更新 · %lld部作品缺少图片"
+          }
+        }
+      }
+    },
     "Update AniShelf to keep syncing with iCloud." : {
       "localizations" : {
         "ja" : {
@@ -14639,6 +15439,22 @@
         }
       }
     },
+    "Use an API key from the China (Beijing) region. AniShelf keeps your Bailian key in the Keychain on this device. It does not sync." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中国（北京）リージョンのAPIキーを使用してください。AniShelfはBailianのキーをこのデバイスのキーチェーンに保存します。同期はされません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请使用华北2（北京）地域的API密钥。AniShelf会将你的Bailian密钥保存在此设备的钥匙串中，不会同步。"
+          }
+        }
+      }
+    },
     "Backend" : {
       "localizations" : {
         "ja" : {
@@ -15119,70 +15935,6 @@
         }
       }
     },
-    "Smart Features need Apple Intelligence on this Mac. macOS 27 also accepts an OpenAI or OpenRouter key." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スマート機能にはこのMacでApple Intelligenceが必要です。macOS 27以降ではOpenAIまたはOpenRouterのキーも使えます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "智能功能需要此Mac支持Apple Intelligence。macOS 27及更高版本也可使用OpenAI或OpenRouter密钥。"
-          }
-        }
-      }
-    },
-    "Smart Features need Apple Intelligence on this device. iOS 27 also accepts an OpenAI or OpenRouter key." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スマート機能にはこのデバイスでApple Intelligenceが必要です。iOS 27以降ではOpenAIまたはOpenRouterのキーも使えます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "智能功能需要此设备支持Apple Intelligence。iOS 27及更高版本也可使用OpenAI或OpenRouter密钥。"
-          }
-        }
-      }
-    },
-    "Smart Features need Apple Intelligence, or an OpenAI or OpenRouter key." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スマート機能にはApple Intelligence、またはOpenAIかOpenRouterのキーが必要です。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "智能功能需要Apple Intelligence，或OpenAI、OpenRouter的密钥。"
-          }
-        }
-      }
-    },
-    "Smart Features use the checked backend. Describe a category from the Categories manager." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スマート機能はチェックしたバックエンドを使います。カテゴリの管理画面で、説明からカテゴリを作成できます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "智能功能使用勾选的后端。可在分类管理中通过描述创建分类。"
-          }
-        }
-      }
-    },
     "Test Connection" : {
       "localizations" : {
         "ja" : {
@@ -15649,6 +16401,662 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "添加到分组"
+          }
+        }
+      }
+    },
+    "Click Screen Saver…, then choose AniShelf under Other at the bottom of the list." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「スクリーンセーバ…」をクリックし、リストの一番下にある「その他」でAniShelfを選択します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点按“屏幕保护程序…”，然后在列表底部的“其他”中选择AniShelf。"
+          }
+        }
+      }
+    },
+    "Details" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "表示する情報"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示的信息"
+          }
+        }
+      }
+    },
+    "Year" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "年"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "年份"
+          }
+        }
+      }
+    },
+    "Watch Dates" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "視聴期間"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "观看时间"
+          }
+        }
+      }
+    },
+    "Date Format" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日付の形式"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日期格式"
+          }
+        }
+      }
+    },
+    "Date Source" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "基準にする日付"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日期依据"
+          }
+        }
+      }
+    },
+    "Entries with Dates" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日付のある作品"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有日期的条目"
+          }
+        }
+      }
+    },
+    "Full Date" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "年月日"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "年月日"
+          }
+        }
+      }
+    },
+    "No playable entries with the selected date. Older snapshots need to be republished in AniShelf." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択した日付を持つ表示可能な作品がありません。古いスナップショットはAniShelfで再公開してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有包含所选日期且可播放的条目。请在AniShelf中重新发布旧版快照。"
+          }
+        }
+      }
+    },
+    "Year and Month" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "年月"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "年月"
+          }
+        }
+      }
+    },
+    "Genres" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ジャンル"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "类型"
+          }
+        }
+      }
+    },
+    "Airing Status" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "放送状況"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "播出状态"
+          }
+        }
+      }
+    },
+    "After installation, AniShelf updates the screen saver automatically when you change these settings." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インストール後は、この設定を変更するとAniShelfがスクリーンセーバを自動的に更新します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装后，更改这些设置时AniShelf会自动更新屏幕保护程序。"
+          }
+        }
+      }
+    },
+    "Uninstall Screen Saver…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンセーバをアンインストール…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "卸载屏幕保护程序…"
+          }
+        }
+      }
+    },
+    "Uninstalling makes the AniShelf option disappear in the screen saver settings." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アンインストールすると、スクリーンセーバ設定からAniShelfの項目がなくなります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "卸载后，屏幕保护程序设置中将不再显示AniShelf选项。"
+          }
+        }
+      }
+    },
+    "Deleted Category" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除されたカテゴリ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已删除的分类"
+          }
+        }
+      }
+    },
+    "Remove AniShelf from Screen Savers" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリーンセーバからAniShelfを削除"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从屏幕保护程序中移除AniShelf"
+          }
+        }
+      }
+    },
+    "AniShelf stopped updating the screen saver and deleted its artwork. To finish, click Screen Saver… in Wallpaper settings, Control-click AniShelf, then choose Delete “AniShelf”." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelfはスクリーンセーバの更新を停止し、画像を削除しました。最後に、「壁紙」設定で「スクリーンセーバ…」をクリックし、AniShelfをControlキーを押しながらクリックして「“AniShelf”を削除」を選択してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AniShelf已停止更新屏幕保护程序并删除了图像。最后，请在“墙纸”设置中点按“屏幕保护程序…”，按住Control键点按AniShelf，然后选取删除“AniShelf”。"
+          }
+        }
+      }
+    },
+    "Cards" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カード枚数"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "卡片数量"
+          }
+        }
+      }
+    },
+    "Wall" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ウォール"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "墙"
+          }
+        }
+      }
+    },
+    "Cover" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カバー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "封面"
+          }
+        }
+      }
+    },
+    "Flip" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フリップ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "翻转"
+          }
+        }
+      }
+    },
+    "Poster" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ポスター"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "海报"
+          }
+        }
+      }
+    },
+    "Focus" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フォーカス"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "聚焦"
+          }
+        }
+      }
+    },
+    "Fusion" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フュージョン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "融合"
+          }
+        }
+      }
+    },
+    "Cover Fusion" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カバーフュージョン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "封面融合"
+          }
+        }
+      }
+    },
+    "Deck" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デッキ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "卡组"
+          }
+        }
+      }
+    },
+    "Fan" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "扇形"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "扇形"
+          }
+        }
+      }
+    },
+    "Pile" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "積み重ね"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "叠放"
+          }
+        }
+      }
+    },
+    "Mode" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "モード"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模式"
+          }
+        }
+      }
+    },
+    "Depth Drift" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "奥行きドリフト"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "景深漂移"
+          }
+        }
+      }
+    },
+    "Editorial Cover" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "雑誌の表紙"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "杂志封面"
+          }
+        }
+      }
+    },
+    "Flip Delay" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "反転間隔"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "翻转间隔"
+          }
+        }
+      }
+    },
+    "Flip Wall" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フリップウォール"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "翻转墙"
+          }
+        }
+      }
+    },
+    "Hold Duration" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止時間"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停留时长"
+          }
+        }
+      }
+    },
+    "Posters per 10 Seconds" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "10秒あたりのポスター枚数"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每10秒的海报数"
+          }
+        }
+      }
+    },
+    "Timeline" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タイムライン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "时间轴"
+          }
+        }
+      }
+    },
+    "This release adds a Mac screen saver and new smart category providers." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac向けスクリーンセーバと、新しいスマートカテゴリ対応サービスを追加しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增Mac屏幕保护程序，并支持更多智能分类服务。"
+          }
+        }
+      }
+    },
+    "Added a Mac screen saver with several built-in styles and customizable layouts." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複数のスタイルを内蔵し、レイアウトをカスタマイズできるMac向けスクリーンセーバを追加しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增Mac屏幕保护程序，内置多种风格，支持自定义排版。"
+          }
+        }
+      }
+    },
+    "Install or update the screen saver from Settings." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定からスクリーンセーバをインストールまたは更新できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可在设置中安装或更新屏幕保护程序。"
+          }
+        }
+      }
+    },
+    "Smart categories now support Alibaba Cloud Bailian and DeepSeek." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スマートカテゴリがAlibaba Cloud BailianとDeepSeekに対応しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "智能分类已支持阿里云百炼和DeepSeek。"
           }
         }
       }

@@ -1,6 +1,6 @@
 # Privacy Policy for AniShelf
 
-Effective date: November 1, 2026
+Effective date: November 23, 2026
 
 AniShelf is an anime library management app for iPhone, iPad, and Mac. This
 Privacy Policy explains what information the app handles, how that information
@@ -14,8 +14,10 @@ is used, and the choices available to you.
 - AniShelf does not require an AniShelf account. iCloud Sync uses your Apple
   Account, and TMDb features use a TMDb API key you provide.
 - Search, metadata, artwork, and broadcast features contact external services.
-- Optional Smart Features use Apple Intelligence on your device, or an OpenAI or
-  OpenRouter account whose API key you provide.
+- Optional Smart Features use Apple Intelligence on your device, or your own API
+  key for OpenAI, OpenRouter, Bailian (Alibaba Cloud Model Studio), or DeepSeek.
+- The optional Mac screen saver saves artwork and entry details from your
+  library to your Pictures folder.
 - AniShelf does not sell your personal information.
 - AniShelf does not use third-party advertising SDKs.
 - AniShelf does not use cross-app tracking.
@@ -143,19 +145,36 @@ Smart Features, such as creating a category from a description, are off until
 you set them up. With Apple Intelligence, the requests run through Apple's
 Foundation Models framework under Apple's terms.
 
-If you instead add an OpenAI or OpenRouter API key, AniShelf sends each request
-directly from your device to that provider with your key. A request contains
-the description you type and, for the anime AniShelf checks, their titles,
-release years, kinds, production companies, genres, and the start of their
-overviews. It does not
-contain your notes, ratings, watch dates, or library identifiers. The provider
-receives your IP address and standard network metadata, and handles the request
-under its own terms and privacy policy, including any retention or model
-training settings of your account.
+If you instead add an API key for OpenAI, OpenRouter, Bailian, or DeepSeek,
+AniShelf sends each request directly from your device to that provider with your
+key. A request contains the description you type and, for the anime AniShelf
+checks, their titles, release years, kinds, production companies, genres, and
+the start of their overviews. It does not contain your notes, ratings, watch
+dates, or library identifiers. The provider receives your IP address and standard
+network metadata, and handles the request under its own terms and privacy policy,
+including any retention or model training settings of your account.
 
 AniShelf stores provider keys in the system Keychain on your device. They are
 not included in backups or CloudKit sync. Removing a key in Smart Features
 settings deletes it from the Keychain.
+
+### 11. Optional Mac Screen Saver
+
+On Mac, you can install AniShelf's screen saver from Settings. Nothing is saved
+until you install it. AniShelf then saves a snapshot of the entries you choose
+to show, such as your favorites or one category, in the
+`~/Pictures/AniShelf Screen Saver` folder and updates it when your library or
+screen saver settings change.
+
+The snapshot contains posters and other artwork for those entries and, for each
+entry, its title, season, year, genres, airing status, TMDb score, tagline,
+overview, watch status, start and finish dates, and your score unless scoring is
+turned off. It does not contain your notes. The screen saver reads this folder
+on your Mac and does not connect to the network. Other apps and people with
+access to your Pictures folder can also read it.
+
+Uninstalling the screen saver in AniShelf's settings stops these updates and
+removes the artwork and entry details from the folder.
 
 ## How AniShelf Uses Information
 
@@ -201,6 +220,8 @@ AniShelf currently does not:
 - Cached images and temporary export files may remain on device storage until
   they are cleared by the app or the operating system.
 - Backups you create are stored wherever you choose to save or share them.
+- Mac screen saver snapshots remain in your Pictures folder until you uninstall
+  the screen saver in AniShelf's settings or delete them yourself.
 - Preserved recovery databases remain on the device after you dismiss the
   recovery notice. Deleting current library entries does not remove those
   preserved copies or separately exported files.
@@ -228,14 +249,17 @@ episode information.
 
 [TVMaze Privacy Policy](https://www.tvmaze.com/site/privacy)
 
-### OpenAI and OpenRouter
+### Smart Features cloud providers
 
-If you add an OpenAI or OpenRouter API key for Smart Features, AniShelf sends
-Smart Features requests to that provider. OpenRouter forwards each request to
-the company that runs the model you choose.
+If you add an API key for OpenAI, OpenRouter, Bailian (Alibaba Cloud Model
+Studio), or DeepSeek, AniShelf sends Smart Features requests to that provider.
+OpenRouter forwards each request to the company that runs the model you choose.
+AniShelf sends Bailian requests to Alibaba Cloud's China (Beijing) region.
 
 [OpenAI Privacy Policy](https://openai.com/policies/privacy-policy/)
 [OpenRouter Privacy Policy](https://openrouter.ai/privacy)
+[Bailian Privacy Notice](https://help.aliyun.com/en/model-studio/privacy-notice)
+[DeepSeek Open Platform Privacy Policy](https://cdn.deepseek.com/policies/zh-CN/deepseek-open-platform-privacy-policy.html)
 
 ### Apple iCloud and System Services
 
@@ -262,6 +286,8 @@ You can choose to:
 - disable the TMDb relay to send API requests directly to TMDb
 - turn off broadcast schedules and remove airing reminder subscriptions
 - leave Smart Features unset, or remove a provider key at any time
+- leave the Mac screen saver uninstalled, or uninstall it to remove its
+  snapshot
 - control notification permission and previews in system settings
 - delete your library entries within the app
 - delete cached data where such controls are provided

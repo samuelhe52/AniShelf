@@ -83,3 +83,13 @@ temp/
 
 # Git worktrees
 .worktrees/
+
+# fastlane run output
+/fastlane/report.xml
+/fastlane/README.md
+/fastlane/Preview.html
+/fastlane/screenshots/
+/fastlane/test_output/
+
+# Python bytecode from scripts/
+__pycache__/

@@ -97,8 +97,14 @@
             let instructions = text(of: messages, role: "system")
             let prompt = text(of: messages, role: "user")
             let format = body["response_format"] as? [String: Any]
-            let schema = (format?["json_schema"] as? [String: Any])?["schema"] as? [String: Any]
-            let properties = Set((schema?["properties"] as? [String: Any] ?? [:]).keys)
+            let fields: [String: Any]?
+            if format?["type"] as? String == "json_object", let lastLine = instructions.split(separator: "\n").last {
+                fields = try? JSONSerialization.jsonObject(with: Data(lastLine.utf8)) as? [String: Any]
+            } else {
+                let schema = (format?["json_schema"] as? [String: Any])?["schema"] as? [String: Any]
+                fields = schema?["properties"] as? [String: Any]
+            }
+            let properties = Set((fields ?? [:]).keys)
 
             if properties.contains("semanticCriterion") {
                 if prompt.contains("#fail") { return Reply(status: 500, latency: 0.8) }

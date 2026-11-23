@@ -40,7 +40,7 @@
 
 ## Releases
 
-- Use the project-specific [`anishelf-release`](.codex/skills/anishelf-release/SKILL.md) skill for every source-control release. The skill ends at verified Git publication; the maintainer handles post-push app distribution.
+- Use the project-specific [`anishelf-release`](.codex/skills/anishelf-release/SKILL.md) skill for every release. It covers source control, then TestFlight and App Store submission of the Xcode Cloud builds through `fastlane/`; the public release after App Review stays manual.
 
 ## Additional Notes
 

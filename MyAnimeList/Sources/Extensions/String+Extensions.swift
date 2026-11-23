@@ -141,5 +141,9 @@ extension String {
 }
 
 extension String {
-    static let bundleIdentifier = "com.samuelhe.MyAnimeList"
+    #if ANISHELF_LAB
+        static let bundleIdentifier = "com.samuelhe.MyAnimeList.lab"
+    #else
+        static let bundleIdentifier = "com.samuelhe.MyAnimeList"
+    #endif
 }

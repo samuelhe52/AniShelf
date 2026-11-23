@@ -40,12 +40,17 @@ class LibraryStore {
     @ObservationIgnored private var deferredSavesIncludeBackgroundWrite = false
     @ObservationIgnored private var membershipSnapshot = LibraryMembershipSnapshot()
     @ObservationIgnored private var airingReminderPruningEnabled: Bool
+    #if os(macOS)
+        private(set) var screenSaverPublisher: ScreenSaverPublisher?
+    #endif
     /// False for generated fixture libraries (docs-ai 026): no sync coordinator or scheduler
     /// exists, so every sync path, including Settings' enable and retry, does nothing.
     @ObservationIgnored let allowsCloudSync: Bool
     private(set) var libraryRevision = 0
     /// Changes after a save from a context other than the main one, such as Refresh All's
-    /// writer. Merging those values into the UI's models bypasses their observation, so
+    /// writer.
+    ///
+    /// Merging those values into the UI's models bypasses their observation, so
     /// display caches read this to rebuild their row snapshots.
     private(set) var backgroundWriteRevision = 0
 
@@ -145,6 +150,12 @@ class LibraryStore {
     /// Write through the category operations.
     var categories: [LibraryCategory] = [] {
         willSet { preferences.saveCategories(newValue) }
+        didSet {
+            #if os(macOS)
+                // A screen saver showing a category must empty when that category is deleted.
+                screenSaverPublisher?.libraryDidChange()
+            #endif
+        }
     }
 
     /// Whether the library already holds an entry, regardless of the active category or filters.
@@ -206,6 +217,23 @@ class LibraryStore {
             setupLibrarySyncScheduling()
         }
     }
+
+    #if os(macOS)
+        func startScreenSaverPublisher(
+            defaults: UserDefaults, directory: URL, preserveSnapshotUntilEnabled: Bool
+        ) {
+            guard screenSaverPublisher == nil else { return }
+            screenSaverPublisher = ScreenSaverPublisher(
+                defaults: defaults, directory: directory, preserveSnapshotUntilEnabled: preserveSnapshotUntilEnabled
+            ) {
+                [weak self] settings, language in
+                guard let self else { return .init(settings: settings.manifestSettings, entries: []) }
+                return ScreenSaverSnapshotBuilder.build(
+                    from: self, settings: settings, language: language, scoringEnabled: defaults.isLibraryScoringEnabled
+                )
+            }
+        }
+    #endif
 
     func reloadPersistedPreferences() {
         let snapshot = preferences.load()
@@ -293,6 +321,9 @@ class LibraryStore {
             }
         }
         pruneAiringReminderSubscriptions()
+        #if os(macOS)
+            screenSaverPublisher?.libraryDidChange()
+        #endif
     }
 
     func enableAiringReminderPruning() {
@@ -344,8 +375,13 @@ class LibraryStore {
                 descriptor.fetchLimit = 1
                 return try reader?.fetch(descriptor).first
             }
-            guard needsRefresh else { return }
-            try refreshLibrary()
+            if needsRefresh {
+                try refreshLibrary()
+            } else {
+                #if os(macOS)
+                    screenSaverPublisher?.libraryDidChange()
+                #endif
+            }
         } catch {
             libraryStoreLogger.error("Error refreshing library: \(error)")
         }
