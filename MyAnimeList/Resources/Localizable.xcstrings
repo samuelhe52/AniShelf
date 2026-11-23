@@ -17029,18 +17029,18 @@
         }
       }
     },
-    "Install, update, or uninstall the screen saver from Settings." : {
+    "Install or update the screen saver from Settings." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "設定からスクリーンセーバをインストール、更新、またはアンインストールできます。"
+            "value" : "設定からスクリーンセーバをインストールまたは更新できます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "可在设置中安装、更新或卸载屏幕保护程序。"
+            "value" : "可在设置中安装或更新屏幕保护程序。"
           }
         }
       }

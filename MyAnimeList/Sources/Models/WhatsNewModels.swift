@@ -492,7 +492,7 @@ enum WhatsNewRegistry {
                 "This release adds a Mac screen saver and new smart category providers.",
             highlights: [
                 "Added a Mac screen saver with several built-in styles and customizable layouts.",
-                "Install, update, or uninstall the screen saver from Settings.",
+                "Install or update the screen saver from Settings.",
                 "Smart categories now support Alibaba Cloud Bailian and DeepSeek."
             ],
             primaryAction: nil,
