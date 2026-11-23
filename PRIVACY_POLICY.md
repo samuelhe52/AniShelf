@@ -1,6 +1,6 @@
 # Privacy Policy for AniShelf
 
-Effective date: November 1, 2026
+Effective date: November 23, 2026
 
 AniShelf is an anime library management app for iPhone, iPad, and Mac. This
 Privacy Policy explains what information the app handles, how that information
@@ -16,6 +16,8 @@ is used, and the choices available to you.
 - Search, metadata, artwork, and broadcast features contact external services.
 - Optional Smart Features use Apple Intelligence on your device, or your own API
   key for OpenAI, OpenRouter, Bailian (Alibaba Cloud Model Studio), or DeepSeek.
+- The optional Mac screen saver saves artwork and entry details from your
+  library to your Pictures folder.
 - AniShelf does not sell your personal information.
 - AniShelf does not use third-party advertising SDKs.
 - AniShelf does not use cross-app tracking.
@@ -156,6 +158,24 @@ AniShelf stores provider keys in the system Keychain on your device. They are
 not included in backups or CloudKit sync. Removing a key in Smart Features
 settings deletes it from the Keychain.
 
+### 11. Optional Mac Screen Saver
+
+On Mac, you can install AniShelf's screen saver from Settings. Nothing is saved
+until you install it. AniShelf then saves a snapshot of the entries you choose
+to show, such as your favorites or one category, in the
+`~/Pictures/AniShelf Screen Saver` folder and updates it when your library or
+screen saver settings change.
+
+The snapshot contains posters and other artwork for those entries and, for each
+entry, its title, season, year, genres, airing status, TMDb score, tagline,
+overview, watch status, start and finish dates, and your score unless scoring is
+turned off. It does not contain your notes. The screen saver reads this folder
+on your Mac and does not connect to the network. Other apps and people with
+access to your Pictures folder can also read it.
+
+Uninstalling the screen saver in AniShelf's settings stops these updates and
+removes the artwork and entry details from the folder.
+
 ## How AniShelf Uses Information
 
 AniShelf uses the information it handles to:
@@ -200,6 +220,8 @@ AniShelf currently does not:
 - Cached images and temporary export files may remain on device storage until
   they are cleared by the app or the operating system.
 - Backups you create are stored wherever you choose to save or share them.
+- Mac screen saver snapshots remain in your Pictures folder until you uninstall
+  the screen saver in AniShelf's settings or delete them yourself.
 - Preserved recovery databases remain on the device after you dismiss the
   recovery notice. Deleting current library entries does not remove those
   preserved copies or separately exported files.
@@ -264,6 +286,8 @@ You can choose to:
 - disable the TMDb relay to send API requests directly to TMDb
 - turn off broadcast schedules and remove airing reminder subscriptions
 - leave Smart Features unset, or remove a provider key at any time
+- leave the Mac screen saver uninstalled, or uninstall it to remove its
+  snapshot
 - control notification permission and previews in system settings
 - delete your library entries within the app
 - delete cached data where such controls are provided

@@ -23,6 +23,7 @@ AniShelf helps you track, record, and manage the anime series and films you've w
 - Show anime info in English, Chinese, or Japanese
 - Group anime into your own categories, or describe a category in your own words and let Smart Features find the matching anime
 - Use AniShelf on iPhone, iPad, and as a native Mac app
+- On Mac, show your library as a screen saver
 
 AniShelf also has a companion command-line tool, [anishelf-cli](https://github.com/samuelhe52/anishelf-cli). With iCloud Sync enabled, the `ani` command gives you read-only access to your AniShelf library. See the [anishelf-cli README](https://github.com/samuelhe52/anishelf-cli#readme) for installation and usage.
 
@@ -93,6 +94,10 @@ AniShelf requires a TMDb API key, which is free for personal use. To get one:
    4. In Airing & Reminders, choose the "Default Timing" for all reminders, and tap "Reminders" to review, retime, or remove each reminder.
    5. In Smart Features, choose which model to use. Apple Intelligence runs on your device when it's supported and turned on. On iOS, iPadOS, and macOS 27 or later, you can instead use your own API key for OpenAI, OpenRouter, Bailian (Qwen 3.8 Flash; the key must be from the China (Beijing) region), or DeepSeek (DeepSeek Flash). GPT-6 Luna is recommended; whichever model you use, review the results before creating a category. With those providers, AniShelf sends your description and, for the anime it checks, their titles, years, kinds, studios, genres, and the start of their overviews to that provider. Your notes, ratings, and watch dates aren't sent.
 11. On Mac, AniShelf is a native app. Library scopes and categories are in the sidebar, and the selected entry's details appear in the inspector beside the library. Choose File > "New Window" to open another window; on iPad and Mac, each window keeps its own category, filters, sorting, and view mode.
+12. On Mac, AniShelf can show your library as a screen saver. Open "Screen Saver" in Settings.
+   1. Under "Show", choose Favorites, Watched, All Library Entries, or one of your categories, and under "Entry Type", choose whether to include series, films, or both. Then pick a layout, such as Cover Wall, Backdrop, or Timeline, and choose which details appear on the slides. The preview at the top shows your changes as you make them.
+   2. Under "Setup", click "Install…", then click "Open Wallpaper Settings". Click "Screen Saver…" and choose AniShelf under "Other" at the bottom of the list. If AniShelf asks for access to your Pictures folder, allow it: AniShelf saves the screen saver's artwork in `~/Pictures/AniShelf Screen Saver` and keeps it updated when your library or these settings change.
+   3. To remove it, click "Uninstall Screen Saver…". AniShelf stops updating the screen saver and deletes its artwork. Then, in Wallpaper settings, click "Screen Saver…", Control-click AniShelf, and choose Delete "AniShelf".
 
 ## FAQ
 

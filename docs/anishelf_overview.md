@@ -23,6 +23,7 @@ AniShelf 主要用来追踪、记录、管理看过的番剧/动画电影。核�
 - 动画信息支持英文、中文、日文显示
 - 可以用自定义分类整理番剧，也可以用自然语言描述想要的分类，由智能功能找出匹配的作品
 - 支持 iPhone、iPad，并提供原生 Mac 应用
+- 在 Mac 上可以把资料库设为屏幕保护程序
 
 AniShelf 还提供配套的命令行工具 [anishelf-cli](https://github.com/samuelhe52/anishelf-cli)。开启 iCloud Sync 后，可以通过 `ani` 命令以只读方式访问 AniShelf 资料库。安装和使用方法请参阅 [anishelf-cli README](https://github.com/samuelhe52/anishelf-cli#readme)。
 
@@ -93,6 +94,10 @@ AniShelf 还提供配套的命令行工具 [anishelf-cli](https://github.com/sam
    4. 在“播出与提醒”中可以设置所有提醒的“默认提醒时间”；点击“提醒”可以查看每条提醒、修改提醒时间或移除提醒。
    5. 在“智能功能”中可以选择使用的模型。设备支持并开启 Apple Intelligence 时，可以使用在设备上运行的 Apple Intelligence。在 iOS、iPadOS 和 macOS 27 及更高版本上，也可以改用自己的 OpenAI、OpenRouter、阿里云百炼 Bailian（Qwen 3.8 Flash，需使用华北2（北京）地域的 API 密钥）或 DeepSeek（DeepSeek Flash）API 密钥。推荐使用 GPT-6 Luna；无论使用哪种模型，创建分类前都请检查结果。使用这些服务时，AniShelf 会把你的描述，以及待检查番剧的标题、年份、类型、制作公司、题材和简介开头发送给对应的服务商；不会发送你的笔记、评分和观看日期。
 11. 在 Mac 上，AniShelf 是原生应用：资料库范围和分类位于侧边栏，选中条目后，详情会显示在资料库旁的检查器中。选择“文件” > “新建窗口”可以打开新窗口；在 iPad 和 Mac 上，每个窗口会独立保留各自的分类、筛选、排序和视图模式。
+12. 在 Mac 上，可以把资料库设为屏幕保护程序。在设置中打开“屏幕保护程序”。
+   1. 在“显示”中选择“收藏”“已看完”“资料库中的全部作品”或某个分类，在“动画类型”中选择包含动画系列、电影或两者。然后选择布局，例如“海报墙”“背景图”或“时间轴”，并选择幻灯片上显示的信息。顶部的预览会随设置实时更新。
+   2. 在“设置步骤”中点击“安装…”，然后点击“打开墙纸设置”。点按“屏幕保护程序…”，在列表底部的“其他”中选择 AniShelf。如果 AniShelf 请求访问“图片”文件夹，请允许：AniShelf 会把屏幕保护程序使用的图片保存在 `~/Pictures/AniShelf Screen Saver` 中，并在资料库或这些设置变化时自动更新。
+   3. 如需移除，点击“卸载屏幕保护程序…”。AniShelf 会停止更新屏幕保护程序并删除其图片。然后在墙纸设置中点按“屏幕保护程序…”，按住 Control 键点按 AniShelf，选择删除“AniShelf”。
 
 ## 常见问题
 

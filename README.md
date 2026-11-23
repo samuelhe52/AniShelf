@@ -55,6 +55,7 @@ New features will be released on TestFlight before being pushed to the App Store
 - **☁️ iCloud Sync** — Keep your library and preferences in sync across your devices
 - **🌍 Multi-language** — Support for anime metadata in English, Chinese, and Japanese
 - **🖥️ Native Mac App** — A desktop interface with a sidebar and an inspector
+- **🌌 Mac Screen Saver** — Show your library's posters and artwork as a macOS screen saver, with several layouts to choose from
 
 ## CLI & Agentic Access
 
