@@ -16996,6 +16996,70 @@
           }
         }
       }
+    },
+    "This release adds a Mac screen saver and new smart category providers." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac向けスクリーンセーバと、新しいスマートカテゴリ対応サービスを追加しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增Mac屏幕保护程序，并支持更多智能分类服务。"
+          }
+        }
+      }
+    },
+    "Added a Mac screen saver with several built-in styles and customizable layouts." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複数のスタイルを内蔵し、レイアウトをカスタマイズできるMac向けスクリーンセーバを追加しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增Mac屏幕保护程序，内置多种风格，支持自定义排版。"
+          }
+        }
+      }
+    },
+    "Install, update, or uninstall the screen saver from Settings." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定からスクリーンセーバをインストール、更新、またはアンインストールできます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可在设置中安装、更新或卸载屏幕保护程序。"
+          }
+        }
+      }
+    },
+    "Smart categories now support Alibaba Cloud Bailian and DeepSeek." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スマートカテゴリがAlibaba Cloud BailianとDeepSeekに対応しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "智能分类已支持阿里云百炼和DeepSeek。"
+          }
+        }
+      }
     }
   },
   "version" : "1.2"

@@ -486,6 +486,25 @@ enum WhatsNewRegistry {
                 )
             ]
         ),
+        "1.107.0": .init(
+            version: "1.107.0",
+            summary:
+                "This release adds a Mac screen saver and new smart category providers.",
+            highlights: [
+                "Added a Mac screen saver with several built-in styles and customizable layouts.",
+                "Install, update, or uninstall the screen saver from Settings.",
+                "Smart categories now support Alibaba Cloud Bailian and DeepSeek."
+            ],
+            primaryAction: nil,
+            secondaryActions: [
+                .init(
+                    id: "project-github",
+                    title: "AniShelf on GitHub",
+                    systemImage: "arrow.up.right.square",
+                    kind: .openURL(projectURL)
+                )
+            ]
+        ),
         "1.106.0": .init(
             version: "1.106.0",
             summary:
