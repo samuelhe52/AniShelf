@@ -28,9 +28,9 @@
 - **Open In:** jump from an entry to Infuse, Kazumi, or bilibili.
 
 <p align="center">
-  <img width="240" src=".app-store-assets/screenshots/ios/01-poster-grid-view.jpeg" alt="Poster grid view" />
-  <img width="240" src=".app-store-assets/screenshots/ios/04-anime-detail-overview.jpeg" alt="Anime detail overview" />
-  <img width="240" src=".app-store-assets/screenshots/ios/05-watch-management-sheet.jpeg" alt="Watch management sheet" />
+  <img width="32%" src=".app-store-assets/screenshots/ios/01-poster-grid-view.jpeg" alt="Poster grid view" />
+  <img width="32%" src=".app-store-assets/screenshots/ios/04-anime-detail-overview.jpeg" alt="Anime detail overview" />
+  <img width="32%" src=".app-store-assets/screenshots/ios/05-watch-management-sheet.jpeg" alt="Watch management sheet" />
 </p>
 
 ### 🖥️ iPad and Mac

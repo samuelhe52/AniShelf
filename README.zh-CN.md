@@ -28,9 +28,9 @@
 - **打开方式**：从条目直接跳转到 Infuse、Kazumi 或哔哩哔哩。
 
 <p align="center">
-  <img width="240" src=".app-store-assets/screenshots/ios/01-poster-grid-view.jpeg" alt="海报网格视图" />
-  <img width="240" src=".app-store-assets/screenshots/ios/04-anime-detail-overview.jpeg" alt="作品详情" />
-  <img width="240" src=".app-store-assets/screenshots/ios/05-watch-management-sheet.jpeg" alt="观看管理" />
+  <img width="32%" src=".app-store-assets/screenshots/ios/01-poster-grid-view.jpeg" alt="海报网格视图" />
+  <img width="32%" src=".app-store-assets/screenshots/ios/04-anime-detail-overview.jpeg" alt="作品详情" />
+  <img width="32%" src=".app-store-assets/screenshots/ios/05-watch-management-sheet.jpeg" alt="观看管理" />
 </p>
 
 ### 🖥️ iPad 与 Mac
