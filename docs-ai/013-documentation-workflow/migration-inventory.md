@@ -66,7 +66,7 @@ crash bundle, credential, or raw session transcript is copied into the repositor
 
 - `README.md`, `README.zh-CN.md`, and `PRIVACY_POLICY.md`: public project and policy documents.
 - `docs/anishelf_overview.md`, `docs/anishelf_overview.en.md`, and `docs/images/`: public tutorials and their assets.
-- `.app-store-assets/poster/README.md` and `.app-store-assets/promo-video-v151-v199/README.md`: package-local asset instructions.
+- `.marketing/poster/README.md` and `.marketing/promo-video-v151-v199/README.md`: package-local asset instructions.
 - `AGENTS.md` and the source-control release skill: developer and release procedures.
 
 ## Tooling retirement

@@ -28,9 +28,9 @@
 - **Open In:** jump from an entry to Infuse, Kazumi, or bilibili.
 
 <p align="center">
-  <img width="32%" src=".app-store-assets/screenshots/ios/01-poster-grid-view.jpeg" alt="Poster grid view" />
-  <img width="32%" src=".app-store-assets/screenshots/ios/04-anime-detail-overview.jpeg" alt="Anime detail overview" />
-  <img width="32%" src=".app-store-assets/screenshots/ios/05-watch-management-sheet.jpeg" alt="Watch management sheet" />
+  <img width="32%" src=".marketing/screenshots/ios/01-poster-grid-view.jpeg" alt="Poster grid view" />
+  <img width="32%" src=".marketing/screenshots/ios/04-anime-detail-overview.jpeg" alt="Anime detail overview" />
+  <img width="32%" src=".marketing/screenshots/ios/05-watch-management-sheet.jpeg" alt="Watch management sheet" />
 </p>
 
 ### 🖥️ iPad and Mac
@@ -38,7 +38,7 @@
 A sidebar holds your categories, and the entry you pick opens in an inspector beside the library. Open more windows, each with its own category, filters, sorting, and view mode.
 
 <p align="center">
-  <img width="640" src=".app-store-assets/screenshots/ipad/01-grid-view-inspector.jpeg" alt="iPad: poster grid with the entry inspector" />
+  <img width="640" src=".marketing/screenshots/ipad/01-grid-view-inspector.jpeg" alt="iPad: poster grid with the entry inspector" />
 </p>
 
 ### 🌌 Mac screen saver
@@ -46,7 +46,7 @@ A sidebar holds your categories, and the entry you pick opens in an inspector be
 Show your library's posters and artwork as a macOS screen saver. Choose which entries appear, pick a layout and the details on each slide, and install it from Settings. It updates as your library changes.
 
 <p align="center">
-  <img width="640" src=".app-store-assets/screenshots/mac/screen-saver/01-editorial-cover.jpeg" alt="Editorial Cover screen saver layout" />
+  <img width="640" src=".marketing/screenshots/mac/screen-saver/01-editorial-cover.jpeg" alt="Editorial Cover screen saver layout" />
 </p>
 
 ### ☁️ Sync, backup, and the terminal

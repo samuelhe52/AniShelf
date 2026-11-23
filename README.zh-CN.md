@@ -28,9 +28,9 @@
 - **打开方式**：从条目直接跳转到 Infuse、Kazumi 或哔哩哔哩。
 
 <p align="center">
-  <img width="32%" src=".app-store-assets/screenshots/ios/01-poster-grid-view.jpeg" alt="海报网格视图" />
-  <img width="32%" src=".app-store-assets/screenshots/ios/04-anime-detail-overview.jpeg" alt="作品详情" />
-  <img width="32%" src=".app-store-assets/screenshots/ios/05-watch-management-sheet.jpeg" alt="观看管理" />
+  <img width="32%" src=".marketing/screenshots/ios/01-poster-grid-view.jpeg" alt="海报网格视图" />
+  <img width="32%" src=".marketing/screenshots/ios/04-anime-detail-overview.jpeg" alt="作品详情" />
+  <img width="32%" src=".marketing/screenshots/ios/05-watch-management-sheet.jpeg" alt="观看管理" />
 </p>
 
 ### 🖥️ iPad 与 Mac
@@ -38,7 +38,7 @@
 分类位于侧边栏，选中的条目在资料库旁的检查器中打开。可以打开多个窗口，每个窗口分别记住自己的分类、筛选、排序和视图模式。
 
 <p align="center">
-  <img width="640" src=".app-store-assets/screenshots/ipad/01-grid-view-inspector.jpeg" alt="iPad：海报网格与条目检查器" />
+  <img width="640" src=".marketing/screenshots/ipad/01-grid-view-inspector.jpeg" alt="iPad：海报网格与条目检查器" />
 </p>
 
 ### 🌌 Mac 屏保
@@ -46,7 +46,7 @@
 把资料库的海报和背景图变成 macOS 屏幕保护程序。选择要展示的作品、布局以及每张幻灯片显示的信息，在设置中即可安装。资料库变化时，屏保会自动更新。
 
 <p align="center">
-  <img width="640" src=".app-store-assets/screenshots/mac/screen-saver/01-editorial-cover.jpeg" alt="杂志封面屏保布局" />
+  <img width="640" src=".marketing/screenshots/mac/screen-saver/01-editorial-cover.jpeg" alt="杂志封面屏保布局" />
 </p>
 
 ### ☁️ 同步、备份与终端
