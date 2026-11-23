@@ -11,133 +11,78 @@
     <a href="https://apps.apple.com/app/id6759359144"><img src="https://img.shields.io/badge/App%20Store-Download%20now-007AFF?logo=apple&logoColor=white" alt="Download AniShelf on the App Store" /></a>
   </p>
 
-  <p><a href="README.zh-CN.md">中文</a> · <a href="https://anishelf.konakona.dev">Website</a> · <a href="docs/anishelf_overview.en.md">User Guide</a> · <a href="https://testflight.apple.com/join/ns3sR38X">TestFlight Beta</a></p>
+  <p><a href="README.zh-CN.md">中文</a> · <a href="https://anishelf.konakona.dev">Website</a> · <a href="docs/anishelf_overview.en.md">User Guide</a> · <a href="docs/screenshots.md">Screenshots</a> · <a href="https://testflight.apple.com/join/ns3sR38X">TestFlight Beta</a></p>
 </div>
 
 ---
 
-## 📸 Screenshots
+## Features
 
-<div style="overflow-x: auto; padding: 0.25rem 0 1rem;">
-  <table cellpadding="0" cellspacing="12">
-    <tr>
-      <td><img src=".app-store-assets/screenshots/ios/01-poster-grid-view.jpeg" alt="AniShelf poster grid view" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/02-featured-library-card.jpeg" alt="AniShelf featured library card" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/03-library-list-view.jpeg" alt="AniShelf library list view" width="240" /></td>
-    </tr>
-    <tr>
-      <td><img src=".app-store-assets/screenshots/ios/04-anime-detail-overview.jpeg" alt="AniShelf anime detail overview" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/05-watch-management-sheet.jpeg" alt="AniShelf watch management sheet" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/06-library-stats-overview.jpeg" alt="AniShelf library stats overview" width="240" /></td>
-    </tr>
-  </table>
-</div>
+### 📚 Browse and track
 
-## 📱 Availability
+- **Three views:** switch between a poster grid, a featured card, and a detailed list.
+- **Categories:** organize anime into custom categories, describe them in natural language, and find matches automatically.
+- **Track Progress:** track watch status, scores, episode-level progress, and rewatches.
+- **Episode Notes:** write a note for each episode, alongside an overall note for the series or season.
+- **Broadcast & Reminders:** view broadcast airtimes for eligible anime and set reminders for each new episode, before or after airtime.
+- **Open In:** jump from an entry to Infuse, Kazumi, or bilibili.
 
-AniShelf is available on the [App Store](https://apps.apple.com/app/id6759359144) for iPhone and iPad running iOS or iPadOS 26 or later, and as a native Mac app for macOS 26 or later.
+<p align="center">
+  <img width="240" src=".app-store-assets/screenshots/ios/01-poster-grid-view.jpeg" alt="Poster grid view" />
+  <img width="240" src=".app-store-assets/screenshots/ios/04-anime-detail-overview.jpeg" alt="Anime detail overview" />
+  <img width="240" src=".app-store-assets/screenshots/ios/05-watch-management-sheet.jpeg" alt="Watch management sheet" />
+</p>
 
-New features will be released on TestFlight before being pushed to the App Store. You can join the [TestFlight Beta](https://testflight.apple.com/join/ns3sR38X) to get early access to new features and provide feedback.
+### 🖥️ iPad and Mac
 
-> You need a TMDb API key to use the app, which can be obtained for free from [The Movie Database](https://www.themoviedb.org/settings/api).
+A sidebar holds your categories, and the entry you pick opens in an inspector beside the library. Open more windows, each with its own category, filters, sorting, and view mode.
 
-## ✨ Features
+<p align="center">
+  <img width="640" src=".app-store-assets/screenshots/ipad/01-grid-view-inspector.jpeg" alt="iPad: poster grid with the entry inspector" />
+</p>
 
-- **📚 Library Management** — Keep track of all your anime in one place
-- **🗂️ Categories** — Organize anime into custom categories, describe them in natural language, and find matches automatically
-- **🔍 Search** — Find anime using The Movie Database (TMDb) with multi-language support
-- **🎨 Beautiful UI** — Native SwiftUI interface, polished and consistent design language
-- **📊 Track Progress** — Track watch status, scores, episode-level progress, and rewatches
-- **📝 Episode Notes** — Write a note for each episode, alongside an overall note for the series or season
-- **▶️ Open In** — Jump from an entry to Infuse, Kazumi, or bilibili
-- **⏰ Broadcast & Reminders** — View broadcast airtimes for eligible anime and set reminders for each new episode, before or after airtime
-- **💾 Backup & Restore** — Back up and restore your library and settings, or export your library to common file formats
-- **☁️ iCloud Sync** — Keep your library and preferences in sync across your devices
-- **🌍 Multi-language** — Support for anime metadata in English, Chinese, and Japanese
-- **🖥️ Native Mac App** — A desktop interface with a sidebar and an inspector
-- **🌌 Mac Screen Saver** — Show your library's posters and artwork as a macOS screen saver, with several layouts to choose from
+### 🌌 Mac screen saver
 
-## CLI & Agentic Access
+Show your library's posters and artwork as a macOS screen saver. Choose which entries appear, pick a layout and the details on each slide, and install it from Settings. It updates as your library changes.
 
-AniShelf also has a companion CLI: [anishelf-cli](https://github.com/samuelhe52/anishelf-cli). It provides the `ani` command for read-only access to your AniShelf library. Turn on iCloud Sync in AniShelf first.
+<p align="center">
+  <img width="640" src=".app-store-assets/screenshots/mac/screen-saver/01-editorial-cover.jpeg" alt="Editorial Cover screen saver layout" />
+</p>
 
-If you are an agent, follow [SKILL.md](https://github.com/samuelhe52/anishelf-cli/blob/main/skills/anishelf-cli/SKILL.md) for installation and usage details.
+### ☁️ Sync, backup, and the terminal
 
-For manual installation and setup, follow the [anishelf-cli README](https://github.com/samuelhe52/anishelf-cli#readme).
+- **iCloud Sync** keeps your library and preferences the same on every device.
+- **Backup and export.** Back up and restore your library and settings, or export it as CSV, JSON, a spreadsheet, and more.
+- **Metadata in English, Chinese, or Japanese**, searched and fetched from TMDb.
+- **[anishelf-cli](https://github.com/samuelhe52/anishelf-cli)** gives you, or your coding agent, read-only access to your library with the `ani` command. Agents can follow its [SKILL.md](https://github.com/samuelhe52/anishelf-cli/blob/main/skills/anishelf-cli/SKILL.md).
 
-## 🔧 Development
+**More screenshots, including dark mode, iPhone Duo, Mac, and every screen saver layout: [Screenshots](docs/screenshots.md).**
 
-### 📋 Build/Run Requirements
+## Get AniShelf
 
-- iOS/iPadOS 26.0+ or macOS 26.0+
-- Xcode 27.0+
-- Swift 6.0+
-- TMDb API key (free from [The Movie Database](https://www.themoviedb.org/settings/api))
+Download it from the [App Store](https://apps.apple.com/app/id6759359144) for iPhone, iPad, and Mac (iOS, iPadOS, and macOS 26 or later), or join the [TestFlight Beta](https://testflight.apple.com/join/ns3sR38X) to try new features first.
 
-### 🚀 Getting Started
+> AniShelf needs a free TMDb API key, which you can get from [The Movie Database](https://www.themoviedb.org/settings/api).
 
-1. **Clone the repository**
+## Development
 
-   ```bash
-   git clone https://github.com/samuelhe52/AniShelf.git
-   cd AniShelf
-   ```
-
-2. **Open in Xcode**
-
-   ```bash
-   open MyAnimeList.xcodeproj
-   ```
-
-3. **Build and run**
-   - Select your target device, a simulator, or My Mac
-   - Press `⌘R` to build and run
-   - On first launch, you'll be prompted to enter your TMDb API key
-
-### Common Commands
+Requires Xcode 27 and Swift 6.
 
 ```bash
-make build
-make run-sim # Build and run on a booted simulator
-make test-sim # Run the app and DataProvider test suites on a booted simulator
-make run-mac # Build and run the native Mac app
-make lint
+git clone https://github.com/samuelhe52/AniShelf.git
+cd AniShelf
+open MyAnimeList.xcodeproj   # then ⌘R; the app asks for your TMDb API key on first launch
 ```
 
-> **Note:** The app was renamed from **MyAnimeList** to **AniShelf**. The app display name changed, but internal directories and the Xcode project still use `MyAnimeList` for backward compatibility.
+`make help` lists the build, run, and test targets. The Xcode project and internal directories still use the app's former name, **MyAnimeList**.
 
-## 🤝 Contributing
+Pull requests are welcome. Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) with an imperative, capitalized subject, for example `feat: Add library search`.
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## License
 
-### Commit Message Guidelines
+Apache License 2.0. See [LICENSE](LICENSE).
 
-This project follows the Conventional Commits format:
+## Acknowledgments
 
-- Start with a type such as `feat`, `fix`, `docs`, `test`, `refactor`, or `style`
-- Use an imperative, capitalized, concise subject
-- Do not end the subject with a period
-- Add a short body only when it clarifies the change
-
-Examples:
-
-```git
-feat: Add library search
-
-fix: Restore library backups correctly
-
-refactor: Simplify library views
-```
-
-## 📝 License
-
-This project is licensed under the Apache License 2.0 — see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [The Movie Database (TMDb)](https://www.themoviedb.org/) for their comprehensive anime database
+- [The Movie Database (TMDb)](https://www.themoviedb.org/) for its comprehensive anime database
 - [Kingfisher](https://github.com/onevcat/Kingfisher) for image loading and caching
-
----
-
-**Made with ❤️ using Swift and SwiftUI**
