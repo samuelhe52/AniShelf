@@ -751,7 +751,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.106.0;
+				MARKETING_VERSION = 1.107.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelhe.MyAnimeList;
 				PRODUCT_MODULE_NAME = MyAnimeList;
 				PRODUCT_NAME = AniShelf;
@@ -799,7 +799,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.106.0;
+				MARKETING_VERSION = 1.107.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.samuelhe.MyAnimeList;
 				PRODUCT_MODULE_NAME = MyAnimeList;
 				PRODUCT_NAME = AniShelf;
