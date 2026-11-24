@@ -84,31 +84,33 @@ struct EntryDetailView: View {
     }
 
     var body: some View {
-        pageWithPrompts
-            .environment(session)
-            .task(id: "\(session.instanceID)-\(currentLanguage.rawValue)-\(showsHero)") {
-                await session.loadDetails(
-                    language: currentLanguage,
-                    includesTitleLogo: showsHero
-                ) {
-                    await store?.restoreMissingParentSeries(for: session.entry)
+        if session.canRenderEntry {
+            pageWithPrompts
+                .environment(session)
+                .task(id: "\(session.instanceID)-\(currentLanguage.rawValue)-\(showsHero)") {
+                    await session.loadDetails(
+                        language: currentLanguage,
+                        includesTitleLogo: showsHero
+                    ) {
+                        await store?.restoreMissingParentSeries(for: session.entry)
+                    }
                 }
-            }
-            .onChange(of: session.entry.supportsEpisodeNotes) { hadOwner, hasOwner in
-                // Without an owner the snapshot read no episode notes, and note editing was
-                // unavailable. Adopt the restored parent's notes so Discard keeps them.
-                guard !hadOwner, hasOwner else { return }
-                session.originalUserInfo.episodeNotes = session.entry.episodeNotes
-            }
-            .task(id: broadcastActivationTaskID) {
-                session.broadcast.update(broadcastActivationTaskID.activation)
-            }
-            .onChange(of: session.instanceID) {
-                cancelConversionTask()
-            }
-            .onDisappear {
-                cancelConversionTask()
-            }
+                .onChange(of: session.entry.supportsEpisodeNotes) { hadOwner, hasOwner in
+                    // Without an owner the snapshot read no episode notes, and note editing was
+                    // unavailable. Adopt the restored parent's notes so Discard keeps them.
+                    guard !hadOwner, hasOwner else { return }
+                    session.originalUserInfo.episodeNotes = session.entry.episodeNotes
+                }
+                .task(id: broadcastActivationTaskID) {
+                    session.broadcast.update(broadcastActivationTaskID.activation)
+                }
+                .onChange(of: session.instanceID) {
+                    cancelConversionTask()
+                }
+                .onDisappear {
+                    cancelConversionTask()
+                }
+        }
     }
 
     /// The scrolling page and its chrome.
@@ -116,11 +118,15 @@ struct EntryDetailView: View {
         ZStack {
             ScrollViewReader { proxy in
                 ScrollView(showsIndicators: false) {
-                    #if os(macOS)
-                        macInspectorContent(proxy)
-                    #else
-                        iOSPageContent(proxy)
-                    #endif
+                    // The scroll layout can evaluate this closure even after its parent
+                    // has stopped presenting the session.
+                    if session.canRenderEntry {
+                        #if os(macOS)
+                            macInspectorContent(proxy)
+                        #else
+                            iOSPageContent(proxy)
+                        #endif
+                    }
                 }
                 .supportedSwipeActionsContainer()
                 .scrollPosition($session.scrollPosition)

@@ -42,17 +42,18 @@
             shownIDs.count == 1 ? shownIDs.first : nil
         }
 
-        private var selectedEntry: AnimeEntry? {
+        private var selectedItem: LibraryEntryDisplayItem? {
             guard isPresented, let identity = shownSingle else { return nil }
-            return displayItems.first { $0.id == identity }?.entry
+            return displayItems.first { $0.id == identity }
         }
 
         var body: some View {
+            let selectedItem = selectedItem
             ZStack {
                 // SwiftUI keeps the inspector alive while collapsed. Remove its content
                 // explicitly so arrow navigation cannot load and save hidden entry details.
                 if isPresented {
-                    selectionContent
+                    selectionContent(selectedItem: selectedItem)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -81,8 +82,8 @@
             }
             // Import can replace the object behind the selected identity. Changes to that
             // same object's metadata do not recreate its session or restart its load.
-            .onChange(of: selectedEntry.map(ObjectIdentifier.init), initial: true) {
-                synchronizeDetailSession(selectedEntry?.libraryIdentity)
+            .onChange(of: selectedItem.map { ObjectIdentifier($0.entry) }, initial: true) {
+                synchronizeDetailSession(selectedItem)
             }
             // The List commits its highlight in its own update, then the content follows. A
             // newer selection cancels the wait, so key repeat skips entries it passes.
@@ -111,7 +112,7 @@
         }
 
         @ViewBuilder
-        private var selectionContent: some View {
+        private func selectionContent(selectedItem: LibraryEntryDisplayItem?) -> some View {
             if shownIDs.count > 1 {
                 let selectedEntries = selectedEntries
                 MacBatchSelectionPanel(
@@ -123,10 +124,13 @@
                     apply: applyBatchAction,
                     deleteSelectedEntries: { deleteEntries(selectedEntries) }
                 )
-            } else if let identity = shownSingle {
-                // The session is created right after the selection changes; until then
-                // show nothing rather than flash No Selection.
-                if let session = detailSessionStore.session(for: identity) {
+            } else if shownSingle != nil {
+                // An outgoing selection can outlive its row. Never show a session from a
+                // missing or replaced row while the synchronization below catches up.
+                if let selectedItem,
+                    let session = detailSessionStore.session(for: selectedItem.id),
+                    session.entry === selectedItem.entry
+                {
                     entryDetail(session: session)
                 }
             } else {
@@ -158,12 +162,13 @@
             .presentationBackground(LibraryEntryDetailHost.inspector.pageBackground)
         }
 
-        private func synchronizeDetailSession(_ identity: LibraryEntryIdentity?) {
+        private func synchronizeDetailSession(_ item: LibraryEntryDisplayItem?) {
             detailSessionStore.synchronizePresentedDetail(
-                identity: identity,
+                identity: item?.id,
                 repository: store.repository,
-                resolveEntry: { id in
-                    displayItems.first { $0.id == id }?.entry ?? store.repository.existingEntry(identity: id)
+                resolveEntry: { _ in
+                    guard let entry = item?.entry, entry.modelContext != nil, !entry.isDeleted else { return nil }
+                    return entry
                 }
             )
         }
