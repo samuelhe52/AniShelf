@@ -76,7 +76,18 @@ struct EntryNotesSection: View {
         return originalNotes
     }
 
+    private var canRenderEntry: Bool {
+        guard let session else { return true }
+        return session.entry === entry && session.canRenderEntry
+    }
+
     var body: some View {
+        if canRenderEntry {
+            notes
+        }
+    }
+
+    private var notes: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
 
@@ -155,19 +166,27 @@ struct EntryNotesSection: View {
         HStack(spacing: 6) {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal) {
-                    HStack(spacing: 6) {
-                        chip(
-                            .overall, title: String(localized: "Overall"),
-                            hasText: !entry.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                && !visibleNotes.isEmpty)
-                        ForEach(chipAnchors) { anchor in
-                            let hasText = entry.episodeNote(at: anchor)?.isEmpty == false
-                            chip(.episode(anchor), title: EntryNoteLabels.short(anchor, entry: entry), hasText: hasText)
-                                .contextMenu { episodeMenu(for: anchor, hasText: hasText) }
-                                .transition(.scale(scale: 0.8).combined(with: .opacity))
+                    // The retained chip scroller can lay out independently of the detail page.
+                    if canRenderEntry {
+                        HStack(spacing: 6) {
+                            chip(
+                                .overall, title: String(localized: "Overall"),
+                                hasText: !entry.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                    && !visibleNotes.isEmpty)
+                            ForEach(chipAnchors) { anchor in
+                                if canRenderEntry {
+                                    let hasText = entry.episodeNote(at: anchor)?.isEmpty == false
+                                    chip(
+                                        .episode(anchor), title: EntryNoteLabels.short(anchor, entry: entry),
+                                        hasText: hasText
+                                    )
+                                    .contextMenu { episodeMenu(for: anchor, hasText: hasText) }
+                                    .transition(.scale(scale: 0.8).combined(with: .opacity))
+                                }
+                            }
                         }
+                        .padding(.vertical, 1)
                     }
-                    .padding(.vertical, 1)
                 }
                 // `.hidden` still shows a scroller on macOS when a mouse is connected.
                 .scrollIndicators(.never)

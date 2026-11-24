@@ -11,127 +11,78 @@
     <a href="https://apps.apple.com/app/id6759359144"><img src="https://img.shields.io/badge/App%20Store-%E7%AB%8B%E5%8D%B3%E4%B8%8B%E8%BD%BD-007AFF?logo=apple&logoColor=white" alt="从 App Store 下载 AniShelf" /></a>
   </p>
 
-  <p><a href="README.md">English</a> · <a href="https://anishelf.konakona.dev/zh/">官方网站</a> · <a href="docs/anishelf_overview.md">使用教程</a> · <a href="https://testflight.apple.com/join/ns3sR38X">TestFlight 测试版</a></p>
+  <p><a href="README.md">English</a> · <a href="https://anishelf.konakona.dev/zh/">官方网站</a> · <a href="docs/anishelf_overview.md">使用教程</a> · <a href="docs/screenshots.zh-CN.md">截图</a> · <a href="https://testflight.apple.com/join/ns3sR38X">TestFlight 测试版</a></p>
 </div>
 
 ---
 
-## 📸 截图
+## 功能
 
-<div style="overflow-x: auto; padding: 0.25rem 0 1rem;">
-  <table cellpadding="0" cellspacing="12">
-    <tr>
-      <td><img src=".app-store-assets/screenshots/ios/01-poster-grid-view.jpeg" alt="AniShelf poster grid view" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/02-featured-library-card.jpeg" alt="AniShelf featured library card" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/03-library-list-view.jpeg" alt="AniShelf library list view" width="240" /></td>
-    </tr>
-    <tr>
-      <td><img src=".app-store-assets/screenshots/ios/04-anime-detail-overview.jpeg" alt="AniShelf anime detail overview" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/05-watch-management-sheet.jpeg" alt="AniShelf watch management sheet" width="240" /></td>
-      <td><img src=".app-store-assets/screenshots/ios/06-library-stats-overview.jpeg" alt="AniShelf library stats overview" width="240" /></td>
-    </tr>
-  </table>
-</div>
+### 📚 浏览与追踪
 
-## 📱 获取方式
+- **三种视图**：海报网格、精选卡片、详细列表，任你切换。
+- **分类**：自定义分类整理番剧，用自然语言描述，自动筛选匹配作品。
+- **进度追踪**：标记观看状态、打分，精准记录单集观看进度和重看次数。
+- **分集笔记**：为每一集单独记录笔记，也可以为系列或单季写整体笔记。
+- **播出与提醒**：查看符合条件番剧的播出时间，并为新番每集设置播出前或播出后的提醒。
+- **打开方式**：从条目直接跳转到 Infuse、Kazumi 或哔哩哔哩。
 
-AniShelf 现已上架 [App Store](https://apps.apple.com/app/id6759359144)，支持运行 iOS 或 iPadOS 26 及以上版本的 iPhone 和 iPad，并提供适用于 macOS 26 及以上版本的原生 Mac 应用。
+<p align="center">
+  <img width="32%" src=".marketing/screenshots/ios/01-poster-grid-view.jpeg" alt="海报网格视图" />
+  <img width="32%" src=".marketing/screenshots/ios/04-anime-detail-overview.jpeg" alt="作品详情" />
+  <img width="32%" src=".marketing/screenshots/ios/05-watch-management-sheet.jpeg" alt="观看管理" />
+</p>
 
-新功能会先通过 TestFlight 发布，之后再推送到 App Store。你可以加入 [TestFlight 测试版](https://testflight.apple.com/join/ns3sR38X)，抢先体验新功能并提供反馈。
+### 🖥️ iPad 与 Mac
 
-> 使用应用需要一个 TMDb API 密钥，可以从 [The Movie Database](https://www.themoviedb.org/settings/api) 免费获取。
+分类位于侧边栏，选中的条目在资料库旁的检查器中打开。可以打开多个窗口，每个窗口分别记住自己的分类、筛选、排序和视图模式。
 
-## ✨ 功能
+<p align="center">
+  <img width="640" src=".marketing/screenshots/ipad/01-grid-view-inspector.jpeg" alt="iPad：海报网格与条目检查器" />
+</p>
 
-- **📚 资料库管理**：整理收藏所有动漫作品
-- **🗂️ 分类**：自定义分类整理番剧，用自然语言描述，自动筛选匹配作品
-- **🔍 检索**：依托 TMDb 数据库多语言检索动漫资源
-- **🎨 精致界面**：基于原生 SwiftUI 搭建，视觉风格统一精致
-- **📊 进度追踪**：标记观看状态、打分，精准记录单集观看进度和重看次数
-- **📝 分集笔记**：为每一集单独记录笔记，也可以为系列或单季写整体笔记
-- **▶️ 打开方式**：从条目直接跳转到 Infuse、Kazumi 或哔哩哔哩
-- **⏰ 播出与提醒**：查看符合条件番剧的播出时间，并为新番每集设置播出前或播出后的提醒
-- **💾 备份还原**：备份和恢复资料库与设置，也可以将资料库导出为常用文件格式
-- **☁️ iCloud同步**：跨设备同步资料库数据与偏好设置
-- **🌍 多语言适配**：动漫元数据支持英文、中文、日文
-- **🖥️ 原生 Mac 应用**：为桌面设计的侧边栏与检查器
-- **🌌 Mac 屏保**：用资料库的海报和背景图作为 macOS 屏幕保护程序，提供多种布局
+### 🌌 Mac 屏保
 
-## CLI 与 Agent 集成
+把资料库的海报和背景图变成 macOS 屏幕保护程序。选择要展示的作品、布局以及每张幻灯片显示的信息，在设置中即可安装。资料库变化时，屏保会自动更新。
 
-AniShelf 还提供配套 CLI：[anishelf-cli](https://github.com/samuelhe52/anishelf-cli)。它提供 `ani` 命令，让你以只读方式访问你的 AniShelf 资料库。请先在 AniShelf 中开启 iCloud 同步。
+<p align="center">
+  <img width="640" src=".marketing/screenshots/mac/screen-saver/01-editorial-cover.jpeg" alt="杂志封面屏保布局" />
+</p>
 
-如果你是 Agent，请阅读 [SKILL.md](https://github.com/samuelhe52/anishelf-cli/blob/main/skills/anishelf-cli/SKILL.md) 了解安装和使用详情。
+### ☁️ 同步、备份与终端
 
-如需手动安装和设置，请参考 [anishelf-cli README](https://github.com/samuelhe52/anishelf-cli#readme)。
+- **iCloud 同步**：在所有设备间同步资料库和偏好设置。
+- **备份与导出**：备份和还原资料库与设置，或导出为 CSV、JSON、电子表格等格式。
+- **中文、英文、日文元数据**：通过 TMDb 检索和获取。
+- **[anishelf-cli](https://github.com/samuelhe52/anishelf-cli)**：提供 `ani` 命令，让你或你的编程 Agent 以只读方式访问资料库。Agent 可以按照它的 [SKILL.md](https://github.com/samuelhe52/anishelf-cli/blob/main/skills/anishelf-cli/SKILL.md) 操作。
 
-## 🔧 开发
+**更多截图（包括深色模式、iPhone Duo、Mac 和全部屏保布局）请见[截图](docs/screenshots.zh-CN.md)。**
 
-### 📋 构建与运行要求
+## 获取 AniShelf
 
-- iOS/iPadOS 26.0+ 或 macOS 26.0+
-- Xcode 27.0+
-- Swift 6.0+
-- TMDb API 密钥（可从 [The Movie Database](https://www.themoviedb.org/settings/api) 免费获取）
+从 [App Store](https://apps.apple.com/app/id6759359144) 下载，支持 iPhone、iPad 和 Mac（iOS、iPadOS 和 macOS 26 及以上版本）；也可以加入 [TestFlight 测试版](https://testflight.apple.com/join/ns3sR38X)，抢先体验新功能。
 
-### 🚀 快速开始
+> 使用 AniShelf 需要一个 TMDb API 密钥，可以从 [The Movie Database](https://www.themoviedb.org/settings/api) 免费获取。
 
-1. **克隆仓库**
+## 开发
 
-   ```bash
-   git clone https://github.com/samuelhe52/AniShelf.git
-   cd AniShelf
-   ```
-
-2. **在 Xcode 中打开项目**
-
-   ```bash
-   open MyAnimeList.xcodeproj
-   ```
-
-3. **构建并运行**
-   - 选择目标设备、模拟器或 My Mac
-   - 按下 `⌘R` 构建并运行
-   - 首次启动时，系统会提示你输入 TMDb API 密钥
-
-### 常用命令
+需要 Xcode 27 和 Swift 6。
 
 ```bash
-make build
-make run-sim  # 在已启动的模拟器上构建并运行
-make test-sim # 在已启动的模拟器上运行 App 和 DataProvider 测试套件
-make lint
+git clone https://github.com/samuelhe52/AniShelf.git
+cd AniShelf
+open MyAnimeList.xcodeproj   # 然后按 ⌘R；首次启动时应用会提示输入 TMDb API 密钥
 ```
 
-> **注意：**应用曾从 **MyAnimeList** 更名为 **AniShelf**。App 显示名称已更新，但内部目录和 Xcode 项目仍使用 `MyAnimeList`，以保持向后兼容。
+`make help` 会列出构建、运行和测试命令。Xcode 项目和内部目录仍沿用应用的旧名 **MyAnimeList**。
 
-## 🤝 贡献
+欢迎提交 Pull Request。Commit message 遵循 [Conventional Commits](https://www.conventionalcommits.org/)，主题使用祈使语气并首字母大写，例如 `feat: Add library search`。
 
-欢迎贡献代码！请随时提交 Pull Request。
+## 许可证
 
-### Commit Message 规范
+Apache License 2.0，详见 [LICENSE](LICENSE)。
 
-本项目遵循 Conventional Commits 格式。
-
-示例：
-
-```git
-feat: Add library search
-
-fix: Restore library backups correctly
-
-refactor: Simplify library views
-```
-
-## 📝 许可证
-
-本项目采用 Apache License 2.0；详情请参阅 [LICENSE](LICENSE)。
-
-## 🙏 致谢
+## 致谢
 
 - 感谢 [The Movie Database (TMDb)](https://www.themoviedb.org/) 提供全面的动画数据库
 - 感谢 [Kingfisher](https://github.com/onevcat/Kingfisher) 提供图片加载与缓存功能
-
----
-
-**Made with ❤️ using Swift and SwiftUI**

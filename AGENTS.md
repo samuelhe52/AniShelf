@@ -52,4 +52,4 @@
 
 ## Website Maintenance
 
-- When screenshots or user-facing feature names change, report the follow-up needed in `../anishelf-site`. Edit that repository only when the task covers it, and commit or deploy it only when asked. The site copies screenshots from this repository's `.app-store-assets/screenshots/` into its `src/assets/screens/` (then `npm run og`) and takes its labels from `MyAnimeList/Resources/Localizable.xcstrings`.
+- When screenshots or user-facing feature names change, report the follow-up needed in `../anishelf-site`. Edit that repository only when the task covers it, and commit or deploy it only when asked. The site copies screenshots from this repository's `.marketing/screenshots/` into its `src/assets/screens/` (then `npm run og`) and takes its labels from `MyAnimeList/Resources/Localizable.xcstrings`.

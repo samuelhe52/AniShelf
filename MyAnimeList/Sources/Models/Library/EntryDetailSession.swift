@@ -58,6 +58,7 @@ final class EntryDetailSession {
     let broadcast: EntryDetailBroadcastModel
     private let repository: LibraryRepository
     private let broadcastEligibilityChecker: TMDbBroadcastEligibilityChecker
+    private let wasManaged: Bool
     @ObservationIgnored private var loadingTasks: [UUID: Task<Void, Never>] = [:]
 
     var presentation = EntryDetailPresentationState()
@@ -95,6 +96,12 @@ final class EntryDetailSession {
             || isPresentingNotes
     }
 
+    /// SwiftUI can still measure an outgoing page after SwiftData has detached its entry.
+    /// `isDeleted` covers pending deletion, but resets after the delete is saved.
+    var canRenderEntry: Bool {
+        !entry.isDeleted && (!wasManaged || entry.modelContext != nil)
+    }
+
     init(
         entry: AnimeEntry,
         repository: LibraryRepository,
@@ -106,6 +113,7 @@ final class EntryDetailSession {
     ) {
         self.entry = entry
         self.entryIdentity = entry.libraryIdentity
+        self.wasManaged = entry.modelContext != nil
         self.repository = repository
         let broadcastEligibilityChecker = broadcastEligibilityChecker.forDetailSession()
         self.broadcastEligibilityChecker = broadcastEligibilityChecker
@@ -335,7 +343,10 @@ final class EntryDetailSessionStore {
     }
 
     func session(for identity: LibraryEntryIdentity?) -> EntryDetailSession? {
-        guard presentedSession?.entryIdentity == identity else { return nil }
-        return presentedSession
+        guard let session = presentedSession,
+            session.entryIdentity == identity,
+            session.canRenderEntry
+        else { return nil }
+        return session
     }
 }

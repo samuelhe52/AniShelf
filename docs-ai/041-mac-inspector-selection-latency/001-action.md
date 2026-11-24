@@ -15,8 +15,9 @@
    `selection.ids` after a 20 ms wait in `.task(id: selection.ids)`; a newer
    selection cancels it. The first selection after none, and clearing the
    selection, apply synchronously in the existing `onChange(of: selection.ids,
-   initial: true)`. Content, `selectedEntry` (and so session synchronization), and
-   the batch panel's entries read `shownIDs`; `lastSingleID` and the poster flight
+   initial: true)`. Content, `selectedItem` (and so session synchronization), and
+   the batch panel's entries read `shownIDs`; a session is shown only while its entry
+   is the selected item's exact model ([002](002-detail-deletion-lifetime.md)); `lastSingleID` and the poster flight
    still follow the live selection.
 2. **Sidebar counts.** `LibraryDisplayCounts` (in `LibraryDisplayOrder.swift`) is
    built from the display records' `LibraryDisplayOrderInputs`.

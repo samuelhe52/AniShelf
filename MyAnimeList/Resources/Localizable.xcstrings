@@ -7354,7 +7354,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "如果已重新安装，请退出「系统设置」。在「活动监视器」中搜索legacyScreenSaver，只对名称完全匹配的进程点按「停止」并选取「退出」。然后重新打开「系统设置」，再次预览AniShelf。"
+            "value" : "如果已重新安装，请退出“系统设置”。在“活动监视器”中搜索legacyScreenSaver，只对名称完全匹配的进程点按“停止”并选取“退出”。然后重新打开“系统设置”，再次预览AniShelf。"
           }
         }
       }

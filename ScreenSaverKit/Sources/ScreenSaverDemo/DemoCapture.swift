@@ -19,7 +19,8 @@ import UniformTypeIdentifiers
 ///
 /// Options: `--layouts deckFan,flipWall`, `--screens 0,3,5` (preset indices), `--times 1.5,4`
 /// (seconds after start), `--speed 4`, `--entries 3`, `--seed 7`, `--dates watch` for Timeline's
-/// watch dates, and `--snapshot <folder>` to use a particular snapshot.
+/// watch dates, `--snapshot <folder>` to use a particular snapshot, and `--full-size` to draw each
+/// layout at its full size in points, as the installed saver does, instead of at half size.
 /// `--backdrop-sides` reports placements or, with `--entry-ids <id,id>`, writes stills and
 /// diagnostic variants. `--analyze-missing` runs the export detector in memory for older snapshots.
 @MainActor
@@ -78,8 +79,10 @@ enum DemoCapture {
 
                 // A panel at half the layout size and the display's scale, at desktop level behind every
                 // other window: the window server only draws windows on screen, Stage Manager leaves
-                // panels alone, and nothing takes focus.
-                let viewSize = CGSize(width: size.width / 2, height: size.height / 2)
+                // panels alone, and nothing takes focus. With `--full-size`, a 1512 × 982 layout on a
+                // 2x display comes out at 3024 × 1964 pixels, like the saver on a 14-inch MacBook Pro.
+                let scale = CommandLine.arguments.contains("--full-size") ? 1.0 : 0.5
+                let viewSize = CGSize(width: size.width * scale, height: size.height * scale)
                 let panel = NSPanel(
                     contentRect: CGRect(origin: .zero, size: viewSize),
                     styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)

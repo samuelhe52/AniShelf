@@ -168,3 +168,4 @@ Files: `MyAnimeList/Sources/Views/Library/EntryDetail/EntryDetailView.swift`,
 
 - Updated 2026-11-10: the episodes block keeps no extra `.id`, and the scroll reset lives in the session's initial `ScrollPosition`; corrected in place under Design §3.
 - Updated 2026-11-10: the Mac notes section gets an entry-scoped `.id`, after a recording showed its scope reset animating on a switch; corrected in place under Design §3.
+- Updated 2026-11-24: The inspector will not present a session whose selected model left the display or was replaced, and retained scroll layouts check model lifetime; corrected the action record's `selectedEntry` description — see [002-detail-deletion-lifetime.md](002-detail-deletion-lifetime.md).
