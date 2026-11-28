@@ -1,0 +1,63 @@
+{
+  "fill": "none",
+  "groups": [
+    {
+      "name": "Artwork",
+      "layers": [
+        {
+          "name": "artwork-light",
+          "image-name": "light.png",
+          "glass": false,
+          "hidden-specializations": [
+            {
+              "appearance": "dark",
+              "value": true
+            },
+            {
+              "appearance": "tinted",
+              "value": true
+            }
+          ]
+        },
+        {
+          "name": "artwork-dark",
+          "image-name": "dark.png",
+          "glass": false,
+          "hidden-specializations": [
+            {
+              "value": true
+            },
+            {
+              "appearance": "dark",
+              "value": false
+            }
+          ]
+        },
+        {
+          "name": "artwork-mono",
+          "image-name": "mono.png",
+          "hidden-specializations": [
+            {
+              "value": true
+            },
+            {
+              "appearance": "tinted",
+              "value": false
+            }
+          ]
+        }
+      ],
+      "shadow": {
+        "kind": "none",
+        "opacity": 0
+      },
+      "specular": false
+    }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "iOS",
+      "macOS"
+    ]
+  }
+}
