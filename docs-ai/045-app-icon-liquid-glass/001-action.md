@@ -4,7 +4,9 @@
 
 | Date | Change | Ref |
 | --- | --- | --- |
-| 2026-11-28 | Added `MyAnimeList/Resources/AppIcon.icon` with light, dark, and mono artwork plus a glass subject group; removed `AppIcon.appiconset` and `MacAppIcon.icon`; dropped the macOS-only `MacAppIcon` app-icon override | working tree, uncommitted |
+| 2026-11-28 | Added `MyAnimeList/Resources/AppIcon.icon` with light, dark, and mono artwork plus a glass subject group; removed `AppIcon.appiconset` and `MacAppIcon.icon`; dropped the macOS-only `MacAppIcon` app-icon override | PR #32 |
+| 2026-11-28 | Reworked tinted contrast in `mono.png` ([002](002-tinted-contrast.md)) | PR #32 |
+| 2026-11-28 | Removed the glass Subject group and cutouts; rebuilt the tinted silhouette as vector-traced, hand-touched edges ([003](003-flat-artwork-vector-mask.md)) | PR #32 |
 
 ## Outcome and current state (as of 2026-11-28)
 
@@ -12,10 +14,9 @@ One Icon Composer document is now the app icon for every target and SDK. `ASSETC
 
 Key paths:
 
-- `MyAnimeList/Resources/AppIcon.icon/icon.json` — two groups, `supported-platforms.squares = ["iOS", "macOS"]`.
+- `MyAnimeList/Resources/AppIcon.icon/icon.json` — one `Artwork` group (the Subject group was removed in [003](003-flat-artwork-vector-mask.md)), `supported-platforms.squares = ["iOS", "macOS"]`.
 - `MyAnimeList/Resources/AppIcon.icon/Assets/light.png`, `dark.png` — the unchanged 1024 px illustrations, now duplicated only here for the icon.
-- `MyAnimeList/Resources/AppIcon.icon/Assets/subject-light.png`, `subject-dark.png` — foreground cutouts (transparent background) used as the glass subject layer; hidden in the tinted appearance.
-- `MyAnimeList/Resources/AppIcon.icon/Assets/mono.png` — high-contrast monochrome artwork shown only in the tinted appearance; the current file is the rim-lit, flat-background version from [002-tinted-contrast.md](002-tinted-contrast.md).
+- `MyAnimeList/Resources/AppIcon.icon/Assets/mono.png` — high-contrast monochrome artwork shown only in the tinted appearance; the current file keeps the flat-background tones from [002-tinted-contrast.md](002-tinted-contrast.md) with the vector-traced silhouette from [003-flat-artwork-vector-mask.md](003-flat-artwork-vector-mask.md).
 - `MyAnimeList.xcodeproj/project.pbxproj` — app-icon build settings for both configurations.
 - `MyAnimeList/Resources/Assets.xcassets/` — now only `AccentColor.colorset`, `app-icon.imageset`, and `Contents.json`; the app icon is no longer an image set here.
 
@@ -23,9 +24,9 @@ The in-app brand surfaces (`app-icon.imageset` used by the About sheet, About vi
 
 Renditions the document produces (verified with `ictool`, platform `macOS`):
 
-- `Default` and `Dark` keep the previous artwork with a faint specular sheen from the subject group; mean channel difference against the previous document's `Default` render is under 2/255.
+- `Default` and `Dark` render the flat illustrations (pixel-identical on iOS since [003](003-flat-artwork-vector-mask.md); the original landing added a faint specular sheen from the subject group).
 - `TintedLight` and `TintedDark` show `mono.png`; the system applies the user's tint to its luminance.
-- `ClearLight` and `ClearDark` render the cutout subject as a glass object over the glass-rendered artwork.
+- `ClearLight` and `ClearDark` render a grayscale of `mono.png` (originally the cutout subject as a glass object; see [003](003-flat-artwork-vector-mask.md)).
 
 ## Deviations from plan
 

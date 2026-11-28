@@ -2,51 +2,12 @@
   "fill": "none",
   "groups": [
     {
-      "name": "Subject",
-      "layers": [
-        {
-          "name": "subject-light",
-          "image-name": "subject-light.png",
-          "glass": true,
-          "hidden-specializations": [
-            {
-              "appearance": "dark",
-              "value": true
-            },
-            {
-              "appearance": "tinted",
-              "value": true
-            }
-          ]
-        },
-        {
-          "name": "subject-dark",
-          "image-name": "subject-dark.png",
-          "glass": true,
-          "hidden-specializations": [
-            {
-              "value": true
-            },
-            {
-              "appearance": "dark",
-              "value": false
-            }
-          ]
-        }
-      ],
-      "lighting": "individual",
-      "shadow": {
-        "kind": "neutral",
-        "opacity": 0.35
-      },
-      "specular": true
-    },
-    {
       "name": "Artwork",
       "layers": [
         {
           "name": "artwork-light",
           "image-name": "light.png",
+          "glass": false,
           "hidden-specializations": [
             {
               "appearance": "dark",
@@ -61,6 +22,7 @@
         {
           "name": "artwork-dark",
           "image-name": "dark.png",
+          "glass": false,
           "hidden-specializations": [
             {
               "value": true
